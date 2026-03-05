@@ -11,13 +11,13 @@
   --bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,0.06);
   --red:#ff2d55;--red-dim:rgba(255,45,85,0.12);--red-glow:rgba(255,45,85,0.4);
   --yellow:#ffd60a;--yel-dim:rgba(255,214,10,0.1);--yel-glow:rgba(255,214,10,0.4);
-  --green:#30d158;--green-dim:rgba(48,209,88,0.1);
+  --green:#30d158;--green-dim:rgba(48,209,88,0.1);--green-glow:rgba(48,209,88,0.3);
   --text:#eeeef5;--muted:rgba(238,238,245,0.38);--accent:#4c6ef5;
 }
 html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;}
 .bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;}
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
-.page{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:24px 16px 48px;display:flex;flex-direction:column;gap:20px;}
+.page{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:24px 16px 60px;display:flex;flex-direction:column;gap:20px;}
 
 /* Nav */
 .nav{display:flex;align-items:center;justify-content:space-between;gap:8px;}
@@ -28,44 +28,55 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .btn-nav:hover{border-color:var(--muted);color:var(--text);}
 .btn-nav.danger:hover{border-color:var(--red);color:var(--red);}
 
-/* Profile header */
+@keyframes slide-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Profile header ── */
 .profile-header{
   background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;
   display:flex;align-items:center;gap:20px;
   box-shadow:0 0 40px rgba(0,0,0,0.4);
   animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
-@keyframes slide-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-
-/* Avatar */
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
-.profile-avatar{
-  width:72px;height:72px;border-radius:50%;
-  background:var(--red-dim);border:2px solid var(--red);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;
-  color:var(--red);overflow:hidden;
-}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
-.avatar-overlay{
-  position:absolute;inset:0;border-radius:50%;
-  background:rgba(0,0,0,0.6);
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;opacity:0;transition:opacity 0.2s;
-}
+.avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0;transition:opacity 0.2s;}
 input[type="file"]{display:none;}
-
 .profile-info{flex:1;min-width:0;}
 .profile-pseudo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;line-height:1;}
 .profile-since{font-size:12px;color:var(--muted);margin-top:4px;}
+
+/* Follow button */
+.btn-follow{
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;padding:9px 18px;border-radius:10px;
+  border:none;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;gap:6px;
+  flex-shrink:0;
+}
+.btn-follow.not-following{background:var(--green-dim);border:1.5px solid rgba(48,209,88,0.3);color:var(--green);}
+.btn-follow.not-following:hover{background:rgba(48,209,88,0.25);box-shadow:0 0 16px var(--green-glow);}
+.btn-follow.following{background:var(--surface2);border:1.5px solid var(--border);color:var(--muted);}
+.btn-follow.following:hover{border-color:var(--red);color:var(--red);}
+
 .profile-elo{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;}
 .profile-elo-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:right;}
 
-/* Upload hint */
-.avatar-hint{font-size:11px;color:var(--muted);text-align:center;letter-spacing:1px;}
+/* ── Social counts ── */
+.social-row{
+  display:flex;gap:8px;
+  animation:slide-in 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both;
+}
+.social-card{
+  flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px;text-align:center;cursor:pointer;transition:all 0.2s;
+}
+.social-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
+.social-card.active{border-color:var(--accent);}
+.social-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
+.social-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
-/* Stats */
+/* ── Stats ── */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;animation:slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:4px;transition:all 0.2s;}
 .stat-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
@@ -75,7 +86,6 @@ input[type="file"]{display:none;}
 .stat-card.losses .stat-val{color:var(--red);}
 .stat-card.draws  .stat-val{color:var(--muted);}
 
-/* Winrate */
 .winrate-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;animation:slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both;}
 .winrate-header{display:flex;justify-content:space-between;align-items:center;}
 .wr-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
@@ -83,11 +93,16 @@ input[type="file"]{display:none;}
 .wr-bar{height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
 .wr-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow));transition:width 1s cubic-bezier(0.22,1,0.36,1);}
 
-/* Section title */
-.section-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--muted);animation:slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
+/* ── Tabs ── */
+.tabs-row{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:4px;animation:slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
+.tab{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
 
-/* History */
-.history-list{display:flex;flex-direction:column;gap:6px;animation:slide-in 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both;}
+/* ── Tab panels ── */
+.tab-panel{display:none;animation:slide-in 0.3s cubic-bezier(0.22,1,0.36,1) both;}
+.tab-panel.show{display:flex;flex-direction:column;gap:6px;}
+
+/* ── History rows ── */
 .game-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none;color:var(--text);transition:all 0.2s;}
 .game-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
 .game-result{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
@@ -103,7 +118,60 @@ input[type="file"]{display:none;}
 .game-elo-change.neu{color:var(--muted);}
 .replay-badge{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);flex-shrink:0;}
 .game-row:hover .replay-badge{border-color:var(--accent);color:var(--accent);}
-.empty-state{text-align:center;padding:40px 20px;color:var(--muted);font-size:14px;}
+
+/* ── Player rows (following/followers) ── */
+.player-row{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  text-decoration:none;color:var(--text);transition:all 0.2s;
+}
+.player-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
+.player-mini-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;}
+.player-mini-avatar img{width:100%;height:100%;object-fit:cover;}
+.player-mini-info{flex:1;min-width:0;}
+.player-mini-pseudo{font-weight:600;font-size:14px;}
+.player-mini-stats{font-size:11px;color:var(--muted);margin-top:1px;}
+.player-mini-elo{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--yellow);flex-shrink:0;}
+
+/* Badges wins streak */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+.badge.online{background:rgba(48,209,88,0.12);color:var(--green);border:1px solid rgba(48,209,88,0.2);}
+
+.empty-state{text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;}
+
+/* ── Search bar ── */
+.search-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px 18px;display:flex;flex-direction:column;gap:10px;
+  animation:slide-in 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both;
+}
+.search-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+.search-row{display:flex;gap:8px;}
+.search-input{
+  flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 14px;color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;
+  outline:none;transition:border-color 0.2s;
+}
+.search-input:focus{border-color:var(--accent);}
+.search-input::placeholder{color:var(--muted);}
+.search-btn{
+  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;padding:10px 18px;border-radius:10px;
+  background:var(--accent);border:none;color:#fff;cursor:pointer;
+  transition:all 0.2s;flex-shrink:0;
+}
+.search-btn:hover{background:#6b8aff;transform:translateY(-1px);}
+.search-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.search-result{
+  display:none;align-items:center;gap:12px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;text-decoration:none;color:var(--text);
+  transition:all 0.2s;cursor:pointer;
+}
+.search-result:hover{border-color:var(--accent);}
+.search-result.show{display:flex;}
+.search-error{font-size:12px;color:var(--red);display:none;}
+.search-error.show{display:block;}
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
 </style>
 </head>
@@ -120,92 +188,205 @@ input[type="file"]{display:none;}
     </div>
   </nav>
 
-  <div id="content"><div class="loading">Chargement...</div></div>
+  <!-- Recherche de joueur -->
+  <div class="search-wrap">
+    <div class="search-label">🔍 Rechercher un joueur</div>
+    <div class="search-row">
+      <input
+        class="search-input"
+        id="search-input"
+        placeholder="Entrez un pseudo..."
+        maxlength="20"
+        autocomplete="off"
+        spellcheck="false"
+        onkeydown="if(event.key==='Enter') searchPlayer()"
+      />
+      <button class="search-btn" id="search-btn" onclick="searchPlayer()">Chercher</button>
+    </div>
+    <div class="search-error" id="search-error">Joueur introuvable.</div>
+    <a class="search-result" id="search-result" href="#">
+      <div class="player-mini-avatar" id="sr-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px" id="sr-pseudo"></div>
+        <div style="font-size:11px;color:var(--muted)" id="sr-stats"></div>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
+      <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir →</div>
+    </a>
+  </div>
 
+  <div id="content"><div class="loading">Chargement...</div></div>
 </div>
 
 <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
 
 <script>
 let currentPlayer = null;
+let viewerPlayer  = null;
+let isOwnProfile  = false;
 
 async function load() {
-  const saved  = localStorage.getItem('player') || sessionStorage.getItem('player');
-  const urlId  = new URLSearchParams(location.search).get('id');
-  const playerId = urlId || (saved ? JSON.parse(saved).id : null);
-  const me     = saved ? JSON.parse(saved) : null;
-  const isOwn  = me && (!urlId || String(urlId) === String(me.id));
+  const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
+  const urlId    = new URLSearchParams(location.search).get('id');
+  viewerPlayer   = saved ? JSON.parse(saved) : null;
+  const playerId = urlId || (viewerPlayer?.id ?? null);
+  isOwnProfile   = viewerPlayer && (!urlId || String(urlId) === String(viewerPlayer.id));
 
-  if (isOwn) document.getElementById('btn-logout').style.display = 'block';
-
+  if (isOwnProfile) document.getElementById('btn-logout').style.display = 'block';
   if (!playerId) {
-    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur sélectionné.<br><a href="/" style="color:var(--red)">← Retour</a></div>';
+    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">← Retour</a></div>';
     return;
   }
 
   try {
-    const res = await fetch(`/api/players/${playerId}`);
-    if (!res.ok) throw new Error();
-    const { player, games } = await res.json();
+    const [profileRes, followRes] = await Promise.all([
+      fetch(`/api/players/${playerId}`),
+      viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
+    ]);
+    if (!profileRes.ok) throw new Error();
+    const { player, games, following, followers } = await profileRes.json();
+    const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
     currentPlayer = player;
 
-    const total = player.wins + player.losses + player.draws;
-    const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
-
-    // Avatar HTML
-    const avatarHtml = player.avatar
-      ? `<img src="${player.avatar}" alt="avatar">`
-      : player.pseudo[0].toUpperCase();
-
-    const avatarSection = isOwn
-      ? `<div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
-           <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
-           <div class="avatar-overlay">📷</div>
-         </div>`
-      : `<div class="profile-avatar">${avatarHtml}</div>`;
-
-    document.getElementById('content').innerHTML = `
-      <div class="profile-header">
-        ${avatarSection}
-        <div class="profile-info">
-          <div class="profile-pseudo">${player.pseudo}</div>
-          <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR', {month:'long', year:'numeric'})}</div>
-          ${isOwn ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">📷 Clique sur la photo pour la changer</div>' : ''}
-        </div>
-        <div>
-          <div class="profile-elo">${player.elo}</div>
-          <div class="profile-elo-lbl">ELO</div>
-        </div>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-        <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
-        <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
-      </div>
-
-      <div class="winrate-card">
-        <div class="winrate-header">
-          <span class="wr-label">Winrate</span>
-          <span class="wr-pct">${wr}%</span>
-        </div>
-        <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
-      </div>
-
-      <div class="section-title">Historique des parties</div>
-      <div class="history-list">${renderGames(games, player)}</div>
-    `;
-
-    setTimeout(() => {
-      const fill = document.getElementById('wr-fill');
-      if (fill) fill.style.width = wr + '%';
-    }, 100);
-
+    render(player, games, following || [], followers || [], followStatus);
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
   }
 }
 
+function render(player, games, following, followers, followStatus) {
+  const total = player.wins + player.losses + player.draws;
+  const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
+
+  const avatarHtml = player.avatar
+    ? `<img src="${player.avatar}" alt="avatar">`
+    : player.pseudo[0].toUpperCase();
+
+  const avatarSection = isOwnProfile
+    ? `<div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
+         <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
+         <div class="avatar-overlay">📷</div>
+       </div>`
+    : `<div class="profile-avatar" style="border-color:${player.color||'var(--red)'}">${avatarHtml}</div>`;
+
+  const followBtn = !isOwnProfile && viewerPlayer
+    ? `<button id="btn-follow" class="btn-follow ${followStatus.isFollowing ? 'following' : 'not-following'}"
+         onclick="toggleFollow(${player.id})">
+         ${followStatus.isFollowing ? '✓ Suivi' : '+ Suivre'}
+       </button>`
+    : '';
+
+  document.getElementById('content').innerHTML = `
+    <!-- Header -->
+    <div class="profile-header">
+      ${avatarSection}
+      <div class="profile-info">
+        <div class="profile-pseudo">${player.pseudo}</div>
+        <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div>
+        ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">📷 Clique sur la photo pour la changer</div>' : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <div>
+          <div class="profile-elo">${player.elo}</div>
+          <div class="profile-elo-lbl">ELO</div>
+        </div>
+        ${followBtn}
+      </div>
+    </div>
+
+    <!-- Compteurs sociaux -->
+    <div class="social-row">
+      <div class="social-card" onclick="switchTab('following')">
+        <div class="social-val">${following.length}</div>
+        <div class="social-lbl">Suivis</div>
+      </div>
+      <div class="social-card" onclick="switchTab('followers')">
+        <div class="social-val">${followers.length}</div>
+        <div class="social-lbl">Abonnés</div>
+      </div>
+      <div class="social-card" onclick="switchTab('history')">
+        <div class="social-val">${games.length}</div>
+        <div class="social-lbl">Parties</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
+      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
+      <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
+    </div>
+
+    <!-- Winrate -->
+    <div class="winrate-card">
+      <div class="winrate-header">
+        <span class="wr-label">Winrate</span>
+        <span class="wr-pct">${wr}%</span>
+      </div>
+      <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs-row">
+      <button class="tab active" id="tab-history"   onclick="switchTab('history')">🎮 Parties</button>
+      <button class="tab"        id="tab-following"  onclick="switchTab('following')">👁 Suivis</button>
+      <button class="tab"        id="tab-followers"  onclick="switchTab('followers')">👥 Abonnés</button>
+    </div>
+
+    <!-- Panel : Historique -->
+    <div class="tab-panel show" id="panel-history">
+      ${renderGames(games, player)}
+    </div>
+
+    <!-- Panel : Following -->
+    <div class="tab-panel" id="panel-following">
+      ${renderPlayers(following, 'Aucun joueur suivi pour l\'instant.')}
+    </div>
+
+    <!-- Panel : Followers -->
+    <div class="tab-panel" id="panel-followers">
+      ${renderPlayers(followers, 'Aucun abonné pour l\'instant.')}
+    </div>
+  `;
+
+  setTimeout(() => { const f = document.getElementById('wr-fill'); if(f) f.style.width = wr+'%'; }, 100);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  ['history','following','followers'].forEach(t => {
+    document.getElementById('tab-' + t)?.classList.toggle('active', t === name);
+    const panel = document.getElementById('panel-' + t);
+    if (panel) { panel.classList.toggle('show', t === name); }
+  });
+}
+
+// ── Follow / Unfollow ─────────────────────────────────────────────────────────
+async function toggleFollow(targetId) {
+  if (!viewerPlayer) return location.href = '/';
+  const btn = document.getElementById('btn-follow');
+  const isFollowing = btn.classList.contains('following');
+  const method = isFollowing ? 'DELETE' : 'POST';
+
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/players/${targetId}/follow`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ followerId: viewerPlayer.id }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      btn.classList.toggle('following',     data.following);
+      btn.classList.toggle('not-following', !data.following);
+      btn.textContent = data.following ? '✓ Suivi' : '+ Suivre';
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Render helpers ────────────────────────────────────────────────────────────
 function renderGames(games, me) {
   if (!games.length) return '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>';
   return games.map(g => {
@@ -219,19 +400,38 @@ function renderGames(games, me) {
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
     const date      = g.finished_at
-      ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '—';
-    return `
-      <a class="game-row" href="/replay/${g.id}">
-        <div class="game-result ${rc}">${ri}</div>
-        <div class="game-vs">vs <span>${opponent}</span></div>
-        <div class="game-meta">
-          <div class="game-elo-change ${eloClass}">${eloStr}</div>
-          <div>${g.move_count} coups · ${g.duration}s</div>
-          <div>${date}</div>
-        </div>
-        <div class="replay-badge">▶ Replay</div>
-      </a>`;
+    return `<a class="game-row" href="/replay/${g.id}">
+      <div class="game-result ${rc}">${ri}</div>
+      <div class="game-vs">vs <span>${opponent}</span></div>
+      <div class="game-meta">
+        <div class="game-elo-change ${eloClass}">${eloStr}</div>
+        <div>${g.move_count} coups · ${g.duration}s</div>
+        <div>${date}</div>
+      </div>
+      <div class="replay-badge">▶ Replay</div>
+    </a>`;
+  }).join('');
+}
+
+function renderPlayers(players, emptyMsg) {
+  if (!players.length) return `<div class="empty-state">${emptyMsg}</div>`;
+  return players.map(p => {
+    const avatarHtml = p.avatar
+      ? `<img src="${p.avatar}" alt="${p.pseudo}">`
+      : p.pseudo[0].toUpperCase();
+    const color  = p.color || '#ff2d55';
+    const total  = (p.wins||0) + (p.losses||0) + (p.draws||0);
+    const wr     = total > 0 ? Math.round(((p.wins||0)/total)*100) : 0;
+    return `<a class="player-row" href="/profil?id=${p.id}">
+      <div class="player-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
+      <div class="player-mini-info">
+        <div class="player-mini-pseudo">${p.pseudo}</div>
+        <div class="player-mini-stats">${p.wins||0}V · ${p.losses||0}D · ${wr}% WR</div>
+      </div>
+      <div class="player-mini-elo">${p.elo}</div>
+    </a>`;
   }).join('');
 }
 
@@ -240,31 +440,21 @@ function handleAvatarUpload(input) {
   const file = input.files[0];
   if (!file) return;
   if (file.size > 2 * 1024 * 1024) return alert('Image trop lourde (max 2MB).');
-
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const base64 = e.target.result;
-
-    // Redimensionner à 200x200 max
-    const resized = await resizeImage(base64, 200);
-
+    const resized = await resizeImage(e.target.result, 200);
     const me = JSON.parse(localStorage.getItem('player') || '{}');
     const res = await fetch(`/api/players/${me.id}/avatar`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ avatar: resized }),
     });
-
     if (res.ok) {
-      // Mettre à jour l'affichage
-      const avatarEl = document.getElementById('avatar-el');
-      if (avatarEl) avatarEl.innerHTML = `<img src="${resized}" alt="avatar">`;
-      // Mettre à jour localStorage
+      const el = document.getElementById('avatar-el');
+      if (el) el.innerHTML = `<img src="${resized}" alt="avatar">`;
       me.avatar = resized;
       localStorage.setItem('player', JSON.stringify(me));
-    } else {
-      alert('Erreur lors de l\'upload.');
-    }
+    } else alert('Erreur upload.');
   };
   reader.readAsDataURL(file);
 }
@@ -291,6 +481,52 @@ function logout() {
   sessionStorage.removeItem('player');
   sessionStorage.removeItem('match');
   window.location.href = '/';
+}
+
+// ── Recherche joueur ──────────────────────────────────────────────────────────
+async function searchPlayer() {
+  const pseudo = document.getElementById('search-input').value.trim();
+  if (!pseudo) return;
+
+  const btn    = document.getElementById('search-btn');
+  const result = document.getElementById('search-result');
+  const error  = document.getElementById('search-error');
+
+  btn.disabled = true;
+  btn.textContent = '...';
+  result.classList.remove('show');
+  error.classList.remove('show');
+
+  try {
+    const res = await fetch(`/api/players/by-pseudo/${encodeURIComponent(pseudo)}`);
+    if (!res.ok) throw new Error();
+    const player = await res.json();
+
+    // Afficher le résultat
+    const color   = player.color || '#ff2d55';
+    const total   = (player.wins||0) + (player.losses||0) + (player.draws||0);
+    const wr      = total > 0 ? Math.round(((player.wins||0)/total)*100) : 0;
+    const avatar  = document.getElementById('sr-avatar');
+
+    avatar.style.background = color + '22';
+    avatar.style.border = `2px solid ${color}`;
+    avatar.style.color  = color;
+    avatar.innerHTML    = player.avatar
+      ? `<img src="${player.avatar}" style="width:100%;height:100%;object-fit:cover">`
+      : player.pseudo[0].toUpperCase();
+
+    document.getElementById('sr-pseudo').textContent = player.pseudo;
+    document.getElementById('sr-stats').textContent  = `${player.wins||0}V · ${player.losses||0}D · ${wr}% WR`;
+    document.getElementById('sr-elo').textContent    = player.elo;
+    document.getElementById('search-result').href    = `/profil?id=${player.id}`;
+    result.classList.add('show');
+
+  } catch {
+    error.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Chercher';
+  }
 }
 
 load();

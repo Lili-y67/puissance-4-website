@@ -55,6 +55,12 @@ db.exec(`
     active      INTEGER NOT NULL DEFAULT 1,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS follows (
+    follower_id  INTEGER NOT NULL REFERENCES players(id),
+    following_id INTEGER NOT NULL REFERENCES players(id),
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (follower_id, following_id)
+  );
   CREATE INDEX IF NOT EXISTS idx_moves_game     ON moves(game_id);
   CREATE INDEX IF NOT EXISTS idx_games_p1       ON games(player1_id);
   CREATE INDEX IF NOT EXISTS idx_games_p2       ON games(player2_id);
@@ -127,6 +133,25 @@ const mQ = {
   getByGame: db.prepare(`SELECT * FROM moves WHERE game_id = ? ORDER BY move_number ASC`),
 };
 
+// ── Follows ──────────────────────────────────────────────────────────────────
+const fQ = {
+  follow:         db.prepare(`INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)`),
+  unfollow:       db.prepare(`DELETE FROM follows WHERE follower_id = ? AND following_id = ?`),
+  isFollowing:    db.prepare(`SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?`),
+  getFollowing:   db.prepare(`
+    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color, p.wins, p.losses, p.draws
+    FROM follows f JOIN players p ON p.id = f.following_id
+    WHERE f.follower_id = ? ORDER BY p.elo DESC
+  `),
+  getFollowers:   db.prepare(`
+    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color
+    FROM follows f JOIN players p ON p.id = f.follower_id
+    WHERE f.following_id = ? ORDER BY f.created_at DESC
+  `),
+  countFollowing: db.prepare(`SELECT COUNT(*) as n FROM follows WHERE follower_id  = ?`),
+  countFollowers: db.prepare(`SELECT COUNT(*) as n FROM follows WHERE following_id = ?`),
+};
+
 // ── Boosts ────────────────────────────────────────────────────────────────────
 const bQ = {
   create:        db.prepare(`INSERT INTO boosts (multiplier, applied_by) VALUES (@multiplier, @applied_by)`),
@@ -166,4 +191,4 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, calcElo, finishGame };

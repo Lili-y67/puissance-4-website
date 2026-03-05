@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, pQ, gQ, mQ } = require('./db/db');
+const { initDb, pQ, gQ, mQ, fQ } = require('./db/db');
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -105,8 +105,37 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   if (!player) return res.status(404).json({ error: 'Introuvable' });
-  const games = gQ.getForPlayer.all(player.id, player.id);
-  res.json({ player: sanitize(player), games });
+  const games      = gQ.getForPlayer.all(player.id, player.id);
+  const following  = fQ.getFollowing.all(player.id);
+  const followers  = fQ.getFollowers.all(player.id);
+  res.json({ player: sanitize(player), games, following, followers });
+});
+
+// Follow / Unfollow
+app.post('/api/players/:id/follow', (req, res) => {
+  const { followerId } = req.body;
+  if (!followerId) return res.status(400).json({ error: 'followerId requis' });
+  const target = Number(req.params.id);
+  if (followerId === target) return res.status(400).json({ error: 'Tu ne peux pas te suivre toi-même.' });
+  fQ.follow.run(followerId, target);
+  res.json({ following: true, followers: fQ.countFollowers.get(target).n });
+});
+
+app.delete('/api/players/:id/follow', (req, res) => {
+  const { followerId } = req.body;
+  if (!followerId) return res.status(400).json({ error: 'followerId requis' });
+  const target = Number(req.params.id);
+  fQ.unfollow.run(followerId, target);
+  res.json({ following: false, followers: fQ.countFollowers.get(target).n });
+});
+
+app.get('/api/players/:id/follow-status', (req, res) => {
+  const { viewerId } = req.query;
+  const target = Number(req.params.id);
+  const isFollowing = viewerId ? !!fQ.isFollowing.get(Number(viewerId), target) : false;
+  const followers   = fQ.countFollowers.get(target).n;
+  const following   = fQ.countFollowing.get(target).n;
+  res.json({ isFollowing, followers, following });
 });
 
 app.get('/api/games/:id', (req, res) => {
