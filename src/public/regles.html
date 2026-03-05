@@ -464,32 +464,21 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <script>
 // ── Partie exemple animée ────────────────────────────────────────────────────
 // Séquence de coups : [col, joueur(1=rouge,2=jaune), commentaire]
-const MOVES = [
-  [3, 1, "Rouge prend le centre ! 🎯"],
-  [3, 2, "Jaune bloque le centre..."],
-  [2, 1, "Rouge construit vers la gauche"],
-  [4, 2, "Jaune occupe la droite"],
-  [1, 1, "Rouge continue son alignement..."],
-  [5, 2, "Jaune s'étale sur les ailes"],
-  [4, 1, "Rouge joue diagonal ! Jaune doit réagir ⚡"],
-  [2, 2, "Jaune essaie de contrer"],
-  [3, 1, "Rouge empile au centre"],
-  [1, 2, "Jaune tente sa chance à gauche"],
-  [5, 1, "Rouge menace sur deux fronts 😈"],
-  [0, 2, "Jaune panique et joue à l'extrême gauche..."],
-  [4, 1, "ROUGE GAGNE ! Diagonal parfait 🏆🎉"],
-];
+const EX_ROWS = 6;
+const EX_COLS = 7;
 
-// Grille 6x7
-const EX_ROWS = 6, EX_COLS = 7;
-let exGrid = [], exTimer = null;
+let exGrid = [];
+let currentPlayer = 1;
+let exTimer = null;
 
 function initExBoard() {
   exGrid = Array.from({length: EX_ROWS}, () => Array(EX_COLS).fill(0));
   const board = document.getElementById('ex-board');
   board.innerHTML = '';
+
   for (let r = 0; r < EX_ROWS; r++) {
     for (let c = 0; c < EX_COLS; c++) {
+
       const cell = document.createElement('div');
       cell.id = `ex-${r}-${c}`;
       cell.style.cssText = `
@@ -497,86 +486,150 @@ function initExBoard() {
         box-shadow:inset 0 2px 5px rgba(0,0,0,0.6);
         position:relative;overflow:hidden;
       `;
+
       const tok = document.createElement('div');
       tok.style.cssText = `
         position:absolute;inset:3px;border-radius:50%;
-        transform:scale(0);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        transform:scale(0);
+        transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
       `;
+
       cell.appendChild(tok);
       board.appendChild(cell);
     }
   }
 }
 
-function exDropToken(col, player) {
+function getAvailableRow(col) {
   for (let r = EX_ROWS - 1; r >= 0; r--) {
-    if (exGrid[r][col] === 0) {
-      exGrid[r][col] = player;
-      const cell = document.getElementById(`ex-${r}-${col}`);
-      const tok  = cell.firstChild;
-      if (player === 1) {
-        tok.style.background = 'radial-gradient(circle at 35% 30%, #ff6b85, #ff2d55)';
-        tok.style.boxShadow  = '0 0 14px rgba(255,45,85,0.6)';
-      } else {
-        tok.style.background = 'radial-gradient(circle at 35% 30%, #ffe566, #ffd60a)';
-        tok.style.boxShadow  = '0 0 14px rgba(255,214,10,0.6)';
-      }
-      void tok.offsetWidth;
-      tok.style.transform = 'scale(1)';
-      return r;
-    }
+    if (exGrid[r][col] === 0) return r;
   }
   return -1;
 }
 
-function highlightWin() {
-  // La diagonale gagnante : (5,1) (4,2) (3,3) (2,4) — Rouge
-  const WIN = [[5,1],[4,2],[3,3],[2,4]];
-  WIN.forEach(([r,c]) => {
-    const tok = document.getElementById(`ex-${r}-${c}`)?.firstChild;
-    if (tok) tok.style.animation = 'win-pulse 0.7s ease-in-out infinite alternate';
-  });
+function dropToken(col, player) {
+
+  const r = getAvailableRow(col);
+  if (r === -1) return null;
+
+  exGrid[r][col] = player;
+
+  const tok = document.getElementById(`ex-${r}-${col}`).firstChild;
+
+  if (player === 1) {
+    tok.style.background = 'radial-gradient(circle at 35% 30%, #ff6b85, #ff2d55)';
+    tok.style.boxShadow = '0 0 14px rgba(255,45,85,0.6)';
+  } else {
+    tok.style.background = 'radial-gradient(circle at 35% 30%, #ffe566, #ffd60a)';
+    tok.style.boxShadow = '0 0 14px rgba(255,214,10,0.6)';
+  }
+
+  void tok.offsetWidth;
+  tok.style.transform = 'scale(1)';
+
+  return [r,col];
+}
+
+function checkWin(r,c,player) {
+
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+
+  for (const [dr,dc] of dirs) {
+
+    let count = 1;
+
+    for (let i=1;i<4;i++){
+      const nr=r+dr*i,nc=c+dc*i;
+      if(exGrid[nr]?.[nc]===player) count++;
+      else break;
+    }
+
+    for (let i=1;i<4;i++){
+      const nr=r-dr*i,nc=c-dc*i;
+      if(exGrid[nr]?.[nc]===player) count++;
+      else break;
+    }
+
+    if(count>=4) return true;
+  }
+
+  return false;
+}
+
+function getValidColumns() {
+  const cols = [];
+  for (let c=0;c<EX_COLS;c++) {
+    if (getAvailableRow(c) !== -1) cols.push(c);
+  }
+  return cols;
+}
+
+function simulateMove(col,player) {
+
+  const r = getAvailableRow(col);
+  if (r === -1) return false;
+
+  exGrid[r][col] = player;
+  const win = checkWin(r,col,player);
+  exGrid[r][col] = 0;
+
+  return win;
+}
+
+function chooseMove(player) {
+
+  const opponent = player === 1 ? 2 : 1;
+  const valid = getValidColumns();
+
+  // gagner
+  for (const col of valid) {
+    if (simulateMove(col,player)) return col;
+  }
+
+  // bloquer
+  for (const col of valid) {
+    if (simulateMove(col,opponent)) return col;
+  }
+
+  // centre
+  if (valid.includes(3)) return 3;
+
+  // random
+  return valid[Math.floor(Math.random()*valid.length)];
+}
+
+function playBotTurn() {
+
+  const col = chooseMove(currentPlayer);
+  const pos = dropToken(col,currentPlayer);
+
+  if (!pos) return;
+
+  const [r,c] = pos;
+
+  if (checkWin(r,c,currentPlayer)) {
+
+    document.getElementById('ex-turn-txt').textContent =
+      currentPlayer === 1 ? "🏆 Rouge gagne !" : "🏆 Jaune gagne !";
+
+    return;
+  }
+
+  currentPlayer = currentPlayer === 1 ? 2 : 1;
+
+  exTimer = setTimeout(playBotTurn, 700 + Math.random()*500);
 }
 
 function startExample() {
+
   clearTimeout(exTimer);
+
   initExBoard();
-  document.getElementById('ex-replay-btn').style.display = 'none';
-  document.getElementById('ex-comment').textContent = 'La partie commence...';
+  currentPlayer = 1;
 
-  let i = 0;
-  function playNext() {
-    if (i >= MOVES.length) {
-      // Fin — highlight + bouton rejouer
-      highlightWin();
-      document.getElementById('ex-turn-txt').textContent = '🏆 Rouge gagne !';
-      document.getElementById('ex-dot').style.background = '#ffd60a';
-      document.getElementById('ex-dot').style.boxShadow = '0 0 6px rgba(255,214,10,0.8)';
-      document.getElementById('ex-comment').style.color = '#ff2d55';
-      document.getElementById('ex-replay-btn').style.display = 'block';
-      return;
-    }
+  document.getElementById('ex-turn-txt').textContent = "🤖 Simulation IA vs IA";
 
-    const [col, player, comment] = MOVES[i];
-    exDropToken(col, player);
-
-    // Mettre à jour commentaire + indicateur tour
-    document.getElementById('ex-comment').textContent = comment;
-    document.getElementById('ex-comment').style.color = player === 1 ? 'rgba(255,45,85,0.9)' : 'rgba(255,214,10,0.9)';
-
-    const nextPlayer = player === 1 ? 2 : 1;
-    const isLast = i === MOVES.length - 1;
-    if (!isLast) {
-      document.getElementById('ex-turn-txt').textContent = nextPlayer === 1 ? 'Tour de Rouge' : 'Tour de Jaune';
-      document.getElementById('ex-dot').style.background = nextPlayer === 1 ? 'var(--red)' : 'var(--yellow)';
-      document.getElementById('ex-dot').style.boxShadow = nextPlayer === 1 ? '0 0 6px var(--red-glow)' : '0 0 6px var(--yel-glow)';
-    }
-
-    i++;
-    exTimer = setTimeout(playNext, 1100);
-  }
-
-  exTimer = setTimeout(playNext, 600);
+  exTimer = setTimeout(playBotTurn,800);
 }
 
 // Démarrer automatiquement quand visible
