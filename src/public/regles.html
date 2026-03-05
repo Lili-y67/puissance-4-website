@@ -619,6 +619,24 @@ function playBotTurn() {
 
   exTimer = setTimeout(playBotTurn, 700 + Math.random()*500);
 }
+const BOT_PREFIX = [
+"Neural", "Quantum", "Alpha", "Omega", "Titan",
+"Cyber", "Nova", "Apex", "Hyper", "Fusion",
+"Orion", "Atlas", "Zenith", "Pulse", "Vector"
+];
+
+const BOT_CORE = [
+"AI", "Bot", "Engine", "Core", "Mind",
+"Solver", "Matrix", "Brain", "Logic", "Drive"
+];
+
+function randomBotName() {
+  const p = BOT_PREFIX[Math.floor(Math.random()*BOT_PREFIX.length)];
+  const c = BOT_CORE[Math.floor(Math.random()*BOT_CORE.length)];
+  const v = (Math.random()*3+1).toFixed(1);
+
+  return `${p} ${c} v${v}`;
+}
 const bot1 = randomBotName();
 let bot2;
 
