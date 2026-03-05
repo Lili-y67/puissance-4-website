@@ -30,6 +30,7 @@ app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/ind
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
 app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
+app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 
 // ── API ────────────────────────────────────────────────────────────────────────
 app.post('/api/players', (req, res) => {

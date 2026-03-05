@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Règles</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:       #06060e;
+  --surface:  #0d0d1c;
+  --surface2: #13132a;
+  --border:   rgba(255,255,255,0.06);
+  --red:      #ff2d55;
+  --red-dim:  rgba(255,45,85,0.15);
+  --red-glow: rgba(255,45,85,0.4);
+  --yellow:   #ffd60a;
+  --yel-dim:  rgba(255,214,10,0.12);
+  --yel-glow: rgba(255,214,10,0.4);
+  --green:    #30d158;
+  --text:     #eeeef5;
+  --muted:    rgba(238,238,245,0.38);
+  --accent:   #4c6ef5;
+}
+
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0;
+  background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: grid-drift 20s linear infinite;
+}
+@keyframes grid-drift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+
+.scanlines {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
+}
+
+/* ── Layout ── */
+.page {
+  position: relative; z-index: 2;
+  max-width: 560px; margin: 0 auto;
+  padding: 32px 16px 64px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── Nav ── */
+.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.logo-sm { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: 2px; text-decoration: none; color: var(--text); }
+.logo-sm span { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+.btn-back {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; padding: 7px 16px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  cursor: pointer; text-decoration: none; transition: all 0.2s;
+}
+.btn-back:hover { border-color: var(--muted); color: var(--text); }
+
+/* ── Hero ── */
+.hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes slide-in { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+.hero-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; color: var(--red); }
+.hero-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(52px, 12vw, 80px); font-weight: 900; letter-spacing: -1px; line-height: 0.9; text-transform: uppercase; }
+.hero-title span { color: var(--red); text-shadow: 0 0 40px var(--red-glow); }
+.hero-sub { font-size: 13px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+/* ── Mini board demo ── */
+.board-demo {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+  background: #0a0a18; border-radius: 14px; padding: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  animation: slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;
+}
+.bd-cell { aspect-ratio: 1; border-radius: 50%; background: #07071a; box-shadow: inset 0 2px 6px rgba(0,0,0,0.6); position: relative; overflow: hidden; }
+.bd-cell .tok { position: absolute; inset: 3px; border-radius: 50%; transform: scale(0); }
+.bd-cell.r .tok { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 12px var(--red-glow); transform: scale(1); }
+.bd-cell.y .tok { background: radial-gradient(circle at 35% 30%, #ffe566, var(--yellow)); box-shadow: 0 0 12px var(--yel-glow); transform: scale(1); }
+.bd-cell.rw .tok { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 12px var(--red-glow); transform: scale(1); animation: win-pulse 0.7s ease-in-out infinite alternate; }
+@keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.12); filter: brightness(1.4); } }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+  padding: 24px 22px; display: flex; flex-direction: column; gap: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.card:nth-child(2) { animation: slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
+.card:nth-child(3) { animation: slide-in 0.5s 0.2s  cubic-bezier(0.22,1,0.36,1) both; }
+.card:nth-child(4) { animation: slide-in 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both; }
+.card:nth-child(5) { animation: slide-in 0.5s 0.3s  cubic-bezier(0.22,1,0.36,1) both; }
+.card:nth-child(6) { animation: slide-in 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+
+.card-header { display: flex; align-items: center; gap: 12px; }
+.card-icon { font-size: 24px; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.card-icon.red    { background: var(--red-dim);  border: 1px solid rgba(255,45,85,0.2); }
+.card-icon.yellow { background: var(--yel-dim);  border: 1px solid rgba(255,214,10,0.2); }
+.card-icon.green  { background: rgba(48,209,88,0.1); border: 1px solid rgba(48,209,88,0.2); }
+.card-icon.blue   { background: rgba(76,110,245,0.1); border: 1px solid rgba(76,110,245,0.2); }
+.card-icon.purple { background: rgba(191,90,242,0.1); border: 1px solid rgba(191,90,242,0.2); }
+
+.card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+.card-sub   { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 1px; }
+
+.card-body { font-size: 14px; line-height: 1.7; color: rgba(238,238,245,0.75); }
+.card-body strong { color: var(--text); font-weight: 600; }
+.card-body .hi-red    { color: var(--red);    font-weight: 600; }
+.card-body .hi-yellow { color: var(--yellow); font-weight: 600; }
+.card-body .hi-green  { color: var(--green);  font-weight: 600; }
+
+/* ── Rule steps ── */
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step  { display: flex; align-items: flex-start; gap: 12px; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+  background: var(--red-dim); border: 1px solid rgba(255,45,85,0.25);
+  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 800;
+  color: var(--red); display: flex; align-items: center; justify-content: center;
+  margin-top: 1px;
+}
+.step-text { font-size: 14px; line-height: 1.6; color: rgba(238,238,245,0.75); }
+.step-text strong { color: var(--text); }
+
+/* ── Win examples ── */
+.win-examples { display: flex; flex-direction: column; gap: 8px; }
+.win-ex {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.win-ex-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.win-mini { display: flex; gap: 5px; align-items: center; }
+.win-mini .t { width: 28px; height: 28px; border-radius: 50%; background: #07071a; flex-shrink:0; }
+.win-mini .t.r { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 10px var(--red-glow); }
+.win-mini .t.y { background: radial-gradient(circle at 35% 30%, #ffe566, var(--yellow)); box-shadow: 0 0 10px var(--yel-glow); }
+.win-mini .t.e { background: #07071a; border: 1px solid var(--border); }
+.win-mini-col { display: flex; flex-direction: column; gap: 5px; }
+
+/* ── Elo section ── */
+.elo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.elo-item {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; text-align: center;
+}
+.elo-val { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+.elo-val.pos { color: var(--green); }
+.elo-val.neg { color: var(--red); }
+.elo-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; }
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ── Tips ── */
+.tips { display: flex; flex-direction: column; gap: 8px; }
+.tip { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: rgba(238,238,245,0.7); }
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.tip strong { color: var(--text); }
+
+/* ── CTA ── */
+.cta {
+  background: linear-gradient(135deg, var(--red-dim), var(--yel-dim));
+  border: 1px solid rgba(255,45,85,0.2); border-radius: 18px; padding: 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
+  animation: slide-in 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+.cta-title { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+.cta-sub { font-size: 13px; color: var(--muted); }
+.btn-play {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase; padding: 14px 32px; border-radius: 12px;
+  background: var(--red); color: #fff; border: none; cursor: pointer;
+  box-shadow: 0 4px 24px var(--red-glow); text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+}
+.btn-play:hover { background: #ff4567; transform: translateY(-2px); box-shadow: 0 8px 32px var(--red-glow); }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
+
+<div class="page">
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a class="logo-sm" href="/">Puissance <span>4</span></a>
+    <a class="btn-back" href="/">← Retour</a>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">Guide du joueur</div>
+    <div class="hero-title">Les <span>règles</span></div>
+    <div class="hero-sub">Tout ce qu'il faut savoir pour dominer</div>
+  </div>
+
+  <!-- Board demo animé -->
+  <div class="board-demo" id="board-demo"></div>
+
+  <!-- Objectif -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon red">🎯</div>
+      <div>
+        <div class="card-title">Objectif</div>
+        <div class="card-sub">Le but du jeu</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Aligne <strong>4 jetons de ta couleur</strong> consécutivement avant ton adversaire.
+      L'alignement peut être <span class="hi-red">horizontal</span>, <span class="hi-yellow">vertical</span>
+      ou <span class="hi-green">diagonal</span> — dans n'importe quelle direction.
+    </div>
+  </div>
+
+  <!-- Déroulement -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon yellow">⚡</div>
+      <div>
+        <div class="card-title">Déroulement</div>
+        <div class="card-sub">Comment se joue une partie</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">La partie se joue sur une grille de <strong>6 lignes × 7 colonnes</strong>.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Les deux joueurs jouent <strong>à tour de rôle</strong>. Le joueur 1 commence toujours.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">À ton tour, <strong>clique sur une colonne</strong> pour y faire tomber ton jeton. Il tombe jusqu'à la case libre la plus basse.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Tu ne peux <strong>pas choisir la hauteur</strong> — la gravité fait tout !</div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-text">La partie se termine quand un joueur aligne 4 jetons, ou quand la grille est <strong>entièrement remplie</strong> (match nul).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alignements gagnants -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon green">🏆</div>
+      <div>
+        <div class="card-title">Alignements gagnants</div>
+        <div class="card-sub">4 façons de gagner</div>
+      </div>
+    </div>
+    <div class="win-examples">
+      <!-- Horizontal -->
+      <div class="win-ex">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">➡️</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">Horizontal</div>
+            <div style="font-size:11px;color:var(--muted)">4 de suite sur une ligne</div>
+          </div>
+        </div>
+        <div class="win-mini">
+          <div class="t r"></div><div class="t r"></div><div class="t r"></div><div class="t r"></div>
+        </div>
+      </div>
+      <!-- Vertical -->
+      <div class="win-ex">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">⬆️</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">Vertical</div>
+            <div style="font-size:11px;color:var(--muted)">4 de suite dans une colonne</div>
+          </div>
+        </div>
+        <div class="win-mini-col">
+          <div class="t r"></div><div class="t r"></div><div class="t r"></div><div class="t r"></div>
+        </div>
+      </div>
+      <!-- Diagonal montant -->
+      <div class="win-ex">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">↗️</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">Diagonal montant</div>
+            <div style="font-size:11px;color:var(--muted)">4 en diagonale vers le haut</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,28px);grid-template-rows:repeat(4,28px);gap:4px;flex-shrink:0">
+          <div class="t e"></div><div class="t e"></div><div class="t e"></div><div class="t r"></div>
+          <div class="t e"></div><div class="t e"></div><div class="t r"></div><div class="t e"></div>
+          <div class="t e"></div><div class="t r"></div><div class="t e"></div><div class="t e"></div>
+          <div class="t r"></div><div class="t e"></div><div class="t e"></div><div class="t e"></div>
+        </div>
+      </div>
+      <!-- Diagonal descendant -->
+      <div class="win-ex">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">↘️</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text)">Diagonal descendant</div>
+            <div style="font-size:11px;color:var(--muted)">4 en diagonale vers le bas</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,28px);grid-template-rows:repeat(4,28px);gap:4px;flex-shrink:0">
+          <div class="t r"></div><div class="t e"></div><div class="t e"></div><div class="t e"></div>
+          <div class="t e"></div><div class="t r"></div><div class="t e"></div><div class="t e"></div>
+          <div class="t e"></div><div class="t e"></div><div class="t r"></div><div class="t e"></div>
+          <div class="t e"></div><div class="t e"></div><div class="t e"></div><div class="t r"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Système ELO -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon blue">📊</div>
+      <div>
+        <div class="card-title">Système ELO</div>
+        <div class="card-sub">Comment évolue ton classement</div>
+      </div>
+    </div>
+    <div class="card-body" style="margin-bottom:4px">
+      Chaque joueur commence à <strong>1000 ELO</strong>. Après chaque partie, ton score évolue selon
+      la force de ton adversaire — battre un joueur plus fort rapporte <span class="hi-green">plus de points</span>,
+      perdre contre un joueur plus faible en <span class="hi-red">coûte davantage</span>.
+    </div>
+    <div class="elo-grid">
+      <div class="elo-item">
+        <div class="elo-val pos">+16 à +30</div>
+        <div class="elo-lbl">Points gagnés (victoire)</div>
+      </div>
+      <div class="elo-item">
+        <div class="elo-val neg">-16 à -30</div>
+        <div class="elo-lbl">Points perdus (défaite)</div>
+      </div>
+      <div class="elo-item">
+        <div class="elo-val" style="color:var(--muted)">±0 à ±5</div>
+        <div class="elo-lbl">Match nul</div>
+      </div>
+      <div class="elo-item">
+        <div class="elo-val" style="color:var(--accent)">1000</div>
+        <div class="elo-lbl">ELO de départ</div>
+      </div>
+    </div>
+    <div class="card-body" style="font-size:13px">
+      Si ton adversaire se <strong>déconnecte</strong> en cours de partie, tu remportes automatiquement la victoire et les points ELO associés.
+    </div>
+  </div>
+
+  <!-- Conseils stratégiques -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon purple">🧠</div>
+      <div>
+        <div class="card-title">Stratégie</div>
+        <div class="card-sub">Conseils pour progresser</div>
+      </div>
+    </div>
+    <div class="tips">
+      <div class="tip">
+        <div class="tip-icon">🏗️</div>
+        <div><strong>Contrôle le centre.</strong> Les colonnes du milieu offrent le plus de possibilités d'alignement — occupe-les en priorité.</div>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">🔥</div>
+        <div><strong>Crée des doubles menaces.</strong> Si tu forces ton adversaire à bloquer deux alignements en même temps, l'un des deux sera gagnant.</div>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">🛡️</div>
+        <div><strong>Bloque à temps.</strong> Si ton adversaire a 3 jetons alignés, bloquer est prioritaire sur ton propre alignement.</div>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">⚠️</div>
+        <div><strong>Attention aux colonnes pleines.</strong> Une colonne remplie ne peut plus recevoir de jetons — anticipe les espaces disponibles.</div>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">👁️</div>
+        <div><strong>Pense en diagonale.</strong> Les alignements diagonaux sont les plus difficiles à voir — et donc les plus dangereux !</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Partie exemple animée -->
+  <div class="card" id="card-example">
+    <div class="card-header">
+      <div class="card-icon red">🎮</div>
+      <div>
+        <div class="card-title">Partie exemple</div>
+        <div class="card-sub">Rouge gagne en diagonal — regarde !</div>
+      </div>
+    </div>
+
+    <!-- Joueurs -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,45,85,0.2);border-radius:10px;padding:10px 12px">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red-glow);flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:600">Rouge</div>
+          <div style="font-size:11px;color:var(--muted)">Joueur 1</div>
+        </div>
+      </div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:var(--muted);letter-spacing:3px">VS</div>
+      <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,214,10,0.2);border-radius:10px;padding:10px 12px">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px var(--yel-glow);flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:600">Jaune</div>
+          <div style="font-size:11px;color:var(--muted)">Joueur 2</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commentaire du coup -->
+    <div id="ex-comment" style="font-size:13px;color:var(--muted);min-height:18px;text-align:center;transition:all 0.3s">
+      Prêt à jouer...
+    </div>
+
+    <!-- Board exemple -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div id="ex-board" style="
+        display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
+        background:#0a0a18;border-radius:14px;padding:8px;
+        border:1px solid var(--border);width:100%;
+        box-shadow:0 12px 32px rgba(0,0,0,0.5);
+      "></div>
+      <!-- Indicateur tour -->
+      <div id="ex-turn" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
+        <div id="ex-dot" style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red-glow)"></div>
+        <span id="ex-turn-txt">Tour de Rouge</span>
+      </div>
+    </div>
+
+    <!-- Bouton rejouer -->
+    <button id="ex-replay-btn" onclick="startExample()" style="
+      display:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+      letter-spacing:2px;text-transform:uppercase;padding:10px 20px;border-radius:10px;
+      background:var(--red-dim);border:1px solid rgba(255,45,85,0.3);color:var(--red);
+      cursor:pointer;transition:all 0.2s;align-self:center;
+    " onmouseover="this.style.background='rgba(255,45,85,0.25)'" onmouseout="this.style.background='var(--red-dim)'">
+      🔄 Revoir la partie
+    </button>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta">
+    <div class="cta-title">Prêt à jouer ?</div>
+    <div class="cta-sub">Mets ta théorie en pratique !</div>
+    <a class="btn-play" href="/">⚡ Jouer maintenant</a>
+  </div>
+
+</div>
+
+<script>
+// ── Partie exemple animée ────────────────────────────────────────────────────
+// Séquence de coups : [col, joueur(1=rouge,2=jaune), commentaire]
+const MOVES = [
+  [3, 1, "Rouge prend le centre ! 🎯"],
+  [3, 2, "Jaune bloque le centre..."],
+  [2, 1, "Rouge construit vers la gauche"],
+  [4, 2, "Jaune occupe la droite"],
+  [1, 1, "Rouge continue son alignement..."],
+  [5, 2, "Jaune s'étale sur les ailes"],
+  [4, 1, "Rouge joue diagonal ! Jaune doit réagir ⚡"],
+  [2, 2, "Jaune essaie de contrer"],
+  [3, 1, "Rouge empile au centre"],
+  [1, 2, "Jaune tente sa chance à gauche"],
+  [5, 1, "Rouge menace sur deux fronts 😈"],
+  [0, 2, "Jaune panique et joue à l'extrême gauche..."],
+  [4, 1, "ROUGE GAGNE ! Diagonal parfait 🏆🎉"],
+];
+
+// Grille 6x7
+const EX_ROWS = 6, EX_COLS = 7;
+let exGrid = [], exTimer = null;
+
+function initExBoard() {
+  exGrid = Array.from({length: EX_ROWS}, () => Array(EX_COLS).fill(0));
+  const board = document.getElementById('ex-board');
+  board.innerHTML = '';
+  for (let r = 0; r < EX_ROWS; r++) {
+    for (let c = 0; c < EX_COLS; c++) {
+      const cell = document.createElement('div');
+      cell.id = `ex-${r}-${c}`;
+      cell.style.cssText = `
+        aspect-ratio:1;border-radius:50%;background:#07071a;
+        box-shadow:inset 0 2px 5px rgba(0,0,0,0.6);
+        position:relative;overflow:hidden;
+      `;
+      const tok = document.createElement('div');
+      tok.style.cssText = `
+        position:absolute;inset:3px;border-radius:50%;
+        transform:scale(0);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      `;
+      cell.appendChild(tok);
+      board.appendChild(cell);
+    }
+  }
+}
+
+function exDropToken(col, player) {
+  for (let r = EX_ROWS - 1; r >= 0; r--) {
+    if (exGrid[r][col] === 0) {
+      exGrid[r][col] = player;
+      const cell = document.getElementById(`ex-${r}-${col}`);
+      const tok  = cell.firstChild;
+      if (player === 1) {
+        tok.style.background = 'radial-gradient(circle at 35% 30%, #ff6b85, #ff2d55)';
+        tok.style.boxShadow  = '0 0 14px rgba(255,45,85,0.6)';
+      } else {
+        tok.style.background = 'radial-gradient(circle at 35% 30%, #ffe566, #ffd60a)';
+        tok.style.boxShadow  = '0 0 14px rgba(255,214,10,0.6)';
+      }
+      void tok.offsetWidth;
+      tok.style.transform = 'scale(1)';
+      return r;
+    }
+  }
+  return -1;
+}
+
+function highlightWin() {
+  // La diagonale gagnante : (5,1) (4,2) (3,3) (2,4) — Rouge
+  const WIN = [[5,1],[4,2],[3,3],[2,4]];
+  WIN.forEach(([r,c]) => {
+    const tok = document.getElementById(`ex-${r}-${c}`)?.firstChild;
+    if (tok) tok.style.animation = 'win-pulse 0.7s ease-in-out infinite alternate';
+  });
+}
+
+function startExample() {
+  clearTimeout(exTimer);
+  initExBoard();
+  document.getElementById('ex-replay-btn').style.display = 'none';
+  document.getElementById('ex-comment').textContent = 'La partie commence...';
+
+  let i = 0;
+  function playNext() {
+    if (i >= MOVES.length) {
+      // Fin — highlight + bouton rejouer
+      highlightWin();
+      document.getElementById('ex-turn-txt').textContent = '🏆 Rouge gagne !';
+      document.getElementById('ex-dot').style.background = '#ffd60a';
+      document.getElementById('ex-dot').style.boxShadow = '0 0 6px rgba(255,214,10,0.8)';
+      document.getElementById('ex-comment').style.color = '#ff2d55';
+      document.getElementById('ex-replay-btn').style.display = 'block';
+      return;
+    }
+
+    const [col, player, comment] = MOVES[i];
+    exDropToken(col, player);
+
+    // Mettre à jour commentaire + indicateur tour
+    document.getElementById('ex-comment').textContent = comment;
+    document.getElementById('ex-comment').style.color = player === 1 ? 'rgba(255,45,85,0.9)' : 'rgba(255,214,10,0.9)';
+
+    const nextPlayer = player === 1 ? 2 : 1;
+    const isLast = i === MOVES.length - 1;
+    if (!isLast) {
+      document.getElementById('ex-turn-txt').textContent = nextPlayer === 1 ? 'Tour de Rouge' : 'Tour de Jaune';
+      document.getElementById('ex-dot').style.background = nextPlayer === 1 ? 'var(--red)' : 'var(--yellow)';
+      document.getElementById('ex-dot').style.boxShadow = nextPlayer === 1 ? '0 0 6px var(--red-glow)' : '0 0 6px var(--yel-glow)';
+    }
+
+    i++;
+    exTimer = setTimeout(playNext, 1100);
+  }
+
+  exTimer = setTimeout(playNext, 600);
+}
+
+// Démarrer automatiquement quand visible
+const exObserver = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) {
+    startExample();
+    exObserver.disconnect();
+  }
+}, { threshold: 0.3 });
+exObserver.observe(document.getElementById('card-example'));
+
+// Board demo — position de démonstration avec 4 alignés animés
+const GRID = [
+  [0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0],
+  [0,0,0,'y',0,0,0],
+  [0,0,'y','rw','y',0,0],
+  [0,'r','r','rw','r','y',0],
+  ['r','y','y','rw','y','r','y'],
+];
+
+const demo = document.getElementById('board-demo');
+GRID.forEach(row => {
+  row.forEach(cell => {
+    const d = document.createElement('div');
+    d.className = 'bd-cell' + (cell ? ' ' + cell : '');
+    const t = document.createElement('div');
+    t.className = 'tok';
+    d.appendChild(t);
+    demo.appendChild(d);
+  });
+});
+</script>
+</body>
+</html>
