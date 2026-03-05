@@ -11,8 +11,7 @@ class GameManager {
   }
 
   create(p1, p2) {
-    // gQ.create retourne directement lastId() avec sql.js
-    const gameId = gQ.create(p1.id, p2.id);
+    const gameId = gQ.create.run({ p1: p1.id, p2: p2.id }).lastInsertRowid;
 
     const state = {
       id:         gameId,
@@ -50,8 +49,7 @@ class GameManager {
     state.moveCount++;
     state.lastMoveAt = now;
 
-    // ✅ mQ.insert est une fonction directe avec sql.js
-    mQ.insert({
+    mQ.insert.run({
       game_id:     gameId,
       player_id:   state.players[playerNum].id,
       col,

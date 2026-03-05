@@ -32,12 +32,16 @@ app.post('/api/players', (req, res) => {
   const { pseudo } = req.body;
   if (!pseudo?.trim()) return res.status(400).json({ error: 'pseudo requis' });
   try {
-    const player = pQ.upsert(pseudo.trim());
+    let player = pQ.upsert.get({ pseudo: pseudo.trim() });
+    if (!player) player = pQ.getByPseudo.get(pseudo.trim()); // fallback si conflit
     const { color } = req.body;
-    if (color && /^#[0-9a-fA-F]{6}$/.test(color)) pQ.updateColor(player.id, color);
-    res.json(pQ.getById(player.id));
+    if (color && /^#[0-9a-fA-F]{6}$/.test(color)) pQ.updateColor.run({ color, id: player.id });
+    res.json(pQ.getById.get(player.id));
   }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  catch (e) {
+    console.error('[POST /api/players]', e);
+    res.status(500).json({ error: e.message, stack: e.stack });
+  }
 });
 
 // Update player color/theme
@@ -45,42 +49,42 @@ app.patch('/api/players/:id/color', (req, res) => {
   const { color } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color))
     return res.status(400).json({ error: 'couleur invalide' });
-  pQ.updateColor(Number(req.params.id), color);
+  pQ.updateColor.run({ color, id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
 app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
-  const p = pQ.getByPseudo(req.params.pseudo);
+  const p = pQ.getByPseudo.get(req.params.pseudo);
   if (!p) return res.status(404).json({ error: 'Introuvable' });
   res.json(p);
 });
 
 app.get('/api/players/:id', (req, res) => {
-  const player = pQ.getById(Number(req.params.id));
+  const player = pQ.getById.get(Number(req.params.id));
   if (!player) return res.status(404).json({ error: 'Introuvable' });
-  const games = gQ.getForPlayer(player.id);
+  const games = gQ.getForPlayer.all(player.id, player.id);
   res.json({ player, games });
 });
 
 app.get('/api/games/:id', (req, res) => {
-  const game = gQ.getById(Number(req.params.id));
+  const game = gQ.getById.get(Number(req.params.id));
   if (!game) return res.status(404).json({ error: 'Introuvable' });
   res.json(game);
 });
 
 app.get('/api/games/:id/moves', (req, res) => {
-  const game = gQ.getById(Number(req.params.id));
+  const game = gQ.getById.get(Number(req.params.id));
   if (!game) return res.status(404).json({ error: 'Introuvable' });
-  res.json({ game, moves: mQ.getByGame(Number(req.params.id)) });
+  res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)) });
 });
 
-app.get('/api/leaderboard', (_, res) => res.json(pQ.leaderboard()));
+app.get('/api/leaderboard', (_, res) => res.json(pQ.leaderboard.all()));
 
 // ── Socket.io ──────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
 
   socket.on('identify', ({ playerId }) => {
-    const player = pQ.getById(playerId);
+    const player = pQ.getById.get(playerId);
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
     socket.playerId   = playerId;
     socket.playerData = player;
@@ -89,7 +93,7 @@ io.on('connection', socket => {
 
   socket.on('queue_join', () => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
-    socket.playerData = pQ.getById(socket.playerId); // refresh elo
+    socket.playerData = pQ.getById.get(socket.playerId); // refresh elo
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
     if (!joined) return socket.emit('error', { message: 'Déjà en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });
@@ -130,7 +134,7 @@ io.on('connection', socket => {
   socket.on('color_update', ({ color }) => {
     if (!socket.playerData || !color) return;
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    pQ.updateColor(socket.playerData.id, color);
+    pQ.updateColor.run({ color, id: socket.playerData.id });
     socket.playerData.color = color;
     const game = gm.getBySocket(socket.id);
     if (game) io.to('game:' + game.id).emit('color_updated', { playerId: socket.playerData.id, color });
