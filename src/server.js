@@ -99,41 +99,24 @@ io.on('connection', socket => {
 
   socket.on('queue_leave', () => { mm.leave(socket.id); socket.emit('queue_left'); });
 
-  // Reconnexion à une partie existante après refresh/redirect
+  // Reconnexion à une partie existante après redirect home → /game
   socket.on('rejoin_game', ({ gameId }) => {
-    const state = gm.games.get(gameId);
-    if (!state || state.status !== 'active') {
-      // Partie terminée ou inexistante → retour home
-      return socket.emit('game_not_found');
-    }
-
-    // Retrouver le side du joueur
-    const side = state.players[1].id === socket.playerId ? 1
-               : state.players[2].id === socket.playerId ? 2
-               : null;
-
-    if (!side) return socket.emit('game_not_found');
-
-    // Mettre à jour le socketId dans la partie
-    state.players[side].socketId = socket.id;
-    gm.socketToGame.set(socket.id, gameId);
-
-    // Rejoindre la room Socket.io
+    // Rejoindre la room Socket.io pour recevoir les events move_played/game_over
     socket.join('game:' + gameId);
 
-    // Renvoyer les données du match au client
-    socket.emit('game_rejoined', {
-      gameId,
-      yourSide: side,
-      startsIn: 0, // déjà commencé
-      players: {
-        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55' },
-        2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a' },
-      },
-      // Renvoyer l'état actuel du board
-      board: state.board.grid,
-      currentTurn: state.current,
-    });
+    // Si la partie est encore en RAM, mettre à jour le socketId
+    const state = gm.games.get(gameId);
+    if (state && state.status === 'active') {
+      const side = state.players[1].id === socket.playerId ? 1
+                 : state.players[2].id === socket.playerId ? 2
+                 : null;
+      if (side) {
+        state.players[side].socketId = socket.id;
+        gm.socketToGame.set(socket.id, gameId);
+      }
+    }
+    // Le client setup son lobby directement depuis sessionStorage
+    // donc pas besoin de renvoyer game_rejoined
   });
 
   socket.on('play_move', ({ col }) => {

@@ -292,12 +292,10 @@ window.addEventListener('DOMContentLoaded', () => {
   myPlayer = JSON.parse(pData);
 
   if (mData) {
-    // Match trouvé depuis la home → on garde le match en mémoire
-    // et on le supprime SEULEMENT après setupLobby réussi
     const match = JSON.parse(mData);
+    sessionStorage.removeItem('match');
     connectSocket(match);
   } else {
-    // Arrivée directe sur /game sans match → retour home
     location.href = '/';
   }
 });
@@ -313,52 +311,20 @@ function connectSocket(pendingMatch) {
   socket.on('identified', (p) => {
     myPlayer = p;
     if (pendingMatch) {
-      // On dit au serveur qu'on rejoint cette partie
+      // Rejoindre la room côté serveur
       socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
+      // On setup le lobby côté client directement avec les données déjà connues
+      // Sans attendre le serveur — on a déjà tout dans pendingMatch
+      setupLobby(pendingMatch);
     }
   });
 
-  // Serveur confirme le rejoin
-  socket.on('game_rejoined', (data) => {
-    sessionStorage.removeItem('match');
-    if (data.startsIn === 0) {
-      // Partie déjà en cours → restore directement sans lobby
-      lobbyData   = data;
-      gameId      = data.gameId;
-      mySide      = data.yourSide;
-      currentTurn = data.currentTurn;
-      applyColors(data.players[1].color || '#ff2d55', data.players[2].color || '#ffd60a');
-      document.getElementById('lobby-overlay').classList.add('hidden');
-      document.getElementById('name-p1').textContent = data.players[1].pseudo;
-      document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
-      document.getElementById('name-p2').textContent = data.players[2].pseudo;
-      document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
-      gameOver = false;
-      renderBoard();
-      // Restaurer les tokens déjà joués
-      if (data.board) {
-        for (let r = 0; r < 6; r++) {
-          for (let c = 0; c < 7; c++) {
-            if (data.board[r][c]) applyToken(r, c, data.board[r][c]);
-          }
-        }
-      }
-      updateTurnUI();
-    } else {
-      setupLobby(data);
-    }
-  });
+  // Serveur confirme le rejoin (optionnel, on l'ignore si lobby déjà setup)
+  socket.on('game_rejoined', () => { /* déjà géré via setupLobby */ });
+  socket.on('game_not_found', () => { location.href = '/'; });
 
-  socket.on('game_not_found', () => {
-    sessionStorage.removeItem('match');
-    location.href = '/';
-  });
-
-  // Si le match_found arrive (cas normal depuis la queue)
-  socket.on('match_found', (d) => {
-    sessionStorage.removeItem('match');
-    setupLobby(d);
-  });
+  // match_found depuis la queue (cas où on arrive sans pendingMatch)
+  socket.on('match_found', (d) => setupLobby(d));
 
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
