@@ -739,7 +739,7 @@ function showError(msg) {
 //  SOCKET & QUEUE
 // ═══════════════════════════════════════════════════════════════════
 function connectAndQueue() {
-  socket = io();
+  socket = io({ transports: ['polling'] });
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id }));
   socket.on('identified',   (player) => { myPlayer = player; socket.emit('queue_join'); });
   socket.on('queue_joined', ({ position }) => showQueueView(position));

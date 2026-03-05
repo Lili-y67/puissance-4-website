@@ -13,7 +13,11 @@ const { GameManager }         = require('./game/GameManager');
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server, { cors: { origin: '*' } });
+const io     = new Server(server, {
+  cors: { origin: '*' },
+  transports: ['polling'], // Railway ne supporte pas bien les WebSockets
+  allowUpgrades: false,
+});
 
 const mm = new Matchmaking();
 const gm = new GameManager();

@@ -302,7 +302,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ── Socket ────────────────────────────────────────────────────────────────────
 function connectSocket(pendingMatch) {
-  socket = io();
+  socket = io({ transports: ['polling'] });
 
   socket.on('connect', () => {
     socket.emit('identify', { playerId: myPlayer.id });
