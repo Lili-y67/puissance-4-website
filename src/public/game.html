@@ -292,21 +292,74 @@ window.addEventListener('DOMContentLoaded', () => {
   myPlayer = JSON.parse(pData);
 
   if (mData) {
+    // Match trouvé depuis la home → on garde le match en mémoire
+    // et on le supprime SEULEMENT après setupLobby réussi
     const match = JSON.parse(mData);
-    sessionStorage.removeItem('match');
-    connectSocket(() => setupLobby(match));
+    connectSocket(match);
   } else {
-    // Arrivé directement sur /game → re-queue
-    connectSocket(() => socket.emit('queue_join'));
+    // Arrivée directe sur /game sans match → retour home
+    location.href = '/';
   }
 });
 
 // ── Socket ────────────────────────────────────────────────────────────────────
-function connectSocket(onReady) {
+function connectSocket(pendingMatch) {
   socket = io();
-  socket.on('connect',     ()  => socket.emit('identify', { playerId: myPlayer.id }));
-  socket.on('identified',  (p) => { myPlayer = p; onReady(); });
-  socket.on('match_found', (d) => setupLobby(d));
+
+  socket.on('connect', () => {
+    socket.emit('identify', { playerId: myPlayer.id });
+  });
+
+  socket.on('identified', (p) => {
+    myPlayer = p;
+    if (pendingMatch) {
+      // On dit au serveur qu'on rejoint cette partie
+      socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
+    }
+  });
+
+  // Serveur confirme le rejoin
+  socket.on('game_rejoined', (data) => {
+    sessionStorage.removeItem('match');
+    if (data.startsIn === 0) {
+      // Partie déjà en cours → restore directement sans lobby
+      lobbyData   = data;
+      gameId      = data.gameId;
+      mySide      = data.yourSide;
+      currentTurn = data.currentTurn;
+      applyColors(data.players[1].color || '#ff2d55', data.players[2].color || '#ffd60a');
+      document.getElementById('lobby-overlay').classList.add('hidden');
+      document.getElementById('name-p1').textContent = data.players[1].pseudo;
+      document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
+      document.getElementById('name-p2').textContent = data.players[2].pseudo;
+      document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+      gameOver = false;
+      renderBoard();
+      // Restaurer les tokens déjà joués
+      if (data.board) {
+        for (let r = 0; r < 6; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (data.board[r][c]) applyToken(r, c, data.board[r][c]);
+          }
+        }
+      }
+      updateTurnUI();
+    } else {
+      setupLobby(data);
+    }
+  });
+
+  socket.on('game_not_found', () => {
+    sessionStorage.removeItem('match');
+    location.href = '/';
+  });
+
+  // Si le match_found arrive (cas normal depuis la queue)
+  socket.on('match_found', (d) => {
+    sessionStorage.removeItem('match');
+    setupLobby(d);
+  });
+
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
   socket.on('color_updated', ({ playerId, color }) => {
