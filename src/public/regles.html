@@ -619,7 +619,15 @@ function playBotTurn() {
 
   exTimer = setTimeout(playBotTurn, 700 + Math.random()*500);
 }
+const bot1 = randomBotName();
+let bot2;
 
+do {
+  bot2 = randomBotName();
+} while (bot2 === bot1);
+
+document.getElementById("ex-turn-txt").textContent =
+`🤖 ${bot1}  VS  🤖 ${bot2}`;
 function startExample() {
 
   clearTimeout(exTimer);
