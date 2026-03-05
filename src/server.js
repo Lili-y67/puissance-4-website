@@ -105,12 +105,11 @@ io.on('connection', socket => {
 
   // Reconnexion à une partie existante après redirect home → /game
   socket.on('rejoin_game', ({ gameId }) => {
-    // Rejoindre la room Socket.io pour recevoir les events move_played/game_over
     socket.join('game:' + gameId);
 
-    // Si la partie est encore en RAM, mettre à jour le socketId
     const state = gm.games.get(gameId);
     if (state && state.status === 'active') {
+      // Partie encore en RAM → juste mettre à jour le socketId
       const side = state.players[1].id === socket.playerId ? 1
                  : state.players[2].id === socket.playerId ? 2
                  : null;
@@ -118,9 +117,40 @@ io.on('connection', socket => {
         state.players[side].socketId = socket.id;
         gm.socketToGame.set(socket.id, gameId);
       }
+    } else {
+      // Partie plus en RAM (serveur redémarré) → recréer depuis DB
+      const gameRow = gQ.getById.get(gameId);
+      if (!gameRow || gameRow.status !== 'active') {
+        return socket.emit('game_not_found');
+      }
+
+      // Recréer les moves déjà joués pour rebuilder le board
+      const moves = mQ.getByGame.all(gameId);
+      const { Board } = require('./game/Board');
+      const board = new Board();
+      moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
+
+      const p1 = pQ.getById.get(gameRow.player1_id);
+      const p2 = pQ.getById.get(gameRow.player2_id);
+      const currentTurn = moves.length % 2 === 0 ? 1 : 2;
+
+      // Remettre la partie en RAM
+      const state = {
+        id: gameId,
+        board,
+        players: {
+          1: { ...p1, socketId: gameRow.player1_id === socket.playerId ? socket.id : null },
+          2: { ...p2, socketId: gameRow.player2_id === socket.playerId ? socket.id : null },
+        },
+        current:    currentTurn,
+        startedAt:  Date.now(),
+        lastMoveAt: Date.now(),
+        moveCount:  moves.length,
+        status:     'active',
+      };
+      gm.games.set(gameId, state);
+      gm.socketToGame.set(socket.id, gameId);
     }
-    // Le client setup son lobby directement depuis sessionStorage
-    // donc pas besoin de renvoyer game_rejoined
   });
 
   socket.on('play_move', ({ col }) => {

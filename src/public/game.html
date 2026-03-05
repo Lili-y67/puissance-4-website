@@ -335,7 +335,14 @@ function connectSocket(pendingMatch) {
     lobbyData.players[side].color = color;
     applyColors(lobbyData.players[1].color, lobbyData.players[2].color);
   });
-  socket.on('error', ({ message }) => console.error('[Socket]', message));
+  socket.on('error', ({ message }) => {
+    console.error('[Socket]', message);
+    if (message === 'Aucune partie en cours.' || message === 'Partie inactive.') {
+      sessionStorage.removeItem('match');
+      alert('La partie a expiré (serveur redémarré). Retour à l\'accueil.');
+      location.href = '/';
+    }
+  });
 }
 
 // ── Lobby ─────────────────────────────────────────────────────────────────────
