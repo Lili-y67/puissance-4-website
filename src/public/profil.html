@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Profil</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg:#06060e; --surface:#0d0d1c; --surface2:#13132a; --border:rgba(255,255,255,0.06);
+  --red:#ff2d55; --red-dim:rgba(255,45,85,0.12); --red-glow:rgba(255,45,85,0.4);
+  --yellow:#ffd60a; --yel-dim:rgba(255,214,10,0.1); --yel-glow:rgba(255,214,10,0.4);
+  --green:#30d158; --green-dim:rgba(48,209,88,0.1);
+  --text:#eeeef5; --muted:rgba(238,238,245,0.38); --accent:#4c6ef5;
+}
+html,body { min-height:100%; background:var(--bg); color:var(--text); font-family:'Barlow',sans-serif; }
+.bg-grid { position:fixed; inset:0; z-index:0; background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px); background-size:48px 48px; }
+.scanlines { position:fixed; inset:0; z-index:1; pointer-events:none; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px); }
+
+.page { position:relative; z-index:2; max-width:640px; margin:0 auto; padding:24px 16px 48px; display:flex; flex-direction:column; gap:20px; }
+
+/* ── Nav ── */
+.nav { display:flex; align-items:center; justify-content:space-between; }
+.logo-sm { font-family:'Barlow Condensed',sans-serif; font-size:24px; font-weight:900; letter-spacing:2px; text-decoration:none; color:var(--text); }
+.logo-sm span { color:var(--red); }
+.btn-back { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:7px 16px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--muted); cursor:pointer; text-decoration:none; transition:all 0.2s; }
+.btn-back:hover { border-color:var(--muted); color:var(--text); }
+
+/* ── Profile header ── */
+.profile-header {
+  background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:24px;
+  display:flex; align-items:center; gap:20px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.4);
+  animation: slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes slide-in { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+.profile-avatar {
+  width:72px; height:72px; border-radius:50%;
+  background:var(--red-dim); border:2px solid var(--red);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900;
+  color:var(--red); flex-shrink:0;
+}
+.profile-info { flex:1; min-width:0; }
+.profile-pseudo { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; letter-spacing:1px; line-height:1; }
+.profile-since { font-size:12px; color:var(--muted); margin-top:4px; }
+.profile-elo {
+  font-family:'Barlow Condensed',sans-serif; font-size:42px; font-weight:900; letter-spacing:2px;
+  color:var(--yellow); text-shadow:0 0 20px var(--yel-glow); text-align:right;
+  flex-shrink:0;
+}
+.profile-elo-lbl { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); text-align:right; }
+
+/* ── Stats grid ── */
+.stats-grid {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:8px;
+  animation: slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;
+}
+.stat-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 12px;
+  text-align:center; display:flex; flex-direction:column; gap:4px;
+  transition:all 0.2s;
+}
+.stat-card:hover { border-color:rgba(255,255,255,0.12); transform:translateY(-2px); }
+.stat-val { font-family:'Barlow Condensed',sans-serif; font-size:32px; font-weight:900; letter-spacing:1px; }
+.stat-lbl { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.stat-card.wins   .stat-val { color:var(--green); }
+.stat-card.losses .stat-val { color:var(--red); }
+.stat-card.draws  .stat-val { color:var(--muted); }
+
+/* Winrate bar */
+.winrate-card {
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;
+  display:flex; flex-direction:column; gap:10px;
+  animation: slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+}
+.winrate-header { display:flex; justify-content:space-between; align-items:center; }
+.wr-label { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.wr-pct { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:800; color:var(--green); }
+.wr-bar { height:6px; background:var(--surface2); border-radius:4px; overflow:hidden; }
+.wr-fill { height:100%; border-radius:4px; background:linear-gradient(90deg, var(--green), var(--yellow)); transition:width 1s cubic-bezier(0.22,1,0.36,1); }
+
+/* ── History ── */
+.section-title {
+  font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700;
+  letter-spacing:4px; text-transform:uppercase; color:var(--muted);
+  animation: slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.history-list { display:flex; flex-direction:column; gap:6px; animation: slide-in 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both; }
+
+.game-row {
+  background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 16px;
+  display:flex; align-items:center; gap:12px; cursor:pointer;
+  text-decoration:none; color:var(--text); transition:all 0.2s;
+}
+.game-row:hover { border-color:rgba(255,255,255,0.12); transform:translateX(4px); }
+
+.game-result {
+  width:32px; height:32px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.game-result.win  { background:var(--green-dim); }
+.game-result.loss { background:var(--red-dim); }
+.game-result.draw { background:var(--surface2); }
+
+.game-vs { font-size:13px; font-weight:500; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.game-vs span { color:var(--muted); }
+
+.game-meta { text-align:right; font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:1px; }
+.game-elo-change { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; letter-spacing:1px; }
+.game-elo-change.pos { color:var(--green); }
+.game-elo-change.neg { color:var(--red); }
+.game-elo-change.neu { color:var(--muted); }
+
+.replay-badge {
+  font-size:10px; letter-spacing:1px; text-transform:uppercase;
+  padding:3px 8px; border-radius:4px; background:var(--surface2); border:1px solid var(--border);
+  color:var(--muted); flex-shrink:0;
+}
+.game-row:hover .replay-badge { border-color:var(--accent); color:var(--accent); }
+
+.empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-size:14px; }
+
+/* Loading */
+.loading { text-align:center; padding:60px 20px; color:var(--muted); font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
+<div class="page">
+
+  <nav class="nav">
+    <a class="logo-sm" href="/">Puissance <span>4</span></a>
+    <a class="btn-back" href="/">← Retour</a>
+  </nav>
+
+  <div id="content"><div class="loading">Chargement...</div></div>
+
+</div>
+<script>
+async function load() {
+  // Get player from session or URL
+  const saved  = sessionStorage.getItem('player');
+  const urlId  = new URLSearchParams(location.search).get('id');
+  const playerId = urlId || (saved ? JSON.parse(saved).id : null);
+
+  if (!playerId) {
+    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur sélectionné.<br><a href="/" style="color:var(--red)">← Retour</a></div>';
+    return;
+  }
+
+  try {
+    const res  = await fetch(`/api/players/${playerId}`);
+    if (!res.ok) throw new Error();
+    const { player, games } = await res.json();
+
+    const total  = player.wins + player.losses + player.draws;
+    const wr     = total > 0 ? Math.round((player.wins / total) * 100) : 0;
+
+    const isOwn  = !urlId || String(urlId) === String(JSON.parse(saved || '{}').id);
+
+    document.getElementById('content').innerHTML = `
+      <!-- Profile header -->
+      <div class="profile-header">
+        <div class="profile-avatar">${player.pseudo[0].toUpperCase()}</div>
+        <div class="profile-info">
+          <div class="profile-pseudo">${player.pseudo}</div>
+          <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR', {month:'long', year:'numeric'})}</div>
+        </div>
+        <div>
+          <div class="profile-elo">${player.elo}</div>
+          <div class="profile-elo-lbl">ELO</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card wins">
+          <div class="stat-val">${player.wins}</div>
+          <div class="stat-lbl">Victoires</div>
+        </div>
+        <div class="stat-card losses">
+          <div class="stat-val">${player.losses}</div>
+          <div class="stat-lbl">Défaites</div>
+        </div>
+        <div class="stat-card draws">
+          <div class="stat-val">${player.draws}</div>
+          <div class="stat-lbl">Nuls</div>
+        </div>
+      </div>
+
+      <!-- Winrate -->
+      <div class="winrate-card">
+        <div class="winrate-header">
+          <span class="wr-label">Winrate</span>
+          <span class="wr-pct">${wr}%</span>
+        </div>
+        <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
+      </div>
+
+      <!-- History -->
+      <div class="section-title">Historique des parties</div>
+      <div class="history-list" id="history-list">
+        ${renderGames(games, player)}
+      </div>
+    `;
+
+    // Animate winrate bar
+    setTimeout(() => {
+      const fill = document.getElementById('wr-fill');
+      if (fill) fill.style.width = wr + '%';
+    }, 100);
+
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
+  }
+}
+
+function renderGames(games, me) {
+  if (!games.length) return '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>';
+
+  return games.map(g => {
+    const isP1   = g.player1_id === me.id;
+    const opponent = isP1 ? g.p2_pseudo : g.p1_pseudo;
+    const won    = g.winner_id === me.id;
+    const isDraw = g.winner_id === null;
+    const resultClass = isDraw ? 'draw' : (won ? 'win' : 'loss');
+    const resultIcon  = isDraw ? '⚖️' : (won ? '🏆' : '💀');
+
+    // Elo change
+    const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
+    const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
+    const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
+
+    const date = g.finished_at
+      ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})
+      : '—';
+
+    return `
+      <a class="game-row" href="/replay/${g.id}">
+        <div class="game-result ${resultClass}">${resultIcon}</div>
+        <div class="game-vs">vs <span>${opponent}</span></div>
+        <div class="game-meta">
+          <div class="game-elo-change ${eloClass}">${eloStr}</div>
+          <div>${g.move_count} coups · ${g.duration}s</div>
+          <div>${date}</div>
+        </div>
+        <div class="replay-badge">▶ Replay</div>
+      </a>
+    `;
+  }).join('');
+}
+
+load();
+</script>
+</body>
+</html>

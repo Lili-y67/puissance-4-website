@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Replay</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,0.06);
+  --red:#ff2d55;--red-dim:rgba(255,45,85,0.12);--red-glow:rgba(255,45,85,0.4);
+  --yellow:#ffd60a;--yel-dim:rgba(255,214,10,0.1);--yel-glow:rgba(255,214,10,0.4);
+  --text:#eeeef5;--muted:rgba(238,238,245,0.38);--accent:#4c6ef5;
+  --grid:#0a0a18;--cell:#07071a;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden;}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
+
+.page{position:relative;z-index:2;max-width:600px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+
+/* ── Nav ── */
+.nav{width:100%;display:flex;align-items:center;justify-content:space-between;}
+.logo-sm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text);}
+.logo-sm span{color:var(--red);}
+.btn-back{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;text-decoration:none;transition:all 0.2s;}
+.btn-back:hover{border-color:var(--muted);color:var(--text);}
+
+/* ── Replay header ── */
+.replay-header{
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 20px;
+  display:flex;flex-direction:column;gap:10px;
+  animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes slide-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.replay-vs{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.rp{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+.rp-dot{width:14px;height:14px;border-radius:50%;}
+.rp.p1 .rp-dot{background:var(--red);box-shadow:0 0 8px var(--red-glow);}
+.rp.p2 .rp-dot{background:var(--yellow);box-shadow:0 0 8px var(--yel-glow);}
+.rp-name{font-weight:600;font-size:14px;}
+.rp-elo{font-size:11px;color:var(--muted);}
+.rp-result{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;padding:4px 10px;border-radius:6px;margin-top:2px;}
+.rp.winner .rp-result{background:rgba(255,214,10,0.1);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);}
+.rp.loser  .rp-result{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,45,85,0.2);}
+.rp.draw   .rp-result{background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+
+.vs-mid{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:700;color:var(--muted);letter-spacing:3px;flex-shrink:0;}
+
+.replay-meta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+.rmeta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.rmeta strong{color:var(--text);font-weight:600;}
+
+/* ── Progress bar ── */
+.progress-wrap{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.progress-top{display:flex;justify-content:space-between;align-items:center;}
+.progress-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.progress-count{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;}
+.progress-bar-bg{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.progress-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--red),var(--yellow));transition:width 0.3s ease;}
+
+/* ── Think timer ── */
+.think-box{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 20px;
+  min-height:44px;width:100%;
+}
+.think-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:all 0.3s;}
+.think-dot.p1{background:var(--red);box-shadow:0 0 8px var(--red-glow);}
+.think-dot.p2{background:var(--yellow);box-shadow:0 0 8px var(--yel-glow);}
+.think-text{font-size:13px;color:var(--muted);}
+.think-timer{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--text);min-width:48px;text-align:right;}
+
+/* ── Board ── */
+.board-wrap{position:relative;}
+.board{
+  background:var(--grid);border-radius:18px;padding:10px;
+  border:1px solid var(--border);
+  box-shadow:0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.04);
+  display:grid;
+  grid-template-columns:repeat(7,68px);
+  grid-template-rows:repeat(6,68px);
+  gap:6px;
+}
+.cell{border-radius:50%;background:var(--cell);box-shadow:inset 0 3px 8px rgba(0,0,0,0.6);position:relative;overflow:hidden;}
+.cell .token{position:absolute;inset:4px;border-radius:50%;transform:scale(0);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.cell.drop .token{transform:scale(1);}
+.cell.p1 .token{background:radial-gradient(circle at 35% 30%,#ff6b85,var(--red));box-shadow:0 0 18px var(--red-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
+.cell.p2 .token{background:radial-gradient(circle at 35% 30%,#ffe566,var(--yellow));box-shadow:0 0 18px var(--yel-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
+.cell.highlight{box-shadow:inset 0 3px 8px rgba(0,0,0,0.6),0 0 0 2px rgba(255,255,255,0.15);}
+.cell.winning .token{animation:win-pulse 0.7s ease-in-out infinite alternate;}
+@keyframes win-pulse{from{transform:scale(1)}to{transform:scale(1.1);filter:brightness(1.4);}}
+
+/* ── End screen ── */
+.end-card{
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;
+  display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;
+}
+.end-card.show{display:flex;}
+.end-title{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:4px;line-height:1;}
+.end-sub{font-size:13px;color:var(--muted);}
+.end-btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+.btn-action{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:11px 22px;border-radius:10px;border:none;cursor:pointer;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+.btn-action.primary{background:var(--red);color:#fff;box-shadow:0 4px 20px var(--red-glow);}
+.btn-action.primary:hover{background:#ff4567;transform:translateY(-1px);}
+.btn-action.ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
+.btn-action.ghost:hover{border-color:var(--muted);color:var(--text);}
+
+.loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
+
+<div class="page">
+  <nav class="nav">
+    <a class="logo-sm" href="/">Puissance <span>4</span></a>
+    <a class="btn-back" id="back-btn" href="/profil">← Profil</a>
+  </nav>
+
+  <div id="content"><div class="loading">Chargement du replay...</div></div>
+</div>
+
+<script>
+const ROWS = 6, COLS = 7;
+let moves = [], gameData = null;
+let moveIndex = 0;
+let replayTimeout = null;
+// Cap think time for replay: min 400ms, max 3000ms (to not bore the viewer)
+const MIN_THINK = 400;
+const MAX_THINK = 3000;
+
+// ── Board state ───────────────────────────────────────────────────────────────
+let board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
+
+function getGameId() {
+  const parts = location.pathname.split('/');
+  return parts[parts.length - 1];
+}
+
+async function init() {
+  const id = getGameId();
+  try {
+    const res = await fetch(`/api/games/${id}/moves`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    gameData = data.game;
+    moves    = data.moves;
+
+    // Update back link if player in session
+    const saved = sessionStorage.getItem('player');
+    if (saved) {
+      const p = JSON.parse(saved);
+      document.getElementById('back-btn').href = '/profil?id=' + p.id;
+    }
+
+    renderShell();
+    setTimeout(startReplay, 800);
+  } catch(e) {
+    document.getElementById('content').innerHTML = '<div class="loading">Partie introuvable.</div>';
+  }
+}
+
+function renderShell() {
+  const g = gameData;
+  const p1Won = g.winner_id === g.player1_id;
+  const p2Won = g.winner_id === g.player2_id;
+  const isDraw = g.winner_id === null;
+
+  const date = g.finished_at
+    ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+    : '—';
+
+  document.getElementById('content').innerHTML = `
+    <div class="replay-header">
+      <div class="replay-vs">
+        <div class="rp p1 ${isDraw?'draw':(p1Won?'winner':'loser')}">
+          <div class="rp-dot"></div>
+          <div class="rp-name">${g.p1_pseudo}</div>
+          <div class="rp-elo">${g.p1_elo} ELO</div>
+          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DÉFAITE')}</div>
+        </div>
+        <div class="vs-mid">VS</div>
+        <div class="rp p2 ${isDraw?'draw':(p2Won?'winner':'loser')}">
+          <div class="rp-dot"></div>
+          <div class="rp-name">${g.p2_pseudo}</div>
+          <div class="rp-elo">${g.p2_elo} ELO</div>
+          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DÉFAITE')}</div>
+        </div>
+      </div>
+      <div class="replay-meta">
+        <div class="rmeta">📅 <strong>${date}</strong></div>
+        <div class="rmeta">🎯 <strong>${g.move_count} coups</strong></div>
+        <div class="rmeta">⏱️ <strong>${g.duration}s</strong></div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span class="progress-label">Replay en cours</span>
+        <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="prog-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Think timer -->
+    <div class="think-box" id="think-box">
+      <div class="think-dot p1" id="think-dot"></div>
+      <div class="think-text" id="think-text">Début dans un instant...</div>
+      <div class="think-timer" id="think-timer"></div>
+    </div>
+
+    <!-- Board -->
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+    </div>
+
+    <!-- End card -->
+    <div class="end-card" id="end-card">
+      <div class="end-title" id="end-title"></div>
+      <div class="end-sub" id="end-sub"></div>
+      <div class="end-btns">
+        <button class="btn-action primary" onclick="restartReplay()">↺ Revoir</button>
+        <a class="btn-action ghost" href="/">⚡ Jouer</a>
+      </div>
+    </div>
+  `;
+
+  renderBoard();
+}
+
+// ── Board rendering ───────────────────────────────────────────────────────────
+function renderBoard() {
+  const el = document.getElementById('board');
+  if (!el) return;
+  el.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      cell.appendChild(Object.assign(document.createElement('div'), {className:'token'}));
+      el.appendChild(cell);
+    }
+  }
+}
+
+function getCell(r, c) { return document.getElementById(`cell-${r}-${c}`); }
+
+function placeToken(row, col, player) {
+  board[row][col] = player;
+  const cell = getCell(row, col);
+  if (!cell) return;
+  cell.classList.add('p' + player);
+  void cell.offsetWidth;
+  cell.classList.add('drop');
+}
+
+// ── Replay engine ─────────────────────────────────────────────────────────────
+function startReplay() {
+  board      = Array.from({length:ROWS}, () => Array(COLS).fill(0));
+  moveIndex  = 0;
+  renderBoard();
+  scheduleNextMove();
+}
+
+function restartReplay() {
+  clearTimeout(replayTimeout);
+  document.getElementById('end-card').classList.remove('show');
+  startReplay();
+}
+
+function scheduleNextMove() {
+  if (moveIndex >= moves.length) {
+    finishReplay();
+    return;
+  }
+
+  const move      = moves[moveIndex];
+  const player    = move.player_id === gameData.player1_id ? 1 : 2;
+  const pseudo    = player === 1 ? gameData.p1_pseudo : gameData.p2_pseudo;
+  const rawThink  = move.think_ms || 500;
+
+  // Cap think time for watchability
+  const thinkMs   = Math.min(Math.max(rawThink, MIN_THINK), MAX_THINK);
+
+  // Update think indicator
+  const dot  = document.getElementById('think-dot');
+  const txt  = document.getElementById('think-text');
+  const tmr  = document.getElementById('think-timer');
+  if (dot) { dot.className = 'think-dot p' + player; }
+  if (txt) { txt.textContent = `${pseudo} réfléchit...`; }
+
+  // Countdown display
+  let elapsed = 0;
+  const tickMs = 50;
+  const countInterval = setInterval(() => {
+    elapsed += tickMs;
+    const remaining = ((thinkMs - elapsed) / 1000).toFixed(1);
+    if (tmr) tmr.textContent = remaining + 's';
+    if (elapsed >= thinkMs) clearInterval(countInterval);
+  }, tickMs);
+
+  replayTimeout = setTimeout(() => {
+    clearInterval(countInterval);
+    playMoveInReplay(move, player);
+  }, thinkMs);
+}
+
+function playMoveInReplay(move, player) {
+  placeToken(move.row, move.col, player);
+  moveIndex++;
+
+  // Update progress
+  const pct = (moveIndex / moves.length) * 100;
+  const progBar   = document.getElementById('prog-bar');
+  const progCount = document.getElementById('prog-count');
+  if (progBar)   progBar.style.width = pct + '%';
+  if (progCount) progCount.textContent = moveIndex + ' / ' + moves.length;
+
+  // Small pause then next move
+  replayTimeout = setTimeout(scheduleNextMove, 200);
+}
+
+function finishReplay() {
+  // Highlight winning cells
+  if (gameData.winner_id) {
+    highlightWinner();
+  }
+
+  // Update think box
+  const dot = document.getElementById('think-dot');
+  const txt = document.getElementById('think-text');
+  const tmr = document.getElementById('think-timer');
+  if (dot) dot.style.opacity = '0';
+  if (txt) txt.textContent   = 'Partie terminée';
+  if (tmr) tmr.textContent   = '';
+
+  // Show end card
+  const isDraw   = gameData.winner_id === null;
+  const winnerPs = isDraw ? null : (gameData.winner_id === gameData.player1_id ? gameData.p1_pseudo : gameData.p2_pseudo);
+
+  const titleEl = document.getElementById('end-title');
+  const subEl   = document.getElementById('end-sub');
+
+  if (isDraw) {
+    titleEl.textContent = '⚖️ ÉGALITÉ';
+    titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
+  } else {
+    titleEl.textContent = `🏆 ${winnerPs.toUpperCase()}`;
+    titleEl.style.background = 'linear-gradient(135deg, var(--red), var(--yellow))';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor  = 'transparent';
+
+  subEl.textContent = `${gameData.move_count} coups · ${gameData.duration}s`;
+
+  setTimeout(() => {
+    document.getElementById('end-card').classList.add('show');
+  }, 600);
+}
+
+function highlightWinner() {
+  // Recompute winning cells from board state
+  const winnerId = gameData.winner_id;
+  const player   = winnerId === gameData.player1_id ? 1 : 2;
+  const dirs     = [[0,1],[1,0],[1,1],[1,-1]];
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] !== player) continue;
+      for (const [dr, dc] of dirs) {
+        const line = getWinLine(r, c, player, dr, dc);
+        if (line.length >= 4) {
+          line.forEach(([lr, lc]) => {
+            const cell = getCell(lr, lc);
+            if (cell) cell.classList.add('winning');
+          });
+          return;
+        }
+      }
+    }
+  }
+}
+
+function getWinLine(row, col, player, dr, dc) {
+  const pos = [], neg = [];
+  for (let s = 1; s < 4; s++) {
+    const r = row+dr*s, c = col+dc*s;
+    if (r>=0&&r<ROWS&&c>=0&&c<COLS&&board[r][c]===player) pos.push([r,c]); else break;
+  }
+  for (let s = 1; s < 4; s++) {
+    const r = row-dr*s, c = col-dc*s;
+    if (r>=0&&r<ROWS&&c>=0&&c<COLS&&board[r][c]===player) neg.push([r,c]); else break;
+  }
+  const all = [...neg.reverse(), [row,col], ...pos];
+  return all.length >= 4 ? all.slice(0, 4) : [];
+}
+
+init();
+</script>
+</body>
+</html>

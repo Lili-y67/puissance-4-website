@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:       #06060e;
+  --surface:  #0d0d1c;
+  --surface2: #13132a;
+  --border:   rgba(255,255,255,0.06);
+  --red:      #ff2d55;
+  --red-dim:  rgba(255,45,85,0.15);
+  --red-glow: rgba(255,45,85,0.4);
+  --yellow:   #ffd60a;
+  --yel-dim:  rgba(255,214,10,0.12);
+  --yel-glow: rgba(255,214,10,0.4);
+  --text:     #eeeef5;
+  --muted:    rgba(238,238,245,0.38);
+  --accent:   #4c6ef5;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ── Animated background grid ───────────────────────────────────────────────── */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: grid-drift 20s linear infinite;
+}
+@keyframes grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 48px 48px; }
+}
+
+/* Falling tokens decoration */
+.tokens-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.token-fall {
+  position: absolute;
+  top: -60px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: fall linear infinite;
+}
+.token-fall.red {
+  background: radial-gradient(circle at 35% 35%, #ff6b85, var(--red));
+  box-shadow: 0 0 20px var(--red-glow);
+}
+.token-fall.yellow {
+  background: radial-gradient(circle at 35% 35%, #ffe566, var(--yellow));
+  box-shadow: 0 0 20px var(--yel-glow);
+}
+@keyframes fall {
+  0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+  5%   { opacity: 0.25; }
+  95%  { opacity: 0.12; }
+  100% { opacity: 0; transform: translateY(110vh) rotate(360deg); }
+}
+
+/* Scanlines */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+.page {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 0;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────────── */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 48px;
+  animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(-24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.logo-eyebrow {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--red);
+  opacity: 0.8;
+}
+
+.logo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(72px, 14vw, 120px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 0.88;
+  text-transform: uppercase;
+  position: relative;
+}
+.logo-p4  { color: var(--text); }
+.logo-num {
+  color: var(--red);
+  text-shadow: 0 0 40px var(--red-glow), 0 0 80px var(--red-glow);
+  animation: flicker 6s ease-in-out infinite;
+}
+@keyframes flicker {
+  0%,96%,100% { opacity: 1; }
+  97%          { opacity: 0.7; }
+  98%          { opacity: 1; }
+  99%          { opacity: 0.5; }
+}
+
+.logo-tagline {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── Board decoration ───────────────────────────────────────────────────────── */
+.board-deco {
+  display: grid;
+  grid-template-columns: repeat(7, 28px);
+  grid-template-rows: repeat(3, 28px);
+  gap: 5px;
+  margin: 20px 0 0;
+  opacity: 0.4;
+}
+.board-deco-cell {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+.board-deco-cell.r { background: var(--red); border-color: var(--red); box-shadow: 0 0 8px var(--red-glow); }
+.board-deco-cell.y { background: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 8px var(--yel-glow); }
+
+/* ── Card ───────────────────────────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+  animation: card-in 0.6s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.card-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* ── Input ──────────────────────────────────────────────────────────────────── */
+.input-wrap {
+  position: relative;
+}
+.input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  pointer-events: none;
+}
+.input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px 14px 42px;
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-dim);
+}
+.input::placeholder { color: var(--muted); font-weight: 400; }
+
+/* ── Divider ────────────────────────────────────────────────────────────────── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────────── */
+.btn {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-play {
+  background: var(--red);
+  color: #fff;
+  box-shadow: 0 4px 24px var(--red-glow);
+}
+.btn-play:hover {
+  background: #ff4567;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px var(--red-glow);
+}
+.btn-play:active { transform: translateY(0); }
+
+.btn-ghost {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+}
+.btn-ghost:hover {
+  border-color: var(--muted);
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.btn-cancel {
+  background: transparent;
+  border: 1.5px solid rgba(255,45,85,0.3);
+  color: var(--red);
+  font-size: 14px;
+  padding: 11px 20px;
+}
+.btn-cancel:hover {
+  background: var(--red-dim);
+  border-color: var(--red);
+}
+
+/* ── Stats strip ────────────────────────────────────────────────────────────── */
+.stats-strip {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-top: 2px;
+}
+.stat-item {
+  flex: 1;
+  background: var(--surface2);
+  padding: 12px 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stat-val {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+.stat-key {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.stat-item.elo .stat-val { color: var(--yellow); }
+.stat-item.wins .stat-val { color: var(--red); }
+
+/* ── Queue state ────────────────────────────────────────────────────────────── */
+.queue-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 8px 0;
+}
+
+.pulse-ring {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pulse-ring::before, .pulse-ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--red);
+  animation: ring-pulse 2s ease-out infinite;
+}
+.pulse-ring::after { animation-delay: 0.8s; }
+@keyframes ring-pulse {
+  0%   { transform: scale(0.8); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.pulse-dot {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ff6b85, var(--red));
+  box-shadow: 0 0 20px var(--red-glow);
+  z-index: 1;
+}
+
+.queue-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.queue-sub {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.queue-timer {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 16px;
+}
+
+/* ── Links ──────────────────────────────────────────────────────────────────── */
+.link {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.link a {
+  color: var(--red);
+  text-decoration: none;
+  font-weight: 500;
+}
+.link a:hover { text-decoration: underline; }
+
+/* ── Error message ──────────────────────────────────────────────────────────── */
+.error-msg {
+  font-size: 12px;
+  color: var(--red);
+  text-align: center;
+  min-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* ── Transitions ────────────────────────────────────────────────────────────── */
+.fade-out {
+  animation: fadeOut 0.25s ease forwards;
+}
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateY(-12px); }
+}
+.fade-in {
+  animation: fadeIn 0.35s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Theme / Color picker ── */
+.theme-section { display:flex; flex-direction:column; gap:8px; }
+.theme-label-row { display:flex; align-items:center; justify-content:space-between; }
+.theme-lbl { font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted); }
+.theme-presets { display:flex; gap:6px; flex-wrap:wrap; }
+.preset-dot {
+  width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+  transition:all 0.2s; flex-shrink:0;
+}
+.preset-dot:hover { transform:scale(1.15); }
+.preset-dot.active { border-color:var(--text); transform:scale(1.15); }
+.color-input-wrap {
+  display:flex; align-items:center; gap:10px;
+  background:var(--surface2); border:1.5px solid var(--border); border-radius:10px; padding:10px 14px;
+  cursor:pointer; transition:border-color 0.2s;
+}
+.color-input-wrap:hover { border-color:rgba(255,255,255,0.15); }
+.color-preview { width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,0.2); flex-shrink:0; transition:background 0.2s; }
+.color-input-lbl { font-size:13px; font-weight:500; flex:1; }
+.color-input-sub { font-size:11px; color:var(--muted); }
+input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-events:none; }
+
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-grid"></div>
+<div class="tokens-bg" id="tokens-bg"></div>
+<div class="scanlines"></div>
+
+<div class="page">
+  <!-- Hero -->
+  <div class="hero">
+    <div class="logo-eyebrow">Jouez en ligne</div>
+    <div class="logo">
+      <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
+    </div>
+    <div class="logo-tagline">Connecte · Défie · Domine</div>
+
+    <!-- Mini board decoration -->
+    <div class="board-deco" id="board-deco"></div>
+  </div>
+
+  <!-- Card -->
+  <div class="card" id="main-card">
+    <!-- LOGIN VIEW -->
+    <div id="view-login">
+      <div class="card-label">Entrer dans l'arène</div>
+
+      <div class="input-wrap">
+        <span class="input-icon">⚔️</span>
+        <input
+          class="input"
+          id="input-pseudo"
+          placeholder="Ton pseudo"
+          maxlength="20"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+
+      <!-- Theme picker -->
+      <div class="theme-section">
+        <div class="theme-label-row">
+          <span class="theme-lbl">Couleur de jeton</span>
+        </div>
+        <div class="theme-presets" id="theme-presets">
+          <!-- filled by JS -->
+        </div>
+        <div class="color-input-wrap" onclick="document.getElementById('custom-color').click()">
+          <div class="color-preview" id="color-preview"></div>
+          <div>
+            <div class="color-input-lbl">Couleur personnalisée</div>
+            <div class="color-input-sub" id="color-hex-display">#ff2d55</div>
+          </div>
+          <input type="color" id="custom-color" value="#ff2d55" oninput="onColorInput(this.value)">
+        </div>
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <button class="btn btn-play" id="btn-play" onclick="handleLogin()">
+        <span>⚡</span> Jouer maintenant
+      </button>
+
+      <div class="divider">ou</div>
+
+      <button class="btn btn-ghost" onclick="window.location.href='/profil'">
+        👤 Voir mon profil
+      </button>
+
+      <div class="link">Nouvelle partie classée · <a href="#">Règles</a></div>
+    </div>
+
+    <!-- QUEUE VIEW -->
+    <div id="view-queue" style="display:none">
+      <div class="queue-inner">
+        <div class="pulse-ring">
+          <div class="pulse-dot"></div>
+        </div>
+        <div class="queue-title">Recherche en cours</div>
+        <div class="queue-sub" id="queue-sub">En attente d'un adversaire...</div>
+        <div class="queue-timer" id="queue-timer">00:00</div>
+      </div>
+
+      <!-- Player stats recap -->
+      <div class="stats-strip" id="queue-stats" style="display:none">
+        <div class="stat-item elo">
+          <div class="stat-val" id="stat-elo">—</div>
+          <div class="stat-key">ELO</div>
+        </div>
+        <div class="stat-item wins">
+          <div class="stat-val" id="stat-wins">—</div>
+          <div class="stat-key">Victoires</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-games">—</div>
+          <div class="stat-key">Parties</div>
+        </div>
+      </div>
+
+      <button class="btn btn-cancel" onclick="handleLeaveQueue()">
+        ✕ Annuler la recherche
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  DECORATION
+// ═══════════════════════════════════════════════════════════════════
+const DECO = [0,0,0,0,0,0,0, 0,0,'r','y','r',0,0, 0,'r','y','r','y','r',0];
+const decoEl = document.getElementById('board-deco');
+DECO.forEach(v => {
+  const c = document.createElement('div');
+  c.className = 'board-deco-cell' + (v ? ' ' + v : '');
+  decoEl.appendChild(c);
+});
+function spawnTokens() {
+  const bg = document.getElementById('tokens-bg');
+  for (let i = 0; i < 18; i++) {
+    const t   = document.createElement('div');
+    t.className = 'token-fall ' + (Math.random() > 0.5 ? 'red' : 'yellow');
+    t.style.left   = Math.random() * 100 + 'vw';
+    const sz = (24 + Math.random() * 28) + 'px';
+    t.style.width  = sz; t.style.height = sz;
+    const dur = 6 + Math.random() * 10;
+    t.style.animationDuration = dur + 's';
+    t.style.animationDelay   = -(Math.random() * dur) + 's';
+    bg.appendChild(t);
+  }
+}
+spawnTokens();
+
+// ═══════════════════════════════════════════════════════════════════
+//  THEMES & COLORS
+// ═══════════════════════════════════════════════════════════════════
+const PRESETS = [
+  { color:'#ff2d55', label:'Rouge'  },
+  { color:'#ffd60a', label:'Jaune'  },
+  { color:'#30d158', label:'Vert'   },
+  { color:'#0a84ff', label:'Bleu'   },
+  { color:'#bf5af2', label:'Violet' },
+  { color:'#ff9f0a', label:'Orange' },
+  { color:'#00c7be', label:'Cyan'   },
+  { color:'#ff375f', label:'Rose'   },
+];
+let selectedColor = '#ff2d55';
+
+function initThemePicker() {
+  const saved = sessionStorage.getItem('player');
+  if (saved) { const p = JSON.parse(saved); if (p.color) selectedColor = p.color; }
+
+  const container = document.getElementById('theme-presets');
+  container.innerHTML = '';
+  PRESETS.forEach(({ color, label }) => {
+    const dot = document.createElement('div');
+    dot.className = 'preset-dot' + (color === selectedColor ? ' active' : '');
+    dot.title     = label;
+    dot.style.background = color;
+    dot.onclick   = () => selectColor(color);
+    container.appendChild(dot);
+  });
+  updateColorUI(selectedColor);
+}
+
+function selectColor(color) {
+  selectedColor = color;
+  document.getElementById('custom-color').value = color;
+  updateColorUI(color);
+  document.querySelectorAll('.preset-dot').forEach(d => {
+    d.classList.toggle('active', d.style.background === hexToRgb(color));
+  });
+  saveColorToServer(color);
+}
+
+function onColorInput(color) {
+  selectedColor = color;
+  updateColorUI(color);
+  document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
+  clearTimeout(window._colorTimer);
+  window._colorTimer = setTimeout(() => saveColorToServer(color), 600);
+}
+
+function saveColorToServer(color) {
+  const saved = sessionStorage.getItem('player');
+  if (!saved) return;
+  const p = JSON.parse(saved);
+  fetch('/api/players/' + p.id + '/color', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ color }),
+  });
+  p.color = color;
+  sessionStorage.setItem('player', JSON.stringify(p));
+}
+
+function updateColorUI(color) {
+  document.getElementById('color-preview').style.background = color;
+  document.getElementById('color-hex-display').textContent  = color.toUpperCase();
+  document.getElementById('custom-color').value = color;
+  const btn = document.querySelector('.btn-play');
+  if (btn) {
+    btn.style.background = `linear-gradient(135deg, ${color}, #7b61ff)`;
+    btn.style.boxShadow  = `0 4px 24px ${color}55`;
+  }
+}
+
+function hexToRgb(hex) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('input-pseudo').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+async function handleLogin() {
+  const pseudo = document.getElementById('input-pseudo').value.trim();
+  if (!pseudo)           return showError('Entre un pseudo pour jouer !');
+  if (pseudo.length < 2) return showError('Au moins 2 caractères.');
+
+  const btn = document.getElementById('btn-play');
+  btn.textContent = '...';
+  btn.disabled    = true;
+
+  try {
+    const res = await fetch('/api/players', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pseudo, color: selectedColor }),
+    });
+    if (!res.ok) throw new Error();
+    myPlayer = await res.json();
+    sessionStorage.setItem('player', JSON.stringify(myPlayer));
+    connectAndQueue();
+  } catch {
+    showError('Erreur serveur, réessaie.');
+    btn.innerHTML = '<span>⚡</span> Jouer maintenant';
+    btn.disabled  = false;
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SOCKET & QUEUE
+// ═══════════════════════════════════════════════════════════════════
+function connectAndQueue() {
+  socket = io();
+  socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id }));
+  socket.on('identified',   (player) => { myPlayer = player; socket.emit('queue_join'); });
+  socket.on('queue_joined', ({ position }) => showQueueView(position));
+  socket.on('match_found',  (data) => {
+    sessionStorage.setItem('match',  JSON.stringify(data));
+    sessionStorage.setItem('player', JSON.stringify(myPlayer));
+    window.location.href = '/game';
+  });
+  socket.on('error', ({ message }) => showError(message));
+}
+
+function showQueueView(position) {
+  const loginView = document.getElementById('view-login');
+  const queueView = document.getElementById('view-queue');
+  loginView.classList.add('fade-out');
+  setTimeout(() => {
+    loginView.style.display = 'none';
+    queueView.style.display = 'block';
+    queueView.classList.add('fade-in');
+    document.getElementById('queue-stats').style.display = 'flex';
+    document.getElementById('stat-elo').textContent   = myPlayer.elo;
+    document.getElementById('stat-wins').textContent  = myPlayer.wins;
+    document.getElementById('stat-games').textContent = myPlayer.wins + myPlayer.losses + myPlayer.draws;
+    document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
+  }, 250);
+  queueStart    = Date.now();
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - queueStart) / 1000);
+  const m = String(Math.floor(elapsed/60)).padStart(2,'0');
+  const s = String(elapsed%60).padStart(2,'0');
+  document.getElementById('queue-timer').textContent = `${m}:${s}`;
+}
+
+function handleLeaveQueue() {
+  if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
+  clearInterval(timerInterval);
+  const loginView = document.getElementById('view-login');
+  const queueView = document.getElementById('view-queue');
+  queueView.classList.add('fade-out');
+  setTimeout(() => {
+    queueView.style.display = 'none';
+    queueView.classList.remove('fade-out','fade-in');
+    loginView.style.display = 'block';
+    loginView.classList.remove('fade-out');
+    const btn = document.getElementById('btn-play');
+    btn.innerHTML = '<span>⚡</span> Jouer maintenant';
+    btn.disabled  = false;
+  }, 250);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  initThemePicker();
+  const saved = sessionStorage.getItem('player');
+  if (saved) {
+    const p = JSON.parse(saved);
+    document.getElementById('input-pseudo').value = p.pseudo;
+  }
+});
+</script>
+</body>
+</html>
