@@ -14,7 +14,9 @@ let ready = null;
 
 function initDb() {
   if (ready) return ready;
-  ready = initSqlJs().then(SQL => {
+  // Spécifier le chemin du WASM explicitement pour Railway/Node.js
+  const wasmPath = require('path').join(require.resolve('sql.js'), '..', 'sql-wasm.wasm');
+  ready = initSqlJs({ locateFile: () => wasmPath }).then(SQL => {
     const fileExists = fs.existsSync(DB_PATH);
     _db = fileExists
       ? new SQL.Database(fs.readFileSync(DB_PATH))

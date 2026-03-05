@@ -360,13 +360,18 @@ function setupLobby(data) {
     }
   });
 
-  // Countdown
+  // Countdown — on affiche n, attend 1s, affiche n-1, etc.
   let n = data.startsIn || 3;
-  document.getElementById('countdown').textContent = n;
+  const cdEl = document.getElementById('countdown');
+  cdEl.textContent = n;
   const iv = setInterval(() => {
     n--;
-    document.getElementById('countdown').textContent = n;
-    if (n <= 0) { clearInterval(iv); startGame(data); }
+    if (n <= 0) {
+      clearInterval(iv);
+      startGame(data);
+    } else {
+      cdEl.textContent = n;
+    }
   }, 1000);
 }
 
