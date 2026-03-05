@@ -1,5 +1,5 @@
 /**
- * db.js — better-sqlite3 (Railway utilise Node 20, binaires dispo)
+ * db.js — better-sqlite3
  */
 const Database = require('better-sqlite3');
 const path     = require('path');
@@ -16,11 +16,13 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS players (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     pseudo     TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    password   TEXT    NOT NULL DEFAULT '',
     elo        INTEGER NOT NULL DEFAULT 1000,
     wins       INTEGER NOT NULL DEFAULT 0,
     losses     INTEGER NOT NULL DEFAULT 0,
     draws      INTEGER NOT NULL DEFAULT 0,
     color      TEXT    NOT NULL DEFAULT '#ff2d55',
+    avatar     TEXT    NOT NULL DEFAULT '',
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS games (
@@ -59,21 +61,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_players_pseudo ON players(pseudo);
 `);
 
+// Migration : ajouter colonnes si absentes (pour DBs existantes)
+try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
+
 // ── Players ───────────────────────────────────────────────────────────────────
 const pQ = {
   getById:     db.prepare(`SELECT * FROM players WHERE id = ?`),
   getByPseudo: db.prepare(`SELECT * FROM players WHERE pseudo = ? COLLATE NOCASE`),
-  upsert:      db.prepare(`
-    INSERT INTO players (pseudo) VALUES (@pseudo)
-    ON CONFLICT(pseudo) DO UPDATE SET pseudo = pseudo
+  register:    db.prepare(`
+    INSERT INTO players (pseudo, password) VALUES (@pseudo, @password)
     RETURNING *
   `),
-  updateColor: db.prepare(`UPDATE players SET color = @color WHERE id = @id`),
-  updateElo:   db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
-  win:         db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
-  loss:        db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
-  draw:        db.prepare(`UPDATE players SET draws  = draws  + 1 WHERE id = ?`),
-  leaderboard: db.prepare(`SELECT * FROM players ORDER BY elo DESC LIMIT 10`),
+  updateColor:  db.prepare(`UPDATE players SET color  = @color  WHERE id = @id`),
+  updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
+  updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
+  win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
+  loss:         db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
+  draw:         db.prepare(`UPDATE players SET draws  = draws  + 1 WHERE id = ?`),
+  leaderboard:  db.prepare(`SELECT * FROM players ORDER BY elo DESC LIMIT 10`),
 };
 
 // ── Games ─────────────────────────────────────────────────────────────────────
@@ -81,8 +88,8 @@ const gQ = {
   create: db.prepare(`INSERT INTO games (player1_id, player2_id) VALUES (@p1, @p2)`),
   getById: db.prepare(`
     SELECT g.*,
-      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo, p1.color AS p1_color,
-      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo, p2.color AS p2_color,
+      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo, p1.color AS p1_color, p1.avatar AS p1_avatar,
+      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo, p2.color AS p2_color, p2.avatar AS p2_avatar,
       w.pseudo  AS winner_pseudo
     FROM games g
     JOIN players p1 ON g.player1_id = p1.id
@@ -157,6 +164,6 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return { dW, dL, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
 });
 
-function initDb() { return Promise.resolve(); } // sync, rien à attendre
+function initDb() { return Promise.resolve(); }
 
 module.exports = { initDb, db, pQ, gQ, mQ, bQ, calcElo, finishGame };

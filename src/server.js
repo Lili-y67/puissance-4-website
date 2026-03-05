@@ -1,11 +1,9 @@
-/**
- * server.js — Express + Socket.io
- */
 require('dotenv').config();
 const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
 const path       = require('path');
+const crypto     = require('crypto');
 
 const { initDb, pQ, gQ, mQ } = require('./db/db');
 const { Matchmaking }         = require('./game/Matchmaking');
@@ -15,14 +13,14 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: '*' },
-  transports: ['polling'], // Railway ne supporte pas bien les WebSockets
+  transports: ['polling'],
   allowUpgrades: false,
 });
 
 const mm = new Matchmaking();
 const gm = new GameManager();
 
-app.use(express.json());
+app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── SPA routing ────────────────────────────────────────────────────────────────
@@ -32,43 +30,83 @@ app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/pro
 app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 
-// ── API ────────────────────────────────────────────────────────────────────────
-app.post('/api/players', (req, res) => {
-  const { pseudo } = req.body;
-  if (!pseudo?.trim()) return res.status(400).json({ error: 'pseudo requis' });
+// ── Hash password ──────────────────────────────────────────────────────────────
+function hashPwd(pwd) {
+  return crypto.createHash('sha256').update(pwd + 'p4salt2024').digest('hex');
+}
+
+// ── Auth API ───────────────────────────────────────────────────────────────────
+
+// Inscription
+app.post('/api/auth/register', (req, res) => {
+  const { pseudo, password } = req.body;
+  if (!pseudo?.trim() || !password) return res.status(400).json({ error: 'Pseudo et mot de passe requis.' });
+  if (pseudo.trim().length < 2) return res.status(400).json({ error: 'Pseudo trop court (2 caractères min).' });
+  if (password.length < 4)     return res.status(400).json({ error: 'Mot de passe trop court (4 caractères min).' });
+
+  const existing = pQ.getByPseudo.get(pseudo.trim());
+  if (existing) return res.status(409).json({ error: 'Ce pseudo est déjà pris.' });
+
   try {
-    let player = pQ.upsert.get({ pseudo: pseudo.trim() });
-    if (!player) player = pQ.getByPseudo.get(pseudo.trim()); // fallback si conflit
-    const { color } = req.body;
-    if (color && /^#[0-9a-fA-F]{6}$/.test(color)) pQ.updateColor.run({ color, id: player.id });
-    res.json(pQ.getById.get(player.id));
-  }
-  catch (e) {
-    console.error('[POST /api/players]', e);
-    res.status(500).json({ error: e.message, stack: e.stack });
+    const player = pQ.register.get({ pseudo: pseudo.trim(), password: hashPwd(password) });
+    res.json(sanitize(player));
+  } catch(e) {
+    console.error('[register]', e);
+    res.status(500).json({ error: e.message });
   }
 });
 
-// Update player color/theme
+// Connexion
+app.post('/api/auth/login', (req, res) => {
+  const { pseudo, password } = req.body;
+  if (!pseudo?.trim() || !password) return res.status(400).json({ error: 'Pseudo et mot de passe requis.' });
+
+  const player = pQ.getByPseudo.get(pseudo.trim());
+  if (!player) return res.status(401).json({ error: 'Pseudo introuvable.' });
+
+  // Support anciens comptes sans mot de passe (migration)
+  if (player.password && player.password !== hashPwd(password))
+    return res.status(401).json({ error: 'Mot de passe incorrect.' });
+
+  res.json(sanitize(player));
+});
+
+// Ne jamais renvoyer le hash du mot de passe au client
+function sanitize(p) {
+  const { password, ...rest } = p;
+  return rest;
+}
+
+// ── Players API ────────────────────────────────────────────────────────────────
 app.patch('/api/players/:id/color', (req, res) => {
   const { color } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color))
-    return res.status(400).json({ error: 'couleur invalide' });
+    return res.status(400).json({ error: 'Couleur invalide.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/avatar', (req, res) => {
+  const { avatar } = req.body;
+  if (!avatar || !avatar.startsWith('data:image/'))
+    return res.status(400).json({ error: 'Image invalide.' });
+  if (avatar.length > 3 * 1024 * 1024) // ~2MB base64
+    return res.status(413).json({ error: 'Image trop lourde (max 2MB).' });
+  pQ.updateAvatar.run({ avatar, id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
 app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
   const p = pQ.getByPseudo.get(req.params.pseudo);
   if (!p) return res.status(404).json({ error: 'Introuvable' });
-  res.json(p);
+  res.json(sanitize(p));
 });
 
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   if (!player) return res.status(404).json({ error: 'Introuvable' });
   const games = gQ.getForPlayer.all(player.id, player.id);
-  res.json({ player, games });
+  res.json({ player: sanitize(player), games });
 });
 
 app.get('/api/games/:id', (req, res) => {
@@ -83,7 +121,9 @@ app.get('/api/games/:id/moves', (req, res) => {
   res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)) });
 });
 
-app.get('/api/leaderboard', (_, res) => res.json(pQ.leaderboard.all()));
+app.get('/api/leaderboard', (_, res) => {
+  res.json(pQ.leaderboard.all().map(sanitize));
+});
 
 // ── Socket.io ──────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
@@ -92,13 +132,13 @@ io.on('connection', socket => {
     const player = pQ.getById.get(playerId);
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
     socket.playerId   = playerId;
-    socket.playerData = player;
-    socket.emit('identified', player);
+    socket.playerData = sanitize(player);
+    socket.emit('identified', sanitize(player));
   });
 
   socket.on('queue_join', () => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
-    socket.playerData = pQ.getById.get(socket.playerId); // refresh elo
+    socket.playerData = sanitize(pQ.getById.get(socket.playerId));
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
     if (!joined) return socket.emit('error', { message: 'Déjà en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });
@@ -108,56 +148,6 @@ io.on('connection', socket => {
 
   socket.on('queue_leave', () => { mm.leave(socket.id); socket.emit('queue_left'); });
 
-  // Reconnexion à une partie existante après redirect home → /game
-  socket.on('rejoin_game', ({ gameId }) => {
-    socket.join('game:' + gameId);
-
-    const state = gm.games.get(gameId);
-    if (state && state.status === 'active') {
-      // Partie encore en RAM → juste mettre à jour le socketId
-      const side = state.players[1].id === socket.playerId ? 1
-                 : state.players[2].id === socket.playerId ? 2
-                 : null;
-      if (side) {
-        state.players[side].socketId = socket.id;
-        gm.socketToGame.set(socket.id, gameId);
-      }
-    } else {
-      // Partie plus en RAM (serveur redémarré) → recréer depuis DB
-      const gameRow = gQ.getById.get(gameId);
-      if (!gameRow || gameRow.status !== 'active') {
-        return socket.emit('game_not_found');
-      }
-
-      // Recréer les moves déjà joués pour rebuilder le board
-      const moves = mQ.getByGame.all(gameId);
-      const { Board } = require('./game/Board');
-      const board = new Board();
-      moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
-
-      const p1 = pQ.getById.get(gameRow.player1_id);
-      const p2 = pQ.getById.get(gameRow.player2_id);
-      const currentTurn = moves.length % 2 === 0 ? 1 : 2;
-
-      // Remettre la partie en RAM
-      const state = {
-        id: gameId,
-        board,
-        players: {
-          1: { ...p1, socketId: gameRow.player1_id === socket.playerId ? socket.id : null },
-          2: { ...p2, socketId: gameRow.player2_id === socket.playerId ? socket.id : null },
-        },
-        current:    currentTurn,
-        startedAt:  Date.now(),
-        lastMoveAt: Date.now(),
-        moveCount:  moves.length,
-        status:     'active',
-      };
-      gm.games.set(gameId, state);
-      gm.socketToGame.set(socket.id, gameId);
-    }
-  });
-
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
@@ -165,7 +155,6 @@ io.on('connection', socket => {
     if (result.type === 'game_over') io.to('game:' + result.gameId).emit('game_over',   result);
   });
 
-  // Player changed color mid-session → broadcast to ongoing game
   socket.on('color_update', ({ color }) => {
     if (!socket.playerData || !color) return;
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
@@ -174,6 +163,39 @@ io.on('connection', socket => {
     const game = gm.getBySocket(socket.id);
     if (game) io.to('game:' + game.id).emit('color_updated', { playerId: socket.playerData.id, color });
   });
+
+  socket.on('rejoin_game', ({ gameId }) => {
+    socket.join('game:' + gameId);
+    const state = gm.games.get(gameId);
+    if (state && state.status === 'active') {
+      const side = state.players[1].id === socket.playerId ? 1
+                 : state.players[2].id === socket.playerId ? 2 : null;
+      if (side) { state.players[side].socketId = socket.id; gm.socketToGame.set(socket.id, gameId); }
+    } else {
+      const gameRow = gQ.getById.get(gameId);
+      if (!gameRow || gameRow.status !== 'active') return socket.emit('game_not_found');
+      const moves = mQ.getByGame.all(gameId);
+      const { Board } = require('./game/Board');
+      const board = new Board();
+      moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
+      const p1 = pQ.getById.get(gameRow.player1_id);
+      const p2 = pQ.getById.get(gameRow.player2_id);
+      const state = {
+        id: gameId, board,
+        players: {
+          1: { ...sanitize(p1), socketId: gameRow.player1_id === socket.playerId ? socket.id : null },
+          2: { ...sanitize(p2), socketId: gameRow.player2_id === socket.playerId ? socket.id : null },
+        },
+        current: moves.length % 2 === 0 ? 1 : 2,
+        startedAt: Date.now(), lastMoveAt: Date.now(),
+        moveCount: moves.length, status: 'active',
+      };
+      gm.games.set(gameId, state);
+      gm.socketToGame.set(socket.id, gameId);
+    }
+  });
+
+  socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
     mm.leave(socket.id);
@@ -193,8 +215,8 @@ function _startMatch(p1, p2) {
   const base = {
     gameId: state.id,
     players: {
-      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55' },
-      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a' },
+      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '' },
+      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '' },
     },
     startsIn: 3,
   };
@@ -202,7 +224,6 @@ function _startMatch(p1, p2) {
   if (s2) s2.emit('match_found', { ...base, yourSide: 2 });
 }
 
-// ── Boot ───────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 initDb().then(() => {
   server.listen(PORT, () => console.log(`✅  http://localhost:${PORT}`));

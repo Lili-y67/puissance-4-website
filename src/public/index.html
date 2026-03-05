@@ -455,6 +455,15 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Auth tabs ── */
+.auth-tabs { display:flex; gap:4px; background:var(--surface2); border-radius:10px; padding:4px; }
+.auth-tab {
+  flex:1; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
+  letter-spacing:1px; text-transform:uppercase; padding:8px; border-radius:7px;
+  background:transparent; border:none; color:var(--muted); cursor:pointer; transition:all 0.2s;
+}
+.auth-tab.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+
 /* ── Theme / Color picker ── */
 .theme-section { display:flex; flex-direction:column; gap:8px; }
 .theme-label-row { display:flex; align-items:center; justify-content:space-between; }
@@ -505,27 +514,28 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
     <div id="view-login">
       <div class="card-label">Entrer dans l'arène</div>
 
-      <div class="input-wrap">
-        <span class="input-icon">⚔️</span>
-        <input
-          class="input"
-          id="input-pseudo"
-          placeholder="Ton pseudo"
-          maxlength="20"
-          autocomplete="off"
-          spellcheck="false"
-        />
+      <!-- Tabs login / register -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login"    onclick="switchTab('login')">Connexion</button>
+        <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">Créer un compte</button>
       </div>
 
+      <div class="input-wrap">
+        <span class="input-icon">⚔️</span>
+        <input class="input" id="input-pseudo" placeholder="Pseudo" maxlength="20" autocomplete="off" spellcheck="false" />
+      </div>
 
-      <!-- Theme picker -->
-      <div class="theme-section">
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input class="input" id="input-password" type="password" placeholder="Mot de passe" autocomplete="current-password" />
+      </div>
+
+      <!-- Theme picker (visible seulement à l'inscription) -->
+      <div class="theme-section" id="theme-section">
         <div class="theme-label-row">
           <span class="theme-lbl">Couleur de jeton</span>
         </div>
-        <div class="theme-presets" id="theme-presets">
-          <!-- filled by JS -->
-        </div>
+        <div class="theme-presets" id="theme-presets"></div>
         <div class="color-input-wrap" onclick="document.getElementById('custom-color').click()">
           <div class="color-preview" id="color-preview"></div>
           <div>
@@ -538,8 +548,8 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
 
       <div class="error-msg" id="error-msg"></div>
 
-      <button class="btn btn-play" id="btn-play" onclick="handleLogin()">
-        <span>⚡</span> Jouer maintenant
+      <button class="btn btn-play" id="btn-play" onclick="handleAuth()">
+        <span>⚡</span> <span id="btn-play-txt">Se connecter</span>
       </button>
 
       <div class="divider">ou</div>
@@ -600,11 +610,11 @@ DECO.forEach(v => {
 function spawnTokens() {
   const bg = document.getElementById('tokens-bg');
   for (let i = 0; i < 18; i++) {
-    const t   = document.createElement('div');
+    const t = document.createElement('div');
     t.className = 'token-fall ' + (Math.random() > 0.5 ? 'red' : 'yellow');
-    t.style.left   = Math.random() * 100 + 'vw';
+    t.style.left = Math.random() * 100 + 'vw';
     const sz = (24 + Math.random() * 28) + 'px';
-    t.style.width  = sz; t.style.height = sz;
+    t.style.width = sz; t.style.height = sz;
     const dur = 6 + Math.random() * 10;
     t.style.animationDuration = dur + 's';
     t.style.animationDelay   = -(Math.random() * dur) + 's';
@@ -612,6 +622,20 @@ function spawnTokens() {
   }
 }
 spawnTokens();
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH TABS
+// ═══════════════════════════════════════════════════════════════════
+let authMode = 'login'; // 'login' | 'register'
+
+function switchTab(mode) {
+  authMode = mode;
+  document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+  document.getElementById('tab-register').classList.toggle('active', mode === 'register');
+  document.getElementById('btn-play-txt').textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte';
+  document.getElementById('theme-section').style.display = mode === 'register' ? 'flex' : 'none';
+  document.getElementById('error-msg').textContent = '';
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  THEMES & COLORS
@@ -629,9 +653,6 @@ const PRESETS = [
 let selectedColor = '#ff2d55';
 
 function initThemePicker() {
-  const saved = sessionStorage.getItem('player');
-  if (saved) { const p = JSON.parse(saved); if (p.color) selectedColor = p.color; }
-
   const container = document.getElementById('theme-presets');
   container.innerHTML = '';
   PRESETS.forEach(({ color, label }) => {
@@ -652,27 +673,12 @@ function selectColor(color) {
   document.querySelectorAll('.preset-dot').forEach(d => {
     d.classList.toggle('active', d.style.background === hexToRgb(color));
   });
-  saveColorToServer(color);
 }
 
 function onColorInput(color) {
   selectedColor = color;
   updateColorUI(color);
   document.querySelectorAll('.preset-dot').forEach(d => d.classList.remove('active'));
-  clearTimeout(window._colorTimer);
-  window._colorTimer = setTimeout(() => saveColorToServer(color), 600);
-}
-
-function saveColorToServer(color) {
-  const saved = sessionStorage.getItem('player');
-  if (!saved) return;
-  const p = JSON.parse(saved);
-  fetch('/api/players/' + p.id + '/color', {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ color }),
-  });
-  p.color = color;
-  sessionStorage.setItem('player', JSON.stringify(p));
 }
 
 function updateColorUI(color) {
@@ -697,42 +703,55 @@ function hexToRgb(hex) {
 let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 
 // ═══════════════════════════════════════════════════════════════════
-//  LOGIN
+//  AUTH (login / register)
 // ═══════════════════════════════════════════════════════════════════
-document.getElementById('input-pseudo').addEventListener('keydown', e => {
-  if (e.key === 'Enter') handleLogin();
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('view-login').style.display !== 'none') handleAuth();
 });
 
-async function handleLogin() {
-  const pseudo = document.getElementById('input-pseudo').value.trim();
-  if (!pseudo)           return showError('Entre un pseudo pour jouer !');
-  if (pseudo.length < 2) return showError('Au moins 2 caractères.');
+async function handleAuth() {
+  const pseudo    = document.getElementById('input-pseudo').value.trim();
+  const password  = document.getElementById('input-password').value;
+
+  if (!pseudo)    return showError('Entre ton pseudo.');
+  if (!password)  return showError('Entre ton mot de passe.');
 
   const btn = document.getElementById('btn-play');
-  btn.textContent = '...';
-  btn.disabled    = true;
+  btn.disabled = true;
+  const origTxt = document.getElementById('btn-play-txt').textContent;
+  document.getElementById('btn-play-txt').textContent = '...';
+
+  const url = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
 
   try {
-    const res = await fetch('/api/players', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pseudo, color: selectedColor }),
+      body: JSON.stringify({ pseudo, password, color: selectedColor }),
     });
-    if (!res.ok) throw new Error();
-    myPlayer = await res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      showError(data.error || 'Erreur serveur.');
+      btn.disabled = false;
+      document.getElementById('btn-play-txt').textContent = origTxt;
+      return;
+    }
+    myPlayer = data;
+    // Sauvegarder en localStorage pour rester connecté
+    localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     connectAndQueue();
   } catch {
-    showError('Erreur serveur, réessaie.');
-    btn.innerHTML = '<span>⚡</span> Jouer maintenant';
-    btn.disabled  = false;
+    showError('Erreur réseau, réessaie.');
+    btn.disabled = false;
+    document.getElementById('btn-play-txt').textContent = origTxt;
   }
 }
 
 function showError(msg) {
   const el = document.getElementById('error-msg');
   el.textContent = msg;
-  setTimeout(() => { el.textContent = ''; }, 3000);
+  setTimeout(() => { el.textContent = ''; }, 4000);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -741,7 +760,7 @@ function showError(msg) {
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id }));
-  socket.on('identified',   (player) => { myPlayer = player; socket.emit('queue_join'); });
+  socket.on('identified',   (player) => { myPlayer = player; localStorage.setItem('player', JSON.stringify(myPlayer)); socket.emit('queue_join'); });
   socket.on('queue_joined', ({ position }) => showQueueView(position));
   socket.on('match_found',  (data) => {
     sessionStorage.setItem('match',  JSON.stringify(data));
@@ -788,20 +807,31 @@ function handleLeaveQueue() {
     loginView.style.display = 'block';
     loginView.classList.remove('fade-out');
     const btn = document.getElementById('btn-play');
-    btn.innerHTML = '<span>⚡</span> Jouer maintenant';
-    btn.disabled  = false;
+    btn.style.background = '';
+    btn.style.boxShadow  = '';
+    btn.disabled = false;
   }, 250);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-//  INIT
+//  INIT — auto-login si localStorage
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // Masquer le theme picker en mode login par défaut
+  document.getElementById('theme-section').style.display = 'none';
+
   initThemePicker();
-  const saved = sessionStorage.getItem('player');
+
+  // Auto-login depuis localStorage
+  const saved = localStorage.getItem('player');
   if (saved) {
     const p = JSON.parse(saved);
+    myPlayer = p;
+    sessionStorage.setItem('player', JSON.stringify(p));
     document.getElementById('input-pseudo').value = p.pseudo;
+    if (p.color) { selectedColor = p.color; initThemePicker(); }
+    // Auto-connect direct
+    connectAndQueue();
   }
 });
 </script>
