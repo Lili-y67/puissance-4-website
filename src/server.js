@@ -199,6 +199,7 @@ io.on('connection', socket => {
   });
 
   socket.on('rejoin_game', ({ gameId }) => {
+    socket.transitioning = false; // Le joueur est bien arrivé sur /game
     socket.join('game:' + gameId);
     const state = gm.games.get(gameId);
     if (state && state.status === 'active') {
@@ -233,6 +234,30 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     mm.leave(socket.id);
+
+    // Si le socket était en transition (match_found mais pas encore rejoin_game)
+    // on ne déclenche pas de forfait immédiatement — le joueur charge /game
+    if (socket.transitioning) {
+      // Laisser une fenêtre de grâce : si personne ne rejoint dans 20s → forfait
+      const gameId = socket.pendingGameId;
+      const side   = socket.pendingSide;
+      if (gameId && side) {
+        setTimeout(() => {
+          const state = gm.games.get(gameId);
+          if (!state || state.status !== 'active') return; // déjà terminé
+          // Vérifier si ce joueur a rejoint
+          const playerSide = state.players[side];
+          if (!playerSide || !io.sockets.sockets.get(playerSide.socketId)) {
+            // Toujours déconnecté → forfait
+            const winner = side === 1 ? 2 : 1;
+            const result = gm._end(state, winner, [], 'disconnect');
+            io.to('game:' + gameId).emit('game_over', result);
+          }
+        }, 20000);
+      }
+      return;
+    }
+
     const result = gm.disconnect(socket.id);
     if (result?.type === 'game_over') io.to('game:' + result.gameId).emit('game_over', result);
   });
@@ -254,8 +279,18 @@ function _startMatch(p1, p2) {
     },
     startsIn: 3,
   };
-  if (s1) s1.emit('match_found', { ...base, yourSide: 1 });
-  if (s2) s2.emit('match_found', { ...base, yourSide: 2 });
+  if (s1) {
+    s1.transitioning  = true;
+    s1.pendingGameId  = state.id;
+    s1.pendingSide    = 1;
+    s1.emit('match_found', { ...base, yourSide: 1 });
+  }
+  if (s2) {
+    s2.transitioning  = true;
+    s2.pendingGameId  = state.id;
+    s2.pendingSide    = 2;
+    s2.emit('match_found', { ...base, yourSide: 2 });
+  }
 }
 
 const PORT = process.env.PORT || 3000;
