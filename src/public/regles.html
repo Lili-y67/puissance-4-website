@@ -250,76 +250,6 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     </div>
   </div>
 
-  <!-- Alignements gagnants -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-icon green">🏆</div>
-      <div>
-        <div class="card-title">Alignements gagnants</div>
-        <div class="card-sub">4 façons de gagner</div>
-      </div>
-    </div>
-    <div class="win-examples">
-      <!-- Horizontal -->
-      <div class="win-ex">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">➡️</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">Horizontal</div>
-            <div style="font-size:11px;color:var(--muted)">4 de suite sur une ligne</div>
-          </div>
-        </div>
-        <div class="win-mini">
-          <div class="t r"></div><div class="t r"></div><div class="t r"></div><div class="t r"></div>
-        </div>
-      </div>
-      <!-- Vertical -->
-      <div class="win-ex">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">⬆️</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">Vertical</div>
-            <div style="font-size:11px;color:var(--muted)">4 de suite dans une colonne</div>
-          </div>
-        </div>
-        <div class="win-mini-col">
-          <div class="t r"></div><div class="t r"></div><div class="t r"></div><div class="t r"></div>
-        </div>
-      </div>
-      <!-- Diagonal montant -->
-      <div class="win-ex">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">↗️</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">Diagonal montant</div>
-            <div style="font-size:11px;color:var(--muted)">4 en diagonale vers le haut</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,28px);grid-template-rows:repeat(4,28px);gap:4px;flex-shrink:0">
-          <div class="t e"></div><div class="t e"></div><div class="t e"></div><div class="t r"></div>
-          <div class="t e"></div><div class="t e"></div><div class="t r"></div><div class="t e"></div>
-          <div class="t e"></div><div class="t r"></div><div class="t e"></div><div class="t e"></div>
-          <div class="t r"></div><div class="t e"></div><div class="t e"></div><div class="t e"></div>
-        </div>
-      </div>
-      <!-- Diagonal descendant -->
-      <div class="win-ex">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">↘️</span>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--text)">Diagonal descendant</div>
-            <div style="font-size:11px;color:var(--muted)">4 en diagonale vers le bas</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(4,28px);grid-template-rows:repeat(4,28px);gap:4px;flex-shrink:0">
-          <div class="t r"></div><div class="t e"></div><div class="t e"></div><div class="t e"></div>
-          <div class="t e"></div><div class="t r"></div><div class="t e"></div><div class="t e"></div>
-          <div class="t e"></div><div class="t e"></div><div class="t r"></div><div class="t e"></div>
-          <div class="t e"></div><div class="t e"></div><div class="t e"></div><div class="t r"></div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Système ELO -->
   <div class="card">
@@ -398,7 +328,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div class="card-icon red">🎮</div>
       <div>
         <div class="card-title">Partie exemple</div>
-        <div class="card-sub">Rouge gagne en diagonal — regarde !</div>
+        <div class="card-sub">Simulation IA vs IA — nouveaux bots à chaque partie !</div>
       </div>
     </div>
 
@@ -407,16 +337,16 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,45,85,0.2);border-radius:10px;padding:10px 12px">
         <div style="width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red-glow);flex-shrink:0"></div>
         <div>
-          <div style="font-size:13px;font-weight:600">Rouge</div>
-          <div style="font-size:11px;color:var(--muted)">Joueur 1</div>
+          <div style="font-size:13px;font-weight:600" id="bot1-name">Bot 1</div>
+          <div style="font-size:11px;color:var(--muted)">IA Joueur 1</div>
         </div>
       </div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:var(--muted);letter-spacing:3px">VS</div>
       <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,214,10,0.2);border-radius:10px;padding:10px 12px">
         <div style="width:20px;height:20px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px var(--yel-glow);flex-shrink:0"></div>
         <div>
-          <div style="font-size:13px;font-weight:600">Jaune</div>
-          <div style="font-size:11px;color:var(--muted)">Joueur 2</div>
+          <div style="font-size:13px;font-weight:600" id="bot2-name">Bot 2</div>
+          <div style="font-size:11px;color:var(--muted)">IA Joueur 2</div>
         </div>
       </div>
     </div>
@@ -437,7 +367,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
       <!-- Indicateur tour -->
       <div id="ex-turn" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
         <div id="ex-dot" style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red-glow)"></div>
-        <span id="ex-turn-txt">Tour de Rouge</span>
+        <span id="ex-turn-txt">Chargement...</span>
       </div>
     </div>
 
@@ -516,13 +446,9 @@ function dropToken(col, player) {
 
   const tok = document.getElementById(`ex-${r}-${col}`).firstChild;
 
-  if (player === 1) {
-    tok.style.background = 'radial-gradient(circle at 35% 30%, #ff6b85, #ff2d55)';
-    tok.style.boxShadow = '0 0 14px rgba(255,45,85,0.6)';
-  } else {
-    tok.style.background = 'radial-gradient(circle at 35% 30%, #ffe566, #ffd60a)';
-    tok.style.boxShadow = '0 0 14px rgba(255,214,10,0.6)';
-  }
+  const c = player === 1 ? color1 : color2;
+  tok.style.background = `radial-gradient(circle at 35% 30%, ${c.light}, ${c.main})`;
+  tok.style.boxShadow  = `0 0 14px ${c.glow}`;
 
   void tok.offsetWidth;
   tok.style.transform = 'scale(1)';
@@ -609,8 +535,10 @@ function playBotTurn() {
 
   if (checkWin(r,c,currentPlayer)) {
 
-    document.getElementById('ex-turn-txt').textContent =
-      currentPlayer === 1 ? "🏆 Rouge gagne !" : "🏆 Jaune gagne !";
+    const winnerName = document.getElementById(currentPlayer === 1 ? 'bot1-name' : 'bot2-name')?.textContent || (currentPlayer === 1 ? 'Bot 1' : 'Bot 2');
+    const winColor = currentPlayer === 1 ? color1.main : color2.main;
+    const turnEl = document.getElementById('ex-turn-txt');
+    if (turnEl) { turnEl.textContent = `🏆 ${winnerName} gagne !`; turnEl.style.color = winColor; }
 
     return;
   }
@@ -639,23 +567,98 @@ function randomBotName() {
 }
 const bot1 = randomBotName();
 let bot2;
+do { bot2 = randomBotName(); } while (bot2 === bot1);
 
-do {
-  bot2 = randomBotName();
-} while (bot2 === bot1);
+// Couleur hex aléatoire avec teinte claire et glow dérivés
+function randomHex() {
+  // Saturation et luminosité forcées pour que ce soit beau
+  const h = Math.floor(Math.random() * 360);
+  const s = 75 + Math.floor(Math.random() * 25); // 75-100%
+  const l = 50 + Math.floor(Math.random() * 15); // 50-65%
+  return hslToHex(h, s, l);
+}
 
-document.getElementById("ex-turn-txt").textContent =
-`🤖 ${bot1}  VS  🤖 ${bot2}`;
+function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function lightenHex(hex, amt = 30) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  const lr = Math.min(255, r + amt).toString(16).padStart(2,'0');
+  const lg = Math.min(255, g + amt).toString(16).padStart(2,'0');
+  const lb = Math.min(255, b + amt).toString(16).padStart(2,'0');
+  return `#${lr}${lg}${lb}`;
+}
+
+function hexGlow(hex, a = 0.6) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function makeColor(hex) {
+  return { main: hex, light: lightenHex(hex, 40), glow: hexGlow(hex) };
+}
+
+function randomTwoColors() {
+  const h1 = Math.floor(Math.random() * 360);
+  // Forcer une différence de teinte d'au moins 60°
+  const h2 = (h1 + 60 + Math.floor(Math.random() * 240)) % 360;
+  return [
+    makeColor(hslToHex(h1, 80 + Math.floor(Math.random()*20), 55 + Math.floor(Math.random()*10))),
+    makeColor(hslToHex(h2, 80 + Math.floor(Math.random()*20), 55 + Math.floor(Math.random()*10))),
+  ];
+}
+
+let [color1, color2] = randomTwoColors();
+
+// Init noms et couleurs au chargement
+setTimeout(() => {
+  const n1 = document.getElementById('bot1-name');
+  const n2 = document.getElementById('bot2-name');
+  const d1 = document.getElementById('bot1-dot');
+  const d2 = document.getElementById('bot2-dot');
+  if (n1) n1.textContent = bot1;
+  if (n2) n2.textContent = bot2;
+  if (d1) { d1.style.background = color1.main; d1.style.boxShadow = `0 0 8px ${color1.glow}`; }
+  if (d2) { d2.style.background = color2.main; d2.style.boxShadow = `0 0 8px ${color2.glow}`; }
+  document.getElementById("ex-turn-txt").textContent = `🤖 ${bot1}  VS  🤖 ${bot2}`;
+}, 0);
 function startExample() {
-
   clearTimeout(exTimer);
-
   initExBoard();
   currentPlayer = 1;
 
-  document.getElementById('ex-turn-txt').textContent = "🤖 Simulation IA vs IA";
+  // Nouveau tirage de noms + couleurs à chaque relance
+  const [nc1, nc2] = randomTwoColors();
+  Object.assign(color1, nc1);
+  Object.assign(color2, nc2);
+  const newBot1 = randomBotName();
+  let newBot2;
+  do { newBot2 = randomBotName(); } while (newBot2 === newBot1);
 
-  exTimer = setTimeout(playBotTurn,800);
+  // Mettre à jour l'UI
+  const n1 = document.getElementById('bot1-name');
+  const n2 = document.getElementById('bot2-name');
+  const d1 = document.getElementById('bot1-dot');
+  const d2 = document.getElementById('bot2-dot');
+  if (n1) n1.textContent = newBot1;
+  if (n2) n2.textContent = newBot2;
+  if (d1) { d1.style.background = color1.main; d1.style.boxShadow = `0 0 8px ${color1.glow}`; }
+  if (d2) { d2.style.background = color2.main; d2.style.boxShadow = `0 0 8px ${color2.glow}`; }
+
+  document.getElementById('ex-turn-txt').textContent = `🤖 ${newBot1}  VS  🤖 ${newBot2}`;
+  exTimer = setTimeout(playBotTurn, 800);
 }
 
 // Démarrer automatiquement quand visible

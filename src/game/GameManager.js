@@ -109,7 +109,19 @@ class GameManager {
       ? state.players[winnerSide === 1 ? 2 : 1].id
       : state.players[2].id;
 
+    // Calculer les deltas AVANT finishGame pour les avoir par joueur
+    const p1IsWinner = winnerSide === 1;
+    const p2IsWinner = winnerSide === 2;
+    // winnerId = gagnant, loserId = perdant (ou p1/p2 pour draw)
     const elo = finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw);
+
+    // Delta ELO par joueur (pas winner/loser générique)
+    const p1Delta = isDraw
+      ? (state.players[1].id === winnerId ? elo.dW : elo.dL)
+      : (p1IsWinner ? elo.dW : elo.dL);
+    const p2Delta = isDraw
+      ? (state.players[2].id === winnerId ? elo.dW : elo.dL)
+      : (p2IsWinner ? elo.dW : elo.dL);
 
     // Cleanup memory
     this.socketToGame.delete(state.players[1].socketId);
@@ -123,12 +135,12 @@ class GameManager {
       winner: winnerSide,
       winCells,
       eloChanges: {
-        [state.players[1].id]: winnerSide === 1 ? elo.dW : elo.dL,
-        [state.players[2].id]: winnerSide === 2 ? elo.dW : elo.dL,
+        [state.players[1].id]: p1Delta,
+        [state.players[2].id]: p2Delta,
       },
       eloNow: {
-        [state.players[1].id]: winnerSide === 1 ? elo.winnerEloNow : elo.loserEloNow,
-        [state.players[2].id]: winnerSide === 2 ? elo.winnerEloNow : elo.loserEloNow,
+        [state.players[1].id]: p1IsWinner ? elo.winnerEloNow : elo.loserEloNow,
+        [state.players[2].id]: p2IsWinner ? elo.winnerEloNow : elo.loserEloNow,
       },
       players: {
         1: { id: state.players[1].id, pseudo: state.players[1].pseudo, color: state.players[1].color },

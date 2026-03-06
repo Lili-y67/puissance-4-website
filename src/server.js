@@ -48,7 +48,12 @@ app.post('/api/auth/register', (req, res) => {
   if (existing) return res.status(409).json({ error: 'Ce pseudo est déjà pris.' });
 
   try {
-    const player = pQ.register.get({ pseudo: pseudo.trim(), password: hashPwd(password) });
+    let player = pQ.register.get({ pseudo: pseudo.trim(), password: hashPwd(password) });
+    // Sauvegarder la couleur choisie à l'inscription
+    if (req.body.color && /^#[0-9a-fA-F]{6}$/.test(req.body.color)) {
+      pQ.updateColor.run({ color: req.body.color, id: player.id });
+      player = pQ.getById.get(player.id);
+    }
     res.json(sanitize(player));
   } catch(e) {
     console.error('[register]', e);

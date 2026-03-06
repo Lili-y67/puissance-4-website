@@ -180,10 +180,16 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   if (isDraw) { pQ.draw.run(winnerId); pQ.draw.run(loserId); }
   else        { pQ.win.run(winnerId);  pQ.loss.run(loserId); }
 
+  // elo_p1 = delta du joueur 1, elo_p2 = delta du joueur 2
+  // winnerId peut être player1 ou player2
+  const game = gQ.getById.get(gameId);
+  const p1Delta = game.player1_id === winnerId ? dW : dL;
+  const p2Delta = game.player2_id === winnerId ? dW : dL;
+
   gQ.finish.run({
     id: gameId, winner_id: isDraw ? null : winnerId,
     move_count: moveCount, duration,
-    elo_p1: dW, elo_p2: dL,
+    elo_p1: p1Delta, elo_p2: p2Delta,
   });
 
   return { dW, dL, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
