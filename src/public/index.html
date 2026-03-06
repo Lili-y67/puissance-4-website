@@ -824,14 +824,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
+  const noAutoQueue = sessionStorage.getItem('no_auto_queue');
+  sessionStorage.removeItem('no_auto_queue'); // consommer le flag
+
   if (saved) {
     const p = JSON.parse(saved);
     myPlayer = p;
     sessionStorage.setItem('player', JSON.stringify(p));
     document.getElementById('input-pseudo').value = p.pseudo;
     if (p.color) { selectedColor = p.color; initThemePicker(); }
-    // Auto-connect direct
-    connectAndQueue();
+
+    if (!noAutoQueue) {
+      // Auto-connect direct uniquement si on ne vient pas d'une partie
+      connectAndQueue();
+    }
+    // Sinon on affiche juste le formulaire pré-rempli, l'utilisateur clique manuellement
   }
 });
 </script>

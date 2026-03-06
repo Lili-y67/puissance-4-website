@@ -251,7 +251,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
       <div class="result-elo"    id="result-elo"></div>
       <div class="result-reason" id="result-reason"></div>
       <div class="result-btns">
-        <button class="btn-action primary" onclick="location.href='/'">⚡ Rejouer</button>
+        <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">⚡ Rejouer</button>
         <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
       </div>
     </div>
@@ -285,17 +285,21 @@ function applyColors(c1, c2) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  const pData = sessionStorage.getItem('player');
+  // Lire depuis sessionStorage OU localStorage
+  const pData = sessionStorage.getItem('player') || localStorage.getItem('player');
   const mData = sessionStorage.getItem('match');
 
   if (!pData) return location.href = '/';
   myPlayer = JSON.parse(pData);
+  // S'assurer que sessionStorage est à jour
+  sessionStorage.setItem('player', pData);
 
   if (mData) {
     const match = JSON.parse(mData);
     sessionStorage.removeItem('match');
     connectSocket(match);
   } else {
+    // Pas de match en session → retour accueil SANS marquer de flag
     location.href = '/';
   }
 });
@@ -321,7 +325,7 @@ function connectSocket(pendingMatch) {
 
   // Serveur confirme le rejoin (optionnel, on l'ignore si lobby déjà setup)
   socket.on('game_rejoined', () => { /* déjà géré via setupLobby */ });
-  socket.on('game_not_found', () => { location.href = '/'; });
+  socket.on('game_not_found', () => { sessionStorage.setItem('no_auto_queue','1'); location.href = '/'; });
 
   // match_found depuis la queue (cas où on arrive sans pendingMatch)
   socket.on('match_found', (d) => setupLobby(d));
@@ -523,6 +527,7 @@ function setStatus(html, thinking = false) {
 
 function quit() {
   if (socket) socket.disconnect();
+  sessionStorage.setItem('no_auto_queue', '1');
   location.href = '/';
 }
 </script>
