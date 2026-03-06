@@ -178,6 +178,14 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
 }
 .btn-play:hover { background: #ff4567; transform: translateY(-2px); box-shadow: 0 8px 32px var(--red-glow); }
+
+@media (max-width: 480px) {
+  .page { padding: 20px 10px 48px; }
+  .hero-title { font-size: clamp(44px, 14vw, 80px); }
+  .card { padding: 18px 14px; }
+  .win-ex { flex-direction: column; align-items: flex-start; gap: 8px; }
+  #ex-board { gap: 3px !important; padding: 6px !important; }
+}
 </style>
 </head>
 <body>

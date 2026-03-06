@@ -129,7 +129,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .board-wrap { position: relative; }
 .col-buttons { display: flex; gap: 6px; margin-bottom: 4px; }
 .col-btn {
-  width: 68px; height: 26px; border: none; background: transparent; cursor: pointer;
+  width: calc((min(98vw, 520px) - 20px - 6px*6) / 7); height: 26px; border: none; background: transparent; cursor: pointer;
   border-radius: 6px; transition: all 0.15s; position: relative;
   display: flex; align-items: center; justify-content: center;
 }
@@ -142,7 +142,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   background: var(--grid); border-radius: 18px; padding: 10px;
   border: 1px solid var(--border);
   box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
-  display: grid; grid-template-columns: repeat(7, 68px); grid-template-rows: repeat(6, 68px); gap: 6px;
+  display: grid;
+  /* Taille fluide : s'adapte à la largeur de l'écran */
+  --cell-size: min(68px, calc((min(98vw, 520px) - 20px - 6px*6) / 7));
+  grid-template-columns: repeat(7, var(--cell-size));
+  grid-template-rows: repeat(6, var(--cell-size));
+  gap: 6px;
 }
 .cell {
   border-radius: 50%; background: var(--cell); cursor: pointer;
@@ -189,6 +194,46 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .btn-action.primary:hover { opacity: 0.9; transform: translateY(-1px); }
 .btn-action.ghost { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
 .btn-action.ghost:hover { border-color: var(--muted); color: var(--text); }
+
+/* ── Responsive mobile ── */
+@media (max-width: 480px) {
+  .page { padding: 12px 8px 24px; gap: 10px; }
+  .top-bar { padding: 0 4px; }
+  .logo-sm { font-size: 20px; }
+  .btn-quit { padding: 6px 10px; font-size: 11px; }
+
+  /* Lobby */
+  .lobby-players { grid-template-columns: 1fr 48px 1fr; gap: 8px; max-width: 100%; padding: 0 8px; }
+  .lobby-player { padding: 14px 8px; border-radius: 12px; }
+  .lobby-avatar { width: 40px; height: 40px; font-size: 18px; }
+  .lobby-pseudo { font-size: 12px; }
+  .lobby-elo    { font-size: 14px; }
+  .vs-text   { font-size: 20px; }
+  .countdown { font-size: 52px; }
+
+  /* Player cards */
+  .players-row { gap: 6px; }
+  .player-card { padding: 8px 10px; gap: 6px; border-radius: 10px; }
+  .pc-dot  { width: 12px; height: 12px; }
+  .pc-name { font-size: 12px; }
+  .pc-elo  { font-size: 10px; }
+  .vs-sm   { font-size: 14px; }
+  .turn-lbl { font-size: 9px; }
+
+  /* Board — déjà fluide grâce à --cell-size, juste ajuster le gap et padding */
+  .board { gap: 4px; padding: 7px; border-radius: 12px; }
+  .col-btn { height: 20px; }
+  .col-btn::after { font-size: 9px; }
+
+  /* Result overlay */
+  .result-title { font-size: 36px !important; }
+  .result-elo   { font-size: 18px !important; }
+}
+
+@media (max-width: 360px) {
+  .board { gap: 3px; padding: 5px; }
+  .pc-name { font-size: 11px; }
+}
 </style>
 </head>
 <body>

@@ -487,6 +487,14 @@ html, body {
 .color-input-sub { font-size:11px; color:var(--muted); }
 input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-events:none; }
 
+
+@media (max-width: 480px) {
+  .page { padding: 20px 12px 40px; }
+  .logo { font-size: clamp(48px, 16vw, 80px); }
+  .card { padding: 20px 16px; }
+  .btn { font-size: 15px; padding: 14px; }
+  .stats-strip { gap: 8px; }
+}
 </style>
 </head>
 <body>
