@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 — Partie</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/w9nwQxm.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -260,6 +261,39 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// ═══════════════════════════════════════════════════════════════════
+//  SOUNDS — Web Audio API, aucun fichier externe
+// ═══════════════════════════════════════════════════════════════════
+const SFX = (() => {
+  let ctx = null;
+  function ac() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx;
+  }
+  function beep(freq, dur, vol = 0.15, shape = 'sine', attack = 0.005) {
+    try {
+      const c = ac(), osc = c.createOscillator(), g = c.createGain();
+      osc.connect(g); g.connect(c.destination);
+      osc.type = shape;
+      osc.frequency.setValueAtTime(freq, c.currentTime);
+      g.gain.setValueAtTime(0, c.currentTime);
+      g.gain.linearRampToValueAtTime(vol, c.currentTime + attack);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+      osc.start(c.currentTime); osc.stop(c.currentTime + dur);
+    } catch(e) {}
+  }
+  return {
+    drop()        { beep(300, 0.07, 0.14, 'triangle'); setTimeout(() => beep(200, 0.09, 0.07, 'triangle'), 55); },
+    opponentDrop(){ beep(230, 0.07, 0.09, 'triangle'); setTimeout(() => beep(160, 0.09, 0.05, 'triangle'), 55); },
+    tick()        { beep(900, 0.04, 0.07, 'square'); },
+    go()          { [523,659,784].forEach((f,i) => setTimeout(() => beep(f, 0.25, 0.13), i*70)); },
+    matchFound()  { [440,554,659].forEach((f,i) => setTimeout(() => beep(f, 0.35, 0.13), i*90)); },
+    win()         { [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.14), i*110)); },
+    lose()        { [392,349,311,261].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.12, 'sawtooth'), i*120)); },
+    draw()        { beep(350, 0.18, 0.1, 'triangle'); setTimeout(() => beep(350, 0.18, 0.08, 'triangle'), 240); },
+  };
+})();
+
 const ROWS = 6, COLS = 7;
 let socket, myPlayer, mySide, gameId, currentTurn;
 let gameOver  = false;
@@ -351,6 +385,7 @@ function connectSocket(pendingMatch) {
 
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
+  SFX.matchFound();
   lobbyData = data;
   gameId    = data.gameId;
   mySide    = data.yourSide;
@@ -384,9 +419,11 @@ function setupLobby(data) {
     n--;
     if (n <= 0) {
       clearInterval(iv);
+      SFX.go();
       startGame(data);
     } else {
       cdEl.textContent = n;
+      SFX.tick();
     }
   }, 1000);
 }
@@ -435,10 +472,13 @@ function renderBoard() {
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
   if (gameOver || currentTurn !== mySide) return;
+  SFX.drop();
   socket.emit('play_move', { col });
 }
 
 function onMovePlayed(data) {
+  if (data.player === mySide) SFX.drop();
+  else SFX.opponentDrop();
   applyToken(data.row, data.col, data.player);
   currentTurn = data.next;
   updateTurnUI();
@@ -490,6 +530,7 @@ function onGameOver(data) {
 
   const isWinner = data.winner === mySide;
   const isDraw   = data.reason === 'draw';
+  setTimeout(() => { if (isDraw) SFX.draw(); else if (isWinner) SFX.win(); else SFX.lose(); }, 300);
   const eloD     = data.eloChanges?.[myPlayer.id] ?? 0;
 
   const titleEl = document.getElementById('result-title');

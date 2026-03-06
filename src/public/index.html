@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/w9nwQxm.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* ── Reset & Base ───────────────────────────────────────────────────────────── */
@@ -572,6 +573,17 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
         <div class="queue-timer" id="queue-timer">00:00</div>
       </div>
 
+      <!-- Avatar joueur dans la queue -->
+      <div id="queue-avatar-wrap" style="display:none;flex-direction:column;align-items:center;gap:6px;margin-top:4px">
+        <div id="queue-avatar" style="
+          width:56px;height:56px;border-radius:50%;overflow:hidden;
+          display:flex;align-items:center;justify-content:center;
+          font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;
+          border:2px solid var(--red);background:var(--red-dim);color:var(--red);
+        "></div>
+        <div id="queue-pseudo" style="font-size:13px;font-weight:600;letter-spacing:1px;"></div>
+      </div>
+
       <!-- Player stats recap -->
       <div class="stats-strip" id="queue-stats" style="display:none">
         <div class="stat-item elo">
@@ -597,6 +609,26 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+// Sons légers sur index
+const SFX = (() => {
+  let ctx = null;
+  function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; }
+  function beep(freq, dur, vol = 0.12, shape = 'sine') {
+    try {
+      const c = ac(), osc = c.createOscillator(), g = c.createGain();
+      osc.connect(g); g.connect(c.destination);
+      osc.type = shape; osc.frequency.setValueAtTime(freq, c.currentTime);
+      g.gain.setValueAtTime(vol, c.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+      osc.start(c.currentTime); osc.stop(c.currentTime + dur);
+    } catch(e) {}
+  }
+  return {
+    click()      { beep(600, 0.05, 0.07); },
+    matchFound() { [440,554,659].forEach((f,i) => setTimeout(() => beep(f, 0.35, 0.13), i*90)); },
+  };
+})();
+
 // ═══════════════════════════════════════════════════════════════════
 //  DECORATION
 // ═══════════════════════════════════════════════════════════════════
@@ -710,6 +742,7 @@ document.addEventListener('keydown', e => {
 });
 
 async function handleAuth() {
+  SFX.click();
   const pseudo    = document.getElementById('input-pseudo').value.trim();
   const password  = document.getElementById('input-password').value;
 
@@ -783,6 +816,24 @@ function showQueueView(position) {
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
     document.getElementById('stat-games').textContent = myPlayer.wins + myPlayer.losses + myPlayer.draws;
     document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
+
+    // Avatar dans la queue
+    const avatarWrap = document.getElementById('queue-avatar-wrap');
+    const avatarEl   = document.getElementById('queue-avatar');
+    const pseudoEl   = document.getElementById('queue-pseudo');
+    if (avatarWrap && avatarEl) {
+      const color = myPlayer.color || '#ff2d55';
+      avatarEl.style.borderColor = color;
+      avatarEl.style.background  = color + '22';
+      avatarEl.style.color       = color;
+      if (myPlayer.avatar) {
+        avatarEl.innerHTML = `<img src="${myPlayer.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+      } else {
+        avatarEl.textContent = myPlayer.pseudo[0].toUpperCase();
+      }
+      if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
+      avatarWrap.style.display = 'flex';
+    }
   }, 250);
   queueStart    = Date.now();
   timerInterval = setInterval(updateTimer, 1000);
