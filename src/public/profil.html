@@ -502,7 +502,7 @@ function handleAvatarUpload(input) {
     const res = await fetch(`/api/players/${me.id}/avatar`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatar: resized }),
+      body: JSON.stringify({ avatar: resized, token: localStorage.getItem('token') }),
     });
     if (res.ok) {
       const el = document.getElementById('avatar-el');
