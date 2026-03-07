@@ -29,6 +29,26 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
 app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
+app.get('/live',       (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
+
+app.get('/api/live', (_, res) => {
+  const games = [];
+  for (const [id, state] of gm.games) {
+    if (state.status !== 'active') continue;
+    games.push({
+      id,
+      players: {
+        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '' },
+        2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '' },
+      },
+      grid:    state.board.grid,
+      current: state.current,
+      moves:   state.moveCount,
+    });
+    if (games.length >= 15) break;
+  }
+  res.json(games);
+});
 
 // ── Hash password ──────────────────────────────────────────────────────────────
 function hashPwd(pwd) {

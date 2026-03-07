@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Parties en direct</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/w9nwQxm.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg:      #06060e;
+  --surface: #0d0d1c;
+  --border:  rgba(255,255,255,0.06);
+  --text:    #eeeef5;
+  --muted:   rgba(238,238,245,0.38);
+  --accent:  #4c6ef5;
+  --green:   #30d158;
+}
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; }
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0;
+  background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.scanlines {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+}
+.page { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
+
+/* ── Header ── */
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
+.logo { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; color: var(--text); }
+.logo span { color: var(--accent); }
+.live-badge {
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--green); background: rgba(48,209,88,0.1); border: 1px solid rgba(48,209,88,0.25);
+  padding: 6px 14px; border-radius: 20px;
+}
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink-dot 1.2s ease-in-out infinite; }
+@keyframes blink-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+.subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.subtitle span { color: var(--text); font-weight: 600; }
+
+/* ── Grid de parties ── */
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ── Carte partie ── */
+.game-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 14px; display: flex; flex-direction: column; gap: 12px;
+  transition: border-color 0.2s, transform 0.2s;
+  animation: card-in 0.3s cubic-bezier(0.22,1,0.36,1) both;
+}
+.game-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
+@keyframes card-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── Players header dans la carte ── */
+.card-players { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-player { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.card-player.p2 { flex-direction: row-reverse; text-align: right; }
+.player-av {
+  width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 900;
+  border: 2px solid; transition: box-shadow 0.3s;
+}
+.player-av img { width: 100%; height: 100%; object-fit: cover; }
+.player-info { min-width: 0; }
+.player-pseudo { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player-elo { font-size: 10px; color: var(--muted); }
+
+.vs-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 900; color: var(--muted); letter-spacing: 2px; flex-shrink: 0; }
+
+/* ── Mini grille ── */
+.mini-board {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 3px;
+  background: #0a0a18;
+  border-radius: 10px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  aspect-ratio: 7/6;
+}
+.mini-cell {
+  border-radius: 50%;
+  background: #07071a;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.mini-cell.p1 { box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
+.mini-cell.p2 { box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
+
+/* ── Footer carte ── */
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.move-count { font-size: 11px; color: var(--muted); }
+.turn-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
+.turn-dot { width: 6px; height: 6px; border-radius: 50%; animation: blink-dot 1s ease-in-out infinite; }
+
+/* ── Empty state ── */
+.empty { text-align: center; padding: 80px 20px; color: var(--muted); }
+.empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px; color: var(--text); }
+.empty-sub { font-size: 13px; }
+
+/* ── Refresh indicator ── */
+.refresh-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-bottom: 20px; }
+.refresh-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 100%; transition: width linear; }
+
+@media (max-width: 480px) {
+  .games-grid { grid-template-columns: 1fr; }
+  .header { margin-bottom: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
+<div class="page">
+
+  <div class="header">
+    <a class="logo" href="/">P<span>4</span> RANKED</a>
+    <div class="live-badge"><div class="live-dot"></div>EN DIRECT</div>
+  </div>
+
+  <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
+
+  <div class="subtitle">
+    <span id="count">0</span> partie(s) en cours · Mise à jour toutes les 3s
+  </div>
+
+  <div class="games-grid" id="games-grid">
+    <div class="empty">
+      <div class="empty-icon">⏳</div>
+      <div class="empty-title">Chargement...</div>
+    </div>
+  </div>
+
+</div>
+<script>
+const REFRESH_MS = 3000;
+let prevIds = new Set();
+
+function renderAvatar(player, side) {
+  const color = player.color;
+  const dim   = color + '22';
+  const av = document.createElement('div');
+  av.className = 'player-av';
+  av.style.borderColor = color;
+  av.style.background  = dim;
+  av.style.color       = color;
+  if (player.avatar) {
+    av.innerHTML = `<img src="${player.avatar}" alt="">`;
+  } else {
+    av.textContent = player.pseudo[0].toUpperCase();
+  }
+  return av;
+}
+
+function renderCard(game) {
+  const p1 = game.players[1], p2 = game.players[2];
+
+  const card = document.createElement('div');
+  card.className = 'game-card';
+  card.dataset.id = game.id;
+
+  // ── Players ──
+  const playersRow = document.createElement('div');
+  playersRow.className = 'card-players';
+
+  // P1
+  const cp1 = document.createElement('div');
+  cp1.className = 'card-player p1';
+  const info1 = document.createElement('div');
+  info1.className = 'player-info';
+  info1.innerHTML = `<div class="player-pseudo">${p1.pseudo}</div><div class="player-elo">${p1.elo} ELO</div>`;
+  cp1.appendChild(renderAvatar(p1, 1));
+  cp1.appendChild(info1);
+
+  // VS
+  const vs = document.createElement('div');
+  vs.className = 'vs-sep';
+  vs.textContent = 'VS';
+
+  // P2
+  const cp2 = document.createElement('div');
+  cp2.className = 'card-player p2';
+  const info2 = document.createElement('div');
+  info2.className = 'player-info';
+  info2.innerHTML = `<div class="player-pseudo">${p2.pseudo}</div><div class="player-elo">${p2.elo} ELO</div>`;
+  cp2.appendChild(renderAvatar(p2, 2));
+  cp2.appendChild(info2);
+
+  playersRow.append(cp1, vs, cp2);
+
+  // ── Mini grille ──
+  const board = document.createElement('div');
+  board.className = 'mini-board';
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 7; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'mini-cell';
+      const val = game.grid[r]?.[c] ?? 0;
+      if (val === 1) {
+        cell.classList.add('p1');
+        cell.style.background = `radial-gradient(circle at 35% 30%, ${p1.color}cc, ${p1.color})`;
+        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${p1.color}66`;
+      } else if (val === 2) {
+        cell.classList.add('p2');
+        cell.style.background = `radial-gradient(circle at 35% 30%, ${p2.color}cc, ${p2.color})`;
+        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${p2.color}66`;
+      }
+      board.appendChild(cell);
+    }
+  }
+
+  // ── Footer ──
+  const footer = document.createElement('div');
+  footer.className = 'card-footer';
+  const moves = document.createElement('div');
+  moves.className = 'move-count';
+  moves.textContent = `${game.moves} coup${game.moves > 1 ? 's' : ''}`;
+  const turnPlayer = game.players[game.current];
+  const turnInd = document.createElement('div');
+  turnInd.className = 'turn-indicator';
+  const dot = document.createElement('div');
+  dot.className = 'turn-dot';
+  dot.style.background = turnPlayer.color;
+  turnInd.appendChild(dot);
+  turnInd.appendChild(Object.assign(document.createElement('span'), {
+    textContent: turnPlayer.pseudo,
+    style: `color:${turnPlayer.color}`
+  }));
+  footer.append(moves, turnInd);
+
+  card.append(playersRow, board, footer);
+  return card;
+}
+
+async function refresh() {
+  try {
+    const res   = await fetch('/api/live');
+    const games = await res.json();
+
+    const grid = document.getElementById('games-grid');
+    const count = document.getElementById('count');
+    count.textContent = games.length;
+
+    if (games.length === 0) {
+      grid.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🎮</div>
+          <div class="empty-title">Aucune partie en cours</div>
+          <div class="empty-sub">Lance une partie pour apparaître ici !</div>
+        </div>`;
+      prevIds = new Set();
+      return;
+    }
+
+    const newIds = new Set(games.map(g => g.id));
+
+    // Supprimer les cartes des parties terminées
+    grid.querySelectorAll('.game-card').forEach(card => {
+      if (!newIds.has(Number(card.dataset.id))) card.remove();
+    });
+
+    // Mettre à jour ou ajouter
+    games.forEach((game, i) => {
+      const existing = grid.querySelector(`.game-card[data-id="${game.id}"]`);
+      const newCard  = renderCard(game);
+      newCard.style.animationDelay = prevIds.has(game.id) ? '0ms' : `${i * 40}ms`;
+      if (existing) {
+        existing.replaceWith(newCard);
+      } else {
+        grid.appendChild(newCard);
+      }
+    });
+
+    prevIds = newIds;
+  } catch(e) {
+    console.error('Live fetch error', e);
+  }
+}
+
+// Barre de refresh animée
+function startRefreshBar() {
+  const fill = document.getElementById('refresh-fill');
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  void fill.offsetWidth;
+  fill.style.transition = `width ${REFRESH_MS}ms linear`;
+  fill.style.width = '0%';
+}
+
+refresh();
+startRefreshBar();
+setInterval(() => { refresh(); startRefreshBar(); }, REFRESH_MS);
+</script>
+</body>
+</html>
