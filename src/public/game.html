@@ -585,23 +585,23 @@ function onMovePlayed(data) {
 // pour coloriser avec la couleur du joueur
 function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   tokenEl.textContent = '';
-  tokenEl.style.borderRadius = '0';
-  tokenEl.style.clipPath = '';
-  tokenEl.style.background = 'transparent';
-  tokenEl.style.boxShadow = 'none';
+  // Forcer via setAttribute pour surpasser .cell.p1 .token { background: ... }
+  tokenEl.setAttribute('style',
+    'border-radius:0!important;clip-path:none!important;' +
+    'background:transparent!important;box-shadow:none!important;' +
+    'inset:4px;position:absolute;display:flex;align-items:center;justify-content:center;' +
+    'transform:scale(1);'
+  );
 
-  // Lire la cell-size CSS pour avoir la vraie taille même si offsetWidth=0
-  const cssSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 68;
-  const tokenSize = tokenEl.offsetWidth > 4 ? tokenEl.offsetWidth : cssSize - 8; // inset:4px de chaque côté
+  // Calculer la taille depuis --cell-size (fiable même si token pas encore visible)
+  const cssCell = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 68;
+  const size = cssCell - 8; // inset: 4px de chaque côté
   const DPR = window.devicePixelRatio || 1;
-  const size = tokenSize;
   const canvas = document.createElement('canvas');
   canvas.width  = size * DPR;
   canvas.height = size * DPR;
-  canvas.style.width  = size + 'px';
-  canvas.style.height = size + 'px';
-  canvas.style.position = 'absolute';
-  canvas.style.inset = '0';
+  canvas.style.width  = '100%';
+  canvas.style.height = '100%';
 
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
@@ -638,7 +638,6 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   // Glow via shadow sur le canvas
   tokenEl.style.filter = `drop-shadow(0 0 ${size*0.1}px ${glowColor})`;
 
-  tokenEl.style.position = 'relative';
   tokenEl.appendChild(canvas);
 }
 
