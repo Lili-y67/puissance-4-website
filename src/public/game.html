@@ -606,19 +606,25 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   ctx.scale(DPR, DPR);
   ctx.clearRect(0, 0, size, size);
 
-  // Mesurer l'emoji pour le faire tenir exactement dans le carré
-  // On commence avec une font grande puis on ajuste
-  let fontSize = size * 1.8;
+  // Trouver la bonne fontSize par dichotomie sur canvas temporaire
+  const tmp = document.createElement('canvas');
+  tmp.width = size * 2; tmp.height = size * 2;
+  const tc = tmp.getContext('2d');
+  let lo = 4, hi = size * 1.5, fontSize = size * 0.75;
+  for (let i = 0; i < 8; i++) {
+    const mid = (lo + hi) / 2;
+    tc.font = `${mid}px serif`;
+    const m = tc.measureText(emoji);
+    const w = m.actualBoundingBoxRight - m.actualBoundingBoxLeft || m.width;
+    const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent || mid;
+    if (Math.max(w, h) < size * 0.82) lo = mid;
+    else hi = mid;
+    fontSize = lo;
+  }
+
   ctx.font = `${fontSize}px serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  let metrics = ctx.measureText(emoji);
-  const emojiW = metrics.actualBoundingBoxRight - metrics.actualBoundingBoxLeft || metrics.width;
-  const emojiH = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || fontSize * 0.9;
-  // Réduire pour tenir dans size*0.92 (légère marge)
-  const scale = Math.min((size * 0.92) / emojiW, (size * 0.92) / emojiH);
-  fontSize = Math.min(fontSize * scale, size * 1.6);
-  ctx.font = `${fontSize}px serif`;
   ctx.fillText(emoji, size / 2, size / 2);
 
   // Coloriser : on recouvre avec la couleur en mode source-in
