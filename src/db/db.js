@@ -76,6 +76,7 @@ db.exec(`
 // Migration : ajouter colonnes si absentes (pour DBs existantes)
 try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN shape    TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
@@ -87,6 +88,7 @@ const pQ = {
     RETURNING *
   `),
   updateColor:  db.prepare(`UPDATE players SET color  = @color  WHERE id = @id`),
+  updateShape:  db.prepare(`UPDATE players SET shape  = @shape  WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
@@ -145,12 +147,12 @@ const fQ = {
   unfollow:       db.prepare(`DELETE FROM follows WHERE follower_id = ? AND following_id = ?`),
   isFollowing:    db.prepare(`SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?`),
   getFollowing:   db.prepare(`
-    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color, p.wins, p.losses, p.draws
+    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color, p.shape, p.wins, p.losses, p.draws
     FROM follows f JOIN players p ON p.id = f.following_id
     WHERE f.follower_id = ? ORDER BY p.elo DESC
   `),
   getFollowers:   db.prepare(`
-    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color
+    SELECT p.id, p.pseudo, p.elo, p.avatar, p.color, p.shape
     FROM follows f JOIN players p ON p.id = f.follower_id
     WHERE f.following_id = ? ORDER BY f.created_at DESC
   `),

@@ -59,8 +59,8 @@ app.get('/api/live', (_, res) => {
       id,
       status: state.status,
       players: {
-        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '' },
-        2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '' },
+        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' },
+        2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle' },
       },
       grid:    state.board.grid,
       current: state.current,
@@ -131,6 +131,15 @@ function sanitize(p) {
 }
 
 // ── Players API ────────────────────────────────────────────────────────────────
+app.patch('/api/players/:id/shape', (req, res) => {
+  const { shape, token } = req.body;
+  const allowed = ['circle','triangle','diamond','star','heart','emoji'];
+  if (!shape || !allowed.includes(shape)) return res.status(400).json({ error: 'Forme invalide.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
+  pQ.updateShape.run({ shape, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
 app.patch('/api/players/:id/color', (req, res) => {
   const { color, token } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
@@ -227,6 +236,9 @@ io.on('connection', socket => {
   socket.on('queue_join', () => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     socket.playerData = sanitize(pQ.getById.get(socket.playerId));
+    // Inclure la shape depuis le profil (format 'circle' ou 'emoji:⭐')
+    const freshPlayer = pQ.getById.get(socket.playerId);
+    socket.playerData = sanitize(freshPlayer);
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
     if (!joined) return socket.emit('error', { message: 'Déjà en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });
