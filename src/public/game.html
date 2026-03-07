@@ -589,8 +589,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   tokenEl.setAttribute('style',
     'border-radius:0!important;clip-path:none!important;' +
     'background:transparent!important;box-shadow:none!important;' +
-    'inset:4px;position:absolute;display:flex;align-items:center;justify-content:center;' +
-    'transform:scale(1);'
+    'inset:4px;position:absolute;display:flex;align-items:center;justify-content:center;'
   );
 
   // Calculer la taille depuis --cell-size (fiable même si token pas encore visible)
@@ -664,24 +663,22 @@ function applyToken(row, col, player) {
   const token = cell.querySelector('.token');
   if (token) {
     const shape = player === 1 ? p1Shape : p2Shape;
-    const clip  = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
-    // Appliquer inline pour surpasser toute spécificité CSS
-    token.style.borderRadius = clip.borderRadius;
-    token.style.clipPath     = clip.clipPath;
     if (shape === 'emoji') {
-      token.className = 'token s-emoji';
-      // Couleur + glow du joueur
-      const col  = player === 1 ? getComputedStyle(document.documentElement).getPropertyValue('--p1').trim()
-                                : getComputedStyle(document.documentElement).getPropertyValue('--p2').trim();
-      const glow = player === 1 ? getComputedStyle(document.documentElement).getPropertyValue('--p1-glow').trim()
-                                : getComputedStyle(document.documentElement).getPropertyValue('--p2-glow').trim();
-      const em = player === 1 ? p1Emoji : p2Emoji;
-      // Attendre que le token soit dans le DOM et visible avant de dessiner
-      requestAnimationFrame(() => makeEmojiToken(token, em, col, glow));
+      const root = document.documentElement;
+      const cs   = getComputedStyle(root);
+      const col  = cs.getPropertyValue(player === 1 ? '--p1' : '--p2').trim();
+      const glow = cs.getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
+      const em   = player === 1 ? p1Emoji : p2Emoji;
+      // Dessiner le canvas AVANT l'animation drop
+      makeEmojiToken(token, em, col, glow);
     } else {
+      const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
+      token.style.borderRadius = clip.borderRadius;
+      token.style.clipPath     = clip.clipPath;
       token.className = 'token';
     }
   }
+  // Déclencher l'animation drop après avoir préparé le token
   void cell.offsetWidth;
   cell.classList.add('drop');
 }
