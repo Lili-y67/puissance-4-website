@@ -691,16 +691,38 @@ function initShapePicker(currentShape, currentEmoji) {
   const row = document.getElementById('shape-row');
   if (!row) return;
   row.innerHTML = '';
+  const CLIPS = {
+    circle:   { borderRadius: '50%',  clipPath: '' },
+    triangle: { borderRadius: '0',    clipPath: 'polygon(50% 8%, 95% 92%, 5% 92%)' },
+    diamond:  { borderRadius: '0',    clipPath: 'polygon(50% 5%, 95% 50%, 50% 95%, 5% 50%)' },
+    star:     { borderRadius: '0',    clipPath: 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
+    heart:    { borderRadius: '0',    clipPath: 'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)' },
+    emoji:    { borderRadius: '50%',  clipPath: '' },
+  };
   SHAPES.forEach(s => {
     const btn = document.createElement('div');
     btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '');
     btn.dataset.shape = s.id;
     btn.onclick = () => selectShape(s.id);
+
+    const preview = document.createElement('div');
+    preview.className = 'shape-preview';
+
     if (s.id === 'emoji') {
-      btn.innerHTML = `<div class="shape-preview s-emoji">${selectedEmoji}</div>`;
+      preview.style.borderRadius = '50%';
+      preview.style.background   = 'transparent';
+      preview.style.fontSize     = '22px';
+      preview.style.display      = 'flex';
+      preview.style.alignItems   = 'center';
+      preview.style.justifyContent = 'center';
+      preview.textContent = selectedEmoji;
     } else {
-      btn.innerHTML = `<div class="shape-preview s-${s.id}" style="background:var(--red)"></div>`;
+      const c = CLIPS[s.id];
+      preview.style.borderRadius = c.borderRadius;
+      preview.style.clipPath     = c.clipPath;
+      preview.style.background   = 'var(--red)';
     }
+    btn.appendChild(preview);
     row.appendChild(btn);
   });
   updateEmojiWrap();
