@@ -34,9 +34,10 @@ app.get('/live',       (_, res) => res.sendFile(path.join(__dirname, 'public/liv
 app.get('/api/live', (_, res) => {
   const games = [];
   for (const [id, state] of gm.games) {
-    if (state.status !== 'active') continue;
-    games.push({
+    if (state.status !== 'active' && state.status !== 'finished') continue;
+    const entry = {
       id,
+      status: state.status,
       players: {
         1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '' },
         2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '' },
@@ -44,7 +45,12 @@ app.get('/api/live', (_, res) => {
       grid:    state.board.grid,
       current: state.current,
       moves:   state.moveCount,
-    });
+    };
+    if (state.status === 'finished') {
+      entry.result   = state.result   || null;  // { winner, eloChanges }
+      entry.finishedAt = state.finishedAt || Date.now();
+    }
+    games.push(entry);
     if (games.length >= 15) break;
   }
   res.json(games);

@@ -9,15 +9,19 @@
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
-  --bg:      #06060e;
-  --surface: #0d0d1c;
-  --border:  rgba(255,255,255,0.06);
-  --text:    #eeeef5;
-  --muted:   rgba(238,238,245,0.38);
-  --accent:  #4c6ef5;
-  --green:   #30d158;
+  --bg:       #06060e;
+  --surface:  #0d0d1c;
+  --surface2: #13132a;
+  --border:   rgba(255,255,255,0.06);
+  --text:     #eeeef5;
+  --muted:    rgba(238,238,245,0.38);
+  --accent:   #4c6ef5;
+  --green:    #30d158;
+  --red:      #ff2d55;
+  --grid:     #0a0a18;
+  --cell:     #07071a;
 }
-html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
 
 .bg-grid {
   position: fixed; inset: 0; z-index: 0;
@@ -26,101 +30,108 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 }
 .scanlines {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.05) 2px, rgba(0,0,0,0.05) 4px);
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
 }
 .page { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
 
-/* ── Header ── */
-.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
+.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
 .logo { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; color: var(--text); }
-.logo span { color: var(--accent); }
+.logo span { color: var(--red); text-shadow: 0 0 20px rgba(255,45,85,0.4); }
+
 .live-badge {
   display: flex; align-items: center; gap: 8px;
-  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
-  color: var(--green); background: rgba(48,209,88,0.1); border: 1px solid rgba(48,209,88,0.25);
+  font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--green); background: rgba(48,209,88,0.08); border: 1px solid rgba(48,209,88,0.2);
   padding: 6px 14px; border-radius: 20px;
 }
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink-dot 1.2s ease-in-out infinite; }
-@keyframes blink-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.4s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.65)} }
 
-.subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
-.subtitle span { color: var(--text); font-weight: 600; }
+.refresh-bar  { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-bottom: 20px; }
+.refresh-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 100%; }
 
-/* ── Grid de parties ── */
-.games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
+.subtitle { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+.subtitle strong { color: var(--text); font-weight: 600; }
 
-/* ── Carte partie ── */
+.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+
+/* ── Carte ── */
 .game-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 14px; display: flex; flex-direction: column; gap: 12px;
-  transition: border-color 0.2s, transform 0.2s;
-  animation: card-in 0.3s cubic-bezier(0.22,1,0.36,1) both;
+  padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 11px;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+  animation: card-in 0.35s cubic-bezier(0.22,1,0.36,1) both;
 }
-.game-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); }
-@keyframes card-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.game-card:hover { border-color: rgba(255,255,255,0.1); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+@keyframes card-in { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-/* ── Players header dans la carte ── */
-.card-players { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.card-player { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
-.card-player.p2 { flex-direction: row-reverse; text-align: right; }
-.player-av {
-  width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+/* ── Joueurs ── */
+.card-players { display: flex; align-items: center; gap: 8px; }
+.card-player  { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
+.card-player.p2 { flex-direction: row-reverse; }
+
+.p-avatar {
+  width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 900;
-  border: 2px solid; transition: box-shadow 0.3s;
+  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 900;
+  border: 1.5px solid;
 }
-.player-av img { width: 100%; height: 100%; object-fit: cover; }
-.player-info { min-width: 0; }
-.player-pseudo { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.player-elo { font-size: 10px; color: var(--muted); }
+.p-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.p-info { min-width: 0; flex: 1; }
+.p-pseudo { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-elo    { font-size: 10px; color: var(--muted); }
+.card-player.p2 .p-info { text-align: right; }
+.vs-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 900; color: var(--muted); letter-spacing: 2px; flex-shrink: 0; }
 
-.vs-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 900; color: var(--muted); letter-spacing: 2px; flex-shrink: 0; }
-
-/* ── Mini grille ── */
+/* ── Mini board — pas d'animation, juste la couleur ── */
 .mini-board {
+  background: var(--grid); border-radius: 10px; padding: 5px;
+  border: 1px solid var(--border);
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   grid-template-rows: repeat(6, 1fr);
-  gap: 3px;
-  background: #0a0a18;
-  border-radius: 10px;
-  padding: 6px;
-  border: 1px solid var(--border);
-  aspect-ratio: 7/6;
+  gap: 3px; aspect-ratio: 7 / 6;
 }
 .mini-cell {
   border-radius: 50%;
-  background: #07071a;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
-  transition: background 0.2s, box-shadow 0.2s;
+  background: var(--cell);
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.6);
 }
-.mini-cell.p1 { box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
-.mini-cell.p2 { box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
 
-/* ── Footer carte ── */
-.card-footer { display: flex; align-items: center; justify-content: space-between; }
-.move-count { font-size: 11px; color: var(--muted); }
-.turn-indicator { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: 1px; }
-.turn-dot { width: 6px; height: 6px; border-radius: 50%; animation: blink-dot 1s ease-in-out infinite; }
+/* ── Footer ── */
+.card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border); }
+.moves-label { font-size: 10px; color: var(--muted); }
+.turn-wrap   { display: flex; align-items: center; gap: 5px; }
+.turn-pip    { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.turn-name   { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 
-/* ── Empty state ── */
-.empty { text-align: center; padding: 80px 20px; color: var(--muted); }
-.empty-icon { font-size: 48px; margin-bottom: 16px; }
-.empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px; color: var(--text); }
-.empty-sub { font-size: 13px; }
-
-/* ── Refresh indicator ── */
-.refresh-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-bottom: 20px; }
-.refresh-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 100%; transition: width linear; }
-
-@media (max-width: 480px) {
-  .games-grid { grid-template-columns: 1fr; }
-  .header { margin-bottom: 20px; }
+/* ── Résultat overlay sur la carte ── */
+.card-result {
+  position: relative; overflow: hidden;
 }
+.result-banner {
+  position: absolute; inset: 0; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; backdrop-filter: blur(6px); background: rgba(6,6,14,0.82);
+  animation: fade-in 0.4s ease;
+}
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+.result-title-live {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900;
+  letter-spacing: 3px; text-transform: uppercase;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.result-elo-live { font-size: 11px; color: var(--muted); display: flex; gap: 12px; }
+.elo-change { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; }
+
+/* ── Empty ── */
+.empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: var(--muted); }
+.empty-icon  { font-size: 44px; margin-bottom: 14px; }
+.empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--text); margin-bottom: 6px; }
+.empty-sub   { font-size: 12px; }
+
+@media (max-width: 600px) { .games-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
+@media (max-width: 400px) { .games-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -128,82 +139,59 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 <div class="scanlines"></div>
 <div class="page">
 
-  <div class="header">
-    <a class="logo" href="/">P<span>4</span> RANKED</a>
-    <div class="live-badge"><div class="live-dot"></div>EN DIRECT</div>
+  <div class="nav">
+    <a class="logo" href="/">Puissance <span>4</span></a>
+    <div class="live-badge"><div class="live-dot"></div>En direct</div>
   </div>
 
   <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
-
-  <div class="subtitle">
-    <span id="count">0</span> partie(s) en cours · Mise à jour toutes les 3s
-  </div>
+  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 10s</div>
 
   <div class="games-grid" id="games-grid">
-    <div class="empty">
-      <div class="empty-icon">⏳</div>
-      <div class="empty-title">Chargement...</div>
-    </div>
+    <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
   </div>
-
 </div>
+
 <script>
-const REFRESH_MS = 3000;
+const REFRESH_MS = 10000;
 let prevIds = new Set();
 
-function renderAvatar(player, side) {
-  const color = player.color;
-  const dim   = color + '22';
+function mkAvatar(player) {
   const av = document.createElement('div');
-  av.className = 'player-av';
-  av.style.borderColor = color;
-  av.style.background  = dim;
-  av.style.color       = color;
-  if (player.avatar) {
-    av.innerHTML = `<img src="${player.avatar}" alt="">`;
-  } else {
-    av.textContent = player.pseudo[0].toUpperCase();
-  }
+  av.className = 'p-avatar';
+  av.style.borderColor = player.color;
+  av.style.background  = player.color + '1a';
+  av.style.color       = player.color;
+  if (player.avatar) av.innerHTML = `<img src="${player.avatar}" alt="">`;
+  else av.textContent = player.pseudo[0].toUpperCase();
   return av;
 }
 
-function renderCard(game) {
+function mkCard(game) {
   const p1 = game.players[1], p2 = game.players[2];
-
   const card = document.createElement('div');
   card.className = 'game-card';
   card.dataset.id = game.id;
 
-  // ── Players ──
-  const playersRow = document.createElement('div');
-  playersRow.className = 'card-players';
+  // Joueurs
+  const row = document.createElement('div');
+  row.className = 'card-players';
 
-  // P1
-  const cp1 = document.createElement('div');
-  cp1.className = 'card-player p1';
-  const info1 = document.createElement('div');
-  info1.className = 'player-info';
-  info1.innerHTML = `<div class="player-pseudo">${p1.pseudo}</div><div class="player-elo">${p1.elo} ELO</div>`;
-  cp1.appendChild(renderAvatar(p1, 1));
-  cp1.appendChild(info1);
+  const cp1 = document.createElement('div'); cp1.className = 'card-player p1';
+  const i1  = document.createElement('div'); i1.className  = 'p-info';
+  i1.innerHTML = `<div class="p-pseudo">${p1.pseudo}</div><div class="p-elo">${p1.elo} ELO</div>`;
+  cp1.append(mkAvatar(p1), i1);
 
-  // VS
-  const vs = document.createElement('div');
-  vs.className = 'vs-sep';
-  vs.textContent = 'VS';
+  const sep = document.createElement('div'); sep.className = 'vs-sep'; sep.textContent = 'VS';
 
-  // P2
-  const cp2 = document.createElement('div');
-  cp2.className = 'card-player p2';
-  const info2 = document.createElement('div');
-  info2.className = 'player-info';
-  info2.innerHTML = `<div class="player-pseudo">${p2.pseudo}</div><div class="player-elo">${p2.elo} ELO</div>`;
-  cp2.appendChild(renderAvatar(p2, 2));
-  cp2.appendChild(info2);
+  const cp2 = document.createElement('div'); cp2.className = 'card-player p2';
+  const i2  = document.createElement('div'); i2.className  = 'p-info';
+  i2.innerHTML = `<div class="p-pseudo">${p2.pseudo}</div><div class="p-elo">${p2.elo} ELO</div>`;
+  cp2.append(mkAvatar(p2), i2);
 
-  playersRow.append(cp1, vs, cp2);
+  row.append(cp1, sep, cp2);
 
-  // ── Mini grille ──
+  // Mini board — juste la couleur, aucune animation
   const board = document.createElement('div');
   board.className = 'mini-board';
   for (let r = 0; r < 6; r++) {
@@ -212,99 +200,104 @@ function renderCard(game) {
       cell.className = 'mini-cell';
       const val = game.grid[r]?.[c] ?? 0;
       if (val === 1) {
-        cell.classList.add('p1');
-        cell.style.background = `radial-gradient(circle at 35% 30%, ${p1.color}cc, ${p1.color})`;
-        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${p1.color}66`;
+        cell.style.background = `radial-gradient(circle at 35% 30%, ${p1.color}bb, ${p1.color})`;
+        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${p1.color}44`;
       } else if (val === 2) {
-        cell.classList.add('p2');
-        cell.style.background = `radial-gradient(circle at 35% 30%, ${p2.color}cc, ${p2.color})`;
-        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 6px ${p2.color}66`;
+        cell.style.background = `radial-gradient(circle at 35% 30%, ${p2.color}bb, ${p2.color})`;
+        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${p2.color}44`;
       }
       board.appendChild(cell);
     }
   }
 
-  // ── Footer ──
+  // Footer
   const footer = document.createElement('div');
   footer.className = 'card-footer';
-  const moves = document.createElement('div');
-  moves.className = 'move-count';
-  moves.textContent = `${game.moves} coup${game.moves > 1 ? 's' : ''}`;
-  const turnPlayer = game.players[game.current];
-  const turnInd = document.createElement('div');
-  turnInd.className = 'turn-indicator';
-  const dot = document.createElement('div');
-  dot.className = 'turn-dot';
-  dot.style.background = turnPlayer.color;
-  turnInd.appendChild(dot);
-  turnInd.appendChild(Object.assign(document.createElement('span'), {
-    textContent: turnPlayer.pseudo,
-    style: `color:${turnPlayer.color}`
-  }));
-  footer.append(moves, turnInd);
+  const movesEl = document.createElement('div');
+  movesEl.className = 'moves-label';
+  movesEl.textContent = `${game.moves} coup${game.moves !== 1 ? 's' : ''}`;
+  const tp = game.players[game.current];
+  const tw = document.createElement('div'); tw.className = 'turn-wrap';
+  const pip = document.createElement('div'); pip.className = 'turn-pip'; pip.style.background = tp.color;
+  const nm  = document.createElement('div'); nm.className  = 'turn-name'; nm.textContent = tp.pseudo; nm.style.color = tp.color;
+  tw.append(pip, nm);
+  footer.append(movesEl, tw);
 
-  card.append(playersRow, board, footer);
+  // Overlay résultat si partie terminée
+  if (game.status === 'finished' && game.result) {
+    const res    = game.result;
+    const banner = document.createElement('div');
+    banner.className = 'result-banner';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'result-title-live';
+
+    const isDraw = res.winner === null;
+    if (isDraw) {
+      titleEl.textContent = 'ÉGALITÉ';
+      titleEl.style.background = 'linear-gradient(135deg, rgba(238,238,245,0.5), rgba(238,238,245,0.9))';
+    } else {
+      const winner = game.players[res.winner];
+      titleEl.textContent = winner.pseudo + ' gagne !';
+      titleEl.style.background = `linear-gradient(135deg, ${winner.color}, white)`;
+    }
+
+    const eloRow = document.createElement('div');
+    eloRow.className = 'result-elo-live';
+    [1, 2].forEach(s => {
+      const delta = res.eloChanges?.[game.players[s].id] ?? 0;
+      const span  = document.createElement('span');
+      span.className = 'elo-change';
+      span.textContent = `${game.players[s].pseudo} ${delta >= 0 ? '+' : ''}${delta}`;
+      span.style.color = delta >= 0 ? 'var(--green)' : 'var(--muted)';
+      eloRow.appendChild(span);
+    });
+
+    banner.append(titleEl, eloRow);
+    board.style.position = 'relative';
+    board.appendChild(banner);
+  }
+
+  card.append(row, board, footer);
   return card;
 }
 
 async function refresh() {
   try {
-    const res   = await fetch('/api/live');
-    const games = await res.json();
-
-    const grid = document.getElementById('games-grid');
-    const count = document.getElementById('count');
-    count.textContent = games.length;
+    const games = await fetch('/api/live').then(r => r.json());
+    const container = document.getElementById('games-grid');
+    document.getElementById('count').textContent = games.length;
 
     if (games.length === 0) {
-      grid.innerHTML = `
-        <div class="empty">
-          <div class="empty-icon">🎮</div>
-          <div class="empty-title">Aucune partie en cours</div>
-          <div class="empty-sub">Lance une partie pour apparaître ici !</div>
-        </div>`;
-      prevIds = new Set();
-      return;
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div class="empty-sub">Lance une partie pour apparaître ici !</div></div>`;
+      prevIds = new Set(); return;
     }
 
     const newIds = new Set(games.map(g => g.id));
+    container.querySelectorAll('.game-card').forEach(c => { if (!newIds.has(Number(c.dataset.id))) c.remove(); });
 
-    // Supprimer les cartes des parties terminées
-    grid.querySelectorAll('.game-card').forEach(card => {
-      if (!newIds.has(Number(card.dataset.id))) card.remove();
-    });
-
-    // Mettre à jour ou ajouter
     games.forEach((game, i) => {
-      const existing = grid.querySelector(`.game-card[data-id="${game.id}"]`);
-      const newCard  = renderCard(game);
-      newCard.style.animationDelay = prevIds.has(game.id) ? '0ms' : `${i * 40}ms`;
-      if (existing) {
-        existing.replaceWith(newCard);
-      } else {
-        grid.appendChild(newCard);
-      }
+      const existing = container.querySelector(`.game-card[data-id="${game.id}"]`);
+      const card = mkCard(game);
+      if (prevIds.has(game.id)) card.style.animation = 'none';
+      else card.style.animationDelay = `${i * 35}ms`;
+      if (existing) existing.replaceWith(card);
+      else container.appendChild(card);
     });
 
     prevIds = newIds;
-  } catch(e) {
-    console.error('Live fetch error', e);
-  }
+  } catch(e) { console.error('live', e); }
 }
 
-// Barre de refresh animée
-function startRefreshBar() {
+function animBar() {
   const fill = document.getElementById('refresh-fill');
-  fill.style.transition = 'none';
-  fill.style.width = '100%';
+  fill.style.transition = 'none'; fill.style.width = '100%';
   void fill.offsetWidth;
-  fill.style.transition = `width ${REFRESH_MS}ms linear`;
-  fill.style.width = '0%';
+  fill.style.transition = `width ${REFRESH_MS}ms linear`; fill.style.width = '0%';
 }
 
-refresh();
-startRefreshBar();
-setInterval(() => { refresh(); startRefreshBar(); }, REFRESH_MS);
+refresh(); animBar();
+setInterval(() => { refresh(); animBar(); }, REFRESH_MS);
 </script>
 </body>
 </html>

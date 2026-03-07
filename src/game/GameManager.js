@@ -123,10 +123,22 @@ class GameManager {
       ? (state.players[2].id === winnerId ? elo.dW : elo.dL)
       : (p2IsWinner ? elo.dW : elo.dL);
 
-    // Cleanup memory
+    // Stocker le résultat dans le state pour /api/live (affiché 5s)
+    state.finishedAt = Date.now();
+    state.result = {
+      winner:     winnerSide,
+      reason,
+      eloChanges: {
+        [state.players[1].id]: p1Delta,
+        [state.players[2].id]: p2Delta,
+      },
+    };
+
+    // Cleanup sockets immédiatement
     this.socketToGame.delete(state.players[1].socketId);
     this.socketToGame.delete(state.players[2].socketId);
-    this.games.delete(state.id);
+    // Retirer du Map après 6s (5s d'affichage + marge)
+    setTimeout(() => { this.games.delete(state.id); }, 6000);
 
     return {
       type:   'game_over',
