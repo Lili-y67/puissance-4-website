@@ -590,22 +590,37 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   tokenEl.style.background = 'transparent';
   tokenEl.style.boxShadow = 'none';
 
-  // Taille réelle du token dans le DOM
-  const size = tokenEl.offsetWidth || 56;
+  // Lire la cell-size CSS pour avoir la vraie taille même si offsetWidth=0
+  const cssSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 68;
+  const tokenSize = tokenEl.offsetWidth > 4 ? tokenEl.offsetWidth : cssSize - 8; // inset:4px de chaque côté
+  const DPR = window.devicePixelRatio || 1;
+  const size = tokenSize;
   const canvas = document.createElement('canvas');
-  canvas.width  = size * 2; // x2 pour retina
-  canvas.height = size * 2;
-  canvas.style.width  = '100%';
-  canvas.style.height = '100%';
+  canvas.width  = size * DPR;
+  canvas.height = size * DPR;
+  canvas.style.width  = size + 'px';
+  canvas.style.height = size + 'px';
+  canvas.style.position = 'absolute';
+  canvas.style.inset = '0';
 
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(DPR, DPR);
+  ctx.clearRect(0, 0, size, size);
 
-  // Dessiner l'emoji en grand
-  ctx.font = `${size * 1.6}px serif`;
+  // Mesurer l'emoji pour le faire tenir exactement dans le carré
+  // On commence avec une font grande puis on ajuste
+  let fontSize = size * 1.8;
+  ctx.font = `${fontSize}px serif`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(emoji, canvas.width / 2, canvas.height / 2);
+  let metrics = ctx.measureText(emoji);
+  const emojiW = metrics.actualBoundingBoxRight - metrics.actualBoundingBoxLeft || metrics.width;
+  const emojiH = (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) || fontSize * 0.9;
+  // Réduire pour tenir dans size*0.92 (légère marge)
+  const scale = Math.min((size * 0.92) / emojiW, (size * 0.92) / emojiH);
+  fontSize = Math.min(fontSize * scale, size * 1.6);
+  ctx.font = `${fontSize}px serif`;
+  ctx.fillText(emoji, size / 2, size / 2);
 
   // Coloriser : on recouvre avec la couleur en mode source-in
   // (garde la forme de l'emoji, applique la couleur)
@@ -621,8 +636,9 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Glow via shadow sur le canvas
-  tokenEl.style.filter = `drop-shadow(0 0 6px ${glowColor})`;
+  tokenEl.style.filter = `drop-shadow(0 0 ${size*0.1}px ${glowColor})`;
 
+  tokenEl.style.position = 'relative';
   tokenEl.appendChild(canvas);
 }
 
