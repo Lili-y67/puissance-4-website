@@ -447,7 +447,14 @@ function render(player, games, following, followers, followStatus) {
   `;
 
   setTimeout(() => { const f = document.getElementById('wr-fill'); if(f) f.style.width = wr+'%'; }, 100);
-  if (isOwnProfile) setTimeout(() => initColorPicker(player.color), 50);
+  if (isOwnProfile) {
+    const shapeRaw = player.shape || 'circle';
+    const isEmoji  = shapeRaw.startsWith('emoji:');
+    setTimeout(() => {
+      initColorPicker(player.color);
+      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : '⭐');
+    }, 50);
+  }
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
