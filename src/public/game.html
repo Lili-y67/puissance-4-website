@@ -373,7 +373,11 @@ window.addEventListener('DOMContentLoaded', () => {
   // S'assurer que sessionStorage est à jour
   sessionStorage.setItem('player', pData);
 
-  if (mData) {
+  const iaData = sessionStorage.getItem('vs_ia');
+  if (iaData) {
+    sessionStorage.removeItem('vs_ia');
+    startVsIA(JSON.parse(iaData));
+  } else if (mData) {
     const match = JSON.parse(mData);
     sessionStorage.removeItem('match');
     connectSocket(match);
@@ -516,6 +520,7 @@ function renderBoard() {
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
   if (gameOver || currentTurn !== mySide) return;
+  if (iaMode) { iaPlayHuman(col); return; }
   SFX.drop();
   socket.emit('play_move', { col });
 }
@@ -616,6 +621,139 @@ function quit() {
   location.href = '/';
 }
 
+
+// ═══════════════════════════════════════════════════════════════════
+//  MODE IA — Partie locale, pas de socket, pas de classement
+// ═══════════════════════════════════════════════════════════════════
+let iaMode = false;
+let iaGrid = [];
+const IA_R = 6, IA_C = 7;
+
+function startVsIA({ botName, botColor }) {
+  iaMode = true;
+  mySide = 1;
+  currentTurn = 1;
+  gameOver = false;
+  iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
+
+  const playerColor = myPlayer.color || '#ff2d55';
+  applyColors(playerColor, botColor);
+
+  // Lobby
+  const lav1 = document.getElementById('lav1');
+  const lav2 = document.getElementById('lav2');
+  if (myPlayer.avatar) lav1.innerHTML = `<img src="${myPlayer.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  else lav1.textContent = myPlayer.pseudo[0].toUpperCase();
+  lav2.textContent = '🤖';
+  document.getElementById('lpseudo1').textContent = myPlayer.pseudo;
+  document.getElementById('lpseudo2').textContent = botName;
+  document.getElementById('lelo1').textContent = (myPlayer.elo || '—') + ' ELO';
+  document.getElementById('lelo2').textContent = 'Non classé';
+  const badge = document.createElement('div');
+  badge.className = 'lobby-you'; badge.textContent = 'TOI';
+  document.getElementById('lp1').appendChild(badge);
+
+  SFX.matchFound();
+  let n = 3;
+  const cdEl = document.getElementById('countdown');
+  cdEl.textContent = n;
+  const iv = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(iv); SFX.go();
+      document.getElementById('lobby-overlay').classList.add('hidden');
+      document.getElementById('name-p1').textContent = myPlayer.pseudo;
+      document.getElementById('elo-p1').textContent  = (myPlayer.elo || '—') + ' ELO';
+      document.getElementById('name-p2').textContent = '🤖 ' + botName;
+      document.getElementById('elo-p2').textContent  = 'Non classé';
+      renderBoard();
+      updateTurnUI();
+    } else { cdEl.textContent = n; SFX.tick(); }
+  }, 1000);
+}
+
+function iaPlayHuman(col) {
+  const row = iaGetRow(col);
+  if (row === -1 || gameOver) return;
+  iaGrid[row][col] = 1;
+  SFX.drop();
+  applyToken(row, col, 1);
+  const win = iaCheckWin(row, col, 1);
+  if (win) { iaEnd(1, win); return; }
+  if (iaIsDraw()) { iaEnd(null, []); return; }
+  currentTurn = 2;
+  updateTurnUI();
+  setTimeout(iaPlayBot, 400 + Math.random() * 400);
+}
+
+function iaPlayBot() {
+  if (gameOver) return;
+  const col = iaChoose();
+  const row = iaGetRow(col);
+  if (row === -1) return;
+  iaGrid[row][col] = 2;
+  SFX.opponentDrop();
+  applyToken(row, col, 2);
+  const win = iaCheckWin(row, col, 2);
+  if (win) { iaEnd(2, win); return; }
+  if (iaIsDraw()) { iaEnd(null, []); return; }
+  currentTurn = 1;
+  updateTurnUI();
+}
+
+function iaGetRow(col) {
+  for (let r = IA_R-1; r >= 0; r--) if (iaGrid[r][col] === 0) return r;
+  return -1;
+}
+function iaSimulate(col, p) {
+  const row = iaGetRow(col);
+  if (row === -1) return false;
+  iaGrid[row][col] = p;
+  const w = iaCheckWin(row, col, p);
+  iaGrid[row][col] = 0;
+  return !!w;
+}
+function iaChoose() {
+  const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
+  for (const c of valid) if (iaSimulate(c, 2)) return c;
+  for (const c of valid) if (iaSimulate(c, 1)) return c;
+  if (valid.includes(3)) return 3;
+  return valid[Math.floor(Math.random()*valid.length)];
+}
+function iaCheckWin(r, c, p) {
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    const cells = [[r,c]];
+    for (let i=1;i<4;i++) { const nr=r+dr*i,nc=c+dc*i; if(iaGrid[nr]?.[nc]===p) cells.push([nr,nc]); else break; }
+    for (let i=1;i<4;i++) { const nr=r-dr*i,nc=c-dc*i; if(iaGrid[nr]?.[nc]===p) cells.push([nr,nc]); else break; }
+    if (cells.length >= 4) return cells;
+  }
+  return null;
+}
+function iaIsDraw() { return iaGrid[0].every(v=>v!==0); }
+
+function iaEnd(winner, winCells) {
+  gameOver = true;
+  winCells?.forEach(([r,c]) => document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('winning'));
+  for (let c=0;c<IA_C;c++) { const b=document.getElementById('cb'+c); if(b) b.disabled=true; }
+  const isDraw = winner===null, isWin = winner===1;
+  setTimeout(() => { isDraw ? SFX.draw() : isWin ? SFX.win() : SFX.lose(); }, 300);
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent='⚖️ ÉGALITÉ'; titleEl.style.background='linear-gradient(135deg,var(--muted),var(--text))';
+  } else if (isWin) {
+    titleEl.textContent='🏆 VICTOIRE !'; titleEl.style.background='linear-gradient(135deg,var(--p1),var(--p2))';
+  } else {
+    titleEl.textContent='💀 DÉFAITE'; titleEl.style.background='linear-gradient(135deg,#555,#888)';
+  }
+  titleEl.style.webkitBackgroundClip='text'; titleEl.style.webkitTextFillColor='transparent';
+  document.getElementById('result-elo').textContent = '';
+  document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? "Tu as battu l'IA !" : "L'IA a gagné cette fois...";
+  document.getElementById('btn-replay').style.display = 'none';
+  document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue','1'); location.href='/'; };
+  document.getElementById('result-overlay').classList.add('show');
+  setStatus('');
+}
 </script>
 </body>
 </html>

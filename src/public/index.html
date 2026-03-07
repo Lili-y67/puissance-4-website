@@ -303,6 +303,19 @@ html, body {
   background: var(--surface2);
 }
 
+.btn-robot {
+  background: transparent;
+  border: 1.5px solid rgba(76,110,245,0.35);
+  color: rgba(76,110,245,0.8);
+  font-size: 14px;
+  margin-top: 4px;
+}
+.btn-robot:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(76,110,245,0.06);
+}
+
 .btn-cancel {
   background: transparent;
   border: 1.5px solid rgba(255,45,85,0.3);
@@ -569,6 +582,10 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
         👤 Voir mon profil
       </button>
 
+      <button class="btn btn-robot" onclick="startVsIA()">
+        🤖 Jouer contre l'ordinateur
+      </button>
+
       <div class="link">Nouvelle partie classée · <a href="/regles">Règles</a> · <a href="/live">🔴 Live</a></div>
     </div>
 
@@ -802,6 +819,54 @@ function showError(msg) {
 // ═══════════════════════════════════════════════════════════════════
 //  SOCKET & QUEUE
 // ═══════════════════════════════════════════════════════════════════
+// ── Noms aléatoires pour le robot ────────────────────────────────────────────
+const BOT_NAMES = [
+  'GalaxBot','NéonRex','CirKuit','PlasmaZen','VortexOS',
+  'NovaByte','CryptoKid','OmégaDrift','SynthWave','TurboNul',
+  'ZéroMiss','ByteStorm','QuasarBot','GlitchMod','NeuroPix',
+  'PulseCore','DataWraith','XenonBot','CosmoNerd','ArcFlash',
+];
+function randomBotName() {
+  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random()*99+1);
+}
+function randomColor(excludeHex) {
+  let h, tries = 0;
+  do {
+    h = Math.floor(Math.random() * 360);
+    tries++;
+  } while (tries < 20 && Math.abs(h - hexToHue(excludeHex || '#ff2d55')) < 60);
+  return hslToHex(h, 85, 58);
+}
+function hexToHue(hex) {
+  const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  if(d===0) return 0;
+  if(max===r) return ((g-b)/d+(g<b?6:0))*60;
+  if(max===g) return ((b-r)/d+2)*60;
+  return ((r-g)/d+4)*60;
+}
+function hslToHex(h, s, l) {
+  s/=100; l/=100;
+  const a=s*Math.min(l,1-l);
+  const f=n=>{const k=(n+h/30)%12; return Math.round(255*(l-a*Math.max(-1,Math.min(k-3,9-k,1)))).toString(16).padStart(2,'0');};
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function startVsIA() {
+  // Créer un joueur invité si pas connecté
+  const saved = localStorage.getItem('player');
+  const guestPlayer = saved ? JSON.parse(saved) : {
+    id: 0, pseudo: 'Toi', elo: 1200,
+    color: selectedColor || '#ff2d55', avatar: ''
+  };
+  const botColor = randomColor(guestPlayer.color);
+  const botName  = randomBotName();
+  // Stocker les infos pour game.html
+  sessionStorage.setItem('player', JSON.stringify(guestPlayer));
+  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor }));
+  location.href = '/game';
+}
+
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
