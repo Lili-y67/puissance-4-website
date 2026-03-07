@@ -76,7 +76,8 @@ db.exec(`
 // Migration : ajouter colonnes si absentes (pour DBs existantes)
 try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN shape    TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
@@ -203,6 +204,32 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return { dW, dL, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
 });
 
+// ── Anti-boost queries ────────────────────────────────────────────────────────
+const abQ = {
+  // Parties entre deux joueurs dans les dernières 2h
+  recentBetween: db.prepare(`
+    SELECT COUNT(*) as cnt FROM games
+    WHERE status = 'finished'
+      AND ((player1_id = ? AND player2_id = ?) OR (player1_id = ? AND player2_id = ?))
+      AND finished_at > ?
+  `),
+  // Dernières 3 parties de chaque joueur (pour éviter re-match)
+  lastOpponents: db.prepare(`
+    SELECT CASE WHEN player1_id = ? THEN player2_id ELSE player1_id END as opp_id
+    FROM games WHERE status = 'finished' AND (player1_id = ? OR player2_id = ?)
+    ORDER BY finished_at DESC LIMIT 3
+  `),
+  // Qui a gagné dans les parties récentes entre deux joueurs
+  recentWinsBetween: db.prepare(`
+    SELECT winner_id FROM games
+    WHERE status = 'finished' AND winner_id IS NOT NULL
+      AND ((player1_id = ? AND player2_id = ?) OR (player1_id = ? AND player2_id = ?))
+      AND finished_at > ?
+  `),
+  // Marquer un joueur comme suspect
+  setSuspicious: db.prepare(`UPDATE players SET suspicious = @val WHERE id = @id`),
+};
+
 const sQ = {
   set:   db.prepare('INSERT OR REPLACE INTO sessions (token, player_id, expires) VALUES (?, ?, ?)'),
   get:   db.prepare('SELECT player_id, expires FROM sessions WHERE token = ?'),
@@ -212,4 +239,4 @@ const sQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, calcElo, finishGame };

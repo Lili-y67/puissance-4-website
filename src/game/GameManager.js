@@ -2,7 +2,7 @@
  * GameManager.js — Active games + move recording with think_ms
  */
 const { Board }              = require('./Board');
-const { gQ, mQ, finishGame } = require('../db/db');
+const { gQ, mQ, finishGame, abQ, pQ } = require('../db/db');
 
 class GameManager {
   constructor() {
@@ -109,6 +109,23 @@ class GameManager {
       ? state.players[winnerSide === 1 ? 2 : 1].id
       : state.players[2].id;
 
+    // ── Anti-boost : détecter le pattern "toujours le même qui gagne" ──────────
+    const p1id = state.players[1].id;
+    const p2id = state.players[2].id;
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const since = Date.now() - TWO_HOURS;
+    const recentCount = abQ.recentBetween.get(p1id, p2id, p2id, p1id, since)?.cnt || 0;
+
+    // Même IP détectée par le serveur → ELO annulé direct
+    const sameIp = state.players[1].sameIpOpponent === true;
+    const isSuspect = sameIp;
+    if (sameIp) {
+      abQ.setSuspicious.run({ val: 1, id: p1id });
+      abQ.setSuspicious.run({ val: 1, id: p2id });
+      console.log(`[SAME-IP] ELO annulé pour partie ${state.id}`);
+    }
+
+
     // Calculer les deltas AVANT finishGame pour les avoir par joueur
     const p1IsWinner = winnerSide === 1;
     const p2IsWinner = winnerSide === 2;
@@ -116,10 +133,11 @@ class GameManager {
     const elo = finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw);
 
     // Delta ELO par joueur (pas winner/loser générique)
-    const p1Delta = isDraw
+    // Si boost détecté : ELO = 0 pour cette partie
+    const p1Delta = isSuspect ? 0 : isDraw
       ? (state.players[1].id === winnerId ? elo.dW : elo.dL)
       : (p1IsWinner ? elo.dW : elo.dL);
-    const p2Delta = isDraw
+    const p2Delta = isSuspect ? 0 : isDraw
       ? (state.players[2].id === winnerId ? elo.dW : elo.dL)
       : (p2IsWinner ? elo.dW : elo.dL);
 
@@ -150,6 +168,7 @@ class GameManager {
         [state.players[1].id]: p1Delta,
         [state.players[2].id]: p2Delta,
       },
+      isSuspect,
       eloNow: {
         [state.players[1].id]: p1IsWinner ? elo.winnerEloNow : elo.loserEloNow,
         [state.players[2].id]: p2IsWinner ? elo.winnerEloNow : elo.loserEloNow,

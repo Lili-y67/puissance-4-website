@@ -5,7 +5,11 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, pQ, gQ, mQ, fQ, sQ } = require('./db/db');
+const { initDb, pQ, gQ, mQ, fQ, sQ, abQ } = require('./db/db');
+
+// Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
+const ipToPlayers = new Map(); // ip → Set of playerIds
+const playerToIp  = new Map(); // playerId → ip
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -236,6 +240,13 @@ io.on('connection', socket => {
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
     socket.playerId   = Number(playerId);
     socket.playerData = sanitize(player);
+    // Stocker l'IP en mémoire (X-Forwarded-For pour Railway)
+    const clientIp = (socket.handshake.headers['x-forwarded-for'] || '').split(',')[0].trim()
+                   || socket.handshake.address;
+    socket.clientIp = clientIp;
+    playerToIp.set(socket.playerId, clientIp);
+    if (!ipToPlayers.has(clientIp)) ipToPlayers.set(clientIp, new Set());
+    ipToPlayers.get(clientIp).add(socket.playerId);
     socket.emit('identified', sanitize(player));
   });
 
@@ -305,6 +316,15 @@ io.on('connection', socket => {
   socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
+    // Nettoyer la map IP si plus de socket actif pour ce joueur
+    if (socket.playerId && socket.clientIp) {
+      const sameIpSockets = [...io.sockets.sockets.values()]
+        .filter(s => s.clientIp === socket.clientIp && s.id !== socket.id);
+      if (sameIpSockets.length === 0) {
+        const players = ipToPlayers.get(socket.clientIp);
+        if (players) players.delete(socket.playerId);
+      }
+    }
     mm.leave(socket.id);
 
     // Si le socket était en transition (match_found mais pas encore rejoin_game)
@@ -336,6 +356,36 @@ io.on('connection', socket => {
 });
 
 function _startMatch(p1, p2) {
+  // ── Même IP → ELO annulé direct ─────────────────────────────────────────────
+  const ip1 = playerToIp.get(p1.id);
+  const ip2 = playerToIp.get(p2.id);
+  const sameIp = ip1 && ip2 && ip1 === ip2;
+  if (sameIp) {
+    console.log(`[SAME-IP] ${p1.pseudo} et ${p2.pseudo} partagent l'IP ${ip1}`);
+    // On laisse la partie se jouer mais on flag pour annuler l'ELO dans _end
+  }
+  p1.sameIpOpponent = sameIp;
+  p2.sameIpOpponent = sameIp;
+
+  // Anti-rematch : vérifier les 3 derniers adversaires de chaque joueur
+  try {
+    const p1recent = abQ.lastOpponents.all(p1.id, p1.id, p1.id).map(r => r.opp_id);
+    const p2recent = abQ.lastOpponents.all(p2.id, p2.id, p2.id).map(r => r.opp_id);
+    // Si ils ont déjà joué dans les 3 dernières parties des deux côtés → remettre en queue
+    const p1facedP2 = p1recent.slice(0, 2).includes(p2.id); // 2 dernières parties de p1
+    const p2facedP1 = p2recent.slice(0, 2).includes(p1.id); // 2 dernières parties de p2
+    if (p1facedP2 && p2facedP1) {
+      console.log(`[ANTI-REMATCH] ${p1.pseudo} vs ${p2.pseudo} — remis en queue`);
+      mm.join(p1.socketId, p1);
+      mm.join(p2.socketId, p2);
+      const s1 = io.sockets.sockets.get(p1.socketId);
+      const s2 = io.sockets.sockets.get(p2.socketId);
+      if (s1) s1.emit('queue_joined', { position: mm.position(p1.socketId) });
+      if (s2) s2.emit('queue_joined', { position: mm.position(p2.socketId) });
+      return;
+    }
+  } catch(e) { /* ignore si DB pas encore prête */ }
+
   const state = gm.create(p1, p2);
   const room  = 'game:' + state.id;
   const s1    = io.sockets.sockets.get(p1.socketId);
