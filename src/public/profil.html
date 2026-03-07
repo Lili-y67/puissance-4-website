@@ -507,13 +507,15 @@ function renderGames(games, me) {
     const date      = g.finished_at
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '—';
+    const suspBadge = g.suspicious ? `<div title="Double compte détecté — ELO non comptabilisé" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">⚠️ Double compte</div>` : '';
     return `<a class="game-row" href="/replay/${g.id}">
       <div class="game-result ${rc}">${ri}</div>
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
-        <div class="game-elo-change ${eloClass}">${eloStr}</div>
+        <div class="game-elo-change ${eloClass}">${g.suspicious ? '±0 ELO' : eloStr}</div>
         <div>${g.move_count} coups · ${g.duration}s</div>
         <div>${date}</div>
+        ${suspBadge}
       </div>
       <div class="replay-badge">▶ Replay</div>
     </a>`;

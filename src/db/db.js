@@ -78,6 +78,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
@@ -178,22 +179,22 @@ function calcElo(winnerElo, loserElo, isDraw = false) {
     : { dW: Math.round(K*(1-expW)*mult),     dL: Math.round(K*(0-(1-expW))*mult) };
 }
 
-const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw) => {
+const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false) => {
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
   const { dW, dL } = calcElo(winner.elo, loser.elo, isDraw);
 
-  pQ.updateElo.run({ delta: dW, id: winnerId });
-  pQ.updateElo.run({ delta: dL, id: loserId });
+  if (!isSuspect) {
+    // ELO et stats appliqués seulement si partie légitime
+    pQ.updateElo.run({ delta: dW, id: winnerId });
+    pQ.updateElo.run({ delta: dL, id: loserId });
+    if (isDraw) { pQ.draw.run(winnerId); pQ.draw.run(loserId); }
+    else        { pQ.win.run(winnerId);  pQ.loss.run(loserId); }
+  }
 
-  if (isDraw) { pQ.draw.run(winnerId); pQ.draw.run(loserId); }
-  else        { pQ.win.run(winnerId);  pQ.loss.run(loserId); }
-
-  // elo_p1 = delta du joueur 1, elo_p2 = delta du joueur 2
-  // winnerId peut être player1 ou player2
-  const game = gQ.getById.get(gameId);
-  const p1Delta = game.player1_id === winnerId ? dW : dL;
-  const p2Delta = game.player2_id === winnerId ? dW : dL;
+  const game   = gQ.getById.get(gameId);
+  const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
+  const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
 
   gQ.finish.run({
     id: gameId, winner_id: isDraw ? null : winnerId,
@@ -201,7 +202,12 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     elo_p1: p1Delta, elo_p2: p2Delta,
   });
 
-  return { dW, dL, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
+  // Marquer la partie comme suspecte en DB
+  if (isSuspect) {
+    db.prepare('UPDATE games SET suspicious = 1 WHERE id = ?').run(gameId);
+  }
+
+  return { dW: p1Delta, dL: p2Delta, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
 });
 
 // ── Anti-boost queries ────────────────────────────────────────────────────────

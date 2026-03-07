@@ -215,6 +215,7 @@ function renderShell() {
         <div class="rmeta">📅 <strong>${date}</strong></div>
         <div class="rmeta">🎯 <strong>${g.move_count} coups</strong></div>
         <div class="rmeta">⏱️ <strong>${g.duration}s</strong></div>
+        ${g.suspicious ? `<div class="rmeta" style="color:#ff9f0a;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);border-radius:6px;padding:4px 10px;">⚠️ <strong>Double compte détecté — ELO non comptabilisé</strong></div>` : ''}
       </div>
     </div>
 

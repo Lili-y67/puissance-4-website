@@ -130,7 +130,7 @@ class GameManager {
     const p1IsWinner = winnerSide === 1;
     const p2IsWinner = winnerSide === 2;
     // winnerId = gagnant, loserId = perdant (ou p1/p2 pour draw)
-    const elo = finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw);
+    const elo = finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw, isSuspect);
 
     // Delta ELO par joueur (pas winner/loser générique)
     // Si boost détecté : ELO = 0 pour cette partie
