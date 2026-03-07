@@ -483,10 +483,12 @@ function setupLobby(data) {
   // Stocker les shapes (format 'circle' ou 'emoji:⭐')
   const rawS1 = data.players[1].shape || 'circle';
   const rawS2 = data.players[2].shape || 'circle';
+  console.log('[SHAPE] rawS1=', rawS1, 'rawS2=', rawS2, 'mySide=', data.yourSide);
   if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
   else p1Shape = rawS1;
   if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
   else p2Shape = rawS2;
+  console.log('[SHAPE] p1Shape=', p1Shape, 'p1Emoji=', p1Emoji, 'p2Shape=', p2Shape, 'p2Emoji=', p2Emoji);
 
   [1,2].forEach(s => {
     const p = data.players[s];
@@ -663,6 +665,7 @@ function applyToken(row, col, player) {
   const token = cell.querySelector('.token');
   if (token) {
     const shape = player === 1 ? p1Shape : p2Shape;
+    console.log('[TOKEN] player=', player, 'shape=', shape);
     if (shape === 'emoji') {
       const root = document.documentElement;
       const cs   = getComputedStyle(root);
