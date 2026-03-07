@@ -49,7 +49,8 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
 app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
-app.get('/live',       (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
+app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
+app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
 
 app.get('/api/live', (_, res) => {
   const games = [];
@@ -216,6 +217,10 @@ app.get('/api/games/:id/moves', (req, res) => {
 
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().map(sanitize));
+});
+app.get('/api/leaderboard/wins', (_, res) => {
+  const q = db.prepare('SELECT * FROM players ORDER BY wins DESC LIMIT 10');
+  res.json(q.all().map(sanitize));
 });
 
 // ── Socket.io ──────────────────────────────────────────────────────────────────
