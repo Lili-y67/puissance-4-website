@@ -55,6 +55,12 @@ db.exec(`
     active      INTEGER NOT NULL DEFAULT 1,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS sessions (
+    token     TEXT PRIMARY KEY,
+    player_id INTEGER NOT NULL,
+    expires   INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS follows (
     follower_id  INTEGER NOT NULL REFERENCES players(id),
     following_id INTEGER NOT NULL REFERENCES players(id),

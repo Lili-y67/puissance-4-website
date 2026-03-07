@@ -20,24 +20,25 @@ const io     = new Server(server, {
 const mm = new Matchmaking();
 const gm = new GameManager();
 
-// ── Sessions tokens ────────────────────────────────────────────────────────────
-// token (uuid) → playerId  —  expire après 30 jours
-const sessions = new Map(); // token → { playerId, expires }
+// ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
 function genToken() {
   return require('crypto').randomBytes(32).toString('hex');
 }
 function createSession(playerId) {
   const token   = genToken();
   const expires = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  sessions.set(token, { playerId, expires });
+  sQ.set.run(token, playerId, expires);
   return token;
 }
 function validateSession(token) {
-  const s = sessions.get(token);
-  if (!s) return null;
-  if (Date.now() > s.expires) { sessions.delete(token); return null; }
-  return s.playerId;
+  if (!token) return null;
+  const row = sQ.get.get(token);
+  if (!row) return null;
+  if (Date.now() > row.expires) { sQ.del.run(token); return null; }
+  return row.player_id;
 }
+// Purger les sessions expirées au démarrage
+try { sQ.purge.run(Date.now()); } catch(e) {}
 
 app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));

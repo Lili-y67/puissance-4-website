@@ -779,8 +779,10 @@ async function handleAuth() {
       document.getElementById('btn-play-txt').textContent = origTxt;
       return;
     }
-    myPlayer = data;
-    // Sauvegarder en localStorage pour rester connecté
+    // Extraire et sauvegarder le token séparément
+    const { token, ...playerData } = data;
+    myPlayer = playerData;
+    if (token) localStorage.setItem('token', token);
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     connectAndQueue();
