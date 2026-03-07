@@ -387,7 +387,7 @@ function connectSocket(pendingMatch) {
   socket = io({ transports: ['polling'] });
 
   socket.on('connect', () => {
-    socket.emit('identify', { playerId: myPlayer.id });
+    socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
   });
 
   socket.on('identified', (p) => {

@@ -20,6 +20,25 @@ const io     = new Server(server, {
 const mm = new Matchmaking();
 const gm = new GameManager();
 
+// ── Sessions tokens ────────────────────────────────────────────────────────────
+// token (uuid) → playerId  —  expire après 30 jours
+const sessions = new Map(); // token → { playerId, expires }
+function genToken() {
+  return require('crypto').randomBytes(32).toString('hex');
+}
+function createSession(playerId) {
+  const token   = genToken();
+  const expires = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  sessions.set(token, { playerId, expires });
+  return token;
+}
+function validateSession(token) {
+  const s = sessions.get(token);
+  if (!s) return null;
+  if (Date.now() > s.expires) { sessions.delete(token); return null; }
+  return s.playerId;
+}
+
 app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -80,7 +99,8 @@ app.post('/api/auth/register', (req, res) => {
       pQ.updateColor.run({ color: req.body.color, id: player.id });
       player = pQ.getById.get(player.id);
     }
-    res.json(sanitize(player));
+    const token = createSession(player.id);
+    res.json({ ...sanitize(player), token });
   } catch(e) {
     console.error('[register]', e);
     res.status(500).json({ error: e.message });
@@ -99,7 +119,8 @@ app.post('/api/auth/login', (req, res) => {
   if (player.password && player.password !== hashPwd(password))
     return res.status(401).json({ error: 'Mot de passe incorrect.' });
 
-  res.json(sanitize(player));
+  const token = createSession(player.id);
+  res.json({ ...sanitize(player), token });
 });
 
 // Ne jamais renvoyer le hash du mot de passe au client
@@ -110,15 +131,16 @@ function sanitize(p) {
 
 // ── Players API ────────────────────────────────────────────────────────────────
 app.patch('/api/players/:id/color', (req, res) => {
-  const { color } = req.body;
-  if (!color || !/^#[0-9a-fA-F]{6}$/.test(color))
-    return res.status(400).json({ error: 'Couleur invalide.' });
+  const { color, token } = req.body;
+  if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
 app.patch('/api/players/:id/avatar', (req, res) => {
-  const { avatar } = req.body;
+  const { avatar, token } = req.body;
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
   if (!avatar || !avatar.startsWith('data:image/'))
     return res.status(400).json({ error: 'Image invalide.' });
   if (avatar.length > 3 * 1024 * 1024) // ~2MB base64
@@ -188,10 +210,15 @@ app.get('/api/leaderboard', (_, res) => {
 // ── Socket.io ──────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
 
-  socket.on('identify', ({ playerId }) => {
-    const player = pQ.getById.get(playerId);
+  socket.on('identify', ({ playerId, token }) => {
+    // Vérifier le token de session
+    const validId = token ? validateSession(token) : null;
+    if (!validId || validId !== Number(playerId)) {
+      return socket.emit('error', { message: 'Session invalide. Reconnecte-toi.' });
+    }
+    const player = pQ.getById.get(Number(playerId));
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
-    socket.playerId   = playerId;
+    socket.playerId   = Number(playerId);
     socket.playerData = sanitize(player);
     socket.emit('identified', sanitize(player));
   });

@@ -802,7 +802,7 @@ function showError(msg) {
 // ═══════════════════════════════════════════════════════════════════
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
-  socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id }));
+  socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
   socket.on('identified',   (player) => { myPlayer = player; localStorage.setItem('player', JSON.stringify(myPlayer)); socket.emit('queue_join'); });
   socket.on('queue_joined', ({ position }) => showQueueView(position));
   socket.on('match_found',  (data) => {
@@ -885,21 +885,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
-  const noAutoQueue = sessionStorage.getItem('no_auto_queue');
-  sessionStorage.removeItem('no_auto_queue'); // consommer le flag
+  const token = localStorage.getItem('token');
 
-  if (saved) {
+  if (saved && token) {
     const p = JSON.parse(saved);
     myPlayer = p;
     sessionStorage.setItem('player', JSON.stringify(p));
     document.getElementById('input-pseudo').value = p.pseudo;
     if (p.color) { selectedColor = p.color; initThemePicker(); }
-
-    if (!noAutoQueue) {
-      // Auto-connect direct uniquement si on ne vient pas d'une partie
-      connectAndQueue();
-    }
-    // Sinon on affiche juste le formulaire pré-rempli, l'utilisateur clique manuellement
+    // Plus d'auto-queue — l'utilisateur clique sur "Jouer" manuellement
   }
 });
 
