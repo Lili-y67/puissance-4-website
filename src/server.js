@@ -59,7 +59,7 @@ app.get('/api/live', (_, res) => {
       id,
       status: state.status,
       players: {
-        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' },
+        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' }, // format 'circle' ou 'emoji:⭐'
         2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle' },
       },
       grid:    state.board.grid,
@@ -133,10 +133,11 @@ function sanitize(p) {
 // ── Players API ────────────────────────────────────────────────────────────────
 app.patch('/api/players/:id/shape', (req, res) => {
   const { shape, token } = req.body;
+  const base = shape?.split(':')[0];
   const allowed = ['circle','triangle','diamond','star','heart','emoji'];
-  if (!shape || !allowed.includes(shape)) return res.status(400).json({ error: 'Forme invalide.' });
+  if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
-  pQ.updateShape.run({ shape, id: Number(req.params.id) });
+  pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:⭐'
   res.json({ ok: true });
 });
 

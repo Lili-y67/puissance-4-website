@@ -747,12 +747,15 @@ function updateEmojiWrap() {
 }
 
 function onEmojiInput(val) {
-  // Prendre le premier caractère emoji
   const chars = [...val];
-  if (chars.length > 0) {
+  if (chars.length > 0 && chars[0]) {
     selectedEmoji = chars[0];
     document.getElementById('emoji-input').value = selectedEmoji;
-    // Mettre à jour la preview
+    const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
+    if (btn) btn.textContent = selectedEmoji;
+  } else {
+    // Champ vide → fallback ⭐
+    selectedEmoji = '⭐';
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
@@ -763,10 +766,10 @@ async function saveShape() {
   if (!me.id) return;
   const token = localStorage.getItem('token');
   // On stocke shape + emoji dans le localStorage du joueur
-  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + selectedEmoji) : selectedShape;
+  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '⭐')) : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shape: selectedShape, token }),
+    body: JSON.stringify({ shape: shapeVal, token }), // envoie 'circle' ou 'emoji:⭐'
   });
   if (res.ok) {
     me.shape = shapeVal;

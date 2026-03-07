@@ -706,6 +706,13 @@ function startVsIA({ botName, botColor }) {
   gameOver = false;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
 
+  // Lire shape depuis localStorage
+  const savedPlayer = JSON.parse(localStorage.getItem('player') || '{}');
+  const rawShape = savedPlayer.shape || 'circle';
+  if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
+  else p1Shape = rawShape;
+  p2Shape = 'circle'; // l'IA joue toujours rond
+
   const playerColor = myPlayer.color || '#ff2d55';
   applyColors(playerColor, botColor);
 
