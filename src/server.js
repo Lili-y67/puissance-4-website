@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, pQ, gQ, mQ, fQ } = require('./db/db');
+const { initDb, pQ, gQ, mQ, fQ, sQ } = require('./db/db');
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 

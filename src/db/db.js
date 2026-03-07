@@ -201,6 +201,13 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return { dW, dL, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
 });
 
+const sQ = {
+  set:   db.prepare('INSERT OR REPLACE INTO sessions (token, player_id, expires) VALUES (?, ?, ?)'),
+  get:   db.prepare('SELECT player_id, expires FROM sessions WHERE token = ?'),
+  del:   db.prepare('DELETE FROM sessions WHERE token = ?'),
+  purge: db.prepare('DELETE FROM sessions WHERE expires < ?'),
+};
+
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, calcElo, finishGame };
