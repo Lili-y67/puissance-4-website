@@ -870,7 +870,13 @@ function startVsIA() {
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
-  socket.on('identified',   (player) => { myPlayer = player; localStorage.setItem('player', JSON.stringify(myPlayer)); socket.emit('queue_join'); });
+  socket.on('identified',   (player) => {
+    myPlayer = player;
+    localStorage.setItem('player', JSON.stringify(myPlayer));
+    // Envoyer la shape depuis localStorage (plus fiable que la DB Railway)
+    const lsPlayer = JSON.parse(localStorage.getItem('player') || '{}');
+    socket.emit('queue_join', { shape: lsPlayer.shape || 'circle' });
+  });
   socket.on('queue_joined', ({ position }) => showQueueView(position));
   socket.on('match_found',  (data) => {
     sessionStorage.setItem('match',  JSON.stringify(data));

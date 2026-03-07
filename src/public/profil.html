@@ -765,11 +765,10 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  // On stocke shape + emoji dans le localStorage du joueur
   const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '⭐')) : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shape: shapeVal, token }), // envoie 'circle' ou 'emoji:⭐'
+    body: JSON.stringify({ shape: shapeVal, token }),
   });
   if (res.ok) {
     me.shape = shapeVal;

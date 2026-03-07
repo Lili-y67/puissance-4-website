@@ -234,12 +234,12 @@ io.on('connection', socket => {
     socket.emit('identified', sanitize(player));
   });
 
-  socket.on('queue_join', () => {
+  socket.on('queue_join', ({ shape } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
-    socket.playerData = sanitize(pQ.getById.get(socket.playerId));
-    // Inclure la shape depuis le profil (format 'circle' ou 'emoji:⭐')
     const freshPlayer = pQ.getById.get(socket.playerId);
     socket.playerData = sanitize(freshPlayer);
+    // Shape envoyée par le client (localStorage) — priorité sur la DB
+    if (shape) socket.playerData.shape = shape;
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
     if (!joined) return socket.emit('error', { message: 'Déjà en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });
