@@ -54,10 +54,15 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 // ══════════════════════════════════════════════════════════════════════════════
 // DISCORD RESET MOT DE PASSE
 // ══════════════════════════════════════════════════════════════════════════════
-const DISCORD_CLIENT_ID     = process.env.DISCORD_CLIENT_ID;
-const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const DISCORD_BOT_TOKEN     = process.env.DISCORD_BOT_TOKEN;
-const BASE_URL              = process.env.BASE_URL || 'http://localhost:3000';
+// Variables Discord lues dynamiquement (Railway les injecte après démarrage)
+function discordConfig() {
+  return {
+    clientId:     process.env.DISCORD_CLIENT_ID,
+    clientSecret: process.env.DISCORD_CLIENT_SECRET,
+    botToken:     process.env.DISCORD_BOT_TOKEN,
+    baseUrl:      process.env.BASE_URL || 'http://localhost:3000',
+  };
+}
 
 // Page mot de passe oublié
 app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'public/forgot-password.html')));
@@ -70,14 +75,14 @@ app.get('/auth/discord/reset', (req, res) => {
   const player = pQ.getByPseudo.get(pseudo);
   if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
 
+  const { clientId, baseUrl } = discordConfig();
   const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
   const params = new URLSearchParams({
-    client_id:     DISCORD_CLIENT_ID,
-    redirect_uri:  BASE_URL + '/auth/discord/callback',
+    client_id:     clientId,
+    redirect_uri:  baseUrl + '/auth/discord/callback',
     response_type: 'code',
     scope:         'identify',
     state,
-    integration_type: '1', // user-install
   });
   res.redirect('https://discord.com/oauth2/authorize?' + params);
 });
@@ -92,16 +97,17 @@ app.get('/auth/discord/callback', async (req, res) => {
     const player = pQ.getById.get(playerId);
     if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
 
+    const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
     // Échanger le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id:     DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
+        client_id:     clientId,
+        client_secret: clientSecret,
         grant_type:    'authorization_code',
         code,
-        redirect_uri:  BASE_URL + '/auth/discord/callback',
+        redirect_uri:  baseUrl + '/auth/discord/callback',
       }),
     });
     const tokenData = await tokenRes.json();
@@ -128,7 +134,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
+        'Authorization': 'Bot ' + botToken,
         'Content-Type':  'application/json',
       },
       body: JSON.stringify({ recipient_id: discordUser.id }),
@@ -140,7 +146,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
+        'Authorization': 'Bot ' + botToken,
         'Content-Type':  'application/json',
       },
       body: JSON.stringify({
