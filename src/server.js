@@ -347,7 +347,7 @@ app.get('/auth/discord/callback', async (req, res) => {
                 '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n',
                 "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._\n\n",
                 '',
-                "-# 🔧 Si tu es Administrateur, rejoins le serveur pour récupérer les Permissions nécessaires"
+                "-# 🔧 Si tu es Administrateur, rejoins le serveur pour récupérer les Permissions nécessaires : https://discord.gg/ap73mMTX7a"
               ].join(''),
             }),
           });
