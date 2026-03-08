@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -21,10 +22,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 
 /* Nav */
 .nav{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.logo-sm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text);}
+.logo-sm{font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text);}
 .logo-sm span{color:var(--red);}
 .nav-btns{display:flex;gap:8px;}
-.btn-nav{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;text-decoration:none;transition:all 0.2s;}
+.btn-nav{font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 14px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;text-decoration:none;transition:all 0.2s;}
 .btn-nav:hover{border-color:var(--muted);color:var(--text);}
 .btn-nav.danger:hover{border-color:var(--red);color:var(--red);}
 
@@ -55,17 +56,17 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 }
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0;transition:opacity 0.2s;}
 input[type="file"]{display:none;}
 .profile-info{flex:1;min-width:0;}
-.profile-pseudo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;line-height:1;}
+.profile-pseudo{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;line-height:1;}
 .profile-since{font-size:12px;color:var(--muted);margin-top:4px;}
 
 /* Follow button */
 .btn-follow{
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+  font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
   letter-spacing:2px;text-transform:uppercase;padding:9px 18px;border-radius:10px;
   border:none;cursor:pointer;transition:all 0.25s;display:flex;align-items:center;gap:6px;
   flex-shrink:0;
@@ -75,7 +76,7 @@ input[type="file"]{display:none;}
 .btn-follow.following{background:var(--surface2);border:1.5px solid var(--border);color:var(--muted);}
 .btn-follow.following:hover{border-color:var(--red);color:var(--red);}
 
-.profile-elo{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;}
+.profile-elo{font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;}
 .profile-elo-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:right;}
 
 /* ── Social counts ── */
@@ -89,14 +90,14 @@ input[type="file"]{display:none;}
 }
 .social-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
 .social-card.active{border-color:var(--accent);}
-.social-val{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
+.social-val{font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
 .social-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
 /* ── Stats ── */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;animation:slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:4px;transition:all 0.2s;}
 .stat-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
-.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;}
+.stat-val{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;}
 .stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
 .stat-card.wins   .stat-val{color:var(--green);}
 .stat-card.losses .stat-val{color:var(--red);}
@@ -105,13 +106,13 @@ input[type="file"]{display:none;}
 .winrate-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;animation:slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both;}
 .winrate-header{display:flex;justify-content:space-between;align-items:center;}
 .wr-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.wr-pct{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--green);}
+.wr-pct{font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;color:var(--green);}
 .wr-bar{height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
 .wr-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow));transition:width 1s cubic-bezier(0.22,1,0.36,1);}
 
 /* ── Tabs ── */
 .tabs-row{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:4px;animation:slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
-.tab{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
+.tab{flex:1;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
 .tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
 
 /* ── Tab panels ── */
@@ -128,7 +129,7 @@ input[type="file"]{display:none;}
 .game-vs{font-size:13px;font-weight:500;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .game-vs span{color:var(--muted);}
 .game-meta{text-align:right;font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:1px;}
-.game-elo-change{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;}
+.game-elo-change{font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;}
 .game-elo-change.pos{color:var(--green);}
 .game-elo-change.neg{color:var(--red);}
 .game-elo-change.neu{color:var(--muted);}
@@ -142,12 +143,12 @@ input[type="file"]{display:none;}
   text-decoration:none;color:var(--text);transition:all 0.2s;
 }
 .player-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
-.player-mini-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;}
+.player-mini-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:900;}
 .player-mini-avatar img{width:100%;height:100%;object-fit:cover;}
 .player-mini-info{flex:1;min-width:0;}
 .player-mini-pseudo{font-weight:600;font-size:14px;}
 .player-mini-stats{font-size:11px;color:var(--muted);margin-top:1px;}
-.player-mini-elo{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--yellow);flex-shrink:0;}
+.player-mini-elo{font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow);flex-shrink:0;}
 
 /* Badges wins streak */
 .badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;}
@@ -171,7 +172,7 @@ input[type="file"]{display:none;}
 .color-hex{font-size:12px;color:var(--muted);}
 input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:none;}
 .btn-save-color{
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+  font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
   letter-spacing:2px;text-transform:uppercase;padding:10px 20px;border-radius:10px;
   background:var(--green-dim);border:1.5px solid rgba(48,209,88,0.3);color:var(--green);
   cursor:pointer;transition:all 0.2s;align-self:flex-end;
@@ -227,7 +228,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .search-input:focus{border-color:var(--accent);}
 .search-input::placeholder{color:var(--muted);}
 .search-btn{
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
+  font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
   letter-spacing:2px;text-transform:uppercase;padding:10px 18px;border-radius:10px;
   background:var(--accent);border:none;color:#fff;cursor:pointer;
   transition:all 0.2s;flex-shrink:0;
@@ -287,12 +288,12 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
     </div>
     <div class="search-error" id="search-error">Joueur introuvable.</div>
     <a class="search-result" id="search-result" href="#">
-      <div class="player-mini-avatar" id="sr-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;"></div>
+      <div class="player-mini-avatar" id="sr-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:900;"></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:14px" id="sr-pseudo"></div>
         <div style="font-size:11px;color:var(--muted)" id="sr-stats"></div>
       </div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
+      <div style="font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
       <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir →</div>
     </a>
   </div>
@@ -332,7 +333,7 @@ async function load() {
       document.getElementById('content').innerHTML = `
         <div style="text-align:center;padding:80px 20px">
           <div style="font-size:48px;margin-bottom:16px">👤</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.4)">Compte supprimé</div>
+          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.4)">Compte supprimé</div>
           <div style="font-size:13px;color:rgba(238,238,245,0.25);margin-top:8px">Ce joueur a fermé son compte.</div>
         </div>`;
       return;
@@ -374,8 +375,8 @@ function render(player, games, following, followers, followStatus) {
     <!-- Header -->
     <div class="profile-header">
       <!-- Bannière -->
-      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\"banner-input\").click()" title="Changer la bannière"' : ''}>
-        ${player.banner ? `<img src="${player.banner}" alt="bannière">` : ''}
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\'banner-input\').click()" title="Changer la bannière"' : ''}>
+        ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
         ${isOwnProfile ? '<div class="profile-banner-overlay">🖼️</div>' : ''}
       </div>
       <div class="profile-header-inner">
@@ -383,8 +384,8 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
           </div>
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
@@ -598,6 +599,45 @@ function renderPlayers(players, emptyMsg) {
   }).join('');
 }
 
+// ── Banner upload ─────────────────────────────────────────────────────────────
+(function() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.id = 'banner-input';
+  inp.accept = 'image/*'; inp.style.display = 'none';
+  inp.onchange = () => saveBanner(inp);
+  document.body.appendChild(inp);
+})();
+
+async function saveBanner(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 4 * 1024 * 1024) return alert('Bannière trop lourde (max 4MB).');
+  const me    = JSON.parse(localStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token');
+  if (!me.id || !token) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const banner = e.target.result;
+    const res = await fetch('/api/players/' + me.id + '/banner', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ banner, token }),
+    });
+    if (res.ok) {
+      const bannerEl = document.querySelector('.profile-banner');
+      if (bannerEl) {
+        bannerEl.innerHTML = '<img src="' + banner + '" alt="bannière"><div class="profile-banner-overlay">🖼️</div>';
+        bannerEl.onclick = () => document.getElementById('banner-input').click();
+      }
+      me.banner = banner;
+      localStorage.setItem('player', JSON.stringify(me));
+    } else {
+      alert('Erreur upload bannière.');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
 // ── Avatar upload ─────────────────────────────────────────────────────────────
 function handleAvatarUpload(input) {
   const file = input.files[0];
@@ -647,14 +687,14 @@ function confirmCloseAccount() {
   modal.innerHTML = `
     <div style="background:#0d0d1c;border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
       <div style="font-size:36px;margin-bottom:16px">⚠️</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
+      <div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
       <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:24px;line-height:1.6">
         Ton compte sera définitivement supprimé.<br>
         Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color:rgba(238,238,245,0.7)">Joueur supprimé</strong>.
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
-        <button onclick="closeAccount()" style="flex:1;padding:12px;border-radius:10px;border:none;background:#ff3b30;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;cursor:pointer">Supprimer</button>
+        <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
+        <button onclick="closeAccount()" style="flex:1;padding:12px;border-radius:10px;border:none;background:#ff3b30;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;cursor:pointer">Supprimer</button>
       </div>
     </div>`;
   document.body.appendChild(modal);

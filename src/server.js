@@ -181,6 +181,38 @@ app.patch('/api/admin/players/:id/suspicious', (req, res) => {
 app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'public/forgot-password.html')));
 app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
 
+// ── Constantes Discord rôles ──────────────────────────────────────────────────
+const DISCORD_GUILD    = '1477078197530263582';
+const DISCORD_ROLE_ADM = '1480180456782827530';
+const DISCORD_ROLE_MOD = '1480180483613655181';
+
+async function getDiscordRole(discordUserId, botToken) {
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
+      headers: { 'Authorization': 'Bot ' + botToken },
+    });
+    if (!res.ok) return 'user';
+    const member = await res.json();
+    if (!Array.isArray(member.roles)) return 'user';
+    if (member.roles.includes(DISCORD_ROLE_ADM)) return 'admin';
+    if (member.roles.includes(DISCORD_ROLE_MOD)) return 'moderator';
+    return 'user';
+  } catch(e) { return 'user'; }
+}
+
+// ── Job toutes les minutes — sync rôles Discord ────────────────────────────────
+setInterval(async () => {
+  const { botToken } = discordConfig();
+  const linked = db.prepare(`SELECT id, pseudo, role, discord_id FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  for (const player of linked) {
+    const newRole = await getDiscordRole(player.discord_id, botToken);
+    if (newRole !== player.role) {
+      pQ.updateRole.run({ role: newRole, id: player.id });
+      console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} → ${newRole}`);
+    }
+  }
+}, 60 * 1000);
+
 // Liaison Discord depuis le profil (sans reset)
 app.get('/auth/discord/link', (req, res) => {
   const { playerId } = req.query;
@@ -269,13 +301,13 @@ app.get('/auth/discord/callback', async (req, res) => {
             headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content: [
-                '🎮 **Puissance 4 — Compte Discord lié !**\n\n',
+                '🎮 **Puissance 4 — Compte Discord lié !**',
                 '',
-                `Bonjour **${freshPlayer.pseudo}** ! 👋\n\n`,
+                `Bonjour **${freshPlayer.pseudo}** ! 👋`,
                 '',
-                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.\n\n',
+                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.',
                 '',
-                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n\n',
+                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.',
                 "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._",
               ].join(''),
             }),
