@@ -57,10 +57,10 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 // Variables Discord lues dynamiquement (Railway les injecte après démarrage)
 function discordConfig() {
   return {
-    clientId:     process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    botToken:     process.env.DISCORD_BOT_TOKEN,
-    baseUrl:      process.env.BASE_URL || 'http://localhost:3000',
+    clientId:     '1477252548090921060',
+    clientSecret: 'zkIJArhzeumtKZJBxSmAtjEaE9Euugj8',
+    botToken:     'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA',
+    baseUrl:      'https://puissance-4-website-ranked-production.up.railway.app',
   };
 }
 
