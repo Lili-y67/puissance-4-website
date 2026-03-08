@@ -169,8 +169,36 @@ app.get('/auth/discord/callback', async (req, res) => {
     const freshPlayer = pQ.getById.get(playerId);
 
     if (mode === 'link') {
-      // Liaison depuis le profil — juste lier et rediriger
+      // Liaison depuis le profil — lier + envoyer DM de confirmation
       rQ.setDiscord.run(discordUser.id, playerId);
+      const { botToken } = discordConfig();
+      try {
+        const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ recipient_id: discordUser.id }),
+        });
+        const dmData = await dmRes.json();
+        if (dmData.id) {
+          await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: [
+                '🎮 **Puissance 4 — Compte Discord lié !**',
+                '',
+                `Bonjour **${freshPlayer.pseudo}** ! 👋`,
+                '',
+                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.',
+                '',
+                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.',
+                '_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._',
+              ].join('
+'),
+            }),
+          });
+        }
+      } catch(e) { console.error('[DM LINK]', e); }
       return res.redirect('/profil?discord_linked=1');
     }
 

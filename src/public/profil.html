@@ -616,6 +616,7 @@ function resizeImage(dataUrl, maxSize) {
 // ── Fermeture de compte ───────────────────────────────────────────────────────
 function confirmCloseAccount() {
   const modal = document.createElement('div');
+  modal.id = 'delete-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
   modal.innerHTML = `
     <div style="background:#0d0d1c;border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
@@ -626,7 +627,7 @@ function confirmCloseAccount() {
         Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color:rgba(238,238,245,0.7)">Joueur supprimé</strong>.
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="this.closest('div[style]').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
+        <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
         <button onclick="closeAccount()" style="flex:1;padding:12px;border-radius:10px;border:none;background:#ff3b30;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;cursor:pointer">Supprimer</button>
       </div>
     </div>`;
