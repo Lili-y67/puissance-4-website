@@ -65,8 +65,53 @@ function discordConfig() {
 }
 
 // Page mot de passe oublié
+
+// ── Suppression de compte ─────────────────────────────────────────────────────
+app.delete('/api/players/:id', (req, res) => {
+  const { token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+
+  // Anonymiser le pseudo dans les parties (garder l'historique)
+  const pseudo = `Joueur_${id}`;
+  db.prepare(`UPDATE players SET
+    pseudo    = ?,
+    password  = '',
+    avatar    = '',
+    color     = '#444444',
+    discord_id = NULL,
+    suspicious = 0
+  WHERE id = ?`).run(pseudo, id);
+
+  // Supprimer sessions, follows, reset_codes
+  db.prepare(`DELETE FROM sessions    WHERE player_id = ?`).run(id);
+  db.prepare(`DELETE FROM follows     WHERE follower_id = ? OR following_id = ?`).run(id, id);
+  db.prepare(`DELETE FROM reset_codes WHERE player_id = ?`).run(id);
+
+  // Marquer le compte comme supprimé
+  db.prepare(`UPDATE players SET deleted = 1 WHERE id = ?`).run(id);
+
+  res.json({ ok: true });
+});
+
 app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'public/forgot-password.html')));
 app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
+
+// Liaison Discord depuis le profil (sans reset)
+app.get('/auth/discord/link', (req, res) => {
+  const { playerId } = req.query;
+  if (!playerId) return res.redirect('/profil?error=invalid');
+  const { clientId, baseUrl } = discordConfig();
+  const state  = Buffer.from(JSON.stringify({ playerId: Number(playerId), mode: 'link' })).toString('base64');
+  const params = new URLSearchParams({
+    client_id:     clientId,
+    redirect_uri:  baseUrl + '/auth/discord/callback',
+    response_type: 'code',
+    scope:         'identify',
+    state,
+  });
+  res.redirect('https://discord.com/oauth2/authorize?' + params);
+});
 
 // Étape 1 — Rediriger vers Discord OAuth (user-install, DM uniquement)
 app.get('/auth/discord/reset', (req, res) => {
@@ -120,8 +165,22 @@ app.get('/auth/discord/callback', async (req, res) => {
     const discordUser = await userRes.json();
     if (!discordUser.id) return res.redirect('/forgot-password?error=discord_id');
 
-    // Lier le discord_id au compte si pas encore fait
-    rQ.setDiscord.run(discordUser.id, playerId);
+    const { mode } = JSON.parse(Buffer.from(state, 'base64').toString());
+    const freshPlayer = pQ.getById.get(playerId);
+
+    if (mode === 'link') {
+      // Liaison depuis le profil — juste lier et rediriger
+      rQ.setDiscord.run(discordUser.id, playerId);
+      return res.redirect('/profil?discord_linked=1');
+    }
+
+    // Mode reset — vérifier que c'est le bon Discord
+    if (freshPlayer.discord_id && freshPlayer.discord_id !== discordUser.id) {
+      return res.redirect('/forgot-password?error=discord_mismatch');
+    }
+    if (!freshPlayer.discord_id) {
+      rQ.setDiscord.run(discordUser.id, playerId);
+    }
 
     // Générer le code à 6 chiffres (15 min)
     const code6    = String(Math.floor(100000 + Math.random() * 900000));
@@ -275,6 +334,28 @@ function sanitize(p) {
 }
 
 // ── Players API ────────────────────────────────────────────────────────────────
+// Fermeture de compte
+app.delete('/api/players/:id', (req, res) => {
+  const { token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+
+  // Anonymiser le pseudo (les parties gardent le pseudo au moment du jeu via les colonnes p1_pseudo etc.)
+  // puis supprimer le joueur — les FK ON DELETE CASCADE nettoient sessions/reset_codes
+  // Les parties restent intactes (pas de FK cascade sur games)
+  db.prepare(`UPDATE players SET
+    pseudo   = 'Joueur supprimé',
+    password = '',
+    color    = '#555555',
+    avatar   = '',
+    discord_id = NULL
+  WHERE id = ?`).run(id);
+  db.prepare(`DELETE FROM sessions WHERE player_id = ?`).run(id);
+  db.prepare(`DELETE FROM players WHERE id = ?`).run(id);
+
+  res.json({ ok: true });
+});
+
 app.patch('/api/players/:id/shape', (req, res) => {
   const { shape, token } = req.body;
   const base = shape?.split(':')[0];
@@ -312,7 +393,7 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
-  if (!player) return res.status(404).json({ error: 'Introuvable' });
+  if (!player || player.deleted) return res.status(404).json({ error: 'Compte supprimé' });
   const games      = gQ.getForPlayer.all(player.id, player.id);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);

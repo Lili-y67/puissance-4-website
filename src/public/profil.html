@@ -251,6 +251,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
     <div class="nav-btns">
       <a class="btn-nav" href="/">← Jouer</a>
       <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">Déconnexion</button>
+      <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">🗑️ Fermer le compte</button>
     </div>
   </nav>
 
@@ -298,7 +299,10 @@ async function load() {
   const playerId = urlId || (viewerPlayer?.id ?? null);
   isOwnProfile   = viewerPlayer && (!urlId || String(urlId) === String(viewerPlayer.id));
 
-  if (isOwnProfile) document.getElementById('btn-logout').style.display = 'block';
+  if (isOwnProfile) {
+    document.getElementById('btn-logout').style.display = 'block';
+    document.getElementById('btn-close-account').style.display = 'block';
+  }
   if (!playerId) {
     document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">← Retour</a></div>';
     return;
@@ -309,6 +313,15 @@ async function load() {
       fetch(`/api/players/${playerId}`),
       viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
     ]);
+    if (profileRes.status === 404) {
+      document.getElementById('content').innerHTML = `
+        <div style="text-align:center;padding:80px 20px">
+          <div style="font-size:48px;margin-bottom:16px">👤</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.4)">Compte supprimé</div>
+          <div style="font-size:13px;color:rgba(238,238,245,0.25);margin-top:8px">Ce joueur a fermé son compte.</div>
+        </div>`;
+      return;
+    }
     if (!profileRes.ok) throw new Error();
     const { player, games, following, followers } = await profileRes.json();
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
@@ -420,6 +433,23 @@ function render(player, games, following, followers, followStatus) {
         <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="⭐" oninput="onEmojiInput(this.value)">
       </div>
       <button class="btn-save-color" onclick="saveShape()">Enregistrer</button>
+    </div>
+
+    <!-- Carte liaison Discord -->
+    <div class="color-card" style="margin-top:0">
+      <div class="card-label">🔷 Compte Discord</div>
+      ${player.discord_id
+        ? `<div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+             <div style="width:10px;height:10px;border-radius:50%;background:#30d158;flex-shrink:0"></div>
+             <span style="font-size:13px;color:rgba(238,238,245,0.7)">Compte Discord lié</span>
+           </div>`
+        : `<div style="font-size:12px;color:rgba(238,238,245,0.4);margin:8px 0 12px">
+             Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
+           </div>
+           <button class="btn-save-color" onclick="linkDiscord()" style="background:rgba(88,101,242,0.15);border-color:rgba(88,101,242,0.4);color:#8b9cf4">
+             <span style="font-size:14px">🔗</span> Lier Discord
+           </button>`
+      }
     </div>
     ` : ''}
 
@@ -583,6 +613,44 @@ function resizeImage(dataUrl, maxSize) {
 }
 
 // ── Déconnexion ───────────────────────────────────────────────────────────────
+// ── Fermeture de compte ───────────────────────────────────────────────────────
+function confirmCloseAccount() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+    <div style="background:#0d0d1c;border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
+      <div style="font-size:36px;margin-bottom:16px">⚠️</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
+      <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:24px;line-height:1.6">
+        Ton compte sera définitivement supprimé.<br>
+        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color:rgba(238,238,245,0.7)">Joueur supprimé</strong>.
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="this.closest('div[style]').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
+        <button onclick="closeAccount()" style="flex:1;padding:12px;border-radius:10px;border:none;background:#ff3b30;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;cursor:pointer">Supprimer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function closeAccount() {
+  const me    = JSON.parse(localStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token');
+  if (!me.id || !token) return;
+
+  const res  = await fetch(`/api/players/${me.id}`, {
+    method:  'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ token }),
+  });
+  if (res.ok) {
+    localStorage.removeItem('player');
+    localStorage.removeItem('token');
+    sessionStorage.clear();
+    window.location.href = '/?account_deleted=1';
+  }
+}
+
 function logout() {
   localStorage.removeItem('player');
   sessionStorage.removeItem('player');
@@ -761,6 +829,13 @@ function onEmojiInput(val) {
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
+}
+
+function linkDiscord() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  // Redirige vers OAuth Discord avec un state spécial "link" (pas reset)
+  window.location.href = '/auth/discord/link?playerId=' + me.id;
 }
 
 async function saveShape() {
