@@ -75,10 +75,10 @@ app.get('/auth/discord/reset', (req, res) => {
   const player = pQ.getByPseudo.get(pseudo);
   if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
 
-  const { clientId, baseUrl } = discordConfig(req);
+  const { clientId, baseUrl } = discordConfig();
   const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
   const params = new URLSearchParams({
-    client_id:     '1477252548090921060',
+    client_id:     clientId,
     redirect_uri:  baseUrl + '/auth/discord/callback',
     response_type: 'code',
     scope:         'identify',
@@ -97,7 +97,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const player = pQ.getById.get(playerId);
     if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
 
-    const { clientId, clientSecret, baseUrl, botToken } = discordConfig(req);
+    const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
     // Échanger le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
