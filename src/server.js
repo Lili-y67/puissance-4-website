@@ -55,14 +55,6 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 // DISCORD RESET MOT DE PASSE
 // ══════════════════════════════════════════════════════════════════════════════
 // Variables Discord lues dynamiquement (Railway les injecte après démarrage)
-// DEBUG temporaire — à supprimer après vérification
-console.log('[ENV CHECK]', {
-  DISCORD_CLIENT_ID:     process.env.DISCORD_CLIENT_ID     ? 'OK' : 'MANQUANT',
-  DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? 'OK' : 'MANQUANT',
-  DISCORD_BOT_TOKEN:     process.env.DISCORD_BOT_TOKEN     ? 'OK' : 'MANQUANT',
-  BASE_URL:              process.env.BASE_URL               || 'MANQUANT',
-});
-
 function discordConfig() {
   return {
     clientId:     process.env.DISCORD_CLIENT_ID,
@@ -83,7 +75,7 @@ app.get('/auth/discord/reset', (req, res) => {
   const player = pQ.getByPseudo.get(pseudo);
   if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
 
-  const { clientId, baseUrl } = discordConfig();
+  const { clientId, baseUrl } = discordConfig(req);
   const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
   const params = new URLSearchParams({
     client_id:     clientId,
@@ -105,7 +97,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const player = pQ.getById.get(playerId);
     if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
 
-    const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
+    const { clientId, clientSecret, baseUrl, botToken } = discordConfig(req);
     // Échanger le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
