@@ -384,8 +384,8 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:"Barlow Condensed",sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
           </div>
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
