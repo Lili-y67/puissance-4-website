@@ -3,7 +3,7 @@
  * Colle ton URL webhook dans DISCORD_WEBHOOK
  */
 
-const DISCORD_WEBHOOK = 'WEBHOOK_URL_ICI'; // ← remplace ici
+const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1480195661747065014/NGJBvL_A5oPHghTOwcgXjGCnE9TQfvBCs_sHkzuuprS-eq1n4m41O-5vxrV0luXjPq3c'; // ← remplace ici
 
 const BASE = 'https://puissance-4-website-ranked-production.up.railway.app';
 
