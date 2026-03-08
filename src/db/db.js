@@ -81,6 +81,13 @@ try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAU
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_id  TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS daily_limits (
+  player_id INTEGER,
+  action    TEXT,
+  date      TEXT,
+  count     INTEGER DEFAULT 0,
+  PRIMARY KEY (player_id, action, date)
+)`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
@@ -278,4 +285,10 @@ const sQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, rQ, calcElo, finishGame };
+const dlQ = {
+  get:       db.prepare(`SELECT count FROM daily_limits WHERE player_id=? AND action=? AND date=?`),
+  increment: db.prepare(`INSERT INTO daily_limits (player_id,action,date,count) VALUES (?,?,?,1)
+                         ON CONFLICT(player_id,action,date) DO UPDATE SET count=count+1`),
+};
+
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, rQ, dlQ, calcElo, finishGame };

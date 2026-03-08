@@ -460,6 +460,32 @@ const SFX = (() => {
   };
 })();
 
+
+// ── Système audio (identique à game.html) ────────────────────────────────────
+let _ac = null;
+function ac() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  return _ac;
+}
+function beep(freq, dur, vol = 0.15, shape = 'sine', attack = 0.005) {
+  try {
+    const c = ac(), osc = c.createOscillator(), g = c.createGain();
+    osc.connect(g); g.connect(c.destination);
+    osc.type = shape;
+    osc.frequency.setValueAtTime(freq, c.currentTime);
+    g.gain.setValueAtTime(0, c.currentTime);
+    g.gain.linearRampToValueAtTime(vol, c.currentTime + attack);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + dur);
+    osc.start(c.currentTime); osc.stop(c.currentTime + dur);
+  } catch(e) {}
+}
+const SFX = {
+  drop()  { beep(300, 0.07, 0.14, 'triangle'); setTimeout(() => beep(200, 0.09, 0.07, 'triangle'), 55); },
+  tick()  { beep(900, 0.04, 0.07, 'square'); },
+  win()   { [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.14), i*110)); },
+  lose()  { [392,349,311,261].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.12, 'sawtooth'), i*120)); },
+  draw()  { beep(350, 0.18, 0.1, 'triangle'); setTimeout(() => beep(350, 0.18, 0.08, 'triangle'), 240); },
+};
 </script>
 </body>
 </html>
