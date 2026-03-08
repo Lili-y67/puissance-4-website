@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, dlQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers = new Map(); // ip → Set of playerIds
@@ -217,30 +217,10 @@ app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'publi
 const WH = require('./webhooks');
 const { wlog, mkEmbed: embed } = WH;
 
-// ── Rate limiting quotidien ────────────────────────────────────────────────────
-const DAILY_LIMITS = { avatar: 1, banner: 1, emoji: 2 };
-
-function checkDailyLimit(playerId, action, role) {
-  if (['vip','moderator','admin'].includes(role)) return { ok: true }; // VIP illimité
-  const limit = DAILY_LIMITS[action];
-  if (!limit) return { ok: true };
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  const row   = dlQ.get.get(playerId, action, today);
-  const count = row?.count || 0;
-  if (count >= limit) return { ok: false, count, limit };
-  return { ok: true, count, limit };
-}
-
-function consumeLimit(playerId, action) {
-  const today = new Date().toISOString().slice(0, 10);
-  dlQ.increment.run(playerId, action, today);
-}
-
 // ── Constantes Discord rôles ──────────────────────────────────────────────────
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
-const DISCORD_ROLE_VIP = '1480329015406497823';
 
 async function getDiscordRole(discordUserId, botToken) {
   try {
@@ -252,7 +232,6 @@ async function getDiscordRole(discordUserId, botToken) {
     if (!Array.isArray(member.roles)) return 'user';
     if (member.roles.includes(DISCORD_ROLE_ADM)) return 'admin';
     if (member.roles.includes(DISCORD_ROLE_MOD)) return 'moderator';
-    if (member.roles.includes(DISCORD_ROLE_VIP)) return 'vip';
     return 'user';
   } catch(e) { return 'user'; }
 }
@@ -580,9 +559,6 @@ app.patch('/api/players/:id/color', (req, res) => {
 app.patch('/api/players/:id/banner', (req, res) => {
   const { banner, token } = req.body;
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
-  const _bannerPlayer = pQ.getById.get(Number(req.params.id));
-  const _bannerLimit = checkDailyLimit(_bannerPlayer.id, 'banner', _bannerPlayer.role);
-  if (!_bannerLimit.ok) return res.status(429).json({ error: 'daily_limit', limit: _bannerLimit.limit, action: 'banner' });
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   if (banner.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'Bannière trop lourde (max 4MB).' });
   pQ.updateBanner.run({ banner, id: Number(req.params.id) });
@@ -598,7 +574,6 @@ app.patch('/api/players/:id/avatar', (req, res) => {
     return res.status(400).json({ error: 'Image invalide.' });
   if (avatar.length > 3 * 1024 * 1024) // ~2MB base64
     return res.status(413).json({ error: 'Image trop lourde (max 2MB).' });
-  consumeLimit(Number(req.params.id), 'avatar');
   pQ.updateAvatar.run({ avatar, id: Number(req.params.id) });
   const _pAvatar = pQ.getById.get(Number(req.params.id));
   WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024));

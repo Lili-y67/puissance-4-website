@@ -357,7 +357,7 @@ function render(player, games, following, followers, followStatus) {
     : player.pseudo[0].toUpperCase();
 
   const avatarSection = isOwnProfile
-    ? `<div class="avatar-wrap" onclick="${isVip ? 'document.getElementById(\'avatar-input\').click()' : 'showVipLock(\'L\'avatar personnalisé\')'  }" title="${isVip ? 'Changer la photo' : '⭐ VIP requis'}">
+    ? `<div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
          <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
          <div class="avatar-overlay">📷</div>
        </div>`
@@ -374,7 +374,7 @@ function render(player, games, following, followers, followStatus) {
     <!-- Header -->
     <div class="profile-header">
       <!-- Bannière -->
-      <div class="profile-banner" ${isOwnProfile ? `onclick="document.getElementById('banner-input').click()" title="Changer la bannière"` : ''}>
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\'banner-input\').click()" title="Changer la bannière"' : ''}>
         ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
         ${isOwnProfile ? '<div class="profile-banner-overlay">🖼️</div>' : ''}
       </div>
@@ -645,9 +645,7 @@ async function saveBanner(input) {
       me.banner = banner;
       localStorage.setItem('player', JSON.stringify(me));
     } else {
-      const err = await res.json().catch(()=>({}));
-      if (err.error === 'daily_limit') showDailyLimit('banner', err.limit);
-      else alert('Erreur upload bannière.');
+      alert('Erreur upload bannière.');
     }
   };
   reader.readAsDataURL(file);
@@ -672,11 +670,7 @@ function handleAvatarUpload(input) {
       if (el) el.innerHTML = `<img src="${resized}" alt="avatar">`;
       me.avatar = resized;
       localStorage.setItem('player', JSON.stringify(me));
-    } else {
-      const err = await res.json().catch(()=>({}));
-      if (err.error === 'daily_limit') showDailyLimit('avatar', err.limit);
-      else alert('Erreur upload.');
-    }
+    } else alert('Erreur upload.');
   };
   reader.readAsDataURL(file);
 }
@@ -934,38 +928,6 @@ async function toggleAdminPwd() {
   btn.textContent    = '🙈 Masquer';
 }
 
-function showDailyLimit(action, limit) {
-  const names = { avatar: "l'avatar", banner: "la bannière", emoji: "les emojis custom" };
-  const name  = names[action] || action;
-  const modal = document.createElement('div');
-  modal.id = 'limit-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
-  modal.innerHTML = '<div style="background:#0d0d1c;border:1px solid rgba(255,159,10,0.3);border-radius:18px;padding:32px;max-width:340px;text-align:center">'
-    + '<div style="font-size:48px;margin-bottom:12px">⏳</div>'
-    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;margin-bottom:10px;color:#ff9f0a">LIMITE ATTEINTE</div>'
-    + '<div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:6px">Tu as atteint ta limite de <strong style="color:#ff9f0a">' + limit + ' changement' + (limit>1?'s':'') + '/jour</strong> pour ' + name + '.</div>'
-    + '<div style="font-size:12px;color:rgba(238,238,245,0.3);margin-bottom:20px">⭐ Les membres VIP ont un accès illimité.</div>'
-    + '<button onclick="document.getElementById(\'limit-modal\').remove()" style="padding:10px 24px;border-radius:10px;border:none;background:rgba(255,159,10,0.15);color:#ff9f0a;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer">Ok</button>'
-    + '</div>';
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-}
-
-function showVipLock(featureName) {
-  const modal = document.createElement('div');
-  modal.id = 'vip-modal';
-  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
-  modal.innerHTML =
-    <div style="background:#0d0d1c;border:1px solid rgba(255,214,10,0.3);border-radius:18px;padding:32px;max-width:340px;text-align:center">
-      <div style="font-size:48px;margin-bottom:12px">⭐</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;margin-bottom:10px;color:#ffd60a">FONCTIONNALITÉ VIP</div>
-      <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:20px">\{featureName} est réservé aux membres VIP.Rejoins le serveur Discord pour obtenir le rôle !</div>
-      <button onclick="document.getElementById('vip-modal').remove()" style="padding:10px 24px;border-radius:10px;border:none;background:rgba(255,214,10,0.15);color:#ffd60a;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer">Fermer</button>
-    </div>;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', e => { if(e.target===modal) modal.remove(); });
-}
-
 function linkDiscord() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
@@ -978,8 +940,7 @@ async function saveShape() {
   if (!me.id) return;
   const token = localStorage.getItem('token');
   const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '⭐')) : selectedShape;
-  // Emoji limit géré côté serveur
-  const res = await fetch(`/api/players/${me.id}/shape`,{
+  const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shape: shapeVal, token }),
   });
