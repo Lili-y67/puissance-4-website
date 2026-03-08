@@ -78,7 +78,7 @@ app.get('/auth/discord/reset', (req, res) => {
   const { clientId, baseUrl } = discordConfig(req);
   const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
   const params = new URLSearchParams({
-    client_id:     clientId,
+    client_id:     '1477252548090921060',
     redirect_uri:  baseUrl + '/auth/discord/callback',
     response_type: 'code',
     scope:         'identify',
