@@ -867,127 +867,6 @@ function startVsIA() {
   location.href = '/game';
 }
 
-// ── Musique d'attente Queue ────────────────────────────────────────────────────
-const QueueMusic = (() => {
-  let ctx = null, playing = false;
-  let nodes = [];
-
-  function getCtx() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
-  }
-
-  function makeLofi() {
-    const c   = getCtx();
-    const out = c.createGain();
-    out.gain.setValueAtTime(0, c.currentTime);
-    out.gain.linearRampToValueAtTime(0.18, c.currentTime + 2);
-    out.connect(c.destination);
-    nodes.push(out);
-
-    // ── Basse pulsante ──
-    const bassNotes = [65, 65, 73, 73, 61, 61, 68, 68]; // F2 A2 Db2 Ab2
-    let beat = 0;
-    const bpm = 72;
-    const step = 60 / bpm;
-
-    function playBass() {
-      if (!playing) return;
-      const t    = c.currentTime;
-      const freq = bassNotes[beat % bassNotes.length];
-      const o    = c.createOscillator();
-      const g    = c.createGain();
-      const filt = c.createBiquadFilter();
-      o.type = 'sawtooth'; o.frequency.value = freq;
-      filt.type = 'lowpass'; filt.frequency.value = 300;
-      o.connect(filt); filt.connect(g); g.connect(out);
-      g.gain.setValueAtTime(0.4, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + step * 0.8);
-      o.start(t); o.stop(t + step * 0.8);
-      nodes.push(o);
-      beat++;
-      setTimeout(playBass, step * 1000);
-    }
-
-    // ── Mélodie douce ──
-    const melody = [523, 587, 659, 698, 659, 587, 523, 494, 523, 659, 784, 659];
-    let mBeat = 0;
-    function playMelody() {
-      if (!playing) return;
-      const t    = c.currentTime;
-      const freq = melody[mBeat % melody.length];
-      const o    = c.createOscillator();
-      const g    = c.createGain();
-      o.type = 'sine'; o.frequency.value = freq;
-      o.connect(g); g.connect(out);
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.08, t + 0.05);
-      g.gain.exponentialRampToValueAtTime(0.001, t + step * 1.8);
-      o.start(t); o.stop(t + step * 1.8);
-      nodes.push(o);
-      mBeat++;
-      setTimeout(playMelody, step * 2 * 1000);
-    }
-
-    // ── Hi-hat synthétique ──
-    function playHihat() {
-      if (!playing) return;
-      const t      = c.currentTime;
-      const buffer = c.createBuffer(1, c.sampleRate * 0.05, c.sampleRate);
-      const data   = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
-      const src  = c.createBufferSource();
-      const filt = c.createBiquadFilter();
-      const g    = c.createGain();
-      src.buffer = buffer;
-      filt.type = 'highpass'; filt.frequency.value = 8000;
-      src.connect(filt); filt.connect(g); g.connect(out);
-      g.gain.setValueAtTime(0.06, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-      src.start(t);
-      nodes.push(src);
-      setTimeout(playHihat, step * 500);
-    }
-
-    // ── Nappe ambiante ──
-    [130, 196, 261].forEach(freq => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      const f = c.createBiquadFilter();
-      o.type = 'sine'; o.frequency.value = freq;
-      f.type = 'lowpass'; f.frequency.value = 400;
-      o.connect(f); f.connect(g); g.connect(out);
-      g.gain.value = 0.04;
-      o.start();
-      nodes.push(o);
-    });
-
-    setTimeout(playBass,   0);
-    setTimeout(playMelody, step * 1000);
-    setTimeout(playHihat,  0);
-  }
-
-  return {
-    start() {
-      if (playing) return;
-      playing = true;
-      try { makeLofi(); } catch(e) {}
-    },
-    stop() {
-      playing = false;
-      try {
-        if (ctx) {
-          const fade = ctx.createGain();
-          fade.connect(ctx.destination);
-          nodes.forEach(n => { try { n.disconnect(); } catch(e) {} });
-          nodes = [];
-        }
-      } catch(e) {}
-    },
-  };
-})();
-
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   localStorage.setItem('last_active', Date.now());
@@ -1000,7 +879,6 @@ function connectAndQueue() {
     socket.emit('queue_join', { shape: lsPlayer.shape || 'circle' });
   });
   socket.on('queue_joined', ({ position, reason }) => {
-    QueueMusic.start();
     showQueueView(position);
     if (reason === 'anti_rematch') {
       const sub = document.getElementById('queue-sub');
@@ -1008,7 +886,6 @@ function connectAndQueue() {
     }
   });
   socket.on('match_found',  (data) => {
-    QueueMusic.stop();
     sessionStorage.setItem('match',  JSON.stringify(data));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     window.location.href = '/game';
@@ -1060,7 +937,6 @@ function updateTimer() {
 }
 
 function handleLeaveQueue() {
-  QueueMusic.stop();
   if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
   clearInterval(timerInterval);
   const loginView = document.getElementById('view-login');

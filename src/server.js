@@ -321,7 +321,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const { mode } = JSON.parse(Buffer.from(state, 'base64').toString());
     const freshPlayer = pQ.getById.get(playerId);
 
-   if (mode === 'link') {
+    if (mode === 'link') {
       // Liaison depuis le profil — lier + envoyer DM de confirmation
       rQ.setDiscord.run(discordUser.id, playerId);
       const { botToken } = discordConfig();
