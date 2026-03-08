@@ -637,6 +637,7 @@ async function saveBanner(input) {
       body: JSON.stringify({ banner, token }),
     });
     if (res.ok) {
+      PROFIL_SFX.upload();
       const bannerEl = document.querySelector('.profile-banner');
       if (bannerEl) {
         bannerEl.innerHTML = '<img src="' + banner + '" alt="bannière"><div class="profile-banner-overlay">🖼️</div>';
@@ -931,9 +932,118 @@ async function toggleAdminPwd() {
 function linkDiscord() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
+  PROFIL_SFX.discord();
   // Redirige vers OAuth Discord avec un state spécial "link" (pas reset)
   window.location.href = '/auth/discord/link?playerId=' + me.id;
 }
+
+// ── Audio Profil ──────────────────────────────────────────────────────────────
+const PROFIL_SFX = (() => {
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function play(fn) { try { fn(getCtx()); } catch(e) {} }
+
+  return {
+    // ✅ Succès — petit "ping" doux
+    success() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [523, 659, 784].forEach((freq, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine'; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, t + i * 0.08);
+          g.gain.linearRampToValueAtTime(0.18, t + i * 0.08 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.25);
+          o.start(t + i * 0.08); o.stop(t + i * 0.08 + 0.25);
+        });
+      });
+    },
+    // 🎨 Couleur — petit "pop" coloré
+    color(hex) {
+      play(ctx => {
+        const t   = ctx.currentTime;
+        const hue = parseInt(hex.slice(1), 16) % 360;
+        const freq = 300 + (hue / 360) * 500;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, t);
+        o.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.1);
+        g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o.start(t); o.stop(t + 0.2);
+      });
+    },
+    // 💎 Shape — "bloop" rond
+    shape() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(440, t);
+        o.frequency.exponentialRampToValueAtTime(880, t + 0.15);
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        o.start(t); o.stop(t + 0.3);
+      });
+    },
+    // 📷 Avatar/Bannière — "whoosh" doux
+    upload() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        const f = ctx.createBiquadFilter();
+        o.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth';
+        f.type = 'lowpass'; f.frequency.value = 800;
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(600, t + 0.2);
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        o.start(t); o.stop(t + 0.3);
+      });
+    },
+    // 🔗 Discord — "ding" Discord
+    discord() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [880, 1109].forEach((freq, i) => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine'; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, t + i * 0.1);
+          g.gain.linearRampToValueAtTime(0.15, t + i * 0.1 + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.1 + 0.4);
+          o.start(t + i * 0.1); o.stop(t + i * 0.1 + 0.4);
+        });
+      });
+    },
+    // ❌ Erreur — "buzz" court
+    error() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'square'; o.frequency.value = 120;
+        g.gain.setValueAtTime(0.1, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.start(t); o.stop(t + 0.15);
+      });
+    },
+  };
+})();
 
 async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
@@ -954,6 +1064,7 @@ async function saveShape() {
 }
 
 async function saveColor() {
+  PROFIL_SFX.color(selectedColor || '#ff2d55');
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const btn = document.getElementById('btn-save-color');
