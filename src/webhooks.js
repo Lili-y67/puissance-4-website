@@ -1,8 +1,9 @@
 /**
- * webhooks.js — Log Discord centralisé (SANS IP)
+ * webhooks.js — Log Discord centralisé
+ * Colle ton URL webhook dans DISCORD_WEBHOOK
  */
 
-const DISCORD_WEBHOOK = 'https://discord.com/api/webhooks/1480195661747065014/NGJBvL_A5oPHghTOwcgXjGCnE9TQfvBCs_sHkzuuprS-eq1n4m41O-5vxrV0luXjPq3c';
+const DISCORD_WEBHOOK = 'WEBHOOK_URL_ICI'; // ← remplace ici
 
 const BASE = 'https://puissance-4-website-ranked-production.up.railway.app';
 
@@ -29,25 +30,20 @@ function mkEmbed(color, title, fields = []) {
   };
 }
 
+// ── Exports ────────────────────────────────────────────────────────────────────
 module.exports = {
 
   wlog: (embeds) => send(embeds),
   mkEmbed,
 
   // Partie terminée
-  wlogGame({ gameId, isDraw, isSuspect, reason, p1, p2, winner, moves, duration, replayUrl }) {
-
-    const title  = isDraw
-      ? '⚖️ Partie nulle'
-      : isSuspect
-      ? '⚠️ Partie suspecte'
-      : `🎮 Victoire de **${winner}**`;
-
+  wlogGame({ gameId, isDraw, isSuspect, reason, p1, p2, winner, loser, moves, duration, replayUrl }) {
+    const title  = isDraw     ? '⚖️ Partie nulle'
+                 : isSuspect  ? '⚠️ Partie suspecte'
+                 : `🎮 Victoire de **${winner}**`;
     const color  = isDraw ? 0xffd60a : isSuspect ? 0xff9f0a : 0x30d158;
-
-    const d1 = p1.delta >= 0 ? `+${p1.delta}` : String(p1.delta);
-    const d2 = p2.delta >= 0 ? `+${p2.delta}` : String(p2.delta);
-
+    const d1     = p1.delta >= 0 ? `+${p1.delta}` : String(p1.delta);
+    const d2     = p2.delta >= 0 ? `+${p2.delta}` : String(p2.delta);
     send([mkEmbed(color, title, [
       ['Joueur 1', `${p1.pseudo} (${p1.elo} ELO) → ${d1}`, true],
       ['Joueur 2', `${p2.pseudo} (${p2.elo} ELO) → ${d2}`, true],
@@ -62,35 +58,31 @@ module.exports = {
   },
 
   // Inscription
-  wlogRegister(pseudo, id) {
+  wlogRegister(pseudo, id, ip) {
     send([mkEmbed(0x30d158, '🆕 Nouveau compte', [
-      ['Pseudo', pseudo, true],
-      ['ID', id, true],
+      ['Pseudo', pseudo, true], ['ID', id, true], ['IP', ip || '?', true],
       ['Profil', `[Voir](${BASE}/profil?id=${id})`, true],
     ])]);
   },
 
   // Connexion réussie
-  wlogLogin(pseudo, id) {
+  wlogLogin(pseudo, id, ip) {
     send([mkEmbed(0x4c6ef5, '🔑 Connexion', [
-      ['Pseudo', pseudo, true],
-      ['ID', id, true],
+      ['Pseudo', pseudo, true], ['ID', id, true], ['IP', ip || '?', true],
     ])]);
   },
 
   // Connexion échouée
-  wlogLoginFail(pseudo) {
+  wlogLoginFail(pseudo, ip) {
     send([mkEmbed(0xff3b30, '❌ Échec connexion', [
-      ['Pseudo tenté', pseudo, true],
+      ['Pseudo tenté', pseudo, true], ['IP', ip || '?', true],
     ])]);
   },
 
   // Avatar
   wlogAvatar(pseudo, id, sizeKB) {
     send([mkEmbed(0xff9f0a, '📷 Avatar changé', [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
-      ['Taille', sizeKB + ' KB', true],
+      ['Joueur', pseudo, true], ['ID', id, true], ['Taille', sizeKB + ' KB', true],
       ['Profil', `[Voir](${BASE}/profil?id=${id})`, true],
     ])]);
   },
@@ -98,9 +90,7 @@ module.exports = {
   // Bannière
   wlogBanner(pseudo, id, sizeKB) {
     send([mkEmbed(0xff9f0a, '🖼️ Bannière changée', [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
-      ['Taille', sizeKB + ' KB', true],
+      ['Joueur', pseudo, true], ['ID', id, true], ['Taille', sizeKB + ' KB', true],
       ['Profil', `[Voir](${BASE}/profil?id=${id})`, true],
     ])]);
   },
@@ -108,8 +98,7 @@ module.exports = {
   // Profil consulté
   wlogProfileView(visitorPseudo, targetPseudo, targetId) {
     send([mkEmbed(0x636366, '👁️ Profil consulté', [
-      ['Visiteur', visitorPseudo, true],
-      ['Profil', targetPseudo, true],
+      ['Visiteur', visitorPseudo, true], ['Profil', targetPseudo, true],
       ['Lien', `[Voir](${BASE}/profil?id=${targetId})`, true],
     ])]);
   },
@@ -117,24 +106,22 @@ module.exports = {
   // Replay visionné
   wlogReplay(watcherPseudo, gameId) {
     send([mkEmbed(0x8b9cf4, '▶️ Replay visionné', [
-      ['Visionné par', watcherPseudo, true],
-      ['Partie ID', gameId, true],
+      ['Visionné par', watcherPseudo, true], ['Partie ID', gameId, true],
       ['Lien', `[Voir](${BASE}/replay/${gameId})`, true],
     ])]);
   },
 
-  // Admin login (SANS IP)
-  wlogAdminLogin() {
+  // Admin login
+  wlogAdminLogin(ip) {
     send([mkEmbed(0xff2d55, '⚡ Connexion Panel Admin', [
-      ['Heure', new Date().toLocaleString('fr-FR'), true],
+      ['IP', ip || '?', true], ['Heure', new Date().toLocaleString('fr-FR'), true],
     ])]);
   },
 
   // Admin action
   wlogAdminAction(action, pseudo, id, details = []) {
     send([mkEmbed(0xff2d55, `🛡️ Action Admin — ${action}`, [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
+      ['Joueur', pseudo, true], ['ID', id, true],
       ...details,
     ])]);
   },
@@ -142,10 +129,8 @@ module.exports = {
   // Discord lié
   wlogDiscordLink(pseudo, discordId, discordUsername, role) {
     const roleMsg = role !== 'user' ? ` → Rôle **${role}** attribué` : '';
-
     send([mkEmbed(0x5865f2, '🔷 Discord lié' + roleMsg, [
-      ['Joueur', pseudo, true],
-      ['Discord', discordUsername || discordId, true],
+      ['Joueur', pseudo, true], ['Discord', discordUsername || discordId, true],
       ['Rôle attribué', role, true],
     ])]);
   },
@@ -153,40 +138,34 @@ module.exports = {
   // Reset mot de passe
   wlogResetPwd(pseudo, id) {
     send([mkEmbed(0xff6b00, '🔑 Mot de passe réinitialisé', [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
+      ['Joueur', pseudo, true], ['ID', id, true],
     ])]);
   },
 
   // Suppression compte
   wlogDelete(pseudo, id) {
     send([mkEmbed(0x8b0000, '🗑️ Compte supprimé', [
-      ['Pseudo', pseudo, true],
-      ['ID', id, true],
+      ['Pseudo', pseudo, true], ['ID', id, true],
     ])]);
   },
 
   // Sync rôle
   wlogRoleSync(pseudo, oldRole, newRole) {
     send([mkEmbed(0x8b9cf4, '🔄 Rôle sync Discord', [
-      ['Joueur', pseudo, true],
-      ['Avant', oldRole, true],
-      ['Après', newRole, true],
+      ['Joueur', pseudo, true], ['Avant', oldRole, true], ['Après', newRole, true],
     ])]);
   },
 
   // Ban / Mute
   wlogBan(pseudo, id, banned) {
     send([mkEmbed(0xff3b30, banned ? '🚫 Joueur banni' : '✅ Joueur débanni', [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
+      ['Joueur', pseudo, true], ['ID', id, true],
     ])]);
   },
 
   wlogMute(pseudo, id, hours) {
     send([mkEmbed(0xff9f0a, hours > 0 ? '🔇 Joueur muté' : '🔊 Joueur unmuté', [
-      ['Joueur', pseudo, true],
-      ['ID', id, true],
+      ['Joueur', pseudo, true], ['ID', id, true],
       ['Durée', hours > 0 ? hours + 'h' : 'Levé', true],
     ])]);
   },

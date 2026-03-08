@@ -586,8 +586,7 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
         🤖 Jouer contre l'ordinateur
       </button>
 
-      <div class="link"><a href="/regles">Règles</a> · <a href="/live">🔴 Live</a> · <a href="/leaderboard">🏆 Classement</a></div>
-      <div class="link"><a href="/forgot-password">🔑 Mot de passe oublié</a></div>
+      <div class="link">Nouvelle partie classée · <a href="/regles">Règles</a> · <a href="/live">🔴 Live</a> · <a href="/leaderboard">🏆 Classement</a> · <a href="/forgot-password">🔑 Mot de passe oublié</a></div>
     </div>
 
     <!-- QUEUE VIEW -->
@@ -870,6 +869,7 @@ function startVsIA() {
 
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
+  localStorage.setItem('last_active', Date.now());
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
   socket.on('identified',   (player) => {
     myPlayer = player;
@@ -878,7 +878,13 @@ function connectAndQueue() {
     const lsPlayer = JSON.parse(localStorage.getItem('player') || '{}');
     socket.emit('queue_join', { shape: lsPlayer.shape || 'circle' });
   });
-  socket.on('queue_joined', ({ position }) => showQueueView(position));
+  socket.on('queue_joined', ({ position, reason }) => {
+    showQueueView(position);
+    if (reason === 'anti_rematch') {
+      const sub = document.getElementById('queue-sub');
+      if (sub) sub.textContent = "♻️ Adversaire récent — recherche d'un autre joueur...";
+    }
+  });
   socket.on('match_found',  (data) => {
     sessionStorage.setItem('match',  JSON.stringify(data));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
@@ -963,11 +969,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (saved && token) {
     const p = JSON.parse(saved);
-    myPlayer = p;
-    sessionStorage.setItem('player', JSON.stringify(p));
-    document.getElementById('input-pseudo').value = p.pseudo;
-    if (p.color) { selectedColor = p.color; initThemePicker(); }
-    // Plus d'auto-queue — l'utilisateur clique sur "Jouer" manuellement
+    // Vérifier inactivité (10 min)
+    const lastActive = parseInt(localStorage.getItem('last_active') || '0');
+    const inactiveMs = Date.now() - lastActive;
+    if (lastActive && inactiveMs > 10 * 60 * 1000) {
+      // Session expirée — nettoyer
+      localStorage.removeItem('token');
+      localStorage.removeItem('player');
+      localStorage.removeItem('last_active');
+      showError('⏱️ Session expirée après 10 minutes d\'inactivité. Reconnecte-toi.');
+    } else {
+      myPlayer = p;
+      localStorage.setItem('last_active', Date.now());
+      sessionStorage.setItem('player', JSON.stringify(p));
+      document.getElementById('input-pseudo').value = p.pseudo;
+      if (p.color) { selectedColor = p.color; initThemePicker(); }
+      // Auto-queue directement si session valide
+      connectAndQueue();
+    }
   }
 });
 

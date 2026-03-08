@@ -805,24 +805,41 @@ function _startMatch(p1, p2) {
     // Si ils ont déjà joué dans les 3 dernières parties des deux côtés → remettre en queue
     const p1facedP2 = p1recent.slice(0, 2).includes(p2.id); // 2 dernières parties de p1
     const p2facedP1 = p2recent.slice(0, 2).includes(p1.id); // 2 dernières parties de p2
-    if (p1facedP2 && p2facedP1) {
+    // Anti-rematch seulement si d'autres joueurs sont disponibles
+    if (p1facedP2 && p2facedP1 && mm.size() > 2) {
       console.log(`[ANTI-REMATCH] ${p1.pseudo} vs ${p2.pseudo} — remis en queue`);
+      // tryMatch les a déjà retirés de la queue — on les réinsère proprement
+      mm.leave(p1.socketId); // au cas où (sécurité)
+      mm.leave(p2.socketId);
       mm.join(p1.socketId, p1);
       mm.join(p2.socketId, p2);
       const s1 = io.sockets.sockets.get(p1.socketId);
       const s2 = io.sockets.sockets.get(p2.socketId);
-      if (s1) s1.emit('queue_joined', { position: mm.position(p1.socketId) });
-      if (s2) s2.emit('queue_joined', { position: mm.position(p2.socketId) });
+      // Notifier les deux joueurs qu'ils sont en attente d'un autre adversaire
+      if (s1) s1.emit('queue_joined', { position: mm.position(p1.socketId), reason: 'anti_rematch' });
+      if (s2) s2.emit('queue_joined', { position: mm.position(p2.socketId), reason: 'anti_rematch' });
+      // Tenter immédiatement un autre match si d'autres joueurs sont en queue
+      const next = mm.tryMatch();
+      if (next) _startMatch(next.p1, next.p2);
       return;
     }
   } catch(e) { /* ignore si DB pas encore prête */ }
 
+  // Vérifier que les deux sockets sont toujours connectés
+  const s1 = io.sockets.sockets.get(p1.socketId);
+  const s2 = io.sockets.sockets.get(p2.socketId);
+  if (!s1 || !s2) {
+    // Un des deux est déconnecté — remettre l'autre en queue
+    if (s1) { mm.join(p1.socketId, p1); s1.emit('queue_joined', { position: mm.position(p1.socketId) }); }
+    if (s2) { mm.join(p2.socketId, p2); s2.emit('queue_joined', { position: mm.position(p2.socketId) }); }
+    console.log(`[MATCH] Socket invalide — p1:${!!s1} p2:${!!s2}`);
+    return;
+  }
+
   const state = gm.create(p1, p2);
   const room  = 'game:' + state.id;
-  const s1    = io.sockets.sockets.get(p1.socketId);
-  const s2    = io.sockets.sockets.get(p2.socketId);
-  if (s1) s1.join(room);
-  if (s2) s2.join(room);
+  s1.join(room);
+  s2.join(room);
 
   const base = {
     gameId: state.id,

@@ -424,6 +424,7 @@ function connectSocket(pendingMatch) {
   socket = io({ transports: ['polling'] });
 
   socket.on('connect', () => {
+    localStorage.setItem('last_active', Date.now());
     socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
   });
 
