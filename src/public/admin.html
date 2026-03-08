@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Admin</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/w9nwQxm.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,0.06);--text:#eeeef5;--muted:rgba(238,238,245,0.38);--red:#ff2d55;--green:#30d158;--yellow:#ffd60a;--orange:#ff9f0a;--blue:#4c6ef5}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
+.page{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+
+/* Login */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:100%;max-width:380px}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-align:center;margin-bottom:24px;color:var(--text)}
+.logo span{color:var(--red)}
+h2{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:20px}
+input[type=password],input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:12px}
+input:focus{border-color:rgba(255,255,255,0.2)}
+.btn{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;transition:opacity 0.2s}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{opacity:0.85}
+.btn-sm{padding:6px 12px;font-size:12px;font-weight:700;letter-spacing:1px;border-radius:7px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;transition:opacity 0.2s}
+.btn-sm:hover{opacity:0.8}
+.error-msg{background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.3);color:var(--red);border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:12px}
+
+/* Panel */
+#panel{display:none}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:10px}
+.nav-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
+.nav-title span{color:var(--red)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900}
+.stat-lbl{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+
+/* Search */
+.search-wrap{margin-bottom:16px}
+.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;color:var(--text);font-size:14px;font-family:'Barlow',sans-serif;outline:none}
+.search-input:focus{border-color:rgba(255,255,255,0.15)}
+
+/* Table */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--surface2);border-bottom:1px solid var(--border)}
+th{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:12px 14px;text-align:left}
+td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge-user{background:rgba(255,255,255,0.06);color:var(--muted)}
+.badge-moderator{background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3)}
+.badge-admin{background:rgba(255,45,85,0.15);color:var(--red);border:1px solid rgba(255,45,85,0.3)}
+.badge-banned{background:rgba(255,45,85,0.15);color:var(--red)}
+.badge-muted{background:rgba(255,159,10,0.15);color:var(--orange)}
+.badge-suspect{background:rgba(255,159,10,0.1);color:var(--orange)}
+
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:380px}
+.modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+
+@media(max-width:700px){th:nth-child(n+4),td:nth-child(n+4){display:none}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="logo">Puissance <span>4</span></div>
+    <h2>🔐 Admin</h2>
+    <div id="login-error" class="error-msg" style="display:none"></div>
+    <input type="password" id="pwd-input" placeholder="Mot de passe admin..." onkeydown="if(event.key==='Enter')login()">
+    <button class="btn btn-red" onclick="login()">Connexion</button>
+  </div>
+</div>
+
+<!-- Panel -->
+<div id="panel" class="page">
+  <div class="nav">
+    <div class="nav-title">⚡ <span>Admin</span> Panel</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="search-input" style="width:220px" id="search" placeholder="🔍 Rechercher un joueur..." oninput="filterPlayers()">
+      <button class="btn-sm btn-red" onclick="logout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="stats-row" id="stats-row"></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Joueur</th>
+          <th>ELO</th>
+          <th>W/L/D</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="players-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let adminToken = sessionStorage.getItem('adminToken');
+let allPlayers = [];
+
+if (adminToken) showPanel();
+
+async function login() {
+  const pwd = document.getElementById('pwd-input').value;
+  const res  = await fetch('/api/admin/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pwd }),
+  });
+  const data = await res.json();
+  if (data.token) {
+    adminToken = data.token;
+    sessionStorage.setItem('adminToken', adminToken);
+    showPanel();
+  } else {
+    const err = document.getElementById('login-error');
+    err.textContent = data.error || 'Erreur.';
+    err.style.display = 'block';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('adminToken');
+  location.reload();
+}
+
+async function showPanel() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('panel').style.display = 'block';
+  await loadPlayers();
+}
+
+async function api(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+}
+
+async function loadPlayers() {
+  const data = await api('GET', '/api/admin/players');
+  if (!Array.isArray(data)) { logout(); return; }
+  allPlayers = data;
+  renderStats();
+  renderPlayers(allPlayers);
+}
+
+function renderStats() {
+  const total    = allPlayers.length;
+  const banned   = allPlayers.filter(p => p.banned).length;
+  const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
+  const suspect  = allPlayers.filter(p => p.suspicious).length;
+  const mods     = allPlayers.filter(p => p.role === 'moderator' || p.role === 'admin').length;
+
+  document.getElementById('stats-row').innerHTML = [
+    { val: total,   lbl: 'Joueurs',   color: 'var(--text)' },
+    { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
+    { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
+    { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
+    { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
+  ].map(s => `
+    <div class="stat-card">
+      <div class="stat-val" style="color:${s.color}">${s.val}</div>
+      <div class="stat-lbl">${s.lbl}</div>
+    </div>
+  `).join('');
+}
+
+function filterPlayers() {
+  const q = document.getElementById('search').value.toLowerCase();
+  renderPlayers(q ? allPlayers.filter(p => p.pseudo.toLowerCase().includes(q)) : allPlayers);
+}
+
+function renderPlayers(players) {
+  const now = Date.now();
+  document.getElementById('players-body').innerHTML = players.map((p, i) => {
+    const isMuted  = p.muted_until && p.muted_until > now;
+    const muteLeft = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
+
+    const statusBadges = [
+      p.banned   ? `<span class="badge badge-banned">🚫 Banni</span>` : '',
+      isMuted    ? `<span class="badge badge-muted">🔇 Muté ${muteLeft}</span>` : '',
+      p.suspicious ? `<span class="badge badge-suspect">⚠️ Suspect</span>` : '',
+    ].filter(Boolean).join(' ') || '<span style="color:var(--muted);font-size:12px">—</span>';
+
+    return `<tr>
+      <td style="color:var(--muted)">#${i+1}</td>
+      <td>
+        <a href="/profil?id=${p.id}" target="_blank" style="color:var(--text);text-decoration:none;font-weight:600">${p.pseudo}</a>
+        <div style="font-size:11px;color:var(--muted)">ID ${p.id}</div>
+      </td>
+      <td><strong>${p.elo}</strong></td>
+      <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
+      <td><span class="badge badge-${p.role}">${p.role}</span></td>
+      <td>${statusBadges}</td>
+      <td>
+        <div class="actions">
+          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id},'${p.pseudo}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️ Gérer</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openModal(id, pseudo, role, banned, mutedUntil, suspicious) {
+  const now    = Date.now();
+  const isMuted = mutedUntil > now;
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg';
+  modal.id = 'admin-modal';
+  modal.innerHTML = `
+    <div class="modal">
+      <h3>✏️ ${pseudo}</h3>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Pseudo</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="new-pseudo" value="${pseudo}" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="changePseudo(${id})">OK</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle</div>
+        <div style="display:flex;gap:6px">
+          ${['user','moderator','admin'].map(r => `
+            <button class="btn-sm" style="flex:1;background:${r===role?'rgba(76,110,245,0.25)':'rgba(255,255,255,0.05)'};color:${r===role?'#8b9cf4':'var(--muted)'}" onclick="changeRole(${id},'${r}')">${r}</button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Reset ELO</div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="new-elo" value="1000" min="0" max="9999" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <button class="btn-sm" style="background:rgba(255,214,10,0.15);color:var(--yellow)" onclick="resetElo(${id})">Reset</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Mute (heures)</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${[1,6,24,72].map(h => `<button class="btn-sm" style="background:rgba(255,159,10,0.12);color:var(--orange)" onclick="mute(${id},${h})">${h}h</button>`).join('')}
+          ${isMuted ? `<button class="btn-sm" style="background:rgba(48,209,88,0.12);color:var(--green)" onclick="mute(${id},0)">Unmute</button>` : ''}
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn-sm" style="flex:1;background:${banned?'rgba(48,209,88,0.12)':'rgba(255,45,85,0.12)'};color:${banned?'var(--green)':'var(--red)'}" onclick="toggleBan(${id},${banned})">
+          ${banned ? '✅ Débannir' : '🚫 Bannir'}
+        </button>
+        ${suspicious ? `<button class="btn-sm" style="flex:1;background:rgba(48,209,88,0.12);color:var(--green)" onclick="clearSuspicious(${id})">✅ Retirer suspect</button>` : ''}
+      </div>
+
+      <button class="btn-sm" style="width:100%;background:rgba(255,255,255,0.04);color:var(--muted)" onclick="document.getElementById('admin-modal').remove()">Fermer</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function changePseudo(id) {
+  const pseudo = document.getElementById('new-pseudo').value.trim();
+  if (!pseudo) return;
+  const data = await api('PATCH', `/api/admin/players/${id}/pseudo`, { pseudo });
+  if (data.ok) { closeAndReload(); } else alert(data.error);
+}
+
+async function changeRole(id, role) {
+  await api('PATCH', `/api/admin/players/${id}/role`, { role });
+  closeAndReload();
+}
+
+async function resetElo(id) {
+  const elo = Number(document.getElementById('new-elo').value);
+  await api('PATCH', `/api/admin/players/${id}/elo`, { elo });
+  closeAndReload();
+}
+
+async function mute(id, hours) {
+  await api('PATCH', `/api/admin/players/${id}/mute`, { hours });
+  closeAndReload();
+}
+
+async function toggleBan(id, banned) {
+  await api('PATCH', `/api/admin/players/${id}/ban`, { banned: !banned });
+  closeAndReload();
+}
+
+async function clearSuspicious(id) {
+  await api('PATCH', `/api/admin/players/${id}/suspicious`, {});
+  closeAndReload();
+}
+
+function closeAndReload() {
+  document.getElementById('admin-modal')?.remove();
+  loadPlayers();
+}
+</script>
+</body>
+</html>

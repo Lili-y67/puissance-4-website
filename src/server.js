@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers = new Map(); // ip → Set of playerIds
@@ -91,6 +91,90 @@ app.delete('/api/players/:id', (req, res) => {
   // Marquer le compte comme supprimé
   db.prepare(`UPDATE players SET deleted = 1 WHERE id = ?`).run(id);
 
+  res.json({ ok: true });
+});
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PANEL ADMIN
+// ══════════════════════════════════════════════════════════════════════════════
+const ADMIN_PASSWORD = 'admin_p4_2024'; // à changer
+
+app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
+
+// Auth admin
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+  const token = require('crypto').randomBytes(32).toString('hex');
+  adminSessions.add(token);
+  setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
+  res.json({ token });
+});
+
+// Sessions admin en mémoire
+const adminSessions = new Set();
+function isAdmin(req) {
+  const t = req.headers['x-admin-token'];
+  return t && adminSessions.has(t);
+}
+
+// Liste tous les joueurs
+app.get('/api/admin/players', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const players = db.prepare(`SELECT id, pseudo, elo, role, wins, losses, draws, suspicious, banned, muted_until, created_at FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  res.json(players);
+});
+
+// Changer le rôle
+app.patch('/api/admin/players/:id/role', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const { role } = req.body;
+  if (!['user','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide.' });
+  pQ.updateRole.run({ role, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
+// Changer le pseudo
+app.patch('/api/admin/players/:id/pseudo', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const { pseudo } = req.body;
+  if (!pseudo?.trim()) return res.status(400).json({ error: 'Pseudo invalide.' });
+  try {
+    pQ.updatePseudo.run({ pseudo: pseudo.trim(), id: Number(req.params.id) });
+    res.json({ ok: true });
+  } catch(e) { res.status(400).json({ error: 'Pseudo déjà pris.' }); }
+});
+
+// Reset ELO
+app.patch('/api/admin/players/:id/elo', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const { elo } = req.body;
+  db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(Number(elo) || 1000, Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// Mute temporaire (interdit de jouer)
+app.patch('/api/admin/players/:id/mute', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const { hours } = req.body;
+  const until = hours > 0 ? Date.now() + hours * 60 * 60 * 1000 : null;
+  pQ.setMute.run({ until, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
+// Ban / Unban
+app.patch('/api/admin/players/:id/ban', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const { banned } = req.body;
+  pQ.setBanned.run({ banned: banned ? 1 : 0, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
+// Reset suspicious
+app.patch('/api/admin/players/:id/suspicious', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
@@ -185,13 +269,13 @@ app.get('/auth/discord/callback', async (req, res) => {
             headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content: [
-                '🎮 **Puissance 4 — Compte Discord lié !**\n',
+                '🎮 **Puissance 4 — Compte Discord lié !**\n\n',
                 '',
-                `Bonjour **${freshPlayer.pseudo}** ! 👋\n`,
+                `Bonjour **${freshPlayer.pseudo}** ! 👋\n\n`,
                 '',
-                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.\n',
+                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.\n\n',
                 '',
-                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n',
+                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n\n',
                 "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._",
               ].join(''),
             }),
@@ -401,6 +485,15 @@ app.patch('/api/players/:id/color', (req, res) => {
   res.json({ ok: true });
 });
 
+app.patch('/api/players/:id/banner', (req, res) => {
+  const { banner, token } = req.body;
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
+  if (banner.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'Bannière trop lourde (max 4MB).' });
+  pQ.updateBanner.run({ banner, id: Number(req.params.id) });
+  res.json({ ok: true });
+});
+
 app.patch('/api/players/:id/avatar', (req, res) => {
   const { avatar, token } = req.body;
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
@@ -500,6 +593,12 @@ io.on('connection', socket => {
   socket.on('queue_join', ({ shape } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
+    // Vérifier ban/mute
+    if (freshPlayer.banned) return socket.emit('error', { message: 'Ton compte est banni.' });
+    if (freshPlayer.muted_until && freshPlayer.muted_until > Date.now()) {
+      const mins = Math.ceil((freshPlayer.muted_until - Date.now()) / 60000);
+      return socket.emit('error', { message: `Tu es banni de jeu pendant encore ${mins} minute(s).` });
+    }
     socket.playerData = sanitize(freshPlayer);
     // Shape envoyée par le client (localStorage) — priorité sur la DB
     if (shape) socket.playerData.shape = shape;

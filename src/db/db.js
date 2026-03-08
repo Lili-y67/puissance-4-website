@@ -80,6 +80,10 @@ try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT '
 try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_id  TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
@@ -93,7 +97,12 @@ const pQ = {
   `),
   updateColor:  db.prepare(`UPDATE players SET color  = @color  WHERE id = @id`),
   updateShape:    db.prepare(`UPDATE players SET shape    = @shape    WHERE id = @id`),
-  updatePassword: db.prepare(`UPDATE players SET password = @password WHERE id = @id`),
+  updatePassword: db.prepare(`UPDATE players SET password  = @password  WHERE id = @id`),
+  updateBanner:   db.prepare(`UPDATE players SET banner   = @banner   WHERE id = @id`),
+  updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
+  updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
+  setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
+  setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),

@@ -7,7 +7,7 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
 const API       = 'https://puissance-4-website-ranked-production.up.railway.app';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function apiFetch(path) {

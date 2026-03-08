@@ -33,10 +33,26 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 
 /* ── Profile header ── */
 .profile-header{
-  background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;
-  display:flex;align-items:center;gap:20px;
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  overflow:hidden;
   box-shadow:0 0 40px rgba(0,0,0,0.4);
   animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+.profile-banner{
+  width:100%;height:140px;object-fit:cover;display:block;
+  background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
+  position:relative;cursor:pointer;
+}
+.profile-banner img{width:100%;height:100%;object-fit:cover;display:block;}
+.profile-banner-overlay{
+  position:absolute;inset:0;background:rgba(0,0,0,0.4);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity 0.2s;font-size:24px;
+}
+.profile-banner:hover .profile-banner-overlay{opacity:1;}
+.profile-header-inner{
+  display:flex;align-items:center;gap:20px;padding:16px 24px 24px;
+  margin-top:-36px;position:relative;
 }
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
@@ -358,18 +374,29 @@ function render(player, games, following, followers, followStatus) {
   document.getElementById('content').innerHTML = `
     <!-- Header -->
     <div class="profile-header">
-      ${avatarSection}
-      <div class="profile-info">
-        <div class="profile-pseudo">${player.pseudo}</div>
-        <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div>
-        ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">📷 Clique sur la photo pour la changer</div>' : ''}
+      <!-- Bannière -->
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\"banner-input\").click()" title="Changer la bannière"' : ''}>
+        ${player.banner ? `<img src="${player.banner}" alt="bannière">` : ''}
+        ${isOwnProfile ? '<div class="profile-banner-overlay">🖼️</div>' : ''}
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-        <div>
-          <div class="profile-elo">${player.elo}</div>
-          <div class="profile-elo-lbl">ELO</div>
+      <div class="profile-header-inner">
+        ${avatarSection}
+        <div class="profile-info">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="profile-pseudo">${player.pseudo}</div>
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
+          </div>
+          <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
+          ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
         </div>
-        ${followBtn}
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto">
+          <div>
+            <div class="profile-elo">${player.elo}</div>
+            <div class="profile-elo-lbl">ELO</div>
+          </div>
+          ${followBtn}
+        </div>
       </div>
     </div>
 
