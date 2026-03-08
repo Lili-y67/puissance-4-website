@@ -192,9 +192,8 @@ app.get('/auth/discord/callback', async (req, res) => {
                 'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.',
                 '',
                 '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.',
-                '_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._',
-              ].join('
-'),
+                "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._",
+              ].join(''),
             }),
           });
         }
