@@ -134,6 +134,7 @@ app.post('/api/admin/login', (req, res) => {
   const token = require('crypto').randomBytes(32).toString('hex');
   adminSessions.add(token);
   setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
+  WH.wlogAdminLogin(req.headers['x-forwarded-for'] || req.ip);
   res.json({ token });
 });
 
@@ -149,6 +150,8 @@ app.patch('/api/admin/players/:id/role', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { role } = req.body;
   if (!['user','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide.' });
+  const _rp = pQ.getById.get(Number(req.params.id));
+  WH.wlogAdminAction('Rôle changé', _rp?.pseudo || req.params.id, req.params.id, [['Nouveau rôle', role, true]]);
   pQ.updateRole.run({ role, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -159,6 +162,8 @@ app.patch('/api/admin/players/:id/pseudo', (req, res) => {
   const { pseudo } = req.body;
   if (!pseudo?.trim()) return res.status(400).json({ error: 'Pseudo invalide.' });
   try {
+    const _pp = pQ.getById.get(Number(req.params.id));
+    WH.wlogAdminAction('Pseudo changé', _pp?.pseudo || '?', req.params.id, [['Nouveau', pseudo.trim(), true]]);
     pQ.updatePseudo.run({ pseudo: pseudo.trim(), id: Number(req.params.id) });
     res.json({ ok: true });
   } catch(e) { res.status(400).json({ error: 'Pseudo déjà pris.' }); }
@@ -168,6 +173,8 @@ app.patch('/api/admin/players/:id/pseudo', (req, res) => {
 app.patch('/api/admin/players/:id/elo', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { elo } = req.body;
+  const _pe = pQ.getById.get(Number(req.params.id));
+  WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
   db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(Number(elo) || 1000, Number(req.params.id));
   res.json({ ok: true });
 });
@@ -177,6 +184,8 @@ app.patch('/api/admin/players/:id/mute', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { hours } = req.body;
   const until = hours > 0 ? Date.now() + hours * 60 * 60 * 1000 : null;
+  const _pm = pQ.getById.get(Number(req.params.id));
+  WH.wlogMute(_pm?.pseudo || req.params.id, req.params.id, hours);
   pQ.setMute.run({ until, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -185,6 +194,8 @@ app.patch('/api/admin/players/:id/mute', (req, res) => {
 app.patch('/api/admin/players/:id/ban', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { banned } = req.body;
+  const _pb = pQ.getById.get(Number(req.params.id));
+  WH.wlogBan(_pb?.pseudo || req.params.id, req.params.id, banned);
   pQ.setBanned.run({ banned: banned ? 1 : 0, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -198,6 +209,13 @@ app.patch('/api/admin/players/:id/suspicious', (req, res) => {
 
 app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'public/forgot-password.html')));
 app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WEBHOOK DISCORD
+// ══════════════════════════════════════════════════════════════════════════════
+const WH = require('./webhooks');
+const { wlog, mkEmbed: embed } = WH;
 
 // ── Constantes Discord rôles ──────────────────────────────────────────────────
 const DISCORD_GUILD    = '1477078197530263582';
@@ -227,6 +245,7 @@ setInterval(async () => {
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
       console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} → ${newRole}`);
+      WH.wlogRoleSync(player.pseudo, player.role, newRole);
     }
   }
 }, 60 * 1000);
@@ -325,10 +344,10 @@ app.get('/auth/discord/callback', async (req, res) => {
                 '',
                 'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.\n\n',
                 '',
-                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n\n',
+                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n',
                 "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._\n\n",
                 '',
-                "-# 🛠️ Vous pouvez aller sur le Serveur pour avoir de l'aide, ou récupérer des Permissions de Rôles"
+                "-# 🔧 Si tu es Administrateur, rejoins le serveur pour récupérer les Permissions nécessaires"
               ].join(''),
             }),
           });
@@ -543,6 +562,8 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   if (banner.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'Bannière trop lourde (max 4MB).' });
   pQ.updateBanner.run({ banner, id: Number(req.params.id) });
+  const _pBanner = pQ.getById.get(Number(req.params.id));
+  WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024));
   res.json({ ok: true });
 });
 
@@ -554,6 +575,8 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   if (avatar.length > 3 * 1024 * 1024) // ~2MB base64
     return res.status(413).json({ error: 'Image trop lourde (max 2MB).' });
   pQ.updateAvatar.run({ avatar, id: Number(req.params.id) });
+  const _pAvatar = pQ.getById.get(Number(req.params.id));
+  WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024));
   res.json({ ok: true });
 });
 
@@ -603,6 +626,16 @@ app.get('/api/games/:id', (req, res) => {
   const game = gQ.getById.get(Number(req.params.id));
   if (!game) return res.status(404).json({ error: 'Introuvable' });
   res.json(game);
+});
+
+app.get('/api/games/:id/replay-view', (req, res) => {
+  // Endpoint appelé par replay.html au chargement
+  const game = gQ.getById?.get(Number(req.params.id));
+  if (!game) return res.json({ ok: false });
+  const _watcherId = validateSession(req.headers['x-token'] || req.query.token);
+  const _watcher   = _watcherId ? pQ.getById.get(_watcherId) : null;
+  WH.wlogReplay(_watcher?.pseudo || 'Anonyme', req.params.id);
+  res.json({ ok: true });
 });
 
 app.get('/api/games/:id/moves', (req, res) => {

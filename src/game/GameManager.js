@@ -3,6 +3,7 @@
  */
 const { Board }              = require('./Board');
 const { gQ, mQ, finishGame, abQ, pQ } = require('../db/db');
+const { wlogGame } = require('../webhooks');
 
 class GameManager {
   constructor() {
@@ -140,6 +141,22 @@ class GameManager {
     const p2Delta = isSuspect ? 0 : isDraw
       ? (state.players[2].id === winnerId ? elo.dW : elo.dL)
       : (p2IsWinner ? elo.dW : elo.dL);
+
+    // Webhook log partie
+    try {
+      const p1 = state.players[1]; const p2 = state.players[2];
+      const winner = isDraw ? null : (winnerSide === 1 ? p1 : p2);
+      const loser  = isDraw ? null : (winnerSide === 1 ? p2 : p1);
+      const BASE   = 'https://puissance-4-website-ranked-production.up.railway.app';
+      wlogGame({
+        gameId: state.id, isDraw, isSuspect, reason,
+        p1: { pseudo: p1.pseudo, elo: p1.elo, delta: p1Delta },
+        p2: { pseudo: p2.pseudo, elo: p2.elo, delta: p2Delta },
+        winner: winner?.pseudo, loser: loser?.pseudo,
+        moves: state.moveCount, duration,
+        replayUrl: `${BASE}/replay/${state.id}`,
+      });
+    } catch(e) {}
 
     // Stocker le résultat dans le state pour /api/live (affiché 5s)
     state.finishedAt = Date.now();
