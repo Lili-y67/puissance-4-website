@@ -55,6 +55,14 @@ app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 // DISCORD RESET MOT DE PASSE
 // ══════════════════════════════════════════════════════════════════════════════
 // Variables Discord lues dynamiquement (Railway les injecte après démarrage)
+// DEBUG temporaire — à supprimer après vérification
+console.log('[ENV CHECK]', {
+  DISCORD_CLIENT_ID:     process.env.DISCORD_CLIENT_ID     ? 'OK' : 'MANQUANT',
+  DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET ? 'OK' : 'MANQUANT',
+  DISCORD_BOT_TOKEN:     process.env.DISCORD_BOT_TOKEN     ? 'OK' : 'MANQUANT',
+  BASE_URL:              process.env.BASE_URL               || 'MANQUANT',
+});
+
 function discordConfig() {
   return {
     clientId:     process.env.DISCORD_CLIENT_ID,
