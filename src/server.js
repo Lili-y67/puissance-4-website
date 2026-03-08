@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, pQ, gQ, mQ, fQ, sQ, abQ } = require('./db/db');
+const { initDb, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers = new Map(); // ip → Set of playerIds
@@ -50,6 +50,139 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── SPA routing ────────────────────────────────────────────────────────────────
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DISCORD RESET MOT DE PASSE
+// ══════════════════════════════════════════════════════════════════════════════
+const DISCORD_CLIENT_ID     = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const DISCORD_BOT_TOKEN     = process.env.DISCORD_BOT_TOKEN;
+const BASE_URL              = process.env.BASE_URL || 'http://localhost:3000';
+
+// Page mot de passe oublié
+app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'public/forgot-password.html')));
+app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
+
+// Étape 1 — Rediriger vers Discord OAuth (user-install, DM uniquement)
+app.get('/auth/discord/reset', (req, res) => {
+  const { pseudo } = req.query;
+  if (!pseudo) return res.redirect('/forgot-password?error=pseudo_manquant');
+  const player = pQ.getByPseudo.get(pseudo);
+  if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
+
+  const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
+  const params = new URLSearchParams({
+    client_id:     DISCORD_CLIENT_ID,
+    redirect_uri:  BASE_URL + '/auth/discord/callback',
+    response_type: 'code',
+    scope:         'identify',
+    state,
+    integration_type: '1', // user-install
+  });
+  res.redirect('https://discord.com/oauth2/authorize?' + params);
+});
+
+// Étape 2 — Callback Discord → envoyer le code par DM
+app.get('/auth/discord/callback', async (req, res) => {
+  const { code, state, error } = req.query;
+  if (error || !code) return res.redirect('/forgot-password?error=discord_annulé');
+
+  try {
+    const { playerId } = JSON.parse(Buffer.from(state, 'base64').toString());
+    const player = pQ.getById.get(playerId);
+    if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
+
+    // Échanger le code contre un access_token
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type:    'authorization_code',
+        code,
+        redirect_uri:  BASE_URL + '/auth/discord/callback',
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenData.access_token) return res.redirect('/forgot-password?error=discord_token');
+
+    // Récupérer l'identité Discord
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: 'Bearer ' + tokenData.access_token },
+    });
+    const discordUser = await userRes.json();
+    if (!discordUser.id) return res.redirect('/forgot-password?error=discord_id');
+
+    // Lier le discord_id au compte si pas encore fait
+    rQ.setDiscord.run(discordUser.id, playerId);
+
+    // Générer le code à 6 chiffres (15 min)
+    const code6    = String(Math.floor(100000 + Math.random() * 900000));
+    const expires  = Date.now() + 15 * 60 * 1000;
+    rQ.cleanup.run(Date.now());
+    rQ.insert.run(playerId, code6, expires);
+
+    // Envoyer un DM via le bot
+    // 1. Créer un DM channel
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({ recipient_id: discordUser.id }),
+    });
+    const dmData = await dmRes.json();
+    if (!dmData.id) return res.redirect('/forgot-password?error=dm_impossible');
+
+    // 2. Envoyer le message
+    await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bot ' + DISCORD_BOT_TOKEN,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        content: [
+          '🎮 **Puissance 4 — Réinitialisation de mot de passe**',
+          '',
+          `Bonjour **${player.pseudo}** !`,
+          '',
+          `Votre code de réinitialisation est :`,
+          '```',
+          code6,
+          '```',
+          '⏳ Ce code expire dans **15 minutes**.',
+          '',
+          '_Si vous n\'avez pas demandé de réinitialisation, ignorez ce message._',
+        ].join('\n'),
+      }),
+    });
+
+    res.redirect('/reset-password?playerId=' + playerId);
+  } catch (e) {
+    console.error('[DISCORD RESET]', e);
+    res.redirect('/forgot-password?error=erreur_serveur');
+  }
+});
+
+// Étape 3 — Valider le code et changer le mot de passe
+app.post('/api/reset-password', (req, res) => {
+  const { playerId, code, newPassword } = req.body;
+  if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'Données manquantes.' });
+  if (newPassword.length < 4) return res.status(400).json({ error: 'Mot de passe trop court.' });
+
+  const row = rQ.getValid.get(Number(playerId), String(code), Date.now());
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expiré.' });
+
+  const hashed = hashPwd(newPassword);
+  pQ.updatePassword.run({ password: hashed, id: Number(playerId) });
+  rQ.markUsed.run(row.id);
+
+  res.json({ ok: true });
+});
+
 app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
 app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));

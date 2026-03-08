@@ -77,7 +77,8 @@ db.exec(`
 try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN discord_id  TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
@@ -90,7 +91,8 @@ const pQ = {
     RETURNING *
   `),
   updateColor:  db.prepare(`UPDATE players SET color  = @color  WHERE id = @id`),
-  updateShape:  db.prepare(`UPDATE players SET shape  = @shape  WHERE id = @id`),
+  updateShape:    db.prepare(`UPDATE players SET shape    = @shape    WHERE id = @id`),
+  updatePassword: db.prepare(`UPDATE players SET password = @password WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
@@ -210,7 +212,27 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return { dW: p1Delta, dL: p2Delta, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
 });
 
+// ── Reset codes (Discord DM) ──────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS reset_codes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    code       TEXT    NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used       INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 // ── Anti-boost queries ────────────────────────────────────────────────────────
+const rQ = {
+  insert:    db.prepare(`INSERT INTO reset_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
+  getValid:  db.prepare(`SELECT * FROM reset_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
+  markUsed:  db.prepare(`UPDATE reset_codes SET used = 1 WHERE id = ?`),
+  cleanup:   db.prepare(`DELETE FROM reset_codes WHERE expires_at < ? OR used = 1`),
+  setDiscord: db.prepare(`UPDATE players SET discord_id = ? WHERE id = ?`),
+  getByDiscord: db.prepare(`SELECT * FROM players WHERE discord_id = ?`),
+};
+
 const abQ = {
   // Parties entre deux joueurs dans les dernières 2h
   recentBetween: db.prepare(`
@@ -245,4 +267,4 @@ const sQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, rQ, calcElo, finishGame };
