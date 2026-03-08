@@ -80,6 +80,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT '
 try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_id  TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}

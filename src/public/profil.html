@@ -39,7 +39,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
 .profile-banner{
-  width:100%;height:180px;object-fit:cover;display:block;
+  width:100%;height:140px;object-fit:cover;display:block;
   background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
   position:relative;cursor:pointer;
 }
@@ -461,6 +461,20 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <button class="btn-save-color" onclick="saveShape()">Enregistrer</button>
     </div>
+
+    <!-- Carte mot de passe admin -->
+    ${player.role === 'admin' ? `
+    <div class="color-card" style="margin-top:0;border-color:rgba(255,45,85,0.3);background:rgba(255,45,85,0.05)">
+      <div class="card-label" style="color:var(--red)">⚡ Accès Panel Admin</div>
+      <div style="font-size:12px;color:rgba(238,238,245,0.4);margin:8px 0 12px">
+        Mot de passe du panel <a href="/admin" target="_blank" style="color:var(--red)">/admin</a>
+      </div>
+      <div id="admin-pwd-wrap" style="display:none;background:rgba(0,0,0,0.3);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:14px;letter-spacing:2px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
+      <button class="btn-save-color" id="admin-pwd-btn" onclick="toggleAdminPwd()" style="background:rgba(255,45,85,0.12);border-color:rgba(255,45,85,0.3);color:var(--red)">
+        🔑 Afficher le mot de passe
+      </button>
+    </div>
+    ` : ''}
 
     <!-- Carte liaison Discord -->
     <div class="color-card" style="margin-top:0">
@@ -896,6 +910,23 @@ function onEmojiInput(val) {
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
+}
+
+async function toggleAdminPwd() {
+  const wrap = document.getElementById('admin-pwd-wrap');
+  const btn  = document.getElementById('admin-pwd-btn');
+  if (wrap.style.display === 'block') {
+    wrap.style.display = 'none';
+    btn.textContent = '🔑 Afficher le mot de passe';
+    return;
+  }
+  const token = localStorage.getItem('token');
+  const res   = await fetch('/api/admin/password', { headers: { 'x-token': token } });
+  if (!res.ok) return alert('Accès refusé.');
+  const { password } = await res.json();
+  wrap.textContent   = password;
+  wrap.style.display = 'block';
+  btn.textContent    = '🙈 Masquer';
 }
 
 function linkDiscord() {

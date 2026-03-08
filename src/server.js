@@ -98,11 +98,36 @@ app.delete('/api/players/:id', (req, res) => {
 // ══════════════════════════════════════════════════════════════════════════════
 // PANEL ADMIN
 // ══════════════════════════════════════════════════════════════════════════════
-const ADMIN_PASSWORD = 'admin_p4_2024'; // à changer
+function getOrCreateAdminPassword() {
+  const row = db.prepare('SELECT value FROM config WHERE key = ?').get('admin_password');
+  if (row) return row.value;
+  const pwd = require('crypto').randomBytes(10).toString('hex'); // 20 chars hex
+  db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('admin_password', pwd);
+  console.log(`[ADMIN] Mot de passe généré : ${pwd}`);
+  return pwd;
+}
+const ADMIN_PASSWORD = getOrCreateAdminPassword();
 
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 
+// Récupérer le mot de passe admin (réservé aux joueurs rôle admin)
+app.get('/api/admin/password', (req, res) => {
+  const token = req.headers['x-token'];
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(403).json({ error: 'Non autorisé.' });
+  const player = pQ.getById.get(playerId);
+  if (!player || player.role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  res.json({ password: ADMIN_PASSWORD });
+});
+
 // Auth admin
+// Sessions admin en mémoire
+const adminSessions = new Set();
+function isAdmin(req) {
+  const t = req.headers['x-admin-token'];
+  return t && adminSessions.has(t);
+}
+
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
@@ -111,13 +136,6 @@ app.post('/api/admin/login', (req, res) => {
   setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
   res.json({ token });
 });
-
-// Sessions admin en mémoire
-const adminSessions = new Set();
-function isAdmin(req) {
-  const t = req.headers['x-admin-token'];
-  return t && adminSessions.has(t);
-}
 
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
