@@ -867,6 +867,30 @@ function startVsIA() {
   location.href = '/game';
 }
 
+// ── Musique d'attente Queue ────────────────────────────────────────────────────
+const QueueMusic = (() => {
+  let audio = null;
+  function get() {
+    if (!audio) audio = document.getElementById('queue-music');
+    return audio;
+  }
+  return {
+    start() {
+      const a = get();
+      if (!a) return;
+      a.volume = 0.35;
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    },
+    stop() {
+      const a = get();
+      if (!a) return;
+      a.pause();
+      a.currentTime = 0;
+    },
+  };
+})();
+
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   localStorage.setItem('last_active', Date.now());
@@ -879,6 +903,7 @@ function connectAndQueue() {
     socket.emit('queue_join', { shape: lsPlayer.shape || 'circle' });
   });
   socket.on('queue_joined', ({ position, reason }) => {
+    QueueMusic.start();
     showQueueView(position);
     if (reason === 'anti_rematch') {
       const sub = document.getElementById('queue-sub');
@@ -886,6 +911,7 @@ function connectAndQueue() {
     }
   });
   socket.on('match_found',  (data) => {
+    QueueMusic.stop();
     sessionStorage.setItem('match',  JSON.stringify(data));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     window.location.href = '/game';
@@ -937,6 +963,7 @@ function updateTimer() {
 }
 
 function handleLeaveQueue() {
+  QueueMusic.stop();
   if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
   clearInterval(timerInterval);
   const loginView = document.getElementById('view-login');
@@ -991,5 +1018,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
+  <!-- Musique d'attente queue -->
+  <audio id="queue-music" src="/sounds/puissance4-song.mp3" loop preload="none" style="display:none"></audio>
 </body>
 </html>

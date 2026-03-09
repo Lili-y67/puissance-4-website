@@ -875,7 +875,7 @@ initDb().then(() => {
 // ── Bot Discord intégré ───────────────────────────────────────────────────────
 function startBot() {
   const { botToken } = discordConfig();
-  if (!botToken || botToken === 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA') {
+  if (!botToken || botToken === 'TON_BOT_TOKEN') {
     console.log('[BOT] Token manquant — bot désactivé');
     return;
   }
