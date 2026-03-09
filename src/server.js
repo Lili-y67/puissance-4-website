@@ -134,7 +134,7 @@ app.post('/api/admin/login', (req, res) => {
   const token = require('crypto').randomBytes(32).toString('hex');
   adminSessions.add(token);
   setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
-  WH.wlogAdminLogin(req.headers['x-forwarded-for'] || req.ip);
+  WH.wlogAdminLogin();
   res.json({ token });
 });
 

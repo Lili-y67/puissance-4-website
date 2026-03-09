@@ -112,9 +112,9 @@ module.exports = {
   },
 
   // Admin login
-  wlogAdminLogin(ip) {
+  wlogAdminLogin() {
     send([mkEmbed(0xff2d55, '⚡ Connexion Panel Admin', [
-      ['IP', ip || '?', true], ['Heure', new Date().toLocaleString('fr-FR'), true],
+      ['Heure', new Date().toLocaleString('fr-FR'), true],
     ])]);
   },
 

@@ -303,6 +303,100 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
 
 <script>
+// ── Audio Profil ──────────────────────────────────────────────────────────────
+const PROFIL_SFX = (() => {
+  let ctx = null;
+  function getCtx() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function play(fn) { try { fn(getCtx()); } catch(e) {} }
+
+  return {
+    success() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [523, 659, 784].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine'; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, t + i*0.08);
+          g.gain.linearRampToValueAtTime(0.18, t + i*0.08 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i*0.08 + 0.25);
+          o.start(t + i*0.08); o.stop(t + i*0.08 + 0.25);
+        });
+      });
+    },
+    color(hex) {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const hue = parseInt((hex||'#ff0000').slice(1), 16) % 360;
+        const freq = 300 + (hue / 360) * 500;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, t);
+        o.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.1);
+        g.gain.setValueAtTime(0.15, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+        o.start(t); o.stop(t + 0.2);
+      });
+    },
+    shape() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(440, t);
+        o.frequency.exponentialRampToValueAtTime(880, t + 0.15);
+        g.gain.setValueAtTime(0.2, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        o.start(t); o.stop(t + 0.3);
+      });
+    },
+    upload() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+        o.connect(f); f.connect(g); g.connect(ctx.destination);
+        o.type = 'sawtooth'; f.type = 'lowpass'; f.frequency.value = 800;
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(600, t + 0.2);
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+        o.start(t); o.stop(t + 0.3);
+      });
+    },
+    discord() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [880, 1109].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine'; o.frequency.value = freq;
+          g.gain.setValueAtTime(0, t + i*0.1);
+          g.gain.linearRampToValueAtTime(0.15, t + i*0.1 + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i*0.1 + 0.4);
+          o.start(t + i*0.1); o.stop(t + i*0.1 + 0.4);
+        });
+      });
+    },
+    error() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'square'; o.frequency.value = 120;
+        g.gain.setValueAtTime(0.1, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.start(t); o.stop(t + 0.15);
+      });
+    },
+  };
+})();
+
 let currentPlayer = null;
 let viewerPlayer  = null;
 let isOwnProfile  = false;
@@ -637,6 +731,7 @@ async function saveBanner(input) {
       body: JSON.stringify({ banner, token }),
     });
     if (res.ok) {
+      PROFIL_SFX.upload();
       const bannerEl = document.querySelector('.profile-banner');
       if (bannerEl) {
         bannerEl.innerHTML = '<img src="' + banner + '" alt="bannière"><div class="profile-banner-overlay">🖼️</div>';
@@ -645,6 +740,7 @@ async function saveBanner(input) {
       me.banner = banner;
       localStorage.setItem('player', JSON.stringify(me));
     } else {
+      PROFIL_SFX.error();
       alert('Erreur upload bannière.');
     }
   };
@@ -666,11 +762,15 @@ function handleAvatarUpload(input) {
       body: JSON.stringify({ avatar: resized, token: localStorage.getItem('token') }),
     });
     if (res.ok) {
+      PROFIL_SFX.upload();
       const el = document.getElementById('avatar-el');
       if (el) el.innerHTML = `<img src="${resized}" alt="avatar">`;
       me.avatar = resized;
       localStorage.setItem('player', JSON.stringify(me));
-    } else alert('Erreur upload.');
+    } else {
+      PROFIL_SFX.error();
+      alert('Erreur upload.');
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -931,6 +1031,7 @@ async function toggleAdminPwd() {
 function linkDiscord() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
+  PROFIL_SFX.discord();
   // Redirige vers OAuth Discord avec un state spécial "link" (pas reset)
   window.location.href = '/auth/discord/link?playerId=' + me.id;
 }
@@ -945,17 +1046,21 @@ async function saveShape() {
     body: JSON.stringify({ shape: shapeVal, token }),
   });
   if (res.ok) {
+    PROFIL_SFX.shape();
     me.shape = shapeVal;
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
     const c = document.getElementById('shape-confirm');
     if (c) { c.textContent = '✓ Enregistré !'; c.style.opacity = 1; setTimeout(() => c.style.opacity = 0, 2000); }
+  } else {
+    PROFIL_SFX.error();
   }
 }
 
 async function saveColor() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
+  PROFIL_SFX.color(selectedProfilColor || '#ff2d55');
   const btn = document.getElementById('btn-save-color');
   btn.disabled = true;
   btn.textContent = '...';
@@ -966,11 +1071,14 @@ async function saveColor() {
       body: JSON.stringify({ color: selectedProfilColor, token: localStorage.getItem('token') }),
     });
     if (res.ok) {
+      PROFIL_SFX.success();
       me.color = selectedProfilColor;
       localStorage.setItem('player', JSON.stringify(me));
       // Feedback visuel
       const confirm = document.getElementById('save-confirm');
       if (confirm) { confirm.style.opacity = '1'; setTimeout(() => confirm.style.opacity = '0', 2000); }
+    } else {
+      PROFIL_SFX.error();
     }
   } finally {
     btn.disabled = false;
