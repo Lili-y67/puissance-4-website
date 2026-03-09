@@ -21,7 +21,17 @@ class Matchmaking {
 
   tryMatch() {
     if (this.queue.length < 2) return null;
-    return { p1: this.queue.shift(), p2: this.queue.shift() };
+    // Chercher deux joueurs avec des IDs différents (anti self-match)
+    for (let i = 0; i < this.queue.length; i++) {
+      for (let j = i + 1; j < this.queue.length; j++) {
+        if (this.queue[i].id !== this.queue[j].id) {
+          const p1 = this.queue.splice(j, 1)[0];
+          const p2 = this.queue.splice(i, 1)[0];
+          return { p1: p2, p2: p1 };
+        }
+      }
+    }
+    return null; // Que des doublons en queue
   }
 
   size()     { return this.queue.length; }
