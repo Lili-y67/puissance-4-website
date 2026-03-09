@@ -6,6 +6,7 @@ const path       = require('path');
 const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType } = require('discord.js');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers = new Map(); // ip → Set of playerIds
@@ -865,5 +866,136 @@ function _startMatch(p1, p2) {
 
 const PORT = process.env.PORT || 3000;
 initDb().then(() => {
-  server.listen(PORT, () => console.log(`✅  http://localhost:${PORT}`));
+  server.listen(PORT, () => {
+    console.log(`✅  http://localhost:${PORT}`);
+    startBot();
+  });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });
+
+// ── Bot Discord intégré ───────────────────────────────────────────────────────
+function startBot() {
+  const { botToken } = discordConfig();
+  if (!botToken || botToken === 'TON_BOT_TOKEN') {
+    console.log('[BOT] Token manquant — bot désactivé');
+    return;
+  }
+
+  const bot = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+  });
+
+  // ── Statuts rotatifs ──────────────────────────────────────────────────────
+  function updateStatus() {
+    try {
+      const totalPlayers = db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted=0`).get()?.c || 0;
+      const activeGames  = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
+      const statuses = [
+        { text: `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} inscrit${totalPlayers > 1 ? 's' : ''}`, type: ActivityType.Watching },
+        { text: `${activeGames} partie${activeGames > 1 ? 's' : ''} en cours`, type: ActivityType.Playing },
+      ];
+      const s = statuses[Math.floor(Date.now() / 10000) % statuses.length];
+      bot.user.setActivity(s.text, { type: s.type });
+    } catch(e) {}
+  }
+
+  bot.once('ready', () => {
+    console.log(`✅ Bot connecté : ${bot.user.tag}`);
+    updateStatus();
+    setInterval(updateStatus, 10000);
+  });
+
+  // ── Commandes slash ───────────────────────────────────────────────────────
+  const API = process.env.BASE_URL || 'https://puissance-4-website-ranked-production.up.railway.app';
+
+  function eloRank(elo) {
+    if (elo >= 1800) return { label: 'Diamant', emoji: '💎' };
+    if (elo >= 1500) return { label: 'Platine', emoji: '🪙' };
+    if (elo >= 1300) return { label: 'Or',      emoji: '🥇' };
+    if (elo >= 1100) return { label: 'Argent',  emoji: '🥈' };
+    return               { label: 'Bronze',  emoji: '🥉' };
+  }
+  function winRate(p) {
+    const t = (p.wins||0)+(p.losses||0)+(p.draws||0);
+    return t ? Math.round((p.wins/t)*100)+'%' : '—';
+  }
+
+  bot.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+    await interaction.deferReply();
+    try {
+      // /profil
+      if (interaction.commandName === 'profil') {
+        const pseudo = interaction.options.getString('pseudo');
+        const data   = pQ.byPseudo?.get(pseudo) || db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(pseudo);
+        if (!data) return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
+        const games  = gQ.getForPlayer.all(data.id).slice(0, 5);
+        const rank   = eloRank(data.elo);
+        const total  = (data.wins||0)+(data.losses||0)+(data.draws||0);
+        const embed  = new EmbedBuilder()
+          .setColor(data.color || '#ff2d55')
+          .setTitle(`${rank.emoji} ${data.pseudo}`)
+          .setURL(`${API}/profil?id=${data.id}`)
+          .setDescription(`**${rank.label}** · ${data.elo} ELO`)
+          .addFields(
+            { name: '🏆 Victoires', value: String(data.wins||0),   inline: true },
+            { name: '💀 Défaites',  value: String(data.losses||0), inline: true },
+            { name: '⚖️ Nuls',      value: String(data.draws||0),  inline: true },
+            { name: '🎮 Parties',   value: String(total),           inline: true },
+            { name: '📊 Win rate',  value: winRate(data),           inline: true },
+          )
+          .setFooter({ text: 'Puissance 4 Ranked' });
+        if (data.avatar) embed.setThumbnail(data.avatar);
+        if (games.length) {
+          const lines = games.map(g => {
+            const isP1 = g.player1_id === data.id;
+            const opp  = isP1 ? g.p2_pseudo : g.p1_pseudo;
+            const icon = g.winner_id === null ? '⚖️' : (g.winner_id === data.id ? '✅' : '❌');
+            const d    = (isP1 ? g.elo_p1 : g.elo_p2);
+            return `${icon} vs **${opp}** · ${d >= 0 ? '+' : ''}${d} ELO`;
+          });
+          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('\n') });
+        }
+        return interaction.editReply({ embeds: [embed] });
+      }
+
+      // /classement
+      if (interaction.commandName === 'classement') {
+        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 ORDER BY elo DESC LIMIT 10`).all();
+        if (!players.length) return interaction.editReply({ content: '❌ Aucun joueur.' });
+        const medals = ['🥇','🥈','🥉'];
+        const lines  = players.map((p,i) => `${medals[i]||`**#${i+1}**`} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D`);
+        const embed  = new EmbedBuilder()
+          .setColor('#ffd60a')
+          .setTitle('🏆 Classement Puissance 4')
+          .setURL(`${API}/leaderboard`)
+          .setDescription(lines.join('\n'))
+          .setFooter({ text: 'Top 10 · Puissance 4 Ranked' });
+        return interaction.editReply({ embeds: [embed] });
+      }
+
+      // /live
+      if (interaction.commandName === 'live') {
+        const activeGames = gm ? Object.values(gm.games || {}).filter(g => g.status === 'active') : [];
+        if (!activeGames.length) return interaction.editReply({ content: '😴 Aucune partie en cours.' });
+        const lines = activeGames.map(g => {
+          const p1 = g.players?.[1], p2 = g.players?.[2];
+          if (!p1 || !p2) return null;
+          return `⚔️ **${p1.pseudo}** vs **${p2.pseudo}** · ${g.moves||0} coups`;
+        }).filter(Boolean);
+        const embed = new EmbedBuilder()
+          .setColor('#ff2d55')
+          .setTitle(`🔴 ${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
+          .setURL(`${API}/live`)
+          .setDescription(lines.join('\n') || '—')
+          .setFooter({ text: 'Puissance 4 Ranked · Live' });
+        return interaction.editReply({ embeds: [embed] });
+      }
+
+    } catch(e) {
+      console.error('[BOT]', e);
+      interaction.editReply({ content: '❌ Erreur.' });
+    }
+  });
+
+  bot.login(botToken).catch(e => console.error('[BOT] Login failed:', e));
+}
