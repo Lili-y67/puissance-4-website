@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 — Règles</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/w9nwQxm.png">
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -294,6 +294,72 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
     </div>
     <div class="card-body" style="font-size:13px">
       Si ton adversaire se <strong>déconnecte</strong> en cours de partie, tu remportes automatiquement la victoire et les points ELO associés.
+    </div>
+  </div>
+
+  <!-- Système de Rangs -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(155,89,182,0.15);color:#9b59b6">🏅</div>
+      <div>
+        <div class="card-title">Rangs</div>
+        <div class="card-sub">Progresse à travers 6 rangs et 30 niveaux</div>
+      </div>
+    </div>
+    <div class="card-body" style="font-size:13px;margin-bottom:12px">
+      Chaque rang comporte <strong>5 niveaux</strong> (I à V). Plus ton ELO monte, plus tu gravis les échelons.
+      Le badge de ton rang actuel est visible sur ton profil et dans le classement.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:12px">
+        <img src="/ranks/Malachite_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #2ecc7188)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#2ecc71">🟢 MALACHITE I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">100 – 699 ELO · Débuts sur le site</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(176,190,197,0.08);border:1px solid rgba(176,190,197,0.2);border-radius:12px">
+        <img src="/ranks/Quartz_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #b0bec588)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#b0bec5">⚪ QUARTZ I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">700 – 1299 ELO · Rang de départ</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(205,127,50,0.08);border:1px solid rgba(205,127,50,0.2);border-radius:12px">
+        <img src="/ranks/Ambre_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #cd7f3288)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#cd7f32">🟤 AMBRE I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">1300 – 1799 ELO · Joueur confirmé</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(26,188,156,0.08);border:1px solid rgba(26,188,156,0.2);border-radius:12px">
+        <img src="/ranks/Jade_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #1abc9c88)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#1abc9c">🟦 JADE I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">1800 – 2299 ELO · Expert</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.2);border-radius:12px">
+        <img src="/ranks/Saphir_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #3498db88)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#3498db">🔵 SAPHIR I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">2300 – 2799 ELO · Maître</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.2);border-radius:12px">
+        <img src="/ranks/Amethiste_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #9b59b688)">
+        <div style="flex:1">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#9b59b6">🟣 AMÉTHYSTE I – V</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">2800 – 3500 ELO · Élite</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
