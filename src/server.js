@@ -437,6 +437,7 @@ app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/rep
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
+app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
 
 app.get('/api/live', (_, res) => {
   const games = [];
