@@ -488,19 +488,24 @@ function render(player, games, following, followers, followStatus) {
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto">
-          <div style="text-align:right">
-            <div class="profile-elo">${player.elo}</div>
-            <div class="profile-elo-lbl">ELO</div>
-            ${player.rank ? `
-            <div class="rank-badge" style="justify-content:flex-end">
-              <span class="rank-badge-label" style="color:${player.rank.color}">${player.rank.label}</span>
-              <img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
+          <!-- ELO + badge côte à côte -->
+          <div style="display:flex;align-items:center;gap:10px">
+            ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
+            <div style="text-align:right">
+              <div class="profile-elo">${player.elo}</div>
+              <div class="profile-elo-lbl">ELO</div>
+              ${player.rank ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.label}</div>` : ''}
             </div>
-            <div class="rank-progress" title="${player.rank.progress}% vers le rang suivant">
-              <div class="rank-progress-fill" style="width:${player.rank.progress}%;background:${player.rank.color}"></div>
-            </div>` : ''}
           </div>
+          <!-- Barre de progression -->
+          ${player.rank ? `
+          <div style="width:100%">
+            <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden" title="${player.rank.progress}% vers le rang suivant">
+              <div style="height:100%;width:${player.rank.progress}%;background:${player.rank.color};border-radius:2px;transition:width 0.6s ease"></div>
+            </div>
+            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
+          </div>` : ''}
           ${followBtn}
         </div>
       </div>

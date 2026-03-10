@@ -594,7 +594,8 @@ app.get('/api/players/:id', (req, res) => {
   const games      = gQ.getForPlayer.all(player.id, player.id);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
-  res.json({ player: sanitize(player), games, following, followers });
+  const p = sanitize(player);
+  res.json({ player: { ...p, rank: getRank(p.elo) }, games, following, followers });
 });
 
 // Follow / Unfollow
@@ -647,7 +648,7 @@ app.get('/api/games/:id/moves', (req, res) => {
 });
 
 app.get('/api/leaderboard', (_, res) => {
-  res.json(pQ.leaderboard.all().map(sanitize));
+  res.json(pQ.leaderboard.all().map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
 app.get('/api/leaderboard/wins', (_, res) => {
   const q = db.prepare('SELECT * FROM players ORDER BY wins DESC LIMIT 10');
