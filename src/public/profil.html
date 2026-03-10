@@ -493,7 +493,7 @@ function render(player, games, following, followers, followStatus) {
           <div style="display:flex;align-items:center;gap:10px">
             ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
             <div style="text-align:right">
-              <div class="profile-elo">${player.elo}</div>
+              <div class="profile-elo" style="${player.rank ? `color:${player.rank.color};text-shadow:0 0 20px ${player.rank.color}66` : ``}">${player.elo}</div>
               <div class="profile-elo-lbl">ELO</div>
               ${player.rank ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.label}</div>` : ''}
             </div>
