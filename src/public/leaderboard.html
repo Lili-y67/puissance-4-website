@@ -138,6 +138,8 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 .row-pseudo { font-weight: 600; font-size: 14px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
 .row-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.rank-img { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(255,255,255,0.15)); }
+.podium-rank-img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 4px auto 0; filter: drop-shadow(0 0 6px rgba(255,255,255,0.2)); }
 
 /* ── Empty ── */
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
@@ -280,7 +282,16 @@ function render() {
     lbl.className   = 'podium-label';
     lbl.textContent = getLabel();
 
-    card.append(rankEl, av, pseudo, val, lbl);
+    // Badge rang
+    let rankImgEl = '';
+    if (p.rank && currentTab === 'elo') {
+      const ri = document.createElement('img');
+      ri.src = p.rank.image; ri.alt = p.rank.label; ri.title = p.rank.label;
+      ri.className = 'podium-rank-img';
+      card.append(rankEl, av, pseudo, val, ri, lbl);
+    } else {
+      card.append(rankEl, av, pseudo, val, lbl);
+    }
     slot.append(trophy, card);
     podiumEl.appendChild(slot);
   });
@@ -312,8 +323,9 @@ function render() {
     pseudo.textContent = p.pseudo;
 
     const right = document.createElement('div');
-    right.style.textAlign = 'right';
-    right.style.flexShrink = '0';
+    right.style.cssText = 'display:flex;align-items:center;gap:10px;flex-shrink:0';
+    const valWrap = document.createElement('div');
+    valWrap.style.textAlign = 'right';
     const val = document.createElement('div');
     val.className   = 'row-value';
     val.textContent = getValue(p).toLocaleString();
@@ -321,7 +333,14 @@ function render() {
     const lbl = document.createElement('div');
     lbl.className   = 'row-label';
     lbl.textContent = getLabel();
-    right.append(val, lbl);
+    valWrap.append(val, lbl);
+    right.append(valWrap);
+    if (p.rank && currentTab === 'elo') {
+      const ri = document.createElement('img');
+      ri.src = p.rank.image; ri.alt = p.rank.label; ri.title = p.rank.label;
+      ri.className = 'rank-img';
+      right.append(ri);
+    }
 
     row.append(rankEl, av, pseudo, right);
     listEl.appendChild(row);

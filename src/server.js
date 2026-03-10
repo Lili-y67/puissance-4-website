@@ -6,6 +6,7 @@ const path       = require('path');
 const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
+const { getRank } = require('./rank');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType } = require('discord.js');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
@@ -908,11 +909,9 @@ function startBot() {
   const API = process.env.BASE_URL || 'https://puissance-4-website-ranked-production.up.railway.app';
 
   function eloRank(elo) {
-    if (elo >= 1800) return { label: 'Diamant', emoji: '💎' };
-    if (elo >= 1500) return { label: 'Platine', emoji: '🪙' };
-    if (elo >= 1300) return { label: 'Or',      emoji: '🥇' };
-    if (elo >= 1100) return { label: 'Argent',  emoji: '🥈' };
-    return               { label: 'Bronze',  emoji: '🥉' };
+    const r = getRank(elo);
+    const emojis = { Malachite: '🟢', Quartz: '⚪', Ambre: '🟤', Jade: '🟦', Saphir: '🔵', Améthyste: '🟣' };
+    return { label: r.label, emoji: emojis[r.name] || '🎮', color: r.color };
   }
   function winRate(p) {
     const t = (p.wins||0)+(p.losses||0)+(p.draws||0);
@@ -932,7 +931,7 @@ function startBot() {
         const rank   = eloRank(data.elo);
         const total  = (data.wins||0)+(data.losses||0)+(data.draws||0);
         const embed  = new EmbedBuilder()
-          .setColor(data.color || '#ff2d55')
+          .setColor(rank.color || data.color || '#ff2d55')
           .setTitle(`${rank.emoji} ${data.pseudo}`)
           .setURL(`${API}/profil?id=${data.id}`)
           .setDescription(`**${rank.label}** · ${data.elo} ELO`)

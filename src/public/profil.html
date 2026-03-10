@@ -62,6 +62,11 @@ input[type="file"]{display:none;}
 .profile-info{flex:1;min-width:0;}
 .profile-pseudo{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;line-height:1;}
 .profile-since{font-size:12px;color:var(--muted);margin-top:4px;}
+.rank-badge{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.rank-badge img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,255,255,0.2));}
+.rank-badge-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.rank-progress{width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:4px;overflow:hidden;}
+.rank-progress-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
 
 /* Follow button */
 .btn-follow{
@@ -484,9 +489,17 @@ function render(player, games, following, followers, followStatus) {
           ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto">
-          <div>
+          <div style="text-align:right">
             <div class="profile-elo">${player.elo}</div>
             <div class="profile-elo-lbl">ELO</div>
+            ${player.rank ? `
+            <div class="rank-badge" style="justify-content:flex-end">
+              <span class="rank-badge-label" style="color:${player.rank.color}">${player.rank.label}</span>
+              <img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}">
+            </div>
+            <div class="rank-progress" title="${player.rank.progress}% vers le rang suivant">
+              <div class="rank-progress-fill" style="width:${player.rank.progress}%;background:${player.rank.color}"></div>
+            </div>` : ''}
           </div>
           ${followBtn}
         </div>
