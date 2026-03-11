@@ -68,7 +68,45 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
 .modal-btns{display:flex;gap:8px;margin-top:16px}
 
-@media(max-width:700px){th:nth-child(n+4),td:nth-child(n+4){display:none}}
+/* ── Mobile ── */
+@media(max-width:640px){
+  .table-wrap table { display: none; }
+  .mobile-list { display: flex !important; }
+  .search-input { width: 100% !important; }
+  .page { padding: 16px 12px 60px; }
+}
+@media(min-width:641px){
+  .mobile-list { display: none !important; }
+}
+.mobile-list {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.mobile-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mobile-card-info { flex: 1; min-width: 0; }
+.mobile-card-pseudo {
+  font-weight: 700; font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mobile-card-sub {
+  font-size: 11px; color: var(--muted); margin-top: 2px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.mobile-card-elo {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px; font-weight: 900; color: var(--yellow);
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -114,6 +152,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       <tbody id="players-body"></tbody>
     </table>
   </div>
+  <div class="mobile-list" id="mobile-list"></div>
 </div>
 
 <script>
@@ -196,6 +235,30 @@ function filterPlayers() {
 
 function renderPlayers(players) {
   const now = Date.now();
+
+  // ── Rendu mobile (cartes) ──
+  document.getElementById('mobile-list').innerHTML = players.map((p, i) => {
+    const isMuted   = p.muted_until && p.muted_until > now;
+    const muteLeft  = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
+    const flags = [
+      p.banned     ? '<span class="badge badge-banned">🚫</span>' : '',
+      isMuted      ? '<span class="badge badge-muted">🔇</span>' : '',
+      p.suspicious ? '<span class="badge badge-suspect">⚠️</span>' : '',
+    ].filter(Boolean).join('');
+    return `<div class="mobile-card">
+      <div class="mobile-card-info">
+        <div class="mobile-card-pseudo">${p.pseudo} <span class="badge badge-${p.role}" style="font-size:10px">${p.role}</span> ${flags}</div>
+        <div class="mobile-card-sub">
+          <span>ID ${p.id}</span>
+          <span style="color:var(--muted)">·</span>
+          <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
+        </div>
+      </div>
+      <div class="mobile-card-elo">${p.elo}</div>
+      <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;flex-shrink:0" onclick="openModal(${p.id},'${p.pseudo}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️</button>
+    </div>`;
+  }).join('');
+
   document.getElementById('players-body').innerHTML = players.map((p, i) => {
     const isMuted  = p.muted_until && p.muted_until > now;
     const muteLeft = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
