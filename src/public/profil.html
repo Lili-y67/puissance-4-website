@@ -1141,7 +1141,6 @@ async function loadDiscordInfo() {
         ${row('🆔', 'ID Discord',        d.id)}
         ${row('📅', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
         ${row('🔗', 'Lié le',            linkedStr)}
-        ${row('📧', 'Email',             d.email ? (d.email) : 'Non accessible')}
         ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
         ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
         ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
