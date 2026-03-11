@@ -89,7 +89,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN discord_id  TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN discord_id   TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN discord_info TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
@@ -261,12 +262,27 @@ db.exec(`
 `);
 
 // ── Anti-boost queries ────────────────────────────────────────────────────────
+// Table pour les codes de déliaison Discord
+db.exec(`CREATE TABLE IF NOT EXISTS unlink_codes (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id  INTEGER NOT NULL,
+  code       TEXT    NOT NULL,
+  expires_at INTEGER NOT NULL,
+  used       INTEGER NOT NULL DEFAULT 0
+)`);
+
 const rQ = {
   insert:    db.prepare(`INSERT INTO reset_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
   getValid:  db.prepare(`SELECT * FROM reset_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
   markUsed:  db.prepare(`UPDATE reset_codes SET used = 1 WHERE id = ?`),
   cleanup:   db.prepare(`DELETE FROM reset_codes WHERE expires_at < ? OR used = 1`),
-  setDiscord: db.prepare(`UPDATE players SET discord_id = ? WHERE id = ?`),
+  setDiscord:     db.prepare(`UPDATE players SET discord_id = ?, discord_info = ? WHERE id = ?`),
+  clearDiscord:   db.prepare(`UPDATE players SET discord_id = NULL, discord_info = NULL WHERE id = ?`),
+  insertUnlink:   db.prepare(`INSERT INTO unlink_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
+  getUnlink:      db.prepare(`SELECT * FROM unlink_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
+  markUnlink:     db.prepare(`UPDATE unlink_codes SET used = 1 WHERE id = ?`),
+  cleanUnlink:    db.prepare(`DELETE FROM unlink_codes WHERE expires_at < ? OR used = 1`),
+  clearDiscord:   db.prepare(`UPDATE players SET discord_id = NULL, discord_info = NULL WHERE id = ?`),
   getByDiscord: db.prepare(`SELECT * FROM players WHERE discord_id = ?`),
 };
 

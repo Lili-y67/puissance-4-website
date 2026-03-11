@@ -324,8 +324,39 @@ app.get('/auth/discord/callback', async (req, res) => {
     const freshPlayer = pQ.getById.get(playerId);
 
     if (mode === 'link') {
+      // Récupérer les infos du membre sur le serveur Discord
+      const { botToken: bt, baseUrl: bu } = discordConfig();
+      let memberInfo = null;
+      try {
+        const mRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUser.id}`, {
+          headers: { Authorization: 'Bot ' + bt }
+        });
+        if (mRes.ok) memberInfo = await mRes.json();
+      } catch(e) {}
+
+      // Construire l'objet discord_info enrichi
+      const discordInfo = {
+        id:             discordUser.id,
+        username:       discordUser.username,
+        global_name:    discordUser.global_name || discordUser.username,
+        discriminator:  discordUser.discriminator !== '0' ? discordUser.discriminator : null,
+        email:          discordUser.email || null,
+        verified:       discordUser.verified || false,
+        mfa_enabled:    discordUser.mfa_enabled || false,
+        premium_type:   discordUser.premium_type || 0,   // 0=none, 1=classic, 2=nitro, 3=basic
+        public_flags:   discordUser.public_flags || 0,   // badges Discord
+        // Compte créé le (snowflake → timestamp)
+        created_at:     new Date(Number(BigInt(discordUser.id) >> 22n) + 1420070400000).toISOString(),
+        // Infos membre serveur
+        server_joined:  memberInfo?.joined_at || null,
+        server_nick:    memberInfo?.nick || null,
+        server_roles:   memberInfo?.roles || [],
+        boosting_since: memberInfo?.premium_since || null,
+        linked_at:      new Date().toISOString(),
+      };
+
       // Liaison depuis le profil — lier + envoyer DM de confirmation
-      rQ.setDiscord.run(discordUser.id, playerId);
+      rQ.setDiscord.run(discordUser.id, JSON.stringify(discordInfo), playerId);
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
@@ -363,7 +394,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       return res.redirect('/forgot-password?error=discord_mismatch');
     }
     if (!freshPlayer.discord_id) {
-      rQ.setDiscord.run(discordUser.id, playerId);
+      rQ.setDiscord.run(discordUser.id, null, playerId);
     }
 
     // Générer le code à 6 chiffres (15 min)
@@ -624,6 +655,132 @@ app.get('/api/players/:id/follow-status', (req, res) => {
   const followers   = fQ.countFollowers.get(target).n;
   const following   = fQ.countFollowing.get(target).n;
   res.json({ isFollowing, followers, following });
+});
+
+// ── Discord info + déliaison ────────────────────────────────────────────────
+// Infos Discord enrichies du joueur connecté
+app.get('/api/me/discord-info', (req, res) => {
+  const token = req.headers['x-session-token'];
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player || !player.discord_id) return res.json({ discord: null });
+
+  let info = null;
+  try { info = player.discord_info ? JSON.parse(player.discord_info) : null; } catch(e) {}
+
+  // Badges Discord (public_flags)
+  const FLAGS = {
+    1:       'Staff Discord',
+    2:       'Partenaire Discord',
+    4:       'HypeSquad Events',
+    8:       'Bug Hunter Lvl 1',
+    64:      'HypeSquad Bravery',
+    128:     'HypeSquad Brilliance',
+    256:     'HypeSquad Balance',
+    512:     'Supporter précoce',
+    131072:  'Bug Hunter Lvl 2',
+    4194304: 'Développeur actif',
+    16777216:'Mod Alumni',
+  };
+  const NITRO_LABELS = { 0: 'Aucun', 1: 'Nitro Classic', 2: 'Nitro', 3: 'Nitro Basic' };
+
+  const badges = [];
+  if (info?.public_flags) {
+    for (const [flag, label] of Object.entries(FLAGS)) {
+      if (info.public_flags & Number(flag)) badges.push(label);
+    }
+  }
+
+  res.json({
+    discord: info ? {
+      ...info,
+      nitro_label:  NITRO_LABELS[info.premium_type] || 'Aucun',
+      badges,
+      is_boosting:  !!info.boosting_since,
+      on_server:    info.server_joined !== null,
+      account_age_days: info.created_at
+        ? Math.floor((Date.now() - new Date(info.created_at)) / 86400000)
+        : null,
+    } : { id: player.discord_id, username: 'Inconnu', linked_at: null },
+  });
+});
+
+// Demander un code de déliaison Discord → envoi DM via bot
+app.post('/api/discord/unlink/request', async (req, res) => {
+  const token = req.headers['x-session-token'];
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player?.discord_id) return res.status(400).json({ error: 'Aucun Discord lié' });
+
+  const { botToken } = discordConfig();
+  if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible' });
+
+  // Générer code 6 chiffres
+  const code6   = String(Math.floor(100000 + Math.random() * 900000));
+  const expires = Date.now() + 10 * 60 * 1000; // 10 min
+  rQ.cleanUnlink.run(Date.now());
+  rQ.insertUnlink.run(playerId, code6, expires);
+
+  try {
+    // Ouvrir DM
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient_id: player.discord_id }),
+    });
+    const dmData = await dmRes.json();
+    if (!dmData.id) return res.status(500).json({ error: 'Impossible d\'ouvrir le DM' });
+
+    // Envoyer code
+    await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: [
+          '🔓 **Puissance 4 — Déliaison Discord**',
+          '',
+          `Bonjour **${player.pseudo}** !`,
+          '',
+          'Tu as demandé à **délier** ton compte Discord de ton compte Puissance 4.',
+          '',
+          'Ton code de confirmation :',
+          '```',
+          code6,
+          '```',
+          '⏳ Ce code expire dans **10 minutes**.',
+          '',
+          '_Si tu n\'es pas à l\'origine de cette demande, ignore ce message. Ton compte reste lié._',
+        ].join('\n'),
+      }),
+    });
+
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('[UNLINK REQUEST]', e);
+    res.status(500).json({ error: 'Erreur envoi DM' });
+  }
+});
+
+// Confirmer la déliaison avec le code
+app.post('/api/discord/unlink/confirm', (req, res) => {
+  const token = req.headers['x-session-token'];
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code manquant' });
+
+  const row = rQ.getUnlink.get(playerId, String(code).trim(), Date.now());
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expiré' });
+
+  rQ.markUnlink.run(row.id);
+  rQ.clearDiscord.run(playerId);
+
+  res.json({ ok: true });
 });
 
 app.get('/api/games/:id', (req, res) => {

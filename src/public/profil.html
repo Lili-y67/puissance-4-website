@@ -442,6 +442,18 @@ async function load() {
     currentPlayer = player;
 
     render(player, games, following || [], followers || [], followStatus);
+
+    // Charger les infos Discord si profil own + discord lié
+    if (isOwnProfile && player.discord_id) {
+      loadDiscordInfo();
+    }
+
+    // Notif discord_linked
+    const params = new URLSearchParams(location.search);
+    if (params.get('discord_linked') === '1') {
+      history.replaceState({}, '', '/profil');
+      setTimeout(() => loadDiscordInfo(), 500);
+    }
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
   }
@@ -588,13 +600,18 @@ function render(player, games, following, followers, followStatus) {
     ` : ''}
 
     <!-- Carte liaison Discord -->
-    <div class="color-card" style="margin-top:0">
+    <div class="color-card" style="margin-top:0" id="discord-card">
       <div class="card-label">🔷 Compte Discord</div>
       ${player.discord_id
-        ? `<div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-             <div style="width:10px;height:10px;border-radius:50%;background:#30d158;flex-shrink:0"></div>
-             <span style="font-size:13px;color:rgba(238,238,245,0.7)">Compte Discord lié</span>
-           </div>`
+        ? `<div id="discord-info-zone">
+             <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
+               <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
+               <span style="font-size:13px;color:rgba(238,238,245,0.7)">Chargement des infos Discord…</span>
+             </div>
+           </div>
+           <button class="btn-save-color" id="btn-unlink" onclick="requestUnlink()" style="margin-top:12px;background:rgba(255,45,85,0.1);border-color:rgba(255,45,85,0.3);color:#ff6b81;font-size:12px">
+             🔓 Délier Discord
+           </button>`
         : `<div style="font-size:12px;color:rgba(238,238,245,0.4);margin:8px 0 12px">
              Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
            </div>
@@ -602,6 +619,22 @@ function render(player, games, following, followers, followStatus) {
              <span style="font-size:14px">🔗</span> Lier Discord
            </button>`
       }
+    </div>
+
+    <!-- Modal déliaison Discord -->
+    <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:#0d0d1c;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">🔓 Délier Discord</div>
+        <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color:rgba(238,238,245,0.8)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
+        <input id="unlink-code-input" type="text" maxlength="6" placeholder="123456"
+          style="width:100%;background:#13132a;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:13px 16px;color:#eeeef5;font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
+          oninput="this.value=this.value.replace(/\D/g,'')">
+        <div id="unlink-error" style="font-size:12px;color:#ff6b81;min-height:16px;margin-bottom:12px;text-align:center"></div>
+        <div style="display:flex;gap:10px">
+          <button onclick="closeUnlinkModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.5);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px">Annuler</button>
+          <button onclick="confirmUnlink()" style="flex:1;padding:11px;border-radius:10px;border:none;background:#ff2d55;color:#fff;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px">Confirmer</button>
+        </div>
+      </div>
     </div>
     ` : ''}
 
@@ -1050,8 +1083,151 @@ function linkDiscord() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   PROFIL_SFX.discord();
-  // Redirige vers OAuth Discord avec un state spécial "link" (pas reset)
   window.location.href = '/auth/discord/link?playerId=' + me.id;
+}
+
+// ── Discord Info ─────────────────────────────────────────────────────────────
+const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };
+const NITRO_ICONS  = { 0: '', 1: '💎', 2: '💎', 3: '🔷' };
+
+async function loadDiscordInfo() {
+  const zone = document.getElementById('discord-info-zone');
+  if (!zone) return;
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  try {
+    const res  = await fetch('/api/me/discord-info', { headers: { 'x-session-token': token } });
+    const data = await res.json();
+    const d    = data.discord;
+    if (!d) { zone.innerHTML = '<div style="font-size:12px;color:rgba(238,238,245,0.4)">Infos indisponibles</div>'; return; }
+
+    const tag        = d.discriminator ? `${d.username}#${d.discriminator}` : `@${d.username}`;
+    const globalName = d.global_name && d.global_name !== d.username ? `<span style="color:rgba(238,238,245,0.45);font-size:11px"> (${d.global_name})</span>` : '';
+    const createdStr = d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '?';
+    const linkedStr  = d.linked_at  ? new Date(d.linked_at).toLocaleDateString('fr-FR',  {day:'numeric',month:'long',year:'numeric'}) : '?';
+    const joinedStr  = d.server_joined ? new Date(d.server_joined).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : null;
+    const boostStr   = d.boosting_since ? new Date(d.boosting_since).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : null;
+    const ageDays    = d.account_age_days;
+    const ageStr     = ageDays !== null ? (ageDays >= 365 ? Math.floor(ageDays/365) + ' an(s)' : ageDays + ' jours') : '?';
+
+    const nitroColor = NITRO_COLORS[d.premium_type] || null;
+    const nitroIcon  = NITRO_ICONS[d.premium_type]  || '';
+    const nitroLabel = d.nitro_label || 'Aucun';
+
+    const badgesHtml = d.badges?.length
+      ? d.badges.map(b => `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.3);color:#8b9cf4">${b}</span>`).join('')
+      : '<span style="font-size:11px;color:rgba(238,238,245,0.3)">Aucun badge</span>';
+
+    const row = (icon, label, value, color) =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="font-size:14px;width:20px;text-align:center">${icon}</span>
+        <span style="font-size:11px;color:rgba(238,238,245,0.4);min-width:110px">${label}</span>
+        <span style="font-size:12px;color:${color||'rgba(238,238,245,0.8)'};font-weight:600">${value}</span>
+      </div>`;
+
+    zone.innerHTML = `
+      <!-- Header username -->
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0 14px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#eeeef5">${tag}</span>
+        ${globalName}
+        ${d.verified ? '<span title="Email vérifié" style="font-size:13px">✅</span>' : ''}
+        ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">🔐</span>' : ''}
+      </div>
+
+      <!-- Infos lignes -->
+      <div style="margin-bottom:12px">
+        ${row('🆔', 'ID Discord',        d.id)}
+        ${row('📅', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
+        ${row('🔗', 'Lié le',            linkedStr)}
+        ${row('📧', 'Email',             d.email ? (d.email) : 'Non accessible')}
+        ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
+        ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
+        ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
+        ${boostStr ? row('🚀', 'Boosting depuis',    boostStr, '#ff73fa') : ''}
+        ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
+      </div>
+
+      <!-- Badges Discord -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.3);margin-bottom:6px">Badges Discord</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${badgesHtml}</div>
+      </div>`;
+  } catch(e) {
+    const zone2 = document.getElementById('discord-info-zone');
+    if (zone2) zone2.innerHTML = '<div style="font-size:12px;color:rgba(238,238,245,0.3)">Impossible de charger les infos Discord</div>';
+  }
+}
+
+// ── Déliaison Discord ────────────────────────────────────────────────────────
+async function requestUnlink() {
+  const btn = document.getElementById('btn-unlink');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi en cours…'; }
+
+  try {
+    const token = localStorage.getItem('token');
+    const res   = await fetch('/api/discord/unlink/request', {
+      method: 'POST',
+      headers: { 'x-session-token': token, 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      // Afficher le modal
+      const modal = document.getElementById('unlink-modal-bg');
+      if (modal) { modal.style.display = 'flex'; }
+      document.getElementById('unlink-code-input')?.focus();
+    } else {
+      PROFIL_SFX.error();
+      alert('Erreur : ' + (data.error || 'Impossible d\'envoyer le code'));
+    }
+  } catch(e) {
+    PROFIL_SFX.error();
+    alert('Erreur réseau');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔓 Délier Discord'; }
+  }
+}
+
+function closeUnlinkModal() {
+  const modal = document.getElementById('unlink-modal-bg');
+  if (modal) modal.style.display = 'none';
+  const input = document.getElementById('unlink-code-input');
+  if (input) input.value = '';
+  const err = document.getElementById('unlink-error');
+  if (err) err.textContent = '';
+}
+
+async function confirmUnlink() {
+  const code  = document.getElementById('unlink-code-input')?.value?.trim();
+  const errEl = document.getElementById('unlink-error');
+  if (!code || code.length !== 6) {
+    if (errEl) errEl.textContent = 'Entre un code à 6 chiffres';
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    const res   = await fetch('/api/discord/unlink/confirm', {
+      method: 'POST',
+      headers: { 'x-session-token': token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      PROFIL_SFX.success();
+      closeUnlinkModal();
+      // Recharger le profil pour refléter la déliaison
+      setTimeout(() => location.reload(), 800);
+    } else {
+      PROFIL_SFX.error();
+      if (errEl) errEl.textContent = data.error || 'Code invalide ou expiré';
+    }
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Erreur réseau';
+  }
 }
 
 async function saveShape() {
