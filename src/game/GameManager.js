@@ -12,7 +12,13 @@ class GameManager {
   }
 
   create(p1, p2) {
-    const gameId = gQ.create.run({ p1: p1.id, p2: p2.id }).lastInsertRowid;
+    const gameId = gQ.create.run({
+      p1: p1.id, p2: p2.id,
+      p1_color: p1.color || '#ff2d55',
+      p2_color: p2.color || '#ffd60a',
+      p1_shape: p1.shape || 'circle',
+      p2_shape: p2.shape || 'circle',
+    }).lastInsertRowid;
 
     const state = {
       id:         gameId,

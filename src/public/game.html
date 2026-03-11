@@ -730,7 +730,11 @@ function onGameOver(data) {
   const isDraw   = data.reason === 'draw';
   setTimeout(() => { if (isDraw) SFX.draw(); else if (isWinner) SFX.win(); else SFX.lose(); }, 300);
   // Toujours afficher le result overlay (même pour le perdant)
-  const eloD = data.eloChanges?.[myPlayer.id] ?? data.eloChanges?.[String(myPlayer.id)] ?? 0;
+  // Utiliser l'ID du joueur depuis les données de la partie (plus fiable que myPlayer.id)
+  const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
+  const eloD = (myId !== undefined)
+    ? (data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? data.eloChanges?.[Number(myId)] ?? 0)
+    : 0;
 
   const titleEl = document.getElementById('result-title');
   if (isDraw) {

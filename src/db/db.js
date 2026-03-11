@@ -12,6 +12,11 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
+// Migration : ajouter les colonnes couleur/shape si elles n'existent pas
+['p1_color TEXT DEFAULT \'#ff2d55\'', 'p2_color TEXT DEFAULT \'#ffd60a\'', 'p1_shape TEXT DEFAULT \'circle\'', 'p2_shape TEXT DEFAULT \'circle\''].forEach(col => {
+  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) { /* déjà présente */ }
+});
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS players (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,9 +40,15 @@ db.exec(`
     duration    INTEGER DEFAULT 0,
     elo_p1      INTEGER DEFAULT 0,
     elo_p2      INTEGER DEFAULT 0,
+    p1_color    TEXT    DEFAULT '#ff2d55',
+    p2_color    TEXT    DEFAULT '#ffd60a',
+    p1_shape    TEXT    DEFAULT 'circle',
+    p2_shape    TEXT    DEFAULT 'circle',
     created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
     finished_at TEXT
   );
+  -- Migration : ajouter colonnes si elles n'existent pas encore
+  CREATE TEMPORARY TABLE IF NOT EXISTS _tmp_check(x);
   CREATE TABLE IF NOT EXISTS moves (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     game_id     INTEGER NOT NULL REFERENCES games(id),
@@ -114,11 +125,17 @@ const pQ = {
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const gQ = {
-  create: db.prepare(`INSERT INTO games (player1_id, player2_id) VALUES (@p1, @p2)`),
+  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape)`),
   getById: db.prepare(`
     SELECT g.*,
-      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo, p1.color AS p1_color, p1.avatar AS p1_avatar,
-      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo, p2.color AS p2_color, p2.avatar AS p2_avatar,
+      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
+      COALESCE(g.p1_color, p1.color, '#ff2d55') AS p1_color,
+      COALESCE(g.p1_shape, 'circle') AS p1_shape,
+      p1.avatar AS p1_avatar,
+      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
+      COALESCE(g.p2_color, p2.color, '#ffd60a') AS p2_color,
+      COALESCE(g.p2_shape, 'circle') AS p2_shape,
+      p2.avatar AS p2_avatar,
       w.pseudo  AS winner_pseudo
     FROM games g
     JOIN players p1 ON g.player1_id = p1.id
@@ -129,14 +146,19 @@ const gQ = {
   finish: db.prepare(`
     UPDATE games SET status='finished', winner_id=@winner_id,
       move_count=@move_count, duration=@duration,
-      elo_p1=@elo_p1, elo_p2=@elo_p2, finished_at=datetime('now')
+      elo_p1=@elo_p1, elo_p2=@elo_p2,
+      p1_color=@p1_color, p2_color=@p2_color,
+      p1_shape=@p1_shape, p2_shape=@p2_shape,
+      finished_at=datetime('now')
     WHERE id=@id
   `),
   getForPlayer: db.prepare(`
     SELECT g.*,
       p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
       p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
-      w.pseudo  AS winner_pseudo
+      w.pseudo  AS winner_pseudo,
+      COALESCE(g.p1_color, p1.color) AS p1_color,
+      COALESCE(g.p2_color, p2.color) AS p2_color
     FROM games g
     JOIN players p1 ON g.player1_id = p1.id
     JOIN players p2 ON g.player2_id = p2.id
@@ -213,6 +235,10 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     id: gameId, winner_id: isDraw ? null : winnerId,
     move_count: moveCount, duration,
     elo_p1: p1Delta, elo_p2: p2Delta,
+    p1_color: game.p1_color || '#ff2d55',
+    p2_color: game.p2_color || '#ffd60a',
+    p1_shape: game.p1_shape || 'circle',
+    p2_shape: game.p2_shape || 'circle',
   });
 
   // Marquer la partie comme suspecte en DB
