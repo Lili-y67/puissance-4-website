@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 — Page introuvable</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:      #06060e;
+  --surface: #0d0d1c;
+  --border:  rgba(255,255,255,0.06);
+  --red:     #ff2d55;
+  --yellow:  #ffd60a;
+  --muted:   rgba(238,238,245,0.35);
+  --text:    #eeeef5;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow', sans-serif;
+  overflow: hidden;
+}
+
+/* Grille de fond */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,45,85,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,45,85,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── Plateau Puissance 4 ── */
+.board-scene {
+  position: fixed;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, 52px);
+  grid-template-rows: repeat(6, 52px);
+  gap: 6px;
+  background: #1a1a3e;
+  border: 2px solid rgba(88,101,242,0.4);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  padding: 10px;
+  box-shadow: 0 -8px 40px rgba(88,101,242,0.15), inset 0 2px 0 rgba(255,255,255,0.04);
+}
+
+.cell {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: #06060e;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Pions existants décoratifs */
+.cell.red   { background: radial-gradient(circle at 35% 30%, #ff6b82, #ff2d55); box-shadow: 0 0 14px rgba(255,45,85,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,45,85,0.3); }
+.cell.yellow{ background: radial-gradient(circle at 35% 30%, #ffe566, #ffd60a); box-shadow: 0 0 14px rgba(255,214,10,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,214,10,0.3); }
+
+/* ── Pion qui tombe ── */
+.falling-token {
+  position: fixed;
+  left: 50%;
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff6b82, #ff2d55);
+  box-shadow: 0 0 20px rgba(255,45,85,0.6);
+  transform: translateX(-50%);
+  z-index: 10;
+  animation: fall-infinite 2.8s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+
+@keyframes fall-infinite {
+  0%   { top: -80px; opacity: 1; transform: translateX(-50%) scale(1); }
+  72%  { top: calc(100vh - 380px); opacity: 1; transform: translateX(-50%) scale(1); }
+  /* Rebond */
+  78%  { top: calc(100vh - 420px); transform: translateX(-50%) scale(1.12, 0.88); }
+  84%  { top: calc(100vh - 390px); transform: translateX(-50%) scale(0.92, 1.08); }
+  90%  { top: calc(100vh - 405px); transform: translateX(-50%) scale(1.05, 0.96); }
+  96%  { top: calc(100vh - 395px); transform: translateX(-50%) scale(1); }
+  100% { top: calc(100vh - 400px); opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* Traînée lumineuse */
+.falling-token::after {
+  content: '';
+  position: absolute;
+  top: -60px; left: 50%;
+  transform: translateX(-50%);
+  width: 3px; height: 60px;
+  background: linear-gradient(to bottom, transparent, rgba(255,45,85,0.4));
+  border-radius: 2px;
+  animation: trail 2.8s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+
+@keyframes trail {
+  0%, 80% { opacity: 1; }
+  100%     { opacity: 0; }
+}
+
+/* ── Contenu 404 ── */
+.content {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 280px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.error-code {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(80px, 18vw, 140px);
+  font-weight: 900;
+  letter-spacing: 8px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--red), #ff6b82, var(--yellow));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 30px rgba(255,45,85,0.3));
+  animation: flicker 4s ease-in-out infinite;
+}
+
+@keyframes flicker {
+  0%, 95%, 100% { filter: drop-shadow(0 0 30px rgba(255,45,85,0.3)); }
+  96%           { filter: drop-shadow(0 0 60px rgba(255,45,85,0.8)) brightness(1.2); }
+  97%           { filter: drop-shadow(0 0 30px rgba(255,45,85,0.3)); }
+  98%           { filter: drop-shadow(0 0 55px rgba(255,45,85,0.7)) brightness(1.1); }
+}
+
+.error-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: clamp(18px, 4vw, 28px);
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-top: 8px;
+}
+
+.error-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.7;
+  max-width: 320px;
+}
+
+.error-sub em {
+  color: var(--red);
+  font-style: normal;
+  font-weight: 600;
+}
+
+.btn-home {
+  pointer-events: all;
+  margin-top: 28px;
+  padding: 13px 28px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 20px rgba(255,45,85,0.35);
+}
+.btn-home:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255,45,85,0.5);
+}
+
+/* Colonne cible clignotante */
+.col-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 100vh;
+  background: linear-gradient(to bottom, rgba(255,45,85,0.06), transparent 60%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Onde d'impact */
+.impact-ring {
+  position: fixed;
+  left: 50%;
+  width: 0; height: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255,45,85,0.6);
+  transform: translateX(-50%);
+  z-index: 8;
+  animation: impact 2.8s ease-out infinite;
+}
+
+@keyframes impact {
+  0%, 70% { width: 0; height: 0; opacity: 0; top: calc(100vh - 374px); }
+  72%     { width: 0; height: 0; opacity: 1; top: calc(100vh - 374px); }
+  90%     { width: 100px; height: 100px; opacity: 0; top: calc(100vh - 424px); margin-left: -50px; }
+  100%    { width: 100px; height: 100px; opacity: 0; }
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="col-indicator"></div>
+
+<!-- Pion qui tombe -->
+<div class="falling-token"></div>
+<div class="impact-ring"></div>
+
+<!-- Plateau décoratif -->
+<div class="board-scene">
+  <div class="board" id="board"></div>
+</div>
+
+<!-- Contenu -->
+<div class="content">
+  <div class="error-code">404</div>
+  <div class="error-title">Colonne introuvable</div>
+  <div class="error-sub">
+    Tu as joué dans une colonne qui <em>n'existe pas</em>.<br>
+    Cette page s'est perdue quelque part entre la rangée 4 et le vide.
+  </div>
+  <a class="btn-home" href="/">⚡ Retour à l'arène</a>
+</div>
+
+<script>
+// Générer un plateau décoratif avec des pions semi-aléatoires
+const board = document.getElementById('board');
+// Grille 6 rangées × 7 colonnes — colonne du milieu (index 3) libre pour l'animation
+const pattern = [
+  [0,1,0,0,0,2,0],
+  [2,0,1,0,2,0,1],
+  [0,2,0,0,0,1,0],
+  [1,0,2,0,1,0,2],
+  [0,1,0,0,2,1,0],
+  [2,0,1,0,0,2,1],
+];
+
+for (let r = 0; r < 6; r++) {
+  for (let c = 0; c < 7; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const v = pattern[r][c];
+    if (v === 1) cell.classList.add('red');
+    if (v === 2) cell.classList.add('yellow');
+    board.appendChild(cell);
+  }
+}
+
+// Petite touche : au clic sur le pion, relancer l'animation
+document.querySelector('.falling-token').addEventListener('click', function() {
+  this.style.animation = 'none';
+  void this.offsetWidth;
+  this.style.animation = '';
+});
+</script>
+</body>
+</html>

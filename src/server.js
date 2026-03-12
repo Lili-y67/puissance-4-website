@@ -854,6 +854,11 @@ io.on('connection', socket => {
     socket.emit('identified', sanitize(player));
   });
 
+  // Heartbeat de présence (pages hors jeu)
+  socket.on('presence_ping', () => {
+    if (socket.playerId) rQ.updateLastSeen.run(Date.now(), socket.playerId);
+  });
+
   socket.on('queue_join', ({ shape } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
@@ -1050,6 +1055,15 @@ function _startMatch(p1, p2) {
     s2.emit('match_found', { ...base, yourSide: 2 });
   }
 }
+
+// ── 404 — toute route non matchée ────────────────────────────────────────────
+app.use((req, res) => {
+  // Les routes API renvoient du JSON, les pages HTML renvoient la 404
+  if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) {
+    return res.status(404).json({ error: 'Route introuvable' });
+  }
+  res.status(404).sendFile(path.join(__dirname, 'public/404.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 initDb().then(() => {
