@@ -13,7 +13,7 @@
 
   function initSocket() {
     const socket = window.io('/', {
-      transports: ['websocket'],
+      transports: ['polling'],   // Railway ne supporte pas websocket natif
       reconnection: true,
       reconnectionDelay: 3000,
       reconnectionAttempts: 20,

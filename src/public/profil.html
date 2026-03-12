@@ -1348,7 +1348,7 @@ async function loadDiscordInfo() {
         ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
         ${boostStr ? row('🚀', 'Boosting depuis',    boostStr, '#ff73fa') : ''}
         ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
-      </div>`;
+      </div>>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
     if (zone2) zone2.innerHTML = '<div style="font-size:12px;color:rgba(238,238,245,0.3)">Impossible de charger les infos Discord</div>';
