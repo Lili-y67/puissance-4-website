@@ -10,8 +10,9 @@ const { getRank } = require('./rank');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType } = require('discord.js');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
-const ipToPlayers = new Map(); // ip → Set of playerIds
-const playerToIp  = new Map(); // playerId → ip
+const ipToPlayers  = new Map(); // ip → Set of playerIds
+const playerToIp   = new Map(); // playerId → ip
+const onlineSockets = new Map(); // playerId → Set of socketIds (multi-onglets)
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -657,7 +658,20 @@ app.get('/api/players/:id/follow-status', (req, res) => {
   res.json({ isFollowing, followers, following });
 });
 
-// ── Discord info + déliaison ────────────────────────────────────────────────
+// ── Statut en ligne ──────────────────────────────────────────────────────────
+app.get('/api/players/:id/status', (req, res) => {
+  const id = Number(req.params.id);
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Introuvable' });
+
+  const isOnline = onlineSockets.has(id) && onlineSockets.get(id).size > 0;
+  res.json({
+    online:    isOnline,
+    last_seen: player.last_seen || null,
+  });
+});
+
+// ── Discord info + déliaison ─────────────────────────────────────────────────
 // Infos Discord enrichies du joueur connecté
 app.get('/api/me/discord-info', (req, res) => {
   const token = req.headers['x-session-token'];
@@ -833,6 +847,10 @@ io.on('connection', socket => {
     playerToIp.set(socket.playerId, clientIp);
     if (!ipToPlayers.has(clientIp)) ipToPlayers.set(clientIp, new Set());
     ipToPlayers.get(clientIp).add(socket.playerId);
+    // Marquer en ligne
+    if (!onlineSockets.has(socket.playerId)) onlineSockets.set(socket.playerId, new Set());
+    onlineSockets.get(socket.playerId).add(socket.id);
+    rQ.updateLastSeen.run(Date.now(), socket.playerId);
     socket.emit('identified', sanitize(player));
   });
 
@@ -908,6 +926,15 @@ io.on('connection', socket => {
   socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
+    // Mettre à jour last_seen et nettoyer onlineSockets
+    if (socket.playerId) {
+      rQ.updateLastSeen.run(Date.now(), socket.playerId);
+      const socks = onlineSockets.get(socket.playerId);
+      if (socks) {
+        socks.delete(socket.id);
+        if (socks.size === 0) onlineSockets.delete(socket.playerId);
+      }
+    }
     // Nettoyer la map IP si plus de socket actif pour ce joueur
     if (socket.playerId && socket.clientIp) {
       const sameIpSockets = [...io.sockets.sockets.values()]

@@ -55,9 +55,36 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 }
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:2px solid var(--red);display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;transition:border-color 0.4s;}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0;transition:opacity 0.2s;}
+/* Cercle statut autour de l'avatar */
+.avatar-ring{position:absolute;inset:-4px;border-radius:50%;border:3px solid transparent;pointer-events:none;transition:border-color 0.4s,box-shadow 0.4s;}
+.avatar-ring.online{border-color:#30d158;box-shadow:0 0 10px rgba(48,209,88,0.5);}
+.avatar-ring.offline{border-color:#636366;box-shadow:none;}
+/* Badges statut */
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-top:5px;}
+.status-badge.online{background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.3);color:#30d158;}
+.status-badge.offline{background:rgba(99,99,102,0.15);border:1px solid rgba(99,99,102,0.3);color:#8e8e93;}
+.status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.status-dot.online{background:#30d158;animation:pulse-online 1.5s ease-in-out infinite;}
+.status-dot.offline{background:#636366;}
+.status-lastseen{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
+@keyframes pulse-online{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,209,88,0.4);}50%{opacity:0.8;box-shadow:0 0 0 4px rgba(48,209,88,0);}}
+/* Popup simulateur ELO */
+.elo-sim-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;padding:20px;}
+.elo-sim-bg.show{display:flex;}
+.elo-sim-modal{background:#0d0d1c;border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
+.elo-sim-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
+.elo-sim-sub{font-size:12px;color:var(--muted);margin-bottom:24px;}
+.elo-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;outline:none;cursor:pointer;margin:8px 0 4px;}
+.elo-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:2px solid #fff;transition:transform 0.15s;}
+.elo-slider::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.elo-sim-badge{display:flex;flex-direction:column;align-items:center;gap:10px;padding:20px;background:rgba(255,255,255,0.03);border-radius:16px;border:1px solid rgba(255,255,255,0.06);margin-top:16px;}
+.elo-sim-badge img{width:64px;height:64px;object-fit:contain;transition:all 0.3s;}
+.elo-sim-rank-name{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;text-transform:uppercase;transition:color 0.3s;}
+.elo-sim-progress-wrap{width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-top:4px;}
+.elo-sim-progress-fill{height:100%;border-radius:2px;transition:width 0.3s,background 0.3s;}
 input[type="file"]{display:none;}
 .profile-info{flex:1;min-width:0;}
 .profile-pseudo{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;line-height:1;}
@@ -443,6 +470,9 @@ async function load() {
 
     render(player, games, following || [], followers || [], followStatus);
 
+    // Charger le statut en ligne (tous les profils)
+    loadStatus(player.id);
+
     // Charger les infos Discord si profil own + discord lié
     if (isOwnProfile && player.discord_id) {
       loadDiscordInfo();
@@ -468,11 +498,21 @@ function render(player, games, following, followers, followStatus) {
     : player.pseudo[0].toUpperCase();
 
   const avatarSection = isOwnProfile
-    ? `<div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
-         <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
-         <div class="avatar-overlay">📷</div>
+    ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
+         <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
+           <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
+           <div class="avatar-overlay">📷</div>
+           <div class="avatar-ring" id="avatar-ring"></div>
+         </div>
+         <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
        </div>`
-    : `<div class="profile-avatar" style="border-color:${player.color||'var(--red)'}">${avatarHtml}</div>`;
+    : `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
+         <div style="position:relative;flex-shrink:0">
+           <div class="profile-avatar" style="border-color:${player.color||'var(--red)'}" id="avatar-el">${avatarHtml}</div>
+           <div class="avatar-ring" id="avatar-ring"></div>
+         </div>
+         <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
+       </div>`;
 
   const followBtn = !isOwnProfile && viewerPlayer
     ? `<button id="btn-follow" class="btn-follow ${followStatus.isFollowing ? 'following' : 'not-following'}"
@@ -518,6 +558,10 @@ function render(player, games, following, followers, followStatus) {
             </div>
             <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
           </div>` : ''}
+          <!-- Bouton simulateur ELO -->
+          <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color:rgba(238,238,245,0.4);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
+            🎚 Simulateur ELO
+          </button>
           ${followBtn}
         </div>
       </div>
@@ -637,6 +681,36 @@ function render(player, games, following, followers, followStatus) {
       </div>
     </div>
     ` : ''}
+
+    <!-- Popup simulateur ELO -->
+    <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
+      <div class="elo-sim-modal">
+        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color:rgba(238,238,245,0.5);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+        <div class="elo-sim-title">🎚 Simulateur <span style="color:var(--red)">ELO</span></div>
+        <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO réel</div>
+
+        <!-- Slider -->
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px">
+          <span>100</span><span>3500</span>
+        </div>
+        <input type="range" class="elo-slider" id="elo-sim-slider" min="100" max="3500" value="1000" oninput="updateEloSim(this.value)">
+        <div style="text-align:center;margin-top:10px">
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;letter-spacing:2px" id="elo-sim-value">1000</span>
+          <span style="font-size:14px;color:var(--muted);margin-left:4px">ELO</span>
+        </div>
+
+        <!-- Badge rang -->
+        <div class="elo-sim-badge">
+          <img id="elo-sim-img" src="" alt="" style="width:64px;height:64px;object-fit:contain">
+          <div class="elo-sim-rank-name" id="elo-sim-rank-name">—</div>
+          <div style="font-size:12px;color:var(--muted)" id="elo-sim-range">—</div>
+          <div class="elo-sim-progress-wrap" style="width:200px">
+            <div class="elo-sim-progress-fill" id="elo-sim-prog"></div>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px" id="elo-sim-next"></div>
+        </div>
+      </div>
+    </div>
 
     <!-- Tabs -->
     <div class="tabs-row">
@@ -1079,6 +1153,132 @@ async function toggleAdminPwd() {
   btn.textContent    = '🙈 Masquer';
 }
 
+// ── Statut en ligne ──────────────────────────────────────────────────────────
+function formatLastSeen(ts) {
+  if (!ts) return 'Jamais connecté';
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  const mo = Math.floor(d / 30);
+  const y = Math.floor(d / 365);
+  if (s < 60)  return 'Il y a quelques secondes';
+  if (m < 60)  return `Il y a ${m} minute${m>1?'s':''}`;
+  if (h < 24)  return `Il y a ${h} heure${h>1?'s':''}`;
+  if (d < 30)  return `Il y a ${d} jour${d>1?'s':''}`;
+  if (mo < 12) return `Il y a ${mo} mois`;
+  return `Il y a ${y} an${y>1?'s':''}`;
+}
+
+async function loadStatus(playerId) {
+  try {
+    const res  = await fetch(`/api/players/${playerId}/status`);
+    const data = await res.json();
+    const ring = document.getElementById('avatar-ring');
+    const wrap = document.getElementById('status-badge-wrap');
+    if (!ring || !wrap) return;
+
+    if (data.online) {
+      ring.className = 'avatar-ring online';
+      wrap.innerHTML = `<div class="status-badge online">
+        <div class="status-dot online"></div>
+        En ligne
+      </div>`;
+    } else {
+      ring.className = 'avatar-ring offline';
+      const lastSeenStr = formatLastSeen(data.last_seen);
+      wrap.innerHTML = `<div class="status-badge offline">
+        <div class="status-dot offline"></div>
+        Hors ligne
+      </div>
+      <div class="status-lastseen">${lastSeenStr}</div>`;
+    }
+  } catch(e) {}
+}
+
+// ── Simulateur ELO ───────────────────────────────────────────────────────────
+// Table des rangs (miroir de rank.js côté client)
+const RANKS_SIM = [
+  { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
+  { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
+  { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
+  { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
+  { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
+  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+];
+const LEVEL_NAMES = ['I','II','III','IV','V'];
+
+function getSimRank(elo) {
+  const r = RANKS_SIM.find(r => elo >= r.min && elo <= r.max)
+         || (elo < 100 ? RANKS_SIM[0] : RANKS_SIM[RANKS_SIM.length-1]);
+  const span   = r.max - r.min;
+  const perLvl = span / 5;
+  const level  = Math.min(4, Math.floor((elo - r.min) / perLvl));
+  const prog   = Math.round(((elo - r.min - level * perLvl) / perLvl) * 100);
+  const next   = r.max < 3500 ? r.max + 1 : null;
+  return { ...r, level, levelName: LEVEL_NAMES[level], label: r.name + ' ' + LEVEL_NAMES[level], progress: Math.min(100, prog), next };
+}
+
+function openEloSim() {
+  const bg = document.getElementById('elo-sim-bg');
+  if (!bg) return;
+  bg.classList.add('show');
+  // Init slider à l'ELO actuel du joueur affiché
+  const elo = currentPlayer?.elo || 1000;
+  const slider = document.getElementById('elo-sim-slider');
+  if (slider) { slider.value = elo; }
+  updateEloSim(elo);
+}
+
+function closeEloSim() {
+  document.getElementById('elo-sim-bg')?.classList.remove('show');
+}
+
+function updateEloSim(elo) {
+  elo = Number(elo);
+  const rank = getSimRank(elo);
+
+  // Valeur ELO affichée
+  const valEl = document.getElementById('elo-sim-value');
+  if (valEl) { valEl.textContent = elo; valEl.style.color = rank.color; }
+
+  // Couleur du slider
+  const slider = document.getElementById('elo-sim-slider');
+  if (slider) {
+    const pct = ((elo - 100) / (3500 - 100)) * 100;
+    slider.style.background = `linear-gradient(to right, ${rank.color} ${pct}%, rgba(255,255,255,0.1) ${pct}%)`;
+    slider.style.setProperty('--thumb-color', rank.color);
+    slider.style.accentColor = rank.color;
+  }
+
+  // Image badge
+  const img = document.getElementById('elo-sim-img');
+  if (img) {
+    img.src   = `/ranks/${rank.key}_${rank.level + 1}.png`;
+    img.alt   = rank.label;
+    img.style.filter = `drop-shadow(0 0 10px ${rank.color}88)`;
+  }
+
+  // Nom rang
+  const nameEl = document.getElementById('elo-sim-rank-name');
+  if (nameEl) { nameEl.textContent = rank.label; nameEl.style.color = rank.color; }
+
+  // Tranche ELO
+  const rangeEl = document.getElementById('elo-sim-range');
+  if (rangeEl) rangeEl.textContent = rank.min + ' – ' + rank.max + ' ELO';
+
+  // Barre progression
+  const prog = document.getElementById('elo-sim-prog');
+  if (prog) { prog.style.width = rank.progress + '%'; prog.style.background = rank.color; }
+
+  // Next
+  const nextEl = document.getElementById('elo-sim-next');
+  if (nextEl) nextEl.textContent = rank.next
+    ? rank.progress + '% · Prochain rang à ' + rank.next + ' ELO'
+    : '✨ Rang maximum atteint';
+}
+
 function linkDiscord() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
@@ -1146,12 +1346,6 @@ async function loadDiscordInfo() {
         ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
         ${boostStr ? row('🚀', 'Boosting depuis',    boostStr, '#ff73fa') : ''}
         ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
-      </div>
-
-      <!-- Badges Discord -->
-      <div style="margin-bottom:4px">
-        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.3);margin-bottom:6px">Badges Discord</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${badgesHtml}</div>
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');

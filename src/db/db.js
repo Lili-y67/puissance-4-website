@@ -90,6 +90,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`
 try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN suspicious  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_id   TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN last_seen    INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_info TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
@@ -277,6 +278,7 @@ const rQ = {
   markUsed:  db.prepare(`UPDATE reset_codes SET used = 1 WHERE id = ?`),
   cleanup:   db.prepare(`DELETE FROM reset_codes WHERE expires_at < ? OR used = 1`),
   setDiscord:     db.prepare(`UPDATE players SET discord_id = ?, discord_info = ? WHERE id = ?`),
+  updateLastSeen: db.prepare(`UPDATE players SET last_seen = ? WHERE id = ?`),
   clearDiscord:   db.prepare(`UPDATE players SET discord_id = NULL, discord_info = NULL WHERE id = ?`),
   insertUnlink:   db.prepare(`INSERT INTO unlink_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
   getUnlink:      db.prepare(`SELECT * FROM unlink_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
