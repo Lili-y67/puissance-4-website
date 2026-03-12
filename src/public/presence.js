@@ -1,48 +1,51 @@
 /**
  * presence.js — Socket de présence léger
- * À inclure sur toutes les pages (sauf game.html qui gère son propre socket)
- * Ouvre un socket minimal, envoie identify, garde la connexion vivante.
+ * Inclus sur toutes les pages (sauf game.html)
  */
 (function() {
-  const token    = localStorage.getItem('token');
+  const token     = localStorage.getItem('token');
   const playerRaw = localStorage.getItem('player') || sessionStorage.getItem('player');
-  if (!token || !playerRaw) return; // pas connecté
+  if (!token || !playerRaw) return;
 
   let playerId;
   try { playerId = JSON.parse(playerRaw).id; } catch(e) { return; }
   if (!playerId) return;
 
-  // Charger socket.io dynamiquement si pas encore présent
   function initSocket() {
     const socket = window.io('/', {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 3000,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 20,
     });
 
     socket.on('connect', () => {
       socket.emit('identify', { playerId, token });
     });
 
-    // Heartbeat toutes les 25s pour maintenir la connexion
+    socket.on('identified', () => {
+      // Serveur a bien enregistré le socket → re-charger le statut affiché
+      if (typeof window._reloadStatus === 'function') {
+        setTimeout(window._reloadStatus, 100);
+      }
+    });
+
+    // Heartbeat toutes les 25s
     const heartbeat = setInterval(() => {
       if (socket.connected) socket.emit('presence_ping');
     }, 25000);
 
     socket.on('disconnect', () => clearInterval(heartbeat));
-
-    // Exposer pour debug éventuel
     window._presenceSocket = socket;
   }
 
+  // S'assurer que socket.io est chargé avant d'init
   if (window.io) {
     initSocket();
   } else {
-    // socket.io.js pas encore chargé — attendre
-    const script = document.createElement('script');
-    script.src = '/socket.io/socket.io.js';
-    script.onload = initSocket;
-    document.head.appendChild(script);
+    const s = document.createElement('script');
+    s.src = '/socket.io/socket.io.js';
+    s.onload = initSocket;
+    document.head.appendChild(s);
   }
 })();

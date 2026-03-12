@@ -471,6 +471,8 @@ async function load() {
     render(player, games, following || [], followers || [], followStatus);
 
     // Charger le statut en ligne (tous les profils)
+    // Exposer pour que presence.js rappelle après identified
+    window._reloadStatus = () => loadStatus(player.id);
     loadStatus(player.id);
 
     // Charger les infos Discord si profil own + discord lié
