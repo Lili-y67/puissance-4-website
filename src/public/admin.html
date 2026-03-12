@@ -129,6 +129,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="nav">
     <div class="nav-title">⚡ <span>Admin</span> Panel</div>
     <div style="display:flex;gap:8px;align-items:center">
+      <span id="my-role-badge" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:0.5px"></span>
       <input class="search-input" style="width:220px" id="search" placeholder="🔍 Rechercher un joueur..." oninput="filterPlayers()">
       <button class="btn-sm btn-red" onclick="logout()">Déconnexion</button>
     </div>
@@ -157,20 +158,25 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <script>
 let adminToken = sessionStorage.getItem('adminToken');
+let myRole     = sessionStorage.getItem('adminRole') || 'admin'; // 'admin' ou 'moderator'
 let allPlayers = [];
 
 if (adminToken) showPanel();
 
 async function login() {
   const pwd = document.getElementById('pwd-input').value;
+  // Passer le token joueur pour détecter le rôle (moderator vs admin)
+  const playerToken = localStorage.getItem('token') || null;
   const res  = await fetch('/api/admin/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: pwd }),
+    body: JSON.stringify({ password: pwd, playerToken }),
   });
   const data = await res.json();
   if (data.token) {
     adminToken = data.token;
+    myRole     = data.role || 'admin';
     sessionStorage.setItem('adminToken', adminToken);
+    sessionStorage.setItem('adminRole', myRole);
     showPanel();
   } else {
     const err = document.getElementById('login-error');
@@ -181,12 +187,25 @@ async function login() {
 
 function logout() {
   sessionStorage.removeItem('adminToken');
+  sessionStorage.removeItem('adminRole');
   location.reload();
 }
 
 async function showPanel() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('panel').style.display = 'block';
+  // Récupérer le rôle depuis /api/admin/me si déjà connecté
+  try {
+    const me = await api('GET', '/api/admin/me');
+    if (me.role) { myRole = me.role; sessionStorage.setItem('adminRole', myRole); }
+  } catch(e) {}
+  // Afficher badge rôle dans le header
+  const roleEl = document.getElementById('my-role-badge');
+  if (roleEl) {
+    roleEl.textContent = myRole === 'admin' ? '🔴 Admin' : '🛡️ Modérateur';
+    roleEl.style.background = myRole === 'admin' ? 'rgba(255,45,85,0.15)' : 'rgba(76,110,245,0.15)';
+    roleEl.style.color      = myRole === 'admin' ? '#ff2d55' : '#8b9cf4';
+  }
   await loadPlayers();
 }
 
@@ -233,13 +252,23 @@ function filterPlayers() {
   renderPlayers(q ? allPlayers.filter(p => p.pseudo.toLowerCase().includes(q)) : allPlayers);
 }
 
+function onlineDot(online) {
+  return online
+    ? `<span title="En ligne" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#30d158;box-shadow:0 0 5px #30d158;margin-right:3px;vertical-align:middle"></span>`
+    : `<span title="Hors ligne" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#636366;margin-right:3px;vertical-align:middle"></span>`;
+}
+function discordBadge(linked) {
+  return linked
+    ? `<span title="Discord lié" style="font-size:13px">🔗</span>`
+    : `<span title="Discord non lié" style="font-size:13px;opacity:0.3">🔗</span>`;
+}
+
 function renderPlayers(players) {
   const now = Date.now();
 
   // ── Rendu mobile (cartes) ──
-  document.getElementById('mobile-list').innerHTML = players.map((p, i) => {
-    const isMuted   = p.muted_until && p.muted_until > now;
-    const muteLeft  = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
+  document.getElementById('mobile-list').innerHTML = players.map((p) => {
+    const isMuted  = p.muted_until && p.muted_until > now;
     const flags = [
       p.banned     ? '<span class="badge badge-banned">🚫</span>' : '',
       isMuted      ? '<span class="badge badge-muted">🔇</span>' : '',
@@ -247,7 +276,11 @@ function renderPlayers(players) {
     ].filter(Boolean).join('');
     return `<div class="mobile-card">
       <div class="mobile-card-info">
-        <div class="mobile-card-pseudo">${p.pseudo} <span class="badge badge-${p.role}" style="font-size:10px">${p.role}</span> ${flags}</div>
+        <div class="mobile-card-pseudo">
+          ${onlineDot(p.online)}${p.pseudo}
+          <span class="badge badge-${p.role}" style="font-size:10px">${p.role}</span>
+          ${discordBadge(p.discord_linked)} ${flags}
+        </div>
         <div class="mobile-card-sub">
           <span>ID ${p.id}</span>
           <span style="color:var(--muted)">·</span>
@@ -255,25 +288,30 @@ function renderPlayers(players) {
         </div>
       </div>
       <div class="mobile-card-elo">${p.elo}</div>
-      <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;flex-shrink:0" onclick="openModal(${p.id},'${p.pseudo}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️</button>
+      <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;flex-shrink:0" onclick="openModal(${p.id},'${p.pseudo.replace(/'/g,"\\'")}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️</button>
     </div>`;
   }).join('');
 
   document.getElementById('players-body').innerHTML = players.map((p, i) => {
     const isMuted  = p.muted_until && p.muted_until > now;
     const muteLeft = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
-
     const statusBadges = [
-      p.banned   ? `<span class="badge badge-banned">🚫 Banni</span>` : '',
-      isMuted    ? `<span class="badge badge-muted">🔇 Muté ${muteLeft}</span>` : '',
+      p.banned     ? `<span class="badge badge-banned">🚫 Banni</span>` : '',
+      isMuted      ? `<span class="badge badge-muted">🔇 Muté ${muteLeft}</span>` : '',
       p.suspicious ? `<span class="badge badge-suspect">⚠️ Suspect</span>` : '',
     ].filter(Boolean).join(' ') || '<span style="color:var(--muted);font-size:12px">—</span>';
 
     return `<tr>
       <td style="color:var(--muted)">#${i+1}</td>
       <td>
-        <a href="/profil?id=${p.id}" target="_blank" style="color:var(--text);text-decoration:none;font-weight:600">${p.pseudo}</a>
-        <div style="font-size:11px;color:var(--muted)">ID ${p.id}</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${onlineDot(p.online)}
+          <div>
+            <a href="/profil?id=${p.id}" target="_blank" style="color:var(--text);text-decoration:none;font-weight:600">${p.pseudo}</a>
+            <div style="font-size:11px;color:var(--muted)">ID ${p.id}</div>
+          </div>
+          ${discordBadge(p.discord_linked)}
+        </div>
       </td>
       <td><strong>${p.elo}</strong></td>
       <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
@@ -281,7 +319,7 @@ function renderPlayers(players) {
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
-          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id},'${p.pseudo}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️ Gérer</button>
+          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id},'${p.pseudo.replace(/'/g,"\\'")}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️ Gérer</button>
         </div>
       </td>
     </tr>`;

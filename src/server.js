@@ -125,56 +125,124 @@ app.get('/api/admin/password', (req, res) => {
 
 // Auth admin
 // Sessions admin en mémoire
-const adminSessions = new Set();
-function isAdmin(req) {
+const adminSessions = new Map(); // token → { playerId, role }
+
+function getAdminSession(req) {
   const t = req.headers['x-admin-token'];
-  return t && adminSessions.has(t);
+  return t ? adminSessions.get(t) : null;
+}
+function isAdmin(req) {
+  const s = getAdminSession(req);
+  return s && s.role === 'admin';
+}
+function isModo(req) {
+  const s = getAdminSession(req);
+  return s && (s.role === 'admin' || s.role === 'moderator');
 }
 
 app.post('/api/admin/login', (req, res) => {
-  const { password } = req.body;
+  const { password, playerToken } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+
+  // Récupérer le rôle du joueur connecté (admin ou moderator)
+  let role = 'admin'; // par défaut si pas de token joueur
+  let playerId = null;
+  if (playerToken) {
+    const pid = validateSession(playerToken);
+    if (pid) {
+      const p = pQ.getById.get(pid);
+      if (p && (p.role === 'admin' || p.role === 'moderator')) {
+        role = p.role;
+        playerId = pid;
+      }
+    }
+  }
+
   const token = require('crypto').randomBytes(32).toString('hex');
-  adminSessions.add(token);
+  adminSessions.set(token, { playerId, role });
   setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
   WH.wlogAdminLogin();
-  res.json({ token });
+  res.json({ token, role });
+});
+
+// Route pour récupérer le rôle de la session courante
+app.get('/api/admin/me', (req, res) => {
+  const s = getAdminSession(req);
+  if (!s) return res.status(403).json({ error: 'Non autorisé.' });
+  res.json({ role: s.role, playerId: s.playerId });
 });
 
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, wins, losses, draws, suspicious, banned, muted_until, created_at FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
-  res.json(players);
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const players = db.prepare(`SELECT id, pseudo, elo, role, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  // Enrichir avec le statut en ligne
+  const now = Date.now();
+  const enriched = players.map(p => ({
+    ...p,
+    online: onlineSockets.has(p.id) && onlineSockets.get(p.id).size > 0,
+    discord_linked: !!(p.discord_id),
+  }));
+  res.json(enriched);
 });
 
 // Changer le rôle
-app.patch('/api/admin/players/:id/role', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+app.patch('/api/admin/players/:id/role', async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rôles.' });
   const { role } = req.body;
-  if (!['user','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide.' });
-  const _rp = pQ.getById.get(Number(req.params.id));
-  WH.wlogAdminAction('Rôle changé', _rp?.pseudo || req.params.id, req.params.id, [['Nouveau rôle', role, true]]);
+  if (!['user','vip','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide.' });
+  const target = pQ.getById.get(Number(req.params.id));
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const oldRole = target.role;
+  WH.wlogAdminAction('Rôle changé', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
   pQ.updateRole.run({ role, id: Number(req.params.id) });
+
+  // Sync rôle Discord si lié
+  if (target.discord_id) {
+    try { await syncDiscordRole(target.discord_id, role); } catch(e) {}
+    // DM de notification
+    try { await sendDM(target.discord_id, [
+      '🎭 **Puissance 4 — Changement de rôle**',
+      '',
+      `Bonjour **${target.pseudo}** !`,
+      '',
+      `Ton rôle a été modifié : **${oldRole}** → **${role}**`,
+      '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
+    ].join('\n')); } catch(e) {}
+  }
   res.json({ ok: true });
 });
 
 // Changer le pseudo
-app.patch('/api/admin/players/:id/pseudo', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les pseudos.' });
   const { pseudo } = req.body;
   if (!pseudo?.trim()) return res.status(400).json({ error: 'Pseudo invalide.' });
   try {
-    const _pp = pQ.getById.get(Number(req.params.id));
-    WH.wlogAdminAction('Pseudo changé', _pp?.pseudo || '?', req.params.id, [['Nouveau', pseudo.trim(), true]]);
+    const target = pQ.getById.get(Number(req.params.id));
+    const oldPseudo = target?.pseudo || '?';
+    WH.wlogAdminAction('Pseudo changé', oldPseudo, req.params.id, [['Nouveau', pseudo.trim(), true]]);
     pQ.updatePseudo.run({ pseudo: pseudo.trim(), id: Number(req.params.id) });
+
+    // Notif DM + renommage sur le serveur Discord
+    if (target?.discord_id) {
+      try { await renameOnServer(target.discord_id, pseudo.trim()); } catch(e) {}
+      try { await sendDM(target.discord_id, [
+        '✏️ **Puissance 4 — Changement de pseudo**',
+        '',
+        `Bonjour !`,
+        '',
+        `Ton pseudo a été modifié par un administrateur : **${oldPseudo}** → **${pseudo.trim()}**`,
+        '_Si tu n\'as pas demandé ce changement, contacte un administrateur._',
+      ].join('\n')); } catch(e) {}
+    }
     res.json({ ok: true });
   } catch(e) { res.status(400).json({ error: 'Pseudo déjà pris.' }); }
 });
 
 // Reset ELO
 app.patch('/api/admin/players/:id/elo', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { elo } = req.body;
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
@@ -184,7 +252,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
 
 // Mute temporaire (interdit de jouer)
 app.patch('/api/admin/players/:id/mute', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
   const { hours } = req.body;
   const until = hours > 0 ? Date.now() + hours * 60 * 60 * 1000 : null;
   const _pm = pQ.getById.get(Number(req.params.id));
@@ -195,7 +263,7 @@ app.patch('/api/admin/players/:id/mute', (req, res) => {
 
 // Ban / Unban
 app.patch('/api/admin/players/:id/ban', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent bannir.' });
   const { banned } = req.body;
   const _pb = pQ.getById.get(Number(req.params.id));
   WH.wlogBan(_pb?.pseudo || req.params.id, req.params.id, banned);
@@ -205,7 +273,7 @@ app.patch('/api/admin/players/:id/ban', (req, res) => {
 
 // Reset suspicious
 app.patch('/api/admin/players/:id/suspicious', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
   abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -224,6 +292,53 @@ const { wlog, mkEmbed: embed } = WH;
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
+const DISCORD_ROLE_VIP = '1480329015406497823';
+
+// Envoyer un DM Discord via le bot
+async function sendDM(discordId, text) {
+  const { botToken } = discordConfig();
+  if (!botToken) return;
+  const dmRes  = await fetch('https://discord.com/api/v10/users/@me/channels', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient_id: discordId }),
+  });
+  const dm = await dmRes.json();
+  if (!dm.id) return;
+  await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: text }),
+  });
+}
+
+// Renommer un membre sur le serveur Discord
+async function renameOnServer(discordId, nickname) {
+  const { botToken } = discordConfig();
+  if (!botToken) return;
+  await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nick: nickname }),
+  });
+}
+
+// Synchroniser le rôle Discord d'un membre (ajoute/retire les rôles)
+async function syncDiscordRole(discordId, role) {
+  const { botToken } = discordConfig();
+  if (!botToken) return;
+  const ALL_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD, DISCORD_ROLE_VIP];
+  const TARGET = role === 'admin' ? DISCORD_ROLE_ADM
+               : role === 'moderator' ? DISCORD_ROLE_MOD
+               : role === 'vip' ? DISCORD_ROLE_VIP : null;
+  for (const rid of ALL_ROLES) {
+    const method = (rid === TARGET) ? 'PUT' : 'DELETE';
+    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
+      method,
+      headers: { 'Authorization': 'Bot ' + botToken },
+    });
+  }
+}
 
 async function getDiscordRole(discordUserId, botToken) {
   try {
@@ -358,6 +473,8 @@ app.get('/auth/discord/callback', async (req, res) => {
 
       // Liaison depuis le profil — lier + envoyer DM de confirmation
       rQ.setDiscord.run(discordUser.id, JSON.stringify(discordInfo), playerId);
+      // Renommer le membre sur le serveur Discord avec son pseudo en jeu
+      try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
