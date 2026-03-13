@@ -63,7 +63,7 @@ function discordConfig() {
     clientId:     '1477252548090921060',
     clientSecret: 'zkIJArhzeumtKZJBxSmAtjEaE9Euugj8',
     botToken:     'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA',
-    baseUrl:      'https://puissance-4-website-ranked-production.up.railway.app',
+    baseUrl:      process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app',
   };
 }
 
@@ -1268,7 +1268,7 @@ function startBot() {
   });
 
   // ── Commandes slash ───────────────────────────────────────────────────────
-  const API = process.env.BASE_URL || 'https://puissance-4-website-ranked-production.up.railway.app';
+  const API = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
 
   function eloRank(elo) {
     const r = getRank(elo);
