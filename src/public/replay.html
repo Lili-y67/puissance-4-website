@@ -605,7 +605,8 @@ const SFX = (() => {
   };
 })();
 </script>
-<script src="/presence.js">
+<script src="/presence.js"></script>
+<script>
 // ══════════════════════════════════════════════════════════════════════════════
 // ANALYSE
 // ══════════════════════════════════════════════════════════════════════════════
@@ -779,7 +780,4 @@ function jumpToMove(idx) {
   const el = document.getElementById('am-' + analysisResults.findIndex(r => r.moveIndex === idx));
   if (el) el.classList.add('highlighted');
 }
-
 </script>
-</body>
-</html>
