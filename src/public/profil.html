@@ -130,9 +130,11 @@ input[type="file"]{display:none;}
 .stat-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
 .stat-val{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;}
 .stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
-.stat-card.wins   .stat-val{color:var(--green);}
-.stat-card.losses .stat-val{color:var(--red);}
-.stat-card.draws  .stat-val{color:var(--muted);}
+.stat-card.wins     .stat-val{color:var(--green);}
+.stat-card.losses   .stat-val{color:var(--red);}
+.stat-card.draws    .stat-val{color:var(--muted);}
+.stat-card.accuracy .stat-val{color:#8b9cf4;}
+.stat-card.accuracy{background:linear-gradient(135deg,rgba(76,110,245,0.06),rgba(139,156,244,0.04));border-color:rgba(76,110,245,0.2);}
 
 .winrate-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;animation:slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both;}
 .winrate-header{display:flex;justify-content:space-between;align-items:center;}
@@ -586,10 +588,15 @@ function render(player, games, following, followers, followStatus) {
     </div>
 
     <!-- Stats -->
-    <div class="stats-grid">
+    <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
       <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
       <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
       <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
+      ${player.avg_accuracy != null ? `
+      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
+        <div class="stat-val">${player.avg_accuracy}%</div>
+        <div class="stat-lbl">Précision</div>
+      </div>` : ''}
     </div>
 
     <!-- Winrate -->
@@ -1343,11 +1350,18 @@ async function loadDiscordInfo() {
         ${row('🆔', 'ID Discord',        d.id)}
         ${row('📅', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
         ${row('🔗', 'Lié le',            linkedStr)}
+        ${row('📧', 'Email',             d.email ? (d.email) : 'Non accessible')}
         ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
         ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
         ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
         ${boostStr ? row('🚀', 'Boosting depuis',    boostStr, '#ff73fa') : ''}
         ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
+      </div>
+
+      <!-- Badges Discord -->
+      <div style="margin-bottom:4px">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.3);margin-bottom:6px">Badges Discord</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${badgesHtml}</div>
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');

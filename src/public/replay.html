@@ -113,6 +113,52 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .btn-action.ghost:hover{border-color:var(--muted);color:var(--text);}
 
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
+
+/* ══ ANALYSE ══════════════════════════════════════════════════════════════════ */
+.analyse-btn{width:100%;padding:12px;border-radius:12px;background:rgba(76,110,245,0.1);border:1px solid rgba(76,110,245,0.25);color:#8b9cf4;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.analyse-btn:hover{background:rgba(76,110,245,0.2);border-color:rgba(76,110,245,0.45);}
+.analyse-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+.analyse-progress-wrap{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:none;}
+.analyse-progress-wrap.show{display:block;}
+.analyse-progress-label{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+.analyse-progress-bar-bg{height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+.analyse-progress-bar-fill{height:100%;background:linear-gradient(90deg,#4c6ef5,#8b9cf4);border-radius:2px;width:0%;transition:width 0.3s;}
+.analyse-progress-text{font-size:11px;color:var(--muted);text-align:right;}
+
+.analyse-panel{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;display:none;flex-direction:column;gap:16px;}
+.analyse-panel.show{display:flex;}
+
+/* Précision globale */
+.accuracy-row{display:flex;gap:12px;}
+.accuracy-card{flex:1;padding:14px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;text-align:center;}
+.accuracy-pct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;line-height:1;}
+.accuracy-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
+.accuracy-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+
+/* Résumé des coups */
+.move-summary{display:flex;gap:6px;flex-wrap:wrap;}
+.summary-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
+
+/* Liste des coups analysés */
+.analyse-moves{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;}
+.analyse-move{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid transparent;cursor:pointer;transition:all 0.15s;}
+.analyse-move:hover{background:rgba(255,255,255,0.05);border-color:var(--border);}
+.analyse-move.highlighted{background:rgba(76,110,245,0.1);border-color:rgba(76,110,245,0.3);}
+.am-num{font-size:11px;color:var(--muted);width:24px;flex-shrink:0;text-align:center;}
+.am-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.am-col{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;flex:1;}
+.am-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;}
+.am-best-hint{font-size:10px;color:var(--muted);flex-shrink:0;}
+
+/* Couleurs des classifications */
+.cls-best      {background:rgba(48,209,88,0.15);color:#30d158;border:1px solid rgba(48,209,88,0.3);}
+.cls-excellent {background:rgba(100,210,120,0.12);color:#64d278;border:1px solid rgba(100,210,120,0.25);}
+.cls-good      {background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);}
+.cls-inaccuracy{background:rgba(255,214,10,0.12);color:#ffd60a;border:1px solid rgba(255,214,10,0.25);}
+.cls-mistake   {background:rgba(255,159,10,0.12);color:#ff9f0a;border:1px solid rgba(255,159,10,0.25);}
+.cls-blunder   {background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);}
+
 </style>
 </head>
 <body>
@@ -471,6 +517,8 @@ function finishReplay() {
 
   setTimeout(() => {
     document.getElementById('end-card').classList.add('show');
+    const btn = document.getElementById('analyse-btn');
+    if (btn) btn.style.display = 'flex';
   }, 600);
 }
 
@@ -540,6 +588,181 @@ const SFX = (() => {
   };
 })();
 </script>
-<script src="/presence.js"></script>
+<script src="/presence.js">
+// ══════════════════════════════════════════════════════════════════════════════
+// ANALYSE
+// ══════════════════════════════════════════════════════════════════════════════
+let analysisResults = [];
+let analysisWorker  = null;
+
+const CLS_LABELS = {
+  best:       '✅ Meilleur',
+  excellent:  '👍 Excellent',
+  good:       '🟢 Bon',
+  inaccuracy: '🟡 Imprécision',
+  mistake:    '⚠️ Erreur',
+  blunder:    '💀 Gaffe',
+};
+const CLS_COUNTS_LABEL = {
+  best:       'Meilleurs',
+  excellent:  'Excellents',
+  good:       'Bons',
+  inaccuracy: 'Imprécisions',
+  mistake:    'Erreurs',
+  blunder:    'Gaffes',
+};
+
+function startAnalysis() {
+  const btn      = document.getElementById('analyse-btn');
+  const progWrap = document.getElementById('analyse-progress');
+  btn.style.display = 'none';
+  progWrap.classList.add('show');
+
+  // Extraire les colonnes jouées depuis le tableau moves
+  const moveCols = moves.map(m => m.col ?? m.column ?? m);
+
+  analysisWorker = new Worker('/analyse-worker.js');
+
+  analysisWorker.onmessage = (e) => {
+    const { type } = e.data;
+
+    if (type === 'progress') {
+      const { moveIndex, total } = e.data;
+      const pct = Math.round(((moveIndex + 1) / total) * 100);
+      document.getElementById('analyse-bar').style.width = pct + '%';
+      document.getElementById('analyse-progress-text').textContent =
+        `Coup ${moveIndex + 1} / ${total} — ${pct}%`;
+      analysisResults.push(e.data.result);
+    }
+
+    if (type === 'done') {
+      progWrap.classList.remove('show');
+      renderAnalysis(analysisResults, e.data.accuracy);
+      analysisWorker.terminate();
+      // Sauvegarder en DB
+      const gameId = getGameId();
+      fetch(`/api/games/${gameId}/accuracy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p1_accuracy: e.data.accuracy.p1, p2_accuracy: e.data.accuracy.p2 }),
+      }).catch(() => {});
+    }
+  };
+
+  analysisWorker.postMessage({ moves: moveCols });
+}
+
+function renderAnalysis(results, accuracy) {
+  const panel = document.getElementById('analyse-panel');
+  if (!panel) return;
+
+  const g = gameData;
+  const p1Color = getComputedStyle(document.documentElement).getPropertyValue('--p1-color').trim() || '#ff2d55';
+  const p2Color = getComputedStyle(document.documentElement).getPropertyValue('--p2-color').trim() || '#ffd60a';
+
+  // Précision couleur
+  function accColor(pct) {
+    if (pct >= 90) return '#30d158';
+    if (pct >= 75) return '#64d278';
+    if (pct >= 60) return '#8b9cf4';
+    if (pct >= 45) return '#ffd60a';
+    if (pct >= 30) return '#ff9f0a';
+    return '#ff2d55';
+  }
+
+  // Compter par classification par joueur
+  function counts(player) {
+    const r = results.filter(r => r.player === player);
+    const c = { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0 };
+    r.forEach(m => { if (c[m.classification] !== undefined) c[m.classification]++; });
+    return c;
+  }
+  const c1 = counts(1), c2 = counts(2);
+
+  function summaryChips(c) {
+    return Object.entries(c)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `<span class="summary-chip cls-${k}">${v} ${CLS_COUNTS_LABEL[k]}</span>`)
+      .join('');
+  }
+
+  panel.innerHTML = `
+    <!-- Précision -->
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
+        📊 Précision de jeu
+      </div>
+      <div class="accuracy-row">
+        <div class="accuracy-card">
+          <div class="accuracy-pct" style="color:${accColor(accuracy.p1)}">${accuracy.p1}%</div>
+          <div class="accuracy-label">
+            <span class="accuracy-dot" style="background:${p1Color}"></span>
+            ${g.p1_pseudo}
+          </div>
+        </div>
+        <div class="accuracy-card">
+          <div class="accuracy-pct" style="color:${accColor(accuracy.p2)}">${accuracy.p2}%</div>
+          <div class="accuracy-label">
+            <span class="accuracy-dot" style="background:${p2Color}"></span>
+            ${g.p2_pseudo}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Résumé P1 -->
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${p1Color};display:inline-block;flex-shrink:0"></span>
+        <strong style="color:var(--text)">${g.p1_pseudo}</strong>
+      </div>
+      <div class="move-summary">${summaryChips(c1)}</div>
+    </div>
+
+    <!-- Résumé P2 -->
+    <div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${p2Color};display:inline-block;flex-shrink:0"></span>
+        <strong style="color:var(--text)">${g.p2_pseudo}</strong>
+      </div>
+      <div class="move-summary">${summaryChips(c2)}</div>
+    </div>
+
+    <!-- Liste des coups -->
+    <div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
+        🎯 Détail des coups
+      </div>
+      <div class="analyse-moves" id="analyse-moves">
+        ${results.map((r, i) => {
+          const color = r.player === 1 ? p1Color : p2Color;
+          const pseudo = r.player === 1 ? g.p1_pseudo : g.p2_pseudo;
+          const hint = r.classification !== 'best'
+            ? `<span class="am-best-hint">Meilleur : col. ${r.bestCol + 1}</span>` : '';
+          return `<div class="analyse-move" id="am-${i}" onclick="jumpToMove(${r.moveIndex})">
+            <span class="am-num">${i + 1}</span>
+            <span class="am-dot" style="background:${color}"></span>
+            <span class="am-col">${pseudo} — col. ${r.playedCol + 1}</span>
+            ${hint}
+            <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  panel.classList.add('show');
+  // Scroll vers le panel
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function jumpToMove(idx) {
+  // Mettre en surbrillance dans la liste
+  document.querySelectorAll('.analyse-move').forEach(el => el.classList.remove('highlighted'));
+  const el = document.getElementById('am-' + analysisResults.findIndex(r => r.moveIndex === idx));
+  if (el) el.classList.add('highlighted');
+}
+
+</script>
 </body>
 </html>

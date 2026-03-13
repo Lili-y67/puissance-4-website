@@ -316,11 +316,28 @@ async function sendDM(discordId, text) {
 async function renameOnServer(discordId, nickname) {
   const { botToken } = discordConfig();
   if (!botToken) return;
-  await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}`, {
+
+  // Vérifier si c'est le propriétaire du serveur (impossible à renommer)
+  const guildRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}`, {
+    headers: { 'Authorization': 'Bot ' + botToken },
+  });
+  const guild = await guildRes.json();
+  if (guild.owner_id === discordId) {
+    console.log(`[RENAME] Impossible : ${discordId} est le propriétaire du serveur.`);
+    return;
+  }
+
+  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}`, {
     method: 'PATCH',
     headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
     body: JSON.stringify({ nick: nickname }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    // 403 = hiérarchie insuffisante (rôle du membre >= bot)
+    console.log(`[RENAME] Échec pour ${discordId} : ${res.status} — ${err.message || 'permission refusée'}`);
+  }
 }
 
 // Synchroniser le rôle Discord d'un membre (ajoute/retire les rôles)
@@ -744,8 +761,25 @@ app.get('/api/players/:id', (req, res) => {
   const games      = gQ.getForPlayer.all(player.id, player.id);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
+
+  // Précision moyenne (parties analysées uniquement)
+  const accRow = db.prepare(`
+    SELECT
+      AVG(CASE WHEN player1_id = ? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
+      AVG(CASE WHEN player2_id = ? AND p2_accuracy IS NOT NULL THEN p2_accuracy END) AS as_p2,
+      COUNT(CASE WHEN player1_id = ? AND p1_accuracy IS NOT NULL THEN 1 END) +
+      COUNT(CASE WHEN player2_id = ? AND p2_accuracy IS NOT NULL THEN 1 END) AS analysed_count
+    FROM games WHERE (player1_id = ? OR player2_id = ?) AND status = 'finished'
+  `).get(player.id, player.id, player.id, player.id, player.id, player.id);
+
+  let avg_accuracy = null;
+  if (accRow && accRow.analysed_count > 0) {
+    const vals = [accRow.as_p1, accRow.as_p2].filter(v => v != null);
+    avg_accuracy = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  }
+
   const p = sanitize(player);
-  res.json({ player: { ...p, rank: getRank(p.elo) }, games, following, followers });
+  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0 }, games, following, followers });
 });
 
 // Follow / Unfollow
@@ -773,6 +807,17 @@ app.get('/api/players/:id/follow-status', (req, res) => {
   const followers   = fQ.countFollowers.get(target).n;
   const following   = fQ.countFollowing.get(target).n;
   res.json({ isFollowing, followers, following });
+});
+
+// ── Sauvegarde précision d'analyse ──────────────────────────────────────────
+app.post('/api/games/:id/accuracy', (req, res) => {
+  const { p1_accuracy, p2_accuracy } = req.body;
+  const gameId = Number(req.params.id);
+  if (!gameId) return res.status(400).json({ error: 'ID invalide' });
+  if (typeof p1_accuracy !== 'number' || typeof p2_accuracy !== 'number')
+    return res.status(400).json({ error: 'Valeurs invalides' });
+  rQ.setAccuracy.run(p1_accuracy, p2_accuracy, gameId);
+  res.json({ ok: true });
 });
 
 // ── Statut en ligne ──────────────────────────────────────────────────────────
