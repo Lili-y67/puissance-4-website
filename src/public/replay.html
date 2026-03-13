@@ -362,6 +362,23 @@ function renderShell() {
         <a class="btn-action ghost" href="/">⚡ Jouer</a>
       </div>
     </div>
+
+    <!-- Bouton lancer l'analyse -->
+    <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" style="display:none">
+      🔬 Analyser la partie
+    </button>
+
+    <!-- Barre de progression analyse -->
+    <div class="analyse-progress-wrap" id="analyse-progress">
+      <div class="analyse-progress-label">⚙️ Analyse en cours...</div>
+      <div class="analyse-progress-bar-bg">
+        <div class="analyse-progress-bar-fill" id="analyse-bar"></div>
+      </div>
+      <div class="analyse-progress-text" id="analyse-progress-text">Coup 0 / 0</div>
+    </div>
+
+    <!-- Panel résultats -->
+    <div class="analyse-panel" id="analyse-panel"></div>
   `;
 
   renderBoard();
