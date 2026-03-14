@@ -53,6 +53,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── SPA routing ────────────────────────────────────────────────────────────────
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 
 // ══════════════════════════════════════════════════════════════════════════════
 // DISCORD RESET MOT DE PASSE
@@ -612,10 +613,16 @@ app.get('/api/live', (_, res) => {
     const entry = {
       id,
       status: state.status,
-      players: {
-        1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: state.players[1].color || '#ff2d55', avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' }, // format 'circle' ou 'emoji:⭐'
-        2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: state.players[2].color || '#ffd60a', avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle' },
-      },
+      players: (() => {
+        const c1 = state.players[1].color || '#ff2d55';
+        let   c2 = state.players[2].color || '#ffd60a';
+        // Si les deux joueurs ont la même couleur, forcer p2 en jaune
+        if (c1.toLowerCase() === c2.toLowerCase()) c2 = '#ffd60a';
+        return {
+          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' },
+          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle' },
+        };
+      })(),
       grid:    state.board.grid,
       current: state.current,
       moves:   state.moveCount,
@@ -1081,38 +1088,79 @@ io.on('connection', socket => {
     pQ.updateColor.run({ color, id: socket.playerData.id });
     socket.playerData.color = color;
     const game = gm.getBySocket(socket.id);
-    if (game) io.to('game:' + game.id).emit('color_updated', { playerId: socket.playerData.id, color });
+    if (game) {
+      // Vérifier si l'adversaire a la même couleur → lui assigner jaune
+      const side = game.players[1].id === socket.playerData.id ? 1 : 2;
+      const oppSide = side === 1 ? 2 : 1;
+      const oppColor = game.players[oppSide].color || '#ffd60a';
+      let effectiveColor = color;
+      let oppEffectiveColor = oppColor;
+      if (color.toLowerCase() === oppColor.toLowerCase()) {
+        oppEffectiveColor = '#ffd60a';
+        // Mettre à jour la couleur de l'adversaire dans le state
+        game.players[oppSide].color = oppEffectiveColor;
+        io.to('game:' + game.id).emit('color_updated', { playerId: game.players[oppSide].id, color: oppEffectiveColor });
+      }
+      game.players[side].color = effectiveColor;
+      io.to('game:' + game.id).emit('color_updated', { playerId: socket.playerData.id, color: effectiveColor });
+    }
   });
 
   socket.on('rejoin_game', ({ gameId }) => {
-    socket.transitioning = false; // Le joueur est bien arrivé sur /game
+    socket.transitioning = false;
     socket.join('game:' + gameId);
-    const state = gm.games.get(gameId);
-    if (state && state.status === 'active') {
-      const side = state.players[1].id === socket.playerId ? 1
-                 : state.players[2].id === socket.playerId ? 2 : null;
-      if (side) { state.players[side].socketId = socket.id; gm.socketToGame.set(socket.id, gameId); }
-    } else {
+    let state = gm.games.get(gameId);
+
+    // Reconstruire depuis DB si pas en mémoire
+    if (!state || state.status !== 'active') {
       const gameRow = gQ.getById.get(gameId);
       if (!gameRow || gameRow.status !== 'active') return socket.emit('game_not_found');
       const moves = mQ.getByGame.all(gameId);
       const { Board } = require('./game/Board');
       const board = new Board();
       moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
-      const p1 = pQ.getById.get(gameRow.player1_id);
-      const p2 = pQ.getById.get(gameRow.player2_id);
-      const state = {
+      const p1db = pQ.getById.get(gameRow.player1_id);
+      const p2db = pQ.getById.get(gameRow.player2_id);
+      state = {
         id: gameId, board,
         players: {
-          1: { ...sanitize(p1), socketId: gameRow.player1_id === socket.playerId ? socket.id : null },
-          2: { ...sanitize(p2), socketId: gameRow.player2_id === socket.playerId ? socket.id : null },
+          1: { ...sanitize(p1db), color: gameRow.p1_color || p1db.color || '#ff2d55', shape: gameRow.p1_shape || p1db.shape || 'circle', socketId: null },
+          2: { ...sanitize(p2db), color: gameRow.p2_color || p2db.color || '#ffd60a', shape: gameRow.p2_shape || p2db.shape || 'circle', socketId: null },
         },
         current: moves.length % 2 === 0 ? 1 : 2,
         startedAt: Date.now(), lastMoveAt: Date.now(),
         moveCount: moves.length, status: 'active',
       };
       gm.games.set(gameId, state);
+    }
+
+    const side = state.players[1].id === socket.playerId ? 1
+               : state.players[2].id === socket.playerId ? 2 : null;
+
+    if (side) {
+      state.players[side].socketId = socket.id;
+      state.players[side].disconnectedAt = null;
       gm.socketToGame.set(socket.id, gameId);
+
+      // Envoyer l'état complet de la partie au client qui rejoint
+      const p1 = state.players[1], p2 = state.players[2];
+      socket.emit('game_rejoined', {
+        gameId,
+        side,
+        players: {
+          1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle' },
+          2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle' },
+        },
+        grid:    state.board.grid,
+        current: state.current,
+        moves:   state.moveCount,
+        startsIn: 0,
+      });
+
+      // Notifier l'adversaire
+      io.to('game:' + gameId).emit('opponent_reconnected', {
+        pseudo: state.players[side].pseudo,
+      });
     }
   });
 
@@ -1157,11 +1205,43 @@ io.on('connection', socket => {
             const result = gm._end(state, winner, [], 'disconnect');
             io.to('game:' + gameId).emit('game_over', result);
           }
-        }, 20000);
+        }, 30000);
       }
       return;
     }
 
+    // Fenêtre de grâce de 10s avant forfait (permet reload)
+    const gameId = gm.socketToGame.get(socket.id);
+    if (gameId) {
+      const state = gm.games.get(gameId);
+      if (state && state.status === 'active') {
+        const side = gm._side(state, socket.id);
+        if (side) {
+          // Marquer le joueur comme "en reconnexion"
+          state.players[side].disconnectedAt = Date.now();
+          state.players[side].socketId = null;
+
+          // Notifier l'adversaire
+          io.to('game:' + gameId).emit('opponent_disconnected', {
+            pseudo: state.players[side].pseudo,
+            timeout: 30,
+          });
+
+          setTimeout(() => {
+            const st = gm.games.get(gameId);
+            if (!st || st.status !== 'active') return;
+            // Vérifier si le joueur a reconnecté
+            const p = st.players[side];
+            if (!p.socketId || !io.sockets.sockets.get(p.socketId)) {
+              // Toujours déconnecté → forfait
+              const result = gm._end(st, side === 1 ? 2 : 1, [], 'disconnect');
+              io.to('game:' + gameId).emit('game_over', result);
+            }
+          }, 30000);
+          return;
+        }
+      }
+    }
     const result = gm.disconnect(socket.id);
     if (result?.type === 'game_over') io.to('game:' + result.gameId).emit('game_over', result);
   });
@@ -1217,6 +1297,17 @@ function _startMatch(p1, p2) {
     return;
   }
 
+  // Résoudre les couleurs AVANT de créer la partie
+  const _c1 = p1.color || '#ff2d55';
+  let   _c2 = p2.color || '#ffd60a';
+  if (_c1.toLowerCase() === _c2.toLowerCase()) {
+    // Couleurs identiques : choisir une couleur alternative pour p2
+    const ALTS = ['#ffd60a','#30d158','#0a84ff','#bf5af2','#ff9f0a','#ff6b81'];
+    _c2 = ALTS.find(c => c.toLowerCase() !== _c1.toLowerCase()) || '#ffd60a';
+  }
+  p1.color = _c1;
+  p2.color = _c2;
+
   const state = gm.create(p1, p2);
   const room  = 'game:' + state.id;
   s1.join(room);
@@ -1225,8 +1316,8 @@ function _startMatch(p1, p2) {
   const base = {
     gameId: state.id,
     players: {
-      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle' },
-      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle' },
+      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle' },
+      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle' },
     },
     startsIn: 3,
   };

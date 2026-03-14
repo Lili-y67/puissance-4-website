@@ -154,6 +154,46 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 
 <script>
 const REFRESH_MS = 3000;
+
+const SHAPE_CLIPS = {
+  circle:   { borderRadius: '50%', clipPath: '' },
+  triangle: { borderRadius: '0',   clipPath: 'polygon(50% 8%, 95% 92%, 5% 92%)' },
+  diamond:  { borderRadius: '0',   clipPath: 'polygon(50% 5%, 95% 50%, 50% 95%, 5% 50%)' },
+  star:     { borderRadius: '0',   clipPath: 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
+  heart:    { borderRadius: '0',   clipPath: 'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)' },
+  emoji:    { borderRadius: '50%', clipPath: '' },
+};
+
+function parseShape(raw) {
+  if (!raw) return { shape: 'circle', emoji: null };
+  if (raw.startsWith('emoji:')) return { shape: 'emoji', emoji: raw.slice(6) || '⭐' };
+  return { shape: raw, emoji: null };
+}
+
+// Applique forme + couleur sur une mini-cell
+function applyMiniToken(cell, color, rawShape) {
+  const { shape, emoji } = parseShape(rawShape);
+  cell.style.background = '';
+  cell.style.clipPath   = '';
+  cell.style.borderRadius = '';
+  cell.innerHTML = '';
+
+  if (shape === 'emoji' && emoji) {
+    cell.style.borderRadius = '50%';
+    cell.style.background   = color + '22';
+    cell.style.display      = 'flex';
+    cell.style.alignItems   = 'center';
+    cell.style.justifyContent = 'center';
+    cell.style.fontSize     = '65%';
+    cell.textContent        = emoji;
+  } else {
+    const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
+    cell.style.borderRadius = clip.borderRadius;
+    if (clip.clipPath) cell.style.clipPath = clip.clipPath;
+    cell.style.background = `radial-gradient(circle at 35% 30%, ${color}bb, ${color})`;
+    cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${color}44`;
+  }
+}
 let prevIds = new Set();
 
 function mkAvatar(player) {
@@ -199,13 +239,8 @@ function mkCard(game) {
       const cell = document.createElement('div');
       cell.className = 'mini-cell';
       const val = game.grid[r]?.[c] ?? 0;
-      if (val === 1) {
-        cell.style.background = `radial-gradient(circle at 35% 30%, ${p1.color}bb, ${p1.color})`;
-        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${p1.color}44`;
-      } else if (val === 2) {
-        cell.style.background = `radial-gradient(circle at 35% 30%, ${p2.color}bb, ${p2.color})`;
-        cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${p2.color}44`;
-      }
+      if (val === 1) applyMiniToken(cell, p1.color, p1.shape);
+      else if (val === 2) applyMiniToken(cell, p2.color, p2.shape);
       board.appendChild(cell);
     }
   }

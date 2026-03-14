@@ -119,6 +119,10 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 /* ── Status ── */
 .status-bar { font-size: 13px; color: var(--muted); text-align: center; min-height: 18px; }
+.game-id-badge { font-size: 10px; letter-spacing: 1px; color: var(--muted); font-family: monospace; padding: 2px 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; cursor: default; }
+.disconnect-banner { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: rgba(255,159,10,0.95); color: #000; text-align: center; padding: 10px 16px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 1px; }
+.disconnect-banner.show { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.disconnect-timer { font-size: 20px; font-weight: 900; min-width: 24px; }
 .status-bar.thinking { color: var(--accent); }
 .dots span { animation: blink 1.2s infinite; }
 .dots span:nth-child(2) { animation-delay: 0.2s; }
@@ -266,9 +270,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
   </div>
 </div>
 
+<!-- Banner déconnexion adversaire -->
+<div class="disconnect-banner" id="disconnect-banner">
+  <span id="disconnect-msg">Adversaire déconnecté...</span>
+  <span class="disconnect-timer" id="disconnect-timer">10</span>
+  <span>s</span>
+</div>
+
 <div class="page">
   <div class="top-bar">
     <div class="logo-sm">Puissance <span>4</span></div>
+    <span class="game-id-badge" id="game-id-badge" title="ID de la partie"></span>
     <button class="btn-quit" onclick="quit()">✕ Quitter</button>
   </div>
 
@@ -410,12 +422,27 @@ window.addEventListener('DOMContentLoaded', () => {
   if (iaData) {
     sessionStorage.removeItem('vs_ia');
     startVsIA(JSON.parse(iaData));
-  } else if (mData) {
-    const match = JSON.parse(mData);
-    sessionStorage.removeItem('match');
-    connectSocket(match);
   } else {
-    location.href = '/';
+    // Récupérer le gameId depuis l'URL /game/:id ou depuis sessionStorage
+    const urlGameId = location.pathname.split('/').pop();
+    const urlId = urlGameId && urlGameId !== 'game' ? Number(urlGameId) : null;
+
+    if (mData) {
+      const match = JSON.parse(mData);
+      // Garder match en sessionStorage pour permettre le reload
+      // On le nettoie seulement quand la partie est terminée
+      if (urlId && match.gameId !== urlId) {
+        // URL différente du match en session → rejoin par URL
+        connectSocket({ gameId: urlId, players: match.players });
+      } else {
+        connectSocket(match);
+      }
+    } else if (urlId) {
+      // Arrivée directe par URL /game/:id
+      connectSocket({ gameId: urlId });
+    } else {
+      location.href = '/';
+    }
   }
 });
 
@@ -440,7 +467,41 @@ function connectSocket(pendingMatch) {
   });
 
   // Serveur confirme le rejoin (optionnel, on l'ignore si lobby déjà setup)
-  socket.on('game_rejoined', () => { /* déjà géré via setupLobby */ });
+  socket.on('game_rejoined', (data) => {
+    // Rejoin avec données complètes du serveur
+    data.yourSide = data.side;
+    data.startsIn = 0; // pas de countdown au rejoin
+    gameId = data.gameId;
+    mySide = data.side;
+
+    // Appliquer couleurs et shapes
+    applyColors(data.players[1].color || '#ff2d55', data.players[2].color || '#ffd60a');
+    const rawS1 = data.players[1].shape || 'circle';
+    const rawS2 = data.players[2].shape || 'circle';
+    if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
+    else p1Shape = rawS1;
+    if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
+    else p2Shape = rawS2;
+
+    // Démarrer directement (sans lobby si rejoin)
+    document.getElementById('lobby-overlay').classList.add('hidden');
+    document.getElementById('name-p1').textContent = data.players[1].pseudo;
+    document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
+    document.getElementById('name-p2').textContent = data.players[2].pseudo;
+    document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+    currentTurn = data.current;
+    updateTurnIndicator();
+
+    // Reconstruire le plateau depuis la grille reçue
+    const grid = data.grid;
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 7; c++) {
+        const v = grid[r]?.[c] ?? 0;
+        if (v) applyToken(r, c, v);
+      }
+    }
+    setStatus(currentTurn === mySide ? 'Ton tour' : 'Tour adversaire');
+  });
   socket.on('game_not_found', () => { sessionStorage.setItem('no_auto_queue','1'); location.href = '/'; });
 
   // match_found depuis la queue (cas où on arrive sans pendingMatch)
@@ -455,6 +516,34 @@ function connectSocket(pendingMatch) {
     lobbyData.players[side].color = color;
     applyColors(lobbyData.players[1].color, lobbyData.players[2].color);
   });
+  socket.on('opponent_disconnected', ({ pseudo, timeout }) => {
+    const banner = document.getElementById('disconnect-banner');
+    const msg    = document.getElementById('disconnect-msg');
+    const timer  = document.getElementById('disconnect-timer');
+    if (!banner) return;
+    if (msg)   msg.textContent   = `${pseudo} s'est déconnecté...`;
+    if (timer) timer.textContent = timeout;
+    banner.classList.add('show');
+    // Countdown
+    let t = timeout;
+    const iv = setInterval(() => {
+      t--;
+      if (timer) timer.textContent = t;
+      if (t <= 0) clearInterval(iv);
+    }, 1000);
+    banner._interval = iv;
+  });
+
+  socket.on('opponent_reconnected', ({ pseudo }) => {
+    const banner = document.getElementById('disconnect-banner');
+    if (banner) {
+      if (banner._interval) clearInterval(banner._interval);
+      banner.classList.remove('show');
+    }
+    setStatus(`✅ ${pseudo} a reconnecté !`);
+    setTimeout(() => setStatus(''), 2500);
+  });
+
   socket.on('error', ({ message }) => {
     console.error('[Socket]', message);
     if (message === 'Aucune partie en cours.' || message === 'Partie inactive.') {
@@ -467,6 +556,17 @@ function connectSocket(pendingMatch) {
 
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
+  // Mettre à jour l'URL avec le gameId pour permettre le reload
+  if (data.gameId && history.replaceState) {
+    history.replaceState(null, '', '/game/' + data.gameId);
+    // Mettre à jour le match en sessionStorage avec le gameId
+    const stored = sessionStorage.getItem('match');
+    if (stored) {
+      const m = JSON.parse(stored);
+      m.gameId = data.gameId;
+      sessionStorage.setItem('match', JSON.stringify(m));
+    }
+  }
   SFX.matchFound();
   lobbyData = data;
   gameId    = data.gameId;
@@ -706,6 +806,9 @@ function updateTurnUI() {
   } else {
     document.getElementById('turn-lbl').textContent = 'ADVERSAIRE...';
     setStatus('<span class="dots">En attente<span>.</span><span>.</span><span>.</span></span>', true);
+    // Afficher l'ID de la partie
+    const badge = document.getElementById('game-id-badge');
+    if (badge && data.gameId) badge.textContent = '#' + data.gameId;
   }
 }
 
@@ -760,6 +863,10 @@ function onGameOver(data) {
 
   document.getElementById('btn-replay').href = '/replay/' + data.gameId;
   document.getElementById('result-overlay').classList.add('show');
+  // Nettoyer le match de sessionStorage — partie terminée
+  sessionStorage.removeItem('match');
+  // Mettre à jour l'URL pour refléter la partie terminée
+  if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
 }
 
 function setStatus(html, thinking = false) {
