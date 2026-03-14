@@ -93,6 +93,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN discord_id   TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN last_seen    INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN p1_accuracy REAL`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN p2_accuracy REAL`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN analysis_data TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_info TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
@@ -282,6 +283,7 @@ const rQ = {
   setDiscord:     db.prepare(`UPDATE players SET discord_id = ?, discord_info = ? WHERE id = ?`),
   updateLastSeen: db.prepare(`UPDATE players SET last_seen = ? WHERE id = ?`),
   setAccuracy:    db.prepare(`UPDATE games SET p1_accuracy = ?, p2_accuracy = ? WHERE id = ?`),
+  saveAnalysis:   db.prepare(`UPDATE games SET analysis_data = ? WHERE id = ?`),
   clearDiscord:   db.prepare(`UPDATE players SET discord_id = NULL, discord_info = NULL WHERE id = ?`),
   insertUnlink:   db.prepare(`INSERT INTO unlink_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
   getUnlink:      db.prepare(`SELECT * FROM unlink_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),

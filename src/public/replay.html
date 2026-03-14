@@ -239,9 +239,27 @@ async function init() {
 
     renderShell();
     setTimeout(startReplay, 800);
+    // Charger l'analyse existante si dispo
+    loadExistingAnalysis();
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="loading">Partie introuvable.</div>';
   }
+}
+
+async function loadExistingAnalysis() {
+  try {
+    const id  = getGameId();
+    const res = await fetch(`/api/games/${id}/analysis`);
+    const { analysis } = await res.json();
+    if (!analysis) return;
+    // Restaurer les données
+    analysisResults = analysis.results || [];
+    evalHistory     = analysis.evalHistory || [];
+    // Afficher le panel dès que le DOM est prêt (après renderShell)
+    setTimeout(() => {
+      renderAnalysis(analysisResults, analysis.accuracy);
+    }, 900); // après startReplay
+  } catch(e) {}
 }
 
 // ── Inject player colors ─────────────────────────────────────────────────────
@@ -728,10 +746,10 @@ function startAnalysis() {
       renderAnalysis(analysisResults, e.data.accuracy);
       analysisWorker.terminate();
       const gameId = getGameId();
-      fetch(`/api/games/${gameId}/accuracy`, {
+      fetch(`/api/games/${gameId}/analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p1_accuracy: e.data.accuracy.p1, p2_accuracy: e.data.accuracy.p2 }),
+        body: JSON.stringify({ results: analysisResults, evalHistory, accuracy: e.data.accuracy }),
       }).catch(() => {});
     }
   };

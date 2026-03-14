@@ -809,6 +809,32 @@ app.get('/api/players/:id/follow-status', (req, res) => {
   res.json({ isFollowing, followers, following });
 });
 
+// ── Sauvegarde analyse complète ──────────────────────────────────────────────
+app.post('/api/games/:id/analysis', (req, res) => {
+  const { results, evalHistory, accuracy } = req.body;
+  const gameId = Number(req.params.id);
+  if (!gameId) return res.status(400).json({ error: 'ID invalide' });
+  const data = JSON.stringify({ results, evalHistory, accuracy });
+  rQ.saveAnalysis.run(data, gameId);
+  // Sauvegarder aussi la précision
+  if (accuracy && typeof accuracy.p1 === 'number') {
+    rQ.setAccuracy.run(accuracy.p1, accuracy.p2, gameId);
+  }
+  res.json({ ok: true });
+});
+
+// Route GET pour récupérer l'analyse existante
+app.get('/api/games/:id/analysis', (req, res) => {
+  const gameId = Number(req.params.id);
+  const game = db.prepare('SELECT analysis_data FROM games WHERE id = ?').get(gameId);
+  if (!game || !game.analysis_data) return res.json({ analysis: null });
+  try {
+    res.json({ analysis: JSON.parse(game.analysis_data) });
+  } catch(e) {
+    res.json({ analysis: null });
+  }
+});
+
 // ── Sauvegarde précision d'analyse ──────────────────────────────────────────
 app.post('/api/games/:id/accuracy', (req, res) => {
   const { p1_accuracy, p2_accuracy } = req.body;
