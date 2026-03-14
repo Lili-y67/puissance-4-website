@@ -751,8 +751,7 @@ function onGameOver(data) {
   titleEl.style.webkitTextFillColor  = 'transparent';
 
   const eloEl = document.getElementById('result-elo');
-  eloEl.textContent = (eloD >= 0 ? '+' : '') + eloD + ' ELO';
-  eloEl.style.color = eloD >= 0 ? 'var(--p2)' : 'var(--muted)';
+  eloEl.style.display = 'none';
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner

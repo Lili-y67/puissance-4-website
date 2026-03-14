@@ -345,6 +345,8 @@ const SHAPE_CLIPS = {
 
 function renderShell() {
   const g = gameData;
+  applyPlayerColors();
+  initShapes();
   const p1Won = g.winner_id === g.player1_id;
   const p2Won = g.winner_id === g.player2_id;
   const isDraw = g.winner_id === null;
@@ -797,8 +799,9 @@ function renderAnalysis(results, accuracy) {
 
     // Zones invisibles cliquables + tooltip pour chaque coup
     const hitZones = points.map((p, i) => {
-      const score  = (p.ev.score / 100).toFixed(2);
-      const signed = p.ev.score > 0 ? '+' + score : score;
+      const cpVal  = p.ev.cp !== undefined ? p.ev.cp : (p.ev.score / 100);
+      const score  = Math.abs(cpVal) >= 99 ? '#+' + Math.round(Math.abs(cpVal)) : cpVal.toFixed(2);
+      const signed = cpVal > 0 ? '+' + score : cpVal < 0 ? score : '0.00';
       const pseudo = p.ev.player === 1 ? g.p1_pseudo : g.p2_pseudo;
       const col    = p.ev.score > 5 ? p1Color : p.ev.score < -5 ? p2Color : 'rgba(238,238,245,0.5)';
       const zW     = step;
@@ -907,10 +910,12 @@ function renderAnalysis(results, accuracy) {
                 <span class="am-col">${pseudo} — col.${r.playedCol + 1}</span>
                 ${evalBar}
                 <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
-                ${r.evalScore !== undefined ? (() => {
-                  const v = (r.evalScore / 100).toFixed(2);
-                  const cls = r.evalScore > 5 ? 'pos' : r.evalScore < -5 ? 'neg' : 'neu';
-                  const str = r.evalScore > 0 ? '+' + v : v;
+                ${r.evalCP !== undefined ? (() => {
+                  const cp  = r.evalCP;
+                  const abs = Math.abs(cp);
+                  const str = abs >= 99 ? (cp > 0 ? '#+'  : '#-') + Math.round(abs)
+                                       : (cp > 0 ? '+' : '') + cp.toFixed(2);
+                  const cls = cp > 0.1 ? 'pos' : cp < -0.1 ? 'neg' : 'neu';
                   return `<span class="eval-score ${cls}" title="Évaluation de la position">${str}</span>`;
                 })() : ''}
               </div>
