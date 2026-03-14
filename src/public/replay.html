@@ -115,6 +115,30 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
 
 /* ══ ANALYSE ══════════════════════════════════════════════════════════════════ */
+/* Overlay séquence optimale sur le plateau */
+.cell.seq-highlight::after {
+  content: attr(data-seq-num);
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 18px; font-weight: 900; color: #fff;
+  border-radius: inherit;
+  pointer-events: none; z-index: 5;
+}
+.cell.seq-played { outline: 3px solid rgba(255,255,255,0.5); outline-offset: -3px; }
+.cell.seq-opt-0  { background: rgba(48,209,88,0.45) !important; box-shadow: inset 0 0 12px rgba(48,209,88,0.6); }
+.cell.seq-opt-1  { background: rgba(48,209,88,0.30) !important; }
+.cell.seq-opt-2  { background: rgba(48,209,88,0.20) !important; }
+.cell.seq-opt-3  { background: rgba(48,209,88,0.13) !important; }
+.cell.seq-opt-4  { background: rgba(48,209,88,0.08) !important; }
+/* Badge info au-dessus du plateau quand on inspecte un coup */
+.board-inspect-bar {
+  width: 100%; padding: 8px 14px;
+  background: rgba(76,110,245,0.1); border: 1px solid rgba(76,110,245,0.25);
+  border-radius: 10px; font-size: 12px; color: #8b9cf4;
+  display: none; align-items: center; justify-content: space-between; gap: 8px;
+}
+.board-inspect-bar.show { display: flex; }
 .analyse-btn{width:100%;padding:12px;border-radius:12px;background:rgba(76,110,245,0.1);border:1px solid rgba(76,110,245,0.25);color:#8b9cf4;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .analyse-btn:hover{background:rgba(76,110,245,0.2);border-color:rgba(76,110,245,0.45);}
 .analyse-btn:disabled{opacity:0.4;cursor:not-allowed;}
@@ -150,6 +174,11 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .am-col{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;flex:1;}
 .am-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;}
 .am-best-hint{font-size:10px;color:var(--muted);flex-shrink:0;}
+.eval-score{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.5px;min-width:42px;text-align:right;flex-shrink:0;opacity:0;transition:opacity 0.15s;}
+.analyse-move:hover .eval-score{opacity:1;}
+.eval-score.pos{color:#30d158;}
+.eval-score.neg{color:#ff2d55;}
+.eval-score.neu{color:var(--muted);}
 
 /* Couleurs des classifications */
 .cls-best      {background:rgba(48,209,88,0.15);color:#30d158;border:1px solid rgba(48,209,88,0.3);}
@@ -354,6 +383,10 @@ function renderShell() {
     </div>
 
     <!-- Board -->
+    <div class="board-inspect-bar" id="board-inspect-bar">
+      <span id="board-inspect-text">Position au coup sélectionné</span>
+      <button onclick="clearInspect()" style="background:transparent;border:none;color:rgba(139,156,244,0.6);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px" title="Revenir au replay">✕ Quitter</button>
+    </div>
     <div class="board-wrap">
       <div class="board" id="board"></div>
     </div>
@@ -663,15 +696,29 @@ function startAnalysis() {
 
   const moveCols = moves.map(m => m.col ?? m.column ?? m);
   analysisWorker = new Worker('/analyse-worker.js');
+  const _analyseStart = Date.now();
 
   analysisWorker.onmessage = (e) => {
     const { type } = e.data;
     if (type === 'progress') {
       const { moveIndex, total } = e.data;
-      const pct = Math.round(((moveIndex + 1) / total) * 100);
+      const pct      = Math.round(((moveIndex + 1) / total) * 100);
+      const elapsed  = (Date.now() - _analyseStart) / 1000;
+      const avgPerMove = elapsed / (moveIndex + 1);
+      const remaining  = Math.round(avgPerMove * (total - moveIndex - 1));
+
+      let timeStr = '';
+      if (moveIndex === 0) {
+        // Premier coup : estimer basé sur ~2.5s par coup
+        const est = Math.round(2.5 * total);
+        timeStr = ` · ~${est > 60 ? Math.ceil(est/60) + ' min' : est + 's'} estimées`;
+      } else if (remaining > 0) {
+        timeStr = ` · ~${remaining > 60 ? Math.ceil(remaining/60) + ' min' : remaining + 's'} restantes`;
+      }
+
       document.getElementById('analyse-bar').style.width = pct + '%';
       document.getElementById('analyse-progress-text').textContent =
-        `Coup ${moveIndex + 1} / ${total} — ${pct}%`;
+        `Coup ${moveIndex + 1} / ${total} — ${pct}%${timeStr}`;
       analysisResults.push(e.data.result);
     }
     if (type === 'done') {
@@ -827,6 +874,12 @@ function renderAnalysis(results, accuracy) {
                 <span class="am-col">${pseudo} — col.${r.playedCol + 1}</span>
                 ${evalBar}
                 <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
+                ${r.evalScore !== undefined ? (() => {
+                  const v = (r.evalScore / 100).toFixed(2);
+                  const cls = r.evalScore > 5 ? 'pos' : r.evalScore < -5 ? 'neg' : 'neu';
+                  const str = r.evalScore > 0 ? '+' + v : v;
+                  return `<span class="eval-score ${cls}" title="Évaluation de la position">${str}</span>`;
+                })() : ''}
               </div>
               ${seqHtml}
               ${r.comment ? `<div style="margin-top:4px;font-size:10px;color:var(--muted);font-style:italic">${r.comment}</div>` : ''}
@@ -834,14 +887,123 @@ function renderAnalysis(results, accuracy) {
           </div>`;
         }).join('')}
       </div>
-    </div>`;
+    </div>
+  `;
   panel.classList.add('show');
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function jumpToMove(idx) {
+// ── Inspection du plateau depuis l'analyse ───────────────────────────────────
+let inspectMode = false;
+
+function jumpToMove(moveIdx) {
+  // Surligner la ligne dans la liste
   document.querySelectorAll('.analyse-move').forEach(el => el.classList.remove('highlighted'));
-  const el = document.getElementById('am-' + analysisResults.findIndex(r => r.moveIndex === idx));
-  if (el) el.classList.add('highlighted');
+  const listIdx = analysisResults.findIndex(r => r.moveIndex === moveIdx);
+  const el = document.getElementById('am-' + listIdx);
+  if (el) { el.classList.add('highlighted'); el.scrollIntoView({ block: 'nearest' }); }
+
+  const result = analysisResults[listIdx];
+  if (!result) return;
+
+  // Arrêter le replay en cours
+  clearTimeout(replayTimeout);
+  inspectMode = true;
+
+  // Reconstruire le plateau jusqu'à CE coup (inclus)
+  rebuildBoardAt(moveIdx);
+
+  // Afficher la barre d'inspection
+  const bar  = document.getElementById('board-inspect-bar');
+  const txt  = document.getElementById('board-inspect-text');
+  const p    = result.player === 1 ? gameData.p1_pseudo : gameData.p2_pseudo;
+  const cls  = { best:'✅ Meilleur', excellent:'👍 Excellent', good:'🟢 Bon',
+                 inaccuracy:'🟡 Imprécision', mistake:'⚠️ Erreur', blunder:'💀 Gaffe' };
+  if (txt) txt.textContent = `Coup ${moveIdx + 1} · ${p} · ${cls[result.classification] || ''}`;
+  if (bar) bar.classList.add('show');
+
+  // Surligner le coup joué
+  clearSeqHighlights();
+  if (result.playedCol !== undefined) {
+    const row = getTopRow(result.playedCol);
+    if (row >= 0) {
+      const c = getCell(row, result.playedCol);
+      if (c) c.classList.add('seq-played');
+    }
+  }
+
+  // Afficher la séquence optimale si erreur/gaffe/imprécision
+  if (['inaccuracy','mistake','blunder'].includes(result.classification) && result.optimalSeq?.length) {
+    showOptimalSeq(result.optimalSeq, moveIdx);
+  }
+
+  // Scroll vers le plateau
+  document.getElementById('board')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function rebuildBoardAt(upToMoveIdx) {
+  // Reset visuel
+  board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  renderBoard();
+  // Rejouer tous les coups jusqu'à upToMoveIdx inclus
+  for (let i = 0; i <= upToMoveIdx && i < moves.length; i++) {
+    const m      = moves[i];
+    const player = m.player_id === gameData.player1_id ? 1 : 2;
+    placeToken(m.row, m.col, player);
+  }
+}
+
+function showOptimalSeq(seq, afterMoveIdx) {
+  // Simuler le plateau AVANT le coup analysé pour trouver les bonnes rangées
+  const simBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  for (let i = 0; i < afterMoveIdx && i < moves.length; i++) {
+    const m = moves[i];
+    const player = m.player_id === gameData.player1_id ? 1 : 2;
+    // Trouver la rangée
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (simBoard[r][m.col] === 0) { simBoard[r][m.col] = player; break; }
+    }
+  }
+  // Afficher chaque coup de la séquence
+  let sb = simBoard.map(r => [...r]);
+  let player = (afterMoveIdx % 2 === 0) ? 1 : 2;
+  seq.forEach((col, i) => {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (sb[r][col] === 0) {
+        const c = getCell(r, col);
+        if (c) {
+          c.classList.add('seq-opt-' + Math.min(i, 4));
+          c.setAttribute('data-seq-num', i + 1);
+          c.classList.add('seq-highlight');
+        }
+        sb[r][col] = player;
+        break;
+      }
+    }
+    player = player === 1 ? 2 : 1;
+  });
+}
+
+function getTopRow(col) {
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][col] !== 0) return r;
+  }
+  return ROWS - 1;
+}
+
+function clearSeqHighlights() {
+  document.querySelectorAll('.seq-highlight, .seq-played').forEach(c => {
+    c.classList.remove('seq-highlight','seq-played','seq-opt-0','seq-opt-1','seq-opt-2','seq-opt-3','seq-opt-4');
+    c.removeAttribute('data-seq-num');
+  });
+}
+
+function clearInspect() {
+  inspectMode = false;
+  clearSeqHighlights();
+  document.getElementById('board-inspect-bar')?.classList.remove('show');
+  document.querySelectorAll('.analyse-move').forEach(el => el.classList.remove('highlighted'));
+  // Reprendre le replay là où il en était
+  scheduleNextMove();
 }
 </script>
