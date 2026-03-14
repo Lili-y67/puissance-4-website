@@ -782,7 +782,7 @@ function renderAnalysis(results, accuracy) {
       const score  = (p.ev.score / 100).toFixed(2);
       const signed = p.ev.score > 0 ? '+' + score : score;
       const pseudo = p.ev.player === 1 ? g.p1_pseudo : g.p2_pseudo;
-      const col    = evalHistory[i]?.player === 1 ? p1Color : p2Color;
+      const col    = p.ev.score > 5 ? p1Color : p.ev.score < -5 ? p2Color : 'rgba(238,238,245,0.5)';
       const zW     = step;
       return `<rect x="${(p.x - zW/2).toFixed(1)}" y="0" width="${zW.toFixed(1)}" height="${H}"
         fill="transparent" style="cursor:pointer"
