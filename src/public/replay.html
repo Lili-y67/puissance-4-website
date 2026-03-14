@@ -182,6 +182,7 @@ let replayTimeout = null;
 // Cap think time for replay: min 400ms, max 3000ms (to not bore the viewer)
 const MIN_THINK = 400;
 const MAX_THINK = 3000;
+let replaySpeed = 1; // multiplicateur de vitesse
 
 // ── Board state ───────────────────────────────────────────────────────────────
 let board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
@@ -334,7 +335,11 @@ function renderShell() {
     <div class="progress-wrap">
       <div class="progress-top">
         <span class="progress-label">Replay en cours</span>
-        <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Vitesse</span>
+          ${[1,2,4].map(s => `<button id="speed-btn-${s}" onclick="setSpeed(${s})" style="padding:2px 8px;border-radius:6px;border:1px solid ${s===1?'rgba(76,110,245,0.5)':'rgba(255,255,255,0.1)'};background:${s===1?'rgba(76,110,245,0.2)':'transparent'};color:${s===1?'#8b9cf4':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">x${s}</button>`).join('')}
+          <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
+        </div>
       </div>
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="prog-bar" style="width:0%"></div>
@@ -437,7 +442,20 @@ function startReplay() {
 function restartReplay() {
   clearTimeout(replayTimeout);
   document.getElementById('end-card').classList.remove('show');
+  setSpeed(1);
   startReplay();
+}
+
+function setSpeed(s) {
+  replaySpeed = s;
+  [1,2,4].forEach(v => {
+    const btn = document.getElementById('speed-btn-' + v);
+    if (!btn) return;
+    const active = v === s;
+    btn.style.background    = active ? 'rgba(76,110,245,0.2)' : 'transparent';
+    btn.style.borderColor   = active ? 'rgba(76,110,245,0.5)' : 'rgba(255,255,255,0.1)';
+    btn.style.color         = active ? '#8b9cf4' : 'var(--muted)';
+  });
 }
 
 function scheduleNextMove() {
@@ -452,7 +470,7 @@ function scheduleNextMove() {
   const rawThink  = move.think_ms || 500;
 
   // Cap think time for watchability
-  const thinkMs   = Math.min(Math.max(rawThink, MIN_THINK), MAX_THINK);
+  const thinkMs   = Math.round(Math.min(Math.max(rawThink, MIN_THINK), MAX_THINK) / replaySpeed);
 
   // Update think indicator
   const dot  = document.getElementById('think-dot');
@@ -490,7 +508,7 @@ function playMoveInReplay(move, player) {
   if (progCount) progCount.textContent = moveIndex + ' / ' + moves.length;
 
   // Small pause then next move
-  replayTimeout = setTimeout(scheduleNextMove, 200);
+  replayTimeout = setTimeout(scheduleNextMove, Math.round(200 / replaySpeed));
 }
 
 function finishReplay() {
@@ -612,6 +630,7 @@ const SFX = (() => {
 // ══════════════════════════════════════════════════════════════════════════════
 let analysisResults = [];
 let analysisWorker  = null;
+let evalHistory     = [];
 
 const CLS_LABELS = {
   best:       '✅ Meilleur',
@@ -622,28 +641,31 @@ const CLS_LABELS = {
   blunder:    '💀 Gaffe',
 };
 const CLS_COUNTS_LABEL = {
-  best:       'Meilleurs',
-  excellent:  'Excellents',
-  good:       'Bons',
-  inaccuracy: 'Imprécisions',
-  mistake:    'Erreurs',
-  blunder:    'Gaffes',
+  best:'Meilleurs', excellent:'Excellents', good:'Bons',
+  inaccuracy:'Imprécisions', mistake:'Erreurs', blunder:'Gaffes',
 };
+
+// Couleur selon % de précision
+function accColor(pct) {
+  if (pct >= 75) return '#30d158'; // vert
+  if (pct >= 50) return '#ffd60a'; // jaune
+  if (pct >= 25) return '#ff9f0a'; // orange
+  return '#ff2d55';                 // rouge
+}
 
 function startAnalysis() {
   const btn      = document.getElementById('analyse-btn');
   const progWrap = document.getElementById('analyse-progress');
   btn.style.display = 'none';
   progWrap.classList.add('show');
+  analysisResults = [];
+  evalHistory     = [];
 
-  // Extraire les colonnes jouées depuis le tableau moves
   const moveCols = moves.map(m => m.col ?? m.column ?? m);
-
   analysisWorker = new Worker('/analyse-worker.js');
 
   analysisWorker.onmessage = (e) => {
     const { type } = e.data;
-
     if (type === 'progress') {
       const { moveIndex, total } = e.data;
       const pct = Math.round(((moveIndex + 1) / total) * 100);
@@ -652,12 +674,11 @@ function startAnalysis() {
         `Coup ${moveIndex + 1} / ${total} — ${pct}%`;
       analysisResults.push(e.data.result);
     }
-
     if (type === 'done') {
+      evalHistory = e.data.evalHistory || [];
       progWrap.classList.remove('show');
       renderAnalysis(analysisResults, e.data.accuracy);
       analysisWorker.terminate();
-      // Sauvegarder en DB
       const gameId = getGameId();
       fetch(`/api/games/${gameId}/accuracy`, {
         method: 'POST',
@@ -666,29 +687,17 @@ function startAnalysis() {
       }).catch(() => {});
     }
   };
-
   analysisWorker.postMessage({ moves: moveCols });
 }
 
 function renderAnalysis(results, accuracy) {
   const panel = document.getElementById('analyse-panel');
   if (!panel) return;
+  const g      = gameData;
+  const cs     = getComputedStyle(document.documentElement);
+  const p1Color = cs.getPropertyValue('--p1-color').trim() || '#ff2d55';
+  const p2Color = cs.getPropertyValue('--p2-color').trim() || '#ffd60a';
 
-  const g = gameData;
-  const p1Color = getComputedStyle(document.documentElement).getPropertyValue('--p1-color').trim() || '#ff2d55';
-  const p2Color = getComputedStyle(document.documentElement).getPropertyValue('--p2-color').trim() || '#ffd60a';
-
-  // Précision couleur
-  function accColor(pct) {
-    if (pct >= 90) return '#30d158';
-    if (pct >= 75) return '#64d278';
-    if (pct >= 60) return '#8b9cf4';
-    if (pct >= 45) return '#ffd60a';
-    if (pct >= 30) return '#ff9f0a';
-    return '#ff2d55';
-  }
-
-  // Compter par classification par joueur
   function counts(player) {
     const r = results.filter(r => r.player === player);
     const c = { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0 };
@@ -696,12 +705,56 @@ function renderAnalysis(results, accuracy) {
     return c;
   }
   const c1 = counts(1), c2 = counts(2);
-
   function summaryChips(c) {
-    return Object.entries(c)
-      .filter(([, v]) => v > 0)
-      .map(([k, v]) => `<span class="summary-chip cls-${k}">${v} ${CLS_COUNTS_LABEL[k]}</span>`)
-      .join('');
+    return Object.entries(c).filter(([,v]) => v > 0)
+      .map(([k,v]) => `<span class="summary-chip cls-${k}">${v} ${CLS_COUNTS_LABEL[k]}</span>`).join('');
+  }
+
+  // Graphique d'évaluation
+  function buildEvalGraph() {
+    if (!evalHistory.length) return '';
+    const W = 100, H = 60;
+    const mid = H / 2;
+    const step = W / Math.max(evalHistory.length, 1);
+
+    // Ligne zéro
+    let path = `M0,${mid}`;
+    evalHistory.forEach((ev, i) => {
+      const x = (i + 0.5) * step;
+      // score positif = avantage J1 (haut), négatif = avantage J2 (bas)
+      const y = mid - (ev.score / 100) * (mid - 2);
+      path += ` L${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+
+    // Zone remplie J1 (au-dessus de la ligne médiane)
+    const areaP1 = path + ` L${W},${mid} L0,${mid} Z`;
+    // Zone remplie J2 (en-dessous)
+    const areaP2 = path + ` L${W},${mid} L0,${mid} Z`;
+
+    return `
+      <div style="margin-top:4px">
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">
+          📈 Évaluation de la partie
+        </div>
+        <div style="position:relative;width:100%;height:70px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--border);overflow:hidden">
+          <svg viewBox="0 0 100 60" preserveAspectRatio="none" style="width:100%;height:100%">
+            <defs>
+              <clipPath id="clip-top"><rect x="0" y="0" width="100" height="${mid}"/></clipPath>
+              <clipPath id="clip-bot"><rect x="0" y="${mid}" width="100" height="${mid}"/></clipPath>
+            </defs>
+            <!-- Zone J1 (avantage) -->
+            <path d="${areaP1}" fill="${p1Color}" fill-opacity="0.25" clip-path="url(#clip-top)"/>
+            <!-- Zone J2 (avantage) -->
+            <path d="${areaP2}" fill="${p2Color}" fill-opacity="0.25" clip-path="url(#clip-bot)"/>
+            <!-- Ligne médiane -->
+            <line x1="0" y1="${mid}" x2="100" y2="${mid}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>
+            <!-- Courbe -->
+            <path d="${path}" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+          </svg>
+          <div style="position:absolute;top:4px;left:8px;font-size:9px;color:${p1Color};font-weight:700">${g.p1_pseudo}</div>
+          <div style="position:absolute;bottom:4px;left:8px;font-size:9px;color:${p2Color};font-weight:700">${g.p2_pseudo}</div>
+        </div>
+      </div>`;
   }
 
   panel.innerHTML = `
@@ -713,19 +766,14 @@ function renderAnalysis(results, accuracy) {
       <div class="accuracy-row">
         <div class="accuracy-card">
           <div class="accuracy-pct" style="color:${accColor(accuracy.p1)}">${accuracy.p1}%</div>
-          <div class="accuracy-label">
-            <span class="accuracy-dot" style="background:${p1Color}"></span>
-            ${g.p1_pseudo}
-          </div>
+          <div class="accuracy-label"><span class="accuracy-dot" style="background:${p1Color}"></span>${g.p1_pseudo}</div>
         </div>
         <div class="accuracy-card">
           <div class="accuracy-pct" style="color:${accColor(accuracy.p2)}">${accuracy.p2}%</div>
-          <div class="accuracy-label">
-            <span class="accuracy-dot" style="background:${p2Color}"></span>
-            ${g.p2_pseudo}
-          </div>
+          <div class="accuracy-label"><span class="accuracy-dot" style="background:${p2Color}"></span>${g.p2_pseudo}</div>
         </div>
       </div>
+      ${buildEvalGraph()}
     </div>
 
     <!-- Résumé P1 -->
@@ -753,29 +801,45 @@ function renderAnalysis(results, accuracy) {
       </div>
       <div class="analyse-moves" id="analyse-moves">
         ${results.map((r, i) => {
-          const color = r.player === 1 ? p1Color : p2Color;
+          const color  = r.player === 1 ? p1Color : p2Color;
           const pseudo = r.player === 1 ? g.p1_pseudo : g.p2_pseudo;
-          const hint = r.classification !== 'best'
-            ? `<span class="am-best-hint">Meilleur : col. ${r.bestCol + 1}</span>` : '';
+          const isBad  = ['inaccuracy','mistake','blunder'].includes(r.classification);
+
+          // Séquence optimale
+          const seqHtml = (isBad && r.optimalSeq && r.optimalSeq.length > 0)
+            ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:8px;font-size:11px;color:rgba(238,238,245,0.6)">
+                 <span style="color:#30d158;font-weight:700;margin-right:4px">✦ Optimal :</span>
+                 ${r.optimalSeq.map((c,idx) => `<span style="color:#30d158;font-weight:700">col.${c+1}</span>${idx < r.optimalSeq.length-1 ? ' <span style="color:var(--muted)">→</span> ' : ''}`).join('')}
+               </div>`
+            : '';
+
+          const evalBar = r.evalScore !== undefined
+            ? `<div style="width:32px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;flex-shrink:0">
+                 <div style="height:100%;width:${Math.abs(r.evalScore)}%;background:${r.evalScore >= 0 ? p1Color : p2Color};border-radius:2px"></div>
+               </div>`
+            : '';
+
           return `<div class="analyse-move" id="am-${i}" onclick="jumpToMove(${r.moveIndex})">
             <span class="am-num">${i + 1}</span>
             <span class="am-dot" style="background:${color}"></span>
-            <span class="am-col">${pseudo} — col. ${r.playedCol + 1}</span>
-            ${hint}
-            <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="am-col">${pseudo} — col.${r.playedCol + 1}</span>
+                ${evalBar}
+                <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
+              </div>
+              ${seqHtml}
+              ${r.comment ? `<div style="margin-top:4px;font-size:10px;color:var(--muted);font-style:italic">${r.comment}</div>` : ''}
+            </div>
           </div>`;
         }).join('')}
       </div>
-    </div>
-  `;
-
+    </div>`;
   panel.classList.add('show');
-  // Scroll vers le panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function jumpToMove(idx) {
-  // Mettre en surbrillance dans la liste
   document.querySelectorAll('.analyse-move').forEach(el => el.classList.remove('highlighted'));
   const el = document.getElementById('am-' + analysisResults.findIndex(r => r.moveIndex === idx));
   if (el) el.classList.add('highlighted');
