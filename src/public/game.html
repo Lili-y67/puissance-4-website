@@ -468,15 +468,16 @@ function connectSocket(pendingMatch) {
   socket.on('identified', (p) => {
     myPlayer = p;
     if (pendingMatch) {
-      // Rejoindre la room côté serveur
       socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
-      // On setup le lobby côté client directement avec les données déjà connues
-      // Sans attendre le serveur — on a déjà tout dans pendingMatch
-      setupLobby(pendingMatch);
+      // setupLobby seulement si c'est une NOUVELLE partie (startsIn > 0)
+      // Si c'est un reload/rejoin, on attend game_rejoined du serveur
+      if (pendingMatch.startsIn > 0) {
+        setupLobby(pendingMatch);
+      }
+      // sinon : game_rejoined va gérer l'affichage directement
     }
   });
 
-  // Serveur confirme le rejoin (optionnel, on l'ignore si lobby déjà setup)
   socket.on('game_rejoined', (data) => {
     // Rejoin avec données complètes du serveur
     data.yourSide = data.side;
@@ -503,6 +504,7 @@ function connectSocket(pendingMatch) {
     updateTurnUI();
 
     // Reconstruire le plateau depuis la grille reçue
+    renderBoard(); // s'assurer que les cellules existent
     const grid = data.grid;
     for (let r = 0; r < 6; r++) {
       for (let c = 0; c < 7; c++) {
@@ -510,6 +512,17 @@ function connectSocket(pendingMatch) {
         if (v) applyToken(r, c, v);
       }
     }
+
+    // Fermer le banner de déconnexion + stopper le chrono s'il tourne
+    const banner = document.getElementById('disconnect-banner');
+    if (banner) {
+      if (banner._interval) { clearInterval(banner._interval); banner._interval = null; }
+      banner.classList.remove('show');
+    }
+
+    // Initialiser lobbyData pour que opponent_reconnected etc. fonctionnent
+    lobbyData = data;
+
     setStatus(currentTurn === mySide ? 'Ton tour' : 'Tour adversaire');
   });
   socket.on('game_not_found', () => { sessionStorage.setItem('no_auto_queue','1'); location.href = '/'; });
