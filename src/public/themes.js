@@ -1,8 +1,12 @@
 /**
- * themes.js — Système de thèmes v2
- * Ne touche JAMAIS --p1/--p2 (réservés aux couleurs joueurs)
+ * themes.js — Système de thèmes v3
+ * Custom = fond seulement (dégradé 1-3 couleurs)
+ * Reste de l'UI hérite du thème de base choisi
  */
 (function() {
+
+// Thèmes sombres vs clairs
+const LIGHT_THEMES = new Set(['pastel','light']);
 
 const THEMES = {
   default:  { label:'Défaut',  emoji:'🌑', vars:{ '--bg':'#06060e','--surface':'#0d0d1c','--surface2':'#13132a','--border':'rgba(255,255,255,0.06)','--text':'#eeeef5','--muted':'rgba(238,238,245,0.38)','--accent':'#4c6ef5','--grid':'#0d0d20','--cell':'#15153a','--red':'#ff2d55','--red-dim':'rgba(255,45,85,0.15)','--red-glow':'rgba(255,45,85,0.4)','--yellow':'#ffd60a','--yel-dim':'rgba(255,214,10,0.1)','--yel-glow':'rgba(255,214,10,0.4)','--green':'#30d158','--orange':'#ff9f0a' } },
@@ -12,80 +16,65 @@ const THEMES = {
   pastel:   { label:'Pastel',  emoji:'🌸', vars:{ '--bg':'#f0eef8','--surface':'#e8e4f4','--surface2':'#ddd8f0','--border':'rgba(0,0,0,0.08)','--text':'#2a2040','--muted':'rgba(42,32,64,0.45)','--accent':'#9b5be0','--grid':'#ddd8f0','--cell':'#c8c0e8','--red':'#e05b8a','--red-dim':'rgba(224,91,138,0.15)','--red-glow':'rgba(224,91,138,0.4)','--yellow':'#5b9ee0','--yel-dim':'rgba(91,158,224,0.1)','--yel-glow':'rgba(91,158,224,0.4)','--green':'#5bc87a','--orange':'#e08c5b' } },
   forest:   { label:'Forêt',   emoji:'🌿', vars:{ '--bg':'#040d06','--surface':'#0a1a0d','--surface2':'#122518','--border':'rgba(0,200,80,0.1)','--text':'#e8f5ec','--muted':'rgba(232,245,236,0.38)','--accent':'#00aa44','--grid':'#061008','--cell':'#030a04','--red':'#00cc55','--red-dim':'rgba(0,204,85,0.15)','--red-glow':'rgba(0,204,85,0.5)','--yellow':'#aaee00','--yel-dim':'rgba(170,238,0,0.1)','--yel-glow':'rgba(170,238,0,0.5)','--green':'#00ff88','--orange':'#88cc00' } },
   midnight: { label:'Minuit',  emoji:'🌙', vars:{ '--bg':'#0a0a12','--surface':'#12121e','--surface2':'#1a1a2e','--border':'rgba(150,130,255,0.1)','--text':'#e8e8ff','--muted':'rgba(232,232,255,0.35)','--accent':'#6655ee','--grid':'#0d0d1a','--cell':'#080812','--red':'#8866ff','--red-dim':'rgba(136,102,255,0.15)','--red-glow':'rgba(136,102,255,0.5)','--yellow':'#ffaa44','--yel-dim':'rgba(255,170,68,0.1)','--yel-glow':'rgba(255,170,68,0.5)','--green':'#44ddaa','--orange':'#ee7744' } },
+  light:    { label:'Clair',   emoji:'☀️', vars:{ '--bg':'#f5f5f7','--surface':'#ffffff','--surface2':'#ebebed','--border':'rgba(0,0,0,0.08)','--text':'#1d1d1f','--muted':'rgba(29,29,31,0.45)','--accent':'#0066cc','--grid':'#e8e8ea','--cell':'#d4d4d6','--red':'#cc2d55','--red-dim':'rgba(204,45,85,0.12)','--red-glow':'rgba(204,45,85,0.35)','--yellow':'#b8860b','--yel-dim':'rgba(184,134,11,0.1)','--yel-glow':'rgba(184,134,11,0.35)','--green':'#1a7a34','--orange':'#c14a00' } },
 };
 
-let currentThemeName = 'default';
+let currentBase = 'default'; // thème de base utilisé par le custom
 
-function hexToRgba(hex, a) {
-  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function applyTheme(name, customVars) {
-  currentThemeName = name;
-  let vars;
-  if (name === 'custom') {
-    try { vars = customVars || JSON.parse(localStorage.getItem('theme_custom') || 'null')?.vars; } catch {}
-    if (!vars) vars = THEMES.default.vars;
-  } else {
-    vars = (THEMES[name] || THEMES.default).vars;
-  }
+function applyTheme(name) {
   const root = document.documentElement;
-  for (const [k,v] of Object.entries(vars)) root.style.setProperty(k, v);
+
+  if (name === 'custom') {
+    // 1. Appliquer le thème de base sauvegardé (sans --bg)
+    const base = localStorage.getItem('custom_base') || 'default';
+    currentBase = base;
+    const baseVars = (THEMES[base] || THEMES.default).vars;
+    for (const [k,v] of Object.entries(baseVars)) {
+      if (k !== '--bg') root.style.setProperty(k, v);
+    }
+    // 2. Appliquer le fond custom par-dessus
+    const customBg = buildBgValue();
+    if (customBg) root.style.setProperty('--bg', customBg);
+  } else {
+    currentBase = name;
+    const vars = (THEMES[name] || THEMES.default).vars;
+    for (const [k,v] of Object.entries(vars)) root.style.setProperty(k, v);
+  }
+
   localStorage.setItem('theme', name);
+  // Mettre à jour le toggle mode si présent
+  if (typeof updateModeToggle === 'function') updateModeToggle();
   document.querySelectorAll('.theme-pick-btn').forEach(b => {
     const active = b.dataset.theme === name;
     b.classList.toggle('active', active);
-    b.style.borderColor = active ? 'var(--accent)' : 'transparent';
+    b.style.borderColor = active ? 'var(--accent,#4c6ef5)' : 'transparent';
     b.style.background  = active ? 'rgba(100,100,255,0.12)' : 'transparent';
   });
 }
 
-function buildCustomVars() {
-  const get = (id, def) => { const el=document.getElementById('tc-'+id); const v=el?el.value:def; localStorage.setItem('tcustom_'+id,v); return v; };
-  const c1  = get('bg1','#06060e');
-  const c2  = get('bg2','#0d0d2e');
-  const c3  = get('bg3','#1a0a2e');
-  const use3 = document.getElementById('tc-use3')?.checked ?? (localStorage.getItem('tcustom_use3')==='1');
-  const style = document.getElementById('tc-style')?.value ?? localStorage.getItem('tcustom_style') ?? 'linear-tb';
-  localStorage.setItem('tcustom_use3', use3 ? '1' : '0');
-  localStorage.setItem('tcustom_style', style);
-
-  // Construire le fond
-  const stops = use3 ? `${c1}, ${c2}, ${c3}` : `${c1}, ${c2}`;
-  let bg;
-  if (style === 'solid')       bg = c1;
-  else if (style === 'linear-tb')  bg = `linear-gradient(to bottom, ${stops})`;
-  else if (style === 'linear-br')  bg = `linear-gradient(135deg, ${stops})`;
-  else if (style === 'radial') bg = `radial-gradient(ellipse at center, ${stops})`;
-  else if (style === 'radial-tl') bg = `radial-gradient(ellipse at top left, ${stops})`;
-  else bg = `linear-gradient(to bottom, ${stops})`;
-
-  const surf = get('surface','#0d0d1c');
-  const acc  = get('accent','#4c6ef5');
-  const txt  = get('text','#eeeef5');
-  const grid = get('grid','#0a0a18');
-  const cell = get('cell','#07071a');
-  const r=parseInt(surf.slice(1,3),16), g=parseInt(surf.slice(3,5),16), bb=parseInt(surf.slice(5,7),16);
-  return {
-    '--bg':bg,'--surface':surf,'--surface2':`rgb(${Math.min(255,r+12)},${Math.min(255,g+12)},${Math.min(255,bb+12)})`,
-    '--border':hexToRgba(acc,0.12),'--text':txt,'--muted':hexToRgba(txt,0.4),
-    '--accent':acc,'--grid':grid,'--cell':cell,
-    '--red':acc,'--red-dim':hexToRgba(acc,0.15),'--red-glow':hexToRgba(acc,0.45),
-    '--yellow':'#ffd60a','--yel-dim':'rgba(255,214,10,0.1)','--yel-glow':'rgba(255,214,10,0.4)',
-    '--green':'#30d158','--orange':'#ff9f0a',
-  };
+function buildBgValue() {
+  const c1 = localStorage.getItem('tcustom_c1') || '#06060e';
+  const c2 = localStorage.getItem('tcustom_c2') || '#0d0d2e';
+  const c3 = localStorage.getItem('tcustom_c3') || '#1a0a2e';
+  const n  = parseInt(localStorage.getItem('tcustom_n') || '2');
+  const st = localStorage.getItem('tcustom_style') || 'linear-tb';
+  const stops = n === 1 ? c1 : n === 3 ? `${c1}, ${c2}, ${c3}` : `${c1}, ${c2}`;
+  if (st === 'solid')      return c1;
+  if (st === 'linear-tb')  return `linear-gradient(to bottom, ${stops})`;
+  if (st === 'linear-br')  return `linear-gradient(135deg, ${stops})`;
+  if (st === 'radial')     return `radial-gradient(ellipse at center, ${stops})`;
+  if (st === 'radial-tl')  return `radial-gradient(ellipse at top left, ${stops})`;
+  return `linear-gradient(to bottom, ${stops})`;
 }
 
 function buildPicker() {
-  // Appliquer thème sauvegardé immédiatement
   applyTheme(localStorage.getItem('theme') || 'default');
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;';
 
   const menu = document.createElement('div');
-  menu.style.cssText = 'display:none;flex-direction:column;gap:3px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);min-width:155px;';
+  menu.style.cssText = 'display:none;flex-direction:column;gap:3px;background:var(--surface,#0d0d1c);border:1px solid var(--border,rgba(255,255,255,0.06));border-radius:16px;padding:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);min-width:155px;';
 
   // Thèmes prédéfinis
   for (const [key, theme] of Object.entries(THEMES)) {
@@ -93,7 +82,7 @@ function buildPicker() {
     btn.className = 'theme-pick-btn';
     btn.dataset.theme = key;
     btn.textContent = theme.emoji + ' ' + theme.label;
-    btn.style.cssText = 'width:100%;padding:7px 11px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;';
+    btn.style.cssText = 'width:100%;padding:7px 11px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text,#eeeef5);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;';
     btn.addEventListener('click', () => { applyTheme(key); customP.style.display='none'; });
     btn.addEventListener('mouseenter', () => { if(!btn.classList.contains('active')) btn.style.background='rgba(255,255,255,0.05)'; });
     btn.addEventListener('mouseleave', () => { if(!btn.classList.contains('active')) btn.style.background='transparent'; });
@@ -102,159 +91,207 @@ function buildPicker() {
 
   // Séparateur + Custom
   const sep = document.createElement('div');
-  sep.style.cssText = 'height:1px;background:var(--border);margin:4px 0;';
+  sep.style.cssText = 'height:1px;background:var(--border,rgba(255,255,255,0.06));margin:4px 0;';
   menu.appendChild(sep);
 
   const customBtn = document.createElement('button');
   customBtn.className = 'theme-pick-btn';
   customBtn.dataset.theme = 'custom';
   customBtn.textContent = '🎨 Custom';
-  customBtn.style.cssText = 'width:100%;padding:7px 11px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;';
+  customBtn.style.cssText = 'width:100%;padding:7px 11px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text,#eeeef5);font-size:13px;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;font-family:inherit;';
   customBtn.addEventListener('click', () => { customP.style.display = customP.style.display==='none'?'flex':'none'; });
   menu.appendChild(customBtn);
 
-  // Panel custom
+  // ── Panel custom ──────────────────────────────────────────────────────────
   const customP = document.createElement('div');
-  customP.style.cssText = 'display:none;flex-direction:column;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:4px;';
-  // Section Fond dégradé
-  const bgSec = document.createElement('div');
-  bgSec.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+  customP.style.cssText = 'display:none;flex-direction:column;gap:10px;background:var(--surface,#0d0d1c);border:1px solid var(--border,rgba(255,255,255,0.06));border-radius:12px;padding:14px;margin-top:4px;min-width:220px;';
 
-  const bgTitle = document.createElement('div');
-  bgTitle.style.cssText = 'font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);';
-  bgTitle.textContent = '🎨 Arrière-plan';
-  bgSec.appendChild(bgTitle);
+  // Titre
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted,rgba(238,238,245,0.4));font-weight:700;';
+  title.textContent = 'Fond personnalisé';
+  customP.appendChild(title);
 
-  // Style selector
+  // Thème de base (pour surface, texte, etc.)
+  const baseRow = document.createElement('div');
+  baseRow.style.cssText = 'display:flex;flex-direction:column;gap:5px;';
+  const baseLabel = document.createElement('div');
+  baseLabel.style.cssText = 'font-size:11px;color:var(--muted,rgba(238,238,245,0.4));';
+  baseLabel.textContent = 'Interface de base';
+  baseRow.appendChild(baseLabel);
+  const baseBtns = document.createElement('div');
+  baseBtns.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
+  const savedBase = localStorage.getItem('custom_base') || 'default';
+  for (const [key, theme] of Object.entries(THEMES)) {
+    const bb = document.createElement('button');
+    bb.dataset.base = key;
+    bb.textContent = theme.emoji;
+    bb.title = theme.label;
+    bb.style.cssText = `width:28px;height:28px;border-radius:6px;border:1px solid ${key===savedBase?'var(--accent,#4c6ef5)':'var(--border,rgba(255,255,255,0.06))'};background:${key===savedBase?'rgba(100,100,255,0.12)':'transparent'};cursor:pointer;font-size:14px;transition:all 0.15s;`;
+    bb.addEventListener('click', () => {
+      document.querySelectorAll('[data-base]').forEach(b => { b.style.borderColor='var(--border,rgba(255,255,255,0.06))'; b.style.background='transparent'; });
+      bb.style.borderColor='var(--accent,#4c6ef5)'; bb.style.background='rgba(100,100,255,0.12)';
+      localStorage.setItem('custom_base', key);
+    });
+    baseBtns.appendChild(bb);
+  }
+  baseRow.appendChild(baseBtns);
+  customP.appendChild(baseRow);
+
+  // Style dégradé
+  const styleLabel = document.createElement('div');
+  styleLabel.style.cssText = 'font-size:11px;color:var(--muted,rgba(238,238,245,0.4));';
+  styleLabel.textContent = 'Style';
+  customP.appendChild(styleLabel);
   const styleRow = document.createElement('div');
   styleRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
-  const styles = [['solid','Uni'],['linear-tb','↓ Linéaire'],['linear-br','↘ Diagonal'],['radial','◉ Radial'],['radial-tl','◎ Coin']];
+  const STYLES = [['solid','■ Uni'],['linear-tb','↓ Bas'],['linear-br','↘ Diag'],['radial','◉ Centre'],['radial-tl','◎ Coin']];
   const savedStyle = localStorage.getItem('tcustom_style') || 'linear-tb';
-  styles.forEach(([val,lbl]) => {
+  const styleHidden = document.createElement('input');
+  styleHidden.type='hidden'; styleHidden.id='tc-style'; styleHidden.value=savedStyle;
+  STYLES.forEach(([val,lbl]) => {
     const sb = document.createElement('button');
-    sb.id = 'tcstyle-'+val;
     sb.textContent = lbl;
-    sb.dataset.val = val;
-    sb.style.cssText = `padding:3px 7px;border-radius:6px;border:1px solid ${val===savedStyle?'var(--accent)':'var(--border)'};background:${val===savedStyle?'rgba(100,100,255,0.15)':'transparent'};color:var(--text);font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s;`;
+    sb.style.cssText = `padding:4px 8px;border-radius:6px;border:1px solid ${val===savedStyle?'var(--accent,#4c6ef5)':'var(--border,rgba(255,255,255,0.06))'};background:${val===savedStyle?'rgba(100,100,255,0.15)':'transparent'};color:var(--text,#eeeef5);font-size:10px;cursor:pointer;font-family:inherit;transition:all 0.15s;`;
     sb.addEventListener('click', () => {
-      document.querySelectorAll('[id^="tcstyle-"]').forEach(b => { b.style.borderColor='var(--border)'; b.style.background='transparent'; });
-      sb.style.borderColor='var(--accent)'; sb.style.background='rgba(100,100,255,0.15)';
-      document.getElementById('tc-style').value = val;
+      styleRow.querySelectorAll('button').forEach(b => { b.style.borderColor='var(--border,rgba(255,255,255,0.06))'; b.style.background='transparent'; });
+      sb.style.borderColor='var(--accent,#4c6ef5)'; sb.style.background='rgba(100,100,255,0.15)';
+      styleHidden.value = val;
       localStorage.setItem('tcustom_style', val);
       livePreview();
     });
     styleRow.appendChild(sb);
   });
-  const styleInput = document.createElement('input');
-  styleInput.type='hidden'; styleInput.id='tc-style'; styleInput.value=savedStyle;
-  styleRow.appendChild(styleInput);
-  bgSec.appendChild(styleRow);
+  styleRow.appendChild(styleHidden);
+  customP.appendChild(styleRow);
 
-  // Couleurs dégradé
-  const colorRow = document.createElement('div');
-  colorRow.style.cssText = 'display:flex;align-items:center;gap:8px;';
-  const use3saved = localStorage.getItem('tcustom_use3')==='1';
-  const colDefs = [['bg1','#06060e'],['bg2','#0d0d2e'],['bg3','#1a0a2e']];
-  colDefs.forEach(([k,def],i) => {
-    const saved = localStorage.getItem('tcustom_'+k) || def;
+  // Couleurs — jusqu'à 3
+  const colLabel = document.createElement('div');
+  colLabel.style.cssText = 'font-size:11px;color:var(--muted,rgba(238,238,245,0.4));';
+  colLabel.textContent = 'Couleurs (1-3)';
+  customP.appendChild(colLabel);
+
+  const colsWrap = document.createElement('div');
+  colsWrap.style.cssText = 'display:flex;align-items:center;gap:8px;';
+
+  const savedN = parseInt(localStorage.getItem('tcustom_n') || '2');
+  const savedCols = [
+    localStorage.getItem('tcustom_c1') || '#06060e',
+    localStorage.getItem('tcustom_c2') || '#0d0d2e',
+    localStorage.getItem('tcustom_c3') || '#1a0a2e',
+  ];
+
+  // Les 3 color pickers
+  for (let i = 0; i < 3; i++) {
     const inp = document.createElement('input');
-    inp.type='color'; inp.id='tc-'+k; inp.value=saved;
-    inp.style.cssText = `width:32px;height:28px;border:none;background:transparent;cursor:pointer;border-radius:6px;${i===2&&!use3saved?'opacity:0.3;pointer-events:none;':''}`;
-    inp.addEventListener('input', livePreview);
-    colorRow.appendChild(inp);
-    if (i===1) {
-      // Toggle 3ème couleur
-      const tog = document.createElement('button');
-      tog.id='tc-use3-btn'; tog.title='Ajouter une 3ème couleur';
-      tog.textContent = use3saved ? '−' : '+';
-      tog.style.cssText = 'width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;';
-      tog.addEventListener('click', () => {
-        const cb = document.getElementById('tc-use3');
-        cb.checked = !cb.checked;
-        localStorage.setItem('tcustom_use3', cb.checked?'1':'0');
-        const c3inp = document.getElementById('tc-bg3');
-        if (c3inp) { c3inp.style.opacity=cb.checked?'1':'0.3'; c3inp.style.pointerEvents=cb.checked?'auto':'none'; }
-        tog.textContent = cb.checked ? '−' : '+';
-        livePreview();
-      });
-      colorRow.appendChild(tog);
-      const cb = document.createElement('input');
-      cb.type='checkbox'; cb.id='tc-use3'; cb.checked=use3saved; cb.style.display='none';
-      colorRow.appendChild(cb);
-    }
-  });
-  bgSec.appendChild(colorRow);
+    inp.type = 'color';
+    inp.id = 'tc-c' + (i+1);
+    inp.value = savedCols[i];
+    inp.style.cssText = `width:36px;height:32px;border:2px solid var(--border,rgba(255,255,255,0.06));background:transparent;cursor:pointer;border-radius:8px;transition:opacity 0.2s;${i >= savedN ? 'opacity:0.25;pointer-events:none;' : ''}`;
+    inp.addEventListener('input', () => { localStorage.setItem('tcustom_c'+(i+1), inp.value); livePreview(); });
+    colsWrap.appendChild(inp);
+  }
 
-  // Preview miniature
+  // Boutons − et + pour changer le nombre de couleurs
+  const nWrap = document.createElement('div');
+  nWrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-left:4px;';
+  const nDisplay = document.createElement('span');
+  nDisplay.style.cssText = 'font-size:12px;color:var(--muted,rgba(238,238,245,0.4));min-width:16px;text-align:center;';
+  nDisplay.textContent = savedN;
+
+  let currentN = savedN;
+  function updateN(delta) {
+    currentN = Math.max(1, Math.min(3, currentN + delta));
+    localStorage.setItem('tcustom_n', currentN);
+    nDisplay.textContent = currentN;
+    for (let i = 0; i < 3; i++) {
+      const el = document.getElementById('tc-c'+(i+1));
+      if (!el) continue;
+      const active = i < currentN;
+      el.style.opacity = active ? '1' : '0.25';
+      el.style.pointerEvents = active ? 'auto' : 'none';
+    }
+    livePreview();
+  }
+
+  const btnMinus = document.createElement('button');
+  btnMinus.textContent = '−';
+  btnMinus.style.cssText = 'width:22px;height:22px;border-radius:50%;border:1px solid var(--border,rgba(255,255,255,0.06));background:transparent;color:var(--muted,rgba(238,238,245,0.4));cursor:pointer;font-size:16px;line-height:1;font-family:inherit;';
+  btnMinus.addEventListener('click', () => updateN(-1));
+
+  const btnPlus = document.createElement('button');
+  btnPlus.textContent = '+';
+  btnPlus.style.cssText = 'width:22px;height:22px;border-radius:50%;border:1px solid var(--border,rgba(255,255,255,0.06));background:transparent;color:var(--muted,rgba(238,238,245,0.4));cursor:pointer;font-size:16px;line-height:1;font-family:inherit;';
+  btnPlus.addEventListener('click', () => updateN(+1));
+
+  nWrap.append(btnMinus, nDisplay, btnPlus);
+  colsWrap.appendChild(nWrap);
+  customP.appendChild(colsWrap);
+
+  // Preview
   const preview = document.createElement('div');
   preview.id = 'tc-preview';
-  preview.style.cssText = 'height:32px;border-radius:8px;border:1px solid var(--border);transition:background 0.3s;';
-  bgSec.appendChild(preview);
-  customP.appendChild(bgSec);
+  preview.style.cssText = 'height:36px;border-radius:10px;border:1px solid var(--border,rgba(255,255,255,0.06));transition:background 0.3s;';
+  customP.appendChild(preview);
 
-  // Séparateur
-  const sep2 = document.createElement('div');
-  sep2.style.cssText = 'height:1px;background:var(--border);margin:2px 0;';
-  customP.appendChild(sep2);
-
-  // Autres couleurs
-  const otherTitle = document.createElement('div');
-  otherTitle.style.cssText = 'font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:2px;';
-  otherTitle.textContent = '⚙️ Interface';
-  customP.appendChild(otherTitle);
-
-  const rows = [['surface','Surface','#0d0d1c'],['accent','Accent','#4c6ef5'],['text','Texte','#eeeef5'],['grid','Plateau','#0a0a18'],['cell','Cellules','#07071a']];
-  rows.forEach(([k,label,def]) => {
-    const saved = localStorage.getItem('tcustom_'+k) || def;
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;';
-    const inp2 = document.createElement('input');
-    inp2.type='color'; inp2.id='tc-'+k; inp2.value=saved;
-    inp2.style.cssText='width:32px;height:24px;border:none;background:transparent;cursor:pointer;border-radius:4px;';
-    inp2.addEventListener('input', livePreview);
-    row.innerHTML = `<span style="font-size:12px;color:var(--muted)">${label}</span>`;
-    row.appendChild(inp2);
-    customP.appendChild(row);
+  // Bouton Appliquer
+  const applyBtn = document.createElement('button');
+  applyBtn.textContent = '✓ Appliquer';
+  applyBtn.style.cssText = 'width:100%;padding:9px;border-radius:8px;border:none;background:var(--accent,#4c6ef5);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.5px;';
+  applyBtn.addEventListener('click', () => {
+    applyTheme('custom');
+    customP.style.display = 'none';
   });
+  customP.appendChild(applyBtn);
 
   function livePreview() {
-    const c1v = document.getElementById('tc-bg1')?.value||'#06060e';
-    const c2v = document.getElementById('tc-bg2')?.value||'#0d0d2e';
-    const c3v = document.getElementById('tc-bg3')?.value||'#1a0a2e';
-    const u3  = document.getElementById('tc-use3')?.checked;
-    const stv = document.getElementById('tc-style')?.value||'linear-tb';
-    const stops = u3 ? `${c1v}, ${c2v}, ${c3v}` : `${c1v}, ${c2v}`;
-    let bg2;
-    if(stv==='solid') bg2=c1v;
-    else if(stv==='linear-tb') bg2=`linear-gradient(to bottom, ${stops})`;
-    else if(stv==='linear-br') bg2=`linear-gradient(135deg, ${stops})`;
-    else if(stv==='radial') bg2=`radial-gradient(ellipse at center, ${stops})`;
-    else if(stv==='radial-tl') bg2=`radial-gradient(ellipse at top left, ${stops})`;
-    else bg2=`linear-gradient(to bottom, ${stops})`;
+    const bg = buildBgValue();
     const pv = document.getElementById('tc-preview');
-    if(pv) pv.style.background = bg2;
+    if (pv) pv.style.background = bg;
   }
   setTimeout(livePreview, 50);
-  const applyBtn2 = document.createElement('button');
-  applyBtn2.textContent = 'Appliquer';
-  applyBtn2.style.cssText = 'width:100%;padding:8px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-top:4px;font-family:inherit;';
-  applyBtn2.addEventListener('click', () => {
-    const vars = buildCustomVars();
-    localStorage.setItem('theme_custom', JSON.stringify({vars}));
-    applyTheme('custom', vars);
-  });
-  customP.appendChild(applyBtn2);
+
   menu.appendChild(customP);
 
-  // Toggle
+  // Toggle 🌙/☀️ mode clair/sombre
+  const modeToggle = document.createElement('button');
+  function updateModeToggle() {
+    const cur = localStorage.getItem('theme') || 'default';
+    const isLight = LIGHT_THEMES.has(cur);
+    modeToggle.textContent = isLight ? '🌙' : '☀️';
+    modeToggle.title = isLight ? 'Passer en mode sombre' : 'Passer en mode clair';
+  }
+  modeToggle.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid var(--border,rgba(255,255,255,0.06));background:var(--surface,#0d0d1c);color:var(--muted,rgba(238,238,245,0.5));font-size:18px;cursor:pointer;backdrop-filter:blur(10px);transition:all 0.2s;display:flex;align-items:center;justify-content:center;';
+  updateModeToggle();
+  modeToggle.addEventListener('click', e => {
+    e.stopPropagation();
+    const cur = localStorage.getItem('theme') || 'default';
+    const isLight = LIGHT_THEMES.has(cur);
+    // Basculer vers l'opposé
+    const target = isLight ? 'default' : 'light';
+    applyTheme(target);
+    updateModeToggle();
+    menu.style.display = 'none';
+    customP.style.display = 'none';
+  });
+
+  // Toggle 🎨
   const toggle = document.createElement('button');
   toggle.textContent = '🎨';
   toggle.title = 'Thèmes';
-  toggle.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:18px;cursor:pointer;backdrop-filter:blur(10px);transition:all 0.2s;display:flex;align-items:center;justify-content:center;';
-  toggle.addEventListener('click', e => { e.stopPropagation(); const o=menu.style.display==='flex'; menu.style.display=o?'none':'flex'; if(o)customP.style.display='none'; });
-  document.addEventListener('click', e => { if(!wrap.contains(e.target)){menu.style.display='none';customP.style.display='none';} });
+  toggle.style.cssText = 'width:38px;height:38px;border-radius:10px;border:1px solid var(--border,rgba(255,255,255,0.06));background:var(--surface,#0d0d1c);color:var(--muted,rgba(238,238,245,0.5));font-size:18px;cursor:pointer;backdrop-filter:blur(10px);transition:all 0.2s;display:flex;align-items:center;justify-content:center;';
+  toggle.addEventListener('click', e => {
+    e.stopPropagation();
+    const o = menu.style.display === 'flex';
+    menu.style.display = o ? 'none' : 'flex';
+    if (o) customP.style.display = 'none';
+  });
+  document.addEventListener('click', e => {
+    if (!wrap.contains(e.target)) { menu.style.display='none'; customP.style.display='none'; }
+  });
 
   wrap.appendChild(menu);
+  wrap.appendChild(modeToggle);
   wrap.appendChild(toggle);
   document.body.appendChild(wrap);
 

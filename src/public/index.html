@@ -68,12 +68,12 @@ html, body {
   animation: fall linear infinite;
 }
 .token-fall.red {
-  background: radial-gradient(circle at 35% 35%, #ff6b85, var(--red));
-  box-shadow: 0 0 20px var(--red-glow);
+  background: radial-gradient(circle at 35% 35%, #ff6b85, #ff2d55);
+  box-shadow: 0 0 20px rgba(255,45,85,0.4);
 }
 .token-fall.yellow {
-  background: radial-gradient(circle at 35% 35%, #ffe566, var(--yellow));
-  box-shadow: 0 0 20px var(--yel-glow);
+  background: radial-gradient(circle at 35% 35%, #ffe566, #ffd60a);
+  box-shadow: 0 0 20px rgba(255,214,10,0.4);
 }
 @keyframes fall {
   0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
