@@ -421,24 +421,26 @@ window.addEventListener('DOMContentLoaded', () => {
   const iaData = sessionStorage.getItem('vs_ia');
   if (iaData) {
     sessionStorage.removeItem('vs_ia');
+    if (history.replaceState) history.replaceState(null, '', '/game/bot');
     startVsIA(JSON.parse(iaData));
   } else {
     // Récupérer le gameId depuis l'URL /game/:id ou depuis sessionStorage
     const urlGameId = location.pathname.split('/').pop();
+    // /game/bot → pas de rejoin réseau possible, rediriger
+    if (urlGameId === 'bot') {
+      location.href = '/';
+      return;
+    }
     const urlId = urlGameId && urlGameId !== 'game' ? Number(urlGameId) : null;
 
     if (mData) {
       const match = JSON.parse(mData);
-      // Garder match en sessionStorage pour permettre le reload
-      // On le nettoie seulement quand la partie est terminée
       if (urlId && match.gameId !== urlId) {
-        // URL différente du match en session → rejoin par URL
         connectSocket({ gameId: urlId, players: match.players });
       } else {
         connectSocket(match);
       }
     } else if (urlId) {
-      // Arrivée directe par URL /game/:id
       connectSocket({ gameId: urlId });
     } else {
       location.href = '/';
@@ -556,8 +558,8 @@ function connectSocket(pendingMatch) {
 
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
-  // Mettre à jour l'URL avec le gameId pour permettre le reload
-  if (data.gameId && history.replaceState) {
+  // Mettre à jour l'URL avec le gameId pour permettre le reload (pas en mode IA)
+  if (data.gameId && !iaMode && history.replaceState) {
     history.replaceState(null, '', '/game/' + data.gameId);
     // Mettre à jour le match en sessionStorage avec le gameId
     const stored = sessionStorage.getItem('match');

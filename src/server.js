@@ -7,7 +7,7 @@ const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
 const { getRank } = require('./rank');
-const { Client, GatewayIntentBits, EmbedBuilder, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes } = require('discord.js');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers  = new Map(); // ip → Set of playerIds
@@ -53,6 +53,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── SPA routing ────────────────────────────────────────────────────────────────
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+app.get('/game/bot',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1378,10 +1379,28 @@ function startBot() {
     } catch(e) {}
   }
 
-  bot.once('ready', () => {
+  bot.once('ready', async () => {
     console.log(`✅ Bot connecté : ${bot.user.tag}`);
     updateStatus();
     setInterval(updateStatus, 10000);
+
+    // Enregistrer les commandes slash automatiquement
+    try {
+      const rest = new REST({ version: '10' }).setToken(botToken);
+      const commands = [
+        {
+          name: 'profil',
+          description: "Affiche le profil d'un joueur Puissance 4",
+          options: [{ name: 'pseudo', description: 'Le pseudo du joueur', type: 3, required: true }],
+        },
+        { name: 'classement', description: 'Affiche le top 10 des joueurs par ELO' },
+        { name: 'live',       description: 'Affiche les parties en cours' },
+      ];
+      await rest.put(Routes.applicationCommands(bot.user.id), { body: commands });
+      console.log('✅ Commandes slash enregistrées');
+    } catch(e) {
+      console.error('[BOT] Erreur enregistrement commandes:', e.message);
+    }
   });
 
   // ── Commandes slash ───────────────────────────────────────────────────────
