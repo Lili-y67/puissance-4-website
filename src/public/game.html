@@ -810,7 +810,7 @@ function updateTurnUI() {
     setStatus('<span class="dots">En attente<span>.</span><span>.</span><span>.</span></span>', true);
     // Afficher l'ID de la partie
     const badge = document.getElementById('game-id-badge');
-    if (badge && data.gameId) badge.textContent = '#' + data.gameId;
+    if (badge && gameId) badge.textContent = '#' + gameId;
   }
 }
 
