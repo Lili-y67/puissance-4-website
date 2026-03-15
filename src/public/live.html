@@ -21,7 +21,7 @@
   --grid:     #0a0a18;
   --cell:     #07071a;
 }
-html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
+html, body { min-height: 100%; background: var(--bg); background-attachment: fixed; color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
 
 .bg-grid {
   position: fixed; inset: 0; z-index: 0;
@@ -145,7 +145,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 
   <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
-  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 2 secondes</div>
+  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 10s</div>
 
   <div class="games-grid" id="games-grid">
     <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
@@ -153,7 +153,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 </div>
 
 <script>
-const REFRESH_MS = 2000;
+const REFRESH_MS = 3000;
 
 const SHAPE_CLIPS = {
   circle:   { borderRadius: '50%', clipPath: '' },

@@ -28,7 +28,7 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
+  background: var(--bg); background-attachment: fixed;
   color: var(--text);
   font-family: 'Barlow', sans-serif;
   overflow-x: hidden;
@@ -965,7 +965,11 @@ function showQueueView(position) {
       avatarWrap.style.display = 'flex';
     }
   }, 250);
+  // Clear tout interval précédent avant d'en relancer un
+  clearInterval(timerInterval);
+  timerInterval = null;
   queueStart    = Date.now();
+  document.getElementById('queue-timer').textContent = '00:00';
   timerInterval = setInterval(updateTimer, 1000);
 }
 
