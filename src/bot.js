@@ -2,7 +2,7 @@
  * bot.js — Bot Discord Puissance 4
  * Commandes : /profil /classement /live
  */
-const { Client, GatewayIntentBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
 const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
 const API       = 'https://puissance-4-website-ranked-production.up.railway.app';
@@ -42,7 +42,7 @@ client.on('interactionCreate', async interaction => {
       const data   = await apiFetch(`/api/players/by-pseudo/${encodeURIComponent(pseudo)}`);
 
       if (!data || data.error) {
-        return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` ,flags : MessageFlags.Ephemeral});
+        return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
       }
 
       // Charger le profil complet pour les games
@@ -91,7 +91,7 @@ client.on('interactionCreate', async interaction => {
     // ── /classement ──────────────────────────────────────────────────────────
     if (interaction.commandName === 'classement') {
       const players = await apiFetch('/api/leaderboard');
-      if (!players?.length) return interaction.editReply({ content: '❌ Impossible de charger le classement.' ,flags : MessageFlags.Ephemeral});
+      if (!players?.length) return interaction.editReply({ content: '❌ Impossible de charger le classement.' });
 
       const medals = ['🥇', '🥈', '🥉'];
       const lines  = players.map((p, i) => {
@@ -115,7 +115,7 @@ client.on('interactionCreate', async interaction => {
       const games = data?.games?.filter(g => g.status === 'active') || [];
 
       if (!games.length) {
-        return interaction.editReply({ content: '😴 Aucune partie en cours pour le moment.' ,flags : MessageFlags.Ephemeral});
+        return interaction.editReply({ content: '😴 Aucune partie en cours pour le moment.' });
       }
 
       const lines = games.map(g => {
@@ -137,7 +137,7 @@ client.on('interactionCreate', async interaction => {
 
   } catch (e) {
     console.error('[BOT ERROR]', e);
-    interaction.editReply({ content: '❌ Erreur serveur.' ,flags : MessageFlags.Ephemeral});
+    interaction.editReply({ content: '❌ Erreur serveur.' });
   }
 });
 

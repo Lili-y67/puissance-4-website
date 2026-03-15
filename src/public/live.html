@@ -145,7 +145,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
   </div>
 
   <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
-  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 10s</div>
+  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 2 secondes</div>
 
   <div class="games-grid" id="games-grid">
     <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
@@ -153,7 +153,7 @@ html, body { min-height: 100%; background: var(--bg); color: var(--text); font-f
 </div>
 
 <script>
-const REFRESH_MS = 3000;
+const REFRESH_MS = 2000;
 
 const SHAPE_CLIPS = {
   circle:   { borderRadius: '50%', clipPath: '' },
@@ -335,5 +335,6 @@ refresh(); animBar();
 setInterval(() => { refresh(); animBar(); }, REFRESH_MS);
 </script>
 <script src="/presence.js"></script>
+<script src="/themes.js"></script>
 </body>
 </html>
