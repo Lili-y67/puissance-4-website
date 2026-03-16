@@ -74,7 +74,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* Popup simulateur ELO */
 .elo-sim-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;padding:20px;}
 .elo-sim-bg.show{display:flex;}
-.elo-sim-modal{background:#0d0d1c;border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
+.elo-sim-modal{background:var(--surface);border:1px solid rgba(255,255,255,0.08);border-radius:22px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
 .elo-sim-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;}
 .elo-sim-sub{font-size:12px;color:var(--muted);margin-bottom:24px;}
 .elo-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;outline:none;cursor:pointer;margin:8px 0 4px;}
@@ -289,6 +289,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .tabs-row .tab { font-size: 11px; padding: 6px; }
 }
 </style>
+<script src="/themes.js"></script>
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -676,11 +677,11 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Modal déliaison Discord -->
     <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
-      <div style="background:#0d0d1c;border:1px solid rgba(255,255,255,0.1);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">🔓 Délier Discord</div>
         <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color:rgba(238,238,245,0.8)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
         <input id="unlink-code-input" type="text" maxlength="6" placeholder="123456"
-          style="width:100%;background:#13132a;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:13px 16px;color:#eeeef5;font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
           oninput="this.value=this.value.replace(/\D/g,'')">
         <div id="unlink-error" style="font-size:12px;color:#ff6b81;min-height:16px;margin-bottom:12px;text-align:center"></div>
         <div style="display:flex;gap:10px">
@@ -932,7 +933,7 @@ function confirmCloseAccount() {
   modal.id = 'delete-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
   modal.innerHTML = `
-    <div style="background:#0d0d1c;border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
+    <div style="background:var(--surface);border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
       <div style="font-size:36px;margin-bottom:16px">⚠️</div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
       <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:24px;line-height:1.6">
@@ -1339,7 +1340,7 @@ async function loadDiscordInfo() {
       <!-- Header username -->
       <div style="display:flex;align-items:center;gap:8px;margin:10px 0 14px">
         <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:#eeeef5">${tag}</span>
+        <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${tag}</span>
         ${globalName}
         ${d.verified ? '<span title="Email vérifié" style="font-size:13px">✅</span>' : ''}
         ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">🔐</span>' : ''}
@@ -1492,6 +1493,5 @@ async function saveColor() {
 load();
 </script>
 <script src="/presence.js"></script>
-<script src="/themes.js"></script>
 </body>
 </html>

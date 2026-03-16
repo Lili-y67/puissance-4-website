@@ -130,6 +130,14 @@ function buildPicker() {
   applyTheme(localStorage.getItem('theme') || 'default');
 }
 
+// Appliquer le thème immédiatement (avant DOMContentLoaded) pour éviter le flash blanc
+(function() {
+  const saved = localStorage.getItem('theme') || 'default';
+  const theme = THEMES[saved] || THEMES.default;
+  const root = document.documentElement;
+  for (const [k,v] of Object.entries(theme.vars)) root.style.setProperty(k, v);
+})();
+
 if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', buildPicker);
 else buildPicker();
 

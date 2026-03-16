@@ -245,6 +245,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .pc-name { font-size: 11px; }
 }
 </style>
+<script src="/themes.js"></script>
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -469,12 +470,13 @@ function connectSocket(pendingMatch) {
     myPlayer = p;
     if (pendingMatch) {
       socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
-      // setupLobby seulement si c'est une NOUVELLE partie (startsIn > 0)
-      // Si c'est un reload/rejoin, on attend game_rejoined du serveur
-      if (pendingMatch.startsIn > 0) {
+      // isRejoin = true si la partie était déjà en cours (pas de startsIn, ou URL /game/:id)
+      const urlPart = location.pathname.split('/').pop();
+      const isRejoin = pendingMatch._rejoin === true || (urlPart && !isNaN(Number(urlPart)) && Number(urlPart) > 0 && !pendingMatch._fresh);
+      if (!isRejoin) {
         setupLobby(pendingMatch);
       }
-      // sinon : game_rejoined va gérer l'affichage directement
+      // sinon : game_rejoined va gérer l'affichage directement sans countdown
     }
   });
 
@@ -528,7 +530,7 @@ function connectSocket(pendingMatch) {
   socket.on('game_not_found', () => { sessionStorage.setItem('no_auto_queue','1'); location.href = '/'; });
 
   // match_found depuis la queue (cas où on arrive sans pendingMatch)
-  socket.on('match_found', (d) => setupLobby(d));
+  socket.on('match_found', (d) => { d._fresh = true; setupLobby(d); });
 
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
@@ -1045,6 +1047,5 @@ function iaEnd(winner, winCells) {
   setStatus('');
 }
 </script>
-<script src="/themes.js"></script>
 </body>
 </html>
