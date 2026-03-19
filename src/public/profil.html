@@ -461,8 +461,8 @@ async function load() {
       document.getElementById('content').innerHTML = `
         <div style="text-align:center;padding:80px 20px">
           <div style="font-size:48px;margin-bottom:16px">👤</div>
-          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.4)">Compte supprimé</div>
-          <div style="font-size:13px;color:rgba(238,238,245,0.25);margin-top:8px">Ce joueur a fermé son compte.</div>
+          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color: var(--muted)">Compte supprimé</div>
+          <div style="font-size:13px;color: var(--muted);margin-top:8px">Ce joueur a fermé son compte.</div>
         </div>`;
       return;
     }
@@ -564,7 +564,7 @@ function render(player, games, following, followers, followStatus) {
             <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
           </div>` : ''}
           <!-- Bouton simulateur ELO -->
-          <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color:rgba(238,238,245,0.4);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
+          <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
             🎚 Simulateur ELO
           </button>
           ${followBtn}
@@ -643,7 +643,7 @@ function render(player, games, following, followers, followStatus) {
     ${player.role === 'admin' ? `
     <div class="color-card" style="margin-top:0;border-color:rgba(255,45,85,0.3);background:rgba(255,45,85,0.05)">
       <div class="card-label" style="color:var(--red)">⚡ Accès Panel Admin</div>
-      <div style="font-size:12px;color:rgba(238,238,245,0.4);margin:8px 0 12px">
+      <div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
         Mot de passe du panel <a href="/admin" target="_blank" style="color:var(--red)">/admin</a>
       </div>
       <div id="admin-pwd-wrap" style="display:none;background:rgba(0,0,0,0.3);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:14px;letter-spacing:2px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
@@ -660,13 +660,13 @@ function render(player, games, following, followers, followStatus) {
         ? `<div id="discord-info-zone">
              <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
                <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-               <span style="font-size:13px;color:rgba(238,238,245,0.7)">Chargement des infos Discord…</span>
+               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discord…</span>
              </div>
            </div>
            <button class="btn-save-color" id="btn-unlink" onclick="requestUnlink()" style="margin-top:12px;background:rgba(255,45,85,0.1);border-color:rgba(255,45,85,0.3);color:#ff6b81;font-size:12px">
              🔓 Délier Discord
            </button>`
-        : `<div style="font-size:12px;color:rgba(238,238,245,0.4);margin:8px 0 12px">
+        : `<div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
              Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
            </div>
            <button class="btn-save-color" onclick="linkDiscord()" style="background:rgba(88,101,242,0.15);border-color:rgba(88,101,242,0.4);color:#8b9cf4">
@@ -679,13 +679,13 @@ function render(player, games, following, followers, followStatus) {
     <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
         <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">🔓 Délier Discord</div>
-        <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color:rgba(238,238,245,0.8)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
+        <div style="font-size:13px;color: var(--muted);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color: var(--muted)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
         <input id="unlink-code-input" type="text" maxlength="6" placeholder="123456"
           style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
           oninput="this.value=this.value.replace(/\D/g,'')">
         <div id="unlink-error" style="font-size:12px;color:#ff6b81;min-height:16px;margin-bottom:12px;text-align:center"></div>
         <div style="display:flex;gap:10px">
-          <button onclick="closeUnlinkModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.5);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px">Annuler</button>
+          <button onclick="closeUnlinkModal()" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color: var(--muted);cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px">Annuler</button>
           <button onclick="confirmUnlink()" style="flex:1;padding:11px;border-radius:10px;border:none;background:#ff2d55;color:#fff;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px">Confirmer</button>
         </div>
       </div>
@@ -695,7 +695,7 @@ function render(player, games, following, followers, followStatus) {
     <!-- Popup simulateur ELO -->
     <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
       <div class="elo-sim-modal">
-        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color:rgba(238,238,245,0.5);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color: var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
         <div class="elo-sim-title">🎚 Simulateur <span style="color:var(--red)">ELO</span></div>
         <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO réel</div>
 
@@ -936,12 +936,12 @@ function confirmCloseAccount() {
     <div style="background:var(--surface);border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
       <div style="font-size:36px;margin-bottom:16px">⚠️</div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
-      <div style="font-size:13px;color:rgba(238,238,245,0.5);margin-bottom:24px;line-height:1.6">
+      <div style="font-size:13px;color: var(--muted);margin-bottom:24px;line-height:1.6">
         Ton compte sera définitivement supprimé.<br>
-        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color:rgba(238,238,245,0.7)">Joueur supprimé</strong>.
+        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color: var(--muted)">Joueur supprimé</strong>.
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:rgba(238,238,245,0.6);font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
+        <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color: var(--muted);font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
         <button onclick="closeAccount()" style="flex:1;padding:12px;border-radius:10px;border:none;background:#ff3b30;color:#fff;font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;cursor:pointer">Supprimer</button>
       </div>
     </div>`;
@@ -1310,10 +1310,10 @@ async function loadDiscordInfo() {
     const res  = await fetch('/api/me/discord-info', { headers: { 'x-session-token': token } });
     const data = await res.json();
     const d    = data.discord;
-    if (!d) { zone.innerHTML = '<div style="font-size:12px;color:rgba(238,238,245,0.4)">Infos indisponibles</div>'; return; }
+    if (!d) { zone.innerHTML = '<div style="font-size:12px;color: var(--muted)">Infos indisponibles</div>'; return; }
 
     const tag        = d.discriminator ? `${d.username}#${d.discriminator}` : `@${d.username}`;
-    const globalName = d.global_name && d.global_name !== d.username ? `<span style="color:rgba(238,238,245,0.45);font-size:11px"> (${d.global_name})</span>` : '';
+    const globalName = d.global_name && d.global_name !== d.username ? `<span style="color: var(--muted);font-size:11px"> (${d.global_name})</span>` : '';
     const createdStr = d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : '?';
     const linkedStr  = d.linked_at  ? new Date(d.linked_at).toLocaleDateString('fr-FR',  {day:'numeric',month:'long',year:'numeric'}) : '?';
     const joinedStr  = d.server_joined ? new Date(d.server_joined).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : null;
@@ -1327,12 +1327,12 @@ async function loadDiscordInfo() {
 
     const badgesHtml = d.badges?.length
       ? d.badges.map(b => `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.3);color:#8b9cf4">${b}</span>`).join('')
-      : '<span style="font-size:11px;color:rgba(238,238,245,0.3)">Aucun badge</span>';
+      : '<span style="font-size:11px;color: var(--muted)">Aucun badge</span>';
 
     const row = (icon, label, value, color) =>
       `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
         <span style="font-size:14px;width:20px;text-align:center">${icon}</span>
-        <span style="font-size:11px;color:rgba(238,238,245,0.4);min-width:110px">${label}</span>
+        <span style="font-size:11px;color: var(--muted);min-width:110px">${label}</span>
         <span style="font-size:12px;color:${color||'rgba(238,238,245,0.8)'};font-weight:600">${value}</span>
       </div>`;
 
@@ -1361,12 +1361,12 @@ async function loadDiscordInfo() {
 
       <!-- Badges Discord -->
       <div style="margin-bottom:4px">
-        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,0.3);margin-bottom:6px">Badges Discord</div>
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color: var(--muted);margin-bottom:6px">Badges Discord</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px">${badgesHtml}</div>
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
-    if (zone2) zone2.innerHTML = '<div style="font-size:12px;color:rgba(238,238,245,0.3)">Impossible de charger les infos Discord</div>';
+    if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';
   }
 }
 

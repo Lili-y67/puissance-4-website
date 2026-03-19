@@ -899,7 +899,7 @@ function renderAnalysis(results, accuracy) {
 
           // Séquence optimale
           const seqHtml = (isBad && r.optimalSeq && r.optimalSeq.length > 0)
-            ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:8px;font-size:11px;color:rgba(238,238,245,0.6)">
+            ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:8px;font-size:11px;color: var(--muted)">
                  <span style="color:#30d158;font-weight:700;margin-right:4px">✦ Optimal :</span>
                  ${r.optimalSeq.map((c,idx) => `<span style="color:#30d158;font-weight:700">col.${c+1}</span>${idx < r.optimalSeq.length-1 ? ' <span style="color:var(--muted)">→</span> ' : ''}`).join('')}
                </div>`

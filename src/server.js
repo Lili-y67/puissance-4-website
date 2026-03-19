@@ -689,6 +689,17 @@ app.post('/api/auth/login', (req, res) => {
 // Ne jamais renvoyer le hash du mot de passe au client
 function sanitize(p) {
   const { password, ...rest } = p;
+  // Masquer les infos perso si compte supprimé
+  if (rest.deleted) {
+    return {
+      ...rest,
+      pseudo:     '[Supprimé]',
+      avatar:     '',
+      color:      '#555555',
+      discord_id: null,
+      banner:     null,
+    };
+  }
   return rest;
 }
 
@@ -702,15 +713,16 @@ app.delete('/api/players/:id', (req, res) => {
   // Anonymiser le pseudo (les parties gardent le pseudo au moment du jeu via les colonnes p1_pseudo etc.)
   // puis supprimer le joueur — les FK ON DELETE CASCADE nettoient sessions/reset_codes
   // Les parties restent intactes (pas de FK cascade sur games)
+  // Anonymiser + marquer deleted — on garde le joueur en DB pour les parties historiques
   db.prepare(`UPDATE players SET
-    pseudo   = 'Joueur supprimé',
-    password = '',
-    color    = '#555555',
-    avatar   = '',
-    discord_id = NULL
+    pseudo     = '[Supprimé]',
+    password   = '',
+    color      = '#555555',
+    avatar     = '',
+    discord_id = NULL,
+    deleted    = 1
   WHERE id = ?`).run(id);
   db.prepare(`DELETE FROM sessions WHERE player_id = ?`).run(id);
-  db.prepare(`DELETE FROM players WHERE id = ?`).run(id);
 
   res.json({ ok: true });
 });

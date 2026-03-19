@@ -26,11 +26,11 @@ const THEMES = {
 
 // Variables fixes pour mode clair (seulement quand on passe sur un thème clair)
 const LIGHT_OVERRIDES = {
-  '--text':     '#1d1d1f',
-  '--muted':    'rgba(29,29,31,0.45)',
+  '--text':     '#111111',
+  '--muted':    'rgba(0,0,0,0.55)',
   '--surface':  '#ffffff',
   '--surface2': '#f0f0f2',
-  '--border':   'rgba(0,0,0,0.08)',
+  '--border':   'rgba(0,0,0,0.10)',
 };
 const DARK_OVERRIDES = {
   '--text':     '#eeeef5',
@@ -52,12 +52,9 @@ function applyTheme(name) {
   // 1. Appliquer UNIQUEMENT bg, grid, cell
   for (const [k,v] of Object.entries(theme.vars)) root.style.setProperty(k, v);
 
-  // 2. Si on change de mode (sombre ↔ clair), appliquer les overrides texte/surface
-  const isLight = !theme.dark;
-  if (isLight !== !lastDark) {
-    const overrides = isLight ? LIGHT_OVERRIDES : DARK_OVERRIDES;
-    for (const [k,v] of Object.entries(overrides)) root.style.setProperty(k, v);
-  }
+  // 2. Toujours appliquer les overrides texte/surface selon le mode
+  const overrides = !theme.dark ? LIGHT_OVERRIDES : DARK_OVERRIDES;
+  for (const [k,v] of Object.entries(overrides)) root.style.setProperty(k, v);
   lastDark = theme.dark;
 
   localStorage.setItem('theme', name);

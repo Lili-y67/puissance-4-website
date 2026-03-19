@@ -58,7 +58,7 @@ nav {
   padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
   transition: all 0.2s;
 }
-.nav-back:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+.nav-back:hover { color: var(--text); border-color: var(--border); }
 
 /* Page */
 .page { position: relative; z-index: 2; max-width: 680px; margin: 0 auto; padding: 36px 16px 80px; }
@@ -94,14 +94,14 @@ nav {
 .card-icon.orange { background: rgba(255,159,10,0.12);  color: #ff9f0a; }
 .card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
 .card-sub   { font-size: 12px; color: var(--muted); margin-top: 2px; letter-spacing: 0.5px; }
-.card-body  { padding: 16px 20px; font-size: 13px; line-height: 1.75; color: rgba(238,238,245,0.75); }
+.card-body  { padding: 16px 20px; font-size: 13px; line-height: 1.75; color: var(--muted); }
 .card-body + .card-body { padding-top: 0; }
 
 /* Items liste */
 .rule-list { list-style: none; display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; }
 .rule-list li {
   display: flex; align-items: flex-start; gap: 10px;
-  font-size: 13px; line-height: 1.6; color: rgba(238,238,245,0.75);
+  font-size: 13px; line-height: 1.6; color: var(--muted);
 }
 .rule-list li .icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 .rule-list li strong { color: var(--text); }
@@ -130,7 +130,7 @@ nav {
   background: rgba(255,45,85,0.06); border-left: 3px solid var(--red);
   border-radius: 0 8px 8px 0; padding: 12px 16px;
   margin: 0 20px 16px; font-size: 13px; line-height: 1.6;
-  color: rgba(238,238,245,0.75);
+  color: var(--muted);
 }
 .highlight strong { color: var(--red); }
 
