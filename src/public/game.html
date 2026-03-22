@@ -141,6 +141,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .col-btn:not(:disabled):hover::after { opacity: 1; color: var(--text); transform: translateY(2px); }
 .col-btn:not(:disabled):hover { background: rgba(255,255,255,0.04); }
 .col-btn:disabled { cursor: not-allowed; }
+.board.locked .cell { pointer-events: none; }
+.board.locked .col-btn { pointer-events: none; }
 
 .board {
   background: var(--grid); border-radius: 18px; padding: 10px;
@@ -360,8 +362,9 @@ const SFX = (() => {
 
 const ROWS = 6, COLS = 7;
 let socket, myPlayer, mySide, gameId, currentTurn;
-let gameOver  = false;
-let lobbyData = null; // stocke le match_found pour startGame
+let gameOver    = false;
+let lobbyData   = null;
+let inCountdown = false; // true pendant le 3-2-1
 let p1Shape   = 'circle';
 let p2Shape   = 'circle';
 let p1Emoji   = '⭐';
@@ -481,9 +484,12 @@ function connectSocket(pendingMatch) {
   });
 
   socket.on('game_rejoined', (data) => {
-    // Rejoin avec données complètes du serveur
+    // Si le countdown d'une nouvelle partie est en cours, ignorer ce rejoined
+    // (il arrive parce qu'on a émis rejoin_game dans identified, mais c'est une nouvelle partie)
+    if (inCountdown) return;
+
     data.yourSide = data.side;
-    data.startsIn = 0; // pas de countdown au rejoin
+    data.startsIn = 0;
     gameId = data.gameId;
     mySide = data.side;
 
@@ -636,10 +642,12 @@ function setupLobby(data) {
   let n = data.startsIn || 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
+  inCountdown = true;
   const iv = setInterval(() => {
     n--;
     if (n <= 0) {
       clearInterval(iv);
+      inCountdown = false;
       SFX.go();
       startGame(data);
     } else {
@@ -661,6 +669,10 @@ function startGame(data) {
   currentTurn = 1;
   gameOver    = false;
   renderBoard();
+  // Locker la board 400ms pour éviter les clics parasites au démarrage
+  const boardEl = document.getElementById('board');
+  boardEl.classList.add('locked');
+  setTimeout(() => boardEl.classList.remove('locked'), 400);
   updateTurnUI();
 }
 
@@ -693,6 +705,7 @@ function renderBoard() {
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
   if (gameOver || currentTurn !== mySide) return;
+  if (document.getElementById('board')?.classList.contains('locked')) return;
   if (iaMode) { iaPlayHuman(col); return; }
   SFX.drop();
   socket.emit('play_move', { col });

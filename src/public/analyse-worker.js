@@ -1,102 +1,94 @@
 /**
- * analyse-worker.js — Puissance 4, Minimax + Alpha-Beta profondeur 10
- * Score d'évaluation ABSOLU : positif = avantage J1, négatif = avantage J2
+ * analyse-worker.js — Puissance 4, Minimax Alpha-Beta profondeur 10
+ * Score ABSOLU : positif = avantage J1, négatif = avantage J2
  */
 
 const ROWS = 6, COLS = 7;
-const DEPTH = 10;
-const SEQ_DEPTH = 6;
+const DEPTH = 10;      // profondeur analyse principale
+const SEQ_DEPTH = 8;   // profondeur séquence optimale
 
-// ── Utilitaires ───────────────────────────────────────────────────────────────
+// ── Utilitaires plateau ───────────────────────────────────────────────────────
 function makeBoard() { return Array.from({ length: ROWS }, () => new Int8Array(COLS)); }
 function cloneBoard(b) { return b.map(r => new Int8Array(r)); }
+
 function drop(board, col, player) {
-  for (let r = ROWS - 1; r >= 0; r--) {
+  for (let r = ROWS - 1; r >= 0; r--)
     if (board[r][col] === 0) { board[r][col] = player; return r; }
-  }
   return -1;
 }
 function undrop(board, col) {
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < ROWS; r++)
     if (board[r][col] !== 0) { board[r][col] = 0; return; }
-  }
 }
 function validCols(board) {
   return [3,2,4,1,5,0,6].filter(c => board[0][c] === 0);
 }
 function checkWin(board, player) {
+  const P = player;
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c <= COLS-4; c++)
-      if (board[r][c]===player&&board[r][c+1]===player&&board[r][c+2]===player&&board[r][c+3]===player) return true;
-  for (let r = 0; r <= ROWS-4; r++)
-    for (let c = 0; c < COLS; c++)
-      if (board[r][c]===player&&board[r+1][c]===player&&board[r+2][c]===player&&board[r+3][c]===player) return true;
+      if (board[r][c]===P&&board[r][c+1]===P&&board[r][c+2]===P&&board[r][c+3]===P) return true;
+  for (let c = 0; c < COLS; c++)
+    for (let r = 0; r <= ROWS-4; r++)
+      if (board[r][c]===P&&board[r+1][c]===P&&board[r+2][c]===P&&board[r+3][c]===P) return true;
   for (let r = 3; r < ROWS; r++)
     for (let c = 0; c <= COLS-4; c++)
-      if (board[r][c]===player&&board[r-1][c+1]===player&&board[r-2][c+2]===player&&board[r-3][c+3]===player) return true;
+      if (board[r][c]===P&&board[r-1][c+1]===P&&board[r-2][c+2]===P&&board[r-3][c+3]===P) return true;
   for (let r = 0; r <= ROWS-4; r++)
     for (let c = 0; c <= COLS-4; c++)
-      if (board[r][c]===player&&board[r+1][c+1]===player&&board[r+2][c+2]===player&&board[r+3][c+3]===player) return true;
+      if (board[r][c]===P&&board[r+1][c+1]===P&&board[r+2][c+2]===P&&board[r+3][c+3]===P) return true;
   return false;
 }
 function isFull(board) { return board[0].every(c => c !== 0); }
 
-// ── Évaluation ABSOLUE — positif = avantage J1, négatif = avantage J2 ────────
+// ── Évaluation heuristique ────────────────────────────────────────────────────
 function scoreWindow(w, p) {
   const o = p === 1 ? 2 : 1;
   const mine = w.filter(c => c === p).length;
   const opp  = w.filter(c => c === o).length;
   const emp  = w.filter(c => c === 0).length;
-  if (mine === 4) return  100;
-  if (opp  === 4) return -100;
-  if (mine === 3 && emp === 1) return  10;
-  if (opp  === 3 && emp === 1) return -10;
-  if (mine === 2 && emp === 2) return  3;
-  if (opp  === 2 && emp === 2) return -3;
+  if (mine === 4)              return  1000;
+  if (opp  === 4)              return -1000;
+  if (mine === 3 && emp === 1) return   50;
+  if (opp  === 3 && emp === 1) return  -50;
+  if (mine === 2 && emp === 2) return    5;
+  if (opp  === 2 && emp === 2) return   -5;
   return 0;
 }
 
-// evaluate() retourne TOUJOURS du point de vue de J1 (positif = J1 gagne)
 function evaluate(board) {
   let score = 0;
-  // Bonus colonne centrale pour J1
-  const center = board.map(r => r[3]);
-  score += center.filter(c => c === 1).length * 6;
-  score -= center.filter(c => c === 2).length * 6;
-
-  // Horizontales
+  // Préférence colonne centrale
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r][3] === 1) score += 8;
+    if (board[r][3] === 2) score -= 8;
+    if (board[r][2] === 1 || board[r][4] === 1) score += 3;
+    if (board[r][2] === 2 || board[r][4] === 2) score -= 3;
+  }
+  // Fenêtres horizontales
   for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c <= COLS-4; c++) {
-      const w = [board[r][c],board[r][c+1],board[r][c+2],board[r][c+3]];
-      score += scoreWindow(w, 1);
-    }
+    for (let c = 0; c <= COLS-4; c++)
+      score += scoreWindow([board[r][c],board[r][c+1],board[r][c+2],board[r][c+3]], 1);
   // Verticales
   for (let c = 0; c < COLS; c++)
-    for (let r = 0; r <= ROWS-4; r++) {
-      const w = [board[r][c],board[r+1][c],board[r+2][c],board[r+3][c]];
-      score += scoreWindow(w, 1);
-    }
-  // Diag /
+    for (let r = 0; r <= ROWS-4; r++)
+      score += scoreWindow([board[r][c],board[r+1][c],board[r+2][c],board[r+3][c]], 1);
+  // Diagonales /
   for (let r = 3; r < ROWS; r++)
-    for (let c = 0; c <= COLS-4; c++) {
-      const w = [board[r][c],board[r-1][c+1],board[r-2][c+2],board[r-3][c+3]];
-      score += scoreWindow(w, 1);
-    }
-  // Diag \
+    for (let c = 0; c <= COLS-4; c++)
+      score += scoreWindow([board[r][c],board[r-1][c+1],board[r-2][c+2],board[r-3][c+3]], 1);
+  // Diagonales \
   for (let r = 0; r <= ROWS-4; r++)
-    for (let c = 0; c <= COLS-4; c++) {
-      const w = [board[r][c],board[r+1][c+1],board[r+2][c+2],board[r+3][c+3]];
-      score += scoreWindow(w, 1);
-    }
+    for (let c = 0; c <= COLS-4; c++)
+      score += scoreWindow([board[r][c],board[r+1][c+1],board[r+2][c+2],board[r+3][c+3]], 1);
   return score;
 }
 
-// ── Minimax ABSOLU — retourne toujours du point de vue J1 ────────────────────
+// ── Minimax Alpha-Beta ────────────────────────────────────────────────────────
 function minimax(board, depth, alpha, beta, isP1Turn) {
   if (checkWin(board, 1)) return  100000 + depth;
   if (checkWin(board, 2)) return -100000 - depth;
   if (isFull(board) || depth === 0) return evaluate(board);
-
   const cols = validCols(board);
   if (isP1Turn) {
     let best = -Infinity;
@@ -121,7 +113,7 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
   }
 }
 
-// bestMove retourne le meilleur coup + score absolu pour chaque colonne
+// Retourne le meilleur coup + tous les scores par colonne
 function bestMove(board, player) {
   const cols = validCols(board);
   if (!cols.length) return null;
@@ -129,9 +121,16 @@ function bestMove(board, player) {
   let bestCol = cols[0];
   let bestScore = isP1 ? -Infinity : Infinity;
   const colScores = {};
-
   for (const col of cols) {
     drop(board, col, player);
+    // Vérifier victoire immédiate
+    if (checkWin(board, player)) {
+      undrop(board, col);
+      colScores[col] = isP1 ? 100000 : -100000;
+      bestCol = col;
+      bestScore = colScores[col];
+      continue;
+    }
     const score = minimax(board, DEPTH-1, -Infinity, Infinity, !isP1);
     undrop(board, col);
     colScores[col] = score;
@@ -142,7 +141,7 @@ function bestMove(board, player) {
   return { col: bestCol, score: bestScore, colScores };
 }
 
-// ── Séquence optimale ─────────────────────────────────────────────────────────
+// Séquence de jeu optimal depuis une position
 function getOptimalSequence(board, startPlayer, maxMoves) {
   const seq = [];
   const b = cloneBoard(board);
@@ -154,6 +153,12 @@ function getOptimalSequence(board, startPlayer, maxMoves) {
     let bestCol = cols[0], bestScore = isP1 ? -Infinity : Infinity;
     for (const col of cols) {
       drop(b, col, player);
+      if (checkWin(b, player)) {
+        undrop(b, col);
+        bestCol = col;
+        bestScore = isP1 ? 100000 : -100000;
+        break;
+      }
       const score = minimax(b, SEQ_DEPTH-1, -Infinity, Infinity, !isP1);
       undrop(b, col);
       if (isP1 ? score > bestScore : score < bestScore) { bestScore = score; bestCol = col; }
@@ -166,88 +171,140 @@ function getOptimalSequence(board, startPlayer, maxMoves) {
   return seq;
 }
 
-// ── Normalisation du score absolu → centipawns lisibles ──────────────────────
-// Retourne un float ex: +1.24, -0.87, 0.00
-// Positif = avantage J1, négatif = avantage J2
+// ── Normalisation score → centipawns ─────────────────────────────────────────
+// On mappe les scores heuristiques [-5000, +5000] vers [-10, +10]
+// Les victoires forcées > 99000 → ±99.99
 function toCentipawns(absScore) {
-  if (absScore >= 99000)  return  99.99;
+  if (absScore >=  99000) return  99.99;
   if (absScore <= -99000) return -99.99;
-  return Math.round(absScore) / 100;
+  // Score heuristique max réaliste ≈ ±3000
+  const clamped = Math.max(-3000, Math.min(3000, absScore));
+  return Math.round(clamped / 30) / 10; // ex: 300 → +1.0, -600 → -2.0
 }
 
-// Normalise pour la barre [-100, +100]
 function toBar(absScore) {
-  if (absScore >= 99000)  return  100;
+  if (absScore >=  99000) return  100;
   if (absScore <= -99000) return -100;
-  const MAX = 300;
-  return Math.max(-100, Math.min(100, Math.round((absScore / MAX) * 100)));
+  const clamped = Math.max(-3000, Math.min(3000, absScore));
+  return Math.round((clamped / 3000) * 100);
 }
 
-// ── Classification ────────────────────────────────────────────────────────────
+// ── Classification du coup joué ───────────────────────────────────────────────
+// On compare le score APRÈS le coup joué vs le score APRÈS le meilleur coup
+// "loss" = combien d'avantage perdu relativement au meilleur coup disponible
 function classifyMove(player, playedScore, bestScore) {
-  // playedScore et bestScore sont ABSOLUS (J1 perspective)
-  // Pour J1 : on veut que playedScore soit proche de bestScore (le plus grand)
-  // Pour J2 : on veut que playedScore soit proche de bestScore (le plus petit)
-  const loss = player === 1
-    ? bestScore - playedScore   // J1 : perte = bestScore - playedScore (doit être >= 0)
-    : playedScore - bestScore;  // J2 : perte = playedScore - bestScore (doit être >= 0)
+  // Cas victoire immédiate jouée
+  if (player === 1 && playedScore >= 99000) return 'best';
+  if (player === 2 && playedScore <= -99000) return 'best';
 
-  if (loss <= 0)   return 'best';
-  if (loss <= 50)  return 'excellent';
-  if (loss <= 200) return 'good';
-  if (loss <= 500) return 'inaccuracy';
-  if (loss <= 2000) return 'mistake';
+  // Cas où le meilleur coup était une victoire forcée mais pas joué
+  if (player === 1 && bestScore >= 99000 && playedScore < 99000) return 'blunder';
+  if (player === 2 && bestScore <= -99000 && playedScore > -99000) return 'blunder';
+
+  // Perte d'avantage = différence entre meilleur et joué, du point de vue du joueur
+  const loss = player === 1
+    ? (bestScore - playedScore)    // J1 veut maximiser
+    : (playedScore - bestScore);   // J2 veut minimiser (score J1 perspective)
+
+  // Seuils calibrés sur l'échelle heuristique (max ~3000)
+  if (loss <= 10)   return 'best';
+  if (loss <= 50)   return 'excellent';
+  if (loss <= 150)  return 'good';
+  if (loss <= 400)  return 'inaccuracy';
+  if (loss <= 1200) return 'mistake';
   return 'blunder';
 }
 
+// ── Précision ─────────────────────────────────────────────────────────────────
+// Méthode : moyenne pondérée avec pénalité progressive selon la gravité
+function calcAccuracy(scores) {
+  if (!scores.length) return 100;
+  const weights = { best:100, excellent:88, good:70, inaccuracy:45, mistake:15, blunder:0 };
+  const total = scores.reduce((a, s) => a + (weights[s.classification] ?? 50), 0);
+  return Math.round(total / scores.length);
+}
+
 // ── Commentaires ──────────────────────────────────────────────────────────────
-function generateComment(cls, moveIndex, optimalSeq, playedCol) {
+function generateComment(cls, moveIndex, bestCol, playedCol, loss) {
   const turn = Math.floor(moveIndex / 2) + 1;
-  const map = {
-    best:       ["Coup parfait !", "Exactement le bon choix.", "L'algorithme aurait joué pareil."],
-    excellent:  ["Très bon coup, quasi optimal.", "Solide, pratiquement le meilleur.", "Bonne lecture de la position."],
-    good:       ["Bon coup, une légère amélioration était possible.", "Correct, mais il y avait mieux.", "Pas mauvais, l'avantage reste intact."],
-    inaccuracy: ["Imprécision — un peu d'avantage perdu.", "Ce coup laisse passer une opportunité.", "La position reste jouable mais moins favorable."],
-    mistake:    ["Erreur — l'avantage change de camp.", "Ce coup affaiblit significativement la position.", "Il fallait voir plus loin ici."],
-    blunder:    ["Gaffe décisive !", "Ce coup change le résultat de la partie.", "L'adversaire pouvait exploiter cette erreur immédiatement."],
-  };
-  if (turn <= 3 && cls === 'blunder') return "Gaffe dès l'ouverture — très difficile à rattraper.";
-  if (optimalSeq?.[0] === 3 && playedCol !== 3 && ['mistake','blunder'].includes(cls))
-    return "La colonne centrale était cruciale ici.";
-  return (map[cls] || map.good)[moveIndex % (map[cls]?.length || 1)];
+  const col = ['G','F','E','Centre','D','C','B','A','G'][bestCol] || `col.${bestCol+1}`;
+
+  if (cls === 'best')       return ["Coup parfait.", "Exactement le bon choix.", "L'IA aurait joué pareil."][moveIndex % 3];
+  if (cls === 'excellent')  return ["Très bon coup, quasi optimal.", "Solide — pratiquement le meilleur.", "Bonne lecture de position."][moveIndex % 3];
+  if (cls === 'good')       return ["Bon coup, une légère amélioration était possible.", "Correct mais il y avait mieux.", "Position préservée, l'optimum était ailleurs."][moveIndex % 3];
+
+  const hint = bestCol !== playedCol ? ` Le meilleur était la colonne ${bestCol+1}.` : '';
+
+  if (cls === 'inaccuracy') return `Légère imprécision — un peu d'avantage perdu.${hint}`;
+  if (cls === 'mistake') {
+    if (turn <= 4) return `Erreur en ouverture — difficile à rattraper.${hint}`;
+    return `Erreur — l'avantage bascule.${hint}`;
+  }
+  if (cls === 'blunder') {
+    if (turn <= 3) return `Gaffe dès l'ouverture !${hint}`;
+    return `Gaffe décisive — le résultat change.${hint}`;
+  }
+  return '';
 }
 
 // ── Analyse complète ──────────────────────────────────────────────────────────
 self.onmessage = function(e) {
   const { moves } = e.data;
   const board = makeBoard();
-  const results = [], evalHistory = [];
+  const results = [];
+  const evalHistory = [];
   let p1Scores = [], p2Scores = [];
 
   for (let i = 0; i < moves.length; i++) {
     const player    = (i % 2 === 0) ? 1 : 2;
     const playedCol = moves[i];
-    const boardBefore = cloneBoard(board);
 
+    // Score AVANT le coup (position actuelle)
+    const boardBefore = cloneBoard(board);
     const analysis = bestMove(boardBefore, player);
 
     let result;
-    if (!analysis) {
-      result = { moveIndex:i, player, playedCol, bestCol:playedCol, classification:'best', loss:0, evalScore:0, evalCP:0, optimalSeq:[], comment:'' };
+    if (!analysis || validCols(board).length === 0) {
+      result = { moveIndex:i, player, playedCol, bestCol:playedCol, classification:'best', loss:0, evalScore:0, evalCP:0, optimalSeq:[], comment:'Seul coup possible.' };
     } else {
-      const playedScore    = analysis.colScores[playedCol] ?? (player === 1 ? analysis.score - 500 : analysis.score + 500);
-      const classification = classifyMove(player, playedScore, analysis.score);
-      const loss           = Math.abs(analysis.score - playedScore);
-      const evalCP         = toCentipawns(analysis.score); // score AVANT le coup
-      const evalBar        = toBar(analysis.score);
+      const bestScore   = analysis.score;
+      const bestCol     = analysis.col;
 
+      // Score pour le coup joué — TOUJOURS calculé proprement
+      const playedScore = analysis.colScores.hasOwnProperty(playedCol)
+        ? analysis.colScores[playedCol]
+        : (() => {
+            // Recalculer si absent (ne devrait pas arriver)
+            drop(board, playedCol, player);
+            const s = checkWin(board, player)
+              ? (player === 1 ? 100000 : -100000)
+              : minimax(board, DEPTH-2, -Infinity, Infinity, player !== 1);
+            undrop(board, playedCol);
+            return s;
+          })();
+
+      const classification = classifyMove(player, playedScore, bestScore);
+      const loss = Math.abs(bestScore - playedScore);
+
+      // Score APRÈS le coup joué pour le graphe
+      drop(board, playedCol, player);
+      const postScore = checkWin(board, player)
+        ? (player === 1 ? 100000 : -100000)
+        : (isFull(board) ? 0 : evaluate(board));
+      undrop(board, playedCol);
+
+      const evalCP  = toCentipawns(postScore);
+      const evalBar = toBar(postScore);
+
+      // Séquence optimale seulement pour les erreurs
       let optimalSeq = [];
       if (['inaccuracy','mistake','blunder'].includes(classification))
-        optimalSeq = getOptimalSequence(boardBefore, player, 5);
+        optimalSeq = getOptimalSequence(boardBefore, player, 6);
 
-      const comment = generateComment(classification, i, optimalSeq, playedCol);
+      const comment = generateComment(classification, i, bestCol, playedCol, loss);
 
-      result = { moveIndex:i, player, playedCol, bestCol:analysis.col, bestScore:analysis.score, playedScore, classification, loss, evalScore:evalBar, evalCP, optimalSeq, comment };
+      result = { moveIndex:i, player, playedCol, bestCol, bestScore, playedScore, classification, loss, evalScore:evalBar, evalCP, optimalSeq, comment };
+
       if (player === 1) p1Scores.push({ classification, loss });
       else              p2Scores.push({ classification, loss });
     }
@@ -255,21 +312,20 @@ self.onmessage = function(e) {
     results.push(result);
     drop(board, playedCol, player);
 
-    // Score ABSOLU après le coup joué
-    const postScore = checkWin(board, 1) ? 100000
-                    : checkWin(board, 2) ? -100000
-                    : evaluate(board);
-    evalHistory.push({ moveIndex:i, player, score: toBar(postScore), cp: toCentipawns(postScore) });
+    // Historique d'évaluation APRÈS chaque coup (pour le graphe)
+    const postScore2 = checkWin(board, player)
+      ? (player === 1 ? 100000 : -100000)
+      : (isFull(board) ? 0 : evaluate(board));
+    evalHistory.push({ moveIndex:i, player, score:toBar(postScore2), cp:toCentipawns(postScore2) });
 
     self.postMessage({ type:'progress', moveIndex:i, total:moves.length, result });
     if (checkWin(board, player)) break;
   }
 
-  function calcAccuracy(scores) {
-    if (!scores.length) return 100;
-    const w = { best:100, excellent:92, good:78, inaccuracy:55, mistake:25, blunder:5 };
-    return Math.round(scores.reduce((a,s) => a + (w[s.classification] ?? 50), 0) / scores.length);
-  }
-
-  self.postMessage({ type:'done', results, evalHistory, accuracy:{ p1:calcAccuracy(p1Scores), p2:calcAccuracy(p2Scores) } });
+  self.postMessage({
+    type: 'done',
+    results,
+    evalHistory,
+    accuracy: { p1: calcAccuracy(p1Scores), p2: calcAccuracy(p2Scores) }
+  });
 };
