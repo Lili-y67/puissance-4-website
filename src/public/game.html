@@ -854,6 +854,13 @@ function updateTurnUI() {
 function onGameOver(data) {
   gameOver = true;
 
+  // Fermer le banner de déconnexion s'il est encore visible
+  const dcBanner = document.getElementById('disconnect-banner');
+  if (dcBanner) {
+    if (dcBanner._interval) { clearInterval(dcBanner._interval); dcBanner._interval = null; }
+    dcBanner.classList.remove('show');
+  }
+
   if (data.winCells?.length) {
     data.winCells.forEach(([r,c]) => {
       const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
