@@ -1109,9 +1109,16 @@ app.post('/api/bot-replay', (req, res) => {
   else if (winner === 2) { pQ.win.run(botPlayerId); }
   else               { pQ.loss.run(botPlayerId); }
 
+  // Si pas de joueur connecté, on abandonne proprement (pas de replay sauvegardé)
+  if (!playerId) return res.status(200).json({ gameId: null, reason: 'not_logged_in' });
+
+  // Vérification FK
+  if (!pQ.getById.get(p1Id))        throw new Error(`player1_id=${p1Id} introuvable`);
+  if (!pQ.getById.get(botPlayerId))  throw new Error(`botPlayerId=${botPlayerId} introuvable`);
+
   const info = db.prepare(`
-    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2, finished_at)
-    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?, 0, ?, datetime('now'))
+    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2)
+    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?, 0, ?)
   `).run(
     p1Id,
     botPlayerId,
@@ -1121,16 +1128,25 @@ app.post('/api/bot-replay', (req, res) => {
     botColor,
     realP1Shape,
     botShape,
-    botDelta  // elo_p2 = delta du bot
+    botDelta
   );
   const gameId = info.lastInsertRowid;
 
-  // Insérer les coups
+  // Insérer les coups avec calcul de la row (rejouer la grille)
   if (Array.isArray(moves)) {
-    const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, move_number) VALUES (?,?,?,?)`);
+    const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, row, move_number) VALUES (?,?,?,?,?)`);
+    // Reconstruire la grille pour calculer la row de chaque coup
+    const grid = Array.from({length: 6}, () => Array(7).fill(0));
     moves.forEach((col, i) => {
       const pid = i % 2 === 0 ? p1Id : botPlayerId;
-      insertMove.run(gameId, pid, col, i + 1);
+      // Trouver la row la plus basse disponible
+      let row = -1;
+      for (let r = 5; r >= 0; r--) {
+        if (grid[r][col] === 0) { row = r; break; }
+      }
+      if (row === -1) return; // colonne pleine, ignorer
+      grid[row][col] = i % 2 === 0 ? 1 : 2;
+      insertMove.run(gameId, pid, col, row, i + 1);
     });
   }
 
