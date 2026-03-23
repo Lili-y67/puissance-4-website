@@ -817,19 +817,23 @@ app.patch('/api/players/:id/avatar', (req, res) => {
 
 // Autocomplete pseudo — min 3 chars, max 8 résultats, exclu bots et supprimés
 app.get('/api/players/search', (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (q.length < 3) return res.json([]);
-  // Valider : uniquement alphanum + _ + -
-  if (!/^[a-zA-Z0-9_\-\.]{1,20}$/.test(q)) return res.json([]);
-  const rows = db.prepare(`
-    SELECT id, pseudo, elo, avatar, color
-    FROM players
-    WHERE pseudo LIKE ? COLLATE NOCASE
-      AND deleted = 0
-      AND id != ?
-    ORDER BY elo DESC LIMIT 8
-  `).all(q + '%', BOT_PLAYER_ID);
-  res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color })));
+  try {
+    const q = (req.query.q || '').trim();
+    if (q.length < 3) return res.json([]);
+    // Autoriser alphanum + _ + - + . (suffisant, pas de regex bloquante)
+    if (q.length > 20) return res.json([]);
+    const rows = db.prepare(`
+      SELECT id, pseudo, elo, avatar, color
+      FROM players
+      WHERE pseudo LIKE ? COLLATE NOCASE
+        AND deleted = 0
+      ORDER BY elo DESC LIMIT 8
+    `).all(q.replace(/%/g, '') + '%');
+    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color })));
+  } catch(e) {
+    console.error('[search]', e.message);
+    res.json([]);
+  }
 });
 
 app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
@@ -1130,17 +1134,29 @@ app.post('/api/bot-replay', (req, res) => {
   const humanElo  = p1?.elo ?? 1000;
   const botElo    = botPlayer?.elo ?? 1000;
 
-  const K    = 32;
+  // Calcul ELO bot selon la difficulté
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  const K = 32;
   const expBot = 1 / (1 + Math.pow(10, (humanElo - botElo) / 400));
   let botDelta = 0;
-  if (isDraw) {
-    botDelta = Math.round(K * (0.5 - expBot));
-  } else if (winner === 2) {
-    // Bot gagne
-    botDelta = Math.round(K * (1 - expBot));
+
+  if (difficulty === 'easy') {
+    // Facile : win +15→+30 / perd -1→-5 / nul = standard
+    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
+    else if (winner === 2) botDelta = +randInt(15, 30);
+    else                   botDelta = -randInt(1, 5);
+
+  } else if (difficulty === 'hard') {
+    // Difficile : win +5→+10 / perd -10→-20 / nul = standard
+    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
+    else if (winner === 2) botDelta = +randInt(5, 10);
+    else                   botDelta = -randInt(10, 20);
+
   } else {
-    // Bot perd
-    botDelta = Math.round(K * (0 - expBot));
+    // Moyen (et fallback) : formule ELO standard
+    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
+    else if (winner === 2) botDelta = Math.round(K * (1 - expBot));
+    else                   botDelta = Math.round(K * (0 - expBot));
   }
 
   // Appliquer delta ELO uniquement au bot
