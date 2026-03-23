@@ -1030,6 +1030,7 @@ app.get('/api/games/:id/moves', (req, res) => {
 
 // ── Bot replay (sans stats ELO) ──────────────────────────────────────────────
 app.post('/api/bot-replay', (req, res) => {
+  try {
   const { token, moves, winner, p1Color, p2Color, botName, difficulty } = req.body;
   const playerId = token ? validateSession(token) : null;
 
@@ -1044,14 +1045,26 @@ app.post('/api/bot-replay', (req, res) => {
   const botColor    = BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)];
   const botShape    = BOT_SHAPES[Math.floor(Math.random() * BOT_SHAPES.length)];
 
-  // Insérer la partie avec player2_id=0 (joueur bot système) — pas de calcul ELO
-  const p1Id = playerId || 0;
-  const winnerId = winner === 1 ? p1Id : (winner === 2 ? 0 : null);
+  // Récupérer ou créer un vrai player2_id pour le bot
+  // On cherche un joueur bot existant, sinon on en crée un
+  let botPlayerId;
+  const existingBot = db.prepare(`SELECT id FROM players WHERE pseudo='🤖 Bot' LIMIT 1`).get();
+  if (existingBot) {
+    botPlayerId = existingBot.id;
+  } else {
+    const botInsert = db.prepare(`INSERT INTO players (pseudo, password, elo, deleted) VALUES ('🤖 Bot', '', 0, 1)`).run();
+    botPlayerId = botInsert.lastInsertRowid;
+  }
+
+  const p1Id = playerId || botPlayerId; // si pas connecté, on met aussi le bot en p1
+  const winnerId = winner === 1 ? p1Id : (winner === 2 ? botPlayerId : null);
+
   const info = db.prepare(`
     INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape)
-    VALUES (?, 0, ?, 'finished', ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?)
   `).run(
     p1Id,
+    botPlayerId,
     winnerId,
     moves?.length || 0,
     realP1Color,
@@ -1065,12 +1078,16 @@ app.post('/api/bot-replay', (req, res) => {
   if (Array.isArray(moves)) {
     const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, move_number) VALUES (?,?,?,?)`);
     moves.forEach((col, i) => {
-      const pid = i % 2 === 0 ? (playerId || 0) : 0; // 0 = bot système
+      const pid = i % 2 === 0 ? p1Id : botPlayerId;
       insertMove.run(gameId, pid, col, i + 1);
     });
   }
 
   res.json({ gameId });
+  } catch(err) {
+    console.error('[bot-replay]', err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/leaderboard', (_, res) => {
