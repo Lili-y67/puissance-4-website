@@ -938,7 +938,7 @@ let iaBotName = '';
 let iaBotColor = '';
 const IA_R = 6, IA_C = 7;
 
-function startVsIA({ botName, botColor, difficulty = 'hard' }) {
+async function startVsIA({ botName, botColor, difficulty = 'hard' }) {
   iaMode = true;
   mySide = 1;
   currentTurn = 1;
@@ -946,14 +946,22 @@ function startVsIA({ botName, botColor, difficulty = 'hard' }) {
   iaDifficulty = difficulty;
   iaMoves = [];
   iaBotName = botName;
-  iaBotColor = botColor;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
+
+  // Récupérer la vraie couleur et forme du bot depuis la DB
+  try {
+    const botInfo = await fetch('/api/bot-id').then(r => r.json());
+    iaBotColor = botInfo.color || botColor;
+    p2Shape    = botInfo.shape || 'circle';
+  } catch(e) {
+    iaBotColor = botColor;
+    p2Shape    = 'circle';
+  }
 
   const savedPlayer = JSON.parse(localStorage.getItem('player') || '{}');
   const rawShape = savedPlayer.shape || 'circle';
   if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;
-  p2Shape = 'circle';
 
   const playerColor = myPlayer.color || '#ff2d55';
   applyColors(playerColor, botColor);

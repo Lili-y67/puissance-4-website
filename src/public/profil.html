@@ -308,7 +308,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   <!-- Recherche de joueur -->
   <div class="search-wrap">
     <div class="search-label">🔍 Rechercher un joueur</div>
-    <div class="search-row">
+    <div class="search-row" style="position:relative;">
       <input
         class="search-input"
         id="search-input"
@@ -316,9 +316,11 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         maxlength="20"
         autocomplete="off"
         spellcheck="false"
-        onkeydown="if(event.key==='Enter') searchPlayer()"
+        oninput="onSearchInput(this.value)"
+        onkeydown="onSearchKey(event)"
       />
       <button class="search-btn" id="search-btn" onclick="searchPlayer()">Chercher</button>
+      <div id="autocomplete-list" style="display:none;position:absolute;top:100%;left:0;right:48px;z-index:999;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4);margin-top:4px;"></div>
     </div>
     <div class="search-error" id="search-error">Joueur introuvable.</div>
     <a class="search-result" id="search-result" href="#">
@@ -980,6 +982,74 @@ function logout() {
 }
 
 // ── Recherche joueur ──────────────────────────────────────────────────────────
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+let _acTimer = null;
+let _acIndex = -1;
+let _acResults = [];
+
+async function onSearchInput(val) {
+  const list = document.getElementById('autocomplete-list');
+  _acIndex = -1;
+  clearTimeout(_acTimer);
+  if (val.length < 3) { list.style.display = 'none'; return; }
+  _acTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/players/search?q=${encodeURIComponent(val)}`);
+      _acResults = await res.json();
+      renderAcList(_acResults);
+    } catch(e) { list.style.display = 'none'; }
+  }, 200);
+}
+
+function renderAcList(players) {
+  const list = document.getElementById('autocomplete-list');
+  if (!players.length) {
+    list.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--muted);">Aucun pseudo trouvé</div>';
+    list.style.display = 'block';
+    return;
+  }
+  list.innerHTML = players.map((p, i) => {
+    const color = p.color || '#ff2d55';
+    const av = p.avatar
+      ? `<img src="${p.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:28px;height:28px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${color};">${p.pseudo[0].toUpperCase()}</div>`;
+    return `<div class="ac-item" data-index="${i}" onclick="selectAc(${i})" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+      ${av}
+      <span style="font-weight:600;font-size:13px;flex:1;">${p.pseudo}</span>
+      <span style="font-size:11px;color:var(--muted);">${p.elo} ELO</span>
+    </div>`;
+  }).join('');
+  list.style.display = 'block';
+}
+
+function selectAc(i) {
+  const p = _acResults[i];
+  if (!p) return;
+  document.getElementById('search-input').value = p.pseudo;
+  document.getElementById('autocomplete-list').style.display = 'none';
+  searchPlayer();
+}
+
+function onSearchKey(e) {
+  const list = document.getElementById('autocomplete-list');
+  const items = list.querySelectorAll('.ac-item');
+  if (!items.length) { if (e.key === 'Enter') searchPlayer(); return; }
+  if (e.key === 'ArrowDown')  { e.preventDefault(); _acIndex = Math.min(_acIndex+1, items.length-1); highlightAc(items); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); _acIndex = Math.max(_acIndex-1, -1);             highlightAc(items); }
+  else if (e.key === 'Enter')     { e.preventDefault(); _acIndex >= 0 ? selectAc(_acIndex) : searchPlayer(); }
+  else if (e.key === 'Escape')    { list.style.display = 'none'; _acIndex = -1; }
+}
+
+function highlightAc(items) {
+  items.forEach((el, i) => el.style.background = i === _acIndex ? 'rgba(255,255,255,0.08)' : 'transparent');
+  if (_acIndex >= 0 && _acResults[_acIndex]) document.getElementById('search-input').value = _acResults[_acIndex].pseudo;
+}
+
+// Fermer autocomplete si clic ailleurs
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-row')) document.getElementById('autocomplete-list').style.display = 'none';
+});
+
 async function searchPlayer() {
   const pseudo = document.getElementById('search-input').value.trim();
   if (!pseudo) return;
@@ -1359,13 +1429,24 @@ async function loadDiscordInfo() {
         ${row('🔗', 'Lié le',            linkedStr)}
         ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
         ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
-        ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
+        ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur',
+          '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;">' +
+          d.server_roles.map(r => {
+            const col = r.color && r.color !== '#000000' ? r.color : '#99aab5';
+            return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.5px;background:${col}22;color:${col};border:1px solid ${col}55;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></span>
+              ${r.name || r.id}
+            </span>`;
+          }).join('') +
+          '</div>'
+        ) : ''}
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
     if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';
   }
 }
+
 // ── Déliaison Discord ────────────────────────────────────────────────────────
 async function requestUnlink() {
   const btn = document.getElementById('btn-unlink');

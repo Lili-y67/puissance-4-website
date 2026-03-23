@@ -490,6 +490,31 @@ app.get('/auth/discord/callback', async (req, res) => {
         if (mRes.ok) memberInfo = await mRes.json();
       } catch(e) {}
 
+      // Récupérer les rôles du guild avec noms et couleurs
+      let guildRolesMap = {};
+      try {
+        const { botToken: bt2 } = discordConfig();
+        const rolesRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+          headers: { Authorization: 'Bot ' + bt2 }
+        });
+        if (rolesRes.ok) {
+          const roles = await rolesRes.json();
+          roles.forEach(r => { guildRolesMap[r.id] = { name: r.name, color: r.color }; });
+        }
+      } catch(e) {}
+
+      // Construire les rôles enrichis (id, nom, couleur hex)
+      const memberRoleIds = memberInfo?.roles || [];
+      const server_roles_rich = memberRoleIds
+        .map(id => ({
+          id,
+          name:  guildRolesMap[id]?.name  || id,
+          color: guildRolesMap[id]?.color
+            ? '#' + guildRolesMap[id].color.toString(16).padStart(6, '0')
+            : null,
+        }))
+        .filter(r => r.name !== '@everyone' && r.color !== '#000000');
+
       // Construire l'objet discord_info enrichi
       const discordInfo = {
         id:             discordUser.id,
@@ -499,14 +524,12 @@ app.get('/auth/discord/callback', async (req, res) => {
         email:          discordUser.email || null,
         verified:       discordUser.verified || false,
         mfa_enabled:    discordUser.mfa_enabled || false,
-        premium_type:   discordUser.premium_type || 0,   // 0=none, 1=classic, 2=nitro, 3=basic
-        public_flags:   discordUser.public_flags || 0,   // badges Discord
-        // Compte créé le (snowflake → timestamp)
+        premium_type:   discordUser.premium_type || 0,
+        public_flags:   discordUser.public_flags || 0,
         created_at:     new Date(Number(BigInt(discordUser.id) >> 22n) + 1420070400000).toISOString(),
-        // Infos membre serveur
         server_joined:  memberInfo?.joined_at || null,
         server_nick:    memberInfo?.nick || null,
-        server_roles:   memberInfo?.roles || [],
+        server_roles:   server_roles_rich,
         boosting_since: memberInfo?.premium_since || null,
         linked_at:      new Date().toISOString(),
       };
@@ -790,6 +813,23 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   const _pAvatar = pQ.getById.get(Number(req.params.id));
   WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024));
   res.json({ ok: true });
+});
+
+// Autocomplete pseudo — min 3 chars, max 8 résultats, exclu bots et supprimés
+app.get('/api/players/search', (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (q.length < 3) return res.json([]);
+  // Valider : uniquement alphanum + _ + -
+  if (!/^[a-zA-Z0-9_\-\.]{1,20}$/.test(q)) return res.json([]);
+  const rows = db.prepare(`
+    SELECT id, pseudo, elo, avatar, color
+    FROM players
+    WHERE pseudo LIKE ? COLLATE NOCASE
+      AND deleted = 0
+      AND id != ?
+    ORDER BY elo DESC LIMIT 8
+  `).all(q + '%', BOT_PLAYER_ID);
+  res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color })));
 });
 
 app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
@@ -1159,7 +1199,39 @@ app.post('/api/bot-replay', (req, res) => {
 });
 
 // ID du bot système (pour affichage dans les replays)
-app.get('/api/bot-id', (_, res) => res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO }));
+// Rafraîchir les rôles Discord d'un joueur connecté
+app.post('/api/players/:id/refresh-discord', async (req, res) => {
+  const { token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  const player = pQ.getById.get(id);
+  if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord lié.' });
+  try {
+    const { botToken: bt } = discordConfig();
+    const [mRes, rolesRes] = await Promise.all([
+      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}`, { headers: { Authorization: 'Bot ' + bt } }),
+      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, { headers: { Authorization: 'Bot ' + bt } }),
+    ]);
+    if (!mRes.ok) return res.status(404).json({ error: 'Membre introuvable sur le serveur.' });
+    const memberInfo = await mRes.json();
+    const guildRoles = rolesRes.ok ? await rolesRes.json() : [];
+    const rolesMap = {};
+    guildRoles.forEach(r => { rolesMap[r.id] = { name: r.name, color: r.color }; });
+    const server_roles_rich = (memberInfo.roles || [])
+      .map(rid => ({ id: rid, name: rolesMap[rid]?.name || rid, color: rolesMap[rid]?.color ? '#' + rolesMap[rid].color.toString(16).padStart(6,'0') : null }))
+      .filter(r => r.name !== '@everyone');
+    // Mettre à jour discord_info
+    const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
+    const updated = { ...existing, server_roles: server_roles_rich, server_nick: memberInfo.nick || existing.server_nick };
+    rQ.setDiscord.run(player.discord_id, JSON.stringify(updated), id);
+    res.json({ ok: true, roles: server_roles_rich });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/bot-id', (_, res) => {
+  const bot = pQ.getById.get(BOT_PLAYER_ID);
+  res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO, color: bot?.color || '#ffd60a', shape: bot?.shape || 'circle' });
+});
 
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
