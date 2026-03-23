@@ -1178,7 +1178,7 @@ async function saveBotReplay(winner) {
       body: JSON.stringify({
         token:      localStorage.getItem('token'),
         moves:      iaMoves,
-        winner:     winner, // 1=joueur, 2=bot, null=nul
+        winner:     winner,
         p1Color,
         p2Color:    iaBotColor,
         botName:    iaBotName,
@@ -1186,11 +1186,18 @@ async function saveBotReplay(winner) {
       })
     });
     if (res.ok) {
-      const { gameId } = await res.json();
+      const { gameId, botDelta, newBotElo } = await res.json();
       const btn = document.getElementById('btn-replay');
       btn.style.display = '';
       btn.href = '/replay-bot/' + gameId;
       btn.textContent = '📽️ Replay & Analyse';
+      // Afficher le delta ELO du bot
+      if (typeof botDelta === 'number') {
+        const sign = botDelta >= 0 ? '+' : '';
+        document.getElementById('result-elo').textContent =
+          `🤖 ${iaBotName} : ${sign}${botDelta} ELO (→ ${newBotElo})`;
+        document.getElementById('result-elo').style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
+      }
     }
   } catch(e) { /* silencieux */ }
 }

@@ -169,6 +169,7 @@ const gQ = {
     JOIN players p2 ON g.player2_id = p2.id
     LEFT JOIN players w ON g.winner_id = w.id
     WHERE (g.player1_id = ? OR g.player2_id = ?)
+      AND g.player1_id != ? AND g.player2_id != ?
       AND g.status = 'finished'
     ORDER BY g.finished_at DESC LIMIT 25
   `),

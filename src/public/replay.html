@@ -231,6 +231,23 @@ async function init() {
     gameData = data.game;
     moves    = data.moves;
 
+    // Détecter si c'est une partie bot
+    const botRes = await fetch('/api/bot-id').catch(() => null);
+    const botData = botRes?.ok ? await botRes.json() : null;
+    const botId   = botData?.id;
+    const isBot   = botId && (gameData.player2_id === botId || gameData.player1_id === botId);
+
+    // Adapter le pseudo du bot pour l'affichage
+    if (isBot) {
+      if (gameData.player2_id === botId) {
+        gameData.p2_pseudo = '🤖 ' + (gameData.p2_pseudo || 'Puissance4-AI');
+        gameData.p2_elo_display = 'IA';
+      } else {
+        gameData.p1_pseudo = '🤖 ' + (gameData.p1_pseudo || 'Puissance4-AI');
+        gameData.p1_elo_display = 'IA';
+      }
+    }
+
     // Update back link if player in session
     const saved = sessionStorage.getItem('player');
     if (saved) {
@@ -370,14 +387,14 @@ function renderShell() {
         <div class="rp p1 ${isDraw?'draw':(p1Won?'winner':'loser')}">
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p1_pseudo}</div>
-          <div class="rp-elo">${g.p1_elo} ELO</div>
+          <div class="rp-elo">${g.p1_elo_display ?? (g.p1_elo + ' ELO')}</div>
           <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DÉFAITE')}</div>
         </div>
         <div class="vs-mid">VS</div>
         <div class="rp p2 ${isDraw?'draw':(p2Won?'winner':'loser')}">
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p2_pseudo}</div>
-          <div class="rp-elo">${g.p2_elo} ELO</div>
+          <div class="rp-elo">${g.p2_elo_display ?? (g.p2_elo + ' ELO')}</div>
           <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DÉFAITE')}</div>
         </div>
       </div>

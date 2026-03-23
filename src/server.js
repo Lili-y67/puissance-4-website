@@ -739,6 +739,7 @@ app.patch('/api/players/:id/shape', (req, res) => {
 });
 
 app.patch('/api/players/:id/color', (req, res) => {
+  if (Number(req.params.id) === BOT_PLAYER_ID) return res.status(403).json({ error: 'Bot non modifiable.' });
   const { color, token } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
@@ -778,8 +779,24 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
-  if (!player || player.deleted) return res.status(404).json({ error: 'Compte supprimé' });
-  const games      = gQ.getForPlayer.all(player.id, player.id);
+  if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return res.status(404).json({ error: 'Compte supprimé' });
+  // Pour le bot, montrer toutes ses parties ; pour les humains, exclure les parties bot
+  const games = player.id === BOT_PLAYER_ID
+    ? db.prepare(`
+        SELECT g.*,
+          p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
+          p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
+          w.pseudo AS winner_pseudo,
+          COALESCE(g.p1_color, p1.color) AS p1_color,
+          COALESCE(g.p2_color, p2.color) AS p2_color
+        FROM games g
+        JOIN players p1 ON g.player1_id = p1.id
+        JOIN players p2 ON g.player2_id = p2.id
+        LEFT JOIN players w ON g.winner_id = w.id
+        WHERE (g.player1_id = ? OR g.player2_id = ?) AND g.status = 'finished'
+        ORDER BY g.finished_at DESC LIMIT 25
+      `).all(player.id, player.id)
+    : gQ.getForPlayer.all(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
 
@@ -1045,23 +1062,42 @@ app.post('/api/bot-replay', (req, res) => {
   const botColor    = BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)];
   const botShape    = BOT_SHAPES[Math.floor(Math.random() * BOT_SHAPES.length)];
 
-  // Récupérer ou créer un vrai player2_id pour le bot
-  // On cherche un joueur bot existant, sinon on en crée un
-  let botPlayerId;
-  const existingBot = db.prepare(`SELECT id FROM players WHERE pseudo='🤖 Bot' LIMIT 1`).get();
-  if (existingBot) {
-    botPlayerId = existingBot.id;
+  const botPlayerId = BOT_PLAYER_ID;
+  const p1Id     = playerId || botPlayerId;
+  const isDraw   = winner === null;
+  const winnerId = isDraw ? null : (winner === 1 ? p1Id : botPlayerId);
+  const loserId  = isDraw ? null : (winner === 1 ? botPlayerId : p1Id);
+
+  // ── Calcul ELO — seulement le bot est impacté ─────────────────────────────
+  const botPlayer = pQ.getById.get(botPlayerId);
+  const humanElo  = p1?.elo ?? 1000; // ELO humain pour le calcul (pas modifié)
+  const botElo    = botPlayer?.elo ?? 1000;
+
+  const K    = 32;
+  const expBot = 1 / (1 + Math.pow(10, (humanElo - botElo) / 400));
+  let botDelta = 0;
+  if (isDraw) {
+    botDelta = Math.round(K * (0.5 - expBot));
+  } else if (winner === 2) {
+    // Bot gagne
+    botDelta = Math.round(K * (1 - expBot));
   } else {
-    const botInsert = db.prepare(`INSERT INTO players (pseudo, password, elo, deleted) VALUES ('🤖 Bot', '', 0, 1)`).run();
-    botPlayerId = botInsert.lastInsertRowid;
+    // Bot perd
+    botDelta = Math.round(K * (0 - expBot));
   }
 
-  const p1Id = playerId || botPlayerId; // si pas connecté, on met aussi le bot en p1
-  const winnerId = winner === 1 ? p1Id : (winner === 2 ? botPlayerId : null);
+  // Appliquer delta ELO uniquement au bot
+  db.prepare(`UPDATE players SET elo = MAX(0, elo + ?), wins = wins + ?, losses = losses + ?, draws = draws + ? WHERE id = ?`).run(
+    botDelta,
+    winner === 2 ? 1 : 0,
+    winner === 1 ? 1 : 0,
+    isDraw   ? 1 : 0,
+    botPlayerId
+  );
 
   const info = db.prepare(`
-    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape)
-    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?)
+    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2, finished_at)
+    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?, 0, ?, datetime('now'))
   `).run(
     p1Id,
     botPlayerId,
@@ -1070,7 +1106,8 @@ app.post('/api/bot-replay', (req, res) => {
     realP1Color,
     botColor,
     realP1Shape,
-    botShape
+    botShape,
+    botDelta  // elo_p2 = delta du bot
   );
   const gameId = info.lastInsertRowid;
 
@@ -1083,15 +1120,19 @@ app.post('/api/bot-replay', (req, res) => {
     });
   }
 
-  res.json({ gameId });
+  const newBotElo = (pQ.getById.get(botPlayerId))?.elo ?? botElo + botDelta;
+  res.json({ gameId, botDelta, newBotElo });
   } catch(err) {
     console.error('[bot-replay]', err.message, err.stack);
     res.status(500).json({ error: err.message });
   }
 });
 
+// ID du bot système (pour affichage dans les replays)
+app.get('/api/bot-id', (_, res) => res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO }));
+
 app.get('/api/leaderboard', (_, res) => {
-  res.json(pQ.leaderboard.all().map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
+  res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
 app.get('/api/leaderboard/wins', (_, res) => {
   const q = db.prepare('SELECT * FROM players ORDER BY wins DESC LIMIT 10');
