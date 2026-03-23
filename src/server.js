@@ -1039,23 +1039,20 @@ app.post('/api/bot-replay', (req, res) => {
   const realP1Shape = p1?.shape || 'circle';
 
   // Forme et couleur aléatoires pour le bot
+  const BOT_COLORS  = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#ff6b00'];
   const BOT_SHAPES  = ['circle','diamond','triangle','star','heart'];
-  const botColor = (() => {
-  let c;
-  do {
-    c = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
-  } while (c === realP1Color);
-  return c;
-})();
+  const botColor    = BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)];
   const botShape    = BOT_SHAPES[Math.floor(Math.random() * BOT_SHAPES.length)];
 
-  // Insérer la partie avec player2_id = -1 (bot) — pas de calcul ELO
+  // Insérer la partie avec player2_id=0 (joueur bot système) — pas de calcul ELO
+  const p1Id = playerId || 0;
+  const winnerId = winner === 1 ? p1Id : (winner === 2 ? 0 : null);
   const info = db.prepare(`
     INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape)
-    VALUES (?, -1, ?, 'finished', ?, ?, ?, ?, ?)
+    VALUES (?, 0, ?, 'finished', ?, ?, ?, ?, ?)
   `).run(
-    playerId || 0,
-    winner === 1 ? (playerId || 0) : (winner === 2 ? -1 : null),
+    p1Id,
+    winnerId,
     moves?.length || 0,
     realP1Color,
     botColor,
@@ -1068,7 +1065,7 @@ app.post('/api/bot-replay', (req, res) => {
   if (Array.isArray(moves)) {
     const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, move_number) VALUES (?,?,?,?)`);
     moves.forEach((col, i) => {
-      const pid = i % 2 === 0 ? (playerId || 0) : -1;
+      const pid = i % 2 === 0 ? (playerId || 0) : 0; // 0 = bot système
       insertMove.run(gameId, pid, col, i + 1);
     });
   }
