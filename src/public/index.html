@@ -888,7 +888,7 @@ function startVsIA(difficulty = 'hard') {
     color: selectedColor || '#ff2d55', avatar: ''
   };
   const botColor = randomColor(guestPlayer.color);
-  const botName  = randomBotName();
+  const botName  = 'Puissance4-AI';
   // Stocker les infos pour game.html
   sessionStorage.setItem('player', JSON.stringify(guestPlayer));
   sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty }));

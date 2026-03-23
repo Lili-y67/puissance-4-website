@@ -47,6 +47,27 @@ function validateSession(token) {
 // Purger les sessions expirées au démarrage
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
+// ── Bot Puissance4-AI ─────────────────────────────────────────────────────────
+const BOT_PSEUDO = 'Puissance4-AI';
+const BOT_AVATAR = 'https://i.pinimg.com/736x/71/c2/0a/71c20a784a800f78a2e7e0463a17b039.jpg';
+const BOT_BANNER = 'https://i.pinimg.com/1200x/0b/10/ae/0b10aed237a4092f5b6ebf89bccdffbb.jpg';
+const _BOT_COLORS = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#5e5ce6'];
+const _BOT_SHAPES = ['circle','diamond','triangle','star','heart'];
+let BOT_PLAYER_ID;
+{
+  const existing = db.prepare(`SELECT id FROM players WHERE pseudo = ? LIMIT 1`).get(BOT_PSEUDO);
+  if (existing) {
+    BOT_PLAYER_ID = existing.id;
+    db.prepare(`UPDATE players SET avatar=?, banner=?, deleted=0 WHERE id=?`).run(BOT_AVATAR, BOT_BANNER, BOT_PLAYER_ID);
+  } else {
+    const bc = _BOT_COLORS[Math.floor(Math.random() * _BOT_COLORS.length)];
+    const bs = _BOT_SHAPES[Math.floor(Math.random() * _BOT_SHAPES.length)];
+    const r  = db.prepare(`INSERT INTO players (pseudo, password, elo, wins, losses, draws, color, shape, avatar, banner, deleted) VALUES (?,''  ,1200,0,0,0,?,?,?,?,0)`).run(BOT_PSEUDO, bc, bs, BOT_AVATAR, BOT_BANNER);
+    BOT_PLAYER_ID = r.lastInsertRowid;
+  }
+  console.log(`[Bot] Puissance4-AI id=${BOT_PLAYER_ID}`);
+}
+
 app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -1056,12 +1077,6 @@ app.post('/api/bot-replay', (req, res) => {
   const realP1Color = p1?.color || p1Color || '#ff2d55';
   const realP1Shape = p1?.shape || 'circle';
 
-  // Forme et couleur aléatoires pour le bot
-  const BOT_COLORS  = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#ff6b00'];
-  const BOT_SHAPES  = ['circle','diamond','triangle','star','heart'];
-  const botColor    = BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)];
-  const botShape    = BOT_SHAPES[Math.floor(Math.random() * BOT_SHAPES.length)];
-
   const botPlayerId = BOT_PLAYER_ID;
   const p1Id     = playerId || botPlayerId;
   const isDraw   = winner === null;
@@ -1070,7 +1085,9 @@ app.post('/api/bot-replay', (req, res) => {
 
   // ── Calcul ELO — seulement le bot est impacté ─────────────────────────────
   const botPlayer = pQ.getById.get(botPlayerId);
-  const humanElo  = p1?.elo ?? 1000; // ELO humain pour le calcul (pas modifié)
+  const botColor  = botPlayer?.color || '#ffd60a';
+  const botShape  = botPlayer?.shape || 'circle';
+  const humanElo  = p1?.elo ?? 1000;
   const botElo    = botPlayer?.elo ?? 1000;
 
   const K    = 32;
@@ -1087,13 +1104,10 @@ app.post('/api/bot-replay', (req, res) => {
   }
 
   // Appliquer delta ELO uniquement au bot
-  db.prepare(`UPDATE players SET elo = MAX(0, elo + ?), wins = wins + ?, losses = losses + ?, draws = draws + ? WHERE id = ?`).run(
-    botDelta,
-    winner === 2 ? 1 : 0,
-    winner === 1 ? 1 : 0,
-    isDraw   ? 1 : 0,
-    botPlayerId
-  );
+  pQ.updateElo.run({ delta: botDelta, id: botPlayerId });
+  if (isDraw)        { pQ.draw.run(botPlayerId); }
+  else if (winner === 2) { pQ.win.run(botPlayerId); }
+  else               { pQ.loss.run(botPlayerId); }
 
   const info = db.prepare(`
     INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2, finished_at)
