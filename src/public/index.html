@@ -584,9 +584,29 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
         👤 Voir mon profil
       </button>
 
-      <button class="btn btn-robot" onclick="startVsIA()">
+      <button class="btn btn-robot" onclick="openBotModal()">
         🤖 Jouer contre l'ordinateur
       </button>
+
+      <!-- Modal sélection difficulté -->
+      <div id="bot-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:90%;max-width:340px;display:flex;flex-direction:column;gap:16px;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;color:var(--text);">🤖 DIFFICULTÉ</div>
+          <div style="font-size:13px;color:var(--muted);">Choisis le niveau de l'ordinateur</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="startVsIA('easy')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(48,209,88,0.3);background:rgba(48,209,88,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(48,209,88,0.18)'" onmouseout="this.style.background='rgba(48,209,88,0.08)'">
+              🟢 FACILE — <span style="font-weight:400;font-size:13px;">L'IA fait des erreurs intentionnelles</span>
+            </button>
+            <button onclick="startVsIA('medium')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,159,10,0.18)'" onmouseout="this.style.background='rgba(255,159,10,0.08)'">
+              🟡 MOYEN — <span style="font-weight:400;font-size:13px;">Défense et attaque basiques</span>
+            </button>
+            <button onclick="startVsIA('hard')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(255,45,85,0.3);background:rgba(255,45,85,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,45,85,0.18)'" onmouseout="this.style.background='rgba(255,45,85,0.08)'">
+              🔴 DIFFICILE — <span style="font-weight:400;font-size:13px;">Minimax profondeur 10, optimal</span>
+            </button>
+          </div>
+          <button onclick="document.getElementById('bot-modal').style.display='none'" style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">Annuler</button>
+        </div>
+      </div>
 
       <div class="link"><a href="/regles">📚 Règles</a> · <a href="/live">🔴 Live</a> · <a href="/leaderboard">🏆 Classement</a></div>
       <div class="link"><a href="/forgot-password">🔑 Mot de passe oublié</a></div>
@@ -856,7 +876,12 @@ function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
-function startVsIA() {
+function openBotModal() {
+  document.getElementById('bot-modal').style.display = 'flex';
+}
+
+function startVsIA(difficulty = 'hard') {
+  document.getElementById('bot-modal').style.display = 'none';
   // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
   const guestPlayer = saved ? JSON.parse(saved) : {
@@ -867,8 +892,8 @@ function startVsIA() {
   const botName  = randomBotName();
   // Stocker les infos pour game.html
   sessionStorage.setItem('player', JSON.stringify(guestPlayer));
-  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor }));
-  location.href = '/game';
+  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty }));
+  location.href = '/game/bot';
 }
 
 // ── Musique d'attente Queue ────────────────────────────────────────────────────

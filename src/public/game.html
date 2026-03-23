@@ -932,26 +932,34 @@ function quit() {
 // ═══════════════════════════════════════════════════════════════════
 let iaMode = false;
 let iaGrid = [];
+let iaDifficulty = 'hard';
+let iaMoves = []; // historique des coups pour replay
+let iaBotName = '';
+let iaBotColor = '';
 const IA_R = 6, IA_C = 7;
 
-function startVsIA({ botName, botColor }) {
+function startVsIA({ botName, botColor, difficulty = 'hard' }) {
   iaMode = true;
   mySide = 1;
   currentTurn = 1;
   gameOver = false;
+  iaDifficulty = difficulty;
+  iaMoves = [];
+  iaBotName = botName;
+  iaBotColor = botColor;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
 
-  // Lire shape depuis localStorage
   const savedPlayer = JSON.parse(localStorage.getItem('player') || '{}');
   const rawShape = savedPlayer.shape || 'circle';
   if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;
-  p2Shape = 'circle'; // l'IA joue toujours rond
+  p2Shape = 'circle';
 
   const playerColor = myPlayer.color || '#ff2d55';
   applyColors(playerColor, botColor);
 
-  // Lobby
+  const diffLabel = { easy:'🟢 Facile', medium:'🟡 Moyen', hard:'🔴 Difficile' }[difficulty] || '';
+
   const lav1 = document.getElementById('lav1');
   const lav2 = document.getElementById('lav2');
   if (myPlayer.avatar) lav1.innerHTML = `<img src="${myPlayer.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
@@ -960,25 +968,29 @@ function startVsIA({ botName, botColor }) {
   document.getElementById('lpseudo1').textContent = myPlayer.pseudo;
   document.getElementById('lpseudo2').textContent = botName;
   document.getElementById('lelo1').textContent = (myPlayer.elo || '—') + ' ELO';
-  document.getElementById('lelo2').textContent = 'Non classé';
+  document.getElementById('lelo2').textContent = diffLabel;
   const badge = document.createElement('div');
   badge.className = 'lobby-you'; badge.textContent = 'TOI';
   document.getElementById('lp1').appendChild(badge);
 
   SFX.matchFound();
+  inCountdown = true;
   let n = 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
   const iv = setInterval(() => {
     n--;
     if (n <= 0) {
-      clearInterval(iv); SFX.go();
+      clearInterval(iv); inCountdown = false; SFX.go();
       document.getElementById('lobby-overlay').classList.add('hidden');
       document.getElementById('name-p1').textContent = myPlayer.pseudo;
       document.getElementById('elo-p1').textContent  = (myPlayer.elo || '—') + ' ELO';
       document.getElementById('name-p2').textContent = '🤖 ' + botName;
-      document.getElementById('elo-p2').textContent  = 'Non classé';
+      document.getElementById('elo-p2').textContent  = diffLabel;
       renderBoard();
+      const boardEl = document.getElementById('board');
+      boardEl.classList.add('locked');
+      setTimeout(() => boardEl.classList.remove('locked'), 400);
       updateTurnUI();
     } else { cdEl.textContent = n; SFX.tick(); }
   }, 1000);
@@ -988,6 +1000,7 @@ function iaPlayHuman(col) {
   const row = iaGetRow(col);
   if (row === -1 || gameOver) return;
   iaGrid[row][col] = 1;
+  iaMoves.push(col);
   SFX.drop();
   applyToken(row, col, 1);
   const win = iaCheckWin(row, col, 1);
@@ -995,7 +1008,7 @@ function iaPlayHuman(col) {
   if (iaIsDraw()) { iaEnd(null, []); return; }
   currentTurn = 2;
   updateTurnUI();
-  setTimeout(iaPlayBot, 400 + Math.random() * 400);
+  setTimeout(iaPlayBot, 400 + Math.random() * 300);
 }
 
 function iaPlayBot() {
@@ -1004,6 +1017,7 @@ function iaPlayBot() {
   const row = iaGetRow(col);
   if (row === -1) return;
   iaGrid[row][col] = 2;
+  iaMoves.push(col);
   SFX.opponentDrop();
   applyToken(row, col, 2);
   const win = iaCheckWin(row, col, 2);
@@ -1025,13 +1039,97 @@ function iaSimulate(col, p) {
   iaGrid[row][col] = 0;
   return !!w;
 }
-function iaChoose() {
+
+// ── IA Facile : aléatoire sauf victoire immédiate ─────────────────────────────
+function iaChooseEasy() {
+  const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
+  // Jouer victoire si possible
+  for (const c of valid) if (iaSimulate(c, 2)) return c;
+  // Sinon aléatoire pur
+  return valid[Math.floor(Math.random()*valid.length)];
+}
+
+// ── IA Moyen : victoire + blocage + centre ────────────────────────────────────
+function iaChooseMedium() {
   const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
   for (const c of valid) if (iaSimulate(c, 2)) return c;
   for (const c of valid) if (iaSimulate(c, 1)) return c;
-  if (valid.includes(3)) return 3;
-  return valid[Math.floor(Math.random()*valid.length)];
+  const pref = [3,2,4,1,5,0,6].filter(c => iaGetRow(c) !== -1);
+  // 20% chance d'erreur pour rendre moyen
+  if (Math.random() < 0.2 && valid.length > 1) {
+    const others = valid.filter(c => c !== pref[0]);
+    return others[Math.floor(Math.random()*others.length)];
+  }
+  return pref[0];
 }
+
+// ── IA Difficile : Minimax Alpha-Beta ────────────────────────────────────────
+function iaScoreWindow(w, p) {
+  const o = p===1?2:1;
+  const mine=w.filter(c=>c===p).length, opp=w.filter(c=>c===o).length, emp=w.filter(c=>c===0).length;
+  if(mine===4)return 1000; if(opp===4)return-1000;
+  if(mine===3&&emp===1)return 50; if(opp===3&&emp===1)return-50;
+  if(mine===2&&emp===2)return 5; return 0;
+}
+function iaEvaluate(b) {
+  let s=0;
+  for(let r=0;r<IA_R;r++){if(b[r][3]===2)s+=8;if(b[r][3]===1)s-=8;}
+  for(let r=0;r<IA_R;r++)for(let c=0;c<=IA_C-4;c++)s+=iaScoreWindow([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]],2);
+  for(let c=0;c<IA_C;c++)for(let r=0;r<=IA_R-4;r++)s+=iaScoreWindow([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]],2);
+  for(let r=3;r<IA_R;r++)for(let c=0;c<=IA_C-4;c++)s+=iaScoreWindow([b[r][c],b[r-1][c+1],b[r-2][c+2],b[r-3][c+3]],2);
+  for(let r=0;r<=IA_R-4;r++)for(let c=0;c<=IA_C-4;c++)s+=iaScoreWindow([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]],2);
+  return s;
+}
+function iaMinimax(b, depth, alpha, beta, maximizing) {
+  const checkW = (p) => {
+    for(let r=0;r<IA_R;r++)for(let c=0;c<=IA_C-4;c++)if(b[r][c]===p&&b[r][c+1]===p&&b[r][c+2]===p&&b[r][c+3]===p)return true;
+    for(let c=0;c<IA_C;c++)for(let r=0;r<=IA_R-4;r++)if(b[r][c]===p&&b[r+1][c]===p&&b[r+2][c]===p&&b[r+3][c]===p)return true;
+    for(let r=3;r<IA_R;r++)for(let c=0;c<=IA_C-4;c++)if(b[r][c]===p&&b[r-1][c+1]===p&&b[r-2][c+2]===p&&b[r-3][c+3]===p)return true;
+    for(let r=0;r<=IA_R-4;r++)for(let c=0;c<=IA_C-4;c++)if(b[r][c]===p&&b[r+1][c+1]===p&&b[r+2][c+2]===p&&b[r+3][c+3]===p)return true;
+    return false;
+  };
+  if(checkW(2))return 100000+depth; if(checkW(1))return-100000-depth;
+  if(b[0].every(c=>c!==0)||depth===0)return iaEvaluate(b);
+  const cols=[3,2,4,1,5,0,6].filter(c=>b[0][c]===0);
+  if(maximizing){
+    let best=-Infinity;
+    for(const col of cols){
+      for(let r=IA_R-1;r>=0;r--)if(b[r][col]===0){b[r][col]=2;break;}
+      best=Math.max(best,iaMinimax(b,depth-1,alpha,beta,false));
+      for(let r=0;r<IA_R;r++)if(b[r][col]!==0){b[r][col]=0;break;}
+      alpha=Math.max(alpha,best); if(beta<=alpha)break;
+    }
+    return best;
+  } else {
+    let best=Infinity;
+    for(const col of cols){
+      for(let r=IA_R-1;r>=0;r--)if(b[r][col]===0){b[r][col]=1;break;}
+      best=Math.min(best,iaMinimax(b,depth-1,alpha,beta,true));
+      for(let r=0;r<IA_R;r++)if(b[r][col]!==0){b[r][col]=0;break;}
+      beta=Math.min(beta,best); if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+function iaChooseHard() {
+  const valid=[3,2,4,1,5,0,6].filter(c=>iaGetRow(c)!==-1);
+  let bestCol=valid[0], bestScore=-Infinity;
+  const b=iaGrid.map(r=>[...r]);
+  for(const col of valid){
+    for(let r=IA_R-1;r>=0;r--)if(b[r][col]===0){b[r][col]=2;break;}
+    const score=iaMinimax(b,9,-Infinity,Infinity,false);
+    for(let r=0;r<IA_R;r++)if(b[r][col]!==0){b[r][col]=0;break;}
+    if(score>bestScore){bestScore=score;bestCol=col;}
+  }
+  return bestCol;
+}
+
+function iaChoose() {
+  if (iaDifficulty === 'easy')   return iaChooseEasy();
+  if (iaDifficulty === 'medium') return iaChooseMedium();
+  return iaChooseHard();
+}
+
 function iaCheckWin(r, c, p) {
   const dirs = [[1,0],[0,1],[1,1],[1,-1]];
   for (const [dr,dc] of dirs) {
@@ -1060,11 +1158,41 @@ function iaEnd(winner, winCells) {
   }
   titleEl.style.webkitBackgroundClip='text'; titleEl.style.webkitTextFillColor='transparent';
   document.getElementById('result-elo').textContent = '';
-  document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? "Tu as battu l'IA !" : "L'IA a gagné cette fois...";
-  document.getElementById('btn-replay').style.display = 'none';
+  const diffLabel = { easy:'Facile', medium:'Moyen', hard:'Difficile' }[iaDifficulty] || '';
+  document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? `Tu as battu l'IA (${diffLabel}) !` : `L'IA (${diffLabel}) a gagné cette fois...`;
+
+  // Sauvegarder la partie bot pour le replay (sans stats)
+  saveBotReplay(winner);
+
   document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue','1'); location.href='/'; };
   document.getElementById('result-overlay').classList.add('show');
   setStatus('');
+}
+
+async function saveBotReplay(winner) {
+  try {
+    const p1Color = myPlayer.color || '#ff2d55';
+    const res = await fetch('/api/bot-replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token:      localStorage.getItem('token'),
+        moves:      iaMoves,
+        winner:     winner, // 1=joueur, 2=bot, null=nul
+        p1Color,
+        p2Color:    iaBotColor,
+        botName:    iaBotName,
+        difficulty: iaDifficulty,
+      })
+    });
+    if (res.ok) {
+      const { gameId } = await res.json();
+      const btn = document.getElementById('btn-replay');
+      btn.style.display = '';
+      btn.href = '/replay-bot/' + gameId;
+      btn.textContent = '📽️ Replay & Analyse';
+    }
+  } catch(e) { /* silencieux */ }
 }
 </script>
 </body>

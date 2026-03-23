@@ -601,7 +601,8 @@ app.post('/api/reset-password', (req, res) => {
 });
 
 app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
-app.get('/replay/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
+app.get('/replay/:id',     (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
+app.get('/replay-bot/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
@@ -1025,6 +1026,54 @@ app.get('/api/games/:id/moves', (req, res) => {
   const game = gQ.getById.get(Number(req.params.id));
   if (!game) return res.status(404).json({ error: 'Introuvable' });
   res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)) });
+});
+
+// ── Bot replay (sans stats ELO) ──────────────────────────────────────────────
+app.post('/api/bot-replay', (req, res) => {
+  const { token, moves, winner, p1Color, p2Color, botName, difficulty } = req.body;
+  const playerId = token ? validateSession(token) : null;
+
+  // Récupérer le vrai joueur pour sa couleur et forme perso
+  const p1 = playerId ? pQ.getById.get(playerId) : null;
+  const realP1Color = p1?.color || p1Color || '#ff2d55';
+  const realP1Shape = p1?.shape || 'circle';
+
+  // Forme et couleur aléatoires pour le bot
+  const BOT_SHAPES  = ['circle','diamond','triangle','star','heart'];
+  const botColor = (() => {
+  let c;
+  do {
+    c = '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+  } while (c === realP1Color);
+  return c;
+})();
+  const botShape    = BOT_SHAPES[Math.floor(Math.random() * BOT_SHAPES.length)];
+
+  // Insérer la partie avec player2_id = -1 (bot) — pas de calcul ELO
+  const info = db.prepare(`
+    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape)
+    VALUES (?, -1, ?, 'finished', ?, ?, ?, ?, ?)
+  `).run(
+    playerId || 0,
+    winner === 1 ? (playerId || 0) : (winner === 2 ? -1 : null),
+    moves?.length || 0,
+    realP1Color,
+    botColor,
+    realP1Shape,
+    botShape
+  );
+  const gameId = info.lastInsertRowid;
+
+  // Insérer les coups
+  if (Array.isArray(moves)) {
+    const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, move_number) VALUES (?,?,?,?)`);
+    moves.forEach((col, i) => {
+      const pid = i % 2 === 0 ? (playerId || 0) : -1;
+      insertMove.run(gameId, pid, col, i + 1);
+    });
+  }
+
+  res.json({ gameId });
 });
 
 app.get('/api/leaderboard', (_, res) => {

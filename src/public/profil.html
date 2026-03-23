@@ -55,7 +55,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 }
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
-.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--red-dim);border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--red);overflow:hidden;transition:border-color 0.4s;}
+.profile-avatar{width:72px;height:72px;border-radius:50%;background:var(--player-color-dim,var(--red-dim));border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--player-color,var(--red));overflow:hidden;transition:border-color 0.4s,background 0.4s,color 0.4s;}
 .profile-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .avatar-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0;transition:opacity 0.2s;}
 /* Cercle statut autour de l'avatar */
@@ -501,6 +501,12 @@ function render(player, games, following, followers, followStatus) {
   const avatarHtml = player.avatar
     ? `<img src="${player.avatar}" alt="avatar">`
     : player.pseudo[0].toUpperCase();
+
+  // Appliquer la couleur du joueur aux variables CSS pour l'avatar
+  const pc = player.color || '#ff2d55';
+  const r = parseInt(pc.slice(1,3),16), g = parseInt(pc.slice(3,5),16), b = parseInt(pc.slice(5,7),16);
+  document.documentElement.style.setProperty('--player-color', pc);
+  document.documentElement.style.setProperty('--player-color-dim', `rgba(${r},${g},${b},0.15)`);
 
   const avatarSection = isOwnProfile
     ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
@@ -1351,25 +1357,15 @@ async function loadDiscordInfo() {
         ${row('🆔', 'ID Discord',        d.id)}
         ${row('📅', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
         ${row('🔗', 'Lié le',            linkedStr)}
-        ${row('📧', 'Email',             d.email ? (d.email) : 'Non accessible')}
         ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
         ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
-        ${row('💎', 'Nitro',             nitroIcon + ' ' + nitroLabel, nitroColor || 'rgba(238,238,245,0.8)')}
-        ${boostStr ? row('🚀', 'Boosting depuis',    boostStr, '#ff73fa') : ''}
         ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur', d.server_roles.length + ' rôle(s)') : ''}
-      </div>
-
-      <!-- Badges Discord -->
-      <div style="margin-bottom:4px">
-        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color: var(--muted);margin-bottom:6px">Badges Discord</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${badgesHtml}</div>
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
     if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';
   }
 }
-
 // ── Déliaison Discord ────────────────────────────────────────────────────────
 async function requestUnlink() {
   const btn = document.getElementById('btn-unlink');
