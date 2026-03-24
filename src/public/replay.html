@@ -184,6 +184,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .cls-best      {background:rgba(48,209,88,0.15);color:#30d158;border:1px solid rgba(48,209,88,0.3);}
 .cls-excellent {background:rgba(100,210,120,0.12);color:#64d278;border:1px solid rgba(100,210,120,0.25);}
 .cls-good      {background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);}
+.cls-forced{background:rgba(150,150,150,0.12);color:#aaaaaa;border:1px solid rgba(150,150,150,0.25);}
 .cls-inaccuracy{background:rgba(255,214,10,0.12);color:#ffd60a;border:1px solid rgba(255,214,10,0.25);}
 .cls-mistake   {background:rgba(255,159,10,0.12);color:#ff9f0a;border:1px solid rgba(255,159,10,0.25);}
 .cls-blunder   {background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);}
@@ -716,13 +717,14 @@ const CLS_LABELS = {
   best:       '✅ Meilleur',
   excellent:  '👍 Excellent',
   good:       '🟢 Bon',
+  forced:     '⬜ Forcé',
   inaccuracy: '🟡 Imprécision',
   mistake:    '⚠️ Erreur',
   blunder:    '💀 Gaffe',
 };
 const CLS_COUNTS_LABEL = {
   best:'Meilleurs', excellent:'Excellents', good:'Bons',
-  inaccuracy:'Imprécisions', mistake:'Erreurs', blunder:'Gaffes',
+  forced:'Forcés', inaccuracy:'Imprécisions', mistake:'Erreurs', blunder:'Gaffes',
 };
 
 // Couleur selon % de précision
@@ -851,7 +853,7 @@ function renderAnalysis(results, accuracy) {
             </defs>
             <path d="${areaP1}" fill="${p1Color}" fill-opacity="0.25" clip-path="url(#clip-top)"/>
             <path d="${areaP2}" fill="${p2Color}" fill-opacity="0.25" clip-path="url(#clip-bot)"/>
-            <line x1="0" y1="${mid}" x2="100" y2="${mid}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>
+            <line x1="0" y1="${mid}" x2="100" y2="${mid}" stroke="rgba(255,255,255,0.2)" stroke-width="0.8" stroke-dasharray="3,3"/>
             <path d="${path}" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
             <!-- Ligne verticale de survol -->
             <line id="eval-hover-line" x1="-1" y1="0" x2="-1" y2="${H}" stroke="rgba(255,255,255,0.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
@@ -922,10 +924,24 @@ function renderAnalysis(results, accuracy) {
                </div>`
             : '';
 
+          // Barre d'éval : gauche = J1, droite = J2, séparée au centre
           const evalBar = r.evalScore !== undefined
-            ? `<div style="width:32px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;flex-shrink:0">
-                 <div style="height:100%;width:${Math.abs(r.evalScore)}%;background:${r.evalScore >= 0 ? p1Color : p2Color};border-radius:2px"></div>
-               </div>`
+            ? (() => {
+                const sc = r.evalScore; // -100 à +100
+                // Côté J1 (gauche) : sc > 0 → rempli
+                // Côté J2 (droite) : sc < 0 → rempli
+                const p1w = sc > 0 ? Math.round(sc / 2) : 0;   // 0-50%
+                const p2w = sc < 0 ? Math.round(-sc / 2) : 0;  // 0-50%
+                return `<div title="${sc > 0 ? '+' : ''}${sc}" style="width:48px;height:6px;display:flex;border-radius:3px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.06);">
+                  <div style="width:50%;display:flex;justify-content:flex-end;">
+                    <div style="width:${p1w*2}%;height:100%;background:${p1Color};border-radius:3px 0 0 3px;"></div>
+                  </div>
+                  <div style="width:1px;background:rgba(255,255,255,0.15);flex-shrink:0;"></div>
+                  <div style="width:50%;display:flex;justify-content:flex-start;">
+                    <div style="width:${p2w*2}%;height:100%;background:${p2Color};border-radius:0 3px 3px 0;"></div>
+                  </div>
+                </div>`;
+              })()
             : '';
 
           return `<div class="analyse-move" id="am-${i}" onclick="jumpToMove(${r.moveIndex})">

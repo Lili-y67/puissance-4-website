@@ -587,23 +587,71 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
         🤖 Jouer contre l'ordinateur
       </button>
 
-      <!-- Modal sélection difficulté -->
-      <div id="bot-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:90%;max-width:340px;display:flex;flex-direction:column;gap:16px;">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;color:var(--text);">🤖 DIFFICULTÉ</div>
-          <div style="font-size:13px;color:var(--muted);">Choisis le niveau de l'ordinateur</div>
-          <div style="display:flex;flex-direction:column;gap:8px;">
-            <button onclick="startVsIA('easy')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(48,209,88,0.3);background:rgba(48,209,88,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(48,209,88,0.18)'" onmouseout="this.style.background='rgba(48,209,88,0.08)'">
-              🟢 FACILE — <span style="font-weight:400;font-size:13px;">L'IA fait des erreurs intentionnelles</span>
+      <!-- Modal sélection difficulté bot -->
+      <div id="bot-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;color:var(--text);">🤖 MODE IA</div>
+
+          <!-- Tabs -->
+          <div style="display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:3px;">
+            <button id="bot-tab-preset" onclick="setBotTab('preset')"
+              style="flex:1;padding:8px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;">
+              NIVEAUX
             </button>
-            <button onclick="startVsIA('medium')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,159,10,0.18)'" onmouseout="this.style.background='rgba(255,159,10,0.08)'">
-              🟡 MOYEN — <span style="font-weight:400;font-size:13px;">Défense et attaque basiques</span>
-            </button>
-            <button onclick="startVsIA('hard')" style="padding:14px 16px;border-radius:12px;border:1px solid rgba(255,45,85,0.3);background:rgba(255,45,85,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,45,85,0.18)'" onmouseout="this.style.background='rgba(255,45,85,0.08)'">
-              🔴 DIFFICILE — <span style="font-weight:400;font-size:13px;">Minimax profondeur 10, optimal</span>
+            <button id="bot-tab-elo" onclick="setBotTab('elo')"
+              style="flex:1;padding:8px;border-radius:8px;border:none;background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:all 0.2s;">
+              ELO CUSTOM
             </button>
           </div>
-          <button onclick="document.getElementById('bot-modal').style.display='none'" style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;">Annuler</button>
+
+          <!-- Panel Niveaux -->
+          <div id="bot-panel-preset" style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="startVsIA('easy')"
+              style="padding:13px 16px;border-radius:12px;border:1px solid rgba(48,209,88,0.3);background:rgba(48,209,88,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
+              onmouseover="this.style.background='rgba(48,209,88,0.18)'" onmouseout="this.style.background='rgba(48,209,88,0.08)'">
+              🟢 FACILE <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~500 ELO, erreurs fréquentes</span>
+            </button>
+            <button onclick="startVsIA('medium')"
+              style="padding:13px 16px;border-radius:12px;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
+              onmouseover="this.style.background='rgba(255,159,10,0.18)'" onmouseout="this.style.background='rgba(255,159,10,0.08)'">
+              🟡 MOYEN <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~1200 ELO, défense correcte</span>
+            </button>
+            <button onclick="startVsIA('hard')"
+              style="padding:13px 16px;border-radius:12px;border:1px solid rgba(255,45,85,0.3);background:rgba(255,45,85,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
+              onmouseover="this.style.background='rgba(255,45,85,0.18)'" onmouseout="this.style.background='rgba(255,45,85,0.08)'">
+              🔴 DIFFICILE <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~2800 ELO, Minimax optimal</span>
+            </button>
+          </div>
+
+          <!-- Panel ELO custom -->
+          <div id="bot-panel-elo" style="display:none;flex-direction:column;gap:14px;">
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;color:var(--muted);">ELO du bot</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span id="bot-elo-rank-badge" style="font-size:11px;padding:2px 8px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;"></span>
+                  <span id="bot-elo-val" style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--text);">1200</span>
+                </div>
+              </div>
+              <input type="range" id="bot-elo-slider" min="100" max="3500" value="1200" step="50"
+                oninput="updateBotEloDisplay(this.value)"
+                style="width:100%;accent-color:var(--accent);cursor:pointer;">
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;">
+                <span>100</span><span>Malachite</span><span>Quartz</span><span>Ambre</span><span>Jade</span><span>Saphir</span><span>3500</span>
+              </div>
+            </div>
+            <!-- Description du niveau -->
+            <div id="bot-elo-desc" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.02);font-size:12px;color:var(--muted);min-height:44px;"></div>
+            <button onclick="startVsIA('elo', parseInt(document.getElementById('bot-elo-slider').value))"
+              style="padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+              ⚡ JOUER
+            </button>
+          </div>
+
+          <button onclick="document.getElementById('bot-modal').style.display='none'"
+            style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;">
+            Annuler
+          </button>
         </div>
       </div>
 
@@ -877,9 +925,48 @@ function hslToHex(h, s, l) {
 
 function openBotModal() {
   document.getElementById('bot-modal').style.display = 'flex';
+  updateBotEloDisplay(1200);
 }
 
-function startVsIA(difficulty = 'hard') {
+function setBotTab(tab) {
+  const isElo = tab === 'elo';
+  document.getElementById('bot-panel-preset').style.display = isElo ? 'none' : 'flex';
+  document.getElementById('bot-panel-elo').style.display   = isElo ? 'flex' : 'none';
+  document.getElementById('bot-tab-preset').style.background = isElo ? 'transparent' : 'var(--accent)';
+  document.getElementById('bot-tab-preset').style.color      = isElo ? 'var(--muted)' : '#fff';
+  document.getElementById('bot-tab-elo').style.background    = isElo ? 'var(--accent)' : 'transparent';
+  document.getElementById('bot-tab-elo').style.color         = isElo ? '#fff' : 'var(--muted)';
+}
+
+const _BOT_RANKS = [
+  { min:100,  max:699,  name:'Malachite', color:'#2ecc71', depth:0, desc:"Joue aléatoirement, rate même les victoires évidentes." },
+  { min:700,  max:1299, name:'Quartz',    color:'#b0bec5', depth:1, desc:"Voit les victoires immédiates et les bloquages simples." },
+  { min:1300, max:1799, name:'Ambre',     color:'#cd7f32', depth:3, desc:"Minimax profondeur 3 — commet des erreurs régulièrement." },
+  { min:1800, max:2299, name:'Jade',      color:'#1abc9c', depth:5, desc:"Minimax profondeur 5 — défense solide, quelques erreurs." },
+  { min:2300, max:2799, name:'Saphir',    color:'#3498db', depth:7, desc:"Minimax profondeur 7 — très fort, peu d'erreurs." },
+  { min:2800, max:3500, name:'Améthyste', color:'#9b59b6', depth:10,desc:"Minimax profondeur 10 — jeu quasi optimal." },
+];
+
+function getBotRankInfo(elo) {
+  return _BOT_RANKS.find(r => elo >= r.min && elo <= r.max) || _BOT_RANKS[0];
+}
+
+function updateBotEloDisplay(elo) {
+  const info = getBotRankInfo(parseInt(elo));
+  const valEl  = document.getElementById('bot-elo-val');
+  const badgeEl= document.getElementById('bot-elo-rank-badge');
+  const descEl = document.getElementById('bot-elo-desc');
+  if (valEl)   valEl.textContent   = elo;
+  if (badgeEl) {
+    badgeEl.textContent  = info.name.toUpperCase();
+    badgeEl.style.background = info.color + '22';
+    badgeEl.style.color      = info.color;
+    badgeEl.style.border     = `1px solid ${info.color}55`;
+  }
+  if (descEl) descEl.textContent = info.desc;
+}
+
+function startVsIA(difficulty = 'hard', targetElo = null) {
   document.getElementById('bot-modal').style.display = 'none';
   // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
@@ -889,9 +976,14 @@ function startVsIA(difficulty = 'hard') {
   };
   const botColor = randomColor(guestPlayer.color);
   const botName  = 'Puissance4-AI';
-  // Stocker les infos pour game.html
+  // Si mode ELO, mapper vers la profondeur
+  let finalDifficulty = difficulty;
+  let finalTargetElo  = targetElo;
+  if (difficulty === 'easy')   finalTargetElo = 500;
+  if (difficulty === 'medium') finalTargetElo = 1200;
+  if (difficulty === 'hard')   finalTargetElo = 3500;
   sessionStorage.setItem('player', JSON.stringify(guestPlayer));
-  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty }));
+  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty: finalDifficulty, targetElo: finalTargetElo }));
   location.href = '/game/bot';
 }
 

@@ -933,7 +933,8 @@ function quit() {
 let iaMode = false;
 let iaGrid = [];
 let iaDifficulty = 'hard';
-let iaMoves = []; // historique des coups pour replay
+let iaTargetElo  = 3500; // ELO cible du bot
+let iaMoves = [];
 let iaBotName = '';
 let iaBotColor = '';
 const IA_R = 6, IA_C = 7;
@@ -944,6 +945,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard' }) {
   currentTurn = 1;
   gameOver = false;
   iaDifficulty = difficulty;
+  iaTargetElo  = data.targetElo || (difficulty === 'easy' ? 500 : difficulty === 'medium' ? 1200 : 3500);
   iaMoves = [];
   iaBotName = botName;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
@@ -1132,10 +1134,68 @@ function iaChooseHard() {
   return bestCol;
 }
 
+// Mapping ELO → profondeur Minimax + erreur intentionnelle
+function eloToParams(elo) {
+  if (elo < 700)  return { depth: 0, blunderRate: 0.7,  missWinRate: 0.6  }; // ~500
+  if (elo < 1300) return { depth: 1, blunderRate: 0.25, missWinRate: 0.15 }; // ~1000
+  if (elo < 1800) return { depth: 3, blunderRate: 0.12, missWinRate: 0.0  }; // ~1500
+  if (elo < 2300) return { depth: 5, blunderRate: 0.05, missWinRate: 0.0  }; // ~2000
+  if (elo < 2800) return { depth: 7, blunderRate: 0.01, missWinRate: 0.0  }; // ~2500
+  return           { depth: 9, blunderRate: 0.0,  missWinRate: 0.0  };       // ~3200
+}
+
 function iaChoose() {
-  if (iaDifficulty === 'easy')   return iaChooseEasy();
-  if (iaDifficulty === 'medium') return iaChooseMedium();
-  return iaChooseHard();
+  const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
+  if (!valid.length) return 0;
+
+  // Pour easy/medium/hard on garde la logique d'origine MAIS on utilise targetElo
+  const params = eloToParams(iaTargetElo);
+
+  // Peut-on gagner immédiatement ?
+  for (const c of valid) if (iaSimulate(c, 2)) {
+    // missWinRate : chance de rater la victoire (niveaux très bas)
+    if (Math.random() < params.missWinRate) break;
+    return c;
+  }
+
+  // Doit-on bloquer ?
+  const mustBlock = valid.filter(c => iaSimulate(c, 1));
+
+  // blunderRate : chance de jouer n'importe où au lieu de bloquer
+  if (mustBlock.length > 0 && Math.random() >= params.blunderRate) {
+    return mustBlock[0];
+  }
+
+  // Depth 0 → aléatoire avec légère préférence centre
+  if (params.depth === 0) {
+    const pref = [3,2,4,1,5,0,6].filter(c => iaGetRow(c) !== -1);
+    // 50% aléatoire, 50% centre
+    return Math.random() < 0.5 ? valid[Math.floor(Math.random()*valid.length)] : pref[0];
+  }
+
+  // Depth 1 → juste victoire + blocage + centre
+  if (params.depth === 1) {
+    const pref = [3,2,4,1,5,0,6].filter(c => iaGetRow(c) !== -1);
+    return pref[0];
+  }
+
+  // Depth >= 3 → Minimax avec profondeur adaptée + bruit intentionnel
+  const b = iaGrid.map(r=>[...r]);
+  let bestCol = valid[0], bestScore = -Infinity;
+  for (const col of valid) {
+    for(let r=IA_R-1;r>=0;r--)if(b[r][col]===0){b[r][col]=2;break;}
+    const score = iaMinimax(b, params.depth - 1, -Infinity, Infinity, false);
+    for(let r=0;r<IA_R;r++)if(b[r][col]!==0){b[r][col]=0;break;}
+    if (score > bestScore) { bestScore = score; bestCol = col; }
+  }
+
+  // Bruit : parfois jouer le 2e meilleur coup (simule les erreurs humaines)
+  if (params.blunderRate > 0 && Math.random() < params.blunderRate && valid.length > 1) {
+    const others = valid.filter(c => c !== bestCol);
+    return others[Math.floor(Math.random() * others.length)];
+  }
+
+  return bestCol;
 }
 
 function iaCheckWin(r, c, p) {
