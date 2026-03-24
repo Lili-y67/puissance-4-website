@@ -1444,8 +1444,7 @@ async function loadDiscordInfo() {
             </span>`;
           }).join('') +
           '</div>'
-        ) : ''}
-      </div>`;
+        ) : ''}`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
     if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';

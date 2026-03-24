@@ -939,13 +939,13 @@ let iaBotName = '';
 let iaBotColor = '';
 const IA_R = 6, IA_C = 7;
 
-async function startVsIA({ botName, botColor, difficulty = 'hard' }) {
+async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
   mySide = 1;
   currentTurn = 1;
   gameOver = false;
   iaDifficulty = difficulty;
-  iaTargetElo  = data.targetElo || (difficulty === 'easy' ? 500 : difficulty === 'medium' ? 1200 : 3500);
+  iaTargetElo  = targetElo || (difficulty === 'easy' ? 500 : difficulty === 'medium' ? 1200 : 3500);
   iaMoves = [];
   iaBotName = botName;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
