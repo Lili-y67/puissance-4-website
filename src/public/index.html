@@ -501,13 +501,20 @@ html, body {
 input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-events:none; }
 
 
-@media (max-width: 480px) {
-  .page { padding: 20px 12px 40px; }
+@media (max-width: 600px) {
+  .page { padding: 16px 10px 40px; }
   .discord-widget { display: none !important; }
-  .logo { font-size: clamp(48px, 16vw, 80px); }
-  .card { padding: 20px 16px; }
-  .btn { font-size: 15px; padding: 14px; }
-  .stats-strip { gap: 8px; }
+  .logo { font-size: clamp(44px, 14vw, 72px); }
+  .logo-tagline { font-size: 11px; letter-spacing: 2px; }
+  .card { padding: 18px 14px; border-radius: 18px; }
+  .btn { font-size: 14px; padding: 13px; border-radius: 12px; }
+  .btn-robot { font-size: 14px; }
+  .stats-strip { gap: 6px; flex-wrap: wrap; }
+  .stats-strip .stat { font-size: 11px; }
+  .auth-tabs { gap: 4px; }
+  .auth-tab { font-size: 13px; padding: 8px 10px; }
+  .input { padding: 12px 14px 12px 38px; font-size: 14px; }
+  #bot-modal > div { padding: 22px 16px; }
 }
 
 /* ── IA overlay ── */
@@ -1022,6 +1029,16 @@ const QueueMusic = (() => {
   };
 })();
 
+function showLoggedInView(p) {
+  // Afficher le formulaire pré-rempli avec un bouton Rejoindre
+  document.getElementById('input-pseudo').value   = p.pseudo;
+  document.getElementById('input-password').value = '';
+  document.getElementById('btn-play-txt').textContent = '⚡ Rejoindre la partie';
+  // Petite info
+  const errEl = document.getElementById('error-msg');
+  if (errEl) { errEl.style.color = '#30d158'; errEl.textContent = `✓ Connecté en tant que ${p.pseudo} — appuie sur Rejoindre pour jouer.`; }
+}
+
 function connectAndQueue() {
   socket = io({ transports: ['polling'] });
   localStorage.setItem('last_active', Date.now());
@@ -1146,8 +1163,14 @@ window.addEventListener('DOMContentLoaded', () => {
       sessionStorage.setItem('player', JSON.stringify(p));
       document.getElementById('input-pseudo').value = p.pseudo;
       if (p.color) { selectedColor = p.color; initThemePicker(); }
-      // Auto-queue directement si session valide
-      connectAndQueue();
+      // Auto-queue si la préférence est activée (défaut = true)
+      const autoRejoin = localStorage.getItem('auto_rejoin');
+      if (autoRejoin === null || autoRejoin === 'true') {
+        connectAndQueue();
+      } else {
+        // Afficher l'interface connectée sans rejoindre la queue
+        showLoggedInView(p);
+      }
     }
   }
 });

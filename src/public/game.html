@@ -208,43 +208,52 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .btn-action.ghost:hover { border-color: var(--muted); color: var(--text); }
 
 /* ── Responsive mobile ── */
-@media (max-width: 480px) {
-  .page { padding: 12px 8px 24px; gap: 10px; }
+@media (max-width: 600px) {
+  .page { padding: 10px 6px 20px; gap: 8px; }
   .top-bar { padding: 0 4px; }
-  .logo-sm { font-size: 20px; }
-  .btn-quit { padding: 6px 10px; font-size: 11px; }
+  .logo-sm { font-size: 18px; }
+  .btn-quit { padding: 5px 9px; font-size: 11px; }
 
   /* Lobby */
-  .lobby-players { grid-template-columns: 1fr 48px 1fr; gap: 8px; max-width: 100%; padding: 0 8px; }
-  .lobby-player { padding: 14px 8px; border-radius: 12px; }
-  .lobby-avatar { width: 40px; height: 40px; font-size: 18px; }
-  .lobby-pseudo { font-size: 12px; }
-  .lobby-elo    { font-size: 14px; }
-  .vs-text   { font-size: 20px; }
-  .countdown { font-size: 52px; }
+  .lobby-overlay { padding: 16px 10px; }
+  .lobby-players { grid-template-columns: 1fr 40px 1fr; gap: 6px; max-width: 100%; padding: 0; }
+  .lobby-player { padding: 12px 8px; border-radius: 12px; }
+  .lobby-avatar { width: 36px; height: 36px; font-size: 16px; }
+  .lobby-pseudo { font-size: 11px; }
+  .lobby-elo    { font-size: 13px; }
+  .vs-text   { font-size: 18px; }
+  .countdown { font-size: 56px; }
 
   /* Player cards */
-  .players-row { gap: 6px; }
-  .player-card { padding: 8px 10px; gap: 6px; border-radius: 10px; }
-  .pc-dot  { width: 12px; height: 12px; }
-  .pc-name { font-size: 12px; }
+  .players-row { gap: 4px; }
+  .player-card { padding: 7px 8px; gap: 5px; border-radius: 10px; min-width: 0; }
+  .pc-dot  { width: 11px; height: 11px; flex-shrink: 0; }
+  .pc-name { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pc-elo  { font-size: 10px; }
-  .vs-sm   { font-size: 14px; }
-  .turn-lbl { font-size: 9px; }
+  .vs-sm   { font-size: 13px; }
+  .turn-lbl { font-size: 8px; letter-spacing: 0.5px; }
+  .game-id-badge { display: none; }
+  .status-bar { font-size: 11px; }
 
-  /* Board — déjà fluide grâce à --cell-size, juste ajuster le gap et padding */
-  .board { gap: 4px; padding: 7px; border-radius: 12px; }
-  .col-btn { height: 20px; }
-  .col-btn::after { font-size: 9px; }
+  /* Board */
+  .board { gap: 3px; padding: 6px; border-radius: 12px; }
+  .col-btn { height: 18px; }
+  .col-btn::after { font-size: 8px; }
 
-  /* Result overlay */
-  .result-title { font-size: 36px !important; }
-  .result-elo   { font-size: 18px !important; }
+  /* Result */
+  .result-overlay { padding: 20px 14px; }
+  .result-title { font-size: 32px !important; }
+  .result-elo   { font-size: 15px !important; }
+  .btn-action   { padding: 10px 16px; font-size: 13px; }
+
+  /* Disconnect banner */
+  .disconnect-banner { font-size: 13px; padding: 8px 12px; }
 }
 
-@media (max-width: 360px) {
-  .board { gap: 3px; padding: 5px; }
-  .pc-name { font-size: 11px; }
+@media (max-width: 380px) {
+  .board { gap: 2px; padding: 5px; }
+  .pc-name { font-size: 10px; }
+  .lobby-players { grid-template-columns: 1fr 36px 1fr; }
 }
 </style>
 <script src="/themes.js"></script>
@@ -933,7 +942,8 @@ function quit() {
 let iaMode = false;
 let iaGrid = [];
 let iaDifficulty = 'hard';
-let iaTargetElo  = 3500; // ELO cible du bot
+let iaTargetElo  = 3500;
+let iaStartTime  = 0; // ELO cible du bot
 let iaMoves = [];
 let iaBotName = '';
 let iaBotColor = '';
@@ -1001,6 +1011,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       const boardEl = document.getElementById('board');
       boardEl.classList.add('locked');
       setTimeout(() => boardEl.classList.remove('locked'), 400);
+      iaStartTime = Date.now();
       updateTurnUI();
     } else { cdEl.textContent = n; SFX.tick(); }
   }, 1000);
@@ -1230,14 +1241,14 @@ function iaEnd(winner, winCells) {
   document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? `Tu as battu l'IA (${diffLabel}) !` : `L'IA (${diffLabel}) a gagné cette fois...`;
 
   // Sauvegarder la partie bot pour le replay (sans stats)
-  saveBotReplay(winner);
+  saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
 
   document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue','1'); location.href='/'; };
   document.getElementById('result-overlay').classList.add('show');
   setStatus('');
 }
 
-async function saveBotReplay(winner) {
+async function saveBotReplay(winner, duration = 0) {
   try {
     const p1Color = myPlayer.color || '#ff2d55';
     const res = await fetch('/api/bot-replay', {
@@ -1247,6 +1258,7 @@ async function saveBotReplay(winner) {
         token:      localStorage.getItem('token'),
         moves:      iaMoves,
         winner:     winner,
+        duration,
         p1Color,
         p2Color:    iaBotColor,
         botName:    iaBotName,

@@ -71,6 +71,17 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .status-dot.offline{background:#636366;}
 .status-lastseen{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
 @keyframes pulse-online{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,209,88,0.4);}50%{opacity:0.8;box-shadow:0 0 0 4px rgba(48,209,88,0);}}
+/* Toggle auto-rejoin */
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:border-color 0.2s;}
+.toggle-wrap:hover{border-color:rgba(255,255,255,0.15);}
+.toggle-label{font-size:12px;font-weight:600;color:var(--text);}
+.toggle-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+.toggle-switch{position:relative;width:38px;height:22px;flex-shrink:0;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:22px;transition:background 0.25s;}
+.toggle-slider::before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:transform 0.25s;}
+.toggle-switch input:checked + .toggle-slider{background:var(--green);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(16px);}
 /* Popup simulateur ELO */
 .elo-sim-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:2000;align-items:center;justify-content:center;padding:20px;}
 .elo-sim-bg.show{display:flex;}
@@ -168,6 +179,10 @@ input[type="file"]{display:none;}
 .game-elo-change.neu{color:var(--muted);}
 .replay-badge{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);flex-shrink:0;}
 .game-row:hover .replay-badge{border-color:var(--accent);color:var(--accent);}
+.pg-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;}
+.pg-btn:hover{border-color:var(--accent);color:var(--accent);}
+.pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.pg-btn:disabled{opacity:0.3;cursor:not-allowed;}
 
 /* ── Player rows (following/followers) ── */
 .player-row{
@@ -287,6 +302,28 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .stat-val { font-size: 24px; }
   .tabs-row .tab { font-size: 11px; padding: 6px; }
+}
+
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .page { padding: 12px 10px 32px; max-width: 100%; }
+  .banner-wrap { height: 120px; border-radius: 14px; }
+  .profile-info { flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+  .profile-pseudo { font-size: 24px; }
+  .elo-block { align-items: center; }
+  .stats-row { gap: 6px; }
+  .stat-card { padding: 10px 8px; }
+  .stat-val { font-size: 22px; }
+  .games-list .game-row { flex-wrap: wrap; gap: 4px; font-size: 12px; }
+  .search-wrap { padding: 12px; }
+  .search-row { flex-direction: column; gap: 6px; }
+  .search-input { width: 100%; }
+  .search-btn { width: 100%; }
+  #autocomplete-list { right: 0; }
+  .tabs { gap: 4px; }
+  .tab-btn { padding: 8px 10px; font-size: 12px; }
+  .discord-card { padding: 12px; }
+  .discord-row { flex-wrap: wrap; gap: 6px; }
 }
 </style>
 <script src="/themes.js"></script>
@@ -575,6 +612,17 @@ function render(player, games, following, followers, followStatus) {
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
             🎚 Simulateur ELO
           </button>
+          ${isOwnProfile ? `
+          <label class="toggle-wrap" style="margin-top:4px;" onclick="toggleAutoRejoin(event)">
+            <div>
+              <div class="toggle-label">⚡ Auto-rejoin</div>
+              <div class="toggle-sub">Rejoindre la queue automatiquement</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="auto-rejoin-toggle" onchange="onAutoRejoinChange(this.checked)">
+              <span class="toggle-slider"></span>
+            </div>
+          </label>` : ''}
           ${followBtn}
         </div>
       </div>
@@ -739,7 +787,8 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Panel : Historique -->
     <div class="tab-panel show" id="panel-history">
-      ${renderGames(games, player)}
+      <div id="games-list-container"></div>
+      <div id="games-pagination" style="display:none;justify-content:center;align-items:center;gap:8px;margin-top:12px;"></div>
     </div>
 
     <!-- Panel : Following -->
@@ -799,9 +848,65 @@ async function toggleFollow(targetId) {
 }
 
 // ── Render helpers ────────────────────────────────────────────────────────────
-function renderGames(games, me) {
-  if (!games.length) return '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>';
-  return games.map(g => {
+// ── Pagination des parties ───────────────────────────────────────────────────
+const GAMES_PER_PAGE = 10;
+let _gamesData = [];
+let _gamesPlayer = null;
+let _gamesPage = 1;
+
+function initGames(games, me) {
+  _gamesData   = games;
+  _gamesPlayer = me;
+  _gamesPage   = 1;
+  renderGamesPage();
+}
+
+function renderGamesPage() {
+  const container = document.getElementById('games-list-container');
+  const pagination = document.getElementById('games-pagination');
+  if (!container) return;
+
+  const total = _gamesData.length;
+  const totalPages = Math.ceil(total / GAMES_PER_PAGE);
+  const start = (_gamesPage - 1) * GAMES_PER_PAGE;
+  const slice = _gamesData.slice(start, start + GAMES_PER_PAGE);
+
+  container.innerHTML = total === 0
+    ? '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>'
+    : slice.map(g => renderGameRow(g, _gamesPlayer)).join('');
+
+  // Pagination
+  if (totalPages <= 1) { pagination.style.display = 'none'; return; }
+  pagination.style.display = 'flex';
+
+  let html = '';
+  // Bouton précédent
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage - 1})" ${_gamesPage === 1 ? 'disabled' : ''}>‹</button>`;
+
+  // Pages
+  for (let p = 1; p <= totalPages; p++) {
+    if (totalPages > 7 && p > 2 && p < totalPages - 1 && Math.abs(p - _gamesPage) > 1) {
+      if (p === 3 || p === totalPages - 2) html += `<span style="color:var(--muted);padding:0 2px">…</span>`;
+      continue;
+    }
+    html += `<button class="pg-btn ${p === _gamesPage ? 'active' : ''}" onclick="gotoPage(${p})">${p}</button>`;
+  }
+
+  // Bouton suivant
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage + 1})" ${_gamesPage === totalPages ? 'disabled' : ''}>›</button>`;
+
+  pagination.innerHTML = html;
+}
+
+function gotoPage(p) {
+  const totalPages = Math.ceil(_gamesData.length / GAMES_PER_PAGE);
+  if (p < 1 || p > totalPages) return;
+  _gamesPage = p;
+  renderGamesPage();
+  document.getElementById('panel-history').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderGameRow(g, me) {
     const isP1      = g.player1_id === me.id;
     const opponent  = isP1 ? g.p2_pseudo : g.p1_pseudo;
     const won       = g.winner_id === me.id;
@@ -815,7 +920,8 @@ function renderGames(games, me) {
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '—';
     const suspBadge = g.suspicious ? `<div title="Double compte détecté — ELO non comptabilisé" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">⚠️ Double compte</div>` : '';
-    return `<a class="game-row" href="/replay/${g.id}">
+  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">📦 Archivée</div>` : '';
+  return `<a class="game-row" href="/replay/${g.id}">
       <div class="game-result ${rc}">${ri}</div>
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
@@ -823,10 +929,15 @@ function renderGames(games, me) {
         <div>${g.move_count} coups · ${g.duration}s</div>
         <div>${date}</div>
         ${suspBadge}
+        ${archiveBadge}
       </div>
       <div class="replay-badge">▶ Replay</div>
     </a>`;
-  }).join('');
+}
+
+function renderGames(games, me) {
+  // Compatibilité — redirige vers le système paginé
+  initGames(games, me);
 }
 
 function renderPlayers(players, emptyMsg) {
@@ -1053,6 +1164,29 @@ function highlightAc(items) {
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-row')) document.getElementById('autocomplete-list').style.display = 'none';
 });
+
+// ── Auto-rejoin toggle ────────────────────────────────────────────────────────
+function initAutoRejoinToggle() {
+  const toggle = document.getElementById('auto-rejoin-toggle');
+  if (!toggle) return;
+  const val = localStorage.getItem('auto_rejoin');
+  // Par défaut activé
+  toggle.checked = (val === null || val === 'true');
+}
+
+function toggleAutoRejoin(e) {
+  // Éviter double-fire si clic sur le input directement
+  if (e.target.tagName === 'INPUT') return;
+  const toggle = document.getElementById('auto-rejoin-toggle');
+  if (toggle) { toggle.checked = !toggle.checked; onAutoRejoinChange(toggle.checked); }
+}
+
+function onAutoRejoinChange(checked) {
+  localStorage.setItem('auto_rejoin', checked ? 'true' : 'false');
+  // Feedback visuel
+  const sub = document.querySelector('.toggle-sub');
+  if (sub) sub.textContent = checked ? 'Rejoindre la queue automatiquement' : "Attendre sur l'écran d'accueil";
+}
 
 async function searchPlayer() {
   document.getElementById('autocomplete-list').style.display = 'none';
@@ -1444,7 +1578,8 @@ async function loadDiscordInfo() {
             </span>`;
           }).join('') +
           '</div>'
-        ) : ''}`;
+        ) : ''}
+      </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
     if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';

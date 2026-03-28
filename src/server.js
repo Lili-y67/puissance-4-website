@@ -68,6 +68,22 @@ let BOT_PLAYER_ID;
   console.log(`[Bot] Puissance4-AI id=${BOT_PLAYER_ID}`);
 }
 
+// ── Archivage automatique des parties > 14 jours ─────────────────────────────
+function archiveOldGames() {
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const result = db.prepare(`
+    UPDATE games SET archived = 1
+    WHERE archived = 0
+      AND status = 'finished'
+      AND finished_at < ?
+      AND finished_at IS NOT NULL
+  `).run(cutoff);
+  if (result.changes > 0) console.log(`[Archive] ${result.changes} partie(s) archivée(s)`);
+}
+// Lancer au démarrage puis toutes les heures
+archiveOldGames();
+setInterval(archiveOldGames, 60 * 60 * 1000);
+
 app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -1113,7 +1129,7 @@ app.get('/api/games/:id/moves', (req, res) => {
 // ── Bot replay (sans stats ELO) ──────────────────────────────────────────────
 app.post('/api/bot-replay', (req, res) => {
   try {
-  const { token, moves, winner, p1Color, p2Color, botName, difficulty } = req.body;
+  const { token, moves, winner, duration, p1Color, p2Color, botName, difficulty } = req.body;
   const playerId = token ? validateSession(token) : null;
 
   // Récupérer le vrai joueur pour sa couleur et forme perso
@@ -1173,17 +1189,13 @@ app.post('/api/bot-replay', (req, res) => {
   if (!pQ.getById.get(botPlayerId))  throw new Error(`botPlayerId=${botPlayerId} introuvable`);
 
   const info = db.prepare(`
-    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2)
-    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?, 0, ?)
+    INSERT INTO games (player1_id, player2_id, winner_id, status, move_count, duration, p1_color, p2_color, p1_shape, p2_shape, elo_p1, elo_p2)
+    VALUES (?, ?, ?, 'finished', ?, ?, ?, ?, ?, ?, 0, ?)
   `).run(
-    p1Id,
-    botPlayerId,
-    winnerId,
-    moves?.length || 0,
-    realP1Color,
-    botColor,
-    realP1Shape,
-    botShape,
+    p1Id, botPlayerId, winnerId,
+    moves?.length || 0, duration || 0,
+    realP1Color, botColor,
+    realP1Shape, botShape,
     botDelta
   );
   const gameId = info.lastInsertRowid;
