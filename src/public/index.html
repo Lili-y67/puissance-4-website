@@ -1030,13 +1030,26 @@ const QueueMusic = (() => {
 })();
 
 function showLoggedInView(p) {
-  // Afficher le formulaire pré-rempli avec un bouton Rejoindre
-  document.getElementById('input-pseudo').value   = p.pseudo;
-  document.getElementById('input-password').value = '';
-  document.getElementById('btn-play-txt').textContent = '⚡ Rejoindre la partie';
-  // Petite info
-  const errEl = document.getElementById('error-msg');
-  if (errEl) { errEl.style.color = '#30d158'; errEl.textContent = `✓ Connecté en tant que ${p.pseudo} — appuie sur Rejoindre pour jouer.`; }
+  // Masquer le formulaire login, montrer un écran "prêt à jouer"
+  const loginView = document.getElementById('view-login');
+  if (!loginView) return;
+
+  loginView.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:8px 0;">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;color:var(--text)">
+        Salut, <span style="color:var(--red)">${p.pseudo}</span> !
+      </div>
+      <div style="font-size:13px;color:var(--muted);text-align:center;">
+        Auto-rejoin désactivé — clique pour rejoindre la file d'attente.
+      </div>
+      <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
+        <span>⚡</span> <span>Rejoindre la partie</span>
+      </button>
+      <a href="/profil?id=${p.id}" style="font-size:12px;color:var(--muted);text-decoration:none;">
+        → Mon profil
+      </a>
+    </div>
+  `;
 }
 
 function connectAndQueue() {

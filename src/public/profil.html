@@ -613,10 +613,10 @@ function render(player, games, following, followers, followStatus) {
             🎚 Simulateur ELO
           </button>
           ${isOwnProfile ? `
-          <label class="toggle-wrap" style="margin-top:4px;" onclick="toggleAutoRejoin(event)">
+          <label class="toggle-wrap" style="margin-top:4px;">
             <div>
               <div class="toggle-label">⚡ Auto-rejoin</div>
-              <div class="toggle-sub">Rejoindre la queue automatiquement</div>
+              <div class="toggle-sub" id="auto-rejoin-sub">Rejoindre la queue automatiquement</div>
             </div>
             <div class="toggle-switch">
               <input type="checkbox" id="auto-rejoin-toggle" onchange="onAutoRejoinChange(this.checked)">
@@ -1170,22 +1170,20 @@ function initAutoRejoinToggle() {
   const toggle = document.getElementById('auto-rejoin-toggle');
   if (!toggle) return;
   const val = localStorage.getItem('auto_rejoin');
-  // Par défaut activé
   toggle.checked = (val === null || val === 'true');
-}
-
-function toggleAutoRejoin(e) {
-  // Éviter double-fire si clic sur le input directement
-  if (e.target.tagName === 'INPUT') return;
-  const toggle = document.getElementById('auto-rejoin-toggle');
-  if (toggle) { toggle.checked = !toggle.checked; onAutoRejoinChange(toggle.checked); }
+  updateAutoRejoinSub(toggle.checked);
 }
 
 function onAutoRejoinChange(checked) {
   localStorage.setItem('auto_rejoin', checked ? 'true' : 'false');
-  // Feedback visuel
-  const sub = document.querySelector('.toggle-sub');
-  if (sub) sub.textContent = checked ? 'Rejoindre la queue automatiquement' : "Attendre sur l'écran d'accueil";
+  updateAutoRejoinSub(checked);
+}
+
+function updateAutoRejoinSub(checked) {
+  const sub = document.getElementById('auto-rejoin-sub');
+  if (sub) sub.textContent = checked
+    ? 'Rejoindre la queue automatiquement'
+    : 'Attendre sur l\'écran d\'accueil';
 }
 
 async function searchPlayer() {
