@@ -1272,6 +1272,10 @@ app.get('/api/leaderboard/wins', (_, res) => {
 // ── Socket.io ──────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
 
+  socket.on('join_live', () => {
+    socket.join('live');
+  });
+
   socket.on('identify', ({ playerId, token }) => {
     // Vérifier le token de session
     const validId = token ? validateSession(token) : null;
@@ -1327,6 +1331,8 @@ io.on('connection', socket => {
     if (result.error) return socket.emit('error', { message: result.error });
     if (result.type === 'move')      io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'game_over') io.to('game:' + result.gameId).emit('game_over',   result);
+    // Notifier les spectateurs live
+    io.to('live').emit('live_update');
   });
 
   socket.on('color_update', ({ color }) => {

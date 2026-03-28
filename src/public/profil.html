@@ -811,6 +811,9 @@ function render(player, games, following, followers, followStatus) {
       initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : '⭐');
     }, 50);
   }
+  // Initialiser la pagination des parties et le toggle auto-rejoin
+  initGames(games, player);
+  initAutoRejoinToggle();
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────

@@ -146,15 +146,16 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
   </div>
 
   <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
-  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; Actualisation toutes les 2 secondes</div>
+  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; <span id="live-status" style="color:var(--green)">⚡ Temps réel</span></div>
 
   <div class="games-grid" id="games-grid">
     <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
   </div>
 </div>
 
+<script src="/socket.io/socket.io.js"></script>
 <script>
-const REFRESH_MS = 2000;
+const REFRESH_MS = 3000; // fallback polling
 
 const SHAPE_CLIPS = {
   circle:   { borderRadius: '50%', clipPath: '' },
@@ -213,6 +214,12 @@ function mkCard(game) {
   const card = document.createElement('div');
   card.className = 'game-card';
   card.dataset.id = game.id;
+  // Clic → rejoindre comme spectateur
+  if (game.status === 'active') {
+    card.style.cursor = 'pointer';
+    card.title = 'Voir cette partie en direct';
+    card.addEventListener('click', () => { location.href = '/game/' + game.id; });
+  }
 
   // Joueurs
   const row = document.createElement('div');
@@ -305,7 +312,7 @@ async function refresh() {
     document.getElementById('count').textContent = games.length;
 
     if (games.length === 0) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div class="empty-sub">Lance une partie pour apparaître ici !</div></div>`;
+      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div class="empty-sub">Clique sur une carte pour regarder en direct !</div></div>`;
       prevIds = new Set(); return;
     }
 
@@ -325,15 +332,44 @@ async function refresh() {
   } catch(e) { console.error('live', e); }
 }
 
+// ── Socket.IO temps réel ──────────────────────────────────────────────────────
+let socket;
+try {
+  socket = io({ transports: ['polling'] });
+  socket.emit('join_live');
+
+  socket.on('live_update', () => { refresh(); });
+
+  socket.on('connect', () => {
+    document.getElementById('live-status').textContent = '⚡ Temps réel';
+    document.getElementById('live-status').style.color = 'var(--green)';
+    // Masquer la barre de refresh (inutile en temps réel)
+    document.querySelector('.refresh-bar').style.display = 'none';
+  });
+
+  socket.on('disconnect', () => {
+    document.getElementById('live-status').textContent = '⟳ Polling 3s';
+    document.getElementById('live-status').style.color = 'var(--muted)';
+    document.querySelector('.refresh-bar').style.display = 'block';
+  });
+} catch(e) {
+  console.warn('Socket.IO indisponible, fallback polling');
+}
+
+// Fallback polling si pas de socket
 function animBar() {
   const fill = document.getElementById('refresh-fill');
+  if (!fill) return;
   fill.style.transition = 'none'; fill.style.width = '100%';
   void fill.offsetWidth;
   fill.style.transition = `width ${REFRESH_MS}ms linear`; fill.style.width = '0%';
 }
 
-refresh(); animBar();
-setInterval(() => { refresh(); animBar(); }, REFRESH_MS);
+refresh();
+// Polling de secours (utile même avec socket pour la 1ère charge)
+setInterval(() => {
+  if (!socket?.connected) { refresh(); animBar(); }
+}, REFRESH_MS);
 </script>
 <script src="/presence.js"></script>
 </body>
