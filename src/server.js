@@ -1692,51 +1692,164 @@ function startBot() {
   }
 
   bot.on('interactionCreate', async interaction => {
+    // ── Autocomplete pseudo ──────────────────────────────────────────────────
+    if (interaction.isAutocomplete() && interaction.commandName === 'profil') {
+      try {
+        const q = interaction.options.getFocused();
+        if (q.length < 2) return interaction.respond([]);
+        const rows = db.prepare(`
+          SELECT pseudo, elo FROM players
+          WHERE pseudo LIKE ? COLLATE NOCASE AND deleted = 0 AND id != ?
+          ORDER BY elo DESC LIMIT 10
+        `).all(q.replace(/%/g,'') + '%', BOT_PLAYER_ID);
+        await interaction.respond(rows.map(r => ({
+          name: `${r.pseudo} · ${r.elo} ELO`,
+          value: r.pseudo
+        })));
+      } catch(e) {
+        console.error('[BOT autocomplete]', e.message);
+        try { await interaction.respond([]); } catch(_) {}
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
-    await interaction.deferReply();
+
+    // Defer visible pour tous sauf si ephemeral forcé
+    try { await interaction.deferReply(); } catch(e) { return; }
+
     try {
-      // /profil
+      // ── /profil ────────────────────────────────────────────────────────────
       if (interaction.commandName === 'profil') {
         const pseudo = interaction.options.getString('pseudo');
-        const data   = pQ.byPseudo?.get(pseudo) || db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(pseudo);
-        if (!data) return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
-        const games  = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
-        const rank   = eloRank(data.elo);
-        const total  = (data.wins||0)+(data.losses||0)+(data.draws||0);
-        const embed  = new EmbedBuilder()
-          .setColor(rank.color || data.color || '#ff2d55')
+        console.log(`[BOT /profil] recherche: "${pseudo}"`);
+
+        const data = db.prepare(
+          `SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`
+        ).get(pseudo);
+
+        if (!data) {
+          return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
+        }
+
+        console.log(`[BOT /profil] joueur trouvé id=${data.id}`);
+
+        const games = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
+        const rank  = eloRank(data.elo);
+        const total = (data.wins||0)+(data.losses||0)+(data.draws||0);
+        const wr    = total ? Math.round((data.wins/total)*100)+'%' : '—';
+
+        // Précision moyenne
+        const accRow = db.prepare(`
+          SELECT
+            AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
+            AVG(CASE WHEN player2_id=? AND p2_accuracy IS NOT NULL THEN p2_accuracy END) AS as_p2
+          FROM games WHERE (player1_id=? OR player2_id=?) AND status='finished'
+        `).get(data.id, data.id, data.id, data.id);
+        const prec = (() => {
+          const vals = [accRow?.as_p1, accRow?.as_p2].filter(v => v != null);
+          return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)+'%' : '—';
+        })();
+
+        // Discord info
+        const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
+
+        // Rang progression
+        const rankInfo = getRank(data.elo);
+        const pct = rankInfo.progress ?? 0;
+        const bar = '█'.repeat(Math.round(pct/10)) + '░'.repeat(10-Math.round(pct/10));
+
+        const embed = new EmbedBuilder()
+          .setColor(data.color || rank.color)
           .setTitle(`${rank.emoji} ${data.pseudo}`)
           .setURL(`${API}/profil?id=${data.id}`)
-          .setDescription(`**${rank.label}** · ${data.elo} ELO`)
+          .setDescription([
+            `**${rank.label}** · ${data.elo} ELO`,
+            data.role === 'admin' ? '⚡ ADMIN' : data.role === 'moderator' ? '🛡️ MODO' : null,
+          ].filter(Boolean).join(' · '))
           .addFields(
             { name: '🏆 Victoires', value: String(data.wins||0),   inline: true },
             { name: '💀 Défaites',  value: String(data.losses||0), inline: true },
             { name: '⚖️ Nuls',      value: String(data.draws||0),  inline: true },
             { name: '🎮 Parties',   value: String(total),           inline: true },
-            { name: '📊 Win rate',  value: winRate(data),           inline: true },
-          )
-          .setFooter({ text: 'Puissance 4 Ranked' });
+            { name: '📊 Win rate',  value: wr,                      inline: true },
+            { name: '🎯 Précision', value: prec,                    inline: true },
+            { name: `📈 ${rank.label} ${['I','II','III','IV','V'][(rankInfo.level||1)-1]}`,
+              value: `\`${bar}\` ${pct}%${rankInfo.next ? ` → ${rankInfo.next} ELO` : ' MAX'}`,
+              inline: false },
+          );
+
         if (data.avatar) embed.setThumbnail(data.avatar);
+        if (data.banner) embed.setImage(data.banner);
+
+        // Social
+        const followCounts = db.prepare(`
+          SELECT
+            (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following,
+            (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers
+        `).get(data.id, data.id);
+        embed.addFields(
+          { name: '👁 Suivis',   value: String(followCounts?.following||0), inline: true },
+          { name: '👥 Abonnés', value: String(followCounts?.followers||0), inline: true },
+          { name: '📅 Membre',  value: data.created_at
+              ? new Date(data.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+              : '—', inline: true },
+        );
+
+        // Apparence
+        const shapeLabel = { circle:'⭕ Cercle', diamond:'💎 Diamant', triangle:'🔺 Triangle',
+          star:'⭐ Étoile', heart:'❤️ Cœur' }[data.shape] || data.shape || 'Cercle';
+        embed.addFields({
+          name: '🎨 Apparence',
+          value: `Couleur : \`${(data.color||'#ff2d55').toUpperCase()}\`  ·  Forme : ${shapeLabel}`,
+          inline: false,
+        });
+
+        // Discord lié
+        if (di) {
+          const dLines = [`**@${di.username||di.global_name}**`];
+          if (di.server_nick) dLines.push(`Pseudo serveur : ${di.server_nick}`);
+          if (di.boosting_since) dLines.push('🚀 Booster');
+          if (di.server_roles?.length) {
+            const roleStr = di.server_roles.filter(r=>r.name&&r.name!=='@everyone').map(r=>r.name).slice(0,4).join(', ');
+            if (roleStr) dLines.push(`Rôles : ${roleStr}`);
+          }
+          embed.addFields({ name: '🔗 Discord', value: dLines.join('\n'), inline: false });
+        }
+
+        // Alertes
+        const alerts = [];
+        if (data.suspicious) alerts.push('⚠️ Activité suspecte');
+        if (data.banned) alerts.push('🚫 Banni');
+        if (alerts.length) embed.addFields({ name: '🚨 Statut', value: alerts.join(' · '), inline: false });
+
+        // Dernières parties
         if (games.length) {
           const lines = games.map(g => {
             const isP1 = g.player1_id === data.id;
             const opp  = isP1 ? g.p2_pseudo : g.p1_pseudo;
             const icon = g.winner_id === null ? '⚖️' : (g.winner_id === data.id ? '✅' : '❌');
-            const d    = (isP1 ? g.elo_p1 : g.elo_p2);
+            const d    = isP1 ? g.elo_p1 : g.elo_p2;
             return `${icon} vs **${opp}** · ${d >= 0 ? '+' : ''}${d} ELO`;
           });
-          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('\n') });
+          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('\n'), inline: false });
         }
+
+        embed.setFooter({ text: `Puissance 4 Ranked · ID ${data.id}` });
+        console.log(`[BOT /profil] embed construit OK`);
         return interaction.editReply({ embeds: [embed] });
       }
 
-      // /classement
+      // ── /classement ────────────────────────────────────────────────────────
       if (interaction.commandName === 'classement') {
-        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 ORDER BY elo DESC LIMIT 10`).all();
+        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id!=? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
         if (!players.length) return interaction.editReply({ content: '❌ Aucun joueur.' });
         const medals = ['🥇','🥈','🥉'];
-        const lines  = players.map((p,i) => `${medals[i]||`**#${i+1}**`} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D`);
-        const embed  = new EmbedBuilder()
+        const lines  = players.map((p,i) => {
+          const r = eloRank(p.elo);
+          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D`;
+        });
+        const embed = new EmbedBuilder()
           .setColor('#ffd60a')
           .setTitle('🏆 Classement Puissance 4')
           .setURL(`${API}/leaderboard`)
@@ -1745,14 +1858,15 @@ function startBot() {
         return interaction.editReply({ embeds: [embed] });
       }
 
-      // /live
+      // ── /live ──────────────────────────────────────────────────────────────
       if (interaction.commandName === 'live') {
-        const activeGames = gm ? Object.values(gm.games || {}).filter(g => g.status === 'active') : [];
+        const activeGames = [...(gm.games || new Map()).values()].filter(g => g.status === 'active');
         if (!activeGames.length) return interaction.editReply({ content: '😴 Aucune partie en cours.' });
         const lines = activeGames.map(g => {
           const p1 = g.players?.[1], p2 = g.players?.[2];
           if (!p1 || !p2) return null;
-          return `⚔️ **${p1.pseudo}** vs **${p2.pseudo}** · ${g.moves||0} coups`;
+          const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
+          return `⚔️ **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) · ${g.moveCount||0} coups · Tour de **${cur}**`;
         }).filter(Boolean);
         const embed = new EmbedBuilder()
           .setColor('#ff2d55')
@@ -1764,8 +1878,15 @@ function startBot() {
       }
 
     } catch(e) {
-      console.error('[BOT]', e);
-      interaction.editReply({ content: '❌ Erreur.' });
+      // Log complet de l'erreur
+      console.error('[BOT ERROR]', e.constructor.name, e.message);
+      console.error(e.stack);
+      // Envoyer l'erreur en ephemeral pour debug
+      const errMsg = `❌ **Erreur** : \`${e.constructor.name}: ${e.message}\``;
+      try {
+        if (interaction.deferred) await interaction.editReply({ content: errMsg });
+        else await interaction.reply({ content: errMsg, ephemeral: true });
+      } catch(_) {}
     }
   });
 

@@ -15,9 +15,10 @@ const commands = [
     options: [
       {
         name: 'pseudo',
-        description: 'Le pseudo du joueur',
+        description: 'Le pseudo du joueur (2 caractères min)',
         type: 3, // STRING
         required: true,
+        autocomplete: true,
       },
     ],
   },
