@@ -27,6 +27,17 @@ const io     = new Server(server, {
 const mm = new Matchmaking();
 const gm = new GameManager();
 
+// ── Utilitaires sécurité ──────────────────────────────────────────────────────
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || req.socket?.remoteAddress
+    || 'unknown';
+}
+function hashIp(ip) {
+  // SHA-256 + sel fixe → non-réversible mais déterministe
+  return require('crypto').createHash('sha256').update('p4-ip-salt-2025:' + ip).digest('hex');
+}
+
 // ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
 function genToken() {
   return require('crypto').randomBytes(32).toString('hex');
@@ -448,7 +459,8 @@ app.get('/auth/discord/reset', (req, res) => {
   if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
 
   const { clientId, baseUrl } = discordConfig();
-  const state  = Buffer.from(JSON.stringify({ playerId: player.id })).toString('base64');
+  const clientIp = getClientIp(req);
+  const state  = Buffer.from(JSON.stringify({ playerId: player.id, ipHash: hashIp(clientIp) })).toString('base64');
   const params = new URLSearchParams({
     client_id:     clientId,
     redirect_uri:  baseUrl + '/auth/discord/callback',
@@ -465,7 +477,8 @@ app.get('/auth/discord/callback', async (req, res) => {
   if (error || !code) return res.redirect('/forgot-password?error=discord_annulé');
 
   try {
-    const { playerId } = JSON.parse(Buffer.from(state, 'base64').toString());
+    const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
+    const { playerId, ipHash } = stateData;
     const player = pQ.getById.get(playerId);
     if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
 
@@ -598,7 +611,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const code6    = String(Math.floor(100000 + Math.random() * 900000));
     const expires  = Date.now() + 15 * 60 * 1000;
     rQ.cleanup.run(Date.now());
-    rQ.insert.run(playerId, code6, expires);
+    rQ.insert.run(playerId, code6, expires, ipHash || null);
 
     // Envoyer un DM via le bot
     // 1. Créer un DM channel
@@ -648,10 +661,20 @@ app.get('/auth/discord/callback', async (req, res) => {
 app.post('/api/reset-password', (req, res) => {
   const { playerId, code, newPassword } = req.body;
   if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'Données manquantes.' });
-  if (newPassword.length < 4) return res.status(400).json({ error: 'Mot de passe trop court.' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min).' });
 
   const row = rQ.getValid.get(Number(playerId), String(code), Date.now());
   if (!row) return res.status(400).json({ error: 'Code invalide ou expiré.' });
+
+  // Vérifier que c'est la même IP qui a demandé le reset
+  if (row.ip_hash) {
+    const clientIp   = getClientIp(req);
+    const clientHash = hashIp(clientIp);
+    if (clientHash !== row.ip_hash) {
+      console.warn(`[reset-password] IP mismatch — demande: ${row.ip_hash.slice(0,8)}… soumission: ${clientHash.slice(0,8)}…`);
+      return res.status(403).json({ error: 'Réinitialisation refusée : adresse IP différente de celle de la demande. Recommence depuis le début.' });
+    }
+  }
 
   const hashed = hashPwd(newPassword);
   pQ.updatePassword.run({ password: hashed, id: Number(playerId) });

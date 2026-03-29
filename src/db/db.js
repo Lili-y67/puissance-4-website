@@ -263,7 +263,8 @@ db.exec(`
     player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     code       TEXT    NOT NULL,
     expires_at INTEGER NOT NULL,
-    used       INTEGER NOT NULL DEFAULT 0
+    used       INTEGER NOT NULL DEFAULT 0,
+    ip_hash    TEXT
   );
 `);
 
@@ -277,8 +278,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS unlink_codes (
   used       INTEGER NOT NULL DEFAULT 0
 )`);
 
+try { db.exec(`ALTER TABLE reset_codes ADD COLUMN ip_hash TEXT`); } catch(e) {}
+
 const rQ = {
-  insert:    db.prepare(`INSERT INTO reset_codes (player_id, code, expires_at) VALUES (?, ?, ?)`),
+  insert:    db.prepare(`INSERT INTO reset_codes (player_id, code, expires_at, ip_hash) VALUES (?, ?, ?, ?)`),
   getValid:  db.prepare(`SELECT * FROM reset_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
   markUsed:  db.prepare(`UPDATE reset_codes SET used = 1 WHERE id = ?`),
   cleanup:   db.prepare(`DELETE FROM reset_codes WHERE expires_at < ? OR used = 1`),
