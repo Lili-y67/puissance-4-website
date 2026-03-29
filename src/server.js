@@ -1700,7 +1700,7 @@ function startBot() {
         const pseudo = interaction.options.getString('pseudo');
         const data   = pQ.byPseudo?.get(pseudo) || db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(pseudo);
         if (!data) return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
-        const games  = gQ.getForPlayer.all(data.id).slice(0, 5);
+        const games  = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
         const rank   = eloRank(data.elo);
         const total  = (data.wins||0)+(data.losses||0)+(data.draws||0);
         const embed  = new EmbedBuilder()
