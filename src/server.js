@@ -1712,40 +1712,55 @@ function startBot() {
   }
 
   async function getAvatarAttachment(data) {
-    // Si avatar HTTP, l'utiliser directement
+    const initial = (data.pseudo || '?')[0].toUpperCase();
+    const color   = data.color || '#ff2d55';
+
+    // Cas 1 : avatar URL HTTP directe
     if (data.avatar && data.avatar.startsWith('http')) {
       return { url: data.avatar, attachment: null };
     }
-    // Sinon générer un SVG avec l'initiale
-    const initial = (data.pseudo || '?')[0].toUpperCase();
-    const color   = data.color || '#ff2d55';
+
+    // Cas 2 : avatar base64 (data:image/...;base64,...)
+    if (data.avatar && data.avatar.startsWith('data:')) {
+      try {
+        const matches = data.avatar.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          const mime   = matches[1]; // ex: image/jpeg
+          const b64    = matches[2];
+          const buf    = Buffer.from(b64, 'base64');
+          const ext    = mime.split('/')[1] || 'jpg';
+          return { url: null, attachment: { name: 'avatar.' + ext, buffer: buf } };
+        }
+      } catch(e) {
+        console.error('[BOT] avatar base64 parse error:', e.message);
+      }
+    }
+
+    // Cas 3 : pas d'avatar — générer initiale avec canvas ou SVG
     try {
-      // Essayer canvas d'abord
       const { createCanvas } = require('canvas');
       const size = 128;
       const cv   = createCanvas(size, size);
       const ctx  = cv.getContext('2d');
-      // Fond coloré avec gradient
-      const grd = ctx.createRadialGradient(size*0.4, size*0.35, 0, size/2, size/2, size/2);
+      const grd  = ctx.createRadialGradient(size*0.4, size*0.35, 0, size/2, size/2, size/2);
       grd.addColorStop(0, color);
       const hex = color.replace('#','');
-      const dr = Math.round(parseInt(hex.slice(0,2),16)*0.7).toString(16).padStart(2,'0');
-      const dg = Math.round(parseInt(hex.slice(2,4),16)*0.7).toString(16).padStart(2,'0');
-      const db2= Math.round(parseInt(hex.slice(4,6),16)*0.7).toString(16).padStart(2,'0');
+      const dr  = Math.round(parseInt(hex.slice(0,2),16)*0.75).toString(16).padStart(2,'0');
+      const dg  = Math.round(parseInt(hex.slice(2,4),16)*0.75).toString(16).padStart(2,'0');
+      const db2 = Math.round(parseInt(hex.slice(4,6),16)*0.75).toString(16).padStart(2,'0');
       grd.addColorStop(1, '#'+dr+dg+db2);
       ctx.beginPath();
       ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
       ctx.fillStyle = grd;
       ctx.fill();
-      // Texte
       ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.font = 'bold 56px Arial';
+      ctx.font      = 'bold 56px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(initial, size/2, size/2);
       return { url: null, attachment: { name: 'avatar.png', buffer: cv.toBuffer('image/png') } };
     } catch(e) {
-      // Fallback : SVG
+      // Fallback SVG si canvas absent
       const svgBuf = generateAvatarSvg(initial, color);
       return { url: null, attachment: { name: 'avatar.svg', buffer: svgBuf } };
     }
@@ -1834,9 +1849,22 @@ function startBot() {
           .setURL(API + '/profil?id=' + data.id)
           .setDescription(desc);
 
-        // Avatar : générer avec canvas/SVG si pas d'URL
-        const bannerUrl = data.banner && data.banner.startsWith('http') ? data.banner : null;
-        if (bannerUrl) embed.setImage(bannerUrl);
+        // Bannière — base64 ou URL HTTP
+        let bannerAttachment = null;
+        if (data.banner) {
+          if (data.banner.startsWith('http')) {
+            embed.setImage(data.banner);
+          } else if (data.banner.startsWith('data:')) {
+            try {
+              const bm = data.banner.match(/^data:([^;]+);base64,(.+)$/);
+              if (bm) {
+                const bext = bm[1].split('/')[1] || 'jpg';
+                bannerAttachment = { name: 'banner.' + bext, buffer: Buffer.from(bm[2], 'base64') };
+                embed.setImage('attachment://banner.' + bext);
+              }
+            } catch(e) { console.error('[BOT] banner base64 parse error:', e.message); }
+          }
+        }
         const avatarInfo = await getAvatarAttachment(data);
 
         // Stats
@@ -1925,18 +1953,23 @@ function startBot() {
 
         embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
         console.log('[BOT /profil] embed OK pour ' + data.pseudo);
-        // Attacher l'avatar généré si nécessaire
+        const { AttachmentBuilder } = require('discord.js');
+        const files = [];
+
+        // Avatar
         if (avatarInfo.url) {
           embed.setThumbnail(avatarInfo.url);
-          return interaction.editReply({ embeds: [embed] });
         } else if (avatarInfo.attachment) {
-          const { AttachmentBuilder } = require('discord.js');
-          const att = new AttachmentBuilder(avatarInfo.attachment.buffer, { name: avatarInfo.attachment.name });
           embed.setThumbnail('attachment://' + avatarInfo.attachment.name);
-          return interaction.editReply({ embeds: [embed], files: [att] });
-        } else {
-          return interaction.editReply({ embeds: [embed] });
+          files.push(new AttachmentBuilder(avatarInfo.attachment.buffer, { name: avatarInfo.attachment.name }));
         }
+
+        // Bannière
+        if (bannerAttachment) {
+          files.push(new AttachmentBuilder(bannerAttachment.buffer, { name: bannerAttachment.name }));
+        }
+
+        return interaction.editReply({ embeds: [embed], files });
       }
 
       // ── /classement ────────────────────────────────────────────────────────
