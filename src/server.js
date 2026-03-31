@@ -1691,6 +1691,66 @@ function startBot() {
     return t ? Math.round((p.wins/t)*100)+'%' : '—';
   }
 
+  // ── Génération avatar initiale (SVG → Buffer PNG via canvas si dispo) ──────
+  function generateAvatarSvg(initial, color) {
+    // SVG 128x128 avec cercle coloré + initiale blanche
+    const bg  = color || '#ff2d55';
+    const hex = bg.replace('#','');
+    const r   = parseInt(hex.slice(0,2),16);
+    const g   = parseInt(hex.slice(2,4),16);
+    const b   = parseInt(hex.slice(4,6),16);
+    // Couleur de fond légèrement assombrie pour lisibilité
+    const dr  = Math.round(r*0.7), dg = Math.round(g*0.7), db = Math.round(b*0.7);
+    const dark = '#' + [dr,dg,db].map(v=>v.toString(16).padStart(2,'0')).join('');
+    return Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">` +
+      `<defs><radialGradient id="g" cx="40%" cy="35%"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${dark}"/></radialGradient></defs>` +
+      `<circle cx="64" cy="64" r="64" fill="url(#g)"/>` +
+      `<text x="64" y="64" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="56" font-weight="bold" fill="white" opacity="0.95">${initial}</text>` +
+      `</svg>`
+    );
+  }
+
+  async function getAvatarAttachment(data) {
+    // Si avatar HTTP, l'utiliser directement
+    if (data.avatar && data.avatar.startsWith('http')) {
+      return { url: data.avatar, attachment: null };
+    }
+    // Sinon générer un SVG avec l'initiale
+    const initial = (data.pseudo || '?')[0].toUpperCase();
+    const color   = data.color || '#ff2d55';
+    try {
+      // Essayer canvas d'abord
+      const { createCanvas } = require('canvas');
+      const size = 128;
+      const cv   = createCanvas(size, size);
+      const ctx  = cv.getContext('2d');
+      // Fond coloré avec gradient
+      const grd = ctx.createRadialGradient(size*0.4, size*0.35, 0, size/2, size/2, size/2);
+      grd.addColorStop(0, color);
+      const hex = color.replace('#','');
+      const dr = Math.round(parseInt(hex.slice(0,2),16)*0.7).toString(16).padStart(2,'0');
+      const dg = Math.round(parseInt(hex.slice(2,4),16)*0.7).toString(16).padStart(2,'0');
+      const db2= Math.round(parseInt(hex.slice(4,6),16)*0.7).toString(16).padStart(2,'0');
+      grd.addColorStop(1, '#'+dr+dg+db2);
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+      ctx.fillStyle = grd;
+      ctx.fill();
+      // Texte
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.font = 'bold 56px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(initial, size/2, size/2);
+      return { url: null, attachment: { name: 'avatar.png', buffer: cv.toBuffer('image/png') } };
+    } catch(e) {
+      // Fallback : SVG
+      const svgBuf = generateAvatarSvg(initial, color);
+      return { url: null, attachment: { name: 'avatar.svg', buffer: svgBuf } };
+    }
+  }
+
   bot.on('interactionCreate', async interaction => {
     // ── Autocomplete pseudo ──────────────────────────────────────────────────
     if (interaction.isAutocomplete() && interaction.commandName === 'profil') {
@@ -1762,8 +1822,11 @@ function startBot() {
         // Helper : valeur safe pour field Discord (jamais vide)
         const fv = v => (v != null && String(v).trim() !== '') ? String(v) : '—';
 
+        // Mention du membre Discord si lié
+        const memberMention = data.discord_id ? '<@' + data.discord_id + '>' : null;
+
         const roleLabel = data.role === 'admin' ? ' · ⚡ ADMIN' : data.role === 'moderator' ? ' · 🛡️ MODO' : '';
-        const desc = rank.label + ' · ' + data.elo + ' ELO' + roleLabel;
+        const desc = (memberMention ? memberMention + '  ' : '') + rank.label + ' · ' + data.elo + ' ELO' + roleLabel;
 
         const embed = new EmbedBuilder()
           .setColor(data.color && data.color.startsWith('#') ? data.color : rank.color)
@@ -1771,11 +1834,10 @@ function startBot() {
           .setURL(API + '/profil?id=' + data.id)
           .setDescription(desc);
 
-        // Avatar / bannière — seulement si URL non vide
-        const avatarUrl = data.avatar && data.avatar.startsWith('http') ? data.avatar : null;
+        // Avatar : générer avec canvas/SVG si pas d'URL
         const bannerUrl = data.banner && data.banner.startsWith('http') ? data.banner : null;
-        if (avatarUrl) embed.setThumbnail(avatarUrl);
         if (bannerUrl) embed.setImage(bannerUrl);
+        const avatarInfo = await getAvatarAttachment(data);
 
         // Stats
         embed.addFields(
@@ -1805,20 +1867,40 @@ function startBot() {
           { name: '📅 Membre',  value: memberDate,                   inline: true },
         );
 
-        // Apparence
-        const shapeMap = { circle:'⭕ Cercle', diamond:'💎 Diamant', triangle:'🔺 Triangle', star:'⭐ Étoile', heart:'❤️ Cœur' };
-        const shapeLabel = shapeMap[data.shape] || fv(data.shape);
+        // Apparence — emoji de forme, pastille couleur approchante
+        const shapeEmoji = { circle:'⭕', diamond:'💎', triangle:'🔺', star:'⭐', heart:'❤️' };
+        const rawShape = data.shape || 'circle';
+        const shapeDisplay = rawShape.startsWith('emoji:') ? rawShape.slice(6) || '⭐' : (shapeEmoji[rawShape] || '⭕');
         const colorHex = (data.color || '#ff2d55').toUpperCase();
-        embed.addFields({ name: '🎨 Apparence', value: 'Couleur : ' + colorHex + '  ·  Forme : ' + shapeLabel, inline: false });
+        // Pastille couleur approchante via emoji Discord
+        const r16 = parseInt(colorHex.slice(1,3),16), g16 = parseInt(colorHex.slice(3,5),16), b16 = parseInt(colorHex.slice(5,7),16);
+        const colorDot = (() => {
+          if (r16 > 200 && g16 < 100 && b16 < 100) return '🔴';
+          if (r16 > 200 && g16 > 150 && b16 < 80)  return '🟠';
+          if (r16 > 200 && g16 > 200 && b16 < 80)   return '🟡';
+          if (r16 < 100 && g16 > 160 && b16 < 100)  return '🟢';
+          if (r16 < 100 && g16 < 100 && b16 > 180)  return '🔵';
+          if (r16 > 120 && g16 < 80  && b16 > 150)  return '🟣';
+          if (r16 > 160 && g16 > 100 && b16 > 100)  return '🩷';
+          if (r16 > 200 && g16 > 200 && b16 > 200)  return '⚪';
+          if (r16 < 60  && g16 < 60  && b16 < 60)   return '⚫';
+          return '🟤';
+        })();
+        embed.addFields({ name: '🎨 Apparence', value: colorDot + ' **' + colorHex + '**  ·  ' + shapeDisplay, inline: false });
 
         // Discord lié
         if (di && di.username) {
           const dLines = ['@' + (di.username || di.global_name || '?')];
           if (di.server_nick) dLines.push('Pseudo serveur : ' + di.server_nick);
-          if (di.boosting_since) dLines.push('🚀 Booster');
+          if (di.boosting_since) dLines.push('🚀 Booster actif');
           if (di.server_roles && di.server_roles.length) {
-            const roleStr = di.server_roles.filter(r => r && r.name && r.name !== '@everyone').map(r => r.name).slice(0,4).join(', ');
-            if (roleStr) dLines.push('Rôles : ' + roleStr);
+            // Utiliser les mentions <@&ID> si on a les IDs, sinon les noms
+            const roleMentions = di.server_roles
+              .filter(r => r && r.name && r.name !== '@everyone')
+              .slice(0, 5)
+              .map(r => r.id ? '<@&' + r.id + '>' : r.name)
+              .join(' ');
+            if (roleMentions) dLines.push('Rôles : ' + roleMentions);
           }
           embed.addFields({ name: '🔗 Discord', value: dLines.join('') || '—', inline: false });
         }
@@ -1843,7 +1925,18 @@ function startBot() {
 
         embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
         console.log('[BOT /profil] embed OK pour ' + data.pseudo);
-        return interaction.editReply({ embeds: [embed] });
+        // Attacher l'avatar généré si nécessaire
+        if (avatarInfo.url) {
+          embed.setThumbnail(avatarInfo.url);
+          return interaction.editReply({ embeds: [embed] });
+        } else if (avatarInfo.attachment) {
+          const { AttachmentBuilder } = require('discord.js');
+          const att = new AttachmentBuilder(avatarInfo.attachment.buffer, { name: avatarInfo.attachment.name });
+          embed.setThumbnail('attachment://' + avatarInfo.attachment.name);
+          return interaction.editReply({ embeds: [embed], files: [att] });
+        } else {
+          return interaction.editReply({ embeds: [embed] });
+        }
       }
 
       // ── /classement ────────────────────────────────────────────────────────
