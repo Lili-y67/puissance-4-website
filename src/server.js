@@ -1666,7 +1666,7 @@ function startBot() {
         {
           name: 'profil',
           description: "Affiche le profil d'un joueur Puissance 4",
-          options: [{ name: 'pseudo', description: 'Le pseudo du joueur', type: 3, required: true }],
+          options: [{ name: 'pseudo', description: 'Le pseudo du joueur (2 car. min)', type: 3, required: true, autocomplete: true }],
         },
         { name: 'classement', description: 'Affiche le top 10 des joueurs par ELO' },
         { name: 'live',       description: 'Affiche les parties en cours' },
@@ -1759,62 +1759,69 @@ function startBot() {
         const pct = rankInfo.progress ?? 0;
         const bar = '█'.repeat(Math.round(pct/10)) + '░'.repeat(10-Math.round(pct/10));
 
-        const embed = new EmbedBuilder()
-          .setColor(data.color || rank.color)
-          .setTitle(`${rank.emoji} ${data.pseudo}`)
-          .setURL(`${API}/profil?id=${data.id}`)
-          .setDescription([
-            `**${rank.label}** · ${data.elo} ELO`,
-            data.role === 'admin' ? '⚡ ADMIN' : data.role === 'moderator' ? '🛡️ MODO' : null,
-          ].filter(Boolean).join(' · '))
-          .addFields(
-            { name: '🏆 Victoires', value: String(data.wins||0),   inline: true },
-            { name: '💀 Défaites',  value: String(data.losses||0), inline: true },
-            { name: '⚖️ Nuls',      value: String(data.draws||0),  inline: true },
-            { name: '🎮 Parties',   value: String(total),           inline: true },
-            { name: '📊 Win rate',  value: wr,                      inline: true },
-            { name: '🎯 Précision', value: prec,                    inline: true },
-            { name: `📈 ${rank.label} ${['I','II','III','IV','V'][(rankInfo.level||1)-1]}`,
-              value: `\`${bar}\` ${pct}%${rankInfo.next ? ` → ${rankInfo.next} ELO` : ' MAX'}`,
-              inline: false },
-          );
+        // Helper : valeur safe pour field Discord (jamais vide)
+        const fv = v => (v != null && String(v).trim() !== '') ? String(v) : '—';
 
-        if (data.avatar) embed.setThumbnail(data.avatar);
-        if (data.banner) embed.setImage(data.banner);
+        const roleLabel = data.role === 'admin' ? ' · ⚡ ADMIN' : data.role === 'moderator' ? ' · 🛡️ MODO' : '';
+        const desc = rank.label + ' · ' + data.elo + ' ELO' + roleLabel;
+
+        const embed = new EmbedBuilder()
+          .setColor(data.color && data.color.startsWith('#') ? data.color : rank.color)
+          .setTitle(rank.emoji + ' ' + data.pseudo)
+          .setURL(API + '/profil?id=' + data.id)
+          .setDescription(desc);
+
+        // Avatar / bannière — seulement si URL non vide
+        const avatarUrl = data.avatar && data.avatar.startsWith('http') ? data.avatar : null;
+        const bannerUrl = data.banner && data.banner.startsWith('http') ? data.banner : null;
+        if (avatarUrl) embed.setThumbnail(avatarUrl);
+        if (bannerUrl) embed.setImage(bannerUrl);
+
+        // Stats
+        embed.addFields(
+          { name: '🏆 Victoires', value: fv(data.wins),   inline: true },
+          { name: '💀 Défaites',  value: fv(data.losses), inline: true },
+          { name: '⚖️ Nuls',      value: fv(data.draws),  inline: true },
+          { name: '🎮 Parties',   value: fv(total),        inline: true },
+          { name: '📊 Win rate',  value: fv(wr),           inline: true },
+          { name: '🎯 Précision', value: fv(prec),         inline: true },
+        );
+
+        // Rang progression
+        const rankLvlLabel = rank.label + ' ' + (['I','II','III','IV','V'][(rankInfo.level||1)-1] || 'I');
+        const rankValue = bar + ' ' + pct + '%' + (rankInfo.next ? ' → ' + rankInfo.next + ' ELO pour monter' : ' · MAX');
+        embed.addFields({ name: '📈 ' + rankLvlLabel, value: rankValue, inline: false });
 
         // Social
-        const followCounts = db.prepare(`
-          SELECT
-            (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following,
-            (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers
-        `).get(data.id, data.id);
+        const followCounts = db.prepare(
+          'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
+        ).get(data.id, data.id);
+        const memberDate = data.created_at
+          ? new Date(data.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
+          : '—';
         embed.addFields(
-          { name: '👁 Suivis',   value: String(followCounts?.following||0), inline: true },
-          { name: '👥 Abonnés', value: String(followCounts?.followers||0), inline: true },
-          { name: '📅 Membre',  value: data.created_at
-              ? new Date(data.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-              : '—', inline: true },
+          { name: '👁 Suivis',   value: fv(followCounts?.following), inline: true },
+          { name: '👥 Abonnés', value: fv(followCounts?.followers), inline: true },
+          { name: '📅 Membre',  value: memberDate,                   inline: true },
         );
 
         // Apparence
-        const shapeLabel = { circle:'⭕ Cercle', diamond:'💎 Diamant', triangle:'🔺 Triangle',
-          star:'⭐ Étoile', heart:'❤️ Cœur' }[data.shape] || data.shape || 'Cercle';
-        embed.addFields({
-          name: '🎨 Apparence',
-          value: `Couleur : \`${(data.color||'#ff2d55').toUpperCase()}\`  ·  Forme : ${shapeLabel}`,
-          inline: false,
-        });
+        const shapeMap = { circle:'⭕ Cercle', diamond:'💎 Diamant', triangle:'🔺 Triangle', star:'⭐ Étoile', heart:'❤️ Cœur' };
+        const shapeLabel = shapeMap[data.shape] || fv(data.shape);
+        const colorHex = (data.color || '#ff2d55').toUpperCase();
+        embed.addFields({ name: '🎨 Apparence', value: 'Couleur : ' + colorHex + '  ·  Forme : ' + shapeLabel, inline: false });
 
         // Discord lié
-        if (di) {
-          const dLines = [`**@${di.username||di.global_name}**`];
-          if (di.server_nick) dLines.push(`Pseudo serveur : ${di.server_nick}`);
+        if (di && di.username) {
+          const dLines = ['@' + (di.username || di.global_name || '?')];
+          if (di.server_nick) dLines.push('Pseudo serveur : ' + di.server_nick);
           if (di.boosting_since) dLines.push('🚀 Booster');
-          if (di.server_roles?.length) {
-            const roleStr = di.server_roles.filter(r=>r.name&&r.name!=='@everyone').map(r=>r.name).slice(0,4).join(', ');
-            if (roleStr) dLines.push(`Rôles : ${roleStr}`);
+          if (di.server_roles && di.server_roles.length) {
+            const roleStr = di.server_roles.filter(r => r && r.name && r.name !== '@everyone').map(r => r.name).slice(0,4).join(', ');
+            if (roleStr) dLines.push('Rôles : ' + roleStr);
           }
-          embed.addFields({ name: '🔗 Discord', value: dLines.join('\n'), inline: false });
+          embed.addFields({ name: '🔗 Discord', value: dLines.join('
+') || '—', inline: false });
         }
 
         // Alertes
@@ -1827,16 +1834,17 @@ function startBot() {
         if (games.length) {
           const lines = games.map(g => {
             const isP1 = g.player1_id === data.id;
-            const opp  = isP1 ? g.p2_pseudo : g.p1_pseudo;
+            const opp  = fv(isP1 ? g.p2_pseudo : g.p1_pseudo);
             const icon = g.winner_id === null ? '⚖️' : (g.winner_id === data.id ? '✅' : '❌');
-            const d    = isP1 ? g.elo_p1 : g.elo_p2;
-            return `${icon} vs **${opp}** · ${d >= 0 ? '+' : ''}${d} ELO`;
+            const d    = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
+            return icon + ' vs **' + opp + '** · ' + (d >= 0 ? '+' : '') + d + ' ELO';
           });
-          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('\n'), inline: false });
+          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('
+'), inline: false });
         }
 
-        embed.setFooter({ text: `Puissance 4 Ranked · ID ${data.id}` });
-        console.log(`[BOT /profil] embed construit OK`);
+        embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
+        console.log('[BOT /profil] embed OK pour ' + data.pseudo);
         return interaction.editReply({ embeds: [embed] });
       }
 
