@@ -1820,8 +1820,7 @@ function startBot() {
             const roleStr = di.server_roles.filter(r => r && r.name && r.name !== '@everyone').map(r => r.name).slice(0,4).join(', ');
             if (roleStr) dLines.push('Rôles : ' + roleStr);
           }
-          embed.addFields({ name: '🔗 Discord', value: dLines.join('
-') || '—', inline: false });
+          embed.addFields({ name: '🔗 Discord', value: dLines.join('') || '—', inline: false });
         }
 
         // Alertes
@@ -1839,8 +1838,7 @@ function startBot() {
             const d    = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
             return icon + ' vs **' + opp + '** · ' + (d >= 0 ? '+' : '') + d + ' ELO';
           });
-          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('
-'), inline: false });
+          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join(''), inline: false });
         }
 
         embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
