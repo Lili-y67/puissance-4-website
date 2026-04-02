@@ -102,7 +102,10 @@ try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-try { db.exec(`ALTER TABLE games ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p2 INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN reverted      INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
@@ -237,6 +240,10 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const game   = gQ.getById.get(gameId);
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
+
+  // Stocker l'ELO avant la partie pour permettre un revert
+  db.prepare(`UPDATE games SET elo_before_p1=?, elo_before_p2=? WHERE id=?`)
+    .run(winner.elo - dW, loser.elo - dL, gameId);
 
   gQ.finish.run({
     id: gameId, winner_id: isDraw ? null : winnerId,

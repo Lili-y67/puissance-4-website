@@ -7,7 +7,7 @@ const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
 const { getRank } = require('./rank');
-const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder } = require('discord.js');
 
 // Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
 const ipToPlayers  = new Map(); // ip → Set of playerIds
@@ -26,6 +26,14 @@ const io     = new Server(server, {
 
 const mm = new Matchmaking();
 const gm = new GameManager();
+
+// Callback AFK — émettre game_over quand un joueur est AFK trop longtemps
+gm._onAfkEnd = (result) => {
+  if (!result) return;
+  io.to('game:' + result.gameId).emit('game_over', result);
+  io.to('live').emit('live_update');
+  console.log(`[AFK] Partie ${result.gameId} terminée — winner side ${result.winner}`);
+};
 
 // ── Utilitaires sécurité ──────────────────────────────────────────────────────
 function getClientIp(req) {
@@ -102,6 +110,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 app.get('/game/bot',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+app.get('/spec/:id', (req, res) => {
+  const gameId = Number(req.params.id);
+  const state = gm.games.get(gameId);
+  if (!state || state.status !== 'active') {
+    return res.sendFile(path.join(__dirname, 'public/404.html'));
+  }
+  res.sendFile(path.join(__dirname, 'public/game.html'));
+});
 app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1284,6 +1300,103 @@ app.get('/api/bot-id', (_, res) => {
   res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO, color: bot?.color || '#ffd60a', shape: bot?.shape || 'circle' });
 });
 
+// ── Revert de partie (modo/admin uniquement) ─────────────────────────────────
+app.post('/api/admin/games/:id/revert', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Modérateurs et admins uniquement.' });
+
+  const gameId = Number(req.params.id);
+  const game   = db.prepare(`SELECT * FROM games WHERE id = ?`).get(gameId);
+  if (!game) return res.status(404).json({ error: 'Partie introuvable.' });
+  if (game.status !== 'finished') return res.status(400).json({ error: 'La partie n\'est pas terminée.' });
+  if (game.reverted) return res.status(400).json({ error: 'Cette partie a déjà été revertée.' });
+  if (game.elo_before_p1 == null || game.elo_before_p2 == null)
+    return res.status(400).json({ error: 'ELO avant partie non disponible (partie trop ancienne).' });
+
+  const p1 = pQ.getById.get(game.player1_id);
+  const p2 = pQ.getById.get(game.player2_id);
+  if (!p1 || !p2) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  try {
+    // Restaurer l'ELO d'avant la partie
+    db.prepare(`UPDATE players SET elo = ?, wins   = MAX(0, wins   - ?), losses = MAX(0, losses - ?), draws = MAX(0, draws - ?) WHERE id = ?`)
+      .run(game.elo_before_p1,
+        game.winner_id === game.player1_id ? 1 : 0,
+        game.winner_id === game.player2_id ? 1 : 0,
+        game.winner_id === null ? 1 : 0,
+        game.player1_id);
+    db.prepare(`UPDATE players SET elo = ?, wins   = MAX(0, wins   - ?), losses = MAX(0, losses - ?), draws = MAX(0, draws - ?) WHERE id = ?`)
+      .run(game.elo_before_p2,
+        game.winner_id === game.player2_id ? 1 : 0,
+        game.winner_id === game.player1_id ? 1 : 0,
+        game.winner_id === null ? 1 : 0,
+        game.player2_id);
+
+    // Marquer la partie comme revertée
+    db.prepare(`UPDATE games SET reverted = 1 WHERE id = ?`).run(gameId);
+
+    // Log admin
+    const adminId = validateSession(req.headers['x-token']);
+    const admin   = adminId ? pQ.getById.get(adminId) : null;
+    WH.wlogAdminAction('Revert partie', `#${gameId}`, gameId,
+      [['J1', `${p1.pseudo} : ${p1.elo} → ${game.elo_before_p1}`, true],
+       ['J2', `${p2.pseudo} : ${p2.elo} → ${game.elo_before_p2}`, true],
+       ['Par', admin?.pseudo || 'Modérateur', false]]);
+
+    console.log(`[REVERT] Partie #${gameId} revertée par ${admin?.pseudo || '?'}`);
+    res.json({ ok: true, p1: { pseudo: p1.pseudo, eloBefore: game.elo_before_p1 }, p2: { pseudo: p2.pseudo, eloBefore: game.elo_before_p2 } });
+  } catch(e) {
+    console.error('[REVERT]', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Route pour récupérer les parties récentes (admin)
+app.get('/api/admin/games', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
+  const offset = parseInt(req.query.offset) || 0;
+  const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
+
+  const where  = search
+    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished'`
+    : `WHERE g.status='finished'`;
+  const params = search ? [search, search, limit, offset] : [limit, offset];
+
+  const games = db.prepare(`
+    SELECT g.id, g.winner_id, g.status, g.move_count, g.duration, g.finished_at,
+           g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2, g.reverted, g.suspicious,
+           p1.pseudo AS p1_pseudo, p1.id AS player1_id,
+           p2.pseudo AS p2_pseudo, p2.id AS player2_id
+    FROM games g
+    JOIN players p1 ON g.player1_id = p1.id
+    JOIN players p2 ON g.player2_id = p2.id
+    ${where}
+    ORDER BY g.finished_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params);
+
+  res.json(games);
+});
+
+// ── Boost ELO global ──────────────────────────────────────────────────────────
+app.get('/api/admin/boost', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const active = bQ.getActive.get();
+  res.json({ active: !!(active), multiplier: active?.multiplier ?? 1 });
+});
+app.post('/api/admin/boost', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
+  const m = parseFloat(req.body.multiplier);
+  if (isNaN(m) || m < 1 || m > 2) return res.status(400).json({ error: 'Entre 1.0 et 2.0.' });
+  bQ.deactivateAll.run();
+  if (m > 1) {
+    const adminId = validateSession(req.headers['x-token']);
+    const admin   = adminId ? pQ.getById.get(adminId) : null;
+    bQ.create.run({ multiplier: m, applied_by: admin?.pseudo || 'Admin' });
+  }
+  res.json({ ok: true, multiplier: m });
+});
+
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
@@ -1654,10 +1767,28 @@ function startBot() {
     } catch(e) {}
   }
 
+  // Cache des emojis de rang (chargé au démarrage)
+  const rankEmojiCache = {};
+
   bot.once('ready', async () => {
     console.log(`✅ Bot connecté : ${bot.user.tag}`);
     updateStatus();
     setInterval(updateStatus, 10000);
+
+    // Charger les emojis de rang depuis le guild
+    try {
+      const guild = await bot.guilds.fetch(DISCORD_GUILD);
+      const emojis = await guild.emojis.fetch();
+      const rankNames = ['Malachite','Quartz','Ambre','Jade','Saphir','Amethiste'];
+      emojis.forEach(e => {
+        const name = e.name; // ex: "Malachite_1", "Quartz_3"
+        const base = rankNames.find(r => name.startsWith(r));
+        if (base) rankEmojiCache[name] = `<:${name}:${e.id}>`;
+      });
+      console.log(`[BOT] ${Object.keys(rankEmojiCache).length} emojis de rang chargés`);
+    } catch(e) {
+      console.error('[BOT] Emojis rang:', e.message);
+    }
 
     // Enregistrer les commandes slash automatiquement
     try {
@@ -1683,8 +1814,11 @@ function startBot() {
 
   function eloRank(elo) {
     const r = getRank(elo);
-    const emojis = { Malachite: '🟢', Quartz: '⚪', Ambre: '🟤', Jade: '🟦', Saphir: '🔵', Améthyste: '🟣' };
-    return { label: r.label, emoji: emojis[r.name] || '🎮', color: r.color };
+    const fallbacks = { Malachite:'🟢', Quartz:'⚪', Ambre:'🟤', Jade:'🟦', Saphir:'🔵', Améthyste:'🟣' };
+    // Chercher l'emoji spécifique au niveau (ex: Quartz_3)
+    const key = r.key + '_' + (r.level || 1);
+    const emoji = rankEmojiCache[key] || fallbacks[r.name] || '🎮';
+    return { label: r.label, emoji, color: r.color, level: r.level, key: r.key };
   }
   function winRate(p) {
     const t = (p.wins||0)+(p.losses||0)+(p.draws||0);
@@ -1953,6 +2087,30 @@ function startBot() {
 
         embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
         console.log('[BOT /profil] embed OK pour ' + data.pseudo);
+
+        // ── SelectMenu des parties ─────────────────────────────────────────
+        const menuRows = [];
+        if (games.length > 0) {
+          const options = games.slice(0, 25).map(g => {
+            const isP1  = g.player1_id === data.id;
+            const opp   = isP1 ? g.p2_pseudo : g.p1_pseudo;
+            const won   = g.winner_id === data.id;
+            const draw  = g.winner_id === null;
+            const icon  = draw ? '⚖️' : (won ? '✅' : '❌');
+            const delta = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
+            const d     = (delta >= 0 ? '+' : '') + delta;
+            const date  = g.finished_at ? g.finished_at.slice(0,10) : '—';
+            const label = (icon + ' vs ' + (opp || '?') + ' · ' + d + ' ELO').slice(0,100);
+            const desc  = (date + ' · ' + (g.move_count || 0) + ' coups · ' + (g.duration || 0) + 's').slice(0,100);
+            return new StringSelectMenuOptionBuilder()
+              .setLabel(label).setDescription(desc).setValue('game:' + g.id);
+          });
+          const menu = new StringSelectMenuBuilder()
+            .setCustomId('prof_games:' + data.id)
+            .setPlaceholder('📋 Voir détails d\'une partie...')
+            .addOptions(options);
+          menuRows.push(new ActionRowBuilder().addComponents(menu));
+        }
         const { AttachmentBuilder } = require('discord.js');
         const files = [];
 
@@ -2008,6 +2166,69 @@ function startBot() {
           .setFooter({ text: 'Puissance 4 Ranked · Live' });
         return interaction.editReply({ embeds: [embed] });
       }
+
+    // ── SelectMenu détail d'une partie ─────────────────────────────────────────
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('prof_games:')) {
+      await interaction.deferReply({ ephemeral: true });
+      try {
+        const val = interaction.values[0];
+        if (!val.startsWith('game:')) return interaction.editReply({ content: '❌ Valeur invalide.' });
+        const gameId = Number(val.split(':')[1]);
+        const game = gQ.getById.get(gameId);
+        if (!game) return interaction.editReply({ content: '❌ Partie introuvable.' });
+
+        const moves = mQ.getByGame.all(gameId);
+        const playerId = Number(interaction.customId.split(':')[1]);
+        const isP1  = game.player1_id === playerId;
+        const opp   = isP1 ? game.p2_pseudo : game.p1_pseudo;
+        const oppElo= isP1 ? game.p2_elo    : game.p1_elo;
+        const won   = game.winner_id === playerId;
+        const draw  = game.winner_id === null;
+        const icon  = draw ? '⚖️' : (won ? '✅' : '❌');
+        const delta = isP1 ? (game.elo_p1 || 0) : (game.elo_p2 || 0);
+        const myElo = isP1 ? game.p1_elo    : game.p2_elo;
+        const myRank= eloRank(myElo);
+        const oppRank=eloRank(oppElo);
+        const date  = game.finished_at
+          ? new Date(game.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
+          : '—';
+
+        const gameEmbed = new EmbedBuilder()
+          .setColor(isP1 ? (game.p1_color || '#ff2d55') : (game.p2_color || '#ffd60a'))
+          .setTitle(icon + ' Partie #' + gameId)
+          .setURL(API + '/replay/' + gameId)
+          .addFields(
+            { name: '⚔️ Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
+            { name: '📊 ELO',         value: (delta >= 0 ? '+' : '') + delta + ' ELO',    inline: true },
+            { name: '🎮 Coups',        value: String(game.move_count || 0),                inline: true },
+            { name: '⏱️ Durée',        value: (game.duration || 0) + 's',                  inline: true },
+            { name: '📅 Date',         value: date,                                         inline: false },
+          );
+
+        // Précision si analysée
+        const myAccuracy = isP1 ? game.p1_accuracy : game.p2_accuracy;
+        const oppAccuracy= isP1 ? game.p2_accuracy : game.p1_accuracy;
+        if (myAccuracy != null) {
+          gameEmbed.addFields(
+            { name: '🎯 Ma précision',  value: myAccuracy  + '%', inline: true },
+            { name: '🎯 Préc. adverse', value: (oppAccuracy || '—') + (oppAccuracy ? '%' : ''), inline: true },
+          );
+        }
+
+        // Replay link button
+        const replayBtn = new ActionRowBuilder().addComponents(
+          new (require('discord.js').ButtonBuilder)()
+            .setLabel('📽️ Voir le replay')
+            .setURL(API + '/replay/' + gameId)
+            .setStyle(require('discord.js').ButtonStyle.Link)
+        );
+
+        return interaction.editReply({ embeds: [gameEmbed], components: [replayBtn] });
+      } catch(e) {
+        console.error('[BOT SelectMenu game]', e.message);
+        return interaction.editReply({ content: '❌ Erreur : ' + e.message });
+      }
+    }
 
     } catch(e) {
       // Log complet de l'erreur

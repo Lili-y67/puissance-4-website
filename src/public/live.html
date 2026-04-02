@@ -218,7 +218,7 @@ function mkCard(game) {
   if (game.status === 'active') {
     card.style.cursor = 'pointer';
     card.title = 'Voir cette partie en direct';
-    card.addEventListener('click', () => { location.href = '/game/' + game.id; });
+    card.addEventListener('click', () => { location.href = '/spec/' + game.id; });
   }
 
   // Joueurs

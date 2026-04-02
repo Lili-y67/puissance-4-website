@@ -138,6 +138,37 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
   <div class="stats-row" id="stats-row"></div>
 
+  <!-- Onglets Joueurs / Parties -->
+  <div style="display:flex;gap:6px;margin-bottom:14px;">
+    <button id="tab-players-btn" onclick="switchAdminTab('players')"
+      style="padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+      👥 JOUEURS
+    </button>
+    <button id="tab-games-btn" onclick="switchAdminTab('games')"
+      style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+      🎮 PARTIES
+    </button>
+  </div>
+
+  <!-- Section Parties -->
+  <div id="admin-games-section" style="display:none;margin-bottom:20px;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+      <input class="search-input" id="games-search" placeholder="🔍 Rechercher par pseudo..." style="flex:1;"
+        oninput="loadAdminGames()">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>J1</th><th>J2</th><th>Résultat</th><th>ELO</th>
+          <th>Coups</th><th>Date</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="games-body"></tbody>
+      </table>
+    </div>
+    <div id="games-pagination-admin" style="display:flex;justify-content:center;gap:8px;margin-top:10px;"></div>
+  </div>
+
+  <div id="admin-players-section">
   <div class="table-wrap">
     <table>
       <thead>
@@ -155,6 +186,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </table>
   </div>
   <div class="mobile-list" id="mobile-list"></div>
+  </div><!-- /admin-players-section -->
 </div>
 
 <script>
@@ -421,6 +453,130 @@ function closeAndReload() {
   document.getElementById('admin-modal')?.remove();
   loadPlayers();
 }
+
+// ── Onglets Admin ──────────────────────────────────────────────────────────────
+let currentAdminTab = 'players';
+function switchAdminTab(tab) {
+  currentAdminTab = tab;
+  const isPlayers = tab === 'players';
+  document.getElementById('admin-players-section').style.display = isPlayers ? 'block' : 'none';
+  document.getElementById('admin-games-section').style.display   = isPlayers ? 'none'  : 'block';
+  document.getElementById('tab-players-btn').style.background    = isPlayers ? 'var(--red)' : 'rgba(255,255,255,0.05)';
+  document.getElementById('tab-players-btn').style.color         = isPlayers ? '#fff' : 'var(--muted)';
+  document.getElementById('tab-games-btn').style.background      = isPlayers ? 'rgba(255,255,255,0.05)' : 'rgba(76,110,245,0.2)';
+  document.getElementById('tab-games-btn').style.color           = isPlayers ? 'var(--muted)' : '#8b9cf4';
+  if (tab === 'games') loadAdminGames();
+}
+
+// ── Gestion des parties ────────────────────────────────────────────────────────
+let adminGamesOffset = 0;
+const ADMIN_GAMES_LIMIT = 25;
+
+async function loadAdminGames() {
+  adminGamesOffset = 0;
+  await fetchAdminGames(0);
+}
+
+async function fetchAdminGames(offset) {
+  const q = document.getElementById('games-search')?.value?.trim() || '';
+  let url  = `/api/admin/games?limit=${ADMIN_GAMES_LIMIT}&offset=${offset}`;
+  if (q) url += '&search=' + encodeURIComponent(q);
+  const games = await api('GET', url);
+  renderAdminGames(games, offset);
+}
+
+function renderAdminGames(games, offset) {
+  const tbody = document.getElementById('games-body');
+  if (!games.length && offset === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvée</td></tr>';
+    document.getElementById('games-pagination-admin').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = games.map(g => {
+    const isP1Win  = g.winner_id === g.player1_id;
+    const isP2Win  = g.winner_id === g.player2_id;
+    const isDraw   = g.winner_id === null;
+    const res      = isDraw ? '⚖️ Nul' : (isP1Win ? `✅ ${g.p1_pseudo}` : `✅ ${g.p2_pseudo}`);
+    const d1       = g.elo_p1 != null ? (g.elo_p1 >= 0 ? '+' : '') + g.elo_p1 : '—';
+    const d2       = g.elo_p2 != null ? (g.elo_p2 >= 0 ? '+' : '') + g.elo_p2 : '—';
+    const date     = g.finished_at ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    const canRevert= !g.reverted && g.elo_before_p1 != null;
+    const revertedBadge = g.reverted ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)">REVERT</span> ' : '';
+    const suspBadge= g.suspicious ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,214,10,0.1);color:#ffd60a;">⚠️</span> ' : '';
+    return `<tr>
+      <td style="color:var(--muted);font-size:11px">${revertedBadge}${suspBadge}#${g.id}</td>
+      <td><strong>${g.p1_pseudo}</strong></td>
+      <td><strong>${g.p2_pseudo}</strong></td>
+      <td style="font-size:12px">${res}</td>
+      <td style="font-size:11px;color:var(--muted)">${d1} / ${d2}</td>
+      <td>${g.move_count || 0}</td>
+      <td style="font-size:11px;color:var(--muted)">${date}</td>
+      <td style="display:flex;gap:4px;">
+        <a href="/replay/${g.id}" target="_blank" class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;text-decoration:none">▶</a>
+        ${canRevert ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="confirmRevert(${g.id},'${g.p1_pseudo}','${g.p2_pseudo}',${g.elo_before_p1},${g.elo_before_p2})">↩ Revert</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pgEl = document.getElementById('games-pagination-admin');
+  const hasPrev = offset > 0;
+  const hasNext = games.length === ADMIN_GAMES_LIMIT;
+  pgEl.innerHTML = [
+    hasPrev ? `<button class="btn-sm" onclick="fetchAdminGames(${offset - ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">◀ Précédent</button>` : '',
+    hasNext ? `<button class="btn-sm" onclick="fetchAdminGames(${offset + ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">Suivant ▶</button>` : '',
+  ].join('');
+}
+
+function confirmRevert(gameId, p1, p2, eloBefore1, eloBefore2) {
+  if (!confirm(`Revert la partie #${gameId} ?
+
+${p1} → ${eloBefore1} ELO
+${p2} → ${eloBefore2} ELO
+
+Cette action est irréversible.`)) return;
+  doRevert(gameId);
+}
+
+async function doRevert(gameId) {
+  try {
+    const res = await api('POST', `/api/admin/games/${gameId}/revert`, {});
+    alert(`✅ Revert effectué !
+${res.p1.pseudo} → ${res.p1.eloBefore} ELO
+${res.p2.pseudo} → ${res.p2.eloBefore} ELO`);
+    loadAdminGames();
+  } catch(e) {
+    alert('❌ Erreur : ' + (e.message || 'Inconnue'));
+  }
+}
+
+// ── Boost ELO Global ──────────────────────────────────────────────────────────
+async function loadBoostStatus() {
+  try {
+    const data = await api('GET', '/api/admin/boost');
+    const el = document.getElementById('boost-status');
+    if (!el) return;
+    if (data.multiplier > 1) {
+      el.innerHTML = `<span style="color:var(--yellow)">⚡ Boost actif : <strong>${data.multiplier}x</strong></span>`;
+      document.getElementById('boost-slider').value = data.multiplier;
+      document.getElementById('boost-val').textContent = parseFloat(data.multiplier).toFixed(1) + 'x';
+    } else {
+      el.innerHTML = '<span style="color:var(--muted)">Aucun boost actif (x1.0)</span>';
+    }
+  } catch(e) {}
+}
+async function setBoost(mult) {
+  try {
+    await api('POST', '/api/admin/boost', { multiplier: mult });
+    await loadBoostStatus();
+    const t = document.createElement('div');
+    t.textContent = mult > 1 ? `⚡ Boost x${mult} activé !` : '✕ Boost désactivé';
+    Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
+  } catch(e) {}
+}
+
 </script>
 </body>
 </html>

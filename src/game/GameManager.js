@@ -9,6 +9,24 @@ class GameManager {
   constructor() {
     this.games        = new Map(); // gameId → state
     this.socketToGame = new Map(); // socketId → gameId
+
+    // ── Timer AFK : vérifier toutes les 30s ──────────────────────────────────
+    this._afkInterval = setInterval(() => {
+      const AFK_LIMIT = 3 * 60 * 1000; // 3 minutes
+      const now = Date.now();
+      for (const [gameId, state] of this.games) {
+        if (state.status !== 'active') continue;
+        if (now - state.lastMoveAt > AFK_LIMIT) {
+          // Le joueur dont c'est le tour est AFK → l'autre gagne
+          const afkSide    = state.current;
+          const winnerSide = afkSide === 1 ? 2 : 1;
+          console.log(`[AFK] Partie ${gameId} — J${afkSide} AFK, J${winnerSide} gagne`);
+          const result = this._end(state, winnerSide, [], 'afk');
+          // Émettre via le callback (injecté depuis server.js)
+          if (this._onAfkEnd) this._onAfkEnd(result);
+        }
+      }
+    }, 30_000);
   }
 
   create(p1, p2) {
