@@ -164,6 +164,30 @@ html, body {
   text-transform: uppercase;
   margin-top: 4px;
 }
+.site-online-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:10px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(48,209,88,0.12);
+  border:1px solid rgba(48,209,88,0.28);
+  color:#30d158;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+}
+.site-online-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#30d158;
+  box-shadow:0 0 0 4px rgba(48,209,88,0.12);
+}
 
 /* ── Board decoration ───────────────────────────────────────────────────────── */
 .board-deco {
@@ -438,34 +462,6 @@ html, body {
   border-radius: 8px;
   padding: 6px 16px;
 }
-.queue-online-badge{
-  position:absolute;
-  top:12px;
-  right:12px;
-  display:none;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(48,209,88,0.12);
-  border:1px solid rgba(48,209,88,0.28);
-  color:#30d158;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  box-shadow:0 10px 22px rgba(0,0,0,0.22);
-}
-.queue-online-badge.show{display:inline-flex;}
-.queue-online-dot{
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:#30d158;
-  box-shadow:0 0 0 4px rgba(48,209,88,0.12);
-}
-
 .queue-volume {
   position: fixed;
   right: 16px;
@@ -797,6 +793,11 @@ html, body {
       <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
     </div>
     <div class="logo-tagline">Connecte · Défie · Domine</div>
+
+        <div class="site-online-badge" id="site-online-badge">
+      <span class="site-online-dot"></span>
+      <span id="site-online-count">0</span> connectes
+    </div>
 
     <!-- Mini board decoration -->
     <div class="board-deco" id="board-deco"></div>
@@ -1182,8 +1183,21 @@ function hslToHex(h, s, l) {
   return `#${f(0)}${f(8)}${f(4)}`;
 }
 
+const BOT_MODAL_HTML = (() => {
+  const modal = document.getElementById('bot-modal');
+  return modal ? modal.outerHTML : '';
+})();
+
+function ensureBotModal() {
+  if (document.getElementById('bot-modal') || !BOT_MODAL_HTML) return;
+  document.body.insertAdjacentHTML('beforeend', BOT_MODAL_HTML);
+}
+
 function openBotModal() {
-  document.getElementById('bot-modal').style.display = 'flex';
+  ensureBotModal();
+  const modal = document.getElementById('bot-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
   updateBotEloDisplay(1200);
 }
 
@@ -1318,11 +1332,10 @@ async function refreshSiteStats() {
     const res = await fetch('/api/site-stats', { cache: 'no-store' });
     if (!res.ok) return;
     const data = await res.json();
-    const badge = document.getElementById('queue-online-badge');
-    const count = document.getElementById('queue-online-count');
+    const badge = document.getElementById('site-online-badge');
+    const count = document.getElementById('site-online-count');
     if (!badge || !count) return;
     count.textContent = String(Math.max(0, Number(data.online) || 0));
-    badge.classList.add('show');
   } catch (_) {}
 }
 
@@ -1401,7 +1414,6 @@ function showQueueView(position) {
     queueView.style.display = 'block';
     queueView.classList.add('fade-in');
     showQueueVolume(true);
-    startSiteStatsPolling();
     document.getElementById('queue-stats').style.display = 'flex';
     document.getElementById('stat-elo').textContent   = myPlayer.elo;
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
@@ -1444,7 +1456,6 @@ function updateTimer() {
 function handleLeaveQueue() {
   QueueMusic.stop();
   showQueueVolume(false);
-  stopSiteStatsPolling();
   if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
   clearInterval(timerInterval);
   const loginView = document.getElementById('view-login');
@@ -1486,6 +1497,7 @@ document.addEventListener('click', (e) => {
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   initRegisterColorPicker();
+  startSiteStatsPolling();
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
   const token = localStorage.getItem('token');
