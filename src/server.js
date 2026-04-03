@@ -2062,6 +2062,211 @@ function startBot() {
     }
   }
 
+  function roundRectBot(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  function hexToRgbaBot(hex, alpha) {
+    const safe = String(hex || '#ffffff').replace('#', '');
+    const full = safe.length === 3 ? safe.split('').map(c => c + c).join('') : safe.padEnd(6, 'f');
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  async function loadImageSafeBot(loadImage, src) {
+    try { return src ? await loadImage(src) : null; } catch { return null; }
+  }
+
+  async function generateProfileCardAttachment(data) {
+    try {
+      const { createCanvas, loadImage } = require('canvas');
+      const rank = data.rank || getRank(data.elo);
+      const canvas = createCanvas(900, 500);
+      const ctx = canvas.getContext('2d');
+      const totalGames = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
+      const bg = await loadImageSafeBot(loadImage, 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg');
+      const avatar = await loadImageSafeBot(loadImage, data.avatar && data.avatar.startsWith('http') ? data.avatar : null);
+      const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
+
+      if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      else {
+        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grad.addColorStop(0, '#170b2c');
+        grad.addColorStop(0.5, '#273372');
+        grad.addColorStop(1, '#090d1f');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      overlay.addColorStop(0, 'rgba(8,10,24,0.38)');
+      overlay.addColorStop(1, 'rgba(8,10,24,0.68)');
+      ctx.fillStyle = overlay;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#ffd60a';
+      ctx.font = '28px Sans';
+      ctx.fillText('Puissance 4 Ranked', 38, 42);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(92, 118, 56, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      if (avatar) {
+        ctx.drawImage(avatar, 36, 62, 112, 112);
+      } else {
+        ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.3);
+        ctx.fillRect(36, 62, 112, 112);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px Sans';
+        ctx.textAlign = 'center';
+        ctx.fillText((data.pseudo || '?')[0].toUpperCase(), 92, 134);
+        ctx.textAlign = 'start';
+      }
+      ctx.restore();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = hexToRgbaBot(data.color || '#ff2d55', 0.95);
+      ctx.beginPath();
+      ctx.arc(92, 118, 58, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.95);
+      ctx.font = 'bold 46px Sans';
+      ctx.fillText(data.pseudo || 'Joueur', 188, 108);
+
+      ctx.fillStyle = '#f3f2ff';
+      ctx.font = '30px Sans';
+      let topLine = `${data.elo} Elo`;
+      if (data.role === 'admin') topLine += '  •  ADMIN';
+      else if (data.role === 'moderator') topLine += '  •  MODO';
+      if (data.is_vip) topLine += '  •  VIP';
+      ctx.fillText(topLine, 190, 146);
+
+      ctx.fillStyle = '#ffd60a';
+      ctx.font = '26px Sans';
+      ctx.fillText(`Rang : ${rank.label}`, 190, 180);
+
+      const stats = [
+        { label: 'Victoires', value: String(data.wins || 0), color: '#9be15d' },
+        { label: 'Défaites', value: String(data.losses || 0), color: '#ff7aa2' },
+        { label: 'Nuls', value: String(data.draws || 0), color: '#8dd7ff' },
+        { label: 'Parties', value: String(totalGames), color: '#7cf0ff' },
+        { label: 'Win rate', value: data.winRate || '—', color: '#c38bff' },
+        { label: 'Précision', value: data.avg_accuracy != null ? String(data.avg_accuracy) : '—', color: '#33a1ff' },
+      ];
+
+      const panelY = 260;
+      const panelW = 240;
+      const panelH = 82;
+      const panelGap = 28;
+      stats.forEach((stat, index) => {
+        const row = Math.floor(index / 3);
+        const col = index % 3;
+        const x = 40 + col * (panelW + panelGap);
+        const y = panelY + row * (panelH + 18);
+        ctx.save();
+        roundRectBot(ctx, x, y, panelW, panelH, 16);
+        ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
+        ctx.shadowColor = stat.color;
+        ctx.shadowBlur = 18;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = hexToRgbaBot(stat.color, 0.95);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = hexToRgbaBot(stat.color, 0.98);
+        ctx.font = '24px Sans';
+        ctx.textAlign = 'center';
+        ctx.fillText(stat.label, x + panelW / 2, y + 28);
+        ctx.font = 'bold 34px Sans';
+        ctx.fillStyle = '#f6f4ff';
+        ctx.fillText(stat.value, x + panelW / 2, y + 62);
+        ctx.textAlign = 'start';
+      });
+
+      ctx.save();
+      roundRectBot(ctx, 660, 62, 196, 156, 18);
+      ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
+      ctx.shadowColor = rank.color || '#ffffff';
+      ctx.shadowBlur = 20;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = hexToRgbaBot(rank.color || '#ffffff', 0.95);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#f3f2ff';
+      ctx.font = '26px Sans';
+      ctx.fillText('Rank', 726, 92);
+      if (rankImage) ctx.drawImage(rankImage, 734, 102, 48, 48);
+      else {
+        ctx.font = '40px Sans';
+        ctx.fillText(data.rankEmoji || '🏅', 742, 142);
+      }
+      ctx.fillStyle = '#ffd60a';
+      ctx.font = 'bold 24px Sans';
+      ctx.fillText(rank.label, 792, 134);
+
+      const barX = 688, barY = 174, barW = 138, barH = 18;
+      roundRectBot(ctx, barX, barY, barW, barH, 9);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fill();
+      roundRectBot(ctx, barX, barY, Math.max(16, Math.round(barW * ((rank.progress || 0) / 100))), barH, 9);
+      ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.95);
+      ctx.fill();
+      ctx.fillStyle = '#f3f2ff';
+      ctx.font = '20px Sans';
+      ctx.fillText(`${rank.progress || 0}%`, 740, 212);
+      if (rank.next) {
+        ctx.font = '18px Sans';
+        ctx.fillText(`→ ${rank.next} Elo`, 776, 212);
+      }
+
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = '22px Sans';
+      ctx.fillText('Discord', 42, 220);
+      ctx.font = '20px Sans';
+      const lines = [
+        `Suivis : ${data.following || 0}   •   Abonnés : ${data.followers || 0}`,
+        `Membre : ${data.memberDate || '—'}`,
+      ];
+      const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
+      if (di?.server_nick) lines.push(`Pseudo serveur : ${di.server_nick}`);
+      if (di?.server_joined) lines.push(`Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}`);
+      if (di?.boosting_since) lines.push('Booster du serveur');
+      if (di?.server_roles?.length) {
+        const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' • ');
+        if (roleNames) lines.push(`Rôles : ${roleNames}`);
+      }
+      lines.slice(0, 4).forEach((line, i) => {
+        ctx.fillStyle = '#f3f2ff';
+        ctx.fillText(line, 42, 248 + i * 28);
+      });
+
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '18px Sans';
+      ctx.fillText(`ID ${data.id}`, 798, 476);
+
+      return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
+    } catch (e) {
+      console.error('[BOT] generateProfileCardAttachment:', e.message);
+      return null;
+    }
+  }
+
   bot.on('interactionCreate', async interaction => {
     // ── Autocomplete pseudo ──────────────────────────────────────────────────
     if (interaction.isAutocomplete() && interaction.commandName === 'profil') {
@@ -2289,7 +2494,22 @@ function startBot() {
           files.push(new AttachmentBuilder(bannerAttachment.buffer, { name: bannerAttachment.name }));
         }
 
-        return interaction.editReply({ embeds: [embed], files });
+        const cardAttachment = await generateProfileCardAttachment({
+          ...data,
+          rank: rankInfo,
+          rankEmoji: rank.emoji,
+          winRate: wr,
+          avg_accuracy: prec,
+          following: followCounts?.following || 0,
+          followers: followCounts?.followers || 0,
+          memberDate,
+        });
+        if (cardAttachment) {
+          embed.setImage('attachment://' + cardAttachment.name);
+          files.push(cardAttachment);
+        }
+
+        return interaction.editReply({ embeds: [embed], files, components: menuRows });
       }
 
       // ── /classement ────────────────────────────────────────────────────────
