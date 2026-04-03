@@ -523,6 +523,32 @@ html, body {
 .auth-tab.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
 .btn-play, .btn-ghost, .btn-robot, .error-msg { width:100%; }
 
+.token-color-section { display:none; width:100%; flex-direction:column; gap:10px; }
+.token-color-head {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--muted);
+}
+.token-color-grid { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.token-color-dot {
+  width:24px; height:24px; border-radius:50%; border:2px solid transparent;
+  cursor:pointer; transition:transform 0.18s ease, border-color 0.18s ease;
+}
+.token-color-dot:hover { transform:scale(1.1); }
+.token-color-dot.active { border-color:rgba(255,255,255,0.9); transform:scale(1.08); }
+.token-color-custom {
+  width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:var(--surface2); border:1.5px solid var(--border); border-radius:12px; padding:10px 12px;
+}
+.token-color-preview {
+  width:22px; height:22px; border-radius:50%; border:2px solid rgba(255,255,255,0.16); flex-shrink:0;
+}
+.token-color-meta { flex:1; min-width:0; }
+.token-color-title { font-size:13px; font-weight:600; color:var(--text); }
+.token-color-value { font-size:11px; color:var(--muted); letter-spacing:1px; }
+.token-color-picker {
+  width:34px; height:34px; padding:0; border:none; background:transparent; cursor:pointer;
+}
+
 /* ── Theme / Color picker ── */
 
 /* Side quick menu */
@@ -770,6 +796,21 @@ html, body {
         <input class="input" id="input-password" type="password" placeholder="Mot de passe" autocomplete="current-password" />
       </div>
 
+      <div class="token-color-section" id="token-color-section">
+        <div class="token-color-head">
+          <span>Couleur de jeton</span>
+        </div>
+        <div class="token-color-grid" id="token-color-grid"></div>
+        <div class="token-color-custom">
+          <div class="token-color-preview" id="token-color-preview"></div>
+          <div class="token-color-meta">
+            <div class="token-color-title">Couleur personnalisée</div>
+            <div class="token-color-value" id="token-color-value">#FF2D55</div>
+          </div>
+          <input class="token-color-picker" id="token-color-picker" type="color" value="#ff2d55" oninput="onRegisterColorInput(this.value)">
+        </div>
+      </div>
+
       <div class="error-msg" id="error-msg"></div>
 
       <button class="btn btn-play" id="btn-play" onclick="handleAuth()">
@@ -959,13 +1000,58 @@ spawnTokens();
 //  AUTH TABS
 // ═══════════════════════════════════════════════════════════════════
 let authMode = 'login'; // 'login' | 'register'
+const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#00c7be', '#ff375f'];
+let selectedRegisterColor = '#ff2d55';
 
 function switchTab(mode) {
   authMode = mode;
   document.getElementById('tab-login').classList.toggle('active', mode === 'login');
   document.getElementById('tab-register').classList.toggle('active', mode === 'register');
   document.getElementById('btn-play-txt').textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte';
+  const colorSection = document.getElementById('token-color-section');
+  if (colorSection) colorSection.style.display = mode === 'register' ? 'flex' : 'none';
   document.getElementById('error-msg').textContent = '';
+}
+
+function initRegisterColorPicker(initialColor = '#ff2d55') {
+  selectedRegisterColor = initialColor;
+  const grid = document.getElementById('token-color-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  REGISTER_COLOR_PRESETS.forEach(color => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'token-color-dot' + (color.toLowerCase() === selectedRegisterColor.toLowerCase() ? ' active' : '');
+    dot.style.background = color;
+    dot.setAttribute('aria-label', `Choisir ${color}`);
+    dot.onclick = () => setRegisterColor(color, true);
+    grid.appendChild(dot);
+  });
+  setRegisterColor(selectedRegisterColor, false);
+}
+
+function setRegisterColor(color, syncPicker = true) {
+  selectedRegisterColor = color;
+  const preview = document.getElementById('token-color-preview');
+  const value = document.getElementById('token-color-value');
+  const picker = document.getElementById('token-color-picker');
+  if (preview) preview.style.background = color;
+  if (value) value.textContent = color.toUpperCase();
+  if (picker && syncPicker) picker.value = color;
+  document.querySelectorAll('.token-color-dot').forEach(dot => {
+    const dotColor = rgbToHex(dot.style.backgroundColor);
+    dot.classList.toggle('active', dotColor === color.toLowerCase());
+  });
+}
+
+function onRegisterColorInput(color) {
+  setRegisterColor(color, false);
+}
+
+function rgbToHex(rgb) {
+  const match = rgb && rgb.match(/\d+/g);
+  if (!match || match.length < 3) return '';
+  return '#' + match.slice(0, 3).map(v => Number(v).toString(16).padStart(2, '0')).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -994,7 +1080,11 @@ async function handleAuth() {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pseudo, password }),
+      body: JSON.stringify({
+        pseudo,
+        password,
+        ...(authMode === 'register' ? { color: selectedRegisterColor } : {}),
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -1333,8 +1423,7 @@ document.addEventListener('click', (e) => {
 //  INIT — auto-login si localStorage
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-
-
+  initRegisterColorPicker();
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
   const token = localStorage.getItem('token');
