@@ -358,7 +358,7 @@ const { wlog, mkEmbed: embed } = WH;
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
-const DISCORD_ROLE_VIP = '1480329015406497823';
+const DISCORD_ROLE_VIP = '1489360367246114866'; // Rôle VIP
 
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
@@ -1298,6 +1298,67 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
 app.get('/api/bot-id', (_, res) => {
   const bot = pQ.getById.get(BOT_PLAYER_ID);
   res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO, color: bot?.color || '#ffd60a', shape: bot?.shape || 'circle' });
+});
+
+// ── Boost VIP individuel ──────────────────────────────────────────────────────
+// Activation : 1h, 1x par jour (reset à minuit)
+app.post('/api/players/:id/vip-boost', (req, res) => {
+  const { token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (player.role !== 'vip') return res.status(403).json({ error: 'Réservé aux VIP.' });
+
+  const now = Date.now();
+  // Vérifier si déjà actif
+  const currentBoost = vipQ.getActive.get(id, now);
+  if (currentBoost) {
+    const remaining = Math.round((currentBoost.expires_at - now) / 60000);
+    return res.status(400).json({ error: `Boost déjà actif encore ${remaining} minute(s).`, remaining });
+  }
+
+  // Vérifier si déjà utilisé aujourd'hui (reset à minuit)
+  const midnight = new Date(); midnight.setHours(0,0,0,0);
+  const usedToday = vipQ.usedToday.get(id, midnight.getTime());
+  if (usedToday) return res.status(400).json({ error: "Boost déjà utilisé aujourd'hui. Reviens à minuit !" });
+
+  // Activer le boost (1 heure)
+  const expiresAt = now + 60 * 60 * 1000;
+  vipQ.activate.run(id, now, expiresAt);
+  res.json({ ok: true, expiresAt, message: '⚡ Boost VIP activé pour 1 heure !' });
+});
+
+// Statut du boost VIP d'un joueur
+app.get('/api/players/:id/vip-boost', (req, res) => {
+  const id = Number(req.params.id);
+  const now = Date.now();
+  const active = vipQ.getActive.get(id, now);
+  const midnight = new Date(); midnight.setHours(0,0,0,0);
+  const usedToday = vipQ.usedToday.get(id, midnight.getTime());
+  res.json({
+    active:     !!active,
+    expiresAt:  active?.expires_at ?? null,
+    usedToday:  !!usedToday,
+    remainingMs: active ? active.expires_at - now : 0,
+  });
+});
+
+// Liste des boosts VIP actifs (admin/modo)
+app.get('/api/admin/vip-boosts', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  const now = Date.now();
+  const boosts = vipQ.listActive.all(now);
+  res.json(boosts.map(b => ({
+    playerId:  b.player_id,
+    pseudo:    b.pseudo,
+    elo:       b.elo,
+    color:     b.color,
+    avatar:    b.avatar,
+    expiresAt: b.expires_at,
+    remainingMin: Math.round((b.expires_at - now) / 60000),
+  })));
 });
 
 // ── Revert de partie (modo/admin uniquement) ─────────────────────────────────

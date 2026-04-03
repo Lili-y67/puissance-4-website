@@ -612,6 +612,15 @@ function render(player, games, following, followers, followStatus) {
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
             🎚 Simulateur ELO
           </button>
+          ${isOwnProfile && player.role === 'vip' ? `
+          <div id="vip-boost-wrap" style="margin-top:4px;">
+            <button id="vip-boost-btn" onclick="activateVipBoost()"
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
+              onmouseover="this.style.background='rgba(255,214,10,0.15)'" onmouseout="this.style.background='rgba(255,214,10,0.08)'">
+              ⚡ BOOST VIP
+            </button>
+            <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
+          </div>` : ''}
           ${isOwnProfile ? `
           <label class="toggle-wrap" style="margin-top:4px;">
             <div>
@@ -814,6 +823,7 @@ function render(player, games, following, followers, followStatus) {
   // Initialiser la pagination des parties et le toggle auto-rejoin
   initGames(games, player);
   initAutoRejoinToggle();
+  initVipBoostUI();
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -1167,6 +1177,61 @@ function highlightAc(items) {
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-row')) document.getElementById('autocomplete-list').style.display = 'none';
 });
+
+// ── Boost VIP ──────────────────────────────────────────────────────────────────
+async function initVipBoostUI() {
+  const wrap = document.getElementById('vip-boost-wrap');
+  if (!wrap) return;
+  try {
+    const saved = sessionStorage.getItem('player');
+    if (!saved) return;
+    const me = JSON.parse(saved);
+    const data = await fetch('/api/players/' + me.id + '/vip-boost').then(r=>r.json());
+    const btn  = document.getElementById('vip-boost-btn');
+    const stat = document.getElementById('vip-boost-status');
+    if (data.active) {
+      const mins = Math.ceil(data.remainingMs / 60000);
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.textContent = '⚡ BOOST ACTIF';
+      stat.textContent = `Se termine dans ${mins} min`;
+      stat.style.color = '#ffd60a';
+    } else if (data.usedToday) {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.textContent = '⚡ BOOST UTILISÉ';
+      stat.textContent = 'Disponible à minuit';
+    } else {
+      btn.textContent = '⚡ ACTIVER BOOST VIP (+20% ELO · 1h)';
+    }
+  } catch(e) {}
+}
+
+async function activateVipBoost() {
+  const saved = sessionStorage.getItem('player');
+  if (!saved) return;
+  const me = JSON.parse(saved);
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch('/api/players/' + me.id + '/vip-boost', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert('❌ ' + (data.error || 'Erreur'));
+      return;
+    }
+    const btn  = document.getElementById('vip-boost-btn');
+    const stat = document.getElementById('vip-boost-status');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.textContent = '⚡ BOOST ACTIF';
+    stat.textContent = 'Se termine dans 60 min';
+    stat.style.color = '#ffd60a';
+  } catch(e) { alert('Erreur réseau'); }
+}
 
 // ── Auto-rejoin toggle ────────────────────────────────────────────────────────
 function initAutoRejoinToggle() {

@@ -103,6 +103,13 @@ try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) 
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+// Table boost VIP individuel
+db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  player_id    INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  activated_at INTEGER NOT NULL,
+  expires_at   INTEGER NOT NULL
+)`);
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p2 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN reverted      INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -215,19 +222,29 @@ const bQ = {
 };
 
 // ── Elo ───────────────────────────────────────────────────────────────────────
-function calcElo(winnerElo, loserElo, isDraw = false) {
-  const K    = 32;
-  const expW = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
-  const mult = bQ.getActive.get()?.multiplier ?? 1;
-  return isDraw
-    ? { dW: Math.round(K*(0.5-expW)*mult),  dL: Math.round(K*(0.5-(1-expW))*mult) }
-    : { dW: Math.round(K*(1-expW)*mult),     dL: Math.round(K*(0-(1-expW))*mult) };
+function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
+  const K          = 32;
+  const expW       = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+  const globalMult = bQ.getActive.get()?.multiplier ?? 1;
+  // Boost VIP individuel sur le gagnant
+  const vipActive  = winnerId && !isDraw ? vipQ.getActive.get(winnerId, Date.now()) : null;
+  const vipMult    = vipActive ? 1.2 : 1;
+  // Arrondi au supérieur pour éviter les décimales
+  const ceil = Math.ceil.bind(Math);
+  if (isDraw) {
+    const raw = K * (0.5 - expW) * globalMult;
+    return { dW: ceil(raw), dL: ceil(K * (0.5 - (1 - expW)) * globalMult) };
+  }
+  return {
+    dW: ceil(K * (1 - expW) * globalMult * vipMult),
+    dL: Math.floor(K * (0 - (1 - expW)) * globalMult), // pertes → floor (plus négatif)
+  };
 }
 
 const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false) => {
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
-  const { dW, dL } = calcElo(winner.elo, loser.elo, isDraw);
+  const { dW, dL } = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
 
   if (!isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
@@ -287,6 +304,18 @@ db.exec(`CREATE TABLE IF NOT EXISTS unlink_codes (
 
 try { db.exec(`ALTER TABLE reset_codes ADD COLUMN ip_hash TEXT`); } catch(e) {}
 
+const vipQ = {
+  activate:   db.prepare(`INSERT INTO vip_boosts (player_id, activated_at, expires_at) VALUES (?,?,?)`),
+  getActive:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND expires_at > ? LIMIT 1`),
+  // Vérifier si déjà utilisé aujourd'hui (reset à minuit)
+  usedToday:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND activated_at >= ? LIMIT 1`),
+  listActive: db.prepare(`
+    SELECT v.*, p.pseudo, p.elo, p.color, p.avatar
+    FROM vip_boosts v JOIN players p ON v.player_id = p.id
+    WHERE v.expires_at > ? ORDER BY v.expires_at DESC
+  `),
+};
+
 const rQ = {
   insert:    db.prepare(`INSERT INTO reset_codes (player_id, code, expires_at, ip_hash) VALUES (?, ?, ?, ?)`),
   getValid:  db.prepare(`SELECT * FROM reset_codes WHERE player_id = ? AND code = ? AND expires_at > ? AND used = 0`),
@@ -339,4 +368,4 @@ const sQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, fQ, sQ, abQ, rQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, sQ, abQ, rQ, calcElo, finishGame };
