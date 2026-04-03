@@ -30,6 +30,10 @@ const commands = [
     name: 'live',
     description: 'Affiche les parties en cours',
   },
+  {
+    name: 'reload',
+    description: 'Recharge les commandes slash du bot',
+  },
 ];
 
 const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);

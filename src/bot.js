@@ -5,7 +5,7 @@
 const {
   Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder,
   ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
-  ButtonBuilder, ButtonStyle
+  ButtonBuilder, ButtonStyle, REST, Routes, PermissionFlagsBits
 } = require('discord.js');
 const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
@@ -13,8 +13,48 @@ const path = require('path');
 const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
 const API       = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
 const PROFILE_BG_URL = 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg';
+const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1477252548090921060';
+const OWNER_IDS = (process.env.DISCORD_OWNER_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+
+const SLASH_COMMANDS = [
+  {
+    name: 'profil',
+    description: 'Affiche le profil d\'un joueur Puissance 4',
+    options: [
+      {
+        name: 'pseudo',
+        description: 'Le pseudo du joueur (2 caractères min)',
+        type: 3,
+        required: true,
+        autocomplete: true,
+      },
+    ],
+  },
+  {
+    name: 'classement',
+    description: 'Affiche le top 10 des joueurs par ELO',
+  },
+  {
+    name: 'live',
+    description: 'Affiche les parties en cours',
+  },
+  {
+    name: 'reload',
+    description: 'Recharge les commandes slash du bot',
+  },
+];
+
+async function registerSlashCommands() {
+  const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
+  await rest.put(Routes.applicationCommands(CLIENT_ID), { body: SLASH_COMMANDS });
+}
+
+function canReloadCommands(interaction) {
+  if (OWNER_IDS.length && OWNER_IDS.includes(interaction.user.id)) return true;
+  return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) || false;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function apiFetch(path) {
@@ -94,7 +134,7 @@ function drawRoundedPanel(ctx, x, y, w, h, color, alpha = 0.18, borderAlpha = 0.
   ctx.fill();
   ctx.shadowBlur = 0;
   ctx.lineWidth = 3;
-  ctx.strokeStyle = color.replace('rgb', 'rgba').replace(')', `, ${borderAlpha})`).replace('#', '');
+  ctx.strokeStyle = hexToRgba(color, borderAlpha);
   ctx.restore();
 }
 
@@ -466,7 +506,7 @@ function buildProfileComponents(profileUrl, games, playerId, page = 0) {
 client.on('interactionCreate', async interaction => {
   try {
 
-    // ── /profil ──────────────────────────────────────────────────────────────
+    // -- /profil --------------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'profil') {
       await interaction.deferReply();
 
@@ -474,7 +514,7 @@ client.on('interactionCreate', async interaction => {
       const data   = await apiFetch(`/api/players/by-pseudo/${encodeURIComponent(pseudo)}`);
 
       if (!data || data.error) {
-        return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
+        return interaction.editReply({ content: `? Joueur **${pseudo}** introuvable.` });
       }
 
       const full      = await apiFetch(`/api/players/${data.id}`);
@@ -490,40 +530,39 @@ client.on('interactionCreate', async interaction => {
       return interaction.editReply({ embeds: [embed], files: [card], components: components || [] });
     }
 
-    // ── /classement ──────────────────────────────────────────────────────────
+    // -- /classement ----------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'classement') {
       await interaction.deferReply();
 
       const players = await apiFetch('/api/leaderboard');
-      if (!players?.length) return interaction.editReply({ content: '❌ Impossible de charger le classement.' });
+      if (!players?.length) return interaction.editReply({ content: '? Impossible de charger le classement.' });
 
-      const medals = ['🥇', '🥈', '🥉'];
+      const medals = ['??', '??', '??'];
       const lines  = players.map((p, i) => {
         const rank  = getRank(p.elo);
         const medal = medals[i] || `**#${i + 1}**`;
-        return `${medal} ${rank.emoji} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D · ${winRate(p)} WR`;
+        return `${medal} ${rank.emoji} **${p.pseudo}** � ${p.elo} ELO � ${p.wins}V/${p.losses}D � ${winRate(p)} WR`;
       });
 
       const embed = new EmbedBuilder()
         .setColor('#ffd60a')
-        .setTitle('🏆 Classement Puissance 4')
+        .setTitle('?? Classement Puissance 4')
         .setURL(`${API}/leaderboard`)
         .setDescription(lines.join('\n'))
-        .setFooter({ text: 'Top 10 par ELO · Puissance 4 Ranked' });
+        .setFooter({ text: 'Top 10 par ELO � Puissance 4 Ranked' });
 
       return interaction.editReply({ embeds: [embed] });
     }
 
-    // ── /live ─────────────────────────────────────────────────────────────────
+    // -- /live ----------------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'live') {
       await interaction.deferReply();
 
       const data  = await apiFetch('/api/live');
-      // /api/live renvoie un array direct
       const games = Array.isArray(data) ? data.filter(g => g.status === 'active') : [];
 
       if (!games.length) {
-        return interaction.editReply({ content: '😴 Aucune partie en cours pour le moment.' });
+        return interaction.editReply({ content: '?? Aucune partie en cours pour le moment.' });
       }
 
       const lines = games.map(g => {
@@ -531,33 +570,42 @@ client.on('interactionCreate', async interaction => {
         const p2  = g.players?.[2] || g.players?.['2'];
         if (!p1 || !p2) return null;
         const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-        return `⚔️ **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) · Tour de **${cur}** · ${g.moves} coups · [Voir](${API}/game/${g.id})`;
+        return `?? **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) � Tour de **${cur}** � ${g.moves} coups � [Voir](${API}/game/${g.id})`;
       }).filter(Boolean);
 
       const embed = new EmbedBuilder()
         .setColor('#ff2d55')
-        .setTitle(`🔴 ${games.length} partie${games.length > 1 ? 's' : ''} en cours`)
+        .setTitle(`?? ${games.length} partie${games.length > 1 ? 's' : ''} en cours`)
         .setURL(`${API}/live`)
         .setDescription(lines.join('\n') || 'Aucune partie active.')
-        .setFooter({ text: 'Puissance 4 Ranked · Live' });
+        .setFooter({ text: 'Puissance 4 Ranked � Live' });
 
       return interaction.editReply({ embeds: [embed] });
     }
 
-    // ── SelectMenu — sélection d'une partie ───────────────────────────────────
+    // -- /reload --------------------------------------------------------------
+    if (interaction.isChatInputCommand() && interaction.commandName === 'reload') {
+      if (!canReloadCommands(interaction)) {
+        return interaction.reply({ content: '? Tu n�as pas la permission d�utiliser cette commande.', ephemeral: true });
+      }
+      await interaction.deferReply({ ephemeral: true });
+      await registerSlashCommands();
+      return interaction.editReply({ content: '? Slash commands recharg�es.' });
+    }
+
+    // -- SelectMenu � s�lection d'une partie ---------------------------------
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('games_menu:')) {
       await interaction.deferUpdate();
       const value = interaction.values[0];
       if (!value.startsWith('game:')) return;
       const gameId = value.split(':')[1];
-      // Répondre avec un lien vers le replay
       await interaction.followUp({
-        content: `📽️ **Voir la partie** : ${API}/replay/${gameId}`,
+        content: `??? **Voir la partie** : ${API}/replay/${gameId}`,
         ephemeral: true,
       });
     }
 
-    // ── Boutons de pagination des parties ─────────────────────────────────────
+    // -- Boutons de pagination des parties -----------------------------------
     if (interaction.isButton() && interaction.customId.startsWith('games_page:')) {
       await interaction.deferUpdate();
       const [, playerId, pageStr] = interaction.customId.split(':');
@@ -581,16 +629,21 @@ client.on('interactionCreate', async interaction => {
   } catch (e) {
     console.error('[BOT ERROR]', e);
     try {
-      const msg = { content: `❌ Erreur : ${e.message}` };
+      const msg = { content: `? Erreur : ${e.message}` };
       if (interaction.deferred || interaction.replied) interaction.editReply(msg);
       else interaction.reply({ ...msg, ephemeral: true });
-    } catch(_) {}
+    } catch (_) {}
   }
 });
 
 client.once('ready', () => {
-  console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
-  console.log(`📡 API : ${API}`);
+  console.log(`? Bot connect� en tant que ${client.user.tag}`);
+  console.log(`?? API : ${API}`);
+  registerSlashCommands()
+    .then(() => console.log('? Slash commands synchronis�es.'))
+    .catch(err => console.error('? Erreur sync slash commands:', err));
 });
 
 client.login(BOT_TOKEN);
+
+
