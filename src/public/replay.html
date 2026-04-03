@@ -88,12 +88,22 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   grid-template-rows:repeat(6,68px);
   gap:6px;
 }
-.cell{border-radius:50%;background:var(--cell);box-shadow:inset 0 3px 10px rgba(0,0,0,0.7),inset 0 1px 3px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);position:relative;overflow:hidden;}
+.cell{
+  border-radius:50%;
+  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,0.06), rgba(7,7,26,0.96) 72%);
+  box-shadow:
+    inset 0 3px 10px rgba(0,0,0,0.7),
+    inset 0 1px 3px rgba(0,0,0,0.5),
+    inset 0 0 0 1px rgba(255,255,255,0.07),
+    0 0 0 1px rgba(255,255,255,0.08);
+  position:relative;
+  overflow:hidden;
+}
 .cell .token{position:absolute;inset:4px;border-radius:50%;transform:scale(0);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);}
 .cell.drop .token{transform:scale(1);}
 .cell.p1 .token{background:radial-gradient(circle at 35% 30%,var(--p1-light,#ff6b85),var(--p1-color,#ff2d55));box-shadow:0 0 18px var(--p1-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
 .cell.p2 .token{background:radial-gradient(circle at 35% 30%,var(--p2-light,#ffe566),var(--p2-color,#ffd60a));box-shadow:0 0 18px var(--p2-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
-.cell.highlight{box-shadow:inset 0 3px 8px rgba(0,0,0,0.6),0 0 0 2px rgba(255,255,255,0.15);}
+.cell.highlight{box-shadow:inset 0 3px 8px rgba(0,0,0,0.6),inset 0 0 0 1px rgba(255,255,255,0.12),0 0 0 2px rgba(255,255,255,0.15);}
 .cell.winning .token{animation:win-pulse 0.7s ease-in-out infinite alternate;}
 @keyframes win-pulse{from{transform:scale(1)}to{transform:scale(1.1);filter:brightness(1.4);}}
 
@@ -126,11 +136,17 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   pointer-events: none; z-index: 5;
 }
 .cell.seq-played { outline: 3px solid rgba(255,255,255,0.5); outline-offset: -3px; }
+.cell.play-focus .token{animation:inspect-pop 0.5s cubic-bezier(0.22,1,0.36,1);}
 .cell.seq-opt-0  { background: rgba(48,209,88,0.45) !important; box-shadow: inset 0 0 12px rgba(48,209,88,0.6); }
 .cell.seq-opt-1  { background: rgba(48,209,88,0.30) !important; }
 .cell.seq-opt-2  { background: rgba(48,209,88,0.20) !important; }
 .cell.seq-opt-3  { background: rgba(48,209,88,0.13) !important; }
 .cell.seq-opt-4  { background: rgba(48,209,88,0.08) !important; }
+@keyframes inspect-pop{
+  0%{transform:scale(0.86);filter:brightness(0.95);}
+  55%{transform:scale(1.18);filter:brightness(1.18);}
+  100%{transform:scale(1);filter:brightness(1);}
+}
 /* Badge info au-dessus du plateau quand on inspecte un coup */
 .board-inspect-bar {
   width: 100%; padding: 8px 14px;
@@ -1024,7 +1040,7 @@ function renderAnalysis(results, accuracy) {
               <div class="am-metrics">
                 ${r.playedWinPct !== undefined ? `<span class="am-metric"><strong>${fmtPct(r.playedWinPct)}</strong> pour ${pseudo}</span>` : ''}
                 ${r.bestWinPct !== undefined ? `<span class="am-metric">meilleur coup: <strong>${fmtPct(r.bestWinPct)}</strong></span>` : ''}
-                ${r.swing !== undefined ? `<span class="am-metric">swing: <strong>-${fmtPct(r.swing)}</strong></span>` : ''}
+                ${r.swing !== undefined ? `<span class="am-metric" title="Perte de chances entre le meilleur coup et le coup joué">swing: <strong>-${fmtPct(r.swing)}</strong> de chances</span>` : ''}
                 <span class="am-metric">avantage: <strong style="color:${ownerColor(r.evalScore || 0)}">${ownerName(r.evalScore || 0)}</strong></span>
                 ${r.bestCol !== undefined && r.bestCol !== r.playedCol ? `<span class="am-metric">meilleur choix: <strong>col.${r.bestCol + 1}</strong></span>` : ''}
               </div>
@@ -1139,7 +1155,12 @@ function jumpToMove(moveIdx) {
     const row = getTopRow(result.playedCol);
     if (row >= 0) {
       const c = getCell(row, result.playedCol);
-      if (c) c.classList.add('seq-played');
+      if (c) {
+        c.classList.add('seq-played');
+        c.classList.remove('play-focus');
+        void c.offsetWidth;
+        c.classList.add('play-focus');
+      }
     }
   }
 
@@ -1203,8 +1224,8 @@ function getTopRow(col) {
 }
 
 function clearSeqHighlights() {
-  document.querySelectorAll('.seq-highlight, .seq-played').forEach(c => {
-    c.classList.remove('seq-highlight','seq-played','seq-opt-0','seq-opt-1','seq-opt-2','seq-opt-3','seq-opt-4');
+  document.querySelectorAll('.seq-highlight, .seq-played, .play-focus').forEach(c => {
+    c.classList.remove('seq-highlight','seq-played','play-focus','seq-opt-0','seq-opt-1','seq-opt-2','seq-opt-3','seq-opt-4');
     c.removeAttribute('data-seq-num');
   });
 }

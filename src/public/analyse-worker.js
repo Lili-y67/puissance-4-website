@@ -221,7 +221,7 @@ function getPositionContext(board, player) {
 }
 
 // ── Classification ────────────────────────────────────────────────────────────
-function classifyMove(player, playedScore, bestScore, availableCols, context) {
+function classifyMove(player, playedScore, bestScore, availableCols, context, playedState = {}) {
   const only1 = availableCols === 1;
 
   // Victoire jouée
@@ -241,9 +241,19 @@ function classifyMove(player, playedScore, bestScore, availableCols, context) {
   const bestPct = player === 1 ? scoreToWinPct(bestScore) : 100 - scoreToWinPct(bestScore);
   const playedPct = player === 1 ? scoreToWinPct(playedScore) : 100 - scoreToWinPct(playedScore);
   const swing = Math.max(0, bestPct - playedPct);
+  const oppImmediateWins = playedState.oppImmediateWins || 0;
+  const bestAllowsOppImmediateWins = playedState.bestAllowsOppImmediateWins || 0;
+
+  if (oppImmediateWins > bestAllowsOppImmediateWins) {
+    if (oppImmediateWins >= 2) return 'blunder';
+    if (swing >= 20) return 'blunder';
+    return 'mistake';
+  }
 
   if (context.type === 'must_block' && swing >= 40) return 'blunder';
   if (context.type === 'win_available' && swing >= 30) return 'blunder';
+  if (swing >= 48) return 'blunder';
+  if (swing >= 30) return 'mistake';
 
   if (loss <= 8 && swing <= 1)   return 'best';
   if (loss <= 45 && swing <= 4)  return 'excellent';
@@ -305,6 +315,36 @@ function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, avai
   }
 }
 
+function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
+  const turn = Math.floor(moveIndex / 2) + 1;
+  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol+1} Ã©tait meilleure.` : '';
+
+  if (cls === 'forced') return `Seul coup disponible â€” coup jouÃ© automatiquement.`;
+  if (context.type === 'win_available' && cls === 'blunder')
+    return `Victoire en main Ã  la col.${context.col+1} â€” mais ratÃ© ! Gaffe dÃ©cisive.`;
+  if (context.type === 'must_block' && context.count > 1 && cls === 'blunder')
+    return `Double menace adverse impossible Ã  bloquer â€” position perdue.`;
+  if (context.type === 'must_block' && cls === 'blunder')
+    return `Blocage obligatoire ignorÃ© â€” l'adversaire gagne maintenant.${hint}`;
+
+  switch(cls) {
+    case 'best':
+      return ['Coup parfait.', "L'IA aurait jouÃ© pareil.", 'Exactement le bon choix.'][moveIndex % 3];
+    case 'excellent':
+      return ['TrÃ¨s bon coup, quasi optimal.', 'Solide â€” pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
+    case 'good':
+      return ['Bon coup, lÃ©gÃ¨re amÃ©lioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
+    case 'inaccuracy':
+      return `LÃ©gÃ¨re imprÃ©cision, tu perds environ ${swing}% de chances.${hint}`;
+    case 'mistake':
+      return turn <= 4 ? `Erreur en ouverture â€” difficile Ã  rattraper.${hint}` : `Erreur nette, tu perds environ ${swing}% de chances.${hint}`;
+    case 'blunder':
+      return turn <= 3 ? `Gaffe dÃ¨s l'ouverture !${hint}` : `Gaffe dÃ©cisive, tu abandonnes environ ${swing}% de chances.${hint}`;
+    default:
+      return '';
+  }
+}
+
 // ── Analyse principale ────────────────────────────────────────────────────────
 self.onmessage = function(e) {
   const { moves } = e.data;
@@ -341,7 +381,22 @@ self.onmessage = function(e) {
       const bestWinPct = player === 1 ? scoreToWinPct(bestScore) : 100 - scoreToWinPct(bestScore);
       const playedWinPct = player === 1 ? scoreToWinPct(playedScore) : 100 - scoreToWinPct(playedScore);
       const swing = Math.max(0, bestWinPct - playedWinPct);
-      const classification = classifyMove(player, playedScore, bestScore, cols.length, context);
+
+      drop(boardBefore, playedCol, player);
+      const oppImmediateWins = countImmediateWins(boardBefore, player === 1 ? 2 : 1);
+      undrop(boardBefore, playedCol);
+
+      let bestAllowsOppImmediateWins = oppImmediateWins;
+      if (bestCol !== undefined && bestCol !== null) {
+        drop(boardBefore, bestCol, player);
+        bestAllowsOppImmediateWins = countImmediateWins(boardBefore, player === 1 ? 2 : 1);
+        undrop(boardBefore, bestCol);
+      }
+
+      const classification = classifyMove(player, playedScore, bestScore, cols.length, context, {
+        oppImmediateWins,
+        bestAllowsOppImmediateWins,
+      });
       const forced = classification === 'forced';
       const loss   = Math.abs(bestScore - playedScore);
       const accScore = moveAccuracyScore(classification, loss, forced, swing);
@@ -361,7 +416,7 @@ self.onmessage = function(e) {
       if (['inaccuracy','mistake','blunder'].includes(classification))
         optimalSeq = getOptimalSequence(boardBefore, player, 6);
 
-      const comment = generateComment(classification, i, bestCol, playedCol, loss, context, cols.length, swing);
+      const comment = generateCommentV2(classification, i, bestCol, playedCol, loss, context, cols.length, swing);
 
       result = { moveIndex:i, player, playedCol, bestCol, bestScore, playedScore,
         classification, forced, loss, accScore, evalScore:evalBar, evalCP, optimalSeq, comment, context,
