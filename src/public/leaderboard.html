@@ -98,6 +98,7 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
 .rank-3 .podium-rank { color: var(--bronze); }
 
 .podium-avatar {
+  position: relative;
   width: 52px; height: 52px; border-radius: 50%; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 900;
@@ -129,12 +130,35 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
   color: var(--muted); width: 28px; text-align: center; flex-shrink: 0;
 }
 .row-avatar {
+  position: relative;
   width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 900;
   border: 1.5px solid;
 }
 .row-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-medal{
+  position:absolute;
+  right:-4px;
+  bottom:-4px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  background:rgba(13,13,28,0.92);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 6px 14px rgba(0,0,0,0.35);
+}
+.podium-avatar .avatar-medal{
+  width:22px;
+  height:22px;
+  right:-2px;
+  bottom:-2px;
+  font-size:13px;
+}
 .row-pseudo { font-weight: 600; font-size: 14px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row-value { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
 .row-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
@@ -232,6 +256,22 @@ function mkAvatar(player, size = 36) {
   return el;
 }
 
+function medalForRank(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return '';
+}
+
+function addMedalBadge(avatarEl, rank) {
+  const medal = medalForRank(rank);
+  if (!avatarEl || !medal || currentTab !== 'elo') return;
+  const badge = document.createElement('div');
+  badge.className = 'avatar-medal';
+  badge.textContent = medal;
+  avatarEl.appendChild(badge);
+}
+
 function render() {
   const players = sorted();
   const top3    = players.slice(0, 3);
@@ -267,6 +307,7 @@ function render() {
     rankEl.textContent = `#${rank}`;
 
     const av = mkAvatar(p, 56);
+    addMedalBadge(av, rank);
 
     const pseudo = document.createElement('div');
     pseudo.className   = 'podium-pseudo';
@@ -317,6 +358,7 @@ function render() {
     rankEl.textContent = `#${rank}`;
 
     const av = mkAvatar(p, 36);
+    addMedalBadge(av, rank);
 
     const pseudo = document.createElement('div');
     pseudo.className   = 'row-pseudo';

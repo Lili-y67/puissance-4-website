@@ -438,6 +438,33 @@ html, body {
   border-radius: 8px;
   padding: 6px 16px;
 }
+.queue-online-badge{
+  position:absolute;
+  top:12px;
+  right:12px;
+  display:none;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(48,209,88,0.12);
+  border:1px solid rgba(48,209,88,0.28);
+  color:#30d158;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.22);
+}
+.queue-online-badge.show{display:inline-flex;}
+.queue-online-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#30d158;
+  box-shadow:0 0 0 4px rgba(48,209,88,0.12);
+}
 
 .queue-volume {
   position: fixed;
@@ -899,6 +926,10 @@ html, body {
 
     <!-- QUEUE VIEW -->
     <div id="view-queue" style="display:none">
+      <div class="queue-online-badge" id="queue-online-badge">
+        <span class="queue-online-dot"></span>
+        <span id="queue-online-count">0</span> connectés
+      </div>
       <div class="queue-inner">
         <div class="pulse-ring">
           <div class="pulse-dot"></div>
@@ -1003,6 +1034,7 @@ let authMode = 'login'; // 'login' | 'register'
 const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#00c7be', '#ff375f'];
 let selectedRegisterColor = '#ff2d55';
 let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
+let siteStatsInterval = null;
 
 function switchTab(mode) {
   authMode = mode;
@@ -1281,6 +1313,30 @@ function showQueueVolume(show) {
   if (show) QueueMusic.syncUI();
 }
 
+async function refreshSiteStats() {
+  try {
+    const res = await fetch('/api/site-stats', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    const badge = document.getElementById('queue-online-badge');
+    const count = document.getElementById('queue-online-count');
+    if (!badge || !count) return;
+    count.textContent = String(Math.max(0, Number(data.online) || 0));
+    badge.classList.add('show');
+  } catch (_) {}
+}
+
+function startSiteStatsPolling() {
+  clearInterval(siteStatsInterval);
+  refreshSiteStats();
+  siteStatsInterval = setInterval(refreshSiteStats, 15000);
+}
+
+function stopSiteStatsPolling() {
+  clearInterval(siteStatsInterval);
+  siteStatsInterval = null;
+}
+
 function showLoggedInView(p) {
   // Masquer le formulaire login, montrer un écran "prêt à jouer"
   const loginView = document.getElementById('view-login');
@@ -1345,6 +1401,7 @@ function showQueueView(position) {
     queueView.style.display = 'block';
     queueView.classList.add('fade-in');
     showQueueVolume(true);
+    startSiteStatsPolling();
     document.getElementById('queue-stats').style.display = 'flex';
     document.getElementById('stat-elo').textContent   = myPlayer.elo;
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
@@ -1387,6 +1444,7 @@ function updateTimer() {
 function handleLeaveQueue() {
   QueueMusic.stop();
   showQueueVolume(false);
+  stopSiteStatsPolling();
   if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
   clearInterval(timerInterval);
   const loginView = document.getElementById('view-login');

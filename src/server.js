@@ -1566,6 +1566,12 @@ app.get('/api/leaderboard/wins', (_, res) => {
   const q = db.prepare('SELECT * FROM players ORDER BY wins DESC LIMIT 10');
   res.json(q.all().map(sanitize));
 });
+app.get('/api/site-stats', (_, res) => {
+  res.json({
+    online: onlineSockets.size,
+    queue: mm?.q?.length || 0,
+  });
+});
 
 // ── Socket.io ──────────────────────────────────────────────────────────────────
 io.on('connection', socket => {
