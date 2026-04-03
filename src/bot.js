@@ -541,7 +541,7 @@ client.on('interactionCreate', async interaction => {
       const lines  = players.map((p, i) => {
         const rank  = getRank(p.elo);
         const medal = medals[i] || `**#${i + 1}**`;
-        return `${medal} ${rank.emoji} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D · ${winRate(p)} WR`;
+        return `${medal} ${rank.emoji} **${p.pseudo}** ï¿½ ${p.elo} ELO ï¿½ ${p.wins}V/${p.losses}D ï¿½ ${winRate(p)} WR`;
       });
 
       const embed = new EmbedBuilder()
@@ -549,7 +549,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle('?? Classement Puissance 4')
         .setURL(`${API}/leaderboard`)
         .setDescription(lines.join('\n'))
-        .setFooter({ text: 'Top 10 par ELO · Puissance 4 Ranked' });
+        .setFooter({ text: 'Top 10 par ELO ï¿½ Puissance 4 Ranked' });
 
       return interaction.editReply({ embeds: [embed] });
     }
@@ -570,7 +570,7 @@ client.on('interactionCreate', async interaction => {
         const p2  = g.players?.[2] || g.players?.['2'];
         if (!p1 || !p2) return null;
         const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-        return `?? **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) · Tour de **${cur}** · ${g.moves} coups · [Voir](${API}/game/${g.id})`;
+        return `?? **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) ï¿½ Tour de **${cur}** ï¿½ ${g.moves} coups ï¿½ [Voir](${API}/game/${g.id})`;
       }).filter(Boolean);
 
       const embed = new EmbedBuilder()
@@ -578,7 +578,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle(`?? ${games.length} partie${games.length > 1 ? 's' : ''} en cours`)
         .setURL(`${API}/live`)
         .setDescription(lines.join('\n') || 'Aucune partie active.')
-        .setFooter({ text: 'Puissance 4 Ranked · Live' });
+        .setFooter({ text: 'Puissance 4 Ranked ï¿½ Live' });
 
       return interaction.editReply({ embeds: [embed] });
     }
@@ -586,14 +586,14 @@ client.on('interactionCreate', async interaction => {
     // -- /reload --------------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'reload') {
       if (!canReloadCommands(interaction)) {
-        return interaction.reply({ content: '? Tu n’as pas la permission d’utiliser cette commande.', ephemeral: true });
+        return interaction.reply({ content: '? Tu nï¿½as pas la permission dï¿½utiliser cette commande.', ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
       await registerSlashCommands();
-      return interaction.editReply({ content: '? Slash commands rechargées.' });
+      return interaction.editReply({ content: '? Slash commands rechargï¿½es.' });
     }
 
-    // -- SelectMenu — sélection d'une partie ---------------------------------
+    // -- SelectMenu ï¿½ sï¿½lection d'une partie ---------------------------------
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('games_menu:')) {
       await interaction.deferUpdate();
       const value = interaction.values[0];
@@ -637,10 +637,10 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.once('ready', () => {
-  console.log(`? Bot connecté en tant que ${client.user.tag}`);
+  console.log(`? Bot connectï¿½ en tant que ${client.user.tag}`);
   console.log(`?? API : ${API}`);
   registerSlashCommands()
-    .then(() => console.log('? Slash commands synchronisées.'))
+    .then(() => console.log('? Slash commands synchronisï¿½es.'))
     .catch(err => console.error('? Erreur sync slash commands:', err));
 });
 
