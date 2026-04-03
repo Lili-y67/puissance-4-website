@@ -587,7 +587,7 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.role === 'vip'       ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⭐ VIP</span>' : ''}
+            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⭐ VIP</span>' : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
           </div>
@@ -616,7 +616,7 @@ function render(player, games, following, followers, followStatus) {
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
             🎚 Simulateur ELO
           </button>
-          ${isOwnProfile && player.role === 'vip' ? `
+          ${isOwnProfile && player.is_vip ? `
           <div id="vip-boost-wrap" style="margin-top:4px;">
             <button id="vip-boost-btn" onclick="activateVipBoost()"
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
@@ -1607,12 +1607,15 @@ async function refreshDiscordState(player) {
     });
     const data = await res.json();
     if (data?.unlinked) {
-      syncStoredPlayerPatch({ role: 'user', discord_id: null });
-      return { ...player, role: 'user', discord_id: null };
+      syncStoredPlayerPatch({ role: 'user', is_vip: 0, discord_id: null });
+      return { ...player, role: 'user', is_vip: 0, discord_id: null };
     }
-    if (data?.role && data.role !== player.role) {
-      syncStoredPlayerPatch({ role: data.role });
-      return { ...player, role: data.role };
+    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number') {
+      const patch = {};
+      if (data?.role) patch.role = data.role;
+      if (typeof data?.is_vip === 'number') patch.is_vip = data.is_vip;
+      syncStoredPlayerPatch(patch);
+      return { ...player, ...patch };
     }
   } catch(e) {}
   return player;

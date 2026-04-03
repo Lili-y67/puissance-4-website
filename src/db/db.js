@@ -99,6 +99,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAU
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -128,6 +129,7 @@ const pQ = {
   updatePassword: db.prepare(`UPDATE players SET password  = @password  WHERE id = @id`),
   updateBanner:   db.prepare(`UPDATE players SET banner   = @banner   WHERE id = @id`),
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
+  updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),

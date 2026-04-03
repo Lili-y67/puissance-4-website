@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ } = require('./db/db');
 const { getRank } = require('./rank');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder } = require('discord.js');
 
@@ -51,6 +51,21 @@ function getParisMidnightTs(now = Date.now()) {
   midnightParis.setHours(0, 0, 0, 0);
   const offset = parisNow.getTime() - now;
   return midnightParis.getTime() - offset;
+}
+
+function hasVipRoleIds(roleIds = []) {
+  return Array.isArray(roleIds) && roleIds.includes(DISCORD_ROLE_VIP);
+}
+
+function isVipPlayer(player) {
+  if (!player) return false;
+  if (Number(player.is_vip) === 1) return true;
+  try {
+    const info = player.discord_info ? JSON.parse(player.discord_info) : null;
+    return hasVipRoleIds((info?.server_roles || []).map(r => r.id));
+  } catch(e) {
+    return false;
+  }
 }
 
 // ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
@@ -288,7 +303,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -307,19 +322,27 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   const target = pQ.getById.get(Number(req.params.id));
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
   const oldRole = target.role;
-  WH.wlogAdminAction('Rôle changé', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
-  pQ.updateRole.run({ role, id: Number(req.params.id) });
+  const oldVip  = Number(target.is_vip) === 1;
+  if (role === 'vip') {
+    WH.wlogAdminAction('VIP accordé', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP après', 'oui', true]]);
+    pQ.updateVip.run({ is_vip: 1, id: Number(req.params.id) });
+  } else {
+    WH.wlogAdminAction('Rôle changé', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
+    pQ.updateRole.run({ role, id: Number(req.params.id) });
+  }
 
   // Sync rôle Discord si lié
   if (target.discord_id) {
-    try { await syncDiscordRole(target.discord_id, role); } catch(e) {}
+    try { await syncDiscordRole(target.discord_id, role === 'vip' ? target.role : role, role === 'vip' ? true : oldVip); } catch(e) {}
     // DM de notification
     try { await sendDM(target.discord_id, [
       '🎭 **Puissance 4 — Changement de rôle**',
       '',
       `Bonjour **${target.pseudo}** !`,
       '',
-      `Ton rôle a été modifié : **${oldRole}** → **${role}**`,
+      role === 'vip'
+        ? 'Le statut **VIP** vient de t’être attribué.'
+        : `Ton rôle a été modifié : **${oldRole}** → **${role}**`,
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
   }
@@ -454,15 +477,16 @@ async function renameOnServer(discordId, nickname) {
 }
 
 // Synchroniser le rôle Discord d'un membre (ajoute/retire les rôles)
-async function syncDiscordRole(discordId, role) {
+async function syncDiscordRole(discordId, role, isVip = false) {
   const { botToken } = discordConfig();
   if (!botToken) return;
-  const ALL_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD, DISCORD_ROLE_VIP];
-  const TARGET = role === 'admin' ? DISCORD_ROLE_ADM
-               : role === 'moderator' ? DISCORD_ROLE_MOD
-               : role === 'vip' ? DISCORD_ROLE_VIP : null;
-  for (const rid of ALL_ROLES) {
-    const method = (rid === TARGET) ? 'PUT' : 'DELETE';
+  const STAFF_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD];
+  const STAFF_TARGET = role === 'admin' ? DISCORD_ROLE_ADM
+                    : role === 'moderator' ? DISCORD_ROLE_MOD
+                    : null;
+  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP]) {
+    const shouldHave = rid === DISCORD_ROLE_VIP ? !!isVip : rid === STAFF_TARGET;
+    const method = shouldHave ? 'PUT' : 'DELETE';
     await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
       method,
       headers: { 'Authorization': 'Bot ' + botToken },
@@ -480,7 +504,6 @@ async function getDiscordRole(discordUserId, botToken) {
     if (!Array.isArray(member.roles)) return 'user';
     if (member.roles.includes(DISCORD_ROLE_ADM)) return 'admin';
     if (member.roles.includes(DISCORD_ROLE_MOD)) return 'moderator';
-    if (member.roles.includes(DISCORD_ROLE_VIP)) return 'vip';
     return 'user';
   } catch(e) { return 'user'; }
 }
@@ -488,13 +511,17 @@ async function getDiscordRole(discordUserId, botToken) {
 // ── Job toutes les minutes — sync rôles Discord ────────────────────────────────
 setInterval(async () => {
   const { botToken } = discordConfig();
-  const linked = db.prepare(`SELECT id, pseudo, role, discord_id FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
     const newRole = await getDiscordRole(player.discord_id, botToken);
+    const vipNow = isVipPlayer(player) ? 1 : 0;
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
       console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} → ${newRole}`);
       WH.wlogRoleSync(player.pseudo, player.role, newRole);
+    }
+    if (vipNow !== Number(player.is_vip)) {
+      pQ.updateVip.run({ is_vip: vipNow, id: player.id });
     }
   }
 }, 60 * 1000);
@@ -846,9 +873,13 @@ function sanitize(p) {
       color:      '#555555',
       discord_id: null,
       banner:     null,
+      is_vip:     0,
     };
   }
-  return rest;
+  return {
+    ...rest,
+    is_vip: isVipPlayer(rest) ? 1 : 0,
+  };
 }
 
 // ── Players API ────────────────────────────────────────────────────────────────
@@ -1188,6 +1219,7 @@ app.post('/api/discord/unlink/confirm', (req, res) => {
   const player = pQ.getById.get(playerId);
   rQ.markUnlink.run(row.id);
   rQ.clearDiscord.run(playerId);
+  pQ.updateVip.run({ is_vip: 0, id: playerId });
   if (player && player.role !== 'user') {
     pQ.updateRole.run({ role: 'user', id: playerId });
   }
@@ -1347,6 +1379,8 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       .filter(r => r.name !== '@everyone');
     const newRole = await getDiscordRole(player.discord_id, bt);
     if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
+    const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip || 0);
+    if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id });
     // Mettre à jour discord_info
     const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
     const updated = {
@@ -1357,7 +1391,7 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       boosting_since: memberInfo.premium_since || null,
     };
     rQ.setDiscord.run(player.discord_id, JSON.stringify(updated), id);
-    res.json({ ok: true, roles: server_roles_rich, role: newRole });
+    res.json({ ok: true, roles: server_roles_rich, role: newRole, is_vip: vipNow });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1375,7 +1409,7 @@ app.post('/api/players/:id/vip-boost', (req, res) => {
 
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (player.role !== 'vip') return res.status(403).json({ error: 'Réservé aux VIP.' });
+  if (!isVipPlayer(player)) return res.status(403).json({ error: 'Réservé aux VIP.' });
 
   const now = Date.now();
   // Vérifier si déjà actif

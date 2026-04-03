@@ -309,7 +309,7 @@ async function loadPlayers() {
 
 function renderStats() {
   const total    = allPlayers.length;
-  const vip      = allPlayers.filter(p => p.role === 'vip').length;
+  const vip      = allPlayers.filter(p => p.is_vip).length;
   const banned   = allPlayers.filter(p => p.banned).length;
   const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
   const suspect  = allPlayers.filter(p => p.suspicious).length;
@@ -362,6 +362,7 @@ function renderPlayers(players) {
         <div class="mobile-card-pseudo">
           ${onlineDot(p.online)}${p.pseudo}
           <span class="badge badge-${p.role}" style="font-size:10px">${p.role}</span>
+          ${p.is_vip ? '<span class="badge badge-vip" style="font-size:10px">vip</span>' : ''}
           ${discordBadge(p.discord_linked)} ${flags}
         </div>
         <div class="mobile-card-sub">
@@ -398,11 +399,11 @@ function renderPlayers(players) {
       </td>
       <td><strong>${p.elo}</strong></td>
       <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
-      <td><span class="badge badge-${p.role}">${p.role}</span></td>
+      <td><span class="badge badge-${p.role}">${p.role}</span>${p.is_vip ? ' <span class="badge badge-vip">vip</span>' : ''}</td>
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
-          ${myRole === 'admin' && p.role !== 'vip' ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">⭐ VIP</button>` : ''}
+          ${myRole === 'admin' && !p.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">⭐ VIP</button>` : ''}
           <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id},'${p.pseudo.replace(/'/g,"\\'")}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️ Gérer</button>
         </div>
       </td>
@@ -432,7 +433,7 @@ function openModal(id, pseudo, role, banned, mutedUntil, suspicious) {
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle</div>
         <div style="display:flex;gap:6px">
-          ${['user','vip','moderator','admin'].map(r => `
+          ${['user','moderator','admin'].map(r => `
             <button class="btn-sm" style="flex:1;background:${r===role?'rgba(76,110,245,0.25)':'rgba(255,255,255,0.05)'};color:${r===role?'#8b9cf4':'var(--muted)'}" onclick="changeRole(${id},'${r}')">${r}</button>
           `).join('')}
         </div>
