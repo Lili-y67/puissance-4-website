@@ -1002,6 +1002,7 @@ spawnTokens();
 let authMode = 'login'; // 'login' | 'register'
 const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#00c7be', '#ff375f'];
 let selectedRegisterColor = '#ff2d55';
+let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 
 function switchTab(mode) {
   authMode = mode;
