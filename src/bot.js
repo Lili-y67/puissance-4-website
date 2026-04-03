@@ -3,13 +3,16 @@
  * Commandes : /profil /classement /live
  */
 const {
-  Client, GatewayIntentBits, EmbedBuilder,
+  Client, GatewayIntentBits, EmbedBuilder, AttachmentBuilder,
   ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
   ButtonBuilder, ButtonStyle
 } = require('discord.js');
+const { createCanvas, loadImage } = require('canvas');
+const path = require('path');
 
 const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
 const API       = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
+const PROFILE_BG_URL = 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg';
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
 
@@ -71,14 +74,230 @@ function groupByDay(games, playerId) {
   return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function drawRoundedPanel(ctx, x, y, w, h, color, alpha = 0.18, borderAlpha = 0.95) {
+  ctx.save();
+  roundRect(ctx, x, y, w, h, 20);
+  ctx.fillStyle = `rgba(10, 12, 26, ${alpha})`;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 22;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = color.replace('rgb', 'rgba').replace(')', `, ${borderAlpha})`).replace('#', '');
+  ctx.restore();
+}
+
+function hexToRgba(hex, alpha) {
+  const safe = (hex || '#ffffff').replace('#', '');
+  const full = safe.length === 3 ? safe.split('').map(c => c + c).join('') : safe.padEnd(6, 'f');
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+async function loadImageSafe(src) {
+  try { return src ? await loadImage(src) : null; } catch { return null; }
+}
+
+async function generateProfileCard(p, games, following = [], followers = []) {
+  const rank = p.rank || getRank(p.elo);
+  const canvas = createCanvas(900, 500);
+  const ctx = canvas.getContext('2d');
+  const totalGames = (p.wins || 0) + (p.losses || 0) + (p.draws || 0);
+  const bg = await loadImageSafe(PROFILE_BG_URL);
+  const avatar = await loadImageSafe(p.avatar);
+  const rankImage = await loadImageSafe(path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
+
+  if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+  else {
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#170b2c');
+    grad.addColorStop(0.5, '#273372');
+    grad.addColorStop(1, '#090d1f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  overlay.addColorStop(0, 'rgba(8,10,24,0.38)');
+  overlay.addColorStop(1, 'rgba(8,10,24,0.68)');
+  ctx.fillStyle = overlay;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#ffd60a';
+  ctx.font = '28px Sans';
+  ctx.fillText('Puissance 4 Ranked', 38, 42);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(92, 118, 56, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  if (avatar) {
+    ctx.drawImage(avatar, 36, 62, 112, 112);
+  } else {
+    ctx.fillStyle = hexToRgba(p.color || '#ff2d55', 0.3);
+    ctx.fillRect(36, 62, 112, 112);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Sans';
+    ctx.textAlign = 'center';
+    ctx.fillText((p.pseudo || '?')[0].toUpperCase(), 92, 134);
+    ctx.textAlign = 'start';
+  }
+  ctx.restore();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = hexToRgba(p.color || '#ff2d55', 0.95);
+  ctx.beginPath();
+  ctx.arc(92, 118, 58, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = hexToRgba(p.color || '#ff2d55', 0.95);
+  ctx.font = 'bold 46px Sans';
+  ctx.fillText(p.pseudo || 'Joueur', 188, 108);
+
+  ctx.fillStyle = '#f3f2ff';
+  ctx.font = '30px Sans';
+  let topLine = `${p.elo} Elo`;
+  if (p.role === 'admin') topLine += '  •  ADMIN';
+  else if (p.role === 'moderator') topLine += '  •  MODO';
+  if (p.is_vip) topLine += '  •  VIP';
+  ctx.fillText(topLine, 190, 146);
+
+  ctx.fillStyle = '#ffd60a';
+  ctx.font = '26px Sans';
+  ctx.fillText(`Rang : ${rank.label}`, 190, 180);
+
+  const stats = [
+    { label: 'Victoires', value: String(p.wins || 0), color: '#9be15d' },
+    { label: 'Défaites', value: String(p.losses || 0), color: '#ff7aa2' },
+    { label: 'Nuls', value: String(p.draws || 0), color: '#8dd7ff' },
+    { label: 'Parties', value: String(totalGames), color: '#7cf0ff' },
+    { label: 'Win rate', value: wr, color: '#c38bff' },
+    { label: 'Précision', value: p.avg_accuracy != null ? `${p.avg_accuracy}%` : '—', color: '#33a1ff' },
+  ];
+
+  const panelY = 260;
+  const panelW = 240;
+  const panelH = 82;
+  const panelGap = 28;
+  stats.forEach((stat, index) => {
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+    const x = 40 + col * (panelW + panelGap);
+    const y = panelY + row * (panelH + 18);
+    ctx.save();
+    roundRect(ctx, x, y, panelW, panelH, 16);
+    ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
+    ctx.shadowColor = stat.color;
+    ctx.shadowBlur = 18;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = hexToRgba(stat.color, 0.95);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.fillStyle = hexToRgba(stat.color, 0.98);
+    ctx.font = '24px Sans';
+    ctx.textAlign = 'center';
+    ctx.fillText(stat.label, x + panelW / 2, y + 28);
+    ctx.font = 'bold 34px Sans';
+    ctx.fillStyle = '#f6f4ff';
+    ctx.fillText(stat.value, x + panelW / 2, y + 62);
+    ctx.textAlign = 'start';
+  });
+
+  ctx.save();
+  roundRect(ctx, 660, 62, 196, 156, 18);
+  ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
+  ctx.shadowColor = rank.color || '#ffffff';
+  ctx.shadowBlur = 20;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = hexToRgba(rank.color || '#ffffff', 0.95);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.fillStyle = '#f3f2ff';
+  ctx.font = '26px Sans';
+  ctx.fillText('Rank', 726, 92);
+  if (rankImage) ctx.drawImage(rankImage, 734, 102, 48, 48);
+  else {
+    ctx.font = '40px Sans';
+    ctx.fillText(rank.emoji || '🏅', 742, 142);
+  }
+  ctx.fillStyle = '#ffd60a';
+  ctx.font = 'bold 24px Sans';
+  ctx.fillText(rank.label, 792, 134);
+
+  const barX = 688, barY = 174, barW = 138, barH = 18;
+  roundRect(ctx, barX, barY, barW, barH, 9);
+  ctx.fillStyle = 'rgba(255,255,255,0.18)';
+  ctx.fill();
+  roundRect(ctx, barX, barY, Math.max(16, Math.round(barW * ((rank.progress || 0) / 100))), barH, 9);
+  ctx.fillStyle = hexToRgba(rank.color || '#ffffff', 0.95);
+  ctx.fill();
+  ctx.fillStyle = '#f3f2ff';
+  ctx.font = '20px Sans';
+  ctx.fillText(`${rank.progress || 0}%`, 740, 212);
+  if (rank.next) {
+    ctx.font = '18px Sans';
+    ctx.fillText(`→ ${rank.next} Elo`, 776, 212);
+  }
+
+  const discordY = 212;
+  ctx.fillStyle = '#d7d5ef';
+  ctx.font = '22px Sans';
+  ctx.fillText('Discord', 42, 220);
+  ctx.font = '20px Sans';
+  const memberSince = p.created_at ? fmtDate(p.created_at) : '—';
+  const lines = [
+    `Suivis : ${following.length || 0}   •   Abonnés : ${followers.length || 0}`,
+    `Membre : ${memberSince}`,
+  ];
+  const di = (() => { try { return p.discord_info ? JSON.parse(p.discord_info) : null; } catch { return null; } })();
+  if (di?.server_nick) lines.push(`Pseudo serveur : ${di.server_nick}`);
+  if (di?.server_joined) lines.push(`Rejoint le : ${fmtDate(di.server_joined)}`);
+  if (di?.boosting_since) lines.push('Booster du serveur');
+  if (di?.server_roles?.length) {
+    const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' • ');
+    if (roleNames) lines.push(`Rôles : ${roleNames}`);
+  }
+  lines.slice(0, 4).forEach((line, i) => {
+    ctx.fillStyle = '#f3f2ff';
+    ctx.fillText(line, 42, 248 + i * 28);
+  });
+
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.font = '18px Sans';
+  ctx.fillText(`ID ${p.id}`, 798, 476);
+
+  return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${p.id}.png` });
+}
+
 // Construire l'embed profil — toutes les infos du profil.html
 function buildProfileEmbed(p, games, following = [], followers = []) {
   const rank  = p.rank || getRank(p.elo);
   const total = (p.wins || 0) + (p.losses || 0) + (p.draws || 0);
   const wr    = winRate(p);
+  const profileUrl = `${API}/profil?id=${p.id}`;
 
   // ── Titre & description ──────────────────────────────────────────────────
-  let statusLine = `**${rank.label}** · ${p.elo} ELO`;
+  let statusLine = `@${p.pseudo} · ${p.elo} ELO · Rang : ${rank.emoji} ${rank.label}`;
+  if (p.is_vip) statusLine += ' · ⭐ VIP';
   if (p.role === 'admin') statusLine += ' · ⚡ ADMIN';
   else if (p.role === 'moderator') statusLine += ' · 🛡️ MODO';
 
@@ -89,13 +308,13 @@ function buildProfileEmbed(p, games, following = [], followers = []) {
 
   const embed = new EmbedBuilder()
     .setColor(p.color || rank.color)
-    .setTitle(`${rank.emoji} ${p.pseudo}`)
-    .setURL(`${API}/profil?id=${p.id}`)
+    .setAuthor({ name: '🔗 Accéder au Profil', url: profileUrl })
+    .setTitle(`${p.pseudo}`)
+    .setURL(profileUrl)
     .setDescription(statusLine);
 
-  // Avatar + bannière
+  // Avatar
   if (p.avatar) embed.setThumbnail(p.avatar);
-  if (p.banner) embed.setImage(p.banner);
 
   // ── Stats principales ─────────────────────────────────────────────────────
   embed.addFields(
@@ -114,9 +333,8 @@ function buildProfileEmbed(p, games, following = [], followers = []) {
     return '█'.repeat(filled) + '░'.repeat(10 - filled) + ` ${pct}%`;
   })();
   embed.addFields({
-    name: `📈 Rang — ${rank.label} ${['I','II','III','IV','V'][rank.level - 1] || ''}`,
-    value: `\`${progressBar}\`${rank.next ? `
-→ ${rank.next} ELO pour monter` : ' · Rang MAX'}`,
+    name: '📈 Rank',
+    value: `${rank.emoji} **${rank.label}**\n\`${progressBar}\`${rank.next ? `\n${rank.progress}% → ${rank.next} ELO pour monter` : '\nRang MAX'}`,
     inline: false,
   });
 
@@ -141,7 +359,8 @@ Forme : ${shapeLabel}`,
 
   // ── Discord lié ───────────────────────────────────────────────────────────
   if (di) {
-    const discordLines = [`**@${di.username || di.global_name}**`];
+    const discordLines = [];
+    if (di.global_name || di.username) discordLines.push(`Compte : **${di.global_name || di.username}**`);
     if (di.server_nick) discordLines.push(`Pseudo serveur : ${di.server_nick}`);
     if (di.server_joined) discordLines.push(`Rejoint le : ${fmtDate(di.server_joined)}`);
     if (di.boosting_since) discordLines.push('🚀 Booster du serveur');
@@ -232,6 +451,17 @@ function buildGamesMenu(games, playerId, page = 0) {
   return components;
 }
 
+function buildProfileComponents(profileUrl, games, playerId, page = 0) {
+  const linkRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setLabel('Accéder au Profil')
+      .setStyle(ButtonStyle.Link)
+      .setURL(profileUrl)
+  );
+  const gameRows = games.length ? (buildGamesMenu(games, playerId, page) || []) : [];
+  return [linkRow, ...gameRows].slice(0, 5);
+}
+
 // ── Commandes + composants ────────────────────────────────────────────────────
 client.on('interactionCreate', async interaction => {
   try {
@@ -253,10 +483,11 @@ client.on('interactionCreate', async interaction => {
       const following = full?.following || [];
       const followers = full?.followers || [];
 
-      const embed      = buildProfileEmbed(p, games, following, followers);
-      const components = games.length ? buildGamesMenu(games, p.id, 0) : [];
+      const card       = await generateProfileCard(p, games, following, followers);
+      const embed      = buildProfileEmbed(p, games, following, followers).setImage(`attachment://${card.name}`);
+      const components = buildProfileComponents(`${API}/profil?id=${p.id}`, games, p.id, 0);
 
-      return interaction.editReply({ embeds: [embed], components: components || [] });
+      return interaction.editReply({ embeds: [embed], files: [card], components: components || [] });
     }
 
     // ── /classement ──────────────────────────────────────────────────────────
@@ -340,10 +571,11 @@ client.on('interactionCreate', async interaction => {
       const followers = full?.followers || [];
       if (!p) return;
 
-      const embed      = buildProfileEmbed(p, games, following, followers);
-      const components = buildGamesMenu(games, p.id, page) || [];
+      const card       = await generateProfileCard(p, games, following, followers);
+      const embed      = buildProfileEmbed(p, games, following, followers).setImage(`attachment://${card.name}`);
+      const components = buildProfileComponents(`${API}/profil?id=${p.id}`, games, p.id, page);
 
-      await interaction.editReply({ embeds: [embed], components });
+      await interaction.editReply({ embeds: [embed], files: [card], components });
     }
 
   } catch (e) {

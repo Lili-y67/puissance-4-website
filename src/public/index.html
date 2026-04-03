@@ -430,6 +430,41 @@ html, body {
   padding: 6px 16px;
 }
 
+.queue-volume {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(13,13,28,0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 36px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+}
+.queue-volume.show { display: flex; }
+.queue-volume-icon {
+  font-size: 16px;
+  color: var(--text);
+  width: 18px;
+  text-align: center;
+}
+.queue-volume-slider {
+  width: 120px;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+.queue-volume-val {
+  min-width: 34px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
 /* ── Links ──────────────────────────────────────────────────────────────────── */
 .link {
   text-align: center;
@@ -500,6 +535,141 @@ html, body {
 .color-input-sub { font-size:11px; color:var(--muted); }
 input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-events:none; }
 
+/* Side quick menu */
+.side-quick-menu {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.side-quick-panel {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: width 0.24s ease, opacity 0.18s ease, transform 0.24s ease;
+  transform: translateX(10px);
+}
+.side-quick-menu.open .side-quick-panel {
+  width: 250px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+.side-quick-inner {
+  background: rgba(13,13,28,0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  box-shadow: 0 22px 48px rgba(0,0,0,0.45);
+  backdrop-filter: blur(12px);
+  padding: 16px 14px;
+}
+.side-quick-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+.side-quick-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.side-quick-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  transition: all 0.18s ease;
+}
+.side-quick-link:hover {
+  border-color: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  transform: translateX(-2px);
+}
+.side-quick-emoji {
+  font-size: 16px;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.side-quick-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.side-quick-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.side-quick-sub {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.side-quick-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.side-quick-footer a {
+  color: #ff647f;
+  text-decoration: none;
+}
+.side-quick-toggle {
+  width: 46px;
+  height: 128px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  background: rgba(13,13,28,0.9);
+  color: var(--text);
+  box-shadow: 0 18px 36px rgba(0,0,0,0.35);
+  backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.side-quick-toggle:hover {
+  border-color: rgba(255,255,255,0.16);
+  transform: translateX(-2px);
+}
+.side-quick-toggle-icon {
+  font-size: 20px;
+}
+.side-quick-toggle-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.side-quick-menu.open .side-quick-toggle-text {
+  color: var(--text);
+}
 
 @media (max-width: 600px) {
   .page { padding: 16px 10px 40px; }
@@ -515,6 +685,12 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
   .auth-tab { font-size: 13px; padding: 8px 10px; }
   .input { padding: 12px 14px 12px 38px; font-size: 14px; }
   #bot-modal > div { padding: 22px 16px; }
+  .queue-volume { right: 10px; bottom: 10px; padding: 9px 10px; }
+  .queue-volume-slider { width: 92px; }
+  .side-quick-menu { right: 10px; top: auto; bottom: 14px; transform: none; align-items: flex-end; }
+  .side-quick-toggle { width: 50px; height: 50px; border-radius: 14px; }
+  .side-quick-toggle-text { display: none; }
+  .side-quick-menu.open .side-quick-panel { width: min(78vw, 260px); }
 }
 
 /* ── IA overlay ── */
@@ -527,6 +703,49 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
 <div class="bg-grid"></div>
 <div class="tokens-bg" id="tokens-bg"></div>
 <div class="scanlines"></div>
+
+<div class="side-quick-menu" id="side-quick-menu">
+  <div class="side-quick-panel">
+    <div class="side-quick-inner">
+      <div class="side-quick-title">Accès rapides</div>
+      <div class="side-quick-links">
+        <a class="side-quick-link" href="/regles">
+          <span class="side-quick-emoji">📚</span>
+          <span class="side-quick-meta">
+            <span class="side-quick-label">Règles</span>
+            <span class="side-quick-sub">Guide de jeu</span>
+          </span>
+        </a>
+        <a class="side-quick-link" href="/live">
+          <span class="side-quick-emoji">🔴</span>
+          <span class="side-quick-meta">
+            <span class="side-quick-label">Live</span>
+            <span class="side-quick-sub">Parties en cours</span>
+          </span>
+        </a>
+        <a class="side-quick-link" href="/leaderboard">
+          <span class="side-quick-emoji">🏆</span>
+          <span class="side-quick-meta">
+            <span class="side-quick-label">Classement</span>
+            <span class="side-quick-sub">Top ELO</span>
+          </span>
+        </a>
+        <a class="side-quick-link" href="/forgot-password">
+          <span class="side-quick-emoji">🔑</span>
+          <span class="side-quick-meta">
+            <span class="side-quick-label">Mot de passe oublié</span>
+            <span class="side-quick-sub">Récupération</span>
+          </span>
+        </a>
+      </div>
+      <div class="side-quick-footer">© 2026 Puissance 4 Ranked · <a href="/cgu">Conditions d'utilisation</a></div>
+    </div>
+  </div>
+  <button class="side-quick-toggle" id="side-quick-toggle" type="button" onclick="toggleQuickMenu()" aria-label="Ouvrir le menu rapide">
+    <span class="side-quick-toggle-icon">🧭</span>
+    <span class="side-quick-toggle-text">Menu</span>
+  </button>
+</div>
 
 <div class="page">
   <!-- Hero -->
@@ -710,6 +929,12 @@ input[type="color"] { width:0; height:0; opacity:0; position:absolute; pointer-e
       </button>
     </div>
   </div>
+</div>
+
+<div class="queue-volume" id="queue-volume">
+  <span class="queue-volume-icon" id="queue-volume-icon">🔊</span>
+  <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
+  <span class="queue-volume-val" id="queue-volume-val">35%</span>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -997,16 +1222,29 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
 // ── Musique d'attente Queue ────────────────────────────────────────────────────
 const QueueMusic = (() => {
   let audio = null;
+  let volume = 0.35;
   function get() {
     if (!audio) audio = document.getElementById('queue-music');
     return audio;
+  }
+  function syncUI() {
+    const slider = document.getElementById('queue-volume-slider');
+    const valueEl = document.getElementById('queue-volume-val');
+    const icon = document.getElementById('queue-volume-icon');
+    const pct = Math.round(volume * 100);
+    if (slider) slider.value = String(pct);
+    if (valueEl) valueEl.textContent = pct + '%';
+    if (icon) icon.textContent = pct === 0 ? '🔇' : (pct < 50 ? '🔉' : '🔊');
   }
   return {
     start() {
       const a = get();
       if (!a) return;
-      a.volume = 0.35;
+      const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
+      if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
+      a.volume = volume;
       a.currentTime = 0;
+      syncUI();
       // Débloquer l'AudioContext si suspendu (politique autoplay navigateur)
       const tryPlay = () => a.play().catch(() => {});
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
@@ -1026,8 +1264,27 @@ const QueueMusic = (() => {
       a.pause();
       a.currentTime = 0;
     },
+    setVolume(v) {
+      volume = Math.max(0, Math.min(Number(v), 1));
+      localStorage.setItem('queue_music_volume', String(volume));
+      const a = get();
+      if (a) a.volume = volume;
+      syncUI();
+    },
+    syncUI,
   };
 })();
+
+function setQueueMusicVolume(value) {
+  QueueMusic.setVolume(Number(value) / 100);
+}
+
+function showQueueVolume(show) {
+  const el = document.getElementById('queue-volume');
+  if (!el) return;
+  el.classList.toggle('show', !!show);
+  if (show) QueueMusic.syncUI();
+}
 
 function showLoggedInView(p) {
   // Masquer le formulaire login, montrer un écran "prêt à jouer"
@@ -1073,6 +1330,7 @@ function connectAndQueue() {
   });
   socket.on('match_found',  (data) => {
     QueueMusic.stop();
+    showQueueVolume(false);
     sessionStorage.setItem('match',  JSON.stringify(data));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     window.location.href = '/game';
@@ -1088,6 +1346,7 @@ function showQueueView(position) {
     loginView.style.display = 'none';
     queueView.style.display = 'block';
     queueView.classList.add('fade-in');
+    showQueueVolume(true);
     document.getElementById('queue-stats').style.display = 'flex';
     document.getElementById('stat-elo').textContent   = myPlayer.elo;
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
@@ -1129,6 +1388,7 @@ function updateTimer() {
 
 function handleLeaveQueue() {
   QueueMusic.stop();
+  showQueueVolume(false);
   if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
   clearInterval(timerInterval);
   const loginView = document.getElementById('view-login');
@@ -1145,6 +1405,19 @@ function handleLeaveQueue() {
     btn.disabled = false;
   }, 250);
 }
+
+function toggleQuickMenu(force) {
+  const menu = document.getElementById('side-quick-menu');
+  if (!menu) return;
+  const shouldOpen = typeof force === 'boolean' ? force : !menu.classList.contains('open');
+  menu.classList.toggle('open', shouldOpen);
+}
+
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('side-quick-menu');
+  if (!menu) return;
+  if (!e.target.closest('#side-quick-menu')) toggleQuickMenu(false);
+});
 
 // ═══════════════════════════════════════════════════════════════════
 //  INIT — auto-login si localStorage
