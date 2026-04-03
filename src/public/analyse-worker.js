@@ -6,6 +6,7 @@
 const ROWS = 6, COLS = 7;
 const DEPTH     = 10;
 const SEQ_DEPTH = 8;
+const WIN_SCORE = 100000;
 
 // ── Plateau ───────────────────────────────────────────────────────────────────
 function makeBoard()   { return Array.from({ length: ROWS }, () => new Int8Array(COLS)); }
@@ -47,20 +48,36 @@ function scoreWindow(w, p) {
   const mine = w.filter(c => c === p).length;
   const opp  = w.filter(c => c === o).length;
   const emp  = w.filter(c => c === 0).length;
-  if (mine === 4) return  1000;
-  if (opp  === 4) return -1000;
-  if (mine === 3 && emp === 1) return   50;
-  if (opp  === 3 && emp === 1) return  -50;
-  if (mine === 2 && emp === 2) return    5;
-  if (opp  === 2 && emp === 2) return   -5;
+  if (mine === 4) return  20000;
+  if (opp  === 4) return -20000;
+  if (mine === 3 && emp === 1) return   240;
+  if (opp  === 3 && emp === 1) return  -260;
+  if (mine === 2 && emp === 2) return    28;
+  if (opp  === 2 && emp === 2) return   -32;
+  if (mine === 1 && emp === 3) return     3;
+  if (opp  === 1 && emp === 3) return    -4;
   return 0;
 }
+
+function countImmediateWins(board, player) {
+  let count = 0;
+  for (const col of validCols(board)) {
+    drop(board, col, player);
+    const win = checkWin(board, player);
+    undrop(board, col);
+    if (win) count++;
+  }
+  return count;
+}
+
 function evaluate(board) {
   let score = 0;
+  const centerWeights = [3, 4, 5, 7, 5, 4, 3];
   for (let r = 0; r < ROWS; r++) {
-    if (board[r][3] === 1) score += 8;  if (board[r][3] === 2) score -= 8;
-    if (board[r][2] === 1 || board[r][4] === 1) score += 3;
-    if (board[r][2] === 2 || board[r][4] === 2) score -= 3;
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] === 1) score += centerWeights[c];
+      if (board[r][c] === 2) score -= centerWeights[c];
+    }
   }
   for (let r = 0; r < ROWS; r++)
     for (let c = 0; c <= COLS-4; c++)
@@ -74,13 +91,19 @@ function evaluate(board) {
   for (let r = 0; r <= ROWS-4; r++)
     for (let c = 0; c <= COLS-4; c++)
       score += scoreWindow([board[r][c],board[r+1][c+1],board[r+2][c+2],board[r+3][c+3]], 1);
+  const p1Wins = countImmediateWins(board, 1);
+  const p2Wins = countImmediateWins(board, 2);
+  score += p1Wins * 420;
+  score -= p2Wins * 460;
+  if (p1Wins >= 2) score += 1200;
+  if (p2Wins >= 2) score -= 1400;
   return score;
 }
 
 // ── Minimax ───────────────────────────────────────────────────────────────────
 function minimax(board, depth, alpha, beta, isP1Turn) {
-  if (checkWin(board, 1)) return  100000 + depth;
-  if (checkWin(board, 2)) return -100000 - depth;
+  if (checkWin(board, 1)) return  WIN_SCORE + depth;
+  if (checkWin(board, 2)) return -WIN_SCORE - depth;
   if (isFull(board) || depth === 0) return evaluate(board);
   const cols = validCols(board);
   if (isP1Turn) {
@@ -116,7 +139,7 @@ function bestMove(board, player) {
     drop(board, col, player);
     if (checkWin(board, player)) {
       undrop(board, col);
-      colScores[col] = isP1 ? 100000 : -100000;
+      colScores[col] = isP1 ? WIN_SCORE : -WIN_SCORE;
       bestCol = col; bestScore = colScores[col];
       continue;
     }
@@ -153,17 +176,23 @@ function getOptimalSequence(board, startPlayer, maxMoves) {
 
 // ── Normalisation ─────────────────────────────────────────────────────────────
 // evalBar : -100 (J2 domine) à +100 (J1 domine), 0 = égal
+function scoreToWinPct(absScore) {
+  if (absScore >=  99000) return 100;
+  if (absScore <= -99000) return 0;
+  const clamped = Math.max(-5000, Math.min(5000, absScore));
+  const normalized = Math.tanh(clamped / 1100);
+  return Math.max(0, Math.min(100, Math.round(((normalized + 1) / 2) * 100)));
+}
 function toBar(absScore) {
   if (absScore >=  99000) return  100;
   if (absScore <= -99000) return -100;
-  const clamped = Math.max(-3000, Math.min(3000, absScore));
-  return Math.round((clamped / 3000) * 100);
+  return Math.round((scoreToWinPct(absScore) - 50) * 2);
 }
 function toCentipawns(absScore) {
   if (absScore >=  99000) return  99.99;
   if (absScore <= -99000) return -99.99;
-  const clamped = Math.max(-3000, Math.min(3000, absScore));
-  return Math.round(clamped / 30) / 10;
+  const clamped = Math.max(-5000, Math.min(5000, absScore));
+  return Math.round(clamped / 50) / 10;
 }
 
 // ── Contexte de position ──────────────────────────────────────────────────────
@@ -192,7 +221,7 @@ function getPositionContext(board, player) {
 }
 
 // ── Classification ────────────────────────────────────────────────────────────
-function classifyMove(player, playedScore, bestScore, availableCols) {
+function classifyMove(player, playedScore, bestScore, availableCols, context) {
   const only1 = availableCols === 1;
 
   // Victoire jouée
@@ -209,26 +238,32 @@ function classifyMove(player, playedScore, bestScore, availableCols) {
   const loss = player === 1
     ? (bestScore - playedScore)
     : (playedScore - bestScore);
+  const bestPct = player === 1 ? scoreToWinPct(bestScore) : 100 - scoreToWinPct(bestScore);
+  const playedPct = player === 1 ? scoreToWinPct(playedScore) : 100 - scoreToWinPct(playedScore);
+  const swing = Math.max(0, bestPct - playedPct);
 
-  if (loss <= 10)   return 'best';
-  if (loss <= 60)   return 'excellent';
-  if (loss <= 180)  return 'good';
-  if (loss <= 450)  return 'inaccuracy';
-  if (loss <= 1400) return 'mistake';
+  if (context.type === 'must_block' && swing >= 40) return 'blunder';
+  if (context.type === 'win_available' && swing >= 30) return 'blunder';
+
+  if (loss <= 8 && swing <= 1)   return 'best';
+  if (loss <= 45 && swing <= 4)  return 'excellent';
+  if (loss <= 140 && swing <= 10) return 'good';
+  if (loss <= 320 && swing <= 18) return 'inaccuracy';
+  if (loss <= 900 && swing <= 34) return 'mistake';
   return 'blunder';
 }
 
 // ── Précision — méthode basée sur la perte relative ───────────────────────────
 // Formule : 103.1668 * exp(-0.04354 * lossPct) - 3.1668 (inspirée de chess.com)
 // lossPct = perte en % de l'avantage max possible (3000)
-function moveAccuracyScore(cls, loss, forced) {
+function moveAccuracyScore(cls, loss, forced, swing = 0) {
   if (forced) return 100; // coup forcé = neutre
   if (cls === 'best')      return 100;
-  if (cls === 'excellent') return 90 + Math.max(0, 10 - loss / 6);
-  if (cls === 'good')      return 75 + Math.max(0, 15 - loss / 12);
-  if (cls === 'inaccuracy')return 50 + Math.max(0, 25 - loss / 18);
-  if (cls === 'mistake')   return 20 + Math.max(0, 30 - loss / 47);
-  return Math.max(0, 15 - loss / 200); // blunder
+  if (cls === 'excellent') return Math.max(92, 99 - swing);
+  if (cls === 'good')      return Math.max(78, 90 - swing * 1.2);
+  if (cls === 'inaccuracy')return Math.max(55, 78 - swing * 1.5);
+  if (cls === 'mistake')   return Math.max(22, 54 - swing * 1.1);
+  return Math.max(0, 18 - swing * 0.6 - loss / 250); // blunder
 }
 
 function calcAccuracy(scores) {
@@ -238,7 +273,7 @@ function calcAccuracy(scores) {
 }
 
 // ── Commentaires ──────────────────────────────────────────────────────────────
-function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, availableCols) {
+function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
   const turn = Math.floor(moveIndex / 2) + 1;
   const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol+1} était meilleure.` : '';
 
@@ -261,11 +296,11 @@ function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, avai
     case 'good':
       return ['Bon coup, légère amélioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
     case 'inaccuracy':
-      return `Légère imprécision.${hint}`;
+      return `Légère imprécision, la position glisse de ${swing}% environ.${hint}`;
     case 'mistake':
-      return turn <= 4 ? `Erreur en ouverture — difficile à rattraper.${hint}` : `Erreur — l'avantage bascule.${hint}`;
+      return turn <= 4 ? `Erreur en ouverture — difficile à rattraper.${hint}` : `Erreur nette, l’avantage chute de ${swing}% environ.${hint}`;
     case 'blunder':
-      return turn <= 3 ? `Gaffe dès l'ouverture !${hint}` : `Gaffe décisive.${hint}`;
+      return turn <= 3 ? `Gaffe dès l'ouverture !${hint}` : `Gaffe décisive, la position s’effondre de ${swing}% environ.${hint}`;
     default: return '';
   }
 }
@@ -303,10 +338,13 @@ self.onmessage = function(e) {
             return s;
           })();
 
-      const classification = classifyMove(player, playedScore, bestScore, cols.length);
+      const bestWinPct = player === 1 ? scoreToWinPct(bestScore) : 100 - scoreToWinPct(bestScore);
+      const playedWinPct = player === 1 ? scoreToWinPct(playedScore) : 100 - scoreToWinPct(playedScore);
+      const swing = Math.max(0, bestWinPct - playedWinPct);
+      const classification = classifyMove(player, playedScore, bestScore, cols.length, context);
       const forced = classification === 'forced';
       const loss   = Math.abs(bestScore - playedScore);
-      const accScore = moveAccuracyScore(classification, loss, forced);
+      const accScore = moveAccuracyScore(classification, loss, forced, swing);
 
       // Score APRÈS le coup joué
       drop(board, playedCol, player);
@@ -323,10 +361,11 @@ self.onmessage = function(e) {
       if (['inaccuracy','mistake','blunder'].includes(classification))
         optimalSeq = getOptimalSequence(boardBefore, player, 6);
 
-      const comment = generateComment(classification, i, bestCol, playedCol, loss, context, cols.length);
+      const comment = generateComment(classification, i, bestCol, playedCol, loss, context, cols.length, swing);
 
       result = { moveIndex:i, player, playedCol, bestCol, bestScore, playedScore,
-        classification, forced, loss, accScore, evalScore:evalBar, evalCP, optimalSeq, comment, context };
+        classification, forced, loss, accScore, evalScore:evalBar, evalCP, optimalSeq, comment, context,
+        bestWinPct, playedWinPct, swing };
 
       if (player === 1) p1Scores.push({ classification, loss, accScore });
       else              p2Scores.push({ classification, loss, accScore });

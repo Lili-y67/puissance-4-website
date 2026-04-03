@@ -163,22 +163,30 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* Résumé des coups */
 .move-summary{display:flex;gap:6px;flex-wrap:wrap;}
 .summary-chip{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px;}
+.summary-stat{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);}
+.summary-stat-k{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.summary-stat-v{margin-top:4px;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:1px;}
 
 /* Liste des coups analysés */
 .analyse-moves{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;}
-.analyse-move{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid transparent;cursor:pointer;transition:all 0.15s;}
+.analyse-move{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid transparent;cursor:pointer;transition:all 0.15s;}
 .analyse-move:hover{background:rgba(255,255,255,0.05);border-color:var(--border);}
 .analyse-move.highlighted{background:rgba(76,110,245,0.1);border-color:rgba(76,110,245,0.3);}
 .am-num{font-size:11px;color:var(--muted);width:24px;flex-shrink:0;text-align:center;}
 .am-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.am-col{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;flex:1;}
+.am-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.am-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.am-col{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;}
 .am-badge{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;flex-shrink:0;}
-.am-best-hint{font-size:10px;color:var(--muted);flex-shrink:0;}
-.eval-score{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.5px;min-width:42px;text-align:right;flex-shrink:0;opacity:0;transition:opacity 0.15s;}
-.analyse-move:hover .eval-score{opacity:1;}
+.am-metrics{display:flex;flex-wrap:wrap;gap:6px;}
+.am-metric{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);font-size:10px;letter-spacing:0.4px;color:var(--muted);}
+.am-metric strong{color:var(--text);font-weight:700;}
+.eval-score{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.5px;min-width:54px;text-align:right;flex-shrink:0;}
 .eval-score.pos{color:#30d158;}
 .eval-score.neg{color:#ff2d55;}
 .eval-score.neu{color:var(--muted);}
+.am-comment{font-size:11px;color:var(--muted);line-height:1.45;}
 
 /* Couleurs des classifications */
 .cls-best      {background:rgba(48,209,88,0.15);color:#30d158;border:1px solid rgba(48,209,88,0.3);}
@@ -727,6 +735,21 @@ const CLS_COUNTS_LABEL = {
 };
 
 // Couleur selon % de précision
+CLS_LABELS.best = 'Meilleur';
+CLS_LABELS.excellent = 'Excellent';
+CLS_LABELS.good = 'Bon';
+CLS_LABELS.forced = 'Force';
+CLS_LABELS.inaccuracy = 'Imprecision';
+CLS_LABELS.mistake = 'Erreur';
+CLS_LABELS.blunder = 'Gaffe';
+CLS_COUNTS_LABEL.best = 'Meilleurs';
+CLS_COUNTS_LABEL.excellent = 'Excellents';
+CLS_COUNTS_LABEL.good = 'Bons';
+CLS_COUNTS_LABEL.forced = 'Forces';
+CLS_COUNTS_LABEL.inaccuracy = 'Imprecisions';
+CLS_COUNTS_LABEL.mistake = 'Erreurs';
+CLS_COUNTS_LABEL.blunder = 'Gaffes';
+
 function accColor(pct) {
   if (pct >= 75) return '#30d158'; // vert
   if (pct >= 50) return '#ffd60a'; // jaune
@@ -788,30 +811,91 @@ function startAnalysis() {
 function renderAnalysis(results, accuracy) {
   const panel = document.getElementById('analyse-panel');
   if (!panel) return;
-  const g      = gameData;
-  const cs     = getComputedStyle(document.documentElement);
+  const g = gameData;
+  const cs = getComputedStyle(document.documentElement);
   const p1Color = cs.getPropertyValue('--p1-color').trim() || '#ff2d55';
   const p2Color = cs.getPropertyValue('--p2-color').trim() || '#ffd60a';
+  const classLabels = {
+    best: 'Meilleur',
+    excellent: 'Excellent',
+    good: 'Bon',
+    forced: 'Force',
+    inaccuracy: 'Imprecision',
+    mistake: 'Erreur',
+    blunder: 'Gaffe',
+  };
 
   function counts(player) {
-    const r = results.filter(r => r.player === player);
-    const c = { best:0, excellent:0, good:0, inaccuracy:0, mistake:0, blunder:0 };
-    r.forEach(m => { if (c[m.classification] !== undefined) c[m.classification]++; });
-    return c;
+    const rows = results.filter(r => r.player === player);
+    const bucket = { best: 0, excellent: 0, good: 0, forced: 0, inaccuracy: 0, mistake: 0, blunder: 0 };
+    rows.forEach(row => { if (bucket[row.classification] !== undefined) bucket[row.classification]++; });
+    return bucket;
   }
-  const c1 = counts(1), c2 = counts(2);
-  function summaryChips(c) {
-    return Object.entries(c).filter(([,v]) => v > 0)
-      .map(([k,v]) => `<span class="summary-chip cls-${k}">${v} ${CLS_COUNTS_LABEL[k]}</span>`).join('');
+  function summaryChips(bucket) {
+    return Object.entries(bucket)
+      .filter(([, value]) => value > 0)
+      .map(([key, value]) => `<span class="summary-chip cls-${key}">${value} ${(CLS_COUNTS_LABEL[key] || key)}</span>`)
+      .join('');
   }
-
-  // Graphique d'évaluation
+  function playerSummary(player) {
+    const rows = results.filter(r => r.player === player);
+    const averageSwing = rows.length ? Math.round(rows.reduce((sum, row) => sum + (row.swing || 0), 0) / rows.length) : 0;
+    const strongMoves = rows.filter(row => ['best', 'excellent'].includes(row.classification)).length;
+    const worstMove = rows.reduce((worst, row) => {
+      if (!worst) return row;
+      return (row.swing || 0) > (worst.swing || 0) ? row : worst;
+    }, null);
+    return {
+      averageSwing,
+      strongMoves,
+      worstMove,
+    };
+  }
+  function ownerName(score) {
+    if (score > 4) return g.p1_pseudo;
+    if (score < -4) return g.p2_pseudo;
+    return 'Equilibre';
+  }
+  function ownerColor(score) {
+    if (score > 4) return p1Color;
+    if (score < -4) return p2Color;
+    return 'rgba(238,238,245,0.65)';
+  }
+  function fmtPct(value) {
+    return `${Math.max(0, Math.round(value || 0))}%`;
+  }
+  function fmtCp(value) {
+    if (value === undefined || value === null) return '';
+    const abs = Math.abs(value);
+    if (abs >= 99) return `${value > 0 ? '+' : '-'}mat`;
+    return `${value > 0 ? '+' : value < 0 ? '-' : ''}${abs.toFixed(1)}`;
+  }
+  function summaryGrid(player) {
+    const summary = playerSummary(player);
+    const worstText = summary.worstMove
+      ? `coup ${summary.worstMove.moveIndex + 1} · ${classLabels[summary.worstMove.classification] || summary.worstMove.classification}`
+      : 'aucune';
+    return `
+      <div class="summary-grid">
+        <div class="summary-stat">
+          <div class="summary-stat-k">Swing moyen</div>
+          <div class="summary-stat-v">${fmtPct(summary.averageSwing)}</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-k">Coups forts</div>
+          <div class="summary-stat-v">${summary.strongMoves}</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-k">Pire coup</div>
+          <div class="summary-stat-v" style="font-size:16px;line-height:1.2">${worstText}</div>
+        </div>
+      </div>`;
+  }
   function buildEvalGraph() {
     if (!evalHistory.length) return '';
     const W = 100, H = 60;
     const mid = H / 2;
     const step = W / Math.max(evalHistory.length, 1);
-
     let path = `M0,${mid}`;
     const points = [];
     evalHistory.forEach((ev, i) => {
@@ -820,29 +904,20 @@ function renderAnalysis(results, accuracy) {
       path += ` L${x.toFixed(1)},${y.toFixed(1)}`;
       points.push({ x, y, ev });
     });
-
     const areaP1 = path + ` L${W},${mid} L0,${mid} Z`;
     const areaP2 = path + ` L${W},${mid} L0,${mid} Z`;
-
-    // Zones invisibles cliquables + tooltip pour chaque coup
     const hitZones = points.map((p, i) => {
-      const cpVal  = p.ev.cp !== undefined ? p.ev.cp : (p.ev.score / 100);
-      const score  = Math.abs(cpVal) >= 99 ? '#+' + Math.round(Math.abs(cpVal)) : cpVal.toFixed(2);
-      const signed = cpVal > 0 ? '+' + score : cpVal < 0 ? score : '0.00';
-      const pseudo = p.ev.player === 1 ? g.p1_pseudo : g.p2_pseudo;
-      const col    = p.ev.score > 5 ? p1Color : p.ev.score < -5 ? p2Color : 'rgba(238,238,245,0.5)';
-      const zW     = step;
-      return `<rect x="${(p.x - zW/2).toFixed(1)}" y="0" width="${zW.toFixed(1)}" height="${H}"
+      const zoneW = step;
+      return `<rect x="${(p.x - zoneW/2).toFixed(1)}" y="0" width="${zoneW.toFixed(1)}" height="${H}"
         fill="transparent" style="cursor:pointer"
-        onmouseenter="showEvalTooltip(this,${i},'${signed}','${pseudo}','${col}')"
+        onmouseenter="showEvalTooltip(this,${i})"
         onmouseleave="hideEvalTooltip()"
         onclick="jumpToMove(${p.ev.moveIndex})"/>`;
     }).join('');
-
     return `
       <div style="margin-top:4px">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">
-          📈 Évaluation de la partie
+          Avantage estime apres chaque coup
         </div>
         <div id="eval-graph-wrap" style="position:relative;width:100%;height:70px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--border);overflow:visible">
           <svg id="eval-svg" viewBox="0 0 100 60" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:10px;overflow:hidden">
@@ -853,25 +928,24 @@ function renderAnalysis(results, accuracy) {
             <path d="${areaP1}" fill="${p1Color}" fill-opacity="0.25" clip-path="url(#clip-top)"/>
             <path d="${areaP2}" fill="${p2Color}" fill-opacity="0.25" clip-path="url(#clip-bot)"/>
             <line x1="0" y1="${mid}" x2="100" y2="${mid}" stroke="rgba(255,255,255,0.2)" stroke-width="0.8" stroke-dasharray="3,3"/>
-            <path d="${path}" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
-            <!-- Ligne verticale de survol -->
+            <path d="${path}" fill="none" stroke="rgba(255,255,255,0.68)" stroke-width="1.2"/>
             <line id="eval-hover-line" x1="-1" y1="0" x2="-1" y2="${H}" stroke="rgba(255,255,255,0.4)" stroke-width="0.5" stroke-dasharray="2,2"/>
-            <!-- Zones interactives -->
             ${hitZones}
           </svg>
           <div style="position:absolute;top:4px;left:8px;font-size:9px;color:${p1Color};font-weight:700">${g.p1_pseudo}</div>
-          <div style="position:absolute;bottom:4px;left:8px;font-size:9px;color:${p2Color};font-weight:700">${g.p2_pseudo}</div>
-          <!-- Tooltip -->
-          <div id="eval-tooltip" style="display:none;position:absolute;top:-32px;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:7px;padding:4px 9px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;white-space:nowrap;pointer-events:none;z-index:10"></div>
+          <div style="position:absolute;top:4px;right:8px;font-size:9px;color:${p2Color};font-weight:700">${g.p2_pseudo}</div>
+          <div style="position:absolute;bottom:4px;left:8px;font-size:9px;color:rgba(238,238,245,0.45)">50% = position egale</div>
+          <div id="eval-tooltip" style="display:none;position:absolute;top:-52px;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:7px 10px;font-family:'Barlow',sans-serif;font-size:11px;line-height:1.35;white-space:nowrap;pointer-events:none;z-index:10"></div>
         </div>
       </div>`;
   }
 
+  const c1 = counts(1);
+  const c2 = counts(2);
   panel.innerHTML = `
-    <!-- Précision -->
     <div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
-        📊 Précision de jeu
+        Precision globale
       </div>
       <div class="accuracy-row">
         <div class="accuracy-card">
@@ -886,82 +960,76 @@ function renderAnalysis(results, accuracy) {
       ${buildEvalGraph()}
     </div>
 
-    <!-- Résumé P1 -->
     <div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
         <span style="width:10px;height:10px;border-radius:50%;background:${p1Color};display:inline-block;flex-shrink:0"></span>
         <strong style="color:var(--text)">${g.p1_pseudo}</strong>
       </div>
       <div class="move-summary">${summaryChips(c1)}</div>
+      ${summaryGrid(1)}
     </div>
 
-    <!-- Résumé P2 -->
     <div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px">
         <span style="width:10px;height:10px;border-radius:50%;background:${p2Color};display:inline-block;flex-shrink:0"></span>
         <strong style="color:var(--text)">${g.p2_pseudo}</strong>
       </div>
       <div class="move-summary">${summaryChips(c2)}</div>
+      ${summaryGrid(2)}
     </div>
 
-    <!-- Liste des coups -->
     <div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
-        🎯 Détail des coups
+        Detail des coups
       </div>
       <div class="analyse-moves" id="analyse-moves">
         ${results.map((r, i) => {
-          const color  = r.player === 1 ? p1Color : p2Color;
+          const color = r.player === 1 ? p1Color : p2Color;
           const pseudo = r.player === 1 ? g.p1_pseudo : g.p2_pseudo;
-          const isBad  = ['inaccuracy','mistake','blunder'].includes(r.classification);
-
-          // Séquence optimale
-          const seqHtml = (isBad && r.optimalSeq && r.optimalSeq.length > 0)
-            ? `<div style="margin-top:6px;padding:6px 10px;background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:8px;font-size:11px;color: var(--muted)">
-                 <span style="color:#30d158;font-weight:700;margin-right:4px">✦ Optimal :</span>
-                 ${r.optimalSeq.map((c,idx) => `<span style="color:#30d158;font-weight:700">col.${c+1}</span>${idx < r.optimalSeq.length-1 ? ' <span style="color:var(--muted)">→</span> ' : ''}`).join('')}
-               </div>`
-            : '';
-
-          // Barre d'éval : gauche = J1, droite = J2, séparée au centre
+          const isBad = ['inaccuracy','mistake','blunder'].includes(r.classification);
           const evalBar = r.evalScore !== undefined
             ? (() => {
-                const sc = r.evalScore; // -100 à +100
-                // Côté J1 (gauche) : sc > 0 → rempli
-                // Côté J2 (droite) : sc < 0 → rempli
-                const p1w = sc > 0 ? Math.round(sc / 2) : 0;   // 0-50%
-                const p2w = sc < 0 ? Math.round(-sc / 2) : 0;  // 0-50%
+                const sc = r.evalScore;
+                const p1w = sc > 0 ? Math.round(sc / 2) : 0;
+                const p2w = sc < 0 ? Math.round(-sc / 2) : 0;
                 return `<div title="${sc > 0 ? '+' : ''}${sc}" style="width:48px;height:6px;display:flex;border-radius:3px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,0.06);">
                   <div style="width:50%;display:flex;justify-content:flex-end;">
-                    <div style="width:${p1w*2}%;height:100%;background:${p1Color};border-radius:3px 0 0 3px;"></div>
+                    <div style="width:${p1w * 2}%;height:100%;background:${p1Color};border-radius:3px 0 0 3px;"></div>
                   </div>
                   <div style="width:1px;background:rgba(255,255,255,0.15);flex-shrink:0;"></div>
                   <div style="width:50%;display:flex;justify-content:flex-start;">
-                    <div style="width:${p2w*2}%;height:100%;background:${p2Color};border-radius:0 3px 3px 0;"></div>
+                    <div style="width:${p2w * 2}%;height:100%;background:${p2Color};border-radius:0 3px 3px 0;"></div>
                   </div>
                 </div>`;
               })()
             : '';
-
+          const seqHtml = (isBad && r.optimalSeq && r.optimalSeq.length > 0)
+            ? `<div style="padding:6px 10px;background:rgba(48,209,88,0.06);border:1px solid rgba(48,209,88,0.15);border-radius:8px;font-size:11px;color:var(--muted)">
+                 <span style="color:#30d158;font-weight:700;margin-right:4px">Ligne ideale :</span>
+                 ${r.optimalSeq.map((c, idx) => `<span style="color:#30d158;font-weight:700">col.${c + 1}</span>${idx < r.optimalSeq.length - 1 ? ' <span style="color:var(--muted)">></span> ' : ''}`).join('')}
+               </div>`
+            : '';
+          const evalScore = fmtCp(r.evalCP);
+          const evalCls = (r.evalScore || 0) > 4 ? 'pos' : (r.evalScore || 0) < -4 ? 'neg' : 'neu';
           return `<div class="analyse-move" id="am-${i}" onclick="jumpToMove(${r.moveIndex})">
             <span class="am-num">${i + 1}</span>
             <span class="am-dot" style="background:${color}"></span>
-            <div style="flex:1;min-width:0">
-              <div style="display:flex;align-items:center;gap:8px">
-                <span class="am-col">${pseudo} — col.${r.playedCol + 1}</span>
+            <div class="am-main">
+              <div class="am-head">
+                <span class="am-col">${pseudo} - col.${r.playedCol + 1}</span>
                 ${evalBar}
-                <span class="am-badge cls-${r.classification}">${CLS_LABELS[r.classification]}</span>
-                ${r.evalCP !== undefined ? (() => {
-                  const cp  = r.evalCP;
-                  const abs = Math.abs(cp);
-                  const str = abs >= 99 ? (cp > 0 ? '#+'  : '#-') + Math.round(abs)
-                                       : (cp > 0 ? '+' : '') + cp.toFixed(2);
-                  const cls = cp > 0.1 ? 'pos' : cp < -0.1 ? 'neg' : 'neu';
-                  return `<span class="eval-score ${cls}" title="Évaluation de la position">${str}</span>`;
-                })() : ''}
+                <span class="am-badge cls-${r.classification}">${classLabels[r.classification] || r.classification}</span>
+                ${evalScore ? `<span class="eval-score ${evalCls}" title="Lecture rapide de la position">${evalScore}</span>` : ''}
+              </div>
+              <div class="am-metrics">
+                ${r.playedWinPct !== undefined ? `<span class="am-metric"><strong>${fmtPct(r.playedWinPct)}</strong> pour ${pseudo}</span>` : ''}
+                ${r.bestWinPct !== undefined ? `<span class="am-metric">meilleur coup: <strong>${fmtPct(r.bestWinPct)}</strong></span>` : ''}
+                ${r.swing !== undefined ? `<span class="am-metric">swing: <strong>-${fmtPct(r.swing)}</strong></span>` : ''}
+                <span class="am-metric">avantage: <strong style="color:${ownerColor(r.evalScore || 0)}">${ownerName(r.evalScore || 0)}</strong></span>
+                ${r.bestCol !== undefined && r.bestCol !== r.playedCol ? `<span class="am-metric">meilleur choix: <strong>col.${r.bestCol + 1}</strong></span>` : ''}
               </div>
               ${seqHtml}
-              ${r.comment ? `<div style="margin-top:4px;font-size:10px;color:var(--muted);font-style:italic">${r.comment}</div>` : ''}
+              ${r.comment ? `<div class="am-comment">${r.comment}</div>` : ''}
             </div>
           </div>`;
         }).join('')}
@@ -1004,6 +1072,38 @@ function hideEvalTooltip() {
   if (line) { line.setAttribute('x1', '-1'); line.setAttribute('x2', '-1'); }
 }
 
+function showEvalTooltip(rectEl, moveIdx) {
+  const tip  = document.getElementById('eval-tooltip');
+  const line = document.getElementById('eval-hover-line');
+  const svg  = document.getElementById('eval-svg');
+  const point = evalHistory[moveIdx];
+  if (!tip || !svg || !point) return;
+
+  const vb   = svg.viewBox.baseVal;
+  const step = vb.width / Math.max(evalHistory.length, 1);
+  const xSvg = (moveIdx + 0.5) * step;
+  if (line) { line.setAttribute('x1', xSvg); line.setAttribute('x2', xSvg); }
+
+  const wrap   = document.getElementById('eval-graph-wrap');
+  const wrapW  = wrap.offsetWidth;
+  const xPct   = (moveIdx + 0.5) / evalHistory.length;
+  const xPx    = xPct * wrapW;
+  const rootStyles = getComputedStyle(document.documentElement);
+  const p1Color = rootStyles.getPropertyValue('--p1-color').trim() || '#ff2d55';
+  const p2Color = rootStyles.getPropertyValue('--p2-color').trim() || '#ffd60a';
+  const pseudo = point.score > 4 ? gameData.p1_pseudo : point.score < -4 ? gameData.p2_pseudo : 'Equilibre';
+  const color = point.score > 4 ? p1Color : point.score < -4 ? p2Color : 'rgba(238,238,245,0.75)';
+  const chance = Math.round((point.score + 100) / 2);
+  const cp = point.cp !== undefined && point.cp !== null
+    ? (Math.abs(point.cp) >= 99 ? `${point.cp > 0 ? '+' : '-'}mat` : `${point.cp > 0 ? '+' : point.cp < 0 ? '-' : ''}${Math.abs(point.cp).toFixed(1)}`)
+    : '--';
+
+  tip.style.display = 'block';
+  tip.style.left    = xPx + 'px';
+  tip.style.color   = color;
+  tip.innerHTML = `<div style="font-weight:700;color:${color}">${pseudo}</div><div>coup ${moveIdx + 1} · ${chance}% de controle</div><div style="color:rgba(238,238,245,0.72)">lecture: ${cp}</div>`;
+}
+
 // ── Inspection du plateau depuis l'analyse ───────────────────────────────────
 let inspectMode = false;
 
@@ -1028,8 +1128,8 @@ function jumpToMove(moveIdx) {
   const bar  = document.getElementById('board-inspect-bar');
   const txt  = document.getElementById('board-inspect-text');
   const p    = result.player === 1 ? gameData.p1_pseudo : gameData.p2_pseudo;
-  const cls  = { best:'✅ Meilleur', excellent:'👍 Excellent', good:'🟢 Bon',
-                 inaccuracy:'🟡 Imprécision', mistake:'⚠️ Erreur', blunder:'💀 Gaffe' };
+  const cls  = { best:'Meilleur', excellent:'Excellent', good:'Bon',
+                 forced:'Force', inaccuracy:'Imprecision', mistake:'Erreur', blunder:'Gaffe' };
   if (txt) txt.textContent = `Coup ${moveIdx + 1} · ${p} · ${cls[result.classification] || ''}`;
   if (bar) bar.classList.add('show');
 
