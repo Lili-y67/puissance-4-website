@@ -214,9 +214,16 @@ html, body {
   margin-bottom: 4px;
 }
 
+#view-login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 /* ── Input ──────────────────────────────────────────────────────────────────── */
 .input-wrap {
   position: relative;
+  width: 100%;
 }
 .input-icon {
   position: absolute;
@@ -250,10 +257,12 @@ html, body {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
   color: var(--muted);
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
+  justify-content: center;
 }
 .divider::before, .divider::after {
   content: '';
@@ -505,13 +514,14 @@ html, body {
 }
 
 /* ── Auth tabs ── */
-.auth-tabs { display:flex; gap:4px; background:var(--surface2); border-radius:10px; padding:4px; }
+.auth-tabs { display:flex; gap:4px; background:var(--surface2); border-radius:10px; padding:4px; width:100%; }
 .auth-tab {
   flex:1; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
   letter-spacing:1px; text-transform:uppercase; padding:8px; border-radius:7px;
   background:transparent; border:none; color:var(--muted); cursor:pointer; transition:all 0.2s;
 }
 .auth-tab.active { background:var(--surface); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+.btn-play, .btn-ghost, .btn-robot, .error-msg { width:100%; }
 
 /* ── Theme / Color picker ── */
 
