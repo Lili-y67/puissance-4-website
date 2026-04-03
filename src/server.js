@@ -69,6 +69,21 @@ function isVipPlayer(player) {
 }
 
 // ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
+let canvasFontsRegistered = false;
+function ensureCanvasFonts() {
+  if (canvasFontsRegistered) return;
+  try {
+    const { registerFont } = require('canvas');
+    const fontsDir = path.join(__dirname, 'assets', 'fonts');
+    registerFont(path.join(fontsDir, 'BarlowCondensed-Bold.ttf'), { family: 'Barlow Condensed', weight: '700' });
+    registerFont(path.join(fontsDir, 'Barlow-Regular.ttf'), { family: 'Barlow', weight: '400' });
+    registerFont(path.join(fontsDir, 'Barlow-SemiBold.ttf'), { family: 'Barlow', weight: '600' });
+    canvasFontsRegistered = true;
+  } catch (e) {
+    console.error('[BOT] ensureCanvasFonts:', e.message);
+  }
+}
+
 function genToken() {
   return require('crypto').randomBytes(32).toString('hex');
 }
@@ -2095,6 +2110,7 @@ function startBot() {
   async function generateProfileCardAttachment(data) {
     try {
       const { createCanvas, loadImage } = require('canvas');
+      ensureCanvasFonts();
       const rank = data.rank || getRank(data.elo);
       const canvas = createCanvas(1100, 680);
       const ctx = canvas.getContext('2d');
@@ -2104,10 +2120,10 @@ function startBot() {
       const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
       const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
       const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
-      const fontTitle = 'bold 54px Arial Black';
-      const fontSub = 'bold 24px Trebuchet MS';
-      const fontBody = '22px Trebuchet MS';
-      const fontSmall = '18px Trebuchet MS';
+      const fontTitle = '700 54px "Barlow Condensed"';
+      const fontSub = '700 24px "Barlow Condensed"';
+      const fontBody = '600 22px "Barlow"';
+      const fontSmall = '600 18px "Barlow"';
 
       if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
       else {
@@ -2126,7 +2142,7 @@ function startBot() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = '#ffd60a';
-      ctx.font = 'bold 24px Arial Black';
+      ctx.font = '700 24px "Barlow Condensed"';
       ctx.fillText('PUISSANCE 4 RANKED', 42, 42);
 
       ctx.save();
@@ -2140,7 +2156,7 @@ function startBot() {
         ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.34);
         ctx.fillRect(48, 74, 124, 124);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 52px Arial Black';
+        ctx.font = '700 52px "Barlow Condensed"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText((data.pseudo || '?')[0].toUpperCase(), 110, 136);
@@ -2189,17 +2205,17 @@ function startBot() {
       ctx.restore();
 
       ctx.fillStyle = '#f5f4ff';
-      ctx.font = 'bold 22px Arial Black';
+      ctx.font = '700 22px "Barlow Condensed"';
       ctx.textAlign = 'center';
       ctx.fillText('RANG', rankX + rankW / 2, rankY + 34);
       if (rankImage) ctx.drawImage(rankImage, rankX + 62, rankY + 56, 74, 74);
       else {
-        ctx.font = '48px Arial Black';
+        ctx.font = '700 48px "Barlow Condensed"';
         ctx.fillText(data.rankEmoji || '🏅', rankX + 98, rankY + 116);
       }
       ctx.textAlign = 'start';
       ctx.fillStyle = '#ffe27a';
-      ctx.font = 'bold 30px Arial Black';
+      ctx.font = '700 30px "Barlow Condensed"';
       ctx.fillText(rank.label, rankX + 144, rankY + 106);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontSmall;
@@ -2211,7 +2227,7 @@ function startBot() {
       ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
       ctx.fill();
       ctx.fillStyle = '#f5f4ff';
-      ctx.font = 'bold 18px Trebuchet MS';
+      ctx.font = '600 18px "Barlow"';
       ctx.fillText(rank.next ? `Prochain palier : ${rank.next} ELO` : 'Rang maximum atteint', rankX + 54, rankY + 206);
 
       const stats = [
@@ -2246,10 +2262,10 @@ function startBot() {
         ctx.restore();
 
         ctx.fillStyle = hexToRgbaBot(stat.color, 0.98);
-        ctx.font = 'bold 22px Arial Black';
+        ctx.font = '700 22px "Barlow Condensed"';
         ctx.textAlign = 'center';
         ctx.fillText(stat.label, x + statW / 2, y + 32);
-        ctx.font = 'bold 34px Arial Black';
+        ctx.font = '700 34px "Barlow Condensed"';
         ctx.fillStyle = '#f5f4ff';
         ctx.fillText(stat.value, x + statW / 2, y + 72);
         ctx.textAlign = 'start';
@@ -2258,7 +2274,7 @@ function startBot() {
       const infoX = 42;
       const infoY = 238;
       ctx.fillStyle = '#f5f4ff';
-      ctx.font = 'bold 22px Arial Black';
+      ctx.font = '700 22px "Barlow Condensed"';
       ctx.fillText('DISCORD ET PROFIL', infoX, infoY);
       ctx.font = fontSmall;
       const infoLines = [
@@ -2289,7 +2305,7 @@ function startBot() {
       ctx.stroke();
       ctx.restore();
       ctx.fillStyle = '#ffd60a';
-      ctx.font = 'bold 20px Arial Black';
+      ctx.font = '700 20px "Barlow Condensed"';
       ctx.fillText('DERNIERES PARTIES', historyX + 18, historyY + 28);
       ctx.fillStyle = '#f5f4ff';
       ctx.font = fontSmall;
@@ -2304,7 +2320,7 @@ function startBot() {
       }
 
       ctx.fillStyle = 'rgba(255,255,255,0.78)';
-      ctx.font = '16px Trebuchet MS';
+      ctx.font = '400 16px "Barlow"';
       ctx.fillText(`https://puissance-4-website-production.up.railway.app/profil?id=${data.id}`, 640, 656);
 
       return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
