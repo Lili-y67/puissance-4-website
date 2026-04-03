@@ -2090,12 +2090,18 @@ function startBot() {
     try {
       const { createCanvas, loadImage } = require('canvas');
       const rank = data.rank || getRank(data.elo);
-      const canvas = createCanvas(900, 500);
+      const canvas = createCanvas(1100, 680);
       const ctx = canvas.getContext('2d');
       const totalGames = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
       const bg = await loadImageSafeBot(loadImage, 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg');
       const avatar = await loadImageSafeBot(loadImage, data.avatar && data.avatar.startsWith('http') ? data.avatar : null);
       const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
+      const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
+      const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
+      const fontTitle = 'bold 54px Arial Black';
+      const fontSub = 'bold 24px Trebuchet MS';
+      const fontBody = '22px Trebuchet MS';
+      const fontSmall = '18px Trebuchet MS';
 
       if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
       else {
@@ -2108,53 +2114,99 @@ function startBot() {
       }
 
       const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      overlay.addColorStop(0, 'rgba(8,10,24,0.38)');
-      overlay.addColorStop(1, 'rgba(8,10,24,0.68)');
+      overlay.addColorStop(0, 'rgba(7,9,22,0.30)');
+      overlay.addColorStop(1, 'rgba(7,9,22,0.76)');
       ctx.fillStyle = overlay;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = '#ffd60a';
-      ctx.font = '28px Sans';
-      ctx.fillText('Puissance 4 Ranked', 38, 42);
+      ctx.font = 'bold 24px Arial Black';
+      ctx.fillText('PUISSANCE 4 RANKED', 42, 42);
 
       ctx.save();
       ctx.beginPath();
-      ctx.arc(92, 118, 56, 0, Math.PI * 2);
+      ctx.arc(110, 136, 62, 0, Math.PI * 2);
       ctx.closePath();
       ctx.clip();
       if (avatar) {
-        ctx.drawImage(avatar, 36, 62, 112, 112);
+        ctx.drawImage(avatar, 48, 74, 124, 124);
       } else {
-        ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.3);
-        ctx.fillRect(36, 62, 112, 112);
+        ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.34);
+        ctx.fillRect(48, 74, 124, 124);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 48px Sans';
+        ctx.font = 'bold 52px Arial Black';
         ctx.textAlign = 'center';
-        ctx.fillText((data.pseudo || '?')[0].toUpperCase(), 92, 134);
+        ctx.textBaseline = 'middle';
+        ctx.fillText((data.pseudo || '?')[0].toUpperCase(), 110, 136);
         ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
       }
       ctx.restore();
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.strokeStyle = hexToRgbaBot(data.color || '#ff2d55', 0.95);
       ctx.beginPath();
-      ctx.arc(92, 118, 58, 0, Math.PI * 2);
+      ctx.arc(110, 136, 64, 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.95);
-      ctx.font = 'bold 46px Sans';
-      ctx.fillText(data.pseudo || 'Joueur', 188, 108);
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = fontTitle;
+      ctx.fillText(data.pseudo || 'Joueur', 204, 116);
 
-      ctx.fillStyle = '#f3f2ff';
-      ctx.font = '30px Sans';
-      let topLine = `${data.elo} Elo`;
-      if (data.role === 'admin') topLine += '  •  ADMIN';
-      else if (data.role === 'moderator') topLine += '  •  MODO';
-      if (data.is_vip) topLine += '  •  VIP';
-      ctx.fillText(topLine, 190, 146);
+      ctx.fillStyle = '#ffe27a';
+      ctx.font = fontSub;
+      const badges = [];
+      if (data.is_vip) badges.push('VIP');
+      if (data.role === 'admin') badges.push('ADMIN');
+      else if (data.role === 'moderator') badges.push('MODO');
+      const badgeText = badges.length ? `  •  ${badges.join(' • ')}` : '';
+      ctx.fillText(`${data.elo} ELO  •  ${rank.label}${badgeText}`, 206, 154);
 
-      ctx.fillStyle = '#ffd60a';
-      ctx.font = '26px Sans';
-      ctx.fillText(`Rang : ${rank.label}`, 190, 180);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontBody;
+      ctx.fillText(`ID ${data.id}  •  Couleur ${String(data.color || '#ff2d55').toUpperCase()}  •  Forme ${data.shape || 'circle'}`, 206, 190);
+      ctx.fillText(`Suivis ${data.following || 0}  •  Abonnés ${data.followers || 0}  •  Membre ${data.memberDate || '—'}`, 206, 222);
+
+      const rankX = 744;
+      const rankY = 58;
+      const rankW = 302;
+      const rankH = 214;
+      ctx.save();
+      roundRectBot(ctx, rankX, rankY, rankW, rankH, 24);
+      ctx.fillStyle = 'rgba(18,20,34,0.62)';
+      ctx.shadowColor = rank.color || '#ffffff';
+      ctx.shadowBlur = 24;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = 'bold 22px Arial Black';
+      ctx.textAlign = 'center';
+      ctx.fillText('RANG', rankX + rankW / 2, rankY + 34);
+      if (rankImage) ctx.drawImage(rankImage, rankX + 62, rankY + 56, 74, 74);
+      else {
+        ctx.font = '48px Arial Black';
+        ctx.fillText(data.rankEmoji || '🏅', rankX + 98, rankY + 116);
+      }
+      ctx.textAlign = 'start';
+      ctx.fillStyle = '#ffe27a';
+      ctx.font = 'bold 30px Arial Black';
+      ctx.fillText(rank.label, rankX + 144, rankY + 106);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontSmall;
+      ctx.fillText(`${rank.progress || 0}% de progression`, rankX + 86, rankY + 150);
+      roundRectBot(ctx, rankX + 52, rankY + 166, rankW - 104, 22, 11);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fill();
+      roundRectBot(ctx, rankX + 52, rankY + 166, Math.max(24, Math.round((rankW - 104) * ((rank.progress || 0) / 100))), 22, 11);
+      ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
+      ctx.fill();
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = 'bold 18px Trebuchet MS';
+      ctx.fillText(rank.next ? `Prochain palier : ${rank.next} ELO` : 'Rang maximum atteint', rankX + 54, rankY + 206);
 
       const stats = [
         { label: 'Victoires', value: String(data.wins || 0), color: '#9be15d' },
@@ -2164,101 +2216,90 @@ function startBot() {
         { label: 'Win rate', value: data.winRate || '—', color: '#c38bff' },
         { label: 'Précision', value: data.avg_accuracy != null ? String(data.avg_accuracy) : '—', color: '#33a1ff' },
       ];
-
-      const panelY = 260;
-      const panelW = 240;
-      const panelH = 82;
-      const panelGap = 28;
+      const statW = 304;
+      const statH = 96;
+      const startX = 42;
+      const startY = 312;
+      const gapX = 24;
+      const gapY = 22;
       stats.forEach((stat, index) => {
         const row = Math.floor(index / 3);
         const col = index % 3;
-        const x = 40 + col * (panelW + panelGap);
-        const y = panelY + row * (panelH + 18);
+        const x = startX + col * (statW + gapX);
+        const y = startY + row * (statH + gapY);
         ctx.save();
-        roundRectBot(ctx, x, y, panelW, panelH, 16);
-        ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
+        roundRectBot(ctx, x, y, statW, statH, 18);
+        ctx.fillStyle = 'rgba(16,18,32,0.58)';
         ctx.shadowColor = stat.color;
         ctx.shadowBlur = 18;
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.lineWidth = 3;
-        ctx.strokeStyle = hexToRgbaBot(stat.color, 0.95);
+        ctx.strokeStyle = hexToRgbaBot(stat.color, 0.98);
         ctx.stroke();
         ctx.restore();
 
         ctx.fillStyle = hexToRgbaBot(stat.color, 0.98);
-        ctx.font = '24px Sans';
+        ctx.font = 'bold 22px Arial Black';
         ctx.textAlign = 'center';
-        ctx.fillText(stat.label, x + panelW / 2, y + 28);
-        ctx.font = 'bold 34px Sans';
-        ctx.fillStyle = '#f6f4ff';
-        ctx.fillText(stat.value, x + panelW / 2, y + 62);
+        ctx.fillText(stat.label, x + statW / 2, y + 32);
+        ctx.font = 'bold 34px Arial Black';
+        ctx.fillStyle = '#f5f4ff';
+        ctx.fillText(stat.value, x + statW / 2, y + 72);
         ctx.textAlign = 'start';
       });
 
-      ctx.save();
-      roundRectBot(ctx, 660, 62, 196, 156, 18);
-      ctx.fillStyle = 'rgba(10, 12, 26, 0.42)';
-      ctx.shadowColor = rank.color || '#ffffff';
-      ctx.shadowBlur = 20;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = hexToRgbaBot(rank.color || '#ffffff', 0.95);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.fillStyle = '#f3f2ff';
-      ctx.font = '26px Sans';
-      ctx.fillText('Rank', 726, 92);
-      if (rankImage) ctx.drawImage(rankImage, 734, 102, 48, 48);
-      else {
-        ctx.font = '40px Sans';
-        ctx.fillText(data.rankEmoji || '🏅', 742, 142);
-      }
-      ctx.fillStyle = '#ffd60a';
-      ctx.font = 'bold 24px Sans';
-      ctx.fillText(rank.label, 792, 134);
-
-      const barX = 688, barY = 174, barW = 138, barH = 18;
-      roundRectBot(ctx, barX, barY, barW, barH, 9);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fill();
-      roundRectBot(ctx, barX, barY, Math.max(16, Math.round(barW * ((rank.progress || 0) / 100))), barH, 9);
-      ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.95);
-      ctx.fill();
-      ctx.fillStyle = '#f3f2ff';
-      ctx.font = '20px Sans';
-      ctx.fillText(`${rank.progress || 0}%`, 740, 212);
-      if (rank.next) {
-        ctx.font = '18px Sans';
-        ctx.fillText(`→ ${rank.next} Elo`, 776, 212);
-      }
-
-      ctx.fillStyle = '#d7d5ef';
-      ctx.font = '22px Sans';
-      ctx.fillText('Discord', 42, 220);
-      ctx.font = '20px Sans';
-      const lines = [
-        `Suivis : ${data.following || 0}   •   Abonnés : ${data.followers || 0}`,
-        `Membre : ${data.memberDate || '—'}`,
+      const infoX = 42;
+      const infoY = 238;
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = 'bold 22px Arial Black';
+      ctx.fillText('DISCORD ET PROFIL', infoX, infoY);
+      ctx.font = fontSmall;
+      const infoLines = [
+        di?.username ? `Compte : ${di.global_name || di.username}` : 'Compte Discord non lié',
+        di?.server_nick ? `Pseudo serveur : ${di.server_nick}` : `Couleur du jeton : ${String(data.color || '#ff2d55').toUpperCase()}`,
+        di?.server_joined ? `Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}` : `Shape : ${data.shape || 'circle'}`,
+        di?.boosting_since ? 'Booster actif' : 'Boost serveur : non',
       ];
-      const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
-      if (di?.server_nick) lines.push(`Pseudo serveur : ${di.server_nick}`);
-      if (di?.server_joined) lines.push(`Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}`);
-      if (di?.boosting_since) lines.push('Booster du serveur');
       if (di?.server_roles?.length) {
         const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' • ');
-        if (roleNames) lines.push(`Rôles : ${roleNames}`);
+        if (roleNames) infoLines[3] = `Rôles : ${roleNames}`;
       }
-      lines.slice(0, 4).forEach((line, i) => {
-        ctx.fillStyle = '#f3f2ff';
-        ctx.fillText(line, 42, 248 + i * 28);
-      });
+      infoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 30 + i * 24));
 
-      ctx.fillStyle = 'rgba(255,255,255,0.75)';
-      ctx.font = '18px Sans';
-      ctx.fillText(`ID ${data.id}`, 798, 476);
+      const historyX = 42;
+      const historyY = 550;
+      const historyW = 1004;
+      const historyH = 96;
+      ctx.save();
+      roundRectBot(ctx, historyX, historyY, historyW, historyH, 18);
+      ctx.fillStyle = 'rgba(14,16,30,0.60)';
+      ctx.shadowColor = '#ffd60a';
+      ctx.shadowBlur = 14;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(255,214,10,0.55)';
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = '#ffd60a';
+      ctx.font = 'bold 20px Arial Black';
+      ctx.fillText('DERNIERES PARTIES', historyX + 18, historyY + 28);
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = fontSmall;
+      if (latestGames.length) {
+        latestGames.forEach((g, i) => {
+          const sign = g.delta >= 0 ? '+' : '';
+          const icon = g.draw ? 'DRAW' : (g.won ? 'WIN' : 'LOSE');
+          ctx.fillText(`${icon}  vs ${g.opp}  •  ${sign}${g.delta} ELO  •  ${g.date}`, historyX + 18, historyY + 56 + i * 22);
+        });
+      } else {
+        ctx.fillText('Aucune partie récente.', historyX + 18, historyY + 60);
+      }
+
+      ctx.fillStyle = 'rgba(255,255,255,0.78)';
+      ctx.font = '16px Trebuchet MS';
+      ctx.fillText(`https://puissance-4-website-production.up.railway.app/profil?id=${data.id}`, 640, 656);
 
       return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
     } catch (e) {
@@ -2503,10 +2544,21 @@ function startBot() {
           following: followCounts?.following || 0,
           followers: followCounts?.followers || 0,
           memberDate,
+          latestGames: games.map(g => {
+            const isP1 = g.player1_id === data.id;
+            return {
+              opp: fv(isP1 ? g.p2_pseudo : g.p1_pseudo),
+              delta: isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0),
+              won: g.winner_id === data.id,
+              draw: g.winner_id === null,
+              date: g.finished_at ? g.finished_at.slice(0, 10) : '—',
+            };
+          }),
         });
         if (cardAttachment) {
-          embed.setImage('attachment://' + cardAttachment.name);
+          files.length = 0;
           files.push(cardAttachment);
+          return interaction.editReply({ files, components: menuRows });
         }
 
         return interaction.editReply({ embeds: [embed], files, components: menuRows });
