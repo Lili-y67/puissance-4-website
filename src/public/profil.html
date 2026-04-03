@@ -508,17 +508,20 @@ async function load() {
     if (!profileRes.ok) throw new Error();
     const { player, games, following, followers } = await profileRes.json();
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
-    currentPlayer = player;
+    const freshPlayer = (isOwnProfile && player.discord_id)
+      ? await refreshDiscordState(player)
+      : player;
+    currentPlayer = freshPlayer;
 
-    render(player, games, following || [], followers || [], followStatus);
+    render(freshPlayer, games, following || [], followers || [], followStatus);
 
     // Charger le statut en ligne (tous les profils)
     // Exposer pour que presence.js rappelle après identified
-    window._reloadStatus = () => loadStatus(player.id);
-    loadStatus(player.id);
+    window._reloadStatus = () => loadStatus(freshPlayer.id);
+    loadStatus(freshPlayer.id);
 
     // Charger les infos Discord si profil own + discord lié
-    if (isOwnProfile && player.discord_id) {
+    if (isOwnProfile && freshPlayer.discord_id) {
       loadDiscordInfo();
     }
 
@@ -584,6 +587,7 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
+            ${player.role === 'vip'       ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⭐ VIP</span>' : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
           </div>
@@ -1200,7 +1204,7 @@ async function initVipBoostUI() {
       btn.disabled = true;
       btn.style.opacity = '0.5';
       btn.textContent = '⚡ BOOST UTILISÉ';
-      stat.textContent = 'Disponible à minuit';
+      stat.textContent = 'Disponible à minuit (Paris)';
     } else {
       btn.textContent = '⚡ ACTIVER BOOST VIP (+20% ELO · 1h)';
     }
@@ -1580,6 +1584,39 @@ function linkDiscord() {
 // ── Discord Info ─────────────────────────────────────────────────────────────
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };
 const NITRO_ICONS  = { 0: '', 1: '💎', 2: '💎', 3: '🔷' };
+
+function syncStoredPlayerPatch(patch) {
+  try {
+    const localVal = localStorage.getItem('player');
+    if (localVal) localStorage.setItem('player', JSON.stringify({ ...JSON.parse(localVal), ...patch }));
+  } catch(e) {}
+  try {
+    const sessionVal = sessionStorage.getItem('player');
+    if (sessionVal) sessionStorage.setItem('player', JSON.stringify({ ...JSON.parse(sessionVal), ...patch }));
+  } catch(e) {}
+}
+
+async function refreshDiscordState(player) {
+  const token = localStorage.getItem('token');
+  if (!token || !player?.id || !player.discord_id) return player;
+  try {
+    const res = await fetch('/api/players/' + player.id + '/refresh-discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (data?.unlinked) {
+      syncStoredPlayerPatch({ role: 'user', discord_id: null });
+      return { ...player, role: 'user', discord_id: null };
+    }
+    if (data?.role && data.role !== player.role) {
+      syncStoredPlayerPatch({ role: data.role });
+      return { ...player, role: data.role };
+    }
+  } catch(e) {}
+  return player;
+}
 
 async function loadDiscordInfo() {
   const zone = document.getElementById('discord-info-zone');

@@ -54,6 +54,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 .badge{display:inline-block;padding:2px 8px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .badge-user{background:rgba(255,255,255,0.06);color:var(--muted)}
+.badge-vip{background:rgba(255,214,10,0.14);color:var(--yellow);border:1px solid rgba(255,214,10,0.3)}
 .badge-moderator{background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3)}
 .badge-admin{background:rgba(255,45,85,0.15);color:var(--red);border:1px solid rgba(255,45,85,0.3)}
 .badge-banned{background:rgba(255,45,85,0.15);color:var(--red)}
@@ -137,6 +138,49 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 
   <div class="stats-row" id="stats-row"></div>
+
+  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Boosts ELO</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gestion du boost global et suivi des boosts VIP actifs.</div>
+      </div>
+      <div id="boost-status" style="font-size:13px;color:var(--muted);"></div>
+    </div>
+
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      <button id="boost-tab-global" onclick="switchBoostTab('global')"
+        style="padding:8px 14px;border-radius:8px;border:none;background:var(--yellow);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+        GLOBAL
+      </button>
+      <button id="boost-tab-vip" onclick="switchBoostTab('vip')"
+        style="padding:8px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+        VIP ACTIFS
+      </button>
+    </div>
+
+    <div id="boost-panel-global">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Multiplicateur global</div>
+          <input id="boost-slider" type="range" min="1" max="2" step="0.1" value="1"
+            style="width:100%;accent-color:#ffd60a;"
+            oninput="document.getElementById('boost-val').textContent = Number(this.value).toFixed(1) + 'x'">
+        </div>
+        <div style="min-width:72px;text-align:center;">
+          <div id="boost-val" style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--yellow);">1.0x</div>
+        </div>
+        <div id="boost-global-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);" onclick="setBoost(Number(document.getElementById('boost-slider').value))">Appliquer</button>
+          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1)">Désactiver</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="boost-panel-vip" style="display:none;">
+      <div id="vip-boosts-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
 
   <!-- Onglets Joueurs / Parties -->
   <div style="display:flex;gap:6px;margin-bottom:14px;">
@@ -239,6 +283,10 @@ async function showPanel() {
     roleEl.style.background = myRole === 'admin' ? 'rgba(255,45,85,0.15)' : 'rgba(76,110,245,0.15)';
     roleEl.style.color      = myRole === 'admin' ? '#ff2d55' : '#8b9cf4';
   }
+  const globalActions = document.getElementById('boost-global-actions');
+  if (globalActions) globalActions.style.display = myRole === 'admin' ? 'flex' : 'none';
+  await loadBoostStatus();
+  await loadVipBoosts();
   await loadPlayers();
 }
 
@@ -261,6 +309,7 @@ async function loadPlayers() {
 
 function renderStats() {
   const total    = allPlayers.length;
+  const vip      = allPlayers.filter(p => p.role === 'vip').length;
   const banned   = allPlayers.filter(p => p.banned).length;
   const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
   const suspect  = allPlayers.filter(p => p.suspicious).length;
@@ -269,6 +318,7 @@ function renderStats() {
   document.getElementById('stats-row').innerHTML = [
     { val: total,   lbl: 'Joueurs',   color: 'var(--text)' },
     { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
+    { val: vip,     lbl: 'VIP',       color: 'var(--yellow)' },
     { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
     { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
     { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
@@ -352,6 +402,7 @@ function renderPlayers(players) {
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
+          ${myRole === 'admin' && p.role !== 'vip' ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">⭐ VIP</button>` : ''}
           <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id},'${p.pseudo.replace(/'/g,"\\'")}','${p.role}',${p.banned},${isMuted?p.muted_until:0},${p.suspicious})">✏️ Gérer</button>
         </div>
       </td>
@@ -381,7 +432,7 @@ function openModal(id, pseudo, role, banned, mutedUntil, suspicious) {
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle</div>
         <div style="display:flex;gap:6px">
-          ${['user','moderator','admin'].map(r => `
+          ${['user','vip','moderator','admin'].map(r => `
             <button class="btn-sm" style="flex:1;background:${r===role?'rgba(76,110,245,0.25)':'rgba(255,255,255,0.05)'};color:${r===role?'#8b9cf4':'var(--muted)'}" onclick="changeRole(${id},'${r}')">${r}</button>
           `).join('')}
         </div>

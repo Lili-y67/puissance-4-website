@@ -45,6 +45,13 @@ function hashIp(ip) {
   // SHA-256 + sel fixe → non-réversible mais déterministe
   return require('crypto').createHash('sha256').update('p4-ip-salt-2025:' + ip).digest('hex');
 }
+function getParisMidnightTs(now = Date.now()) {
+  const parisNow = new Date(new Date(now).toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const midnightParis = new Date(parisNow);
+  midnightParis.setHours(0, 0, 0, 0);
+  const offset = parisNow.getTime() - now;
+  return midnightParis.getTime() - offset;
+}
 
 // ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
 function genToken() {
@@ -180,12 +187,22 @@ const ADMIN_PASSWORD = getOrCreateAdminPassword();
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 
 // Récupérer le mot de passe admin (réservé aux joueurs rôle admin)
-app.get('/api/admin/password', (req, res) => {
+app.get('/api/admin/password', async (req, res) => {
   const token = req.headers['x-token'];
   const playerId = validateSession(token);
   if (!playerId) return res.status(403).json({ error: 'Non autorisé.' });
   const player = pQ.getById.get(playerId);
-  if (!player || player.role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  if (!player?.discord_id) return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  let role = player.role;
+  try {
+    const { botToken } = discordConfig();
+    const discordRole = await getDiscordRole(player.discord_id, botToken);
+    if (discordRole !== player.role) {
+      pQ.updateRole.run({ role: discordRole, id: playerId });
+      role = discordRole;
+    }
+  } catch(e) {}
+  if (role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
   res.json({ password: ADMIN_PASSWORD });
 });
 
@@ -193,9 +210,33 @@ app.get('/api/admin/password', (req, res) => {
 // Sessions admin en mémoire
 const adminSessions = new Map(); // token → { playerId, role }
 
+function revokeAdminSessionsForPlayer(playerId) {
+  for (const [token, session] of adminSessions.entries()) {
+    if (session.playerId === playerId) adminSessions.delete(token);
+  }
+}
+
 function getAdminSession(req) {
   const t = req.headers['x-admin-token'];
-  return t ? adminSessions.get(t) : null;
+  if (!t) return null;
+  const session = adminSessions.get(t);
+  if (!session?.playerId) {
+    if (session) adminSessions.delete(t);
+    return null;
+  }
+  const player = pQ.getById.get(session.playerId);
+  const liveRole = player?.discord_id && (player.role === 'admin' || player.role === 'moderator')
+    ? player.role
+    : null;
+  if (!liveRole) {
+    adminSessions.delete(t);
+    return null;
+  }
+  if (session.role !== liveRole) {
+    session.role = liveRole;
+    adminSessions.set(t, session);
+  }
+  return session;
 }
 function isAdmin(req) {
   const s = getAdminSession(req);
@@ -206,22 +247,28 @@ function isModo(req) {
   return s && (s.role === 'admin' || s.role === 'moderator');
 }
 
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
   const { password, playerToken } = req.body;
   if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
 
-  // Récupérer le rôle du joueur connecté (admin ou moderator)
-  let role = 'admin'; // par défaut si pas de token joueur
-  let playerId = null;
-  if (playerToken) {
-    const pid = validateSession(playerToken);
-    if (pid) {
-      const p = pQ.getById.get(pid);
-      if (p && (p.role === 'admin' || p.role === 'moderator')) {
-        role = p.role;
-        playerId = pid;
-      }
+  const playerId = validateSession(playerToken);
+  if (!playerId) return res.status(403).json({ error: 'Session joueur invalide.' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord requis pour accéder au panel.' });
+
+  let role = player.role;
+  try {
+    const { botToken } = discordConfig();
+    const discordRole = await getDiscordRole(player.discord_id, botToken);
+    if (discordRole !== player.role) {
+      pQ.updateRole.run({ role: discordRole, id: playerId });
+      role = discordRole;
     }
+  } catch(e) {}
+
+  if (!['admin', 'moderator'].includes(role)) {
+    return res.status(403).json({ error: 'Ton rôle Discord ne permet pas l\'accès au panel.' });
   }
 
   const token = require('crypto').randomBytes(32).toString('hex');
@@ -433,6 +480,7 @@ async function getDiscordRole(discordUserId, botToken) {
     if (!Array.isArray(member.roles)) return 'user';
     if (member.roles.includes(DISCORD_ROLE_ADM)) return 'admin';
     if (member.roles.includes(DISCORD_ROLE_MOD)) return 'moderator';
+    if (member.roles.includes(DISCORD_ROLE_VIP)) return 'vip';
     return 'user';
   } catch(e) { return 'user'; }
 }
@@ -1137,8 +1185,13 @@ app.post('/api/discord/unlink/confirm', (req, res) => {
   const row = rQ.getUnlink.get(playerId, String(code).trim(), Date.now());
   if (!row) return res.status(400).json({ error: 'Code invalide ou expiré' });
 
+  const player = pQ.getById.get(playerId);
   rQ.markUnlink.run(row.id);
   rQ.clearDiscord.run(playerId);
+  if (player && player.role !== 'user') {
+    pQ.updateRole.run({ role: 'user', id: playerId });
+  }
+  revokeAdminSessionsForPlayer(playerId);
 
   res.json({ ok: true });
 });
@@ -1279,7 +1332,12 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}`, { headers: { Authorization: 'Bot ' + bt } }),
       fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, { headers: { Authorization: 'Bot ' + bt } }),
     ]);
-    if (!mRes.ok) return res.status(404).json({ error: 'Membre introuvable sur le serveur.' });
+    if (!mRes.ok) {
+      rQ.clearDiscord.run(id);
+      pQ.updateRole.run({ role: 'user', id });
+      revokeAdminSessionsForPlayer(id);
+      return res.status(404).json({ error: 'Membre introuvable sur le serveur.', unlinked: true, role: 'user' });
+    }
     const memberInfo = await mRes.json();
     const guildRoles = rolesRes.ok ? await rolesRes.json() : [];
     const rolesMap = {};
@@ -1287,11 +1345,19 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
     const server_roles_rich = (memberInfo.roles || [])
       .map(rid => ({ id: rid, name: rolesMap[rid]?.name || rid, color: rolesMap[rid]?.color ? '#' + rolesMap[rid].color.toString(16).padStart(6,'0') : null }))
       .filter(r => r.name !== '@everyone');
+    const newRole = await getDiscordRole(player.discord_id, bt);
+    if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
     // Mettre à jour discord_info
     const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
-    const updated = { ...existing, server_roles: server_roles_rich, server_nick: memberInfo.nick || existing.server_nick };
+    const updated = {
+      ...existing,
+      server_roles: server_roles_rich,
+      server_nick: memberInfo.nick || existing.server_nick,
+      server_joined: memberInfo.joined_at || existing.server_joined || null,
+      boosting_since: memberInfo.premium_since || null,
+    };
     rQ.setDiscord.run(player.discord_id, JSON.stringify(updated), id);
-    res.json({ ok: true, roles: server_roles_rich });
+    res.json({ ok: true, roles: server_roles_rich, role: newRole });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1319,10 +1385,10 @@ app.post('/api/players/:id/vip-boost', (req, res) => {
     return res.status(400).json({ error: `Boost déjà actif encore ${remaining} minute(s).`, remaining });
   }
 
-  // Vérifier si déjà utilisé aujourd'hui (reset à minuit)
-  const midnight = new Date(); midnight.setHours(0,0,0,0);
-  const usedToday = vipQ.usedToday.get(id, midnight.getTime());
-  if (usedToday) return res.status(400).json({ error: "Boost déjà utilisé aujourd'hui. Reviens à minuit !" });
+  // Vérifier si déjà utilisé aujourd'hui (reset à minuit, heure de Paris)
+  const midnightTs = getParisMidnightTs(now);
+  const usedToday = vipQ.usedToday.get(id, midnightTs);
+  if (usedToday) return res.status(400).json({ error: "Boost déjà utilisé aujourd'hui. Reviens à minuit (heure de Paris) !" });
 
   // Activer le boost (1 heure)
   const expiresAt = now + 60 * 60 * 1000;
@@ -1335,13 +1401,14 @@ app.get('/api/players/:id/vip-boost', (req, res) => {
   const id = Number(req.params.id);
   const now = Date.now();
   const active = vipQ.getActive.get(id, now);
-  const midnight = new Date(); midnight.setHours(0,0,0,0);
-  const usedToday = vipQ.usedToday.get(id, midnight.getTime());
+  const midnightTs = getParisMidnightTs(now);
+  const usedToday = vipQ.usedToday.get(id, midnightTs);
   res.json({
     active:     !!active,
     expiresAt:  active?.expires_at ?? null,
     usedToday:  !!usedToday,
     remainingMs: active ? active.expires_at - now : 0,
+    resetAt: midnightTs + 24 * 60 * 60 * 1000,
   });
 });
 
@@ -1451,8 +1518,8 @@ app.post('/api/admin/boost', (req, res) => {
   if (isNaN(m) || m < 1 || m > 2) return res.status(400).json({ error: 'Entre 1.0 et 2.0.' });
   bQ.deactivateAll.run();
   if (m > 1) {
-    const adminId = validateSession(req.headers['x-token']);
-    const admin   = adminId ? pQ.getById.get(adminId) : null;
+    const session = getAdminSession(req);
+    const admin   = session?.playerId ? pQ.getById.get(session.playerId) : null;
     bQ.create.run({ multiplier: m, applied_by: admin?.pseudo || 'Admin' });
   }
   res.json({ ok: true, multiplier: m });

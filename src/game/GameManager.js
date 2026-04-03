@@ -211,8 +211,8 @@ class GameManager {
       },
       isSuspect,
       eloNow: {
-        [state.players[1].id]: p1IsWinner ? elo.winnerEloNow : elo.loserEloNow,
-        [state.players[2].id]: p2IsWinner ? elo.winnerEloNow : elo.loserEloNow,
+        [state.players[1].id]: elo.player1EloNow,
+        [state.players[2].id]: elo.player2EloNow,
       },
       players: {
         1: { id: state.players[1].id, pseudo: state.players[1].pseudo, color: state.players[1].color },

@@ -231,36 +231,47 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   const vipMult    = vipActive ? 1.2 : 1;
   // Arrondi au supérieur pour éviter les décimales
   const ceil = Math.ceil.bind(Math);
+  const floor = Math.floor.bind(Math);
   if (isDraw) {
-    const raw = K * (0.5 - expW) * globalMult;
-    return { dW: ceil(raw), dL: ceil(K * (0.5 - (1 - expW)) * globalMult) };
+    const p1Delta = K * (0.5 - expW) * globalMult;
+    const p2Delta = K * (0.5 - (1 - expW)) * globalMult;
+    return {
+      dW: p1Delta >= 0 ? ceil(p1Delta) : floor(p1Delta),
+      dL: p2Delta >= 0 ? ceil(p2Delta) : floor(p2Delta),
+    };
   }
   return {
     dW: ceil(K * (1 - expW) * globalMult * vipMult),
-    dL: Math.floor(K * (0 - (1 - expW)) * globalMult), // pertes → floor (plus négatif)
+    dL: floor(K * (0 - (1 - expW)) * globalMult), // pertes → floor (plus négatif)
   };
 }
 
 const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false) => {
+  const game = gQ.getById.get(gameId);
+  const player1 = pQ.getById.get(game.player1_id);
+  const player2 = pQ.getById.get(game.player2_id);
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
   const { dW, dL } = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
-
-  if (!isSuspect) {
-    // ELO et stats appliqués seulement si partie légitime
-    pQ.updateElo.run({ delta: dW, id: winnerId });
-    pQ.updateElo.run({ delta: dL, id: loserId });
-    if (isDraw) { pQ.draw.run(winnerId); pQ.draw.run(loserId); }
-    else        { pQ.win.run(winnerId);  pQ.loss.run(loserId); }
-  }
-
-  const game   = gQ.getById.get(gameId);
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
 
+  if (!isSuspect) {
+    // ELO et stats appliqués seulement si partie légitime
+    pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
+    pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
+    if (isDraw) {
+      pQ.draw.run(game.player1_id);
+      pQ.draw.run(game.player2_id);
+    } else {
+      pQ.win.run(winnerId);
+      pQ.loss.run(loserId);
+    }
+  }
+
   // Stocker l'ELO avant la partie pour permettre un revert
   db.prepare(`UPDATE games SET elo_before_p1=?, elo_before_p2=? WHERE id=?`)
-    .run(winner.elo - dW, loser.elo - dL, gameId);
+    .run(player1.elo, player2.elo, gameId);
 
   gQ.finish.run({
     id: gameId, winner_id: isDraw ? null : winnerId,
@@ -277,7 +288,14 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     db.prepare('UPDATE games SET suspicious = 1 WHERE id = ?').run(gameId);
   }
 
-  return { dW: p1Delta, dL: p2Delta, winnerEloNow: pQ.getById.get(winnerId).elo, loserEloNow: pQ.getById.get(loserId).elo };
+  return {
+    dW: p1Delta,
+    dL: p2Delta,
+    player1EloNow: pQ.getById.get(game.player1_id).elo,
+    player2EloNow: pQ.getById.get(game.player2_id).elo,
+    winnerEloNow: pQ.getById.get(winnerId).elo,
+    loserEloNow: pQ.getById.get(loserId).elo,
+  };
 });
 
 // ── Reset codes (Discord DM) ──────────────────────────────────────────────────
