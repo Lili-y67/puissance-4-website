@@ -9,10 +9,10 @@ const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ } = require('./db/db')
 const { getRank } = require('./rank');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder } = require('discord.js');
 
-// Map IP → Set<playerId> — en mémoire uniquement, reset au redémarrage
-const ipToPlayers  = new Map(); // ip → Set of playerIds
-const playerToIp   = new Map(); // playerId → ip
-const onlineSockets = new Map(); // playerId → Set of socketIds (multi-onglets)
+// Map IP ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Set<playerId> ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â en mÃƒÆ’Ã‚Â©moire uniquement, reset au redÃƒÆ’Ã‚Â©marrage
+const ipToPlayers  = new Map(); // ip ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Set of playerIds
+const playerToIp   = new Map(); // playerId ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ip
+const onlineSockets = new Map(); // playerId ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Set of socketIds (multi-onglets)
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -27,22 +27,22 @@ const io     = new Server(server, {
 const mm = new Matchmaking();
 const gm = new GameManager();
 
-// Callback AFK — émettre game_over quand un joueur est AFK trop longtemps
+// Callback AFK ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ÃƒÆ’Ã‚Â©mettre game_over quand un joueur est AFK trop longtemps
 gm._onAfkEnd = (result) => {
   if (!result) return;
   io.to('game:' + result.gameId).emit('game_over', result);
   io.to('live').emit('live_update');
-  console.log(`[AFK] Partie ${result.gameId} terminée — winner side ${result.winner}`);
+  console.log(`[AFK] Partie ${result.gameId} terminÃƒÆ’Ã‚Â©e ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â winner side ${result.winner}`);
 };
 
-// ── Utilitaires sécurité ──────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Utilitaires sÃƒÆ’Ã‚Â©curitÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function getClientIp(req) {
   return (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
     || req.socket?.remoteAddress
     || 'unknown';
 }
 function hashIp(ip) {
-  // SHA-256 + sel fixe → non-réversible mais déterministe
+  // SHA-256 + sel fixe ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ non-rÃƒÆ’Ã‚Â©versible mais dÃƒÆ’Ã‚Â©terministe
   return require('crypto').createHash('sha256').update('p4-ip-salt-2025:' + ip).digest('hex');
 }
 function getParisMidnightTs(now = Date.now()) {
@@ -68,7 +68,7 @@ function isVipPlayer(player) {
   }
 }
 
-// ── Sessions tokens (SQLite) ──────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Sessions tokens (SQLite) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 let canvasFontsRegistered = false;
 function ensureCanvasFonts() {
   if (canvasFontsRegistered) return;
@@ -78,6 +78,7 @@ function ensureCanvasFonts() {
     registerFont(path.join(fontsDir, 'BarlowCondensed-Bold.ttf'), { family: 'Barlow Condensed', weight: '700' });
     registerFont(path.join(fontsDir, 'Barlow-Regular.ttf'), { family: 'Barlow', weight: '400' });
     registerFont(path.join(fontsDir, 'Barlow-SemiBold.ttf'), { family: 'Barlow', weight: '600' });
+    registerFont(path.join(fontsDir, 'BebasNeue-Regular.ttf'), { family: 'Bebas Neue', weight: '400' });
     canvasFontsRegistered = true;
   } catch (e) {
     console.error('[BOT] ensureCanvasFonts:', e.message);
@@ -100,10 +101,10 @@ function validateSession(token) {
   if (Date.now() > row.expires) { sQ.del.run(token); return null; }
   return row.player_id;
 }
-// Purger les sessions expirées au démarrage
+// Purger les sessions expirÃƒÆ’Ã‚Â©es au dÃƒÆ’Ã‚Â©marrage
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
-// ── Bot Puissance4-AI ─────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Bot Puissance4-AI ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const BOT_PSEUDO = 'Puissance4-AI';
 const BOT_AVATAR = 'https://i.pinimg.com/736x/71/c2/0a/71c20a784a800f78a2e7e0463a17b039.jpg';
 const BOT_BANNER = 'https://i.pinimg.com/1200x/0b/10/ae/0b10aed237a4092f5b6ebf89bccdffbb.jpg';
@@ -124,7 +125,7 @@ let BOT_PLAYER_ID;
   console.log(`[Bot] Puissance4-AI id=${BOT_PLAYER_ID}`);
 }
 
-// ── Archivage automatique des parties > 14 jours ─────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Archivage automatique des parties > 14 jours ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function archiveOldGames() {
   const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const result = db.prepare(`
@@ -134,16 +135,16 @@ function archiveOldGames() {
       AND finished_at < ?
       AND finished_at IS NOT NULL
   `).run(cutoff);
-  if (result.changes > 0) console.log(`[Archive] ${result.changes} partie(s) archivée(s)`);
+  if (result.changes > 0) console.log(`[Archive] ${result.changes} partie(s) archivÃƒÆ’Ã‚Â©e(s)`);
 }
-// Lancer au démarrage puis toutes les heures
+// Lancer au dÃƒÆ’Ã‚Â©marrage puis toutes les heures
 archiveOldGames();
 setInterval(archiveOldGames, 60 * 60 * 1000);
 
 app.use(express.json({ limit: '5mb' })); // pour les avatars base64
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── SPA routing ────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SPA routing ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 app.get('/game/bot',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
@@ -157,10 +158,10 @@ app.get('/spec/:id', (req, res) => {
 });
 app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 // DISCORD RESET MOT DE PASSE
-// ══════════════════════════════════════════════════════════════════════════════
-// Variables Discord lues dynamiquement (Railway les injecte après démarrage)
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
+// Variables Discord lues dynamiquement (Railway les injecte aprÃƒÆ’Ã‚Â¨s dÃƒÆ’Ã‚Â©marrage)
 function discordConfig() {
   return {
     clientId:     '1477252548090921060',
@@ -170,13 +171,13 @@ function discordConfig() {
   };
 }
 
-// Page mot de passe oublié
+// Page mot de passe oubliÃƒÆ’Ã‚Â©
 
-// ── Suppression de compte ─────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Suppression de compte ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.delete('/api/players/:id', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
 
   // Anonymiser le pseudo dans les parties (garder l'historique)
   const pseudo = `Joueur_${id}`;
@@ -194,35 +195,35 @@ app.delete('/api/players/:id', (req, res) => {
   db.prepare(`DELETE FROM follows     WHERE follower_id = ? OR following_id = ?`).run(id, id);
   db.prepare(`DELETE FROM reset_codes WHERE player_id = ?`).run(id);
 
-  // Marquer le compte comme supprimé
+  // Marquer le compte comme supprimÃƒÆ’Ã‚Â©
   db.prepare(`UPDATE players SET deleted = 1 WHERE id = ?`).run(id);
 
   res.json({ ok: true });
 });
 
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 // PANEL ADMIN
-// ══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 function getOrCreateAdminPassword() {
   const row = db.prepare('SELECT value FROM config WHERE key = ?').get('admin_password');
   if (row) return row.value;
   const pwd = require('crypto').randomBytes(10).toString('hex'); // 20 chars hex
   db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('admin_password', pwd);
-  console.log(`[ADMIN] Mot de passe généré : ${pwd}`);
+  console.log(`[ADMIN] Mot de passe gÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©rÃƒÆ’Ã‚Â© : ${pwd}`);
   return pwd;
 }
 const ADMIN_PASSWORD = getOrCreateAdminPassword();
 
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 
-// Récupérer le mot de passe admin (réservé aux joueurs rôle admin)
+// RÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer le mot de passe admin (rÃƒÆ’Ã‚Â©servÃƒÆ’Ã‚Â© aux joueurs rÃƒÆ’Ã‚Â´le admin)
 app.get('/api/admin/password', async (req, res) => {
   const token = req.headers['x-token'];
   const playerId = validateSession(token);
-  if (!playerId) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!playerId) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  if (!player?.discord_id) return res.status(403).json({ error: 'RÃƒÆ’Ã‚Â©servÃƒÆ’Ã‚Â© aux administrateurs.' });
   let role = player.role;
   try {
     const { botToken } = discordConfig();
@@ -232,13 +233,13 @@ app.get('/api/admin/password', async (req, res) => {
       role = discordRole;
     }
   } catch(e) {}
-  if (role !== 'admin') return res.status(403).json({ error: 'Réservé aux administrateurs.' });
+  if (role !== 'admin') return res.status(403).json({ error: 'RÃƒÆ’Ã‚Â©servÃƒÆ’Ã‚Â© aux administrateurs.' });
   res.json({ password: ADMIN_PASSWORD });
 });
 
 // Auth admin
-// Sessions admin en mémoire
-const adminSessions = new Map(); // token → { playerId, role }
+// Sessions admin en mÃƒÆ’Ã‚Â©moire
+const adminSessions = new Map(); // token ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ { playerId, role }
 
 function revokeAdminSessionsForPlayer(playerId) {
   for (const [token, session] of adminSessions.entries()) {
@@ -285,7 +286,7 @@ app.post('/api/admin/login', async (req, res) => {
   if (!playerId) return res.status(403).json({ error: 'Session joueur invalide.' });
 
   const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord requis pour accéder au panel.' });
+  if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord requis pour accÃƒÆ’Ã‚Â©der au panel.' });
 
   let role = player.role;
   try {
@@ -298,7 +299,7 @@ app.post('/api/admin/login', async (req, res) => {
   } catch(e) {}
 
   if (!['admin', 'moderator'].includes(role)) {
-    return res.status(403).json({ error: 'Ton rôle Discord ne permet pas l\'accès au panel.' });
+    return res.status(403).json({ error: 'Ton rÃƒÆ’Ã‚Â´le Discord ne permet pas l\'accÃƒÆ’Ã‚Â¨s au panel.' });
   }
 
   const token = require('crypto').randomBytes(32).toString('hex');
@@ -308,16 +309,16 @@ app.post('/api/admin/login', async (req, res) => {
   res.json({ token, role });
 });
 
-// Route pour récupérer le rôle de la session courante
+// Route pour rÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer le rÃƒÆ’Ã‚Â´le de la session courante
 app.get('/api/admin/me', (req, res) => {
   const s = getAdminSession(req);
-  if (!s) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!s) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   res.json({ role: s.role, playerId: s.playerId });
 });
 
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
@@ -329,35 +330,35 @@ app.get('/api/admin/players', (req, res) => {
   res.json(enriched);
 });
 
-// Changer le rôle
+// Changer le rÃƒÆ’Ã‚Â´le
 app.patch('/api/admin/players/:id/role', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rôles.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rÃƒÆ’Ã‚Â´les.' });
   const { role } = req.body;
-  if (!['user','vip','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Rôle invalide.' });
+  if (!['user','vip','moderator','admin'].includes(role)) return res.status(400).json({ error: 'RÃƒÆ’Ã‚Â´le invalide.' });
   const target = pQ.getById.get(Number(req.params.id));
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
   const oldRole = target.role;
   const oldVip  = Number(target.is_vip) === 1;
   if (role === 'vip') {
-    WH.wlogAdminAction('VIP accordé', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP après', 'oui', true]]);
+    WH.wlogAdminAction('VIP accordÃƒÆ’Ã‚Â©', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprÃƒÆ’Ã‚Â¨s', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: Number(req.params.id) });
   } else {
-    WH.wlogAdminAction('Rôle changé', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
+    WH.wlogAdminAction('RÃƒÆ’Ã‚Â´le changÃƒÆ’Ã‚Â©', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
     pQ.updateRole.run({ role, id: Number(req.params.id) });
   }
 
-  // Sync rôle Discord si lié
+  // Sync rÃƒÆ’Ã‚Â´le Discord si liÃƒÆ’Ã‚Â©
   if (target.discord_id) {
     try { await syncDiscordRole(target.discord_id, role === 'vip' ? target.role : role, role === 'vip' ? true : oldVip); } catch(e) {}
     // DM de notification
     try { await sendDM(target.discord_id, [
-      '🎭 **Puissance 4 — Changement de rôle**',
+      'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â­ **Puissance 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Changement de rÃƒÆ’Ã‚Â´le**',
       '',
       `Bonjour **${target.pseudo}** !`,
       '',
       role === 'vip'
-        ? 'Le statut **VIP** vient de t’être attribué.'
-        : `Ton rôle a été modifié : **${oldRole}** → **${role}**`,
+        ? 'Le statut **VIP** vient de tÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã‚Âªtre attribuÃƒÆ’Ã‚Â©.'
+        : `Ton rÃƒÆ’Ã‚Â´le a ÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â© modifiÃƒÆ’Ã‚Â© : **${oldRole}** ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ **${role}**`,
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
   }
@@ -372,28 +373,28 @@ app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
   try {
     const target = pQ.getById.get(Number(req.params.id));
     const oldPseudo = target?.pseudo || '?';
-    WH.wlogAdminAction('Pseudo changé', oldPseudo, req.params.id, [['Nouveau', pseudo.trim(), true]]);
+    WH.wlogAdminAction('Pseudo changÃƒÆ’Ã‚Â©', oldPseudo, req.params.id, [['Nouveau', pseudo.trim(), true]]);
     pQ.updatePseudo.run({ pseudo: pseudo.trim(), id: Number(req.params.id) });
 
     // Notif DM + renommage sur le serveur Discord
     if (target?.discord_id) {
       try { await renameOnServer(target.discord_id, pseudo.trim()); } catch(e) {}
       try { await sendDM(target.discord_id, [
-        '✏️ **Puissance 4 — Changement de pseudo**',
+        'ÃƒÂ¢Ã…â€œÃ‚ÂÃƒÂ¯Ã‚Â¸Ã‚Â **Puissance 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Changement de pseudo**',
         '',
         `Bonjour !`,
         '',
-        `Ton pseudo a été modifié par un administrateur : **${oldPseudo}** → **${pseudo.trim()}**`,
-        '_Si tu n\'as pas demandé ce changement, contacte un administrateur._',
+        `Ton pseudo a ÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â© modifiÃƒÆ’Ã‚Â© par un administrateur : **${oldPseudo}** ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ **${pseudo.trim()}**`,
+        '_Si tu n\'as pas demandÃƒÆ’Ã‚Â© ce changement, contacte un administrateur._',
       ].join('\n')); } catch(e) {}
     }
     res.json({ ok: true });
-  } catch(e) { res.status(400).json({ error: 'Pseudo déjà pris.' }); }
+  } catch(e) { res.status(400).json({ error: 'Pseudo dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  pris.' }); }
 });
 
 // Reset ELO
 app.patch('/api/admin/players/:id/elo', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const { elo } = req.body;
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
@@ -403,7 +404,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
 
 // Mute temporaire (interdit de jouer)
 app.patch('/api/admin/players/:id/mute', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const { hours } = req.body;
   const until = hours > 0 ? Date.now() + hours * 60 * 60 * 1000 : null;
   const _pm = pQ.getById.get(Number(req.params.id));
@@ -424,7 +425,7 @@ app.patch('/api/admin/players/:id/ban', (req, res) => {
 
 // Reset suspicious
 app.patch('/api/admin/players/:id/suspicious', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -433,17 +434,17 @@ app.get('/forgot-password', (_, res) => res.sendFile(path.join(__dirname, 'publi
 app.get('/reset-password',  (_, res) => res.sendFile(path.join(__dirname, 'public/reset-password.html')));
 
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 // WEBHOOK DISCORD
-// ══════════════════════════════════════════════════════════════════════════════
+// ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â
 const WH = require('./webhooks');
 const { wlog, mkEmbed: embed } = WH;
 
-// ── Constantes Discord rôles ──────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Constantes Discord rÃƒÆ’Ã‚Â´les ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
-const DISCORD_ROLE_VIP = '1489360367246114866'; // Rôle VIP
+const DISCORD_ROLE_VIP = '1489360367246114866'; // RÃƒÆ’Ã‚Â´le VIP
 
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
@@ -468,13 +469,13 @@ async function renameOnServer(discordId, nickname) {
   const { botToken } = discordConfig();
   if (!botToken) return;
 
-  // Vérifier si c'est le propriétaire du serveur (impossible à renommer)
+  // VÃƒÆ’Ã‚Â©rifier si c'est le propriÃƒÆ’Ã‚Â©taire du serveur (impossible ÃƒÆ’Ã‚Â  renommer)
   const guildRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}`, {
     headers: { 'Authorization': 'Bot ' + botToken },
   });
   const guild = await guildRes.json();
   if (guild.owner_id === discordId) {
-    console.log(`[RENAME] Impossible : ${discordId} est le propriétaire du serveur.`);
+    console.log(`[RENAME] Impossible : ${discordId} est le propriÃƒÆ’Ã‚Â©taire du serveur.`);
     return;
   }
 
@@ -486,12 +487,12 @@ async function renameOnServer(discordId, nickname) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    // 403 = hiérarchie insuffisante (rôle du membre >= bot)
-    console.log(`[RENAME] Échec pour ${discordId} : ${res.status} — ${err.message || 'permission refusée'}`);
+    // 403 = hiÃƒÆ’Ã‚Â©rarchie insuffisante (rÃƒÆ’Ã‚Â´le du membre >= bot)
+    console.log(`[RENAME] ÃƒÆ’Ã¢â‚¬Â°chec pour ${discordId} : ${res.status} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${err.message || 'permission refusÃƒÆ’Ã‚Â©e'}`);
   }
 }
 
-// Synchroniser le rôle Discord d'un membre (ajoute/retire les rôles)
+// Synchroniser le rÃƒÆ’Ã‚Â´le Discord d'un membre (ajoute/retire les rÃƒÆ’Ã‚Â´les)
 async function syncDiscordRole(discordId, role, isVip = false) {
   const { botToken } = discordConfig();
   if (!botToken) return;
@@ -523,7 +524,7 @@ async function getDiscordRole(discordUserId, botToken) {
   } catch(e) { return 'user'; }
 }
 
-// ── Job toutes les minutes — sync rôles Discord ────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Job toutes les minutes ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sync rÃƒÆ’Ã‚Â´les Discord ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 setInterval(async () => {
   const { botToken } = discordConfig();
   const linked = db.prepare(`SELECT id, pseudo, role, is_vip, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
@@ -532,7 +533,7 @@ setInterval(async () => {
     const vipNow = isVipPlayer(player) ? 1 : 0;
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
-      console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} → ${newRole}`);
+      console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${newRole}`);
       WH.wlogRoleSync(player.pseudo, player.role, newRole);
     }
     if (vipNow !== Number(player.is_vip)) {
@@ -557,7 +558,7 @@ app.get('/auth/discord/link', (req, res) => {
   res.redirect('https://discord.com/oauth2/authorize?' + params);
 });
 
-// Étape 1 — Rediriger vers Discord OAuth (user-install, DM uniquement)
+// ÃƒÆ’Ã¢â‚¬Â°tape 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Rediriger vers Discord OAuth (user-install, DM uniquement)
 app.get('/auth/discord/reset', (req, res) => {
   const { pseudo } = req.query;
   if (!pseudo) return res.redirect('/forgot-password?error=pseudo_manquant');
@@ -577,10 +578,10 @@ app.get('/auth/discord/reset', (req, res) => {
   res.redirect('https://discord.com/oauth2/authorize?' + params);
 });
 
-// Étape 2 — Callback Discord → envoyer le code par DM
+// ÃƒÆ’Ã¢â‚¬Â°tape 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Callback Discord ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ envoyer le code par DM
 app.get('/auth/discord/callback', async (req, res) => {
   const { code, state, error } = req.query;
-  if (error || !code) return res.redirect('/forgot-password?error=discord_annulé');
+  if (error || !code) return res.redirect('/forgot-password?error=discord_annulÃƒÆ’Ã‚Â©');
 
   try {
     const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
@@ -589,7 +590,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     if (!player) return res.redirect('/forgot-password?error=joueur_introuvable');
 
     const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
-    // Échanger le code contre un access_token
+    // ÃƒÆ’Ã¢â‚¬Â°changer le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -604,7 +605,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const tokenData = await tokenRes.json();
     if (!tokenData.access_token) return res.redirect('/forgot-password?error=discord_token');
 
-    // Récupérer l'identité Discord
+    // RÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer l'identitÃƒÆ’Ã‚Â© Discord
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: 'Bearer ' + tokenData.access_token },
     });
@@ -615,7 +616,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     const freshPlayer = pQ.getById.get(playerId);
 
     if (mode === 'link') {
-      // Récupérer les infos du membre sur le serveur Discord
+      // RÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer les infos du membre sur le serveur Discord
       const { botToken: bt, baseUrl: bu } = discordConfig();
       let memberInfo = null;
       try {
@@ -625,7 +626,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         if (mRes.ok) memberInfo = await mRes.json();
       } catch(e) {}
 
-      // Récupérer les rôles du guild avec noms et couleurs
+      // RÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer les rÃƒÆ’Ã‚Â´les du guild avec noms et couleurs
       let guildRolesMap = {};
       try {
         const { botToken: bt2 } = discordConfig();
@@ -638,7 +639,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         }
       } catch(e) {}
 
-      // Construire les rôles enrichis (id, nom, couleur hex)
+      // Construire les rÃƒÆ’Ã‚Â´les enrichis (id, nom, couleur hex)
       const memberRoleIds = memberInfo?.roles || [];
       const server_roles_rich = memberRoleIds
         .map(id => ({
@@ -669,7 +670,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         linked_at:      new Date().toISOString(),
       };
 
-      // Liaison depuis le profil — lier + envoyer DM de confirmation
+      // Liaison depuis le profil ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â lier + envoyer DM de confirmation
       rQ.setDiscord.run(discordUser.id, JSON.stringify(discordInfo), playerId);
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
       try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
@@ -687,16 +688,16 @@ app.get('/auth/discord/callback', async (req, res) => {
             headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content: [
-                '🎮 **Puissance 4 — Compte Discord lié !**\n\n',
+                'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â® **Puissance 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Compte Discord liÃƒÆ’Ã‚Â© !**\n\n',
                 '',
-                `Bonjour **${freshPlayer.pseudo}** ! 👋\n\n`,
+                `Bonjour **${freshPlayer.pseudo}** ! ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ¢â‚¬Â¹\n\n`,
                 '',
-                'Ton compte Discord a été **lié avec succès** à ton compte Puissance 4.\n\n',
+                'Ton compte Discord a ÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â© **liÃƒÆ’Ã‚Â© avec succÃƒÆ’Ã‚Â¨s** ÃƒÆ’Ã‚Â  ton compte Puissance 4.\n\n',
                 '',
-                '🔑 Tu pourras désormais réinitialiser ton mot de passe via Discord si besoin.\n',
-                "_Si tu n'es pas à l'origine de cette liaison, contacte un administrateur._\n\n",
+                'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Ëœ Tu pourras dÃƒÆ’Ã‚Â©sormais rÃƒÆ’Ã‚Â©initialiser ton mot de passe via Discord si besoin.\n',
+                "_Si tu n'es pas ÃƒÆ’Ã‚Â  l'origine de cette liaison, contacte un administrateur._\n\n",
                 '',
-                "-# 🔧 Si tu es Administrateur, rejoins le serveur pour récupérer les Permissions nécessaires : https://discord.gg/ap73mMTX7a"
+                "-# ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Si tu es Administrateur, rejoins le serveur pour rÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer les Permissions nÃƒÆ’Ã‚Â©cessaires : https://discord.gg/ap73mMTX7a"
               ].join(''),
             }),
           });
@@ -705,7 +706,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       return res.redirect('/profil?discord_linked=1');
     }
 
-    // Mode reset — vérifier que c'est le bon Discord
+    // Mode reset ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â vÃƒÆ’Ã‚Â©rifier que c'est le bon Discord
     if (freshPlayer.discord_id && freshPlayer.discord_id !== discordUser.id) {
       return res.redirect('/forgot-password?error=discord_mismatch');
     }
@@ -713,14 +714,14 @@ app.get('/auth/discord/callback', async (req, res) => {
       rQ.setDiscord.run(discordUser.id, null, playerId);
     }
 
-    // Générer le code à 6 chiffres (15 min)
+    // GÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©rer le code ÃƒÆ’Ã‚Â  6 chiffres (15 min)
     const code6    = String(Math.floor(100000 + Math.random() * 900000));
     const expires  = Date.now() + 15 * 60 * 1000;
     rQ.cleanup.run(Date.now());
     rQ.insert.run(playerId, code6, expires, ipHash || null);
 
     // Envoyer un DM via le bot
-    // 1. Créer un DM channel
+    // 1. CrÃƒÆ’Ã‚Â©er un DM channel
     const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
       method: 'POST',
       headers: {
@@ -741,17 +742,17 @@ app.get('/auth/discord/callback', async (req, res) => {
       },
       body: JSON.stringify({
         content: [
-          '🎮 **Puissance 4 — Réinitialisation de mot de passe**',
+          'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â® **Puissance 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â RÃƒÆ’Ã‚Â©initialisation de mot de passe**',
           '',
           `Bonjour **${player.pseudo}** !`,
           '',
-          `Votre code de réinitialisation est :`,
+          `Votre code de rÃƒÆ’Ã‚Â©initialisation est :`,
           '```',
           code6,
           '```',
-          '⏳ Ce code expire dans **15 minutes**.',
+          'ÃƒÂ¢Ã‚ÂÃ‚Â³ Ce code expire dans **15 minutes**.',
           '',
-          '_Si vous n\'avez pas demandé de réinitialisation, ignorez ce message._',
+          '_Si vous n\'avez pas demandÃƒÆ’Ã‚Â© de rÃƒÆ’Ã‚Â©initialisation, ignorez ce message._',
         ].join('\n'),
       }),
     });
@@ -763,22 +764,22 @@ app.get('/auth/discord/callback', async (req, res) => {
   }
 });
 
-// Étape 3 — Valider le code et changer le mot de passe
+// ÃƒÆ’Ã¢â‚¬Â°tape 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Valider le code et changer le mot de passe
 app.post('/api/reset-password', (req, res) => {
   const { playerId, code, newPassword } = req.body;
-  if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'Données manquantes.' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min).' });
+  if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'DonnÃƒÆ’Ã‚Â©es manquantes.' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractÃƒÆ’Ã‚Â¨res min).' });
 
   const row = rQ.getValid.get(Number(playerId), String(code), Date.now());
-  if (!row) return res.status(400).json({ error: 'Code invalide ou expiré.' });
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expirÃƒÆ’Ã‚Â©.' });
 
-  // Vérifier que c'est la même IP qui a demandé le reset
+  // VÃƒÆ’Ã‚Â©rifier que c'est la mÃƒÆ’Ã‚Âªme IP qui a demandÃƒÆ’Ã‚Â© le reset
   if (row.ip_hash) {
     const clientIp   = getClientIp(req);
     const clientHash = hashIp(clientIp);
     if (clientHash !== row.ip_hash) {
-      console.warn(`[reset-password] IP mismatch — demande: ${row.ip_hash.slice(0,8)}… soumission: ${clientHash.slice(0,8)}…`);
-      return res.status(403).json({ error: 'Réinitialisation refusée : adresse IP différente de celle de la demande. Recommence depuis le début.' });
+      console.warn(`[reset-password] IP mismatch ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â demande: ${row.ip_hash.slice(0,8)}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ soumission: ${clientHash.slice(0,8)}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦`);
+      return res.status(403).json({ error: 'RÃƒÆ’Ã‚Â©initialisation refusÃƒÆ’Ã‚Â©e : adresse IP diffÃƒÆ’Ã‚Â©rente de celle de la demande. Recommence depuis le dÃƒÆ’Ã‚Â©but.' });
     }
   }
 
@@ -807,7 +808,7 @@ app.get('/api/live', (_, res) => {
       players: (() => {
         const c1 = state.players[1].color || '#ff2d55';
         let   c2 = state.players[2].color || '#ffd60a';
-        // Si les deux joueurs ont la même couleur, forcer p2 en jaune
+        // Si les deux joueurs ont la mÃƒÆ’Ã‚Âªme couleur, forcer p2 en jaune
         if (c1.toLowerCase() === c2.toLowerCase()) c2 = '#ffd60a';
         return {
           1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' },
@@ -828,26 +829,26 @@ app.get('/api/live', (_, res) => {
   res.json(games);
 });
 
-// ── Hash password ──────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Hash password ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function hashPwd(pwd) {
   return crypto.createHash('sha256').update(pwd + 'p4salt2024').digest('hex');
 }
 
-// ── Auth API ───────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Auth API ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
 // Inscription
 app.post('/api/auth/register', (req, res) => {
   const { pseudo, password } = req.body;
   if (!pseudo?.trim() || !password) return res.status(400).json({ error: 'Pseudo et mot de passe requis.' });
-  if (pseudo.trim().length < 2) return res.status(400).json({ error: 'Pseudo trop court (2 caractères min).' });
-  if (password.length < 4)     return res.status(400).json({ error: 'Mot de passe trop court (4 caractères min).' });
+  if (pseudo.trim().length < 2) return res.status(400).json({ error: 'Pseudo trop court (2 caractÃƒÆ’Ã‚Â¨res min).' });
+  if (password.length < 4)     return res.status(400).json({ error: 'Mot de passe trop court (4 caractÃƒÆ’Ã‚Â¨res min).' });
 
   const existing = pQ.getByPseudo.get(pseudo.trim());
-  if (existing) return res.status(409).json({ error: 'Ce pseudo est déjà pris.' });
+  if (existing) return res.status(409).json({ error: 'Ce pseudo est dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  pris.' });
 
   try {
     let player = pQ.register.get({ pseudo: pseudo.trim(), password: hashPwd(password) });
-    // Sauvegarder la couleur choisie à l'inscription
+    // Sauvegarder la couleur choisie ÃƒÆ’Ã‚Â  l'inscription
     if (req.body.color && /^#[0-9a-fA-F]{6}$/.test(req.body.color)) {
       pQ.updateColor.run({ color: req.body.color, id: player.id });
       player = pQ.getById.get(player.id);
@@ -879,11 +880,11 @@ app.post('/api/auth/login', (req, res) => {
 // Ne jamais renvoyer le hash du mot de passe au client
 function sanitize(p) {
   const { password, ...rest } = p;
-  // Masquer les infos perso si compte supprimé
+  // Masquer les infos perso si compte supprimÃƒÆ’Ã‚Â©
   if (rest.deleted) {
     return {
       ...rest,
-      pseudo:     '[Supprimé]',
+      pseudo:     '[SupprimÃƒÆ’Ã‚Â©]',
       avatar:     '',
       color:      '#555555',
       discord_id: null,
@@ -897,19 +898,19 @@ function sanitize(p) {
   };
 }
 
-// ── Players API ────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Players API ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 // Fermeture de compte
 app.delete('/api/players/:id', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
 
   // Anonymiser le pseudo (les parties gardent le pseudo au moment du jeu via les colonnes p1_pseudo etc.)
-  // puis supprimer le joueur — les FK ON DELETE CASCADE nettoient sessions/reset_codes
+  // puis supprimer le joueur ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â les FK ON DELETE CASCADE nettoient sessions/reset_codes
   // Les parties restent intactes (pas de FK cascade sur games)
-  // Anonymiser + marquer deleted — on garde le joueur en DB pour les parties historiques
+  // Anonymiser + marquer deleted ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â on garde le joueur en DB pour les parties historiques
   db.prepare(`UPDATE players SET
-    pseudo     = '[Supprimé]',
+    pseudo     = '[SupprimÃƒÆ’Ã‚Â©]',
     password   = '',
     color      = '#555555',
     avatar     = '',
@@ -926,8 +927,8 @@ app.patch('/api/players/:id/shape', (req, res) => {
   const base = shape?.split(':')[0];
   const allowed = ['circle','triangle','diamond','star','heart','emoji'];
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
-  pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:⭐'
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
+  pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:ÃƒÂ¢Ã‚Â­Ã‚Â'
   res.json({ ok: true });
 });
 
@@ -935,16 +936,16 @@ app.patch('/api/players/:id/color', (req, res) => {
   if (Number(req.params.id) === BOT_PLAYER_ID) return res.status(403).json({ error: 'Bot non modifiable.' });
   const { color, token } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
 app.patch('/api/players/:id/banner', (req, res) => {
   const { banner, token } = req.body;
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
-  if (banner.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'Bannière trop lourde (max 4MB).' });
+  if (banner.length > 6 * 1024 * 1024) return res.status(400).json({ error: 'BanniÃƒÆ’Ã‚Â¨re trop lourde (max 4MB).' });
   pQ.updateBanner.run({ banner, id: Number(req.params.id) });
   const _pBanner = pQ.getById.get(Number(req.params.id));
   WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024));
@@ -953,7 +954,7 @@ app.patch('/api/players/:id/banner', (req, res) => {
 
 app.patch('/api/players/:id/avatar', (req, res) => {
   const { avatar, token } = req.body;
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   if (!avatar || !avatar.startsWith('data:image/'))
     return res.status(400).json({ error: 'Image invalide.' });
   if (avatar.length > 3 * 1024 * 1024) // ~2MB base64
@@ -964,7 +965,7 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   res.json({ ok: true });
 });
 
-// Autocomplete pseudo — min 3 chars, max 8 résultats, exclu bots et supprimés
+// Autocomplete pseudo ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â min 3 chars, max 8 rÃƒÆ’Ã‚Â©sultats, exclu bots et supprimÃƒÆ’Ã‚Â©s
 app.get('/api/players/search', (req, res) => {
   try {
     const q = (req.query.q || '').trim();
@@ -993,7 +994,7 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
-  if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return res.status(404).json({ error: 'Compte supprimé' });
+  if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return res.status(404).json({ error: 'Compte supprimÃƒÆ’Ã‚Â©' });
   // Pour le bot, montrer toutes ses parties ; pour les humains, exclure les parties bot
   const games = player.id === BOT_PLAYER_ID
     ? db.prepare(`
@@ -1014,7 +1015,7 @@ app.get('/api/players/:id', (req, res) => {
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
 
-  // Précision moyenne (parties analysées uniquement)
+  // PrÃƒÆ’Ã‚Â©cision moyenne (parties analysÃƒÆ’Ã‚Â©es uniquement)
   const accRow = db.prepare(`
     SELECT
       AVG(CASE WHEN player1_id = ? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
@@ -1039,7 +1040,7 @@ app.post('/api/players/:id/follow', (req, res) => {
   const { followerId } = req.body;
   if (!followerId) return res.status(400).json({ error: 'followerId requis' });
   const target = Number(req.params.id);
-  if (followerId === target) return res.status(400).json({ error: 'Tu ne peux pas te suivre toi-même.' });
+  if (followerId === target) return res.status(400).json({ error: 'Tu ne peux pas te suivre toi-mÃƒÆ’Ã‚Âªme.' });
   fQ.follow.run(followerId, target);
   res.json({ following: true, followers: fQ.countFollowers.get(target).n });
 });
@@ -1061,21 +1062,21 @@ app.get('/api/players/:id/follow-status', (req, res) => {
   res.json({ isFollowing, followers, following });
 });
 
-// ── Sauvegarde analyse complète ──────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Sauvegarde analyse complÃƒÆ’Ã‚Â¨te ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.post('/api/games/:id/analysis', (req, res) => {
   const { results, evalHistory, accuracy } = req.body;
   const gameId = Number(req.params.id);
   if (!gameId) return res.status(400).json({ error: 'ID invalide' });
   const data = JSON.stringify({ results, evalHistory, accuracy });
   rQ.saveAnalysis.run(data, gameId);
-  // Sauvegarder aussi la précision
+  // Sauvegarder aussi la prÃƒÆ’Ã‚Â©cision
   if (accuracy && typeof accuracy.p1 === 'number') {
     rQ.setAccuracy.run(accuracy.p1, accuracy.p2, gameId);
   }
   res.json({ ok: true });
 });
 
-// Route GET pour récupérer l'analyse existante
+// Route GET pour rÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer l'analyse existante
 app.get('/api/games/:id/analysis', (req, res) => {
   const gameId = Number(req.params.id);
   const game = db.prepare('SELECT analysis_data FROM games WHERE id = ?').get(gameId);
@@ -1087,7 +1088,7 @@ app.get('/api/games/:id/analysis', (req, res) => {
   }
 });
 
-// ── Sauvegarde précision d'analyse ──────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Sauvegarde prÃƒÆ’Ã‚Â©cision d'analyse ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.post('/api/games/:id/accuracy', (req, res) => {
   const { p1_accuracy, p2_accuracy } = req.body;
   const gameId = Number(req.params.id);
@@ -1098,7 +1099,7 @@ app.post('/api/games/:id/accuracy', (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Statut en ligne ──────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Statut en ligne ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.get('/api/players/:id/status', (req, res) => {
   const id = Number(req.params.id);
   const player = pQ.getById.get(id);
@@ -1111,12 +1112,12 @@ app.get('/api/players/:id/status', (req, res) => {
   });
 });
 
-// ── Discord info + déliaison ─────────────────────────────────────────────────
-// Infos Discord enrichies du joueur connecté
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Discord info + dÃƒÆ’Ã‚Â©liaison ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// Infos Discord enrichies du joueur connectÃƒÆ’Ã‚Â©
 app.get('/api/me/discord-info', (req, res) => {
   const token = req.headers['x-session-token'];
   const playerId = token ? validateSession(token) : null;
-  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+  if (!playerId) return res.status(401).json({ error: 'Non authentifiÃƒÆ’Ã‚Â©' });
 
   const player = pQ.getById.get(playerId);
   if (!player || !player.discord_id) return res.json({ discord: null });
@@ -1133,9 +1134,9 @@ app.get('/api/me/discord-info', (req, res) => {
     64:      'HypeSquad Bravery',
     128:     'HypeSquad Brilliance',
     256:     'HypeSquad Balance',
-    512:     'Supporter précoce',
+    512:     'Supporter prÃƒÆ’Ã‚Â©coce',
     131072:  'Bug Hunter Lvl 2',
-    4194304: 'Développeur actif',
+    4194304: 'DÃƒÆ’Ã‚Â©veloppeur actif',
     16777216:'Mod Alumni',
   };
   const NITRO_LABELS = { 0: 'Aucun', 1: 'Nitro Classic', 2: 'Nitro', 3: 'Nitro Basic' };
@@ -1161,19 +1162,19 @@ app.get('/api/me/discord-info', (req, res) => {
   });
 });
 
-// Demander un code de déliaison Discord → envoi DM via bot
+// Demander un code de dÃƒÆ’Ã‚Â©liaison Discord ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ envoi DM via bot
 app.post('/api/discord/unlink/request', async (req, res) => {
   const token = req.headers['x-session-token'];
   const playerId = token ? validateSession(token) : null;
-  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+  if (!playerId) return res.status(401).json({ error: 'Non authentifiÃƒÆ’Ã‚Â©' });
 
   const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(400).json({ error: 'Aucun Discord lié' });
+  if (!player?.discord_id) return res.status(400).json({ error: 'Aucun Discord liÃƒÆ’Ã‚Â©' });
 
   const { botToken } = discordConfig();
   if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible' });
 
-  // Générer code 6 chiffres
+  // GÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©rer code 6 chiffres
   const code6   = String(Math.floor(100000 + Math.random() * 900000));
   const expires = Date.now() + 10 * 60 * 1000; // 10 min
   rQ.cleanUnlink.run(Date.now());
@@ -1195,19 +1196,19 @@ app.post('/api/discord/unlink/request', async (req, res) => {
       headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: [
-          '🔓 **Puissance 4 — Déliaison Discord**',
+          'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å“ **Puissance 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â DÃƒÆ’Ã‚Â©liaison Discord**',
           '',
           `Bonjour **${player.pseudo}** !`,
           '',
-          'Tu as demandé à **délier** ton compte Discord de ton compte Puissance 4.',
+          'Tu as demandÃƒÆ’Ã‚Â© ÃƒÆ’Ã‚Â  **dÃƒÆ’Ã‚Â©lier** ton compte Discord de ton compte Puissance 4.',
           '',
           'Ton code de confirmation :',
           '```',
           code6,
           '```',
-          '⏳ Ce code expire dans **10 minutes**.',
+          'ÃƒÂ¢Ã‚ÂÃ‚Â³ Ce code expire dans **10 minutes**.',
           '',
-          '_Si tu n\'es pas à l\'origine de cette demande, ignore ce message. Ton compte reste lié._',
+          '_Si tu n\'es pas ÃƒÆ’Ã‚Â  l\'origine de cette demande, ignore ce message. Ton compte reste liÃƒÆ’Ã‚Â©._',
         ].join('\n'),
       }),
     });
@@ -1219,17 +1220,17 @@ app.post('/api/discord/unlink/request', async (req, res) => {
   }
 });
 
-// Confirmer la déliaison avec le code
+// Confirmer la dÃƒÆ’Ã‚Â©liaison avec le code
 app.post('/api/discord/unlink/confirm', (req, res) => {
   const token = req.headers['x-session-token'];
   const playerId = token ? validateSession(token) : null;
-  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
+  if (!playerId) return res.status(401).json({ error: 'Non authentifiÃƒÆ’Ã‚Â©' });
 
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code manquant' });
 
   const row = rQ.getUnlink.get(playerId, String(code).trim(), Date.now());
-  if (!row) return res.status(400).json({ error: 'Code invalide ou expiré' });
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expirÃƒÆ’Ã‚Â©' });
 
   const player = pQ.getById.get(playerId);
   rQ.markUnlink.run(row.id);
@@ -1250,7 +1251,7 @@ app.get('/api/games/:id', (req, res) => {
 });
 
 app.get('/api/games/:id/replay-view', (req, res) => {
-  // Endpoint appelé par replay.html au chargement
+  // Endpoint appelÃƒÆ’Ã‚Â© par replay.html au chargement
   const game = gQ.getById?.get(Number(req.params.id));
   if (!game) return res.json({ ok: false });
   const _watcherId = validateSession(req.headers['x-token'] || req.query.token);
@@ -1265,13 +1266,13 @@ app.get('/api/games/:id/moves', (req, res) => {
   res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)) });
 });
 
-// ── Bot replay (sans stats ELO) ──────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Bot replay (sans stats ELO) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.post('/api/bot-replay', (req, res) => {
   try {
   const { token, moves, winner, duration, p1Color, p2Color, botName, difficulty } = req.body;
   const playerId = token ? validateSession(token) : null;
 
-  // Récupérer le vrai joueur pour sa couleur et forme perso
+  // RÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer le vrai joueur pour sa couleur et forme perso
   const p1 = playerId ? pQ.getById.get(playerId) : null;
   const realP1Color = p1?.color || p1Color || '#ff2d55';
   const realP1Shape = p1?.shape || 'circle';
@@ -1282,27 +1283,27 @@ app.post('/api/bot-replay', (req, res) => {
   const winnerId = isDraw ? null : (winner === 1 ? p1Id : botPlayerId);
   const loserId  = isDraw ? null : (winner === 1 ? botPlayerId : p1Id);
 
-  // ── Calcul ELO — seulement le bot est impacté ─────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Calcul ELO ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â seulement le bot est impactÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const botPlayer = pQ.getById.get(botPlayerId);
   const botColor  = botPlayer?.color || '#ffd60a';
   const botShape  = botPlayer?.shape || 'circle';
   const humanElo  = p1?.elo ?? 1000;
   const botElo    = botPlayer?.elo ?? 1000;
 
-  // Calcul ELO bot selon la difficulté
+  // Calcul ELO bot selon la difficultÃƒÆ’Ã‚Â©
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   const K = 32;
   const expBot = 1 / (1 + Math.pow(10, (humanElo - botElo) / 400));
   let botDelta = 0;
 
   if (difficulty === 'easy') {
-    // Facile : win +15→+30 / perd -1→-5 / nul = standard
+    // Facile : win +15ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢+30 / perd -1ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢-5 / nul = standard
     if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
     else if (winner === 2) botDelta = +randInt(15, 30);
     else                   botDelta = -randInt(1, 5);
 
   } else if (difficulty === 'hard') {
-    // Difficile : win +5→+10 / perd -10→-20 / nul = standard
+    // Difficile : win +5ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢+10 / perd -10ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢-20 / nul = standard
     if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
     else if (winner === 2) botDelta = +randInt(5, 10);
     else                   botDelta = -randInt(10, 20);
@@ -1320,10 +1321,10 @@ app.post('/api/bot-replay', (req, res) => {
   else if (winner === 2) { pQ.win.run(botPlayerId); }
   else               { pQ.loss.run(botPlayerId); }
 
-  // Si pas de joueur connecté, on abandonne proprement (pas de replay sauvegardé)
+  // Si pas de joueur connectÃƒÆ’Ã‚Â©, on abandonne proprement (pas de replay sauvegardÃƒÆ’Ã‚Â©)
   if (!playerId) return res.status(200).json({ gameId: null, reason: 'not_logged_in' });
 
-  // Vérification FK
+  // VÃƒÆ’Ã‚Â©rification FK
   if (!pQ.getById.get(p1Id))        throw new Error(`player1_id=${p1Id} introuvable`);
   if (!pQ.getById.get(botPlayerId))  throw new Error(`botPlayerId=${botPlayerId} introuvable`);
 
@@ -1339,7 +1340,7 @@ app.post('/api/bot-replay', (req, res) => {
   );
   const gameId = info.lastInsertRowid;
 
-  // Insérer les coups avec calcul de la row (rejouer la grille)
+  // InsÃƒÆ’Ã‚Â©rer les coups avec calcul de la row (rejouer la grille)
   if (Array.isArray(moves)) {
     const insertMove = db.prepare(`INSERT INTO moves (game_id, player_id, col, row, move_number) VALUES (?,?,?,?,?)`);
     // Reconstruire la grille pour calculer la row de chaque coup
@@ -1365,14 +1366,14 @@ app.post('/api/bot-replay', (req, res) => {
   }
 });
 
-// ID du bot système (pour affichage dans les replays)
-// Rafraîchir les rôles Discord d'un joueur connecté
+// ID du bot systÃƒÆ’Ã‚Â¨me (pour affichage dans les replays)
+// RafraÃƒÆ’Ã‚Â®chir les rÃƒÆ’Ã‚Â´les Discord d'un joueur connectÃƒÆ’Ã‚Â©
 app.post('/api/players/:id/refresh-discord', async (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const player = pQ.getById.get(id);
-  if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord lié.' });
+  if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord liÃƒÆ’Ã‚Â©.' });
   try {
     const { botToken: bt } = discordConfig();
     const [mRes, rolesRes] = await Promise.all([
@@ -1396,7 +1397,7 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
     if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
     const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip || 0);
     if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id });
-    // Mettre à jour discord_info
+    // Mettre ÃƒÆ’Ã‚Â  jour discord_info
     const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
     const updated = {
       ...existing,
@@ -1415,34 +1416,34 @@ app.get('/api/bot-id', (_, res) => {
   res.json({ id: BOT_PLAYER_ID, pseudo: BOT_PSEUDO, color: bot?.color || '#ffd60a', shape: bot?.shape || 'circle' });
 });
 
-// ── Boost VIP individuel ──────────────────────────────────────────────────────
-// Activation : 1h, 1x par jour (reset à minuit)
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Boost VIP individuel ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+// Activation : 1h, 1x par jour (reset ÃƒÆ’Ã‚Â  minuit)
 app.post('/api/players/:id/vip-boost', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
 
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isVipPlayer(player)) return res.status(403).json({ error: 'Réservé aux VIP.' });
+  if (!isVipPlayer(player)) return res.status(403).json({ error: 'RÃƒÆ’Ã‚Â©servÃƒÆ’Ã‚Â© aux VIP.' });
 
   const now = Date.now();
-  // Vérifier si déjà actif
+  // VÃƒÆ’Ã‚Â©rifier si dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  actif
   const currentBoost = vipQ.getActive.get(id, now);
   if (currentBoost) {
     const remaining = Math.round((currentBoost.expires_at - now) / 60000);
-    return res.status(400).json({ error: `Boost déjà actif encore ${remaining} minute(s).`, remaining });
+    return res.status(400).json({ error: `Boost dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  actif encore ${remaining} minute(s).`, remaining });
   }
 
-  // Vérifier si déjà utilisé aujourd'hui (reset à minuit, heure de Paris)
+  // VÃƒÆ’Ã‚Â©rifier si dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  utilisÃƒÆ’Ã‚Â© aujourd'hui (reset ÃƒÆ’Ã‚Â  minuit, heure de Paris)
   const midnightTs = getParisMidnightTs(now);
   const usedToday = vipQ.usedToday.get(id, midnightTs);
-  if (usedToday) return res.status(400).json({ error: "Boost déjà utilisé aujourd'hui. Reviens à minuit (heure de Paris) !" });
+  if (usedToday) return res.status(400).json({ error: "Boost dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  utilisÃƒÆ’Ã‚Â© aujourd'hui. Reviens ÃƒÆ’Ã‚Â  minuit (heure de Paris) !" });
 
   // Activer le boost (1 heure)
   const expiresAt = now + 60 * 60 * 1000;
   vipQ.activate.run(id, now, expiresAt);
-  res.json({ ok: true, expiresAt, message: '⚡ Boost VIP activé pour 1 heure !' });
+  res.json({ ok: true, expiresAt, message: 'ÃƒÂ¢Ã…Â¡Ã‚Â¡ Boost VIP activÃƒÆ’Ã‚Â© pour 1 heure !' });
 });
 
 // Statut du boost VIP d'un joueur
@@ -1463,7 +1464,7 @@ app.get('/api/players/:id/vip-boost', (req, res) => {
 
 // Liste des boosts VIP actifs (admin/modo)
 app.get('/api/admin/vip-boosts', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const now = Date.now();
   const boosts = vipQ.listActive.all(now);
   res.json(boosts.map(b => ({
@@ -1477,15 +1478,15 @@ app.get('/api/admin/vip-boosts', (req, res) => {
   })));
 });
 
-// ── Revert de partie (modo/admin uniquement) ─────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Revert de partie (modo/admin uniquement) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.post('/api/admin/games/:id/revert', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Modérateurs et admins uniquement.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'ModÃƒÆ’Ã‚Â©rateurs et admins uniquement.' });
 
   const gameId = Number(req.params.id);
   const game   = db.prepare(`SELECT * FROM games WHERE id = ?`).get(gameId);
   if (!game) return res.status(404).json({ error: 'Partie introuvable.' });
-  if (game.status !== 'finished') return res.status(400).json({ error: 'La partie n\'est pas terminée.' });
-  if (game.reverted) return res.status(400).json({ error: 'Cette partie a déjà été revertée.' });
+  if (game.status !== 'finished') return res.status(400).json({ error: 'La partie n\'est pas terminÃƒÆ’Ã‚Â©e.' });
+  if (game.reverted) return res.status(400).json({ error: 'Cette partie a dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  ÃƒÆ’Ã‚Â©tÃƒÆ’Ã‚Â© revertÃƒÆ’Ã‚Â©e.' });
   if (game.elo_before_p1 == null || game.elo_before_p2 == null)
     return res.status(400).json({ error: 'ELO avant partie non disponible (partie trop ancienne).' });
 
@@ -1508,18 +1509,18 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
         game.winner_id === null ? 1 : 0,
         game.player2_id);
 
-    // Marquer la partie comme revertée
+    // Marquer la partie comme revertÃƒÆ’Ã‚Â©e
     db.prepare(`UPDATE games SET reverted = 1 WHERE id = ?`).run(gameId);
 
     // Log admin
     const adminId = validateSession(req.headers['x-token']);
     const admin   = adminId ? pQ.getById.get(adminId) : null;
     WH.wlogAdminAction('Revert partie', `#${gameId}`, gameId,
-      [['J1', `${p1.pseudo} : ${p1.elo} → ${game.elo_before_p1}`, true],
-       ['J2', `${p2.pseudo} : ${p2.elo} → ${game.elo_before_p2}`, true],
-       ['Par', admin?.pseudo || 'Modérateur', false]]);
+      [['J1', `${p1.pseudo} : ${p1.elo} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${game.elo_before_p1}`, true],
+       ['J2', `${p2.pseudo} : ${p2.elo} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${game.elo_before_p2}`, true],
+       ['Par', admin?.pseudo || 'ModÃƒÆ’Ã‚Â©rateur', false]]);
 
-    console.log(`[REVERT] Partie #${gameId} revertée par ${admin?.pseudo || '?'}`);
+    console.log(`[REVERT] Partie #${gameId} revertÃƒÆ’Ã‚Â©e par ${admin?.pseudo || '?'}`);
     res.json({ ok: true, p1: { pseudo: p1.pseudo, eloBefore: game.elo_before_p1 }, p2: { pseudo: p2.pseudo, eloBefore: game.elo_before_p2 } });
   } catch(e) {
     console.error('[REVERT]', e.message);
@@ -1527,9 +1528,9 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
   }
 });
 
-// Route pour récupérer les parties récentes (admin)
+// Route pour rÃƒÆ’Ã‚Â©cupÃƒÆ’Ã‚Â©rer les parties rÃƒÆ’Ã‚Â©centes (admin)
 app.get('/api/admin/games', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
@@ -1555,9 +1556,9 @@ app.get('/api/admin/games', (req, res) => {
   res.json(games);
 });
 
-// ── Boost ELO global ──────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Boost ELO global ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.get('/api/admin/boost', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisé.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisÃƒÆ’Ã‚Â©.' });
   const active = bQ.getActive.get();
   res.json({ active: !!(active), multiplier: active?.multiplier ?? 1 });
 });
@@ -1588,7 +1589,7 @@ app.get('/api/site-stats', (_, res) => {
   });
 });
 
-// ── Socket.io ──────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Socket.io ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 io.on('connection', socket => {
 
   socket.on('join_live', () => {
@@ -1596,7 +1597,7 @@ io.on('connection', socket => {
   });
 
   socket.on('identify', ({ playerId, token }) => {
-    // Vérifier le token de session
+    // VÃƒÆ’Ã‚Â©rifier le token de session
     const validId = token ? validateSession(token) : null;
     if (!validId || validId !== Number(playerId)) {
       return socket.emit('error', { message: 'Session invalide. Reconnecte-toi.' });
@@ -1605,7 +1606,7 @@ io.on('connection', socket => {
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
     socket.playerId   = Number(playerId);
     socket.playerData = sanitize(player);
-    // Stocker l'IP en mémoire (X-Forwarded-For pour Railway)
+    // Stocker l'IP en mÃƒÆ’Ã‚Â©moire (X-Forwarded-For pour Railway)
     const clientIp = (socket.handshake.headers['x-forwarded-for'] || '').split(',')[0].trim()
                    || socket.handshake.address;
     socket.clientIp = clientIp;
@@ -1619,7 +1620,7 @@ io.on('connection', socket => {
     socket.emit('identified', sanitize(player));
   });
 
-  // Heartbeat de présence (pages hors jeu)
+  // Heartbeat de prÃƒÆ’Ã‚Â©sence (pages hors jeu)
   socket.on('presence_ping', () => {
     if (socket.playerId) rQ.updateLastSeen.run(Date.now(), socket.playerId);
   });
@@ -1627,17 +1628,17 @@ io.on('connection', socket => {
   socket.on('queue_join', ({ shape } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
-    // Vérifier ban/mute
+    // VÃƒÆ’Ã‚Â©rifier ban/mute
     if (freshPlayer.banned) return socket.emit('error', { message: 'Ton compte est banni.' });
     if (freshPlayer.muted_until && freshPlayer.muted_until > Date.now()) {
       const mins = Math.ceil((freshPlayer.muted_until - Date.now()) / 60000);
       return socket.emit('error', { message: `Tu es banni de jeu pendant encore ${mins} minute(s).` });
     }
     socket.playerData = sanitize(freshPlayer);
-    // Shape envoyée par le client (localStorage) — priorité sur la DB
+    // Shape envoyÃƒÆ’Ã‚Â©e par le client (localStorage) ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â prioritÃƒÆ’Ã‚Â© sur la DB
     if (shape) socket.playerData.shape = shape;
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
-    if (!joined) return socket.emit('error', { message: 'Déjà en queue.' });
+    if (!joined) return socket.emit('error', { message: 'DÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });
     const match = mm.tryMatch();
     if (match) _startMatch(match.p1, match.p2);
@@ -1661,7 +1662,7 @@ io.on('connection', socket => {
     socket.playerData.color = color;
     const game = gm.getBySocket(socket.id);
     if (game) {
-      // Vérifier si l'adversaire a la même couleur → lui assigner jaune
+      // VÃƒÆ’Ã‚Â©rifier si l'adversaire a la mÃƒÆ’Ã‚Âªme couleur ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ lui assigner jaune
       const side = game.players[1].id === socket.playerData.id ? 1 : 2;
       const oppSide = side === 1 ? 2 : 1;
       const oppColor = game.players[oppSide].color || '#ffd60a';
@@ -1669,7 +1670,7 @@ io.on('connection', socket => {
       let oppEffectiveColor = oppColor;
       if (color.toLowerCase() === oppColor.toLowerCase()) {
         oppEffectiveColor = '#ffd60a';
-        // Mettre à jour la couleur de l'adversaire dans le state
+        // Mettre ÃƒÆ’Ã‚Â  jour la couleur de l'adversaire dans le state
         game.players[oppSide].color = oppEffectiveColor;
         io.to('game:' + game.id).emit('color_updated', { playerId: game.players[oppSide].id, color: oppEffectiveColor });
       }
@@ -1683,7 +1684,7 @@ io.on('connection', socket => {
     socket.join('game:' + gameId);
     let state = gm.games.get(gameId);
 
-    // Reconstruire depuis DB si pas en mémoire
+    // Reconstruire depuis DB si pas en mÃƒÆ’Ã‚Â©moire
     if (!state || state.status !== 'active') {
       const gameRow = gQ.getById.get(gameId);
       if (!gameRow || gameRow.status !== 'active') return socket.emit('game_not_found');
@@ -1714,7 +1715,7 @@ io.on('connection', socket => {
       state.players[side].disconnectedAt = null;
       gm.socketToGame.set(socket.id, gameId);
 
-      // Envoyer l'état complet de la partie au client qui rejoint
+      // Envoyer l'ÃƒÆ’Ã‚Â©tat complet de la partie au client qui rejoint
       const p1 = state.players[1], p2 = state.players[2];
       socket.emit('game_rejoined', {
         gameId,
@@ -1739,7 +1740,7 @@ io.on('connection', socket => {
   socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
-    // Mettre à jour last_seen et nettoyer onlineSockets
+    // Mettre ÃƒÆ’Ã‚Â  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
       rQ.updateLastSeen.run(Date.now(), socket.playerId);
       const socks = onlineSockets.get(socket.playerId);
@@ -1759,20 +1760,20 @@ io.on('connection', socket => {
     }
     mm.leave(socket.id);
 
-    // Si le socket était en transition (match_found mais pas encore rejoin_game)
-    // on ne déclenche pas de forfait immédiatement — le joueur charge /game
+    // Si le socket ÃƒÆ’Ã‚Â©tait en transition (match_found mais pas encore rejoin_game)
+    // on ne dÃƒÆ’Ã‚Â©clenche pas de forfait immÃƒÆ’Ã‚Â©diatement ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â le joueur charge /game
     if (socket.transitioning) {
-      // Laisser une fenêtre de grâce : si personne ne rejoint dans 20s → forfait
+      // Laisser une fenÃƒÆ’Ã‚Âªtre de grÃƒÆ’Ã‚Â¢ce : si personne ne rejoint dans 20s ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ forfait
       const gameId = socket.pendingGameId;
       const side   = socket.pendingSide;
       if (gameId && side) {
         setTimeout(() => {
           const state = gm.games.get(gameId);
-          if (!state || state.status !== 'active') return; // déjà terminé
-          // Vérifier si ce joueur a rejoint
+          if (!state || state.status !== 'active') return; // dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  terminÃƒÆ’Ã‚Â©
+          // VÃƒÆ’Ã‚Â©rifier si ce joueur a rejoint
           const playerSide = state.players[side];
           if (!playerSide || !io.sockets.sockets.get(playerSide.socketId)) {
-            // Toujours déconnecté → forfait
+            // Toujours dÃƒÆ’Ã‚Â©connectÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ forfait
             const winner = side === 1 ? 2 : 1;
             const result = gm._end(state, winner, [], 'disconnect');
             io.to('game:' + gameId).emit('game_over', result);
@@ -1782,7 +1783,7 @@ io.on('connection', socket => {
       return;
     }
 
-    // Fenêtre de grâce de 10s avant forfait (permet reload)
+    // FenÃƒÆ’Ã‚Âªtre de grÃƒÆ’Ã‚Â¢ce de 10s avant forfait (permet reload)
     const gameId = gm.socketToGame.get(socket.id);
     if (gameId) {
       const state = gm.games.get(gameId);
@@ -1802,10 +1803,10 @@ io.on('connection', socket => {
           setTimeout(() => {
             const st = gm.games.get(gameId);
             if (!st || st.status !== 'active') return;
-            // Vérifier si le joueur a reconnecté
+            // VÃƒÆ’Ã‚Â©rifier si le joueur a reconnectÃƒÆ’Ã‚Â©
             const p = st.players[side];
             if (!p.socketId || !io.sockets.sockets.get(p.socketId)) {
-              // Toujours déconnecté → forfait
+              // Toujours dÃƒÆ’Ã‚Â©connectÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ forfait
               const result = gm._end(st, side === 1 ? 2 : 1, [], 'disconnect');
               io.to('game:' + gameId).emit('game_over', result);
             }
@@ -1820,7 +1821,7 @@ io.on('connection', socket => {
 });
 
 function _startMatch(p1, p2) {
-  // ── Même IP → ELO annulé direct ─────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MÃƒÆ’Ã‚Âªme IP ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ELO annulÃƒÆ’Ã‚Â© direct ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const ip1 = playerToIp.get(p1.id);
   const ip2 = playerToIp.get(p2.id);
   const sameIp = ip1 && ip2 && ip1 === ip2;
@@ -1831,18 +1832,18 @@ function _startMatch(p1, p2) {
   p1.sameIpOpponent = sameIp;
   p2.sameIpOpponent = sameIp;
 
-  // Anti-rematch : vérifier les 3 derniers adversaires de chaque joueur
+  // Anti-rematch : vÃƒÆ’Ã‚Â©rifier les 3 derniers adversaires de chaque joueur
   try {
     const p1recent = abQ.lastOpponents.all(p1.id, p1.id, p1.id).map(r => r.opp_id);
     const p2recent = abQ.lastOpponents.all(p2.id, p2.id, p2.id).map(r => r.opp_id);
-    // Si ils ont déjà joué dans les 3 dernières parties des deux côtés → remettre en queue
-    const p1facedP2 = p1recent.slice(0, 2).includes(p2.id); // 2 dernières parties de p1
-    const p2facedP1 = p2recent.slice(0, 2).includes(p1.id); // 2 dernières parties de p2
+    // Si ils ont dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  jouÃƒÆ’Ã‚Â© dans les 3 derniÃƒÆ’Ã‚Â¨res parties des deux cÃƒÆ’Ã‚Â´tÃƒÆ’Ã‚Â©s ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ remettre en queue
+    const p1facedP2 = p1recent.slice(0, 2).includes(p2.id); // 2 derniÃƒÆ’Ã‚Â¨res parties de p1
+    const p2facedP1 = p2recent.slice(0, 2).includes(p1.id); // 2 derniÃƒÆ’Ã‚Â¨res parties de p2
     // Anti-rematch seulement si d'autres joueurs sont disponibles
     if (p1facedP2 && p2facedP1 && mm.size() > 2) {
-      console.log(`[ANTI-REMATCH] ${p1.pseudo} vs ${p2.pseudo} — remis en queue`);
-      // tryMatch les a déjà retirés de la queue — on les réinsère proprement
-      mm.leave(p1.socketId); // au cas où (sécurité)
+      console.log(`[ANTI-REMATCH] ${p1.pseudo} vs ${p2.pseudo} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â remis en queue`);
+      // tryMatch les a dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  retirÃƒÆ’Ã‚Â©s de la queue ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â on les rÃƒÆ’Ã‚Â©insÃƒÆ’Ã‚Â¨re proprement
+      mm.leave(p1.socketId); // au cas oÃƒÆ’Ã‚Â¹ (sÃƒÆ’Ã‚Â©curitÃƒÆ’Ã‚Â©)
       mm.leave(p2.socketId);
       mm.join(p1.socketId, p1);
       mm.join(p2.socketId, p2);
@@ -1851,25 +1852,25 @@ function _startMatch(p1, p2) {
       // Notifier les deux joueurs qu'ils sont en attente d'un autre adversaire
       if (s1) s1.emit('queue_joined', { position: mm.position(p1.socketId), reason: 'anti_rematch' });
       if (s2) s2.emit('queue_joined', { position: mm.position(p2.socketId), reason: 'anti_rematch' });
-      // Tenter immédiatement un autre match si d'autres joueurs sont en queue
+      // Tenter immÃƒÆ’Ã‚Â©diatement un autre match si d'autres joueurs sont en queue
       const next = mm.tryMatch();
       if (next) _startMatch(next.p1, next.p2);
       return;
     }
-  } catch(e) { /* ignore si DB pas encore prête */ }
+  } catch(e) { /* ignore si DB pas encore prÃƒÆ’Ã‚Âªte */ }
 
-  // Vérifier que les deux sockets sont toujours connectés
+  // VÃƒÆ’Ã‚Â©rifier que les deux sockets sont toujours connectÃƒÆ’Ã‚Â©s
   const s1 = io.sockets.sockets.get(p1.socketId);
   const s2 = io.sockets.sockets.get(p2.socketId);
   if (!s1 || !s2) {
-    // Un des deux est déconnecté — remettre l'autre en queue
+    // Un des deux est dÃƒÆ’Ã‚Â©connectÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â remettre l'autre en queue
     if (s1) { mm.join(p1.socketId, p1); s1.emit('queue_joined', { position: mm.position(p1.socketId) }); }
     if (s2) { mm.join(p2.socketId, p2); s2.emit('queue_joined', { position: mm.position(p2.socketId) }); }
-    console.log(`[MATCH] Socket invalide — p1:${!!s1} p2:${!!s2}`);
+    console.log(`[MATCH] Socket invalide ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â p1:${!!s1} p2:${!!s2}`);
     return;
   }
 
-  // Résoudre les couleurs AVANT de créer la partie
+  // RÃƒÆ’Ã‚Â©soudre les couleurs AVANT de crÃƒÆ’Ã‚Â©er la partie
   const _c1 = p1.color || '#ff2d55';
   let   _c2 = p2.color || '#ffd60a';
   if (_c1.toLowerCase() === _c2.toLowerCase()) {
@@ -1907,7 +1908,7 @@ function _startMatch(p1, p2) {
   }
 }
 
-// ── 404 — toute route non matchée ────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ 404 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â toute route non matchÃƒÆ’Ã‚Â©e ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 app.use((req, res) => {
   // Les routes API renvoient du JSON, les pages HTML renvoient la 404
   if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) {
@@ -1919,16 +1920,16 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 3000;
 initDb().then(() => {
   server.listen(PORT, () => {
-    console.log(`✅  http://localhost:${PORT}`);
+    console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦  http://localhost:${PORT}`);
     startBot();
   });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });
 
-// ── Bot Discord intégré ───────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Bot Discord intÃƒÆ’Ã‚Â©grÃƒÆ’Ã‚Â© ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 function startBot() {
   const { botToken } = discordConfig();
   if (!botToken || botToken === 'TON_BOT_TOKEN') {
-    console.log('[BOT] Token manquant — bot désactivé');
+    console.log('[BOT] Token manquant ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â bot dÃƒÆ’Ã‚Â©sactivÃƒÆ’Ã‚Â©');
     return;
   }
 
@@ -1936,7 +1937,7 @@ function startBot() {
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
   });
 
-  // ── Statuts rotatifs ──────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Statuts rotatifs ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   function updateStatus() {
     try {
       const totalPlayers = db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted=0`).get()?.c || 0;
@@ -1950,11 +1951,11 @@ function startBot() {
     } catch(e) {}
   }
 
-  // Cache des emojis de rang (chargé au démarrage)
+  // Cache des emojis de rang (chargÃƒÆ’Ã‚Â© au dÃƒÆ’Ã‚Â©marrage)
   const rankEmojiCache = {};
 
   bot.once('ready', async () => {
-    console.log(`✅ Bot connecté : ${bot.user.tag}`);
+    console.log(`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Bot connectÃƒÆ’Ã‚Â© : ${bot.user.tag}`);
     updateStatus();
     setInterval(updateStatus, 10000);
 
@@ -1968,7 +1969,7 @@ function startBot() {
         const base = rankNames.find(r => name.startsWith(r));
         if (base) rankEmojiCache[name] = `<:${name}:${e.id}>`;
       });
-      console.log(`[BOT] ${Object.keys(rankEmojiCache).length} emojis de rang chargés`);
+      console.log(`[BOT] ${Object.keys(rankEmojiCache).length} emojis de rang chargÃƒÆ’Ã‚Â©s`);
     } catch(e) {
       console.error('[BOT] Emojis rang:', e.message);
     }
@@ -1986,37 +1987,37 @@ function startBot() {
         { name: 'live',       description: 'Affiche les parties en cours' },
       ];
       await rest.put(Routes.applicationCommands(bot.user.id), { body: commands });
-      console.log('✅ Commandes slash enregistrées');
+      console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Commandes slash enregistrÃƒÆ’Ã‚Â©es');
     } catch(e) {
       console.error('[BOT] Erreur enregistrement commandes:', e.message);
     }
   });
 
-  // ── Commandes slash ───────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Commandes slash ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const API = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
 
   function eloRank(elo) {
     const r = getRank(elo);
-    const fallbacks = { Malachite:'🟢', Quartz:'⚪', Ambre:'🟤', Jade:'🟦', Saphir:'🔵', Améthyste:'🟣' };
-    // Chercher l'emoji spécifique au niveau (ex: Quartz_3)
+    const fallbacks = { Malachite:'🟢', Quartz:'⚪', Ambre:'🟤', Jade:'🔵', Saphir:'🔷', Amethyste:'🟣' };
+    // Chercher l'emoji spÃƒÆ’Ã‚Â©cifique au niveau (ex: Quartz_3)
     const key = r.key + '_' + (r.level || 1);
-    const emoji = rankEmojiCache[key] || fallbacks[r.name] || '🎮';
+    const emoji = rankEmojiCache[key] || fallbacks[r.key] || '🎮';
     return { label: r.label, emoji, color: r.color, level: r.level, key: r.key };
   }
   function winRate(p) {
     const t = (p.wins||0)+(p.losses||0)+(p.draws||0);
-    return t ? Math.round((p.wins/t)*100)+'%' : '—';
+    return t ? Math.round((p.wins/t)*100)+'%' : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
   }
 
-  // ── Génération avatar initiale (SVG → Buffer PNG via canvas si dispo) ──────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ GÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©ration avatar initiale (SVG ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Buffer PNG via canvas si dispo) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   function generateAvatarSvg(initial, color) {
-    // SVG 128x128 avec cercle coloré + initiale blanche
+    // SVG 128x128 avec cercle colorÃƒÆ’Ã‚Â© + initiale blanche
     const bg  = color || '#ff2d55';
     const hex = bg.replace('#','');
     const r   = parseInt(hex.slice(0,2),16);
     const g   = parseInt(hex.slice(2,4),16);
     const b   = parseInt(hex.slice(4,6),16);
-    // Couleur de fond légèrement assombrie pour lisibilité
+    // Couleur de fond lÃƒÆ’Ã‚Â©gÃƒÆ’Ã‚Â¨rement assombrie pour lisibilitÃƒÆ’Ã‚Â©
     const dr  = Math.round(r*0.7), dg = Math.round(g*0.7), db = Math.round(b*0.7);
     const dark = '#' + [dr,dg,db].map(v=>v.toString(16).padStart(2,'0')).join('');
     return Buffer.from(
@@ -2053,7 +2054,7 @@ function startBot() {
       }
     }
 
-    // Cas 3 : pas d'avatar — générer initiale avec canvas ou SVG
+    // Cas 3 : pas d'avatar ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â gÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©rer initiale avec canvas ou SVG
     try {
       const { createCanvas } = require('canvas');
       const size = 128;
@@ -2120,10 +2121,22 @@ function startBot() {
       const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
       const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
       const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
+      const fontHero = '400 64px "Bebas Neue"';
       const fontTitle = '700 54px "Barlow Condensed"';
-      const fontSub = '700 24px "Barlow Condensed"';
+      const fontSub = '700 26px "Barlow Condensed"';
       const fontBody = '600 22px "Barlow"';
       const fontSmall = '600 18px "Barlow"';
+      const fontMeta = '400 20px "Barlow"';
+      const drawGlowText = (text, x, y, color, font, blur = 18, align = 'start') => {
+        ctx.save();
+        ctx.font = font;
+        ctx.textAlign = align;
+        ctx.fillStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = blur;
+        ctx.fillText(text, x, y);
+        ctx.restore();
+      };
 
       if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
       else {
@@ -2141,9 +2154,7 @@ function startBot() {
       ctx.fillStyle = overlay;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.fillStyle = '#ffd60a';
-      ctx.font = '700 24px "Barlow Condensed"';
-      ctx.fillText('PUISSANCE 4 RANKED', 42, 42);
+      drawGlowText('PUISSANCE 4 RANKED', 42, 44, '#ffd60a', '400 28px "Bebas Neue"', 16);
 
       ctx.save();
       ctx.beginPath();
@@ -2170,9 +2181,7 @@ function startBot() {
       ctx.arc(110, 136, 64, 0, Math.PI * 2);
       ctx.stroke();
 
-      ctx.fillStyle = '#f5f4ff';
-      ctx.font = fontTitle;
-      ctx.fillText(data.pseudo || 'Joueur', 204, 116);
+      drawGlowText(data.pseudo || 'Joueur', 204, 120, '#f5f4ff', fontHero, 20);
 
       ctx.fillStyle = '#ffe27a';
       ctx.font = fontSub;
@@ -2180,13 +2189,13 @@ function startBot() {
       if (data.is_vip) badges.push('VIP');
       if (data.role === 'admin') badges.push('ADMIN');
       else if (data.role === 'moderator') badges.push('MODO');
-      const badgeText = badges.length ? `  •  ${badges.join(' • ')}` : '';
-      ctx.fillText(`${data.elo} ELO  •  ${rank.label}${badgeText}`, 206, 154);
+      const badgeText = badges.length ? `  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ${badges.join(' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ')}` : '';
+      ctx.fillText(`${data.elo} ELO  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ${rank.label}${badgeText}`, 206, 154);
 
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontBody;
-      ctx.fillText(`ID ${data.id}  •  Couleur ${String(data.color || '#ff2d55').toUpperCase()}  •  Forme ${data.shape || 'circle'}`, 206, 190);
-      ctx.fillText(`Suivis ${data.following || 0}  •  Abonnés ${data.followers || 0}  •  Membre ${data.memberDate || '—'}`, 206, 222);
+      ctx.fillText(`ID ${data.id}  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  Couleur ${String(data.color || '#ff2d55').toUpperCase()}  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  Forme ${data.shape || 'circle'}`, 206, 190);
+      ctx.fillText(`Suivis ${data.following || 0}  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  AbonnÃƒÆ’Ã‚Â©s ${data.followers || 0}  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  Membre ${data.memberDate || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â'}`, 206, 222);
 
       const rankX = 744;
       const rankY = 58;
@@ -2232,11 +2241,11 @@ function startBot() {
 
       const stats = [
         { label: 'Victoires', value: String(data.wins || 0), color: '#9be15d' },
-        { label: 'Défaites', value: String(data.losses || 0), color: '#ff7aa2' },
+        { label: 'DÃƒÆ’Ã‚Â©faites', value: String(data.losses || 0), color: '#ff7aa2' },
         { label: 'Nuls', value: String(data.draws || 0), color: '#8dd7ff' },
         { label: 'Parties', value: String(totalGames), color: '#7cf0ff' },
-        { label: 'Win rate', value: data.winRate || '—', color: '#c38bff' },
-        { label: 'Précision', value: data.avg_accuracy != null ? String(data.avg_accuracy) : '—', color: '#33a1ff' },
+        { label: 'Win rate', value: data.winRate || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â', color: '#c38bff' },
+        { label: 'PrÃƒÆ’Ã‚Â©cision', value: data.avg_accuracy != null ? String(data.avg_accuracy) : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â', color: '#33a1ff' },
       ];
       const statW = 304;
       const statH = 96;
@@ -2271,6 +2280,94 @@ function startBot() {
         ctx.textAlign = 'start';
       });
 
+      ctx.clearRect(196, 74, 512, 176);
+      drawGlowText(data.pseudo || 'Joueur', 204, 118, '#f5f4ff', fontHero, 20);
+      ctx.fillStyle = '#ffe27a';
+      ctx.font = fontSub;
+      ctx.fillText(`${data.elo} ELO  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  ${rank.label}${badgeText}`, 206, 166);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontMeta;
+      ctx.fillText(`ID ${data.id}  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  Couleur ${String(data.color || '#ff2d55').toUpperCase()}  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  Forme ${data.shape || 'circle'}`, 206, 204);
+      ctx.fillText(`Suivis ${data.following || 0}  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  AbonnÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s ${data.followers || 0}  ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¢  Membre ${data.memberDate || 'ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â'}`, 206, 236);
+
+      ctx.clearRect(196, 74, 512, 176);
+      const cleanBadgeText = badges.length ? `  /  ${badges.join(' / ')}` : '';
+      const cleanMetaLine = `${data.elo} ELO  /  ${rank.label}${cleanBadgeText}`;
+      const cleanIdentityLine = `ID ${data.id}  /  Couleur ${String(data.color || '#ff2d55').toUpperCase()}  /  Forme ${data.shape || 'circle'}`;
+      const cleanSocialLine = `Suivis ${data.following || 0}  /  Abonnes ${data.followers || 0}  /  Membre ${data.memberDate || '-'}`;
+      drawGlowText(data.pseudo || 'Joueur', 204, 118, '#f5f4ff', fontHero, 20);
+      ctx.fillStyle = '#ffe27a';
+      ctx.font = fontSub;
+      ctx.fillText(cleanMetaLine, 206, 166);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontMeta;
+      ctx.fillText(cleanIdentityLine, 206, 204);
+      ctx.fillText(cleanSocialLine, 206, 236);
+
+      ctx.clearRect(rankX - 8, rankY - 8, rankW + 16, rankH + 16);
+      ctx.save();
+      roundRectBot(ctx, rankX, rankY, rankW, rankH, 24);
+      ctx.fillStyle = 'rgba(18,20,34,0.62)';
+      ctx.shadowColor = rank.color || '#ffffff';
+      ctx.shadowBlur = 24;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
+      ctx.stroke();
+      ctx.restore();
+      drawGlowText('RANG', rankX + rankW / 2, rankY + 36, '#f5f4ff', '400 32px "Bebas Neue"', 14, 'center');
+      if (rankImage) ctx.drawImage(rankImage, rankX + 56, rankY + 60, 78, 78);
+      else {
+        ctx.save();
+        ctx.font = '700 48px "Barlow Condensed"';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f5f4ff';
+        ctx.fillText(data.rankEmoji || '🏅', rankX + 96, rankY + 120);
+        ctx.restore();
+      }
+      drawGlowText(rank.label, rankX + 148, rankY + 112, '#ffe27a', '400 42px "Bebas Neue"', 14);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontSmall;
+      ctx.fillText(`${rank.progress || 0}% de progression`, rankX + 82, rankY + 158);
+      roundRectBot(ctx, rankX + 52, rankY + 176, rankW - 104, 22, 11);
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.fill();
+      roundRectBot(ctx, rankX + 52, rankY + 176, Math.max(24, Math.round((rankW - 104) * ((rank.progress || 0) / 100))), 22, 11);
+      ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
+      ctx.fill();
+      ctx.fillStyle = '#f5f4ff';
+      ctx.font = '600 18px "Barlow"';
+      ctx.fillText(rank.next ? `Prochain palier : ${rank.next} ELO` : 'Rang maximum atteint', rankX + 54, rankY + 214);
+
+      ctx.clearRect(startX - 8, startY - 8, (statW * 3) + (gapX * 2) + 16, (statH * 2) + gapY + 16);
+      const statStartY = 334;
+      const statGapY = 28;
+      stats.forEach((stat, index) => {
+        const row = Math.floor(index / 3);
+        const col = index % 3;
+        const x = startX + col * (statW + gapX);
+        const y = statStartY + row * (statH + statGapY);
+        ctx.save();
+        roundRectBot(ctx, x, y, statW, statH, 18);
+        ctx.fillStyle = 'rgba(16,18,32,0.56)';
+        ctx.shadowColor = stat.color;
+        ctx.shadowBlur = 20;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = hexToRgbaBot(stat.color, 0.98);
+        ctx.stroke();
+        ctx.restore();
+        drawGlowText(stat.label, x + statW / 2, y + 34, hexToRgbaBot(stat.color, 0.98), '400 28px "Bebas Neue"', 10, 'center');
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#f5f4ff';
+        ctx.font = '400 44px "Bebas Neue"';
+        ctx.fillText(stat.value, x + statW / 2, y + 78);
+        ctx.restore();
+      });
+
       const infoX = 42;
       const infoY = 238;
       ctx.fillStyle = '#f5f4ff';
@@ -2278,16 +2375,42 @@ function startBot() {
       ctx.fillText('DISCORD ET PROFIL', infoX, infoY);
       ctx.font = fontSmall;
       const infoLines = [
-        di?.username ? `Compte : ${di.global_name || di.username}` : 'Compte Discord non lié',
+        di?.username ? `Compte : ${di.global_name || di.username}` : 'Compte Discord non liÃƒÆ’Ã‚Â©',
         di?.server_nick ? `Pseudo serveur : ${di.server_nick}` : `Couleur du jeton : ${String(data.color || '#ff2d55').toUpperCase()}`,
         di?.server_joined ? `Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}` : `Shape : ${data.shape || 'circle'}`,
         di?.boosting_since ? 'Booster actif' : 'Boost serveur : non',
       ];
       if (di?.server_roles?.length) {
-        const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' • ');
-        if (roleNames) infoLines[3] = `Rôles : ${roleNames}`;
+        const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ');
+        if (roleNames) infoLines[3] = `RÃƒÆ’Ã‚Â´les : ${roleNames}`;
       }
       infoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 30 + i * 24));
+
+      ctx.clearRect(infoX - 6, infoY - 22, 560, 140);
+      drawGlowText('DISCORD ET PROFIL', infoX, infoY + 2, '#f5f4ff', '400 30px "Bebas Neue"', 12);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontMeta;
+      infoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 42 + i * 28));
+
+      const cleanInfoLines = [
+        di?.username ? `Compte : ${di.global_name || di.username}` : 'Compte Discord non lie',
+        di?.server_nick ? `Pseudo serveur : ${di.server_nick}` : `Couleur du jeton : ${String(data.color || '#ff2d55').toUpperCase()}`,
+        di?.server_joined ? `Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}` : `Shape : ${data.shape || 'circle'}`,
+        di?.boosting_since ? 'Booster actif' : 'Boost serveur : non',
+      ];
+      if (di?.server_roles?.length) {
+        const cleanRoleNames = di.server_roles
+          .filter(r => r.name && r.name !== '@everyone')
+          .map(r => r.name)
+          .slice(0, 4)
+          .join(' / ');
+        if (cleanRoleNames) cleanInfoLines[3] = `Roles : ${cleanRoleNames}`;
+      }
+      ctx.clearRect(infoX - 6, infoY - 22, 560, 140);
+      drawGlowText('DISCORD ET PROFIL', infoX, infoY + 2, '#f5f4ff', '400 30px "Bebas Neue"', 12);
+      ctx.fillStyle = '#d7d5ef';
+      ctx.font = fontMeta;
+      cleanInfoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 42 + i * 28));
 
       const historyX = 42;
       const historyY = 550;
@@ -2313,15 +2436,19 @@ function startBot() {
         latestGames.forEach((g, i) => {
           const sign = g.delta >= 0 ? '+' : '';
           const icon = g.draw ? 'DRAW' : (g.won ? 'WIN' : 'LOSE');
-          ctx.fillText(`${icon}  vs ${g.opp}  •  ${sign}${g.delta} ELO  •  ${g.date}`, historyX + 18, historyY + 56 + i * 22);
+          ctx.fillText(`${icon}  vs ${g.opp}  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ${sign}${g.delta} ELO  ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢  ${g.date}`, historyX + 18, historyY + 56 + i * 22);
         });
       } else {
-        ctx.fillText('Aucune partie récente.', historyX + 18, historyY + 60);
+        ctx.save();
+        ctx.clearRect(historyX - 4, historyY - 4, historyW + 8, historyH + 8);
+        ctx.restore();
+        ctx.fillStyle = '#f5f4ff';
+        ctx.font = '700 20px "Barlow Condensed"';
+        ctx.fillText('PARTIES', historyX, historyY + 18);
+        ctx.fillStyle = '#c7c5de';
+        ctx.font = fontSmall;
+        ctx.fillText('Aucune partie rÃƒÆ’Ã‚Â©cente.', historyX, historyY + 50);
       }
-
-      ctx.fillStyle = 'rgba(255,255,255,0.78)';
-      ctx.font = '400 16px "Barlow"';
-      ctx.fillText(`https://puissance-4-website-production.up.railway.app/profil?id=${data.id}`, 640, 656);
 
       return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
     } catch (e) {
@@ -2331,7 +2458,7 @@ function startBot() {
   }
 
   bot.on('interactionCreate', async interaction => {
-    // ── Autocomplete pseudo ──────────────────────────────────────────────────
+    // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Autocomplete pseudo ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
     if (interaction.isAutocomplete() && interaction.commandName === 'profil') {
       try {
         const q = interaction.options.getFocused();
@@ -2342,7 +2469,7 @@ function startBot() {
           ORDER BY elo DESC LIMIT 10
         `).all(q.replace(/%/g,'') + '%', BOT_PLAYER_ID);
         await interaction.respond(rows.map(r => ({
-          name: `${r.pseudo} · ${r.elo} ELO`,
+          name: `${r.pseudo} Ãƒâ€šÃ‚Â· ${r.elo} ELO`,
           value: r.pseudo
         })));
       } catch(e) {
@@ -2354,11 +2481,11 @@ function startBot() {
 
     if (!interaction.isChatInputCommand()) return;
 
-    // Defer visible pour tous sauf si ephemeral forcé
+    // Defer visible pour tous sauf si ephemeral forcÃƒÆ’Ã‚Â©
     try { await interaction.deferReply(); } catch(e) { return; }
 
     try {
-      // ── /profil ────────────────────────────────────────────────────────────
+      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ /profil ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
       if (interaction.commandName === 'profil') {
         const pseudo = interaction.options.getString('pseudo');
         console.log(`[BOT /profil] recherche: "${pseudo}"`);
@@ -2368,17 +2495,17 @@ function startBot() {
         ).get(pseudo);
 
         if (!data) {
-          return interaction.editReply({ content: `❌ Joueur **${pseudo}** introuvable.` });
+          return interaction.editReply({ content: `ÃƒÂ¢Ã‚ÂÃ…â€™ Joueur **${pseudo}** introuvable.` });
         }
 
-        console.log(`[BOT /profil] joueur trouvé id=${data.id}`);
+        console.log(`[BOT /profil] joueur trouvÃƒÆ’Ã‚Â© id=${data.id}`);
 
         const games = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
         const rank  = eloRank(data.elo);
         const total = (data.wins||0)+(data.losses||0)+(data.draws||0);
-        const wr    = total ? Math.round((data.wins/total)*100)+'%' : '—';
+        const wr    = total ? Math.round((data.wins/total)*100)+'%' : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
 
-        // Précision moyenne
+        // PrÃƒÆ’Ã‚Â©cision moyenne
         const accRow = db.prepare(`
           SELECT
             AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
@@ -2387,7 +2514,7 @@ function startBot() {
         `).get(data.id, data.id, data.id, data.id);
         const prec = (() => {
           const vals = [accRow?.as_p1, accRow?.as_p2].filter(v => v != null);
-          return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)+'%' : '—';
+          return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)+'%' : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
         })();
 
         // Discord info
@@ -2396,16 +2523,16 @@ function startBot() {
         // Rang progression
         const rankInfo = getRank(data.elo);
         const pct = rankInfo.progress ?? 0;
-        const bar = '█'.repeat(Math.round(pct/10)) + '░'.repeat(10-Math.round(pct/10));
+        const bar = 'ÃƒÂ¢Ã¢â‚¬â€œÃ‹â€ '.repeat(Math.round(pct/10)) + 'ÃƒÂ¢Ã¢â‚¬â€œÃ¢â‚¬Ëœ'.repeat(10-Math.round(pct/10));
 
         // Helper : valeur safe pour field Discord (jamais vide)
-        const fv = v => (v != null && String(v).trim() !== '') ? String(v) : '—';
+        const fv = v => (v != null && String(v).trim() !== '') ? String(v) : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
 
-        // Mention du membre Discord si lié
+        // Mention du membre Discord si liÃƒÆ’Ã‚Â©
         const memberMention = data.discord_id ? '<@' + data.discord_id + '>' : null;
 
-        const roleLabel = data.role === 'admin' ? ' · ⚡ ADMIN' : data.role === 'moderator' ? ' · 🛡️ MODO' : '';
-        const desc = (memberMention ? memberMention + '  ' : '') + rank.label + ' · ' + data.elo + ' ELO' + roleLabel;
+        const roleLabel = data.role === 'admin' ? ' Ãƒâ€šÃ‚Â· ÃƒÂ¢Ã…Â¡Ã‚Â¡ ADMIN' : data.role === 'moderator' ? ' Ãƒâ€šÃ‚Â· ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â MODO' : '';
+        const desc = (memberMention ? memberMention + '  ' : '') + rank.label + ' Ãƒâ€šÃ‚Â· ' + data.elo + ' ELO' + roleLabel;
 
         const embed = new EmbedBuilder()
           .setColor(data.color && data.color.startsWith('#') ? data.color : rank.color)
@@ -2413,7 +2540,7 @@ function startBot() {
           .setURL(API + '/profil?id=' + data.id)
           .setDescription(desc);
 
-        // Bannière — base64 ou URL HTTP
+        // BanniÃƒÆ’Ã‚Â¨re ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â base64 ou URL HTTP
         let bannerAttachment = null;
         if (data.banner) {
           if (data.banner.startsWith('http')) {
@@ -2433,18 +2560,18 @@ function startBot() {
 
         // Stats
         embed.addFields(
-          { name: '🏆 Victoires', value: fv(data.wins),   inline: true },
-          { name: '💀 Défaites',  value: fv(data.losses), inline: true },
-          { name: '⚖️ Nuls',      value: fv(data.draws),  inline: true },
-          { name: '🎮 Parties',   value: fv(total),        inline: true },
-          { name: '📊 Win rate',  value: fv(wr),           inline: true },
-          { name: '🎯 Précision', value: fv(prec),         inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â  Victoires', value: fv(data.wins),   inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã¢â€šÂ¬ DÃƒÆ’Ã‚Â©faites',  value: fv(data.losses), inline: true },
+          { name: 'ÃƒÂ¢Ã…Â¡Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â Nuls',      value: fv(data.draws),  inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â® Parties',   value: fv(total),        inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  Win rate',  value: fv(wr),           inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ PrÃƒÆ’Ã‚Â©cision', value: fv(prec),         inline: true },
         );
 
         // Rang progression
         const rankLvlLabel = rank.label + ' ' + (['I','II','III','IV','V'][(rankInfo.level||1)-1] || 'I');
-        const rankValue = bar + ' ' + pct + '%' + (rankInfo.next ? ' → ' + rankInfo.next + ' ELO pour monter' : ' · MAX');
-        embed.addFields({ name: '📈 ' + rankLvlLabel, value: rankValue, inline: false });
+        const rankValue = bar + ' ' + pct + '%' + (rankInfo.next ? ' ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ' + rankInfo.next + ' ELO pour monter' : ' Ãƒâ€šÃ‚Â· MAX');
+        embed.addFields({ name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‹â€  ' + rankLvlLabel, value: rankValue, inline: false });
 
         // Social
         const followCounts = db.prepare(
@@ -2452,39 +2579,39 @@ function startBot() {
         ).get(data.id, data.id);
         const memberDate = data.created_at
           ? new Date(data.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-          : '—';
+          : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
         embed.addFields(
-          { name: '👁 Suivis',   value: fv(followCounts?.following), inline: true },
-          { name: '👥 Abonnés', value: fv(followCounts?.followers), inline: true },
-          { name: '📅 Membre',  value: memberDate,                   inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â Suivis',   value: fv(followCounts?.following), inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â¥ AbonnÃƒÆ’Ã‚Â©s', value: fv(followCounts?.followers), inline: true },
+          { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Membre',  value: memberDate,                   inline: true },
         );
 
-        // Apparence — emoji de forme, pastille couleur approchante
-        const shapeEmoji = { circle:'⭕', diamond:'💎', triangle:'🔺', star:'⭐', heart:'❤️' };
+        // Apparence ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â emoji de forme, pastille couleur approchante
+        const shapeEmoji = { circle:'ÃƒÂ¢Ã‚Â­Ã¢â‚¬Â¢', diamond:'ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã…Â½', triangle:'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âº', star:'ÃƒÂ¢Ã‚Â­Ã‚Â', heart:'ÃƒÂ¢Ã‚ÂÃ‚Â¤ÃƒÂ¯Ã‚Â¸Ã‚Â' };
         const rawShape = data.shape || 'circle';
-        const shapeDisplay = rawShape.startsWith('emoji:') ? rawShape.slice(6) || '⭐' : (shapeEmoji[rawShape] || '⭕');
+        const shapeDisplay = rawShape.startsWith('emoji:') ? rawShape.slice(6) || 'ÃƒÂ¢Ã‚Â­Ã‚Â' : (shapeEmoji[rawShape] || 'ÃƒÂ¢Ã‚Â­Ã¢â‚¬Â¢');
         const colorHex = (data.color || '#ff2d55').toUpperCase();
         // Pastille couleur approchante via emoji Discord
         const r16 = parseInt(colorHex.slice(1,3),16), g16 = parseInt(colorHex.slice(3,5),16), b16 = parseInt(colorHex.slice(5,7),16);
         const colorDot = (() => {
-          if (r16 > 200 && g16 < 100 && b16 < 100) return '🔴';
-          if (r16 > 200 && g16 > 150 && b16 < 80)  return '🟠';
-          if (r16 > 200 && g16 > 200 && b16 < 80)   return '🟡';
-          if (r16 < 100 && g16 > 160 && b16 < 100)  return '🟢';
-          if (r16 < 100 && g16 < 100 && b16 > 180)  return '🔵';
-          if (r16 > 120 && g16 < 80  && b16 > 150)  return '🟣';
-          if (r16 > 160 && g16 > 100 && b16 > 100)  return '🩷';
-          if (r16 > 200 && g16 > 200 && b16 > 200)  return '⚪';
-          if (r16 < 60  && g16 < 60  && b16 < 60)   return '⚫';
-          return '🟤';
+          if (r16 > 200 && g16 < 100 && b16 < 100) return 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´';
+          if (r16 > 200 && g16 > 150 && b16 < 80)  return 'ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â ';
+          if (r16 > 200 && g16 > 200 && b16 < 80)   return 'ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¡';
+          if (r16 < 100 && g16 > 160 && b16 < 100)  return 'ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¢';
+          if (r16 < 100 && g16 < 100 && b16 > 180)  return 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Âµ';
+          if (r16 > 120 && g16 < 80  && b16 > 150)  return 'ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â£';
+          if (r16 > 160 && g16 > 100 && b16 > 100)  return 'ÃƒÂ°Ã…Â¸Ã‚Â©Ã‚Â·';
+          if (r16 > 200 && g16 > 200 && b16 > 200)  return 'ÃƒÂ¢Ã…Â¡Ã‚Âª';
+          if (r16 < 60  && g16 < 60  && b16 < 60)   return 'ÃƒÂ¢Ã…Â¡Ã‚Â«';
+          return 'ÃƒÂ°Ã…Â¸Ã…Â¸Ã‚Â¤';
         })();
-        embed.addFields({ name: '🎨 Apparence', value: colorDot + ' **' + colorHex + '**  ·  ' + shapeDisplay, inline: false });
+        embed.addFields({ name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¨ Apparence', value: colorDot + ' **' + colorHex + '**  Ãƒâ€šÃ‚Â·  ' + shapeDisplay, inline: false });
 
-        // Discord lié
+        // Discord liÃƒÆ’Ã‚Â©
         if (di && di.username) {
           const dLines = ['@' + (di.username || di.global_name || '?')];
           if (di.server_nick) dLines.push('Pseudo serveur : ' + di.server_nick);
-          if (di.boosting_since) dLines.push('🚀 Booster actif');
+          if (di.boosting_since) dLines.push('ÃƒÂ°Ã…Â¸Ã…Â¡Ã¢â€šÂ¬ Booster actif');
           if (di.server_roles && di.server_roles.length) {
             // Utiliser les mentions <@&ID> si on a les IDs, sinon les noms
             const roleMentions = di.server_roles
@@ -2492,33 +2619,33 @@ function startBot() {
               .slice(0, 5)
               .map(r => r.id ? '<@&' + r.id + '>' : r.name)
               .join(' ');
-            if (roleMentions) dLines.push('Rôles : ' + roleMentions);
+            if (roleMentions) dLines.push('RÃƒÆ’Ã‚Â´les : ' + roleMentions);
           }
-          embed.addFields({ name: '🔗 Discord', value: dLines.join('') || '—', inline: false });
+          embed.addFields({ name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€ Discord', value: dLines.join('') || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â', inline: false });
         }
 
         // Alertes
         const alerts = [];
-        if (data.suspicious) alerts.push('⚠️ Activité suspecte');
-        if (data.banned) alerts.push('🚫 Banni');
-        if (alerts.length) embed.addFields({ name: '🚨 Statut', value: alerts.join(' · '), inline: false });
+        if (data.suspicious) alerts.push('ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â ActivitÃƒÆ’Ã‚Â© suspecte');
+        if (data.banned) alerts.push('ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â« Banni');
+        if (alerts.length) embed.addFields({ name: 'ÃƒÂ°Ã…Â¸Ã…Â¡Ã‚Â¨ Statut', value: alerts.join(' Ãƒâ€šÃ‚Â· '), inline: false });
 
-        // Dernières parties
+        // DerniÃƒÆ’Ã‚Â¨res parties
         if (games.length) {
           const lines = games.map(g => {
             const isP1 = g.player1_id === data.id;
             const opp  = fv(isP1 ? g.p2_pseudo : g.p1_pseudo);
-            const icon = g.winner_id === null ? '⚖️' : (g.winner_id === data.id ? '✅' : '❌');
+            const icon = g.winner_id === null ? 'ÃƒÂ¢Ã…Â¡Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â' : (g.winner_id === data.id ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦' : 'ÃƒÂ¢Ã‚ÂÃ…â€™');
             const d    = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
-            return icon + ' vs **' + opp + '** · ' + (d >= 0 ? '+' : '') + d + ' ELO';
+            return icon + ' vs **' + opp + '** Ãƒâ€šÃ‚Â· ' + (d >= 0 ? '+' : '') + d + ' ELO';
           });
-          embed.addFields({ name: '🕹️ Dernières parties', value: lines.join(''), inline: false });
+          embed.addFields({ name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¢Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â DerniÃƒÆ’Ã‚Â¨res parties', value: lines.join(''), inline: false });
         }
 
-        embed.setFooter({ text: 'Puissance 4 Ranked · ID ' + data.id });
+        embed.setFooter({ text: 'Puissance 4 Ranked Ãƒâ€šÃ‚Â· ID ' + data.id });
         console.log('[BOT /profil] embed OK pour ' + data.pseudo);
 
-        // ── SelectMenu des parties ─────────────────────────────────────────
+        // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SelectMenu des parties ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
         const menuRows = [];
         if (games.length > 0) {
           const options = games.slice(0, 25).map(g => {
@@ -2526,20 +2653,32 @@ function startBot() {
             const opp   = isP1 ? g.p2_pseudo : g.p1_pseudo;
             const won   = g.winner_id === data.id;
             const draw  = g.winner_id === null;
-            const icon  = draw ? '⚖️' : (won ? '✅' : '❌');
+            const icon  = draw ? 'ÃƒÂ¢Ã…Â¡Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â' : (won ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦' : 'ÃƒÂ¢Ã‚ÂÃ…â€™');
             const delta = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
             const d     = (delta >= 0 ? '+' : '') + delta;
-            const date  = g.finished_at ? g.finished_at.slice(0,10) : '—';
-            const label = (icon + ' vs ' + (opp || '?') + ' · ' + d + ' ELO').slice(0,100);
-            const desc  = (date + ' · ' + (g.move_count || 0) + ' coups · ' + (g.duration || 0) + 's').slice(0,100);
+            const date  = g.finished_at ? g.finished_at.slice(0,10) : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
+            const label = (icon + ' vs ' + (opp || '?') + ' Ãƒâ€šÃ‚Â· ' + d + ' ELO').slice(0,100);
+            const desc  = (date + ' Ãƒâ€šÃ‚Â· ' + (g.move_count || 0) + ' coups Ãƒâ€šÃ‚Â· ' + (g.duration || 0) + 's').slice(0,100);
             return new StringSelectMenuOptionBuilder()
               .setLabel(label).setDescription(desc).setValue('game:' + g.id);
           });
           const menu = new StringSelectMenuBuilder()
             .setCustomId('prof_games:' + data.id)
-            .setPlaceholder('📋 Voir détails d\'une partie...')
+            .setPlaceholder('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¹ Voir dÃƒÆ’Ã‚Â©tails d\'une partie...')
             .addOptions(options);
           menuRows.push(new ActionRowBuilder().addComponents(menu));
+        } else {
+          const emptyMenu = new StringSelectMenuBuilder()
+            .setCustomId('prof_games:' + data.id)
+            .setPlaceholder('Aucune partie')
+            .setDisabled(true)
+            .addOptions(
+              new StringSelectMenuOptionBuilder()
+                .setLabel('Aucune partie')
+                .setDescription('Ce joueur n\'a pas encore de partie enregistrÃƒÆ’Ã‚Â©e.')
+                .setValue('none')
+            );
+          menuRows.push(new ActionRowBuilder().addComponents(emptyMenu));
         }
         const { AttachmentBuilder } = require('discord.js');
         const files = [];
@@ -2552,7 +2691,7 @@ function startBot() {
           files.push(new AttachmentBuilder(avatarInfo.attachment.buffer, { name: avatarInfo.attachment.name }));
         }
 
-        // Bannière
+        // BanniÃƒÆ’Ã‚Â¨re
         if (bannerAttachment) {
           files.push(new AttachmentBuilder(bannerAttachment.buffer, { name: bannerAttachment.name }));
         }
@@ -2573,7 +2712,7 @@ function startBot() {
               delta: isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0),
               won: g.winner_id === data.id,
               draw: g.winner_id === null,
-              date: g.finished_at ? g.finished_at.slice(0, 10) : '—',
+              date: g.finished_at ? g.finished_at.slice(0, 10) : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â',
             };
           }),
         });
@@ -2586,52 +2725,52 @@ function startBot() {
         return interaction.editReply({ embeds: [embed], files, components: menuRows });
       }
 
-      // ── /classement ────────────────────────────────────────────────────────
+      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ /classement ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
       if (interaction.commandName === 'classement') {
         const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id!=? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
-        if (!players.length) return interaction.editReply({ content: '❌ Aucun joueur.' });
-        const medals = ['🥇','🥈','🥉'];
+        if (!players.length) return interaction.editReply({ content: 'ÃƒÂ¢Ã‚ÂÃ…â€™ Aucun joueur.' });
+        const medals = ['ÃƒÂ°Ã…Â¸Ã‚Â¥Ã¢â‚¬Â¡','ÃƒÂ°Ã…Â¸Ã‚Â¥Ã‹â€ ','ÃƒÂ°Ã…Â¸Ã‚Â¥Ã¢â‚¬Â°'];
         const lines  = players.map((p,i) => {
           const r = eloRank(p.elo);
-          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** — ${p.elo} ELO · ${p.wins}V/${p.losses}D`;
+          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${p.elo} ELO Ãƒâ€šÃ‚Â· ${p.wins}V/${p.losses}D`;
         });
         const embed = new EmbedBuilder()
           .setColor('#ffd60a')
-          .setTitle('🏆 Classement Puissance 4')
+          .setTitle('ÃƒÂ°Ã…Â¸Ã‚ÂÃ¢â‚¬Â  Classement Puissance 4')
           .setURL(`${API}/leaderboard`)
           .setDescription(lines.join('\n'))
-          .setFooter({ text: 'Top 10 · Puissance 4 Ranked' });
+          .setFooter({ text: 'Top 10 Ãƒâ€šÃ‚Â· Puissance 4 Ranked' });
         return interaction.editReply({ embeds: [embed] });
       }
 
-      // ── /live ──────────────────────────────────────────────────────────────
+      // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ /live ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
       if (interaction.commandName === 'live') {
         const activeGames = [...(gm.games || new Map()).values()].filter(g => g.status === 'active');
-        if (!activeGames.length) return interaction.editReply({ content: '😴 Aucune partie en cours.' });
+        if (!activeGames.length) return interaction.editReply({ content: 'ÃƒÂ°Ã…Â¸Ã‹Å“Ã‚Â´ Aucune partie en cours.' });
         const lines = activeGames.map(g => {
           const p1 = g.players?.[1], p2 = g.players?.[2];
           if (!p1 || !p2) return null;
           const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-          return `⚔️ **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) · ${g.moveCount||0} coups · Tour de **${cur}**`;
+          return `ÃƒÂ¢Ã…Â¡Ã¢â‚¬ÂÃƒÂ¯Ã‚Â¸Ã‚Â **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) Ãƒâ€šÃ‚Â· ${g.moveCount||0} coups Ãƒâ€šÃ‚Â· Tour de **${cur}**`;
         }).filter(Boolean);
         const embed = new EmbedBuilder()
           .setColor('#ff2d55')
-          .setTitle(`🔴 ${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
+          .setTitle(`ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â´ ${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
           .setURL(`${API}/live`)
-          .setDescription(lines.join('\n') || '—')
-          .setFooter({ text: 'Puissance 4 Ranked · Live' });
+          .setDescription(lines.join('\n') || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â')
+          .setFooter({ text: 'Puissance 4 Ranked Ãƒâ€šÃ‚Â· Live' });
         return interaction.editReply({ embeds: [embed] });
       }
 
-    // ── SelectMenu détail d'une partie ─────────────────────────────────────────
+    // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SelectMenu dÃƒÆ’Ã‚Â©tail d'une partie ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('prof_games:')) {
       await interaction.deferReply({ ephemeral: true });
       try {
         const val = interaction.values[0];
-        if (!val.startsWith('game:')) return interaction.editReply({ content: '❌ Valeur invalide.' });
+        if (!val.startsWith('game:')) return interaction.editReply({ content: 'ÃƒÂ¢Ã‚ÂÃ…â€™ Valeur invalide.' });
         const gameId = Number(val.split(':')[1]);
         const game = gQ.getById.get(gameId);
-        if (!game) return interaction.editReply({ content: '❌ Partie introuvable.' });
+        if (!game) return interaction.editReply({ content: 'ÃƒÂ¢Ã‚ÂÃ…â€™ Partie introuvable.' });
 
         const moves = mQ.getByGame.all(gameId);
         const playerId = Number(interaction.customId.split(':')[1]);
@@ -2640,41 +2779,41 @@ function startBot() {
         const oppElo= isP1 ? game.p2_elo    : game.p1_elo;
         const won   = game.winner_id === playerId;
         const draw  = game.winner_id === null;
-        const icon  = draw ? '⚖️' : (won ? '✅' : '❌');
+        const icon  = draw ? 'ÃƒÂ¢Ã…Â¡Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â' : (won ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦' : 'ÃƒÂ¢Ã‚ÂÃ…â€™');
         const delta = isP1 ? (game.elo_p1 || 0) : (game.elo_p2 || 0);
         const myElo = isP1 ? game.p1_elo    : game.p2_elo;
         const myRank= eloRank(myElo);
         const oppRank=eloRank(oppElo);
         const date  = game.finished_at
           ? new Date(game.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-          : '—';
+          : 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â';
 
         const gameEmbed = new EmbedBuilder()
           .setColor(isP1 ? (game.p1_color || '#ff2d55') : (game.p2_color || '#ffd60a'))
           .setTitle(icon + ' Partie #' + gameId)
           .setURL(API + '/replay/' + gameId)
           .addFields(
-            { name: '⚔️ Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
-            { name: '📊 ELO',         value: (delta >= 0 ? '+' : '') + delta + ' ELO',    inline: true },
-            { name: '🎮 Coups',        value: String(game.move_count || 0),                inline: true },
-            { name: '⏱️ Durée',        value: (game.duration || 0) + 's',                  inline: true },
-            { name: '📅 Date',         value: date,                                         inline: false },
+            { name: 'ÃƒÂ¢Ã…Â¡Ã¢â‚¬ÂÃƒÂ¯Ã‚Â¸Ã‚Â Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
+            { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  ELO',         value: (delta >= 0 ? '+' : '') + delta + ' ELO',    inline: true },
+            { name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â® Coups',        value: String(game.move_count || 0),                inline: true },
+            { name: 'ÃƒÂ¢Ã‚ÂÃ‚Â±ÃƒÂ¯Ã‚Â¸Ã‚Â DurÃƒÆ’Ã‚Â©e',        value: (game.duration || 0) + 's',                  inline: true },
+            { name: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬Â¦ Date',         value: date,                                         inline: false },
           );
 
-        // Précision si analysée
+        // PrÃƒÆ’Ã‚Â©cision si analysÃƒÆ’Ã‚Â©e
         const myAccuracy = isP1 ? game.p1_accuracy : game.p2_accuracy;
         const oppAccuracy= isP1 ? game.p2_accuracy : game.p1_accuracy;
         if (myAccuracy != null) {
           gameEmbed.addFields(
-            { name: '🎯 Ma précision',  value: myAccuracy  + '%', inline: true },
-            { name: '🎯 Préc. adverse', value: (oppAccuracy || '—') + (oppAccuracy ? '%' : ''), inline: true },
+            { name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ Ma prÃƒÆ’Ã‚Â©cision',  value: myAccuracy  + '%', inline: true },
+            { name: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â¯ PrÃƒÆ’Ã‚Â©c. adverse', value: (oppAccuracy || 'ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â') + (oppAccuracy ? '%' : ''), inline: true },
           );
         }
 
         // Replay link button
         const replayBtn = new ActionRowBuilder().addComponents(
           new (require('discord.js').ButtonBuilder)()
-            .setLabel('📽️ Voir le replay')
+            .setLabel('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â½ÃƒÂ¯Ã‚Â¸Ã‚Â Voir le replay')
             .setURL(API + '/replay/' + gameId)
             .setStyle(require('discord.js').ButtonStyle.Link)
         );
@@ -2682,7 +2821,7 @@ function startBot() {
         return interaction.editReply({ embeds: [gameEmbed], components: [replayBtn] });
       } catch(e) {
         console.error('[BOT SelectMenu game]', e.message);
-        return interaction.editReply({ content: '❌ Erreur : ' + e.message });
+        return interaction.editReply({ content: 'ÃƒÂ¢Ã‚ÂÃ…â€™ Erreur : ' + e.message });
       }
     }
 
@@ -2691,7 +2830,7 @@ function startBot() {
       console.error('[BOT ERROR]', e.constructor.name, e.message);
       console.error(e.stack);
       // Envoyer l'erreur en ephemeral pour debug
-      const errMsg = `❌ **Erreur** : \`${e.constructor.name}: ${e.message}\``;
+      const errMsg = `ÃƒÂ¢Ã‚ÂÃ…â€™ **Erreur** : \`${e.constructor.name}: ${e.message}\``;
       try {
         if (interaction.deferred) await interaction.editReply({ content: errMsg });
         else await interaction.reply({ content: errMsg, ephemeral: true });
