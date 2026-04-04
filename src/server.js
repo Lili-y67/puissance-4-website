@@ -2119,18 +2119,18 @@ function startBot() {
       const bg = await loadImageSafeBot(loadImage, 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg');
       const avatar = await loadImageSafeBot(loadImage, data.avatar && data.avatar.startsWith('http') ? data.avatar : null);
       const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
-      const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
       const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
       const rawShape = data.shape || 'circle';
       const shapeDisplay = rawShape.startsWith('emoji:')
         ? (rawShape.slice(6).trim() || '●')
         : ({ circle: '●', diamond: '◆', triangle: '▲', star: '★', heart: '♥' }[rawShape] || '●');
+      const shapeLabel = rawShape.startsWith('emoji:') ? 'emoji perso' : rawShape;
       const colorHex = String(data.color || '#ff2d55').toUpperCase();
 
       const fontHero = '400 64px "Bebas Neue"';
       const fontSub = '700 26px "Barlow Condensed"';
       const fontSmall = '600 18px "Barlow"';
-      const fontMeta = '400 20px "Barlow"';
+      const fontMeta = '400 18px "Barlow"';
 
       const drawGlowText = (text, x, y, color, font, blur = 18, align = 'start') => {
         ctx.save();
@@ -2212,14 +2212,14 @@ function startBot() {
       ctx.fillText(`${data.elo} ELO / ${rank.label}${badgeText}`, 206, 166);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontMeta;
-      ctx.fillText(`ID ${data.id} / Couleur ${colorHex} / Forme ${shapeDisplay}`, 206, 204);
-      ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0} / Membre ${data.memberDate || '-'}`, 206, 236);
+      ctx.fillText(`ID ${data.id} / Couleur ${colorHex} / Forme ${shapeLabel}`, 206, 198);
+      ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0} / Membre ${data.memberDate || '-'}`, 206, 226);
 
       const infoX = 42;
-      const infoY = 278;
+      const infoY = 268;
       const infoLines = [
         `Pastille couleur : ${colorHex}`,
-        `Forme : ${shapeDisplay}`,
+        `Forme : ${shapeLabel}`,
         data.created_at ? `Rejoint le : ${new Date(data.created_at).toLocaleDateString('fr-FR')}` : `Rejoint le : --`,
       ];
       drawGlowText('PROFIL', infoX, infoY, '#f5f4ff', '400 30px "Bebas Neue"', 12);
@@ -2229,7 +2229,7 @@ function startBot() {
 
       ctx.save();
       ctx.beginPath();
-      ctx.arc(infoX + 230, infoY + 54, 14, 0, Math.PI * 2);
+      ctx.arc(infoX + 230, infoY + 54, 13, 0, Math.PI * 2);
       ctx.closePath();
       ctx.fillStyle = colorHex;
       ctx.shadowColor = colorHex;
@@ -2238,6 +2238,13 @@ function startBot() {
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.font = '34px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f5f4ff';
+      ctx.fillText(shapeDisplay, infoX + 228, infoY + 98);
       ctx.restore();
 
       const rankX = 744;
@@ -2290,7 +2297,7 @@ function startBot() {
       const statW = 304;
       const statH = 96;
       const startX = 42;
-      const statStartY = 346;
+      const statStartY = 360;
       const gapX = 24;
       const gapY = 24;
       stats.forEach((stat, index) => {
@@ -2307,41 +2314,6 @@ function startBot() {
         ctx.fillText(stat.value, x + statW / 2, y + 78);
         ctx.restore();
       });
-
-      const historyX = 42;
-      const historyY = 586;
-      const historyW = 1004;
-      const historyH = 66;
-      if (latestGames.length) {
-        ctx.save();
-        roundRectBot(ctx, historyX, historyY, historyW, historyH, 18);
-        ctx.fillStyle = 'rgba(14,16,30,0.60)';
-        ctx.shadowColor = '#ffd60a';
-        ctx.shadowBlur = 14;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(255,214,10,0.55)';
-        ctx.stroke();
-        ctx.restore();
-        ctx.fillStyle = '#ffd60a';
-        ctx.font = '700 20px "Barlow Condensed"';
-        ctx.fillText('PARTIES RECENTES', historyX + 18, historyY + 26);
-        ctx.fillStyle = '#f5f4ff';
-        ctx.font = fontSmall;
-        latestGames.forEach((g, i) => {
-          const sign = g.delta >= 0 ? '+' : '';
-          const icon = g.draw ? 'DRAW' : (g.won ? 'WIN' : 'LOSE');
-          ctx.fillText(`${icon} vs ${g.opp} / ${sign}${g.delta} ELO / ${g.date}`, historyX + 18, historyY + 50 + i * 18);
-        });
-      } else {
-        ctx.fillStyle = '#f5f4ff';
-        ctx.font = '700 20px "Barlow Condensed"';
-        ctx.fillText('PARTIES', historyX, historyY + 18);
-        ctx.fillStyle = '#c7c5de';
-        ctx.font = fontSmall;
-        ctx.fillText('Aucune partie recente.', historyX, historyY + 46);
-      }
 
       return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
     } catch (e) {
