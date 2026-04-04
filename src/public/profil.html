@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 â€” Profil</title>
+<title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -382,15 +382,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   <nav class="nav">
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
     <div class="nav-btns">
-      <a class="btn-nav" href="/">â† Jouer</a>
-      <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">DÃ©connexion</button>
-      <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">ðŸ—‘ï¸ Fermer le compte</button>
+      <a class="btn-nav" href="/">← Jouer</a>
+      <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">Déconnexion</button>
+      <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">Fermer le compte</button>
     </div>
   </nav>
 
   <!-- Recherche de joueur -->
   <div class="search-wrap">
-    <div class="search-label">ðŸ” Rechercher un joueur</div>
+    <div class="search-label">Rechercher un joueur</div>
     <div class="search-row" style="position:relative;">
       <input
         class="search-input"
@@ -413,7 +413,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         <div style="font-size:11px;color:var(--muted)" id="sr-stats"></div>
       </div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
-      <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir â†’</div>
+      <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir →</div>
     </a>
   </div>
 
@@ -428,7 +428,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         <div class="upload-chooser-title" id="upload-chooser-title">Choisir un fichier</div>
         <div class="upload-chooser-sub" id="upload-chooser-sub">Selectionne le type de fichier avant l'upload.</div>
       </div>
-      <button class="upload-chooser-close" type="button" onclick="closeUploadChooser()">âœ•</button>
+      <button class="upload-chooser-close" type="button" onclick="closeUploadChooser()">×</button>
     </div>
     <div class="upload-chooser-grid">
       <button class="upload-chooser-btn primary" type="button" id="upload-image-btn" onclick="chooseUploadKind('image')">
@@ -450,7 +450,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         <div class="image-editor-title" id="image-editor-title">Ajuster l'image</div>
         <div class="image-editor-sub" id="image-editor-sub">Zoomez et deplacez l'image comme sur Discord.</div>
       </div>
-      <button class="image-editor-close" type="button" onclick="closeImageEditor()">âœ•</button>
+      <button class="image-editor-close" type="button" onclick="closeImageEditor()">×</button>
     </div>
     <div class="image-editor-stage" id="image-editor-stage">
       <canvas class="image-editor-canvas" id="image-editor-canvas" width="640" height="420"></canvas>
@@ -582,7 +582,7 @@ async function load() {
     document.getElementById('btn-close-account').style.display = 'block';
   }
   if (!playerId) {
-    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">â† Retour</a></div>';
+    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">← Retour</a></div>';
     return;
   }
 
@@ -594,9 +594,9 @@ async function load() {
     if (profileRes.status === 404) {
       document.getElementById('content').innerHTML = `
         <div style="text-align:center;padding:80px 20px">
-          <div style="font-size:48px;margin-bottom:16px">ðŸ‘¤</div>
-          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color: var(--muted)">Compte supprimÃ©</div>
-          <div style="font-size:13px;color: var(--muted);margin-top:8px">Ce joueur a fermÃ© son compte.</div>
+          <div style="font-size:48px;margin-bottom:16px">Profil</div>
+          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color: var(--muted)">Compte supprimé</div>
+          <div style="font-size:13px;color: var(--muted);margin-top:8px">Ce joueur a fermé son compte.</div>
         </div>`;
       return;
     }
@@ -649,7 +649,7 @@ function render(player, games, following, followers, followStatus) {
     ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
          <div class="avatar-wrap" onclick="openUploadChooser('avatar')" title="Changer la photo">
            <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
-           <div class="avatar-overlay">ðŸ“·</div>
+           <div class="avatar-overlay">Photo</div>
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
          <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
@@ -665,33 +665,33 @@ function render(player, games, following, followers, followStatus) {
   const followBtn = !isOwnProfile && viewerPlayer
     ? `<button id="btn-follow" class="btn-follow ${followStatus.isFollowing ? 'following' : 'not-following'}"
          onclick="toggleFollow(${player.id})">
-         ${followStatus.isFollowing ? 'âœ“ Suivi' : '+ Suivre'}
+         ${followStatus.isFollowing ? '✓ Suivi' : '+ Suivre'}
        </button>`
     : '';
 
   document.getElementById('content').innerHTML = `
     <!-- Header -->
     <div class="profile-header">
-      <!-- BanniÃ¨re -->
-      <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la banniÃ¨re"' : ''}>
-        ${player.banner ? '<img src="' + player.banner + '" alt="banniÃ¨re">' : ''}
-        ${isOwnProfile ? '<div class="profile-banner-overlay">ðŸ–¼ï¸</div>' : ''}
+      <!-- Bannière -->
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la bannière"' : ''}>
+        ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
+        ${isOwnProfile ? '<div class="profile-banner-overlay">Modifier</div>' : ''}
       </div>
       <div class="profile-header-inner">
         ${avatarSection}
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">â­ VIP</span>' : ''}
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">ðŸ›¡ï¸ MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">âš¡ ADMIN</span>' : ''}
+            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">VIP</span>' : ''}
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">ADMIN</span>' : ''}
             ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 10px ${player.custom_role_color}22;font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">${player.custom_role_text}</span>` : ''}
           </div>
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
-          ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">ðŸ“· Photo Â· ðŸ–¼ï¸ BanniÃ¨re (clic sur chacune)</div>' : ''}
+          ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">Photo · Bannière (clic sur chacune)</div>' : ''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
-          <!-- ELO + badge cÃ´te Ã  cÃ´te -->
+          <!-- ELO + badge côte à côte -->
           <div style="display:flex;align-items:center;gap:10px">
             ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
             <div style="text-align:right">
@@ -706,25 +706,25 @@ function render(player, games, following, followers, followStatus) {
             <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden" title="${player.rank.progress}% vers le rang suivant">
               <div style="height:100%;width:${player.rank.progress}%;background:${player.rank.color};border-radius:2px;transition:width 0.6s ease"></div>
             </div>
-            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' â†’ ' + player.rank.next + ' ELO' : ' MAX'}</div>
+            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
           </div>` : ''}
           <!-- Bouton simulateur ELO -->
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
-            ðŸŽš Simulateur ELO
+            Simulateur ELO
           </button>
           ${isOwnProfile && player.is_vip ? `
           <div id="vip-boost-wrap" style="margin-top:4px;">
             <button id="vip-boost-btn" onclick="activateVipBoost()"
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
               onmouseover="this.style.background='rgba(255,214,10,0.15)'" onmouseout="this.style.background='rgba(255,214,10,0.08)'">
-              âš¡ BOOST VIP
+              BOOST VIP
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
           </div>` : ''}
           ${isOwnProfile ? `
           <label class="toggle-wrap" style="margin-top:4px;">
             <div>
-              <div class="toggle-label">âš¡ Auto-rejoin</div>
+              <div class="toggle-label">Auto-rejoin</div>
               <div class="toggle-sub" id="auto-rejoin-sub">Rejoindre la queue automatiquement</div>
             </div>
             <div class="toggle-switch">
@@ -745,7 +745,7 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <div class="social-card" onclick="switchTab('followers')">
         <div class="social-val">${followers.length}</div>
-        <div class="social-lbl">AbonnÃ©s</div>
+        <div class="social-lbl">Abonnés</div>
       </div>
       <div class="social-card" onclick="switchTab('history')">
         <div class="social-val">${games.length}</div>
@@ -756,12 +756,12 @@ function render(player, games, following, followers, followStatus) {
     <!-- Stats -->
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
       <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">DÃ©faites</div></div>
+      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
       <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
       ${player.avg_accuracy != null ? `
-      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysÃ©e(s)">
+      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
         <div class="stat-val">${player.avg_accuracy}%</div>
-        <div class="stat-lbl">PrÃ©cision</div>
+        <div class="stat-lbl">Précision</div>
       </div>` : ''}
     </div>
 
@@ -778,8 +778,8 @@ function render(player, games, following, followers, followStatus) {
     ${isOwnProfile ? `
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">ðŸŽ¨ Couleur de jeton</span>
-        <span class="save-confirm" id="save-confirm">âœ“ EnregistrÃ© !</span>
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Couleur de jeton</span>
+        <span class="save-confirm" id="save-confirm">✓ Enregistré !</span>
       </div>
       <div class="color-row" id="color-presets-wrap"></div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -793,13 +793,13 @@ function render(player, games, following, followers, followStatus) {
     </div>
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">ðŸ”· Forme de pion</span>
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Forme de pion</span>
         <span class="save-confirm" id="shape-confirm"></span>
       </div>
       <div class="shape-row" id="shape-row"></div>
       <div class="emoji-input-wrap" id="emoji-wrap">
         <span style="font-size:12px;color:var(--muted);">Ton emoji :</span>
-        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="â­" oninput="onEmojiInput(this.value)">
+        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="*" oninput="onEmojiInput(this.value)">
       </div>
       <button class="btn-save-color" onclick="saveShape()">Enregistrer</button>
     </div>
@@ -807,44 +807,44 @@ function render(player, games, following, followers, followStatus) {
     <!-- Carte mot de passe admin -->
     ${player.role === 'admin' ? `
     <div class="color-card" style="margin-top:0;border-color:rgba(255,45,85,0.3);background:rgba(255,45,85,0.05)">
-      <div class="card-label" style="color:var(--red)">âš¡ AccÃ¨s Panel Admin</div>
+      <div class="card-label" style="color:var(--red)">Accès Panel Admin</div>
       <div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
         Mot de passe du panel <a href="/admin" target="_blank" style="color:var(--red)">/admin</a>
       </div>
       <div id="admin-pwd-wrap" style="display:none;background:rgba(0,0,0,0.3);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:14px;letter-spacing:2px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
       <button class="btn-save-color" id="admin-pwd-btn" onclick="toggleAdminPwd()" style="background:rgba(255,45,85,0.12);border-color:rgba(255,45,85,0.3);color:var(--red)">
-        ðŸ”‘ Afficher le mot de passe
+        Afficher le mot de passe
       </button>
     </div>
     ` : ''}
 
     <!-- Carte liaison Discord -->
     <div class="color-card" style="margin-top:0" id="discord-card">
-      <div class="card-label">ðŸ”· Compte Discord</div>
+      <div class="card-label">Compte Discord</div>
       ${player.discord_id
         ? `<div id="discord-info-zone">
              <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
                <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discordâ€¦</span>
+               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discord...</span>
              </div>
            </div>
            <button class="btn-save-color" id="btn-unlink" onclick="requestUnlink()" style="margin-top:12px;background:rgba(255,45,85,0.1);border-color:rgba(255,45,85,0.3);color:#ff6b81;font-size:12px">
-             ðŸ”“ DÃ©lier Discord
+             Délier Discord
            </button>`
         : `<div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
-             Lie ton Discord pour pouvoir rÃ©initialiser ton mot de passe.
+             Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
            </div>
            <button class="btn-save-color" onclick="linkDiscord()" style="background:rgba(88,101,242,0.15);border-color:rgba(88,101,242,0.4);color:#8b9cf4">
-             <span style="font-size:14px">ðŸ”—</span> Lier Discord
+             Lier Discord
            </button>`
       }
     </div>
 
-    <!-- Modal dÃ©liaison Discord -->
+    <!-- Modal déliaison Discord -->
     <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">ðŸ”“ DÃ©lier Discord</div>
-        <div style="font-size:13px;color: var(--muted);margin-bottom:20px;line-height:1.5">Un code Ã  6 chiffres a Ã©tÃ© envoyÃ© en <strong style="color: var(--muted)">message privÃ©</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">Délier Discord</div>
+        <div style="font-size:13px;color: var(--muted);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color: var(--muted)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
         <input id="unlink-code-input" type="text" maxlength="6" placeholder="123456"
           style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
           oninput="this.value=this.value.replace(/\D/g,'')">
@@ -860,9 +860,9 @@ function render(player, games, following, followers, followStatus) {
     <!-- Popup simulateur ELO -->
     <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
       <div class="elo-sim-modal">
-        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color: var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">âœ•</button>
-        <div class="elo-sim-title">ðŸŽš Simulateur <span style="color:var(--red)">ELO</span></div>
-        <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO rÃ©el</div>
+        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color: var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">×</button>
+        <div class="elo-sim-title">Simulateur <span style="color:var(--red)">ELO</span></div>
+        <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO réel</div>
 
         <!-- Slider -->
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px">
@@ -877,8 +877,8 @@ function render(player, games, following, followers, followStatus) {
         <!-- Badge rang -->
         <div class="elo-sim-badge">
           <img id="elo-sim-img" src="" alt="" style="width:64px;height:64px;object-fit:contain">
-          <div class="elo-sim-rank-name" id="elo-sim-rank-name">â€”</div>
-          <div style="font-size:12px;color:var(--muted)" id="elo-sim-range">â€”</div>
+          <div class="elo-sim-rank-name" id="elo-sim-rank-name">-</div>
+          <div style="font-size:12px;color:var(--muted)" id="elo-sim-range">-</div>
           <div class="elo-sim-progress-wrap" style="width:200px">
             <div class="elo-sim-progress-fill" id="elo-sim-prog"></div>
           </div>
@@ -889,9 +889,9 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Tabs -->
     <div class="tabs-row">
-      <button class="tab active" id="tab-history"   onclick="switchTab('history')">ðŸŽ® Parties</button>
-      <button class="tab"        id="tab-following"  onclick="switchTab('following')">ðŸ‘ Suivis</button>
-      <button class="tab"        id="tab-followers"  onclick="switchTab('followers')">ðŸ‘¥ AbonnÃ©s</button>
+      <button class="tab active" id="tab-history"   onclick="switchTab('history')">Parties</button>
+      <button class="tab"        id="tab-following"  onclick="switchTab('following')">Suivis</button>
+      <button class="tab"        id="tab-followers"  onclick="switchTab('followers')">Abonnés</button>
     </div>
 
     <!-- Panel : Historique -->
@@ -907,7 +907,7 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Panel : Followers -->
     <div class="tab-panel" id="panel-followers">
-      ${renderPlayers(followers, 'Aucun abonnÃ© pour l\'instant.')}
+      ${renderPlayers(followers, 'Aucun abonné pour l\'instant.')}
     </div>
   `;
 
@@ -917,7 +917,7 @@ function render(player, games, following, followers, followStatus) {
     const isEmoji  = shapeRaw.startsWith('emoji:');
     setTimeout(() => {
       initColorPicker(player.color);
-      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : 'â­');
+      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : '*');
     }, 50);
   }
   // Initialiser la pagination des parties et le toggle auto-rejoin
@@ -953,7 +953,7 @@ async function toggleFollow(targetId) {
     if (res.ok) {
       btn.classList.toggle('following',     data.following);
       btn.classList.toggle('not-following', !data.following);
-      btn.textContent = data.following ? 'âœ“ Suivi' : '+ Suivre';
+      btn.textContent = data.following ? '✓ Suivi' : '+ Suivre';
     }
   } finally {
     btn.disabled = false;
@@ -985,7 +985,7 @@ function renderGamesPage() {
   const slice = _gamesData.slice(start, start + GAMES_PER_PAGE);
 
   container.innerHTML = total === 0
-    ? '<div class="empty-state">Aucune partie jouÃ©e pour l\'instant.</div>'
+    ? '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>'
     : slice.map(g => renderGameRow(g, _gamesPlayer)).join('');
 
   // Pagination
@@ -993,20 +993,20 @@ function renderGamesPage() {
   pagination.style.display = 'flex';
 
   let html = '';
-  // Bouton prÃ©cÃ©dent
-  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage - 1})" ${_gamesPage === 1 ? 'disabled' : ''}>â€¹</button>`;
+  // Bouton précédent
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage - 1})" ${_gamesPage === 1 ? 'disabled' : ''}><</button>`;
 
   // Pages
   for (let p = 1; p <= totalPages; p++) {
     if (totalPages > 7 && p > 2 && p < totalPages - 1 && Math.abs(p - _gamesPage) > 1) {
-      if (p === 3 || p === totalPages - 2) html += `<span style="color:var(--muted);padding:0 2px">â€¦</span>`;
+      if (p === 3 || p === totalPages - 2) html += `<span style="color:var(--muted);padding:0 2px">...</span>`;
       continue;
     }
     html += `<button class="pg-btn ${p === _gamesPage ? 'active' : ''}" onclick="gotoPage(${p})">${p}</button>`;
   }
 
   // Bouton suivant
-  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage + 1})" ${_gamesPage === totalPages ? 'disabled' : ''}>â€º</button>`;
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage + 1})" ${_gamesPage === totalPages ? 'disabled' : ''}>></button>`;
 
   pagination.innerHTML = html;
 }
@@ -1025,31 +1025,31 @@ function renderGameRow(g, me) {
     const won       = g.winner_id === me.id;
     const isDraw    = g.winner_id === null;
     const rc        = isDraw ? 'draw' : (won ? 'win' : 'loss');
-    const ri        = isDraw ? 'âš–ï¸' : (won ? 'ðŸ†' : 'ðŸ’€');
+    const ri        = isDraw ? '=' : (won ? 'V' : 'D');
     const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
     const date      = g.finished_at
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
-      : 'â€”';
-    const suspBadge = g.suspicious ? `<div title="Double compte dÃ©tectÃ© â€” ELO non comptabilisÃ©" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">âš ï¸ Double compte</div>` : '';
-  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">ðŸ“¦ ArchivÃ©e</div>` : '';
+      : '-';
+    const suspBadge = g.suspicious ? `<div title="Double compte détecté — ELO non comptabilisé" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">Double compte</div>` : '';
+  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">Archivée</div>` : '';
   return `<a class="game-row" href="/replay/${g.id}">
       <div class="game-result ${rc}">${ri}</div>
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
-        <div class="game-elo-change ${eloClass}">${g.suspicious ? 'Â±0 ELO' : eloStr}</div>
-        <div>${g.move_count} coups Â· ${g.duration}s</div>
+        <div class="game-elo-change ${eloClass}">${g.suspicious ? '±0 ELO' : eloStr}</div>
+        <div>${g.move_count} coups · ${g.duration}s</div>
         <div>${date}</div>
         ${suspBadge}
         ${archiveBadge}
       </div>
-      <div class="replay-badge">â–¶ Replay</div>
+      <div class="replay-badge">Replay</div>
     </a>`;
 }
 
 function renderGames(games, me) {
-  // CompatibilitÃ© â€” redirige vers le systÃ¨me paginÃ©
+  // Compatibilité — redirige vers le système paginé
   initGames(games, me);
 }
 
@@ -1066,7 +1066,7 @@ function renderPlayers(players, emptyMsg) {
       <div class="player-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
       <div class="player-mini-info">
         <div class="player-mini-pseudo">${p.pseudo}</div>
-        <div class="player-mini-stats">${p.wins||0}V Â· ${p.losses||0}D Â· ${wr}% WR</div>
+        <div class="player-mini-stats">${p.wins||0}V · ${p.losses||0}D · ${wr}% WR</div>
       </div>
       <div class="player-mini-elo">${p.elo}</div>
     </a>`;
@@ -1342,7 +1342,7 @@ async function uploadBannerData(banner, me, token) {
     PROFIL_SFX.upload();
     const bannerEl = document.querySelector('.profile-banner');
     if (bannerEl) {
-      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">ðŸ–¼ï¸</div>';
+      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">Modifier</div>';
       bannerEl.onclick = () => openUploadChooser('banner');
     }
     me.banner = banner;
@@ -1525,11 +1525,11 @@ function confirmCloseAccount() {
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
   modal.innerHTML = `
     <div style="background:var(--surface);border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
-      <div style="font-size:36px;margin-bottom:16px">âš ï¸</div>
+      <div style="font-size:36px;margin-bottom:16px">!</div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
       <div style="font-size:13px;color: var(--muted);margin-bottom:24px;line-height:1.6">
-        Ton compte sera dÃ©finitivement supprimÃ©.<br>
-        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color: var(--muted)">Joueur supprimÃ©</strong>.
+        Ton compte sera définitivement supprimé.<br>
+        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color: var(--muted)">Joueur supprimé</strong>.
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
         <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color: var(--muted);font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
@@ -1591,7 +1591,7 @@ async function onSearchInput(val) {
 function renderAcList(players) {
   const list = document.getElementById('autocomplete-list');
   if (!players.length) {
-    list.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--muted);">Aucun pseudo trouvÃ©</div>';
+    list.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--muted);">Aucun pseudo trouvé</div>';
     list.style.display = 'block';
     return;
   }
@@ -1652,16 +1652,16 @@ async function initVipBoostUI() {
       const mins = Math.ceil(data.remainingMs / 60000);
       btn.disabled = true;
       btn.style.opacity = '0.5';
-      btn.textContent = 'âš¡ BOOST ACTIF';
+      btn.textContent = 'BOOST ACTIF';
       stat.textContent = `Se termine dans ${mins} min`;
       stat.style.color = '#ffd60a';
     } else if (data.usedToday) {
       btn.disabled = true;
       btn.style.opacity = '0.5';
-      btn.textContent = 'âš¡ BOOST UTILISÃ‰';
-      stat.textContent = 'Disponible Ã  minuit (Paris)';
+      btn.textContent = 'BOOST UTILISÉ';
+      stat.textContent = 'Disponible à minuit (Paris)';
     } else {
-      btn.textContent = 'âš¡ ACTIVER BOOST VIP (+20% ELO Â· 1h)';
+      btn.textContent = 'ACTIVER BOOST VIP (+20% ELO · 1h)';
     }
   } catch(e) {}
 }
@@ -1679,17 +1679,17 @@ async function activateVipBoost() {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert('âŒ ' + (data.error || 'Erreur'));
+      alert((data.error || 'Erreur'));
       return;
     }
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
     btn.disabled = true;
     btn.style.opacity = '0.5';
-    btn.textContent = 'âš¡ BOOST ACTIF';
+    btn.textContent = 'BOOST ACTIF';
     stat.textContent = 'Se termine dans 60 min';
     stat.style.color = '#ffd60a';
-  } catch(e) { alert('Erreur rÃ©seau'); }
+  } catch(e) { alert('Erreur réseau'); }
 }
 
 // â”€â”€ Auto-rejoin toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1710,7 +1710,7 @@ function updateAutoRejoinSub(checked) {
   const sub = document.getElementById('auto-rejoin-sub');
   if (sub) sub.textContent = checked
     ? 'Rejoindre la queue automatiquement'
-    : 'Attendre sur l\'Ã©cran d\'accueil';
+    : 'Attendre sur l\'écran d\'accueil';
 }
 
 async function searchPlayer() {
@@ -1732,7 +1732,7 @@ async function searchPlayer() {
     if (!res.ok) throw new Error();
     const player = await res.json();
 
-    // Afficher le rÃ©sultat
+    // Afficher le résultat
     const color   = player.color || '#ff2d55';
     const total   = (player.wins||0) + (player.losses||0) + (player.draws||0);
     const wr      = total > 0 ? Math.round(((player.wins||0)/total)*100) : 0;
@@ -1746,7 +1746,7 @@ async function searchPlayer() {
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').textContent = player.pseudo;
-    document.getElementById('sr-stats').textContent  = `${player.wins||0}V Â· ${player.losses||0}D Â· ${wr}% WR`;
+    document.getElementById('sr-stats').textContent  = `${player.wins||0}V · ${player.losses||0}D · ${wr}% WR`;
     document.getElementById('sr-elo').textContent    = player.elo;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
     result.classList.add('show');
@@ -1807,19 +1807,19 @@ function hexToRgb(hex) {
 
 // â”€â”€ Shape picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SHAPES = [
-  { id: 'circle',   label: 'â—' },
-  { id: 'triangle', label: 'â–²' },
-  { id: 'diamond',  label: 'â—†' },
-  { id: 'star',     label: 'â˜…' },
-  { id: 'heart',    label: 'â™¥' },
-  { id: 'emoji',    label: 'ðŸ˜€' },
+  { id: 'circle',   label: '●' },
+  { id: 'triangle', label: '▲' },
+  { id: 'diamond',  label: '◆' },
+  { id: 'star',     label: '★' },
+  { id: 'heart',    label: '♥' },
+  { id: 'emoji',    label: 'Emoji' },
 ];
 let selectedShape = 'circle';
-let selectedEmoji = 'â­';
+let selectedEmoji = '⭐';
 
 function initShapePicker(currentShape, currentEmoji) {
   selectedShape = currentShape || 'circle';
-  selectedEmoji = currentEmoji || 'â­';
+  selectedEmoji = currentEmoji || '⭐';
   const row = document.getElementById('shape-row');
   if (!row) return;
   row.innerHTML = '';
@@ -1879,8 +1879,8 @@ function onEmojiInput(val) {
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   } else {
-    // Champ vide â†’ fallback â­
-    selectedEmoji = 'â­';
+    // Champ vide -> fallback
+    selectedEmoji = '*';
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
@@ -1891,21 +1891,21 @@ async function toggleAdminPwd() {
   const btn  = document.getElementById('admin-pwd-btn');
   if (wrap.style.display === 'block') {
     wrap.style.display = 'none';
-    btn.textContent = 'ðŸ”‘ Afficher le mot de passe';
+    btn.textContent = 'Afficher le mot de passe';
     return;
   }
   const token = localStorage.getItem('token');
   const res   = await fetch('/api/admin/password', { headers: { 'x-token': token } });
-  if (!res.ok) return alert('AccÃ¨s refusÃ©.');
+  if (!res.ok) return alert('Accès refusé.');
   const { password } = await res.json();
   wrap.textContent   = password;
   wrap.style.display = 'block';
-  btn.textContent    = 'ðŸ™ˆ Masquer';
+  btn.textContent    = 'Masquer';
 }
 
 // â”€â”€ Statut en ligne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function formatLastSeen(ts) {
-  if (!ts) return 'Jamais connectÃ©';
+  if (!ts) return 'Jamais connecté';
   const diff = Date.now() - ts;
   const s = Math.floor(diff / 1000);
   const m = Math.floor(s / 60);
@@ -1948,14 +1948,14 @@ async function loadStatus(playerId) {
 }
 
 // â”€â”€ Simulateur ELO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Table des rangs (miroir de rank.js cÃ´tÃ© client)
+// Table des rangs (miroir de rank.js côté client)
 const RANKS_SIM = [
   { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
   { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
   { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
   { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
   { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
-  { name:'AmÃ©thyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
 ];
 const LEVEL_NAMES = ['I','II','III','IV','V'];
 
@@ -1974,7 +1974,7 @@ function openEloSim() {
   const bg = document.getElementById('elo-sim-bg');
   if (!bg) return;
   bg.classList.add('show');
-  // Init slider Ã  l'ELO actuel du joueur affichÃ©
+  // Init slider à l'ELO actuel du joueur affiché
   const elo = currentPlayer?.elo || 1000;
   const slider = document.getElementById('elo-sim-slider');
   if (slider) { slider.value = elo; }
@@ -1989,7 +1989,7 @@ function updateEloSim(elo) {
   elo = Number(elo);
   const rank = getSimRank(elo);
 
-  // Valeur ELO affichÃ©e
+  // Valeur ELO affichée
   const valEl = document.getElementById('elo-sim-value');
   if (valEl) { valEl.textContent = elo; valEl.style.color = rank.color; }
 
@@ -2016,7 +2016,7 @@ function updateEloSim(elo) {
 
   // Tranche ELO
   const rangeEl = document.getElementById('elo-sim-range');
-  if (rangeEl) rangeEl.textContent = rank.min + ' â€“ ' + rank.max + ' ELO';
+  if (rangeEl) rangeEl.textContent = rank.min + ' - ' + rank.max + ' ELO';
 
   // Barre progression
   const prog = document.getElementById('elo-sim-prog');
@@ -2025,8 +2025,8 @@ function updateEloSim(elo) {
   // Next
   const nextEl = document.getElementById('elo-sim-next');
   if (nextEl) nextEl.textContent = rank.next
-    ? rank.progress + '% Â· Prochain rang Ã  ' + rank.next + ' ELO'
-    : 'âœ¨ Rang maximum atteint';
+    ? rank.progress + '% · Prochain rang à ' + rank.next + ' ELO'
+    : 'Rang maximum atteint';
 }
 
 function linkDiscord() {
@@ -2038,7 +2038,7 @@ function linkDiscord() {
 
 // â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };
-const NITRO_ICONS  = { 0: '', 1: 'ðŸ’Ž', 2: 'ðŸ’Ž', 3: 'ðŸ”·' };
+const NITRO_ICONS  = { 0: '', 1: 'Nitro', 2: 'Nitro', 3: 'Boost' };
 
 function syncStoredPlayerPatch(patch) {
   try {
@@ -2118,18 +2118,18 @@ async function loadDiscordInfo() {
         <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${tag}</span>
         ${globalName}
-        ${d.verified ? '<span title="Email vÃ©rifiÃ©" style="font-size:13px">âœ…</span>' : ''}
-        ${d.mfa_enabled ? '<span title="2FA activÃ©" style="font-size:13px">ðŸ”</span>' : ''}
+        ${d.verified ? '<span title="Email vérifié" style="font-size:13px">OK</span>' : ''}
+        ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">2FA</span>' : ''}
       </div>
 
       <!-- Infos lignes -->
       <div style="margin-bottom:12px">
-        ${row('ðŸ†”', 'ID Discord',        d.id)}
-        ${row('ðŸ“…', 'Compte crÃ©Ã© le',    createdStr + ' (' + ageStr + ')')}
-        ${row('ðŸ”—', 'LiÃ© le',            linkedStr)}
-        ${d.on_server && joinedStr ? row('ðŸ ', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('ðŸ ', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
-        ${d.server_nick ? row('âœï¸', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
-        ${d.server_roles?.length ? row('ðŸŽ­', 'RÃ´les sur serveur',
+        ${row('ID', 'ID Discord',        d.id)}
+        ${row('Date', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
+        ${row('Lien', 'Lié le',            linkedStr)}
+        ${d.on_server && joinedStr ? row('Srv', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('Srv', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
+        ${d.server_nick ? row('Pseudo', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
+        ${d.server_roles?.length ? row('Rôles', 'Rôles sur serveur',
           '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;">' +
           d.server_roles.map(r => {
             const col = r.color && r.color !== '#000000' ? r.color : '#99aab5';
@@ -2150,7 +2150,7 @@ async function loadDiscordInfo() {
 // â”€â”€ DÃ©liaison Discord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function requestUnlink() {
   const btn = document.getElementById('btn-unlink');
-  if (btn) { btn.disabled = true; btn.textContent = 'â³ Envoi en coursâ€¦'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }
 
   try {
     const token = localStorage.getItem('token');
@@ -2171,9 +2171,9 @@ async function requestUnlink() {
     }
   } catch(e) {
     PROFIL_SFX.error();
-    alert('Erreur rÃ©seau');
+    alert('Erreur réseau');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'ðŸ”“ DÃ©lier Discord'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Délier Discord'; }
   }
 }
 
@@ -2190,7 +2190,7 @@ async function confirmUnlink() {
   const code  = document.getElementById('unlink-code-input')?.value?.trim();
   const errEl = document.getElementById('unlink-error');
   if (!code || code.length !== 6) {
-    if (errEl) errEl.textContent = 'Entre un code Ã  6 chiffres';
+    if (errEl) errEl.textContent = 'Entre un code à 6 chiffres';
     return;
   }
 
@@ -2206,14 +2206,14 @@ async function confirmUnlink() {
     if (data.ok) {
       PROFIL_SFX.success();
       closeUnlinkModal();
-      // Recharger le profil pour reflÃ©ter la dÃ©liaison
+      // Recharger le profil pour refléter la déliaison
       setTimeout(() => location.reload(), 800);
     } else {
       PROFIL_SFX.error();
-      if (errEl) errEl.textContent = data.error || 'Code invalide ou expirÃ©';
+      if (errEl) errEl.textContent = data.error || 'Code invalide ou expiré';
     }
   } catch(e) {
-    if (errEl) errEl.textContent = 'Erreur rÃ©seau';
+    if (errEl) errEl.textContent = 'Erreur réseau';
   }
 }
 
@@ -2221,7 +2221,7 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || 'â­')) : selectedShape;
+  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '*')) : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shape: shapeVal, token }),
@@ -2232,7 +2232,7 @@ async function saveShape() {
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
     const c = document.getElementById('shape-confirm');
-    if (c) { c.textContent = 'âœ“ EnregistrÃ© !'; c.style.opacity = 1; setTimeout(() => c.style.opacity = 0, 2000); }
+    if (c) { c.textContent = '✓ Enregistré !'; c.style.opacity = 1; setTimeout(() => c.style.opacity = 0, 2000); }
   } else {
     PROFIL_SFX.error();
   }
