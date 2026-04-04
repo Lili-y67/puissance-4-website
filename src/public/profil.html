@@ -682,9 +682,9 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">VIP</span>' : ''}
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">ADMIN</span>' : ''}
+            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">⭐ VIP</span>' : ''}
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
             ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 10px ${player.custom_role_color}22;font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">${player.custom_role_text}</span>` : ''}
           </div>
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -717,7 +717,7 @@ function render(player, games, following, followers, followStatus) {
             <button id="vip-boost-btn" onclick="activateVipBoost()"
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
               onmouseover="this.style.background='rgba(255,214,10,0.15)'" onmouseout="this.style.background='rgba(255,214,10,0.08)'">
-              BOOST VIP
+              ⚡ BOOST VIP
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
           </div>` : ''}
@@ -798,8 +798,8 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <div class="shape-row" id="shape-row"></div>
       <div class="emoji-input-wrap" id="emoji-wrap">
-        <span style="font-size:12px;color:var(--muted);">Ton emoji :</span>
-        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="*" oninput="onEmojiInput(this.value)">
+        <span style="font-size:12px;color:var(--muted);font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;">Ton emoji :</span>
+        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="⭐" oninput="onEmojiInput(this.value)">
       </div>
       <button class="btn-save-color" onclick="saveShape()">Enregistrer</button>
     </div>
@@ -1652,7 +1652,7 @@ async function initVipBoostUI() {
       const mins = Math.ceil(data.remainingMs / 60000);
       btn.disabled = true;
       btn.style.opacity = '0.5';
-      btn.textContent = 'BOOST ACTIF';
+      btn.textContent = '⚡ BOOST ACTIF';
       stat.textContent = `Se termine dans ${mins} min`;
       stat.style.color = '#ffd60a';
     } else if (data.usedToday) {
@@ -1686,7 +1686,7 @@ async function activateVipBoost() {
     const stat = document.getElementById('vip-boost-status');
     btn.disabled = true;
     btn.style.opacity = '0.5';
-    btn.textContent = 'BOOST ACTIF';
+    btn.textContent = '⚡ BOOST ACTIF';
     stat.textContent = 'Se termine dans 60 min';
     stat.style.color = '#ffd60a';
   } catch(e) { alert('Erreur réseau'); }
@@ -1844,6 +1844,7 @@ function initShapePicker(currentShape, currentEmoji) {
       preview.style.borderRadius = '50%';
       preview.style.background   = 'transparent';
       preview.style.fontSize     = '22px';
+      preview.style.fontFamily   = 'Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif';
       preview.style.display      = 'flex';
       preview.style.alignItems   = 'center';
       preview.style.justifyContent = 'center';
@@ -1880,7 +1881,7 @@ function onEmojiInput(val) {
     if (btn) btn.textContent = selectedEmoji;
   } else {
     // Champ vide -> fallback
-    selectedEmoji = '*';
+    selectedEmoji = '⭐';
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
@@ -2221,7 +2222,7 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '*')) : selectedShape;
+  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '⭐')) : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shape: shapeVal, token }),
