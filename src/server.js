@@ -749,17 +749,16 @@ app.get('/auth/discord/callback', async (req, res) => {
             headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content: [
-                '**Puissance 4 - Compte Discord lie**',
+                '\uD83C\uDFAE **Puissance 4 - Compte Discord lie !**',
                 '',
-                `Bonjour **${freshPlayer.pseudo}** !`,
+                `Bonjour **${freshPlayer.pseudo}** ! \uD83D\uDC4B`,
                 '',
-                'Ton compte Discord a bien ete lie a ton compte Puissance 4.',
+                'Ton compte Discord a ete lie avec succes a ton compte Puissance 4.',
                 '',
-                'Tu peux maintenant reinitialiser ton mot de passe via Discord si besoin.',
+                '\uD83D\uDD11 Tu pourras desormais reinitialiser ton mot de passe via Discord si besoin.',
+                "Si tu n'es pas a l'origine de cette liaison, contacte un administrateur.",
                 '',
-                "_Si tu n'es pas a l'origine de cette liaison, contacte un administrateur._",
-                '',
-                '-# Si tu es administrateur, rejoins le serveur pour recuperer les permissions necessaires : https://discord.gg/ap73mMTX7a',
+                '\uD83D\uDD27 Si tu es Administrateur, rejoins le serveur pour recuperer les Permissions necessaires : https://discord.gg/ap73mMTX7a',
               ].join('\n'),
             }),
           });

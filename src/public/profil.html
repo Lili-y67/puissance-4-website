@@ -680,8 +680,8 @@ function render(player, games, following, followers, followStatus) {
       <div class="profile-header-inner">
         ${avatarSection}
         <div class="profile-info">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <div class="profile-pseudo">${player.pseudo}</div>
+          <div class="profile-pseudo">${player.pseudo}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px">
             ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; VIP</span>' : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
