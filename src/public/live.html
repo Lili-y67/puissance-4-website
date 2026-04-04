@@ -3,374 +3,577 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 — Parties en direct</title>
+<title>Puissance 4 - Live</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-:root {
-  --bg:       #06060e;
-  --surface:  #0d0d1c;
-  --surface2: #13132a;
-  --border:   rgba(255,255,255,0.06);
-  --text:     #eeeef5;
-  --muted:    rgba(238,238,245,0.38);
-  --accent:   #4c6ef5;
-  --green:    #30d158;
-  --red:      #ff2d55;
-  --grid:     #0a0a18;
-  --cell:     #07071a;
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--surface3:#171733;--border:rgba(255,255,255,0.06);
+  --text:#eeeef5;--muted:rgba(238,238,245,0.5);--accent:#4c6ef5;--green:#30d158;--red:#ff2d55;--yellow:#ffd60a;
+  --orange:#ff9f0a;--grid:#0a0a18;--cell:#07071a;
 }
-html, body { min-height: 100%; background: var(--bg); background-attachment: fixed; color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
-
-.bg-grid {
-  position: fixed; inset: 0; z-index: 0;
-  background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
-}
-.scanlines {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
-}
-.page { position: relative; z-index: 2; max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
-
-.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 12px; }
-.logo { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; text-decoration: none; color: var(--text); }
-.logo span { color: var(--red); text-shadow: 0 0 20px rgba(255,45,85,0.4); }
-
-.live-badge {
-  display: flex; align-items: center; gap: 8px;
-  font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
-  color: var(--green); background: rgba(48,209,88,0.08); border: 1px solid rgba(48,209,88,0.2);
-  padding: 6px 14px; border-radius: 20px;
-}
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse-dot 1.4s ease-in-out infinite; }
-@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.35;transform:scale(0.65)} }
-
-.refresh-bar  { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-bottom: 20px; }
-.refresh-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 100%; }
-
-.subtitle { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
-.subtitle strong { color: var(--text); font-weight: 600; }
-
-.games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-
-/* ── Carte ── */
-.game-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
-  padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 11px;
-  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
-  animation: card-in 0.35s cubic-bezier(0.22,1,0.36,1) both;
-}
-.game-card:hover { border-color: rgba(255,255,255,0.1); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-@keyframes card-in { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-
-/* ── Joueurs ── */
-.card-players { display: flex; align-items: center; gap: 8px; }
-.card-player  { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
-.card-player.p2 { flex-direction: row-reverse; }
-
-.p-avatar {
-  width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 900;
-  border: 1.5px solid;
-}
-.p-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.p-info { min-width: 0; flex: 1; }
-.p-pseudo { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.p-elo    { font-size: 10px; color: var(--muted); }
-.card-player.p2 .p-info { text-align: right; }
-.vs-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 900; color: var(--muted); letter-spacing: 2px; flex-shrink: 0; }
-
-/* ── Mini board — pas d'animation, juste la couleur ── */
-.mini-board {
-  background: var(--grid); border-radius: 10px; padding: 5px;
-  border: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, 1fr);
-  gap: 3px; aspect-ratio: 7 / 6;
-}
-.mini-cell {
-  border-radius: 50%;
-  background: var(--cell);
-  box-shadow: inset 0 1px 4px rgba(0,0,0,0.6);
-}
-
-/* ── Footer ── */
-.card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border); }
-.moves-label { font-size: 10px; color: var(--muted); }
-.turn-wrap   { display: flex; align-items: center; gap: 5px; }
-.turn-pip    { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.turn-name   { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-
-/* ── Résultat overlay sur la carte ── */
-.card-result {
-  position: relative; overflow: hidden;
-}
-.result-banner {
-  position: absolute; inset: 0; border-radius: 10px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; backdrop-filter: blur(6px); background: rgba(6,6,14,0.82);
-  animation: fade-in 0.4s ease;
-}
-@keyframes fade-in { from{opacity:0} to{opacity:1} }
-.result-title-live {
-  font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900;
-  letter-spacing: 3px; text-transform: uppercase;
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-}
-.result-elo-live { font-size: 11px; color: var(--muted); display: flex; gap: 12px; }
-.elo-change { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; }
-
-/* ── Empty ── */
-.empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 20px; color: var(--muted); }
-.empty-icon  { font-size: 44px; margin-bottom: 14px; }
-.empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--text); margin-bottom: 6px; }
-.empty-sub   { font-size: 12px; }
-
-@media (max-width: 600px) { .games-grid { grid-template-columns: 1fr 1fr; gap: 10px; } }
-@media (max-width: 400px) { .games-grid { grid-template-columns: 1fr; } }
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
+.page{position:relative;z-index:2;max-width:1380px;margin:0 auto;padding:28px 20px 56px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-decoration:none;color:var(--text)}
+.logo span{color:var(--red);text-shadow:0 0 24px rgba(255,45,85,0.35)}
+.live-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:rgba(48,209,88,0.08);border:1px solid rgba(48,209,88,0.22);color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.4s ease-in-out infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.refresh-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:16px}
+.refresh-fill{height:100%;background:var(--accent);border-radius:2px;width:100%}
+.headline{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.headline-title{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
+.headline-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.headline-sub strong{color:var(--text)}
+.status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(76,110,245,0.12);border:1px solid rgba(76,110,245,0.22);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.view{display:none}
+.view.show{display:block}
+.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.game-card{background:linear-gradient(180deg,rgba(18,18,38,.96),rgba(12,12,28,.96));border:1px solid var(--border);border-radius:18px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;animation:card-in .35s cubic-bezier(.22,1,.36,1) both}
+.game-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-2px);box-shadow:0 16px 36px rgba(0,0,0,.4)}
+@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-players{display:flex;align-items:center;gap:8px}
+.card-player{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+.card-player.p2{flex-direction:row-reverse}
+.p-avatar{width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;border:1.5px solid;flex-shrink:0}
+.p-avatar img{width:100%;height:100%;object-fit:cover}
+.p-info{min-width:0;flex:1}
+.p-pseudo{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-elo{font-size:10px;color:var(--muted)}
+.card-player.p2 .p-info{text-align:right}
+.vs-sep{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:var(--muted)}
+.mini-board{background:var(--grid);border-radius:12px;padding:6px;border:1px solid var(--border);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;aspect-ratio:7/6}
+.mini-cell{border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.94));box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03)}
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border)}
+.moves-label{font-size:10px;color:var(--muted)}
+.turn-wrap{display:flex;align-items:center;gap:6px}
+.turn-pip{width:7px;height:7px;border-radius:50%}
+.turn-name{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.empty-state{text-align:center;padding:88px 20px;color:var(--muted);border:1px dashed rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.015)}
+.empty-icon{font-size:44px;margin-bottom:12px}
+.empty-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;color:var(--text);margin-bottom:6px}
+.spec-shell{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,.9fr);gap:22px;align-items:start}
+.spec-card,.analysis-card{background:linear-gradient(180deg,rgba(18,18,38,.98),rgba(10,10,22,.98));border:1px solid var(--border);border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.spec-card{padding:22px}
+.analysis-card{padding:22px;display:flex;flex-direction:column;gap:18px}
+.spec-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.back-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.back-btn:hover{border-color:rgba(255,255,255,.16)}
+.spec-title{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.spec-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.spec-players{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:18px}
+.spec-player{display:flex;align-items:center;gap:12px;padding:14px 16px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:18px;min-width:0}
+.spec-player.right{justify-content:flex-end}
+.spec-player.right .spec-player-info{text-align:right}
+.spec-avatar{width:54px;height:54px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;border:2px solid;flex-shrink:0}
+.spec-avatar img{width:100%;height:100%;object-fit:cover}
+.spec-player-info{min-width:0}
+.spec-pseudo{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spec-elo{font-size:12px;color:var(--muted)}
+.turn-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.turn-chip .dot{width:8px;height:8px;border-radius:50%}
+.board-wrap{padding:18px;border-radius:22px;background:linear-gradient(180deg,#111128,#0a0a18);border:1px solid rgba(255,255,255,.04)}
+.live-board{width:min(100%,760px);margin:0 auto;background:#0a0a18;border-radius:26px;padding:18px;display:grid;grid-template-columns:repeat(7,1fr);gap:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 40px rgba(0,0,0,.35)}
+.live-cell{position:relative;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.96));box-shadow:inset 0 3px 10px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.03);overflow:hidden}
+.live-token{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:68%;font-weight:900}
+.spec-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
+.meta-pill{padding:9px 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.meta-pill strong{color:var(--text)}
+.analysis-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.analysis-copy{font-size:13px;color:var(--muted);line-height:1.5}
+.eval-wrap{display:flex;flex-direction:column;gap:10px}
+.eval-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.eval-label{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.eval-bar{height:16px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;display:flex;border:1px solid rgba(255,255,255,.06)}
+.eval-p1,.eval-p2{height:100%;transition:width .25s ease}
+.eval-p1{background:linear-gradient(90deg,rgba(255,45,85,.95),rgba(255,107,133,.85))}
+.eval-p2{background:linear-gradient(90deg,rgba(255,214,10,.9),rgba(255,234,128,.85))}
+.analysis-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.analysis-stat{padding:14px 14px 12px;border-radius:18px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05)}
+.analysis-stat-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.analysis-stat-value{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:1px}
+.analysis-note{padding:14px 16px;border-radius:16px;background:rgba(76,110,245,.08);border:1px solid rgba(76,110,245,.18);font-size:12px;color:#cad5ff;line-height:1.55}
+@media (max-width:1060px){.spec-shell{grid-template-columns:1fr}.analysis-grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:760px){.page{padding:22px 14px 46px}.headline-title{font-size:30px}.games-grid{grid-template-columns:1fr}.spec-player{padding:12px}.spec-pseudo{font-size:20px}.spec-players{grid-template-columns:1fr}.spec-player.right{justify-content:flex-start}.spec-player.right .spec-player-info{text-align:left}.live-board{gap:8px;padding:12px}.analysis-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 <div class="bg-grid"></div>
 <div class="scanlines"></div>
 <div class="page">
-
   <div class="nav">
     <a class="logo" href="/">Puissance <span>4</span></a>
-    <div class="live-badge"><div class="live-dot"></div>En direct</div>
+    <div class="live-badge"><div class="live-dot"></div>Live</div>
   </div>
 
-  <div class="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
-  <div class="subtitle"><strong id="count">—</strong> partie(s) en cours &nbsp;·&nbsp; <span id="live-status" style="color:var(--green)">⚡ Temps réel</span></div>
+  <div class="refresh-bar" id="refresh-bar"><div class="refresh-fill" id="refresh-fill"></div></div>
 
-  <div class="games-grid" id="games-grid">
-    <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
+  <div class="headline">
+    <div>
+      <div class="headline-title" id="headline-title">Parties en direct</div>
+      <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
+    </div>
+    <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
+  </div>
+
+  <div class="view show" id="list-view">
+    <div class="games-grid" id="games-grid">
+      <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
+    </div>
+  </div>
+
+  <div class="view" id="spec-view">
+    <div class="spec-shell">
+      <div class="spec-card">
+        <div class="spec-top">
+          <button class="back-btn" type="button" onclick="backToLive()">← Retour au live</button>
+          <div>
+            <div class="spec-title" id="spec-title">Spectateur</div>
+            <div class="spec-sub" id="spec-sub">Chargement de la partie...</div>
+          </div>
+        </div>
+
+        <div class="spec-players" id="spec-players"></div>
+
+        <div class="board-wrap">
+          <div class="live-board" id="live-board"></div>
+          <div class="spec-meta" id="spec-meta"></div>
+        </div>
+      </div>
+
+      <div class="analysis-card">
+        <div>
+          <div class="analysis-title">Analyse automatique</div>
+          <div class="analysis-copy">Lecture instantanee de la position. On montre l'equilibre, la dynamique et une precision estimee, sans afficher le meilleur coup.</div>
+        </div>
+
+        <div class="eval-wrap">
+          <div class="eval-top">
+            <div class="eval-label" id="eval-label-left">Joueur 1</div>
+            <div class="eval-label" id="eval-label-right">Joueur 2</div>
+          </div>
+          <div class="eval-bar">
+            <div class="eval-p1" id="eval-p1" style="width:50%"></div>
+            <div class="eval-p2" id="eval-p2" style="width:50%"></div>
+          </div>
+        </div>
+
+        <div class="analysis-grid">
+          <div class="analysis-stat">
+            <div class="analysis-stat-label">Precision estimee P1</div>
+            <div class="analysis-stat-value" id="precision-p1">50%</div>
+          </div>
+          <div class="analysis-stat">
+            <div class="analysis-stat-label">Precision estimee P2</div>
+            <div class="analysis-stat-value" id="precision-p2">50%</div>
+          </div>
+          <div class="analysis-stat">
+            <div class="analysis-stat-label">Menaces P1</div>
+            <div class="analysis-stat-value" id="threats-p1">0</div>
+          </div>
+          <div class="analysis-stat">
+            <div class="analysis-stat-label">Menaces P2</div>
+            <div class="analysis-stat-value" id="threats-p2">0</div>
+          </div>
+        </div>
+
+        <div class="analysis-note" id="analysis-note">La partie apparait ici en grand des qu'une game est selectionnee depuis le live.</div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const REFRESH_MS = 3000; // fallback polling
-
+const REFRESH_MS = 3000;
 const SHAPE_CLIPS = {
-  circle:   { borderRadius: '50%', clipPath: '' },
-  triangle: { borderRadius: '0',   clipPath: 'polygon(50% 8%, 95% 92%, 5% 92%)' },
-  diamond:  { borderRadius: '0',   clipPath: 'polygon(50% 5%, 95% 50%, 50% 95%, 5% 50%)' },
-  star:     { borderRadius: '0',   clipPath: 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
-  heart:    { borderRadius: '0',   clipPath: 'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)' },
-  emoji:    { borderRadius: '50%', clipPath: '' },
+  circle:{ borderRadius:'50%', clipPath:'' },
+  triangle:{ borderRadius:'0', clipPath:'polygon(50% 8%, 95% 92%, 5% 92%)' },
+  diamond:{ borderRadius:'0', clipPath:'polygon(50% 5%, 95% 50%, 50% 95%, 5% 50%)' },
+  star:{ borderRadius:'0', clipPath:'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
+  heart:{ borderRadius:'0', clipPath:'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)' },
+  emoji:{ borderRadius:'50%', clipPath:'' },
 };
+
+let socket = null;
+let prevIds = new Set();
+let selectedGameId = null;
 
 function parseShape(raw) {
   if (!raw) return { shape: 'circle', emoji: null };
-  if (raw.startsWith('emoji:')) return { shape: 'emoji', emoji: raw.slice(6) || '⭐' };
+  if (raw.startsWith('emoji:')) return { shape: 'emoji', emoji: raw.slice(6) || '★' };
   return { shape: raw, emoji: null };
 }
 
-// Applique forme + couleur sur une mini-cell
-function applyMiniToken(cell, color, rawShape) {
+function applyTokenStyle(el, color, rawShape, large = false) {
   const { shape, emoji } = parseShape(rawShape);
-  cell.style.background = '';
-  cell.style.clipPath   = '';
-  cell.style.borderRadius = '';
-  cell.innerHTML = '';
-
+  el.style.background = '';
+  el.style.clipPath = '';
+  el.style.borderRadius = '';
+  el.style.boxShadow = '';
+  el.textContent = '';
   if (shape === 'emoji' && emoji) {
-    cell.style.borderRadius = '50%';
-    cell.style.background   = color + '22';
-    cell.style.display      = 'flex';
-    cell.style.alignItems   = 'center';
-    cell.style.justifyContent = 'center';
-    cell.style.fontSize     = '65%';
-    cell.textContent        = emoji;
-  } else {
-    const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
-    cell.style.borderRadius = clip.borderRadius;
-    if (clip.clipPath) cell.style.clipPath = clip.clipPath;
-    cell.style.background = `radial-gradient(circle at 35% 30%, ${color}bb, ${color})`;
-    cell.style.boxShadow  = `inset 0 1px 3px rgba(0,0,0,0.3), 0 0 4px ${color}44`;
+    el.style.borderRadius = '50%';
+    el.style.background = color + '22';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.fontSize = large ? '74%' : '65%';
+    el.textContent = emoji;
+    return;
   }
+  const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
+  el.style.borderRadius = clip.borderRadius;
+  if (clip.clipPath) el.style.clipPath = clip.clipPath;
+  el.style.background = `radial-gradient(circle at 35% 30%, ${color}cc, ${color})`;
+  el.style.boxShadow = `inset 0 1px 4px rgba(255,255,255,0.06), 0 0 ${large ? 16 : 7}px ${color}44`;
 }
-let prevIds = new Set();
 
-function mkAvatar(player) {
+function mkAvatar(player, large = false) {
   const av = document.createElement('div');
-  av.className = 'p-avatar';
+  av.className = large ? 'spec-avatar' : 'p-avatar';
   av.style.borderColor = player.color;
-  av.style.background  = player.color + '1a';
-  av.style.color       = player.color;
+  av.style.background = player.color + '1a';
+  av.style.color = player.color;
   if (player.avatar) av.innerHTML = `<img src="${player.avatar}" alt="">`;
-  else av.textContent = player.pseudo[0].toUpperCase();
+  else av.textContent = (player.pseudo || '?')[0].toUpperCase();
   return av;
 }
 
-function mkCard(game) {
-  const p1 = game.players[1], p2 = game.players[2];
-  const card = document.createElement('div');
-  card.className = 'game-card';
-  card.dataset.id = game.id;
-  // Clic → rejoindre comme spectateur
-  if (game.status === 'active') {
-    card.style.cursor = 'pointer';
-    card.title = 'Voir cette partie en direct';
-    card.addEventListener('click', () => { location.href = '/spec/' + game.id; });
+function getInitialGameId() {
+  const pathMatch = location.pathname.match(/^\/spec\/(\d+)/);
+  if (pathMatch) return Number(pathMatch[1]);
+  const url = new URL(location.href);
+  const q = Number(url.searchParams.get('game'));
+  return Number.isFinite(q) && q > 0 ? q : null;
+}
+
+function goToSpec(gameId) {
+  if (!gameId) return;
+  selectedGameId = Number(gameId);
+  history.replaceState({}, '', '/spec/' + selectedGameId);
+  document.getElementById('list-view').classList.remove('show');
+  document.getElementById('spec-view').classList.add('show');
+  document.getElementById('headline-title').textContent = 'Mode spectateur';
+  document.getElementById('headline-pill').textContent = 'Analyse auto active';
+}
+
+function backToLive() {
+  selectedGameId = null;
+  history.replaceState({}, '', '/live');
+  document.getElementById('spec-view').classList.remove('show');
+  document.getElementById('list-view').classList.add('show');
+  document.getElementById('headline-title').textContent = 'Parties en direct';
+  document.getElementById('headline-pill').textContent = 'Cliquer pour spectate';
+}
+
+function scoreWindow(windowVals, player) {
+  const opp = player === 1 ? 2 : 1;
+  const me = windowVals.filter(v => v === player).length;
+  const them = windowVals.filter(v => v === opp).length;
+  const empty = windowVals.filter(v => v === 0).length;
+  if (me > 0 && them > 0) return 0;
+  if (me === 4) return 100;
+  if (me === 3 && empty === 1) return 12;
+  if (me === 2 && empty === 2) return 4;
+  if (them === 3 && empty === 1) return -10;
+  if (them === 4) return -100;
+  return 0;
+}
+
+function countThreats(grid, player) {
+  let threats = 0;
+  for (let c = 0; c < 7; c++) {
+    let row = -1;
+    for (let r = 5; r >= 0; r--) {
+      if ((grid[r]?.[c] ?? 0) === 0) { row = r; break; }
+    }
+    if (row === -1) continue;
+    const clone = grid.map(line => line.slice());
+    clone[row][c] = player;
+    if (hasConnectFour(clone, player)) threats++;
+  }
+  return threats;
+}
+
+function hasConnectFour(grid, player) {
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 7; c++) {
+      if ((grid[r]?.[c] ?? 0) !== player) continue;
+      for (const [dc, dr] of dirs) {
+        let ok = true;
+        for (let i = 1; i < 4; i++) {
+          const rr = r + dr * i;
+          const cc = c + dc * i;
+          if (rr < 0 || rr >= 6 || cc < 0 || cc >= 7 || (grid[rr]?.[cc] ?? 0) !== player) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function evaluatePosition(game) {
+  const grid = game.grid || [];
+  let score = 0;
+  const centerCol = 3;
+  for (let r = 0; r < 6; r++) {
+    const val = grid[r]?.[centerCol] ?? 0;
+    if (val === 1) score += 2;
+    if (val === 2) score -= 2;
   }
 
-  // Joueurs
-  const row = document.createElement('div');
-  row.className = 'card-players';
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 7; c++) {
+      if (c <= 3) score += scoreWindow([grid[r]?.[c] ?? 0, grid[r]?.[c+1] ?? 0, grid[r]?.[c+2] ?? 0, grid[r]?.[c+3] ?? 0], 1);
+      if (r <= 2) score += scoreWindow([grid[r]?.[c] ?? 0, grid[r+1]?.[c] ?? 0, grid[r+2]?.[c] ?? 0, grid[r+3]?.[c] ?? 0], 1);
+      if (c <= 3 && r <= 2) score += scoreWindow([grid[r]?.[c] ?? 0, grid[r+1]?.[c+1] ?? 0, grid[r+2]?.[c+2] ?? 0, grid[r+3]?.[c+3] ?? 0], 1);
+      if (c <= 3 && r >= 3) score += scoreWindow([grid[r]?.[c] ?? 0, grid[r-1]?.[c+1] ?? 0, grid[r-2]?.[c+2] ?? 0, grid[r-3]?.[c+3] ?? 0], 1);
+    }
+  }
 
-  const cp1 = document.createElement('div'); cp1.className = 'card-player p1';
-  const i1  = document.createElement('div'); i1.className  = 'p-info';
-  i1.innerHTML = `<div class="p-pseudo">${p1.pseudo}</div><div class="p-elo">${p1.elo} ELO</div>`;
-  cp1.append(mkAvatar(p1), i1);
+  const threats1 = countThreats(grid, 1);
+  const threats2 = countThreats(grid, 2);
+  score += (threats1 - threats2) * 18;
 
-  const sep = document.createElement('div'); sep.className = 'vs-sep'; sep.textContent = 'VS';
+  const normalized = Math.max(-100, Math.min(100, score));
+  const p1Share = Math.max(5, Math.min(95, 50 + normalized / 2));
+  const p2Share = 100 - p1Share;
+  const p1Precision = Math.max(1, Math.min(99, Math.round(50 + normalized * 0.35 + threats1 * 6 - threats2 * 4)));
+  const p2Precision = Math.max(1, Math.min(99, Math.round(50 - normalized * 0.35 + threats2 * 6 - threats1 * 4)));
 
-  const cp2 = document.createElement('div'); cp2.className = 'card-player p2';
-  const i2  = document.createElement('div'); i2.className  = 'p-info';
-  i2.innerHTML = `<div class="p-pseudo">${p2.pseudo}</div><div class="p-elo">${p2.elo} ELO</div>`;
-  cp2.append(mkAvatar(p2), i2);
+  let note = 'Position encore equilibree, les deux joueurs gardent des ressources.';
+  if (Math.abs(normalized) > 45) note = normalized > 0
+    ? `${game.players[1].pseudo} pousse plus fort et controle mieux la position.`
+    : `${game.players[2].pseudo} a une dynamique plus propre et plus dangereuse.`;
+  if (threats1 > 0 || threats2 > 0) note = `Menaces detectees: ${game.players[1].pseudo} ${threats1} / ${game.players[2].pseudo} ${threats2}. La partie peut basculer tres vite.`;
 
-  row.append(cp1, sep, cp2);
+  return { p1Share, p2Share, p1Precision, p2Precision, threats1, threats2, note };
+}
 
-  // Mini board — juste la couleur, aucune animation
-  const board = document.createElement('div');
-  board.className = 'mini-board';
+function renderList(games) {
+  const container = document.getElementById('games-grid');
+  document.getElementById('count').textContent = games.length;
+  if (!games.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
+    prevIds = new Set();
+    return;
+  }
+
+  const newIds = new Set(games.map(g => g.id));
+  container.querySelectorAll('.game-card').forEach(c => { if (!newIds.has(Number(c.dataset.id))) c.remove(); });
+
+  games.forEach((game, i) => {
+    const existing = container.querySelector(`.game-card[data-id="${game.id}"]`);
+    const p1 = game.players[1], p2 = game.players[2];
+    const card = document.createElement('div');
+    card.className = 'game-card';
+    card.dataset.id = game.id;
+    card.onclick = () => goToSpec(game.id);
+
+    const row = document.createElement('div');
+    row.className = 'card-players';
+
+    const cp1 = document.createElement('div');
+    cp1.className = 'card-player';
+    const i1 = document.createElement('div');
+    i1.className = 'p-info';
+    i1.innerHTML = `<div class="p-pseudo">${p1.pseudo}</div><div class="p-elo">${p1.elo} ELO</div>`;
+    cp1.append(mkAvatar(p1), i1);
+
+    const sep = document.createElement('div');
+    sep.className = 'vs-sep';
+    sep.textContent = 'VS';
+
+    const cp2 = document.createElement('div');
+    cp2.className = 'card-player p2';
+    const i2 = document.createElement('div');
+    i2.className = 'p-info';
+    i2.innerHTML = `<div class="p-pseudo">${p2.pseudo}</div><div class="p-elo">${p2.elo} ELO</div>`;
+    cp2.append(mkAvatar(p2), i2);
+
+    row.append(cp1, sep, cp2);
+
+    const board = document.createElement('div');
+    board.className = 'mini-board';
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 7; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'mini-cell';
+        const val = game.grid?.[r]?.[c] ?? 0;
+        if (val === 1) applyTokenStyle(cell, p1.color, p1.shape);
+        if (val === 2) applyTokenStyle(cell, p2.color, p2.shape);
+        board.appendChild(cell);
+      }
+    }
+
+    const footer = document.createElement('div');
+    footer.className = 'card-footer';
+    footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''}</div>`;
+    const turn = document.createElement('div');
+    turn.className = 'turn-wrap';
+    const pip = document.createElement('div');
+    pip.className = 'turn-pip';
+    pip.style.background = game.players[game.current].color;
+    const name = document.createElement('div');
+    name.className = 'turn-name';
+    name.style.color = game.players[game.current].color;
+    name.textContent = game.players[game.current].pseudo;
+    turn.append(pip, name);
+    footer.appendChild(turn);
+
+    card.append(row, board, footer);
+    if (prevIds.has(game.id)) card.style.animation = 'none';
+    else card.style.animationDelay = `${i * 35}ms`;
+    if (existing) existing.replaceWith(card);
+    else container.appendChild(card);
+  });
+
+  prevIds = newIds;
+}
+
+function renderSpec(game) {
+  const p1 = game.players[1], p2 = game.players[2];
+  document.getElementById('spec-title').textContent = `Partie #${game.id}`;
+  document.getElementById('spec-sub').textContent = `${game.moves} coups joues · tour de ${game.players[game.current].pseudo}`;
+
+  const players = document.getElementById('spec-players');
+  const turn = game.players[game.current];
+  players.innerHTML = '';
+
+  const left = document.createElement('div');
+  left.className = 'spec-player';
+  const leftInfo = document.createElement('div');
+  leftInfo.className = 'spec-player-info';
+  leftInfo.innerHTML = `<div class="spec-pseudo">${p1.pseudo}</div><div class="spec-elo">${p1.elo} ELO</div>`;
+  left.append(mkAvatar(p1, true), leftInfo);
+
+  const center = document.createElement('div');
+  center.className = 'turn-chip';
+  center.style.background = turn.color + '16';
+  center.style.border = `1px solid ${turn.color}44`;
+  center.style.color = turn.color;
+  center.innerHTML = `<span class="dot" style="background:${turn.color}"></span>Tour actuel`;
+
+  const right = document.createElement('div');
+  right.className = 'spec-player right';
+  const rightInfo = document.createElement('div');
+  rightInfo.className = 'spec-player-info';
+  rightInfo.innerHTML = `<div class="spec-pseudo">${p2.pseudo}</div><div class="spec-elo">${p2.elo} ELO</div>`;
+  right.append(rightInfo, mkAvatar(p2, true));
+
+  players.append(left, center, right);
+
+  const board = document.getElementById('live-board');
+  board.innerHTML = '';
   for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 7; c++) {
       const cell = document.createElement('div');
-      cell.className = 'mini-cell';
-      const val = game.grid[r]?.[c] ?? 0;
-      if (val === 1) applyMiniToken(cell, p1.color, p1.shape);
-      else if (val === 2) applyMiniToken(cell, p2.color, p2.shape);
+      cell.className = 'live-cell';
+      const val = game.grid?.[r]?.[c] ?? 0;
+      if (val === 1 || val === 2) {
+        const token = document.createElement('div');
+        token.className = 'live-token';
+        const pl = val === 1 ? p1 : p2;
+        applyTokenStyle(token, pl.color, pl.shape, true);
+        cell.appendChild(token);
+      }
       board.appendChild(cell);
     }
   }
 
-  // Footer
-  const footer = document.createElement('div');
-  footer.className = 'card-footer';
-  const movesEl = document.createElement('div');
-  movesEl.className = 'moves-label';
-  movesEl.textContent = `${game.moves} coup${game.moves !== 1 ? 's' : ''}`;
-  const tp = game.players[game.current];
-  const tw = document.createElement('div'); tw.className = 'turn-wrap';
-  const pip = document.createElement('div'); pip.className = 'turn-pip'; pip.style.background = tp.color;
-  const nm  = document.createElement('div'); nm.className  = 'turn-name'; nm.textContent = tp.pseudo; nm.style.color = tp.color;
-  tw.append(pip, nm);
-  footer.append(movesEl, tw);
+  const meta = document.getElementById('spec-meta');
+  meta.innerHTML = `
+    <div class="meta-pill">Partie <strong>#${game.id}</strong></div>
+    <div class="meta-pill">Coups <strong>${game.moves}</strong></div>
+    <div class="meta-pill">Statut <strong>ACTIVE</strong></div>
+  `;
 
-  // Overlay résultat si partie terminée
-  if (game.status === 'finished' && game.result) {
-    const res    = game.result;
-    const banner = document.createElement('div');
-    banner.className = 'result-banner';
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'result-title-live';
-
-    const isDraw = res.winner === null;
-    if (isDraw) {
-      titleEl.textContent = 'ÉGALITÉ';
-      titleEl.style.background = 'linear-gradient(135deg, rgba(238,238,245,0.5), rgba(238,238,245,0.9))';
-    } else {
-      const winner = game.players[res.winner];
-      titleEl.textContent = winner.pseudo + ' gagne !';
-      titleEl.style.background = `linear-gradient(135deg, ${winner.color}, white)`;
-    }
-
-    const eloRow = document.createElement('div');
-    eloRow.className = 'result-elo-live';
-    [1, 2].forEach(s => {
-      const delta = res.eloChanges?.[game.players[s].id] ?? 0;
-      const span  = document.createElement('span');
-      span.className = 'elo-change';
-      span.textContent = `${game.players[s].pseudo} ${delta >= 0 ? '+' : ''}${delta}`;
-      span.style.color = delta >= 0 ? 'var(--green)' : 'var(--muted)';
-      eloRow.appendChild(span);
-    });
-
-    banner.append(titleEl, eloRow);
-    board.style.position = 'relative';
-    board.appendChild(banner);
-  }
-
-  card.append(row, board, footer);
-  return card;
+  const analysis = evaluatePosition(game);
+  document.getElementById('eval-p1').style.width = `${analysis.p1Share}%`;
+  document.getElementById('eval-p2').style.width = `${analysis.p2Share}%`;
+  document.getElementById('precision-p1').textContent = `${analysis.p1Precision}%`;
+  document.getElementById('precision-p2').textContent = `${analysis.p2Precision}%`;
+  document.getElementById('threats-p1').textContent = String(analysis.threats1);
+  document.getElementById('threats-p2').textContent = String(analysis.threats2);
+  document.getElementById('analysis-note').textContent = analysis.note;
+  document.getElementById('eval-label-left').textContent = p1.pseudo;
+  document.getElementById('eval-label-right').textContent = p2.pseudo;
 }
 
 async function refresh() {
   try {
-    const games = await fetch('/api/live').then(r => r.json());
-    const container = document.getElementById('games-grid');
-    document.getElementById('count').textContent = games.length;
+    const games = await fetch('/api/live', { cache: 'no-store' }).then(r => r.json());
+    const activeGames = games.filter(g => g.status === 'active');
+    renderList(activeGames);
 
-    if (games.length === 0) {
-      container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div class="empty-sub">Clique sur une carte pour regarder en direct !</div></div>`;
-      prevIds = new Set(); return;
+    if (selectedGameId) {
+      const selected = activeGames.find(g => Number(g.id) === Number(selectedGameId));
+      if (selected) {
+        document.getElementById('spec-view').classList.add('show');
+        document.getElementById('list-view').classList.remove('show');
+        renderSpec(selected);
+      } else {
+        document.getElementById('spec-title').textContent = 'Partie indisponible';
+        document.getElementById('spec-sub').textContent = 'Cette partie a probablement deja pris fin.';
+        document.getElementById('spec-players').innerHTML = '';
+        document.getElementById('live-board').innerHTML = '';
+        document.getElementById('spec-meta').innerHTML = '';
+        document.getElementById('analysis-note').textContent = 'Aucune analyse disponible car la partie n est plus active.';
+      }
     }
-
-    const newIds = new Set(games.map(g => g.id));
-    container.querySelectorAll('.game-card').forEach(c => { if (!newIds.has(Number(c.dataset.id))) c.remove(); });
-
-    games.forEach((game, i) => {
-      const existing = container.querySelector(`.game-card[data-id="${game.id}"]`);
-      const card = mkCard(game);
-      if (prevIds.has(game.id)) card.style.animation = 'none';
-      else card.style.animationDelay = `${i * 35}ms`;
-      if (existing) existing.replaceWith(card);
-      else container.appendChild(card);
-    });
-
-    prevIds = newIds;
-  } catch(e) { console.error('live', e); }
+  } catch (e) {
+    console.error('live', e);
+  }
 }
 
-// ── Socket.IO temps réel ──────────────────────────────────────────────────────
-let socket;
-try {
-  socket = io({ transports: ['polling'] });
-  socket.emit('join_live');
-
-  socket.on('live_update', () => { refresh(); });
-
-  socket.on('connect', () => {
-    document.getElementById('live-status').textContent = '⚡ Temps réel';
-    document.getElementById('live-status').style.color = 'var(--green)';
-    // Masquer la barre de refresh (inutile en temps réel)
-    document.querySelector('.refresh-bar').style.display = 'none';
-  });
-
-  socket.on('disconnect', () => {
-    document.getElementById('live-status').textContent = '⟳ Polling 3s';
-    document.getElementById('live-status').style.color = 'var(--muted)';
-    document.querySelector('.refresh-bar').style.display = 'block';
-  });
-} catch(e) {
-  console.warn('Socket.IO indisponible, fallback polling');
-}
-
-// Fallback polling si pas de socket
 function animBar() {
   const fill = document.getElementById('refresh-fill');
   if (!fill) return;
-  fill.style.transition = 'none'; fill.style.width = '100%';
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
   void fill.offsetWidth;
-  fill.style.transition = `width ${REFRESH_MS}ms linear`; fill.style.width = '0%';
+  fill.style.transition = `width ${REFRESH_MS}ms linear`;
+  fill.style.width = '0%';
 }
 
+try {
+  socket = io({ transports: ['polling'] });
+  socket.emit('join_live');
+  socket.on('live_update', () => refresh());
+  socket.on('connect', () => {
+    document.getElementById('live-status').textContent = 'Temps reel';
+    document.getElementById('live-status').style.color = 'var(--green)';
+    document.getElementById('refresh-bar').style.display = 'none';
+  });
+  socket.on('disconnect', () => {
+    document.getElementById('live-status').textContent = 'Polling 3s';
+    document.getElementById('live-status').style.color = 'var(--muted)';
+    document.getElementById('refresh-bar').style.display = 'block';
+  });
+} catch (e) {
+  console.warn('Socket indisponible, fallback polling');
+}
+
+selectedGameId = getInitialGameId();
+if (selectedGameId) goToSpec(selectedGameId);
 refresh();
-// Polling de secours (utile même avec socket pour la 1ère charge)
 setInterval(() => {
-  if (!socket?.connected) { refresh(); animBar(); }
+  if (!socket?.connected) {
+    refresh();
+    animBar();
+  }
 }, REFRESH_MS);
 </script>
 <script src="/presence.js"></script>
 </body>
 </html>
-

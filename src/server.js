@@ -154,7 +154,7 @@ app.get('/spec/:id', (req, res) => {
   if (!state || state.status !== 'active') {
     return res.sendFile(path.join(__dirname, 'public/404.html'));
   }
-  res.sendFile(path.join(__dirname, 'public/game.html'));
+  res.sendFile(path.join(__dirname, 'public/live.html'));
 });
 app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 
