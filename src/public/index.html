@@ -180,6 +180,7 @@ html, body {
   letter-spacing:1px;
   text-transform:uppercase;
   box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 2.8s ease-in-out infinite;
 }
 .site-online-dot{
   width:7px;
@@ -187,6 +188,7 @@ html, body {
   border-radius:50%;
   background:#30d158;
   box-shadow:0 0 0 4px rgba(48,209,88,0.12);
+  animation:badge-pulse-green 1.8s ease-in-out infinite;
 }
 .site-games-badge{
   display:inline-flex;
@@ -204,6 +206,7 @@ html, body {
   letter-spacing:1px;
   text-transform:uppercase;
   box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 3.1s ease-in-out infinite;
 }
 .site-games-dot{
   width:7px;
@@ -211,6 +214,19 @@ html, body {
   border-radius:50%;
   background:#ff9f0a;
   box-shadow:0 0 0 4px rgba(255,159,10,0.12);
+  animation:badge-pulse-orange 1.9s ease-in-out infinite;
+}
+@keyframes badge-float{
+  0%,100%{transform:translateY(0);box-shadow:0 10px 22px rgba(0,0,0,0.18);}
+  50%{transform:translateY(-2px);box-shadow:0 14px 28px rgba(0,0,0,0.24);}
+}
+@keyframes badge-pulse-green{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(48,209,88,0.12);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(48,209,88,0.08),0 0 14px rgba(48,209,88,0.26);}
+}
+@keyframes badge-pulse-orange{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(255,159,10,0.12);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(255,159,10,0.08),0 0 14px rgba(255,159,10,0.24);}
 }
 
 /* ── Board decoration ───────────────────────────────────────────────────────── */
