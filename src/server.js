@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
@@ -2348,7 +2348,7 @@ function startBot() {
           ORDER BY elo DESC LIMIT 10
         `).all(q.replace(/%/g,'') + '%', BOT_PLAYER_ID);
         await interaction.respond(rows.map(r => ({
-          name: `${r.pseudo} AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ${r.elo} ELO`,
+          name: `${r.pseudo} - ${r.elo} ELO`,
           value: r.pseudo
         })));
       } catch(e) {
@@ -2374,17 +2374,16 @@ function startBot() {
         ).get(pseudo);
 
         if (!data) {
-          return interaction.editReply({ content: `AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA Joueur **${pseudo}** introuvable.` });
+          return interaction.editReply({ content: `Joueur **${pseudo}** introuvable.` });
         }
 
-        console.log(`[BOT /profil] joueur trouvAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA id=${data.id}`);
+        console.log(`[BOT /profil] joueur trouve id=${data.id}`);
 
         const games = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
-        const rank  = eloRank(data.elo);
-        const total = (data.wins||0)+(data.losses||0)+(data.draws||0);
-        const wr    = total ? Math.round((data.wins/total)*100)+'%' : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
+        const rank = eloRank(data.elo);
+        const total = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
+        const wr = total ? Math.round((data.wins / total) * 100) + '%' : '--';
 
-        // PrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision moyenne
         const accRow = db.prepare(`
           SELECT
             AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
@@ -2393,157 +2392,45 @@ function startBot() {
         `).get(data.id, data.id, data.id, data.id);
         const prec = (() => {
           const vals = [accRow?.as_p1, accRow?.as_p2].filter(v => v != null);
-          return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)+'%' : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
+          return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + '%' : '--';
         })();
 
-        // Discord info
-        const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
+        const di = (() => {
+          try { return data.discord_info ? JSON.parse(data.discord_info) : null; }
+          catch { return null; }
+        })();
 
-        // Rang progression
         const rankInfo = getRank(data.elo);
-        const pct = rankInfo.progress ?? 0;
-        const bar = 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAAAasAAAAAAAAAaAAAAasAA '.repeat(Math.round(pct/10)) + 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAasAAAAAAAAasAA...AAasAAAAaAAaAaA"'.repeat(10-Math.round(pct/10));
-
-        // Helper : valeur safe pour field Discord (jamais vide)
-        const fv = v => (v != null && String(v).trim() !== '') ? String(v) : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
-
-        // Mention du membre Discord si liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
-        const memberMention = data.discord_id ? '<@' + data.discord_id + '>' : null;
-
-        const roleLabel = data.role === 'admin' ? ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA ADMIN' : data.role === 'moderator' ? ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA MODO' : '';
-        const desc = (memberMention ? memberMention + '  ' : '') + rank.label + ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ' + data.elo + ' ELO' + roleLabel;
-
-        const embed = new EmbedBuilder()
-          .setColor(data.color && data.color.startsWith('#') ? data.color : rank.color)
-          .setTitle(rank.emoji + ' ' + data.pseudo)
-          .setURL(API + '/profil?id=' + data.id)
-          .setDescription(desc);
-
-        // BanniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAre AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA base64 ou URL HTTP
-        let bannerAttachment = null;
-        if (data.banner) {
-          if (data.banner.startsWith('http')) {
-            embed.setImage(data.banner);
-          } else if (data.banner.startsWith('data:')) {
-            try {
-              const bm = data.banner.match(/^data:([^;]+);base64,(.+)$/);
-              if (bm) {
-                const bext = bm[1].split('/')[1] || 'jpg';
-                bannerAttachment = { name: 'banner.' + bext, buffer: Buffer.from(bm[2], 'base64') };
-                embed.setImage('attachment://banner.' + bext);
-              }
-            } catch(e) { console.error('[BOT] banner base64 parse error:', e.message); }
-          }
-        }
-        const avatarInfo = await getAvatarAttachment(data);
-
-        // Stats
-        embed.addFields(
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA  Victoires', value: fv(data.wins),   inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA DAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAfaites',  value: fv(data.losses), inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA Nuls',      value: fv(data.draws),  inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Parties',   value: fv(total),        inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAAAasAAAAAaAAasAA  Win rate',  value: fv(wr),           inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA PrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision', value: fv(prec),         inline: true },
-        );
-
-        // Rang progression
-        const rankLvlLabel = rank.label + ' ' + (['I','II','III','IV','V'][(rankInfo.level||1)-1] || 'I');
-        const rankValue = bar + ' ' + pct + '%' + (rankInfo.next ? ' AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ' + rankInfo.next + ' ELO pour monter' : ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA MAX');
-        embed.addFields({ name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAAAasAAAAAAAAAaAAAAasAA  ' + rankLvlLabel, value: rankValue, inline: false });
-
-        // Social
         const followCounts = db.prepare(
           'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
         ).get(data.id, data.id);
         const memberDate = data.created_at
-          ? new Date(data.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})
-          : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
-        embed.addFields(
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAaAaA"AAaAAAasAA...AAAaAAasAA Suivis',   value: fv(followCounts?.following), inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAaAaA"AAaAAAasAA...AAAaAAasAA AbonnAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', value: fv(followCounts?.followers), inline: true },
-          { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Membre',  value: memberDate,                   inline: true },
-        );
+          ? new Date(data.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+          : '--';
 
-        // Apparence AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA emoji de forme, pastille couleur approchante
-        const shapeEmoji = { circle:'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA', diamond:'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAAAAaAAAasAAAAAaAAasAA', triangle:'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA', star:'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA', heart:'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA' };
-        const rawShape = data.shape || 'circle';
-        const shapeDisplay = rawShape.startsWith('emoji:') ? rawShape.slice(6) || 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA' : (shapeEmoji[rawShape] || 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA');
-        const colorHex = (data.color || '#ff2d55').toUpperCase();
-        // Pastille couleur approchante via emoji Discord
-        const r16 = parseInt(colorHex.slice(1,3),16), g16 = parseInt(colorHex.slice(3,5),16), b16 = parseInt(colorHex.slice(5,7),16);
-        const colorDot = (() => {
-          if (r16 > 200 && g16 < 100 && b16 < 100) return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 > 200 && g16 > 150 && b16 < 80)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA ';
-          if (r16 > 200 && g16 > 200 && b16 < 80)   return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 < 100 && g16 > 160 && b16 < 100)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 < 100 && g16 < 100 && b16 > 180)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 > 120 && g16 < 80  && b16 > 150)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 > 160 && g16 > 100 && b16 > 100)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 > 200 && g16 > 200 && b16 > 200)  return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          if (r16 < 60  && g16 < 60  && b16 < 60)   return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-          return 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA';
-        })();
-        embed.addFields({ name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Apparence', value: colorDot + ' **' + colorHex + '**  AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA  ' + shapeDisplay, inline: false });
+        const safe = value => {
+          const textValue = value == null ? '' : String(value).trim();
+          return textValue ? textValue : '--';
+        };
 
-        // Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
-        if (di && di.username) {
-          const dLines = ['@' + (di.username || di.global_name || '?')];
-          if (di.server_nick) dLines.push('Pseudo serveur : ' + di.server_nick);
-          if (di.boosting_since) dLines.push('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Booster actif');
-          if (di.server_roles && di.server_roles.length) {
-            // Utiliser les mentions <@&ID> si on a les IDs, sinon les noms
-            const roleMentions = di.server_roles
-              .filter(r => r && r.name && r.name !== '@everyone')
-              .slice(0, 5)
-              .map(r => r.id ? '<@&' + r.id + '>' : r.name)
-              .join(' ');
-            if (roleMentions) dLines.push('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles : ' + roleMentions);
-          }
-          embed.addFields({ name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAasAA Discord', value: dLines.join('') || 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA', inline: false });
-        }
-
-        // Alertes
-        const alerts = [];
-        if (data.suspicious) alerts.push('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA ActivitAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA suspecte');
-        if (data.banned) alerts.push('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Banni');
-        if (alerts.length) embed.addFields({ name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Statut', value: alerts.join(' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA '), inline: false });
-
-        // DerniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres parties
-        if (games.length) {
-          const lines = games.map(g => {
-            const isP1 = g.player1_id === data.id;
-            const opp  = fv(isP1 ? g.p2_pseudo : g.p1_pseudo);
-            const icon = g.winner_id === null ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA' : (g.winner_id === data.id ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAAAAAaAAAAaAaA"AAaAasAAAAAAAAasAA...AAasAAAAaAAasAA' : 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA');
-            const d    = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
-            return icon + ' vs **' + opp + '** AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ' + (d >= 0 ? '+' : '') + d + ' ELO';
-          });
-          embed.addFields({ name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA DerniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres parties', value: lines.join(''), inline: false });
-        }
-
-        embed.setFooter({ text: 'Puissance 4 Ranked AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ID ' + data.id });
-        console.log('[BOT /profil] embed OK pour ' + data.pseudo);
-
-        // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA SelectMenu des parties AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
         const menuRows = [];
         if (games.length > 0) {
           const options = games.slice(0, 25).map(g => {
-            const isP1  = g.player1_id === data.id;
-            const opp   = isP1 ? g.p2_pseudo : g.p1_pseudo;
-            const won   = g.winner_id === data.id;
-            const draw  = g.winner_id === null;
-            const icon  = draw ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA' : (won ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAAAAAaAAAAaAaA"AAaAasAAAAAAAAasAA...AAasAAAAaAAasAA' : 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA');
+            const isP1 = g.player1_id === data.id;
+            const opp = safe(isP1 ? g.p2_pseudo : g.p1_pseudo);
+            const won = g.winner_id === data.id;
+            const draw = g.winner_id === null;
+            const icon = draw ? 'DRAW' : (won ? 'WIN' : 'LOSE');
             const delta = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
-            const d     = (delta >= 0 ? '+' : '') + delta;
-            const date  = g.finished_at ? g.finished_at.slice(0,10) : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
-            const label = (icon + ' vs ' + (opp || '?') + ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ' + d + ' ELO').slice(0,100);
-            const desc  = (date + ' AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ' + (g.move_count || 0) + ' coups AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ' + (g.duration || 0) + 's').slice(0,100);
+            const date = g.finished_at ? g.finished_at.slice(0, 10) : '--';
             return new StringSelectMenuOptionBuilder()
-              .setLabel(label).setDescription(desc).setValue('game:' + g.id);
+              .setLabel(`${icon} vs ${opp} / ${(delta >= 0 ? '+' : '') + delta} ELO`.slice(0, 100))
+              .setDescription(`${date} / ${g.move_count || 0} coups / ${g.duration || 0}s`.slice(0, 100))
+              .setValue('game:' + g.id);
           });
           const menu = new StringSelectMenuBuilder()
             .setCustomId('prof_games:' + data.id)
-            .setPlaceholder('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Voir dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtails d\'une partie...')
+            .setPlaceholder('Voir le detail d une partie')
             .addOptions(options);
           menuRows.push(new ActionRowBuilder().addComponents(menu));
         } else {
@@ -2554,29 +2441,15 @@ function startBot() {
             .addOptions(
               new StringSelectMenuOptionBuilder()
                 .setLabel('Aucune partie')
-                .setDescription('Ce joueur n\'a pas encore de partie enregistrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe.')
+                .setDescription('Ce joueur n a pas encore de partie enregistree.')
                 .setValue('none')
             );
           menuRows.push(new ActionRowBuilder().addComponents(emptyMenu));
         }
-        const { AttachmentBuilder } = require('discord.js');
-        const files = [];
-
-        // Avatar
-        if (avatarInfo.url) {
-          embed.setThumbnail(avatarInfo.url);
-        } else if (avatarInfo.attachment) {
-          embed.setThumbnail('attachment://' + avatarInfo.attachment.name);
-          files.push(new AttachmentBuilder(avatarInfo.attachment.buffer, { name: avatarInfo.attachment.name }));
-        }
-
-        // BanniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAre
-        if (bannerAttachment) {
-          files.push(new AttachmentBuilder(bannerAttachment.buffer, { name: bannerAttachment.name }));
-        }
 
         const cardAttachment = await generateProfileCardAttachment({
           ...data,
+          discordInfo: di,
           rank: rankInfo,
           rankEmoji: rank.emoji,
           winRate: wr,
@@ -2587,57 +2460,59 @@ function startBot() {
           latestGames: games.map(g => {
             const isP1 = g.player1_id === data.id;
             return {
-              opp: fv(isP1 ? g.p2_pseudo : g.p1_pseudo),
+              opp: safe(isP1 ? g.p2_pseudo : g.p1_pseudo),
               delta: isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0),
               won: g.winner_id === data.id,
               draw: g.winner_id === null,
-              date: g.finished_at ? g.finished_at.slice(0, 10) : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA',
+              date: g.finished_at ? g.finished_at.slice(0, 10) : '--',
             };
           }),
         });
-        if (cardAttachment) {
-          files.length = 0;
-          files.push(cardAttachment);
-          return interaction.editReply({ files, components: menuRows });
+
+        if (!cardAttachment) {
+          console.error(`[BOT /profil] echec generation carte id=${data.id}`);
+          return interaction.editReply({
+            content: `Impossible de generer la carte de profil de **${data.pseudo}** pour le moment.`,
+            components: menuRows,
+          });
         }
 
-        return interaction.editReply({ embeds: [embed], files, components: menuRows });
+        console.log(`[BOT /profil] carte OK pour ${data.pseudo}`);
+        return interaction.editReply({ files: [cardAttachment], components: menuRows });
       }
-
-      // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA /classement AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
       if (interaction.commandName === 'classement') {
         const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id!=? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
-        if (!players.length) return interaction.editReply({ content: 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA Aucun joueur.' });
-        const medals = ['AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA','AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAasAA ','AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA'];
+        if (!players.length) return interaction.editReply({ content: 'Aucun joueur.' });
+        const medals = ['🥇', '🥈', '🥉'];
         const lines  = players.map((p,i) => {
           const r = eloRank(p.elo);
-          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA ${p.elo} ELO AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ${p.wins}V/${p.losses}D`;
+          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** - ${p.elo} ELO - ${p.wins}V/${p.losses}D`;
         });
         const embed = new EmbedBuilder()
           .setColor('#ffd60a')
-          .setTitle('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA  Classement Puissance 4')
+          .setTitle('Classement Puissance 4')
           .setURL(`${API}/leaderboard`)
           .setDescription(lines.join('\n'))
-          .setFooter({ text: 'Top 10 AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA Puissance 4 Ranked' });
+          .setFooter({ text: 'Top 10 Puissance 4 Ranked' });
         return interaction.editReply({ embeds: [embed] });
       }
 
       // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA /live AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
       if (interaction.commandName === 'live') {
         const activeGames = [...(gm.games || new Map()).values()].filter(g => g.status === 'active');
-        if (!activeGames.length) return interaction.editReply({ content: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAAAasAA...aAAaAAAasAA...AAAaAAasAA Aucune partie en cours.' });
+        if (!activeGames.length) return interaction.editReply({ content: 'Aucune partie en cours.' });
         const lines = activeGames.map(g => {
           const p1 = g.players?.[1], p2 = g.players?.[2];
           if (!p1 || !p2) return null;
           const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-          return `AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA ${g.moveCount||0} coups AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA Tour de **${cur}**`;
+          return `Partie: **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) - ${g.moveCount||0} coups - Tour de **${cur}**`;
         }).filter(Boolean);
         const embed = new EmbedBuilder()
           .setColor('#ff2d55')
-          .setTitle(`AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA ${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
+          .setTitle(`${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
           .setURL(`${API}/live`)
-          .setDescription(lines.join('\n') || 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA')
-          .setFooter({ text: 'Puissance 4 Ranked AAaAa AaaAAAAAAaAAAAaAAAAaAAAasAA...AAAaAAasAA Live' });
+          .setDescription(lines.join('\n') || '--')
+          .setFooter({ text: 'Puissance 4 Ranked Live' });
         return interaction.editReply({ embeds: [embed] });
       }
 
@@ -2646,10 +2521,10 @@ function startBot() {
       await interaction.deferReply({ ephemeral: true });
       try {
         const val = interaction.values[0];
-        if (!val.startsWith('game:')) return interaction.editReply({ content: 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA Valeur invalide.' });
+        if (!val.startsWith('game:')) return interaction.editReply({ content: 'Valeur invalide.' });
         const gameId = Number(val.split(':')[1]);
         const game = gQ.getById.get(gameId);
-        if (!game) return interaction.editReply({ content: 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA Partie introuvable.' });
+        if (!game) return interaction.editReply({ content: 'Partie introuvable.' });
 
         const moves = mQ.getByGame.all(gameId);
         const playerId = Number(interaction.customId.split(':')[1]);
@@ -2658,25 +2533,25 @@ function startBot() {
         const oppElo= isP1 ? game.p2_elo    : game.p1_elo;
         const won   = game.winner_id === playerId;
         const draw  = game.winner_id === null;
-        const icon  = draw ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAAAAAaAAAAaAaA"AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA' : (won ? 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAAAAAaAAAAaAaA"AAaAasAAAAAAAAasAA...AAasAAAAaAAasAA' : 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA');
+        const icon  = draw ? '🤝' : (won ? '🏆' : '❌');
         const delta = isP1 ? (game.elo_p1 || 0) : (game.elo_p2 || 0);
         const myElo = isP1 ? game.p1_elo    : game.p2_elo;
         const myRank= eloRank(myElo);
         const oppRank=eloRank(oppElo);
         const date  = game.finished_at
           ? new Date(game.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-          : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
+          : '--';
 
         const gameEmbed = new EmbedBuilder()
           .setColor(isP1 ? (game.p1_color || '#ff2d55') : (game.p2_color || '#ffd60a'))
           .setTitle(icon + ' Partie #' + gameId)
           .setURL(API + '/replay/' + gameId)
           .addFields(
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAAAasAAAAAaAAasAA  ELO',         value: (delta >= 0 ? '+' : '') + delta + ' ELO',    inline: true },
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Coups',        value: String(game.move_count || 0),                inline: true },
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA DurAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe',        value: (game.duration || 0) + 's',                  inline: true },
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Date',         value: date,                                         inline: false },
+            { name: 'Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
+            { name: 'Delta ELO',  value: (delta >= 0 ? '+' : '') + delta + ' ELO', inline: true },
+            { name: 'Coups',      value: String(game.move_count || 0), inline: true },
+            { name: 'Duree',      value: (game.duration || 0) + 's', inline: true },
+            { name: 'Date',       value: date, inline: false },
           );
 
         // PrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision si analysAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe
@@ -2684,15 +2559,15 @@ function startBot() {
         const oppAccuracy= isP1 ? game.p2_accuracy : game.p1_accuracy;
         if (myAccuracy != null) {
           gameEmbed.addFields(
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Ma prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision',  value: myAccuracy  + '%', inline: true },
-            { name: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA PrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAc. adverse', value: (oppAccuracy || 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA') + (oppAccuracy ? '%' : ''), inline: true },
+            { name: 'Ma precision', value: myAccuracy + '%', inline: true },
+            { name: 'Precision adverse', value: (oppAccuracy || '--') + (oppAccuracy ? '%' : ''), inline: true },
           );
         }
 
         // Replay link button
         const replayBtn = new ActionRowBuilder().addComponents(
           new (require('discord.js').ButtonBuilder)()
-            .setLabel('AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...aAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA Voir le replay')
+            .setLabel('Voir le replay')
             .setURL(API + '/replay/' + gameId)
             .setStyle(require('discord.js').ButtonStyle.Link)
         );
@@ -2700,7 +2575,7 @@ function startBot() {
         return interaction.editReply({ embeds: [gameEmbed], components: [replayBtn] });
       } catch(e) {
         console.error('[BOT SelectMenu game]', e.message);
-        return interaction.editReply({ content: 'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA Erreur : ' + e.message });
+        return interaction.editReply({ content: 'Erreur : ' + e.message });
       }
     }
 
@@ -2709,7 +2584,7 @@ function startBot() {
       console.error('[BOT ERROR]', e.constructor.name, e.message);
       console.error(e.stack);
       // Envoyer l'erreur en ephemeral pour debug
-      const errMsg = `AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAAAAAAAAAaAAAAAAaAAA **Erreur** : \`${e.constructor.name}: ${e.message}\``;
+      const errMsg = `**Erreur** : \`${e.constructor.name}: ${e.message}\``;
       try {
         if (interaction.deferred) await interaction.editReply({ content: errMsg });
         else await interaction.reply({ content: errMsg, ephemeral: true });
@@ -2719,3 +2594,4 @@ function startBot() {
 
   bot.login(botToken).catch(e => console.error('[BOT] Login failed:', e));
 }
+
