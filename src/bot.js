@@ -1,5 +1,5 @@
 /**
- * bot.js — Bot Discord Puissance 4
+ * bot.js - Bot Discord Puissance 4
  * Commandes : /profil /classement /live
  */
 const {
@@ -25,7 +25,7 @@ const SLASH_COMMANDS = [
     options: [
       {
         name: 'pseudo',
-        description: 'Le pseudo du joueur (2 caractères min)',
+        description: 'Le pseudo du joueur (2 caracteres min)',
         type: 3,
         required: true,
         autocomplete: true,
@@ -56,11 +56,11 @@ function canReloadCommands(interaction) {
   return interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) || false;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+//  Helpers 
 async function apiFetch(path) {
   try {
     const res = await fetch(API + path);
-    if (!res.ok) { console.error(`[API] ${path} → ${res.status}`); return null; }
+    if (!res.ok) { console.error(`[API] ${path}  ${res.status}`); return null; }
     return res.json();
   } catch (e) {
     console.error(`[API] fetch error ${path}:`, e.message);
@@ -70,22 +70,22 @@ async function apiFetch(path) {
 
 function getRank(elo) {
   const e = Math.max(100, Math.min(elo || 1000, 3500));
-  if (e < 700)  return { label: 'Malachite', emoji: '🟢', color: '#2ecc71' };
-  if (e < 1300) return { label: 'Quartz',    emoji: '⚪', color: '#b0bec5' };
-  if (e < 1800) return { label: 'Ambre',     emoji: '🟤', color: '#cd7f32' };
-  if (e < 2300) return { label: 'Jade',      emoji: '🟦', color: '#1abc9c' };
-  if (e < 2800) return { label: 'Saphir',    emoji: '🔵', color: '#3498db' };
-  return               { label: 'Améthyste', emoji: '🟣', color: '#9b59b6' };
+  if (e < 700)  return { label: 'Malachite', emoji: '', color: '#2ecc71' };
+  if (e < 1300) return { label: 'Quartz',    emoji: '', color: '#b0bec5' };
+  if (e < 1800) return { label: 'Ambre',     emoji: '', color: '#cd7f32' };
+  if (e < 2300) return { label: 'Jade',      emoji: '', color: '#1abc9c' };
+  if (e < 2800) return { label: 'Saphir',    emoji: '', color: '#3498db' };
+  return               { label: 'Amethyste', emoji: '', color: '#9b59b6' };
 }
 
 function winRate(p) {
   const total = (p.wins || 0) + (p.losses || 0) + (p.draws || 0);
-  if (!total) return '—';
+  if (!total) return '-';
   return Math.round((p.wins / total) * 100) + '%';
 }
 
 function fmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const d = new Date(iso);
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
@@ -95,7 +95,7 @@ function fmtGame(g, playerId) {
   const opp   = isP1 ? g.p2_pseudo : g.p1_pseudo;
   const won   = g.winner_id === playerId;
   const draw  = g.winner_id === null;
-  const icon  = draw ? '⚖️' : (won ? '✅' : '❌');
+  const icon  = draw ? '' : (won ? '' : '');
   const delta = isP1 ? g.elo_p1 : g.elo_p2;
   const d     = delta >= 0 ? `+${delta}` : String(delta);
   const date  = fmtDate(g.finished_at);
@@ -110,7 +110,7 @@ function groupByDay(games, playerId) {
     if (!map[day]) map[day] = [];
     map[day].push(fmtGame(g, playerId));
   }
-  // Trier par date décroissante
+  // Trier par date decroissante
   return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
 }
 
@@ -210,9 +210,9 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   ctx.fillStyle = '#f3f2ff';
   ctx.font = '30px Sans';
   let topLine = `${p.elo} Elo`;
-  if (p.role === 'admin') topLine += '  •  ADMIN';
-  else if (p.role === 'moderator') topLine += '  •  MODO';
-  if (p.is_vip) topLine += '  •  VIP';
+  if (p.role === 'admin') topLine += '  -  ADMIN';
+  else if (p.role === 'moderator') topLine += '  -  MODO';
+  if (p.is_vip) topLine += '  -  VIP';
   ctx.fillText(topLine, 190, 146);
 
   ctx.fillStyle = '#ffd60a';
@@ -221,11 +221,11 @@ async function generateProfileCard(p, games, following = [], followers = []) {
 
   const stats = [
     { label: 'Victoires', value: String(p.wins || 0), color: '#9be15d' },
-    { label: 'Défaites', value: String(p.losses || 0), color: '#ff7aa2' },
+    { label: 'Defaites', value: String(p.losses || 0), color: '#ff7aa2' },
     { label: 'Nuls', value: String(p.draws || 0), color: '#8dd7ff' },
     { label: 'Parties', value: String(totalGames), color: '#7cf0ff' },
     { label: 'Win rate', value: wr, color: '#c38bff' },
-    { label: 'Précision', value: p.avg_accuracy != null ? `${p.avg_accuracy}%` : '—', color: '#33a1ff' },
+    { label: 'Precision', value: p.avg_accuracy != null ? `${p.avg_accuracy}%` : '-', color: '#33a1ff' },
   ];
 
   const panelY = 260;
@@ -277,7 +277,7 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   if (rankImage) ctx.drawImage(rankImage, 734, 102, 48, 48);
   else {
     ctx.font = '40px Sans';
-    ctx.fillText(rank.emoji || '🏅', 742, 142);
+    ctx.fillText(rank.emoji || '', 742, 142);
   }
   ctx.fillStyle = '#ffd60a';
   ctx.font = 'bold 24px Sans';
@@ -295,7 +295,7 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   ctx.fillText(`${rank.progress || 0}%`, 740, 212);
   if (rank.next) {
     ctx.font = '18px Sans';
-    ctx.fillText(`→ ${rank.next} Elo`, 776, 212);
+    ctx.fillText(` ${rank.next} Elo`, 776, 212);
   }
 
   const discordY = 212;
@@ -303,9 +303,9 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   ctx.font = '22px Sans';
   ctx.fillText('Discord', 42, 220);
   ctx.font = '20px Sans';
-  const memberSince = p.created_at ? fmtDate(p.created_at) : '—';
+  const memberSince = p.created_at ? fmtDate(p.created_at) : '-';
   const lines = [
-    `Suivis : ${following.length || 0}   •   Abonnés : ${followers.length || 0}`,
+    `Suivis : ${following.length || 0}   -   Abonnes : ${followers.length || 0}`,
     `Membre : ${memberSince}`,
   ];
   const di = (() => { try { return p.discord_info ? JSON.parse(p.discord_info) : null; } catch { return null; } })();
@@ -313,8 +313,8 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   if (di?.server_joined) lines.push(`Rejoint le : ${fmtDate(di.server_joined)}`);
   if (di?.boosting_since) lines.push('Booster du serveur');
   if (di?.server_roles?.length) {
-    const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' • ');
-    if (roleNames) lines.push(`Rôles : ${roleNames}`);
+    const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' - ');
+    if (roleNames) lines.push(`Roles : ${roleNames}`);
   }
   lines.slice(0, 4).forEach((line, i) => {
     ctx.fillStyle = '#f3f2ff';
@@ -328,18 +328,18 @@ async function generateProfileCard(p, games, following = [], followers = []) {
   return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${p.id}.png` });
 }
 
-// Construire l'embed profil — toutes les infos du profil.html
+// Construire l'embed profil - toutes les infos du profil.html
 function buildProfileEmbed(p, games, following = [], followers = []) {
   const rank  = p.rank || getRank(p.elo);
   const total = (p.wins || 0) + (p.losses || 0) + (p.draws || 0);
   const wr    = winRate(p);
   const profileUrl = `${API}/profil?id=${p.id}`;
 
-  // ── Titre & description ──────────────────────────────────────────────────
-  let statusLine = `@${p.pseudo} · ${p.elo} ELO · Rang : ${rank.emoji} ${rank.label}`;
-  if (p.is_vip) statusLine += ' · ⭐ VIP';
-  if (p.role === 'admin') statusLine += ' · ⚡ ADMIN';
-  else if (p.role === 'moderator') statusLine += ' · 🛡️ MODO';
+  //  Titre & description 
+  let statusLine = `@${p.pseudo}  ${p.elo} ELO  Rang : ${rank.emoji} ${rank.label}`;
+  if (p.is_vip) statusLine += '   VIP';
+  if (p.role === 'admin') statusLine += '   ADMIN';
+  else if (p.role === 'moderator') statusLine += '   MODO';
 
   // Discord info
   const di = (() => {
@@ -348,7 +348,7 @@ function buildProfileEmbed(p, games, following = [], followers = []) {
 
   const embed = new EmbedBuilder()
     .setColor(p.color || rank.color)
-    .setAuthor({ name: '🔗 Accéder au Profil', url: profileUrl })
+    .setAuthor({ name: ' Acceder au Profil', url: profileUrl })
     .setTitle(`${p.pseudo}`)
     .setURL(profileUrl)
     .setDescription(statusLine);
@@ -356,91 +356,91 @@ function buildProfileEmbed(p, games, following = [], followers = []) {
   // Avatar
   if (p.avatar) embed.setThumbnail(p.avatar);
 
-  // ── Stats principales ─────────────────────────────────────────────────────
+  //  Stats principales 
   embed.addFields(
-    { name: '🏆 Victoires',  value: String(p.wins   || 0), inline: true },
-    { name: '💀 Défaites',   value: String(p.losses || 0), inline: true },
-    { name: '⚖️ Nuls',       value: String(p.draws  || 0), inline: true },
-    { name: '🎮 Parties',    value: String(total),          inline: true },
-    { name: '📊 Win rate',   value: wr,                     inline: true },
-    { name: '🎯 Précision',  value: p.avg_accuracy != null ? `${p.avg_accuracy}%` : '—', inline: true },
+    { name: ' Victoires',  value: String(p.wins   || 0), inline: true },
+    { name: ' Defaites',   value: String(p.losses || 0), inline: true },
+    { name: ' Nuls',       value: String(p.draws  || 0), inline: true },
+    { name: ' Parties',    value: String(total),          inline: true },
+    { name: ' Win rate',   value: wr,                     inline: true },
+    { name: ' Precision',  value: p.avg_accuracy != null ? `${p.avg_accuracy}%` : '-', inline: true },
   );
 
-  // ── Rang & progression ────────────────────────────────────────────────────
+  //  Rang & progression 
   const progressBar = (() => {
     const pct = rank.progress ?? 0;
     const filled = Math.round(pct / 10);
-    return '█'.repeat(filled) + '░'.repeat(10 - filled) + ` ${pct}%`;
+    return ''.repeat(filled) + ''.repeat(10 - filled) + ` ${pct}%`;
   })();
   embed.addFields({
-    name: '📈 Rank',
-    value: `${rank.emoji} **${rank.label}**\n\`${progressBar}\`${rank.next ? `\n${rank.progress}% → ${rank.next} ELO pour monter` : '\nRang MAX'}`,
+    name: ' Rank',
+    value: `${rank.emoji} **${rank.label}**\n\`${progressBar}\`${rank.next ? `\n${rank.progress}%  ${rank.next} ELO pour monter` : '\nRang MAX'}`,
     inline: false,
   });
 
-  // ── Social ────────────────────────────────────────────────────────────────
+  //  Social 
   embed.addFields(
-    { name: '👁 Suivis',    value: String(following.length || 0), inline: true },
-    { name: '👥 Abonnés',  value: String(followers.length || 0), inline: true },
-    { name: '📅 Membre',   value: p.created_at ? fmtDate(p.created_at) : '—', inline: true },
+    { name: ' Suivis',    value: String(following.length || 0), inline: true },
+    { name: ' Abonnes',  value: String(followers.length || 0), inline: true },
+    { name: ' Membre',   value: p.created_at ? fmtDate(p.created_at) : '-', inline: true },
   );
 
-  // ── Pion (couleur + forme) ────────────────────────────────────────────────
+  //  Pion (couleur + forme) 
   const shapeLabel = {
-    circle: '⭕ Cercle', diamond: '💎 Diamant', triangle: '🔺 Triangle',
-    star: '⭐ Étoile', heart: '❤️ Cœur', emoji: '🎨 Emoji'
+    circle: ' Cercle', diamond: ' Diamant', triangle: ' Triangle',
+    star: ' Etoile', heart: ' Cur', emoji: ' Emoji'
   }[p.shape?.startsWith('emoji:') ? 'emoji' : (p.shape || 'circle')] || p.shape;
   embed.addFields({
-    name: '🎨 Apparence',
+    name: ' Apparence',
     value: `Couleur : \`${(p.color || '#ff2d55').toUpperCase()}\`
 Forme : ${shapeLabel}`,
     inline: true,
   });
 
-  // ── Discord lié ───────────────────────────────────────────────────────────
+  //  Discord lie 
   if (di) {
     const discordLines = [];
     if (di.global_name || di.username) discordLines.push(`Compte : **${di.global_name || di.username}**`);
     if (di.server_nick) discordLines.push(`Pseudo serveur : ${di.server_nick}`);
     if (di.server_joined) discordLines.push(`Rejoint le : ${fmtDate(di.server_joined)}`);
-    if (di.boosting_since) discordLines.push('🚀 Booster du serveur');
+    if (di.boosting_since) discordLines.push(' Booster du serveur');
 
-    // Rôles
+    // Roles
     if (di.server_roles?.length) {
       const roleNames = di.server_roles
         .filter(r => r.name && r.name !== '@everyone')
         .map(r => r.name)
         .slice(0, 5)
         .join(', ');
-      if (roleNames) discordLines.push(`Rôles : ${roleNames}`);
+      if (roleNames) discordLines.push(`Roles : ${roleNames}`);
     }
 
     embed.addFields({
       name: '<:discord:1195893798701592636> Discord',
-      value: discordLines.join('\n') || '—',
+      value: discordLines.join('\n') || '-',
       inline: true,
     });
   } else {
-    embed.addFields({ name: '🔗 Discord', value: '*Non lié*', inline: true });
+    embed.addFields({ name: ' Discord', value: '*Non lie*', inline: true });
   }
 
-  // ── Alertes ────────────────────────────────────────────────────────────────
+  //  Alertes 
   const alerts = [];
-  if (p.suspicious) alerts.push('⚠️ Activité suspecte détectée');
-  if (p.banned)     alerts.push('🚫 Compte banni');
-  if (p.muted_until && new Date(p.muted_until) > new Date()) alerts.push('🔇 Muet');
-  if (alerts.length) embed.addFields({ name: '🚨 Statut', value: alerts.join('\n'), inline: false });
+  if (p.suspicious) alerts.push(' Activite suspecte detectee');
+  if (p.banned)     alerts.push(' Compte banni');
+  if (p.muted_until && new Date(p.muted_until) > new Date()) alerts.push(' Muet');
+  if (alerts.length) embed.addFields({ name: ' Statut', value: alerts.join('\n'), inline: false });
 
-  // ── Dernières parties ─────────────────────────────────────────────────────
+  //  Dernieres parties 
   if (games?.length) {
     const lines = games.slice(0, 5).map(g => {
       const f = fmtGame(g, p.id);
-      return `${f.icon} vs **${f.opp}** · ${f.d} ELO · ${f.date}`;
+      return `${f.icon} vs **${f.opp}**  ${f.d} ELO  ${f.date}`;
     });
-    embed.addFields({ name: '🕹️ Dernières parties', value: lines.join('\n'), inline: false });
+    embed.addFields({ name: ' Dernieres parties', value: lines.join('\n'), inline: false });
   }
 
-  embed.setFooter({ text: `Puissance 4 Ranked · ID ${p.id}` });
+  embed.setFooter({ text: `Puissance 4 Ranked  ID ${p.id}` });
   return embed;
 }
 
@@ -456,7 +456,7 @@ function buildGamesMenu(games, playerId, page = 0) {
   const options = slice.flatMap(([day, dayGames]) =>
     dayGames.slice(0, 4).map(g => {
       const label = `${g.icon} vs ${g.opp}`.slice(0, 100);
-      const desc  = `${g.d} ELO · ${g.moves} coups · ${g.date}`.slice(0, 100);
+      const desc  = `${g.d} ELO  ${g.moves} coups  ${g.date}`.slice(0, 100);
       return new StringSelectMenuOptionBuilder()
         .setLabel(label)
         .setDescription(desc)
@@ -466,22 +466,22 @@ function buildGamesMenu(games, playerId, page = 0) {
 
   const menu = new StringSelectMenuBuilder()
     .setCustomId(`games_menu:${playerId}:${page}`)
-    .setPlaceholder(`📋 Voir une partie (page ${page + 1}/${Math.max(1, totalPages)})`)
+    .setPlaceholder(` Voir une partie (page ${page + 1}/${Math.max(1, totalPages)})`)
     .addOptions(options);
 
   const row = new ActionRowBuilder().addComponents(menu);
   const components = [row];
 
-  // Boutons de pagination si nécessaire
+  // Boutons de pagination si necessaire
   if (totalPages > 1) {
     const btnPrev = new ButtonBuilder()
       .setCustomId(`games_page:${playerId}:${page - 1}`)
-      .setLabel('◀ Précédent')
+      .setLabel(' Precedent')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page === 0);
     const btnNext = new ButtonBuilder()
       .setCustomId(`games_page:${playerId}:${page + 1}`)
-      .setLabel('Suivant ▶')
+      .setLabel('Suivant ')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= totalPages - 1);
     const btnRow = new ActionRowBuilder().addComponents(btnPrev, btnNext);
@@ -494,7 +494,7 @@ function buildGamesMenu(games, playerId, page = 0) {
 function buildProfileComponents(profileUrl, games, playerId, page = 0) {
   const linkRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setLabel('Accéder au Profil')
+      .setLabel('Acceder au Profil')
       .setStyle(ButtonStyle.Link)
       .setURL(profileUrl)
   );
@@ -502,7 +502,7 @@ function buildProfileComponents(profileUrl, games, playerId, page = 0) {
   return [linkRow, ...gameRows].slice(0, 5);
 }
 
-// ── Commandes + composants ────────────────────────────────────────────────────
+//  Commandes + composants 
 client.on('interactionCreate', async interaction => {
   try {
 
@@ -541,7 +541,7 @@ client.on('interactionCreate', async interaction => {
       const lines  = players.map((p, i) => {
         const rank  = getRank(p.elo);
         const medal = medals[i] || `**#${i + 1}**`;
-        return `${medal} ${rank.emoji} **${p.pseudo}** � ${p.elo} ELO � ${p.wins}V/${p.losses}D � ${winRate(p)} WR`;
+        return `${medal} ${rank.emoji} **${p.pseudo}**  ${p.elo} ELO  ${p.wins}V/${p.losses}D  ${winRate(p)} WR`;
       });
 
       const embed = new EmbedBuilder()
@@ -549,7 +549,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle('?? Classement Puissance 4')
         .setURL(`${API}/leaderboard`)
         .setDescription(lines.join('\n'))
-        .setFooter({ text: 'Top 10 par ELO � Puissance 4 Ranked' });
+        .setFooter({ text: 'Top 10 par ELO  Puissance 4 Ranked' });
 
       return interaction.editReply({ embeds: [embed] });
     }
@@ -570,7 +570,7 @@ client.on('interactionCreate', async interaction => {
         const p2  = g.players?.[2] || g.players?.['2'];
         if (!p1 || !p2) return null;
         const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-        return `?? **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) � Tour de **${cur}** � ${g.moves} coups � [Voir](${API}/game/${g.id})`;
+        return `?? **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo})  Tour de **${cur}**  ${g.moves} coups  [Voir](${API}/game/${g.id})`;
       }).filter(Boolean);
 
       const embed = new EmbedBuilder()
@@ -578,7 +578,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle(`?? ${games.length} partie${games.length > 1 ? 's' : ''} en cours`)
         .setURL(`${API}/live`)
         .setDescription(lines.join('\n') || 'Aucune partie active.')
-        .setFooter({ text: 'Puissance 4 Ranked � Live' });
+        .setFooter({ text: 'Puissance 4 Ranked  Live' });
 
       return interaction.editReply({ embeds: [embed] });
     }
@@ -586,14 +586,14 @@ client.on('interactionCreate', async interaction => {
     // -- /reload --------------------------------------------------------------
     if (interaction.isChatInputCommand() && interaction.commandName === 'reload') {
       if (!canReloadCommands(interaction)) {
-        return interaction.reply({ content: '? Tu n�as pas la permission d�utiliser cette commande.', ephemeral: true });
+        return interaction.reply({ content: '? Tu nas pas la permission dutiliser cette commande.', ephemeral: true });
       }
       await interaction.deferReply({ ephemeral: true });
       await registerSlashCommands();
-      return interaction.editReply({ content: '? Slash commands recharg�es.' });
+      return interaction.editReply({ content: '? Slash commands recharges.' });
     }
 
-    // -- SelectMenu � s�lection d'une partie ---------------------------------
+    // -- SelectMenu  slection d'une partie ---------------------------------
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('games_menu:')) {
       await interaction.deferUpdate();
       const value = interaction.values[0];
@@ -637,10 +637,10 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.once('ready', () => {
-  console.log(`? Bot connect� en tant que ${client.user.tag}`);
+  console.log(`? Bot connect en tant que ${client.user.tag}`);
   console.log(`?? API : ${API}`);
   registerSlashCommands()
-    .then(() => console.log('? Slash commands synchronis�es.'))
+    .then(() => console.log('? Slash commands synchronises.'))
     .catch(err => console.error('? Erreur sync slash commands:', err));
 });
 
