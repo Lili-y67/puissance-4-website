@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 â€” Admin</title>
+<title>Puissance 4 - Admin</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -119,7 +119,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <div id="login-screen">
   <div class="login-card">
     <div class="logo">Puissance <span>4</span></div>
-    <h2>ðŸ” Admin</h2>
+    <h2>Admin</h2>
     <div id="login-error" class="error-msg" style="display:none"></div>
     <input type="password" id="pwd-input" placeholder="Mot de passe admin..." onkeydown="if(event.key==='Enter')login()">
     <button class="btn btn-red" onclick="login()">Connexion</button>
@@ -129,11 +129,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 <!-- Panel -->
 <div id="panel" class="page">
   <div class="nav">
-    <div class="nav-title">âš¡ <span>Admin</span> Panel</div>
+    <div class="nav-title"><span>Admin</span> Panel</div>
     <div style="display:flex;gap:8px;align-items:center">
       <span id="my-role-badge" style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:0.5px"></span>
-      <input class="search-input" style="width:220px" id="search" placeholder="ðŸ” Rechercher un joueur..." oninput="filterPlayers()">
-      <button class="btn-sm btn-red" onclick="logout()">DÃ©connexion</button>
+      <input class="search-input" style="width:220px" id="search" placeholder="Rechercher un joueur..." oninput="filterPlayers()">
+      <button class="btn-sm btn-red" onclick="logout()">Déconnexion</button>
     </div>
   </div>
 
@@ -172,7 +172,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         </div>
         <div id="boost-global-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);" onclick="setBoost(Number(document.getElementById('boost-slider').value))">Appliquer</button>
-          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1)">DÃ©sactiver</button>
+          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1)">Désactiver</button>
         </div>
       </div>
     </div>
@@ -186,24 +186,24 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div style="display:flex;gap:6px;margin-bottom:14px;">
     <button id="tab-players-btn" onclick="switchAdminTab('players')"
       style="padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
-      ðŸ‘¥ JOUEURS
+      Joueurs
     </button>
     <button id="tab-games-btn" onclick="switchAdminTab('games')"
       style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
-      ðŸŽ® PARTIES
+      Parties
     </button>
   </div>
 
   <!-- Section Parties -->
   <div id="admin-games-section" style="display:none;margin-bottom:20px;">
     <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-      <input class="search-input" id="games-search" placeholder="ðŸ” Rechercher par pseudo..." style="flex:1;"
+      <input class="search-input" id="games-search" placeholder="Rechercher par pseudo..." style="flex:1;"
         oninput="loadAdminGames()">
     </div>
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>#</th><th>J1</th><th>J2</th><th>RÃ©sultat</th><th>ELO</th>
+          <th>#</th><th>J1</th><th>J2</th><th>Résultat</th><th>ELO</th>
           <th>Coups</th><th>Date</th><th>Actions</th>
         </tr></thead>
         <tbody id="games-body"></tbody>
@@ -221,7 +221,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <th>Joueur</th>
           <th>ELO</th>
           <th>W/L/D</th>
-          <th>RÃ´le</th>
+          <th>Rôle</th>
           <th>Statut</th>
           <th>Actions</th>
         </tr>
@@ -279,7 +279,7 @@ async function showPanel() {
   // Afficher badge rÃ´le dans le header
   const roleEl = document.getElementById('my-role-badge');
   if (roleEl) {
-    roleEl.textContent = myRole === 'admin' ? 'ðŸ”´ Admin' : 'ðŸ›¡ï¸ ModÃ©rateur';
+    roleEl.textContent = myRole === 'admin' ? 'Admin' : 'Modérateur';
     roleEl.style.background = myRole === 'admin' ? 'rgba(255,45,85,0.15)' : 'rgba(76,110,245,0.15)';
     roleEl.style.color      = myRole === 'admin' ? '#ff2d55' : '#8b9cf4';
   }
@@ -320,7 +320,7 @@ function renderStats() {
     { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
     { val: vip,     lbl: 'VIP',       color: 'var(--yellow)' },
     { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
-    { val: muted,   lbl: 'MutÃ©s',     color: 'var(--yellow)' },
+    { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
     { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
   ].map(s => `
     <div class="stat-card">
@@ -342,8 +342,8 @@ function onlineDot(online) {
 }
 function discordBadge(linked) {
   return linked
-    ? `<span title="Discord liÃ©" style="font-size:13px">ðŸ”—</span>`
-    : `<span title="Discord non liÃ©" style="font-size:13px;opacity:0.3">ðŸ”—</span>`;
+    ? `<span title="Discord lié" style="font-size:13px">Discord</span>`
+    : `<span title="Discord non lié" style="font-size:13px;opacity:0.3">Discord</span>`;
 }
 function customRoleBadge(player) {
   const text = String(player.custom_role_text || '').trim();
@@ -358,9 +358,9 @@ function renderPlayers(players) {
   document.getElementById('mobile-list').innerHTML = players.map((p) => {
     const isMuted  = p.muted_until && p.muted_until > now;
     const flags = [
-      p.banned     ? '<span class="badge badge-banned">ðŸš«</span>' : '',
-      isMuted      ? '<span class="badge badge-muted">ðŸ”‡</span>' : '',
-      p.suspicious ? '<span class="badge badge-suspect">âš ï¸</span>' : '',
+      p.banned     ? '<span class="badge badge-banned">Banni</span>' : '',
+      isMuted      ? '<span class="badge badge-muted">Mute</span>' : '',
+      p.suspicious ? '<span class="badge badge-suspect">Suspect</span>' : '',
     ].filter(Boolean).join('');
     return `<div class="mobile-card">
       <div class="mobile-card-info">
@@ -373,12 +373,12 @@ function renderPlayers(players) {
         </div>
         <div class="mobile-card-sub">
           <span>ID ${p.id}</span>
-          <span style="color:var(--muted)">Â·</span>
+          <span style="color:var(--muted)">·</span>
           <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
         </div>
       </div>
       <div class="mobile-card-elo">${p.elo}</div>
-      <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;flex-shrink:0" onclick="openModal(${p.id})">âœï¸</button>
+      <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;flex-shrink:0" onclick="openModal(${p.id})">Gérer</button>
     </div>`;
   }).join('');
 
@@ -386,10 +386,10 @@ function renderPlayers(players) {
     const isMuted  = p.muted_until && p.muted_until > now;
     const muteLeft = isMuted ? Math.ceil((p.muted_until - now) / 60000) + 'min' : '';
     const statusBadges = [
-      p.banned     ? `<span class="badge badge-banned">ðŸš« Banni</span>` : '',
-      isMuted      ? `<span class="badge badge-muted">ðŸ”‡ MutÃ© ${muteLeft}</span>` : '',
-      p.suspicious ? `<span class="badge badge-suspect">âš ï¸ Suspect</span>` : '',
-    ].filter(Boolean).join(' ') || '<span style="color:var(--muted);font-size:12px">â€”</span>';
+      p.banned     ? `<span class="badge badge-banned">Banni</span>` : '',
+      isMuted      ? `<span class="badge badge-muted">Muté ${muteLeft}</span>` : '',
+      p.suspicious ? `<span class="badge badge-suspect">Suspect</span>` : '',
+    ].filter(Boolean).join(' ') || '<span style="color:var(--muted);font-size:12px">-</span>';
 
     return `<tr>
       <td style="color:var(--muted)">#${i+1}</td>
@@ -409,8 +409,8 @@ function renderPlayers(players) {
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
-          ${myRole === 'admin' && !p.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">â­ VIP</button>` : ''}
-          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id})">âœï¸ GÃ©rer</button>
+          ${myRole === 'admin' && !p.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">VIP</button>` : ''}
+          <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id})">Gérer</button>
         </div>
       </td>
     </tr>`;
@@ -441,18 +441,18 @@ function openModal(id) {
         ${!player.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${id},'vip')">VIP</button>` : ''}
       </div>
     `
-    : `<div style="font-size:13px;color:var(--muted)">Les changements de rÃ´le et le VIP sont rÃ©servÃ©s aux admins.</div>`;
+    : `<div style="font-size:13px;color:var(--muted)">Les changements de rôle et le VIP sont réservés aux admins.</div>`;
   const customRoleSection = canManageRoles
     ? `
       <div style="margin-bottom:14px">
-        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">RÃ´le personnalisÃ©</div>
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle personnalisé</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input type="text" id="custom-role-text" value="${customRoleText}" maxlength="6" placeholder="Ex: DEV" style="flex:1;min-width:110px;margin-bottom:0;padding:9px 12px;font-size:13px">
           <input type="color" id="custom-role-color" value="${customRoleColor}" style="width:50px;height:38px;padding:0;border:none;background:none;margin:0">
           <button class="btn-sm" style="background:rgba(255,159,10,0.16);color:var(--orange)" onclick="saveCustomRole(${id})">Sauver</button>
           <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted)" onclick="clearCustomRole(${id})">Retirer</button>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:7px">Texte libre, 6 caractÃ¨res maximum.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Texte libre, 6 caractères maximum.</div>
       </div>
     `
     : '';
@@ -462,7 +462,7 @@ function openModal(id) {
   modal.id = 'admin-modal';
   modal.innerHTML = `
     <div class="modal">
-      <h3>âœï¸ ${pseudo}</h3>
+      <h3>${pseudo}</h3>
 
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Pseudo</div>
@@ -473,7 +473,7 @@ function openModal(id) {
       </div>
 
       <div style="margin-bottom:14px">
-        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">RÃ´le</div>
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle</div>
         ${roleSection}
       </div>
 
@@ -497,14 +497,14 @@ function openModal(id) {
           <input type="number" id="custom-mute-minutes" value="${currentMuteMinutes}" min="0" max="100800" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
           <button class="btn-sm" style="background:rgba(255,159,10,0.16);color:var(--orange)" onclick="muteCustom(${id})">Mute perso</button>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-top:7px">DurÃ©e libre en minutes. 0 retire le mute.</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Durée libre en minutes. 0 retire le mute.</div>
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:14px">
         <button class="btn-sm" style="flex:1;background:${banned?'rgba(48,209,88,0.12)':'rgba(255,45,85,0.12)'};color:${banned?'var(--green)':'var(--red)'}" onclick="toggleBan(${id},${banned})">
-          ${banned ? 'âœ… DÃ©bannir' : 'ðŸš« Bannir'}
+          ${banned ? 'Débannir' : 'Bannir'}
         </button>
-        ${suspicious ? `<button class="btn-sm" style="flex:1;background:rgba(48,209,88,0.12);color:var(--green)" onclick="clearSuspicious(${id})">âœ… Retirer suspect</button>` : ''}
+        ${suspicious ? `<button class="btn-sm" style="flex:1;background:rgba(48,209,88,0.12);color:var(--green)" onclick="clearSuspicious(${id})">Retirer suspect</button>` : ''}
       </div>
 
       <button class="btn-sm" style="width:100%;background:rgba(255,255,255,0.04);color:var(--muted)" onclick="document.getElementById('admin-modal').remove()">Fermer</button>
@@ -601,7 +601,7 @@ async function fetchAdminGames(offset) {
 function renderAdminGames(games, offset) {
   const tbody = document.getElementById('games-body');
   if (!games.length && offset === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvÃ©e</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvée</td></tr>';
     document.getElementById('games-pagination-admin').innerHTML = '';
     return;
   }
@@ -610,13 +610,13 @@ function renderAdminGames(games, offset) {
     const isP1Win  = g.winner_id === g.player1_id;
     const isP2Win  = g.winner_id === g.player2_id;
     const isDraw   = g.winner_id === null;
-    const res      = isDraw ? 'âš–ï¸ Nul' : (isP1Win ? `âœ… ${g.p1_pseudo}` : `âœ… ${g.p2_pseudo}`);
-    const d1       = g.elo_p1 != null ? (g.elo_p1 >= 0 ? '+' : '') + g.elo_p1 : 'â€”';
-    const d2       = g.elo_p2 != null ? (g.elo_p2 >= 0 ? '+' : '') + g.elo_p2 : 'â€”';
-    const date     = g.finished_at ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : 'â€”';
+    const res      = isDraw ? 'Nul' : (isP1Win ? `Victoire ${g.p1_pseudo}` : `Victoire ${g.p2_pseudo}`);
+    const d1       = g.elo_p1 != null ? (g.elo_p1 >= 0 ? '+' : '') + g.elo_p1 : '-';
+    const d2       = g.elo_p2 != null ? (g.elo_p2 >= 0 ? '+' : '') + g.elo_p2 : '-';
+    const date     = g.finished_at ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
     const canRevert= !g.reverted && g.elo_before_p1 != null;
     const revertedBadge = g.reverted ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)">REVERT</span> ' : '';
-    const suspBadge= g.suspicious ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,214,10,0.1);color:#ffd60a;">âš ï¸</span> ' : '';
+    const suspBadge= g.suspicious ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,214,10,0.1);color:#ffd60a;">Suspect</span> ' : '';
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${revertedBadge}${suspBadge}#${g.id}</td>
       <td><strong>${g.p1_pseudo}</strong></td>
@@ -626,8 +626,8 @@ function renderAdminGames(games, offset) {
       <td>${g.move_count || 0}</td>
       <td style="font-size:11px;color:var(--muted)">${date}</td>
       <td style="display:flex;gap:4px;">
-        <a href="/replay/${g.id}" target="_blank" class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;text-decoration:none">â–¶</a>
-        ${canRevert ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="confirmRevert(${g.id},'${g.p1_pseudo}','${g.p2_pseudo}',${g.elo_before_p1},${g.elo_before_p2})">â†© Revert</button>` : ''}
+        <a href="/replay/${g.id}" target="_blank" class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4;text-decoration:none">Replay</a>
+        ${canRevert ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="confirmRevert(${g.id},'${g.p1_pseudo}','${g.p2_pseudo}',${g.elo_before_p1},${g.elo_before_p2})">Revert</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -637,30 +637,30 @@ function renderAdminGames(games, offset) {
   const hasPrev = offset > 0;
   const hasNext = games.length === ADMIN_GAMES_LIMIT;
   pgEl.innerHTML = [
-    hasPrev ? `<button class="btn-sm" onclick="fetchAdminGames(${offset - ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">â—€ PrÃ©cÃ©dent</button>` : '',
-    hasNext ? `<button class="btn-sm" onclick="fetchAdminGames(${offset + ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">Suivant â–¶</button>` : '',
+    hasPrev ? `<button class="btn-sm" onclick="fetchAdminGames(${offset - ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">Précédent</button>` : '',
+    hasNext ? `<button class="btn-sm" onclick="fetchAdminGames(${offset + ADMIN_GAMES_LIMIT})" style="background:rgba(255,255,255,0.05);color:var(--muted)">Suivant</button>` : '',
   ].join('');
 }
 
 function confirmRevert(gameId, p1, p2, eloBefore1, eloBefore2) {
   if (!confirm(`Revert la partie #${gameId} ?
 
-${p1} â†’ ${eloBefore1} ELO
-${p2} â†’ ${eloBefore2} ELO
+${p1} -> ${eloBefore1} ELO
+${p2} -> ${eloBefore2} ELO
 
-Cette action est irrÃ©versible.`)) return;
+Cette action est irréversible.`)) return;
   doRevert(gameId);
 }
 
 async function doRevert(gameId) {
   try {
     const res = await api('POST', `/api/admin/games/${gameId}/revert`, {});
-    alert(`âœ… Revert effectuÃ© !
-${res.p1.pseudo} â†’ ${res.p1.eloBefore} ELO
-${res.p2.pseudo} â†’ ${res.p2.eloBefore} ELO`);
+    alert(`Revert effectué !
+${res.p1.pseudo} -> ${res.p1.eloBefore} ELO
+${res.p2.pseudo} -> ${res.p2.eloBefore} ELO`);
     loadAdminGames();
   } catch(e) {
-    alert('âŒ Erreur : ' + (e.message || 'Inconnue'));
+    alert('Erreur : ' + (e.message || 'Inconnue'));
   }
 }
 
@@ -696,7 +696,7 @@ async function loadVipBoosts() {
           <div style="font-size:11px;color:var(--muted);">${b.elo} ELO</div>
         </div>
         <div style="text-align:right;">
-          <div style="color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;">âš¡ x1.2</div>
+          <div style="color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;">x1.2</div>
           <div style="font-size:10px;color:var(--muted);">${b.remainingMin} min restantes</div>
         </div>
       </div>`;
@@ -710,7 +710,7 @@ async function loadBoostStatus() {
     const el = document.getElementById('boost-status');
     if (!el) return;
     if (data.multiplier > 1) {
-      el.innerHTML = `<span style="color:var(--yellow)">âš¡ Boost actif : <strong>${data.multiplier}x</strong></span>`;
+      el.innerHTML = `<span style="color:var(--yellow)">Boost actif : <strong>${data.multiplier}x</strong></span>`;
       document.getElementById('boost-slider').value = data.multiplier;
       document.getElementById('boost-val').textContent = parseFloat(data.multiplier).toFixed(1) + 'x';
     } else {
@@ -723,7 +723,7 @@ async function setBoost(mult) {
     await api('POST', '/api/admin/boost', { multiplier: mult });
     await loadBoostStatus();
     const t = document.createElement('div');
-    t.textContent = mult > 1 ? `âš¡ Boost x${mult} activÃ© !` : 'âœ• Boost dÃ©sactivÃ©';
+    t.textContent = mult > 1 ? `Boost x${mult} activé !` : 'Boost désactivé';
     Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
     document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
   } catch(e) {}
