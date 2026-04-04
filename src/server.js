@@ -319,7 +319,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, custom_role_text, custom_role_color, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -386,18 +386,22 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
 
   const rawText = String(req.body?.text || '').trim();
   const rawColor = String(req.body?.color || '').trim();
+  const rawEmoji = String(req.body?.emoji || '').trim();
   if (rawText.length > 6) return res.status(400).json({ error: 'Le role personnalise doit faire 6 caracteres max.' });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise pour le role personnalise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
+  const emoji = rawEmoji ? [...rawEmoji][0] : '';
 
   pQ.updateCustomRole.run({
     id,
     text: rawText,
     color: rawText ? rawColor.toUpperCase() : '',
+    emoji: rawText ? emoji : '',
   });
   WH.wlogAdminAction('Role personnalise', target.pseudo, id, [
     ['Texte', rawText || 'aucun', true],
     ['Couleur', rawText ? rawColor.toUpperCase() : 'aucune', true],
+    ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
   ]);
   if (target.discord_id) {
     syncDiscordRole(
@@ -581,7 +585,7 @@ async function getDiscordRole(discordUserId, botToken) {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 setInterval(async () => {
   const { botToken } = discordConfig();
-  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, custom_role_text, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
     const newRole = await getDiscordRole(player.discord_id, botToken);
     const vipNow = isVipPlayer(player) ? 1 : 0;
@@ -745,17 +749,18 @@ app.get('/auth/discord/callback', async (req, res) => {
             headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               content: [
-                'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Compte Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA !**\n\n',
+                '**Puissance 4 - Compte Discord lie**',
                 '',
-                `Bonjour **${freshPlayer.pseudo}** ! AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAaAaA"AAaAasAAAAAAAAasAA...AAasAAAAaAAasAA\n\n`,
+                `Bonjour **${freshPlayer.pseudo}** !`,
                 '',
-                'Ton compte Discord a AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA **liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA avec succAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs** AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  ton compte Puissance 4.\n\n',
+                'Ton compte Discord a bien ete lie a ton compte Puissance 4.',
                 '',
-                'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAaAaA" Tu pourras dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsormais rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinitialiser ton mot de passe via Discord si besoin.\n',
-                "_Si tu n'es pas AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  l'origine de cette liaison, contacte un administrateur._\n\n",
+                'Tu peux maintenant reinitialiser ton mot de passe via Discord si besoin.',
                 '',
-                "-# AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Si tu es Administrateur, rejoins le serveur pour rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer les Permissions nAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcessaires : https://discord.gg/ap73mMTX7a"
-              ].join(''),
+                "_Si tu n'es pas a l'origine de cette liaison, contacte un administrateur._",
+                '',
+                '-# Si tu es administrateur, rejoins le serveur pour recuperer les permissions necessaires : https://discord.gg/ap73mMTX7a',
+              ].join('\n'),
             }),
           });
         }
@@ -799,17 +804,17 @@ app.get('/auth/discord/callback', async (req, res) => {
       },
       body: JSON.stringify({
         content: [
-          'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinitialisation de mot de passe**',
+          '**Puissance 4 - Reinitialisation du mot de passe**',
           '',
           `Bonjour **${player.pseudo}** !`,
           '',
-          `Votre code de rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinitialisation est :`,
+          'Voici ton code de reinitialisation :',
           '```',
           code6,
           '```',
-          'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA Ce code expire dans **15 minutes**.',
+          'Ce code expire dans **15 minutes**.',
           '',
-          '_Si vous n\'avez pas demandAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA de rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinitialisation, ignorez ce message._',
+          "_Si tu n'es pas a l'origine de cette demande, ignore simplement ce message._",
         ].join('\n'),
       }),
     });
@@ -1270,19 +1275,19 @@ app.post('/api/discord/unlink/request', async (req, res) => {
       headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         content: [
-          'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAAAasAA...a **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA DAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAliaison Discord**',
+          '**Puissance 4 - Deliaison Discord**',
           '',
           `Bonjour **${player.pseudo}** !`,
           '',
-          'Tu as demandAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  **dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAlier** ton compte Discord de ton compte Puissance 4.',
+          'Tu as demande a delier ton compte Discord de ton compte Puissance 4.',
           '',
           'Ton code de confirmation :',
           '```',
           code6,
           '```',
-          'AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA Ce code expire dans **10 minutes**.',
+          'Ce code expire dans **10 minutes**.',
           '',
-          '_Si tu n\'es pas AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  l\'origine de cette demande, ignore ce message. Ton compte reste liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA._',
+          "_Si tu n'es pas a l'origine de cette demande, ignore ce message. Ton compte restera lie._",
         ].join('\n'),
       }),
     });
