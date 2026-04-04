@@ -319,7 +319,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, custom_role_text, custom_role_color, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -335,21 +335,34 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles.' });
   const { role } = req.body;
   if (!['user','vip','moderator','admin'].includes(role)) return res.status(400).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle invalide.' });
-  const target = pQ.getById.get(Number(req.params.id));
+  const targetId = Number(req.params.id);
+  const session = getAdminSession(req);
+  const target = pQ.getById.get(targetId);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!session?.playerId) return res.status(403).json({ error: 'Session admin invalide.' });
+  if (session.playerId === targetId && role === 'admin' && target.role !== 'admin') {
+    return res.status(403).json({ error: 'Auto-promotion interdite.' });
+  }
   const oldRole = target.role;
   const oldVip  = Number(target.is_vip) === 1;
   if (role === 'vip') {
     WH.wlogAdminAction('VIP accordAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', 'oui', true]]);
-    pQ.updateVip.run({ is_vip: 1, id: Number(req.params.id) });
+    pQ.updateVip.run({ is_vip: 1, id: targetId });
   } else {
     WH.wlogAdminAction('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
-    pQ.updateRole.run({ role, id: Number(req.params.id) });
+    pQ.updateRole.run({ role, id: targetId });
   }
 
   // Sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord si liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
   if (target.discord_id) {
-    try { await syncDiscordRole(target.discord_id, role === 'vip' ? target.role : role, role === 'vip' ? true : oldVip); } catch(e) {}
+    try {
+      await syncDiscordRole(
+        target.discord_id,
+        role === 'vip' ? target.role : role,
+        role === 'vip' ? true : oldVip,
+        !!String(target.custom_role_text || '').trim()
+      );
+    } catch(e) {}
     // DM de notification
     try { await sendDM(target.discord_id, [
       'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Changement de rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle**',
@@ -361,6 +374,38 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
         : `Ton rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle a AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA modifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA : **${oldRole}** AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA **${role}**`,
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
+  }
+  res.json({ ok: true });
+});
+
+app.patch('/api/admin/players/:id/custom-role', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent modifier le role personnalise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  const rawText = String(req.body?.text || '').trim();
+  const rawColor = String(req.body?.color || '').trim();
+  if (rawText.length > 6) return res.status(400).json({ error: 'Le role personnalise doit faire 6 caracteres max.' });
+  if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise pour le role personnalise.' });
+  if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
+
+  pQ.updateCustomRole.run({
+    id,
+    text: rawText,
+    color: rawText ? rawColor.toUpperCase() : '',
+  });
+  WH.wlogAdminAction('Role personnalise', target.pseudo, id, [
+    ['Texte', rawText || 'aucun', true],
+    ['Couleur', rawText ? rawColor.toUpperCase() : 'aucune', true],
+  ]);
+  if (target.discord_id) {
+    syncDiscordRole(
+      target.discord_id,
+      target.role,
+      Number(target.is_vip) === 1,
+      !!rawText
+    ).catch(() => {});
   }
   res.json({ ok: true });
 });
@@ -405,12 +450,16 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
 // Mute temporaire (interdit de jouer)
 app.patch('/api/admin/players/:id/mute', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const { hours } = req.body;
-  const until = hours > 0 ? Date.now() + hours * 60 * 60 * 1000 : null;
+  const hours = Number(req.body?.hours);
+  const minutes = Number(req.body?.minutes);
+  const durationMinutes = Number.isFinite(minutes)
+    ? Math.max(0, Math.floor(minutes))
+    : (Number.isFinite(hours) ? Math.max(0, Math.floor(hours * 60)) : 0);
+  const until = durationMinutes > 0 ? Date.now() + durationMinutes * 60 * 1000 : null;
   const _pm = pQ.getById.get(Number(req.params.id));
-  WH.wlogMute(_pm?.pseudo || req.params.id, req.params.id, hours);
+  WH.wlogMute(_pm?.pseudo || req.params.id, req.params.id, durationMinutes / 60);
   pQ.setMute.run({ until, id: Number(req.params.id) });
-  res.json({ ok: true });
+  res.json({ ok: true, minutes: durationMinutes });
 });
 
 // Ban / Unban
@@ -445,6 +494,7 @@ const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
+const DISCORD_ROLE_CUSTOM = '1490049340407021649';
 
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
@@ -493,15 +543,19 @@ async function renameOnServer(discordId, nickname) {
 }
 
 // Synchroniser le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord d'un membre (ajoute/retire les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles)
-async function syncDiscordRole(discordId, role, isVip = false) {
+async function syncDiscordRole(discordId, role, isVip = false, hasCustomRole = false) {
   const { botToken } = discordConfig();
   if (!botToken) return;
   const STAFF_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD];
   const STAFF_TARGET = role === 'admin' ? DISCORD_ROLE_ADM
                     : role === 'moderator' ? DISCORD_ROLE_MOD
                     : null;
-  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP]) {
-    const shouldHave = rid === DISCORD_ROLE_VIP ? !!isVip : rid === STAFF_TARGET;
+  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP, DISCORD_ROLE_CUSTOM]) {
+    const shouldHave = rid === DISCORD_ROLE_VIP
+      ? !!isVip
+      : rid === DISCORD_ROLE_CUSTOM
+        ? !!hasCustomRole
+        : rid === STAFF_TARGET;
     const method = shouldHave ? 'PUT' : 'DELETE';
     await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
       method,
@@ -527,7 +581,7 @@ async function getDiscordRole(discordUserId, botToken) {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 setInterval(async () => {
   const { botToken } = discordConfig();
-  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, custom_role_text, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
     const newRole = await getDiscordRole(player.discord_id, botToken);
     const vipNow = isVipPlayer(player) ? 1 : 0;
@@ -539,6 +593,9 @@ setInterval(async () => {
     if (vipNow !== Number(player.is_vip)) {
       pQ.updateVip.run({ is_vip: vipNow, id: player.id });
     }
+    try {
+      await syncDiscordRole(player.discord_id, newRole, vipNow === 1, !!String(player.custom_role_text || '').trim());
+    } catch(e) {}
   }
 }, 60 * 1000);
 

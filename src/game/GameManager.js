@@ -191,6 +191,11 @@ class GameManager {
         [state.players[1].id]: p1Delta,
         [state.players[2].id]: p2Delta,
       },
+      boostInfo: {
+        vipApplied: !!elo.vipApplied,
+        vipAppliedTo: elo.vipAppliedTo ?? null,
+        globalMultiplier: elo.globalMultiplier ?? 1,
+      },
     };
 
     // Cleanup sockets immédiatement
@@ -208,6 +213,11 @@ class GameManager {
       eloChanges: {
         [state.players[1].id]: p1Delta,
         [state.players[2].id]: p2Delta,
+      },
+      boostInfo: {
+        vipApplied: !!elo.vipApplied,
+        vipAppliedTo: elo.vipAppliedTo ?? null,
+        globalMultiplier: elo.globalMultiplier ?? 1,
       },
       isSuspect,
       eloNow: {

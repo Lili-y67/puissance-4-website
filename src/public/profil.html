@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 — Profil</title>
+<title>Puissance 4 â€” Profil</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -31,7 +31,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 
 @keyframes slide-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-/* ── Profile header ── */
+/* â”€â”€ Profile header â”€â”€ */
 .profile-header{
   background:var(--surface);border:1px solid var(--border);border-radius:18px;
   overflow:hidden;
@@ -121,7 +121,7 @@ input[type="file"]{display:none;}
 .profile-elo{font-family:Barlow Condensed,sans-serif;font-size:42px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;}
 .profile-elo-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:right;}
 
-/* ── Social counts ── */
+/* â”€â”€ Social counts â”€â”€ */
 .social-row{
   display:flex;gap:8px;
   animation:slide-in 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both;
@@ -135,7 +135,7 @@ input[type="file"]{display:none;}
 .social-val{font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
 .social-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
-/* ── Stats ── */
+/* â”€â”€ Stats â”€â”€ */
 .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;animation:slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 12px;text-align:center;display:flex;flex-direction:column;gap:4px;transition:all 0.2s;}
 .stat-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
@@ -154,16 +154,16 @@ input[type="file"]{display:none;}
 .wr-bar{height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
 .wr-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow));transition:width 1s cubic-bezier(0.22,1,0.36,1);}
 
-/* ── Tabs ── */
+/* â”€â”€ Tabs â”€â”€ */
 .tabs-row{display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:4px;animation:slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;}
 .tab{flex:1;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
 .tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3);}
 
-/* ── Tab panels ── */
+/* â”€â”€ Tab panels â”€â”€ */
 .tab-panel{display:none;animation:slide-in 0.3s cubic-bezier(0.22,1,0.36,1) both;}
 .tab-panel.show{display:flex;flex-direction:column;gap:6px;}
 
-/* ── History rows ── */
+/* â”€â”€ History rows â”€â”€ */
 .game-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none;color:var(--text);transition:all 0.2s;}
 .game-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
 .game-result{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
@@ -184,7 +184,7 @@ input[type="file"]{display:none;}
 .pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .pg-btn:disabled{opacity:0.3;cursor:not-allowed;}
 
-/* ── Player rows (following/followers) ── */
+/* â”€â”€ Player rows (following/followers) â”€â”€ */
 .player-row{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:12px 16px;display:flex;align-items:center;gap:12px;
@@ -204,7 +204,7 @@ input[type="file"]{display:none;}
 
 .empty-state{text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;}
 
-/* ── Color picker card ── */
+/* â”€â”€ Color picker card â”€â”€ */
 .color-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:16px 18px;display:flex;flex-direction:column;gap:12px;
@@ -229,7 +229,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .btn-save-color:disabled{opacity:0.5;cursor:not-allowed;}
 .save-confirm{font-size:12px;color:var(--green);opacity:0;transition:opacity 0.3s;}
 
-/* ── Shape picker ── */
+/* â”€â”€ Shape picker â”€â”€ */
 .shape-card{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:16px 18px;display:flex;flex-direction:column;gap:12px;
@@ -260,7 +260,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .emoji-input-wrap.visible{display:flex;}
 .emoji-input{background:transparent;border:none;color:var(--text);font-size:22px;width:40px;text-align:center;outline:none;}
 
-/* ── Search bar ── */
+/* â”€â”€ Search bar â”€â”€ */
 .search-wrap{
   background:var(--surface);border:1px solid var(--border);border-radius:14px;
   padding:16px 18px;display:flex;flex-direction:column;gap:10px;
@@ -304,7 +304,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .tabs-row .tab { font-size: 11px; padding: 6px; }
 }
 
-/* ── Mobile ───────────────────────────────────────────────────────────────── */
+/* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 600px) {
   .page { padding: 12px 10px 32px; max-width: 100%; }
   .banner-wrap { height: 120px; border-radius: 14px; }
@@ -348,11 +348,29 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .image-editor-btn{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:11px 18px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all 0.2s;}
 .image-editor-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.18);}
 .image-editor-btn.primary{background:linear-gradient(135deg,var(--accent),#758bff);border-color:transparent;color:#fff;box-shadow:0 12px 28px rgba(76,110,245,0.35);}
+.upload-chooser-bg{display:none;position:fixed;inset:0;z-index:2800;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px)}
+.upload-chooser-bg.show{display:flex}
+.upload-chooser-modal{width:min(92vw,460px);background:linear-gradient(180deg,rgba(18,18,36,.98),rgba(10,10,22,.98));border:1px solid rgba(255,255,255,.08);border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:22px;display:flex;flex-direction:column;gap:16px}
+.upload-chooser-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.upload-chooser-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.upload-chooser-sub{font-size:12px;color:var(--muted);line-height:1.5;margin-top:5px}
+.upload-chooser-close{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:18px}
+.upload-chooser-close:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+.upload-chooser-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.upload-chooser-btn{padding:16px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:var(--surface2);color:var(--text);cursor:pointer;display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;transition:transform .2s,border-color .2s,box-shadow .2s}
+.upload-chooser-btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.16)}
+.upload-chooser-btn.primary{border-color:rgba(76,110,245,.28);background:rgba(76,110,245,.08)}
+.upload-chooser-btn.vip{border-color:rgba(255,214,10,.28);background:rgba(255,214,10,.08)}
+.upload-chooser-btn:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}
+.upload-chooser-btn-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.upload-chooser-btn-meta{font-size:12px;color:var(--muted);line-height:1.45}
+.upload-chooser-note{padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted);line-height:1.6}
 @media (max-width:640px){
   .image-editor-modal{padding:18px;}
   .image-editor-frame.banner{inset:26px 16px;}
   .image-editor-actions{width:100%;}
   .image-editor-btn{flex:1;}
+  .upload-chooser-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -364,15 +382,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   <nav class="nav">
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
     <div class="nav-btns">
-      <a class="btn-nav" href="/">← Jouer</a>
-      <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">Déconnexion</button>
-      <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">🗑️ Fermer le compte</button>
+      <a class="btn-nav" href="/">â† Jouer</a>
+      <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">DÃ©connexion</button>
+      <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">ðŸ—‘ï¸ Fermer le compte</button>
     </div>
   </nav>
 
   <!-- Recherche de joueur -->
   <div class="search-wrap">
-    <div class="search-label">🔍 Rechercher un joueur</div>
+    <div class="search-label">ðŸ” Rechercher un joueur</div>
     <div class="search-row" style="position:relative;">
       <input
         class="search-input"
@@ -395,14 +413,36 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         <div style="font-size:11px;color:var(--muted)" id="sr-stats"></div>
       </div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
-      <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir →</div>
+      <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir â†’</div>
     </a>
   </div>
 
   <div id="content"><div class="loading">Chargement...</div></div>
 </div>
 
-<input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
+<input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarUpload(this)">
+<div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
+  <div class="upload-chooser-modal">
+    <div class="upload-chooser-head">
+      <div>
+        <div class="upload-chooser-title" id="upload-chooser-title">Choisir un fichier</div>
+        <div class="upload-chooser-sub" id="upload-chooser-sub">Selectionne le type de fichier avant l'upload.</div>
+      </div>
+      <button class="upload-chooser-close" type="button" onclick="closeUploadChooser()">âœ•</button>
+    </div>
+    <div class="upload-chooser-grid">
+      <button class="upload-chooser-btn primary" type="button" id="upload-image-btn" onclick="chooseUploadKind('image')">
+        <div class="upload-chooser-btn-title">Choisir une image</div>
+        <div class="upload-chooser-btn-meta" id="upload-image-meta">PNG / JPG / WEBP</div>
+      </button>
+      <button class="upload-chooser-btn vip" type="button" id="upload-gif-btn" onclick="chooseUploadKind('gif')">
+        <div class="upload-chooser-btn-title">Choisir un GIF</div>
+        <div class="upload-chooser-btn-meta" id="upload-gif-meta">Reserve VIP - max 5 Mo</div>
+      </button>
+    </div>
+    <div class="upload-chooser-note" id="upload-chooser-note">Dimensions conseillees et taille max affichees ici.</div>
+  </div>
+</div>
 <div class="image-editor-bg" id="image-editor-bg" aria-hidden="true">
   <div class="image-editor-modal">
     <div class="image-editor-head">
@@ -410,7 +450,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
         <div class="image-editor-title" id="image-editor-title">Ajuster l'image</div>
         <div class="image-editor-sub" id="image-editor-sub">Zoomez et deplacez l'image comme sur Discord.</div>
       </div>
-      <button class="image-editor-close" type="button" onclick="closeImageEditor()">✕</button>
+      <button class="image-editor-close" type="button" onclick="closeImageEditor()">âœ•</button>
     </div>
     <div class="image-editor-stage" id="image-editor-stage">
       <canvas class="image-editor-canvas" id="image-editor-canvas" width="640" height="420"></canvas>
@@ -431,7 +471,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 </div>
 
 <script>
-// ── Audio Profil ──────────────────────────────────────────────────────────────
+// â”€â”€ Audio Profil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PROFIL_SFX = (() => {
   let ctx = null;
   function getCtx() {
@@ -528,6 +568,7 @@ const PROFIL_SFX = (() => {
 let currentPlayer = null;
 let viewerPlayer  = null;
 let isOwnProfile  = false;
+let uploadChooserTarget = null;
 
 async function load() {
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
@@ -541,7 +582,7 @@ async function load() {
     document.getElementById('btn-close-account').style.display = 'block';
   }
   if (!playerId) {
-    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">← Retour</a></div>';
+    document.getElementById('content').innerHTML = '<div class="empty-state">Aucun joueur. <a href="/" style="color:var(--red)">â† Retour</a></div>';
     return;
   }
 
@@ -553,9 +594,9 @@ async function load() {
     if (profileRes.status === 404) {
       document.getElementById('content').innerHTML = `
         <div style="text-align:center;padding:80px 20px">
-          <div style="font-size:48px;margin-bottom:16px">👤</div>
-          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color: var(--muted)">Compte supprimé</div>
-          <div style="font-size:13px;color: var(--muted);margin-top:8px">Ce joueur a fermé son compte.</div>
+          <div style="font-size:48px;margin-bottom:16px">ðŸ‘¤</div>
+          <div style="font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color: var(--muted)">Compte supprimÃ©</div>
+          <div style="font-size:13px;color: var(--muted);margin-top:8px">Ce joueur a fermÃ© son compte.</div>
         </div>`;
       return;
     }
@@ -570,11 +611,11 @@ async function load() {
     render(freshPlayer, games, following || [], followers || [], followStatus);
 
     // Charger le statut en ligne (tous les profils)
-    // Exposer pour que presence.js rappelle après identified
+    // Exposer pour que presence.js rappelle aprÃ¨s identified
     window._reloadStatus = () => loadStatus(freshPlayer.id);
     loadStatus(freshPlayer.id);
 
-    // Charger les infos Discord si profil own + discord lié
+    // Charger les infos Discord si profil own + discord liÃ©
     if (isOwnProfile && freshPlayer.discord_id) {
       loadDiscordInfo();
     }
@@ -606,9 +647,9 @@ function render(player, games, following, followers, followStatus) {
 
   const avatarSection = isOwnProfile
     ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
-         <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
+         <div class="avatar-wrap" onclick="openUploadChooser('avatar')" title="Changer la photo">
            <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
-           <div class="avatar-overlay">📷</div>
+           <div class="avatar-overlay">ðŸ“·</div>
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
          <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
@@ -624,32 +665,33 @@ function render(player, games, following, followers, followStatus) {
   const followBtn = !isOwnProfile && viewerPlayer
     ? `<button id="btn-follow" class="btn-follow ${followStatus.isFollowing ? 'following' : 'not-following'}"
          onclick="toggleFollow(${player.id})">
-         ${followStatus.isFollowing ? '✓ Suivi' : '+ Suivre'}
+         ${followStatus.isFollowing ? 'âœ“ Suivi' : '+ Suivre'}
        </button>`
     : '';
 
   document.getElementById('content').innerHTML = `
     <!-- Header -->
     <div class="profile-header">
-      <!-- Bannière -->
-      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\'banner-input\').click()" title="Changer la bannière"' : ''}>
-        ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
-        ${isOwnProfile ? '<div class="profile-banner-overlay">🖼️</div>' : ''}
+      <!-- BanniÃ¨re -->
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la banniÃ¨re"' : ''}>
+        ${player.banner ? '<img src="' + player.banner + '" alt="banniÃ¨re">' : ''}
+        ${isOwnProfile ? '<div class="profile-banner-overlay">ðŸ–¼ï¸</div>' : ''}
       </div>
       <div class="profile-header-inner">
         ${avatarSection}
         <div class="profile-info">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <div class="profile-pseudo">${player.pseudo}</div>
-            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⭐ VIP</span>' : ''}
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">🛡️ MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">⚡ ADMIN</span>' : ''}
+            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">â­ VIP</span>' : ''}
+            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">ðŸ›¡ï¸ MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">âš¡ ADMIN</span>' : ''}
+            ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 10px ${player.custom_role_color}22;font-family:Barlow Condensed,sans-serif;font-weight:700;letter-spacing:1px">${player.custom_role_text}</span>` : ''}
           </div>
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
-          ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">📷 Photo · 🖼️ Bannière (clic sur chacune)</div>' : ''}
+          ${isOwnProfile ? '<div style="font-size:11px;color:var(--muted);margin-top:4px">ðŸ“· Photo Â· ðŸ–¼ï¸ BanniÃ¨re (clic sur chacune)</div>' : ''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
-          <!-- ELO + badge côte à côte -->
+          <!-- ELO + badge cÃ´te Ã  cÃ´te -->
           <div style="display:flex;align-items:center;gap:10px">
             ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
             <div style="text-align:right">
@@ -664,25 +706,25 @@ function render(player, games, following, followers, followStatus) {
             <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden" title="${player.rank.progress}% vers le rang suivant">
               <div style="height:100%;width:${player.rank.progress}%;background:${player.rank.color};border-radius:2px;transition:width 0.6s ease"></div>
             </div>
-            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
+            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' â†’ ' + player.rank.next + ' ELO' : ' MAX'}</div>
           </div>` : ''}
           <!-- Bouton simulateur ELO -->
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
-            🎚 Simulateur ELO
+            ðŸŽš Simulateur ELO
           </button>
           ${isOwnProfile && player.is_vip ? `
           <div id="vip-boost-wrap" style="margin-top:4px;">
             <button id="vip-boost-btn" onclick="activateVipBoost()"
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
               onmouseover="this.style.background='rgba(255,214,10,0.15)'" onmouseout="this.style.background='rgba(255,214,10,0.08)'">
-              ⚡ BOOST VIP
+              âš¡ BOOST VIP
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
           </div>` : ''}
           ${isOwnProfile ? `
           <label class="toggle-wrap" style="margin-top:4px;">
             <div>
-              <div class="toggle-label">⚡ Auto-rejoin</div>
+              <div class="toggle-label">âš¡ Auto-rejoin</div>
               <div class="toggle-sub" id="auto-rejoin-sub">Rejoindre la queue automatiquement</div>
             </div>
             <div class="toggle-switch">
@@ -703,7 +745,7 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <div class="social-card" onclick="switchTab('followers')">
         <div class="social-val">${followers.length}</div>
-        <div class="social-lbl">Abonnés</div>
+        <div class="social-lbl">AbonnÃ©s</div>
       </div>
       <div class="social-card" onclick="switchTab('history')">
         <div class="social-val">${games.length}</div>
@@ -714,12 +756,12 @@ function render(player, games, following, followers, followStatus) {
     <!-- Stats -->
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
       <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
+      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">DÃ©faites</div></div>
       <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
       ${player.avg_accuracy != null ? `
-      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
+      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysÃ©e(s)">
         <div class="stat-val">${player.avg_accuracy}%</div>
-        <div class="stat-lbl">Précision</div>
+        <div class="stat-lbl">PrÃ©cision</div>
       </div>` : ''}
     </div>
 
@@ -736,8 +778,8 @@ function render(player, games, following, followers, followStatus) {
     ${isOwnProfile ? `
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">🎨 Couleur de jeton</span>
-        <span class="save-confirm" id="save-confirm">✓ Enregistré !</span>
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">ðŸŽ¨ Couleur de jeton</span>
+        <span class="save-confirm" id="save-confirm">âœ“ EnregistrÃ© !</span>
       </div>
       <div class="color-row" id="color-presets-wrap"></div>
       <div style="display:flex;align-items:center;gap:10px">
@@ -751,13 +793,13 @@ function render(player, games, following, followers, followStatus) {
     </div>
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">🔷 Forme de pion</span>
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">ðŸ”· Forme de pion</span>
         <span class="save-confirm" id="shape-confirm"></span>
       </div>
       <div class="shape-row" id="shape-row"></div>
       <div class="emoji-input-wrap" id="emoji-wrap">
         <span style="font-size:12px;color:var(--muted);">Ton emoji :</span>
-        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="⭐" oninput="onEmojiInput(this.value)">
+        <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="â­" oninput="onEmojiInput(this.value)">
       </div>
       <button class="btn-save-color" onclick="saveShape()">Enregistrer</button>
     </div>
@@ -765,44 +807,44 @@ function render(player, games, following, followers, followStatus) {
     <!-- Carte mot de passe admin -->
     ${player.role === 'admin' ? `
     <div class="color-card" style="margin-top:0;border-color:rgba(255,45,85,0.3);background:rgba(255,45,85,0.05)">
-      <div class="card-label" style="color:var(--red)">⚡ Accès Panel Admin</div>
+      <div class="card-label" style="color:var(--red)">âš¡ AccÃ¨s Panel Admin</div>
       <div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
         Mot de passe du panel <a href="/admin" target="_blank" style="color:var(--red)">/admin</a>
       </div>
       <div id="admin-pwd-wrap" style="display:none;background:rgba(0,0,0,0.3);border:1px solid rgba(255,45,85,0.2);border-radius:8px;padding:10px 14px;font-family:monospace;font-size:14px;letter-spacing:2px;color:var(--red);margin-bottom:10px;word-break:break-all"></div>
       <button class="btn-save-color" id="admin-pwd-btn" onclick="toggleAdminPwd()" style="background:rgba(255,45,85,0.12);border-color:rgba(255,45,85,0.3);color:var(--red)">
-        🔑 Afficher le mot de passe
+        ðŸ”‘ Afficher le mot de passe
       </button>
     </div>
     ` : ''}
 
     <!-- Carte liaison Discord -->
     <div class="color-card" style="margin-top:0" id="discord-card">
-      <div class="card-label">🔷 Compte Discord</div>
+      <div class="card-label">ðŸ”· Compte Discord</div>
       ${player.discord_id
         ? `<div id="discord-info-zone">
              <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
                <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discord…</span>
+               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discordâ€¦</span>
              </div>
            </div>
            <button class="btn-save-color" id="btn-unlink" onclick="requestUnlink()" style="margin-top:12px;background:rgba(255,45,85,0.1);border-color:rgba(255,45,85,0.3);color:#ff6b81;font-size:12px">
-             🔓 Délier Discord
+             ðŸ”“ DÃ©lier Discord
            </button>`
         : `<div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
-             Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
+             Lie ton Discord pour pouvoir rÃ©initialiser ton mot de passe.
            </div>
            <button class="btn-save-color" onclick="linkDiscord()" style="background:rgba(88,101,242,0.15);border-color:rgba(88,101,242,0.4);color:#8b9cf4">
-             <span style="font-size:14px">🔗</span> Lier Discord
+             <span style="font-size:14px">ðŸ”—</span> Lier Discord
            </button>`
       }
     </div>
 
-    <!-- Modal déliaison Discord -->
+    <!-- Modal dÃ©liaison Discord -->
     <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px 24px;width:90%;max-width:360px">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">🔓 Délier Discord</div>
-        <div style="font-size:13px;color: var(--muted);margin-bottom:20px;line-height:1.5">Un code à 6 chiffres a été envoyé en <strong style="color: var(--muted)">message privé</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px">ðŸ”“ DÃ©lier Discord</div>
+        <div style="font-size:13px;color: var(--muted);margin-bottom:20px;line-height:1.5">Un code Ã  6 chiffres a Ã©tÃ© envoyÃ© en <strong style="color: var(--muted)">message privÃ©</strong> par le bot Discord.<br>Entre-le ci-dessous pour confirmer.</div>
         <input id="unlink-code-input" type="text" maxlength="6" placeholder="123456"
           style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--text);font-size:22px;font-family:'Barlow Condensed',sans-serif;letter-spacing:8px;text-align:center;outline:none;margin-bottom:8px"
           oninput="this.value=this.value.replace(/\D/g,'')">
@@ -818,9 +860,9 @@ function render(player, games, following, followers, followStatus) {
     <!-- Popup simulateur ELO -->
     <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
       <div class="elo-sim-modal">
-        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color: var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
-        <div class="elo-sim-title">🎚 Simulateur <span style="color:var(--red)">ELO</span></div>
-        <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO réel</div>
+        <button onclick="closeEloSim()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.06);border:none;color: var(--muted);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">âœ•</button>
+        <div class="elo-sim-title">ðŸŽš Simulateur <span style="color:var(--red)">ELO</span></div>
+        <div class="elo-sim-sub">Visualise les rangs sans modifier ton ELO rÃ©el</div>
 
         <!-- Slider -->
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px">
@@ -835,8 +877,8 @@ function render(player, games, following, followers, followStatus) {
         <!-- Badge rang -->
         <div class="elo-sim-badge">
           <img id="elo-sim-img" src="" alt="" style="width:64px;height:64px;object-fit:contain">
-          <div class="elo-sim-rank-name" id="elo-sim-rank-name">—</div>
-          <div style="font-size:12px;color:var(--muted)" id="elo-sim-range">—</div>
+          <div class="elo-sim-rank-name" id="elo-sim-rank-name">â€”</div>
+          <div style="font-size:12px;color:var(--muted)" id="elo-sim-range">â€”</div>
           <div class="elo-sim-progress-wrap" style="width:200px">
             <div class="elo-sim-progress-fill" id="elo-sim-prog"></div>
           </div>
@@ -847,9 +889,9 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Tabs -->
     <div class="tabs-row">
-      <button class="tab active" id="tab-history"   onclick="switchTab('history')">🎮 Parties</button>
-      <button class="tab"        id="tab-following"  onclick="switchTab('following')">👁 Suivis</button>
-      <button class="tab"        id="tab-followers"  onclick="switchTab('followers')">👥 Abonnés</button>
+      <button class="tab active" id="tab-history"   onclick="switchTab('history')">ðŸŽ® Parties</button>
+      <button class="tab"        id="tab-following"  onclick="switchTab('following')">ðŸ‘ Suivis</button>
+      <button class="tab"        id="tab-followers"  onclick="switchTab('followers')">ðŸ‘¥ AbonnÃ©s</button>
     </div>
 
     <!-- Panel : Historique -->
@@ -865,7 +907,7 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Panel : Followers -->
     <div class="tab-panel" id="panel-followers">
-      ${renderPlayers(followers, 'Aucun abonné pour l\'instant.')}
+      ${renderPlayers(followers, 'Aucun abonnÃ© pour l\'instant.')}
     </div>
   `;
 
@@ -875,7 +917,7 @@ function render(player, games, following, followers, followStatus) {
     const isEmoji  = shapeRaw.startsWith('emoji:');
     setTimeout(() => {
       initColorPicker(player.color);
-      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : '⭐');
+      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : 'â­');
     }, 50);
   }
   // Initialiser la pagination des parties et le toggle auto-rejoin
@@ -884,7 +926,7 @@ function render(player, games, following, followers, followStatus) {
   initVipBoostUI();
 }
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
+// â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function switchTab(name) {
   ['history','following','followers'].forEach(t => {
     document.getElementById('tab-' + t)?.classList.toggle('active', t === name);
@@ -893,7 +935,7 @@ function switchTab(name) {
   });
 }
 
-// ── Follow / Unfollow ─────────────────────────────────────────────────────────
+// â”€â”€ Follow / Unfollow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function toggleFollow(targetId) {
   if (!viewerPlayer) return location.href = '/';
   const btn = document.getElementById('btn-follow');
@@ -911,15 +953,15 @@ async function toggleFollow(targetId) {
     if (res.ok) {
       btn.classList.toggle('following',     data.following);
       btn.classList.toggle('not-following', !data.following);
-      btn.textContent = data.following ? '✓ Suivi' : '+ Suivre';
+      btn.textContent = data.following ? 'âœ“ Suivi' : '+ Suivre';
     }
   } finally {
     btn.disabled = false;
   }
 }
 
-// ── Render helpers ────────────────────────────────────────────────────────────
-// ── Pagination des parties ───────────────────────────────────────────────────
+// â”€â”€ Render helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Pagination des parties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const GAMES_PER_PAGE = 10;
 let _gamesData = [];
 let _gamesPlayer = null;
@@ -943,7 +985,7 @@ function renderGamesPage() {
   const slice = _gamesData.slice(start, start + GAMES_PER_PAGE);
 
   container.innerHTML = total === 0
-    ? '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>'
+    ? '<div class="empty-state">Aucune partie jouÃ©e pour l\'instant.</div>'
     : slice.map(g => renderGameRow(g, _gamesPlayer)).join('');
 
   // Pagination
@@ -951,20 +993,20 @@ function renderGamesPage() {
   pagination.style.display = 'flex';
 
   let html = '';
-  // Bouton précédent
-  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage - 1})" ${_gamesPage === 1 ? 'disabled' : ''}>‹</button>`;
+  // Bouton prÃ©cÃ©dent
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage - 1})" ${_gamesPage === 1 ? 'disabled' : ''}>â€¹</button>`;
 
   // Pages
   for (let p = 1; p <= totalPages; p++) {
     if (totalPages > 7 && p > 2 && p < totalPages - 1 && Math.abs(p - _gamesPage) > 1) {
-      if (p === 3 || p === totalPages - 2) html += `<span style="color:var(--muted);padding:0 2px">…</span>`;
+      if (p === 3 || p === totalPages - 2) html += `<span style="color:var(--muted);padding:0 2px">â€¦</span>`;
       continue;
     }
     html += `<button class="pg-btn ${p === _gamesPage ? 'active' : ''}" onclick="gotoPage(${p})">${p}</button>`;
   }
 
   // Bouton suivant
-  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage + 1})" ${_gamesPage === totalPages ? 'disabled' : ''}>›</button>`;
+  html += `<button class="pg-btn" onclick="gotoPage(${_gamesPage + 1})" ${_gamesPage === totalPages ? 'disabled' : ''}>â€º</button>`;
 
   pagination.innerHTML = html;
 }
@@ -983,31 +1025,31 @@ function renderGameRow(g, me) {
     const won       = g.winner_id === me.id;
     const isDraw    = g.winner_id === null;
     const rc        = isDraw ? 'draw' : (won ? 'win' : 'loss');
-    const ri        = isDraw ? '⚖️' : (won ? '🏆' : '💀');
+    const ri        = isDraw ? 'âš–ï¸' : (won ? 'ðŸ†' : 'ðŸ’€');
     const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
     const date      = g.finished_at
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
-      : '—';
-    const suspBadge = g.suspicious ? `<div title="Double compte détecté — ELO non comptabilisé" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">⚠️ Double compte</div>` : '';
-  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">📦 Archivée</div>` : '';
+      : 'â€”';
+    const suspBadge = g.suspicious ? `<div title="Double compte dÃ©tectÃ© â€” ELO non comptabilisÃ©" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">âš ï¸ Double compte</div>` : '';
+  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">ðŸ“¦ ArchivÃ©e</div>` : '';
   return `<a class="game-row" href="/replay/${g.id}">
       <div class="game-result ${rc}">${ri}</div>
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
-        <div class="game-elo-change ${eloClass}">${g.suspicious ? '±0 ELO' : eloStr}</div>
-        <div>${g.move_count} coups · ${g.duration}s</div>
+        <div class="game-elo-change ${eloClass}">${g.suspicious ? 'Â±0 ELO' : eloStr}</div>
+        <div>${g.move_count} coups Â· ${g.duration}s</div>
         <div>${date}</div>
         ${suspBadge}
         ${archiveBadge}
       </div>
-      <div class="replay-badge">▶ Replay</div>
+      <div class="replay-badge">â–¶ Replay</div>
     </a>`;
 }
 
 function renderGames(games, me) {
-  // Compatibilité — redirige vers le système paginé
+  // CompatibilitÃ© â€” redirige vers le systÃ¨me paginÃ©
   initGames(games, me);
 }
 
@@ -1024,18 +1066,73 @@ function renderPlayers(players, emptyMsg) {
       <div class="player-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
       <div class="player-mini-info">
         <div class="player-mini-pseudo">${p.pseudo}</div>
-        <div class="player-mini-stats">${p.wins||0}V · ${p.losses||0}D · ${wr}% WR</div>
+        <div class="player-mini-stats">${p.wins||0}V Â· ${p.losses||0}D Â· ${wr}% WR</div>
       </div>
       <div class="player-mini-elo">${p.elo}</div>
     </a>`;
   }).join('');
 }
 
-// ── Banner upload ─────────────────────────────────────────────────────────────
+// â”€â”€ Banner upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function getUploadInput(target) {
+  return target === 'banner' ? document.getElementById('banner-input') : document.getElementById('avatar-input');
+}
+
+function getUploadTargetInfo(target) {
+  if (target === 'banner') {
+    return {
+      title: 'Choisir une banniere',
+      subtitle: 'Format paysage conseille pour un resultat plus propre.',
+      imageMeta: 'PNG / JPG / WEBP - 1500x500 conseille - max 4 Mo',
+      gifMeta: 'GIF VIP - 1500x500 conseille - max 5 Mo',
+      note: 'Banniere: dimensions optimales 1500x500. Images statiques max 4 Mo, GIF VIP max 5 Mo.'
+    };
+  }
+  return {
+    title: 'Choisir un avatar',
+    subtitle: 'Format carre conseille pour un recadrage plus net.',
+    imageMeta: 'PNG / JPG / WEBP - 500x500 conseille - max 2 Mo',
+    gifMeta: 'GIF VIP - 500x500 conseille - max 5 Mo',
+    note: 'Avatar: dimensions optimales 500x500. Images statiques max 2 Mo, GIF VIP max 5 Mo.'
+  };
+}
+
+function openUploadChooser(target) {
+  uploadChooserTarget = target;
+  const info = getUploadTargetInfo(target);
+  const isVip = Number(currentPlayer?.is_vip) === 1;
+  document.getElementById('upload-chooser-title').textContent = info.title;
+  document.getElementById('upload-chooser-sub').textContent = info.subtitle;
+  document.getElementById('upload-image-meta').textContent = info.imageMeta;
+  document.getElementById('upload-gif-meta').textContent = isVip ? info.gifMeta : 'Reserve VIP - active ton role VIP pour envoyer un GIF';
+  document.getElementById('upload-chooser-note').textContent = info.note;
+  document.getElementById('upload-gif-btn').disabled = !isVip;
+  const bg = document.getElementById('upload-chooser-bg');
+  bg.classList.add('show');
+  bg.setAttribute('aria-hidden', 'false');
+}
+
+function closeUploadChooser() {
+  const bg = document.getElementById('upload-chooser-bg');
+  bg.classList.remove('show');
+  bg.setAttribute('aria-hidden', 'true');
+  uploadChooserTarget = null;
+}
+
+function chooseUploadKind(kind) {
+  if (!uploadChooserTarget) return;
+  const input = getUploadInput(uploadChooserTarget);
+  if (!input) return;
+  input.value = '';
+  input.accept = kind === 'gif' ? 'image/gif' : 'image/png,image/jpeg,image/jpg,image/webp';
+  closeUploadChooser();
+  input.click();
+}
+
 (function() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.id = 'banner-input';
-  inp.accept = 'image/*'; inp.style.display = 'none';
+  inp.accept = 'image/png,image/jpeg,image/jpg,image/webp'; inp.style.display = 'none';
   inp.onchange = () => saveBanner(inp);
   document.body.appendChild(inp);
 })();
@@ -1245,8 +1342,8 @@ async function uploadBannerData(banner, me, token) {
     PROFIL_SFX.upload();
     const bannerEl = document.querySelector('.profile-banner');
     if (bannerEl) {
-      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">🖼️</div>';
-      bannerEl.onclick = () => document.getElementById('banner-input').click();
+      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">ðŸ–¼ï¸</div>';
+      bannerEl.onclick = () => openUploadChooser('banner');
     }
     me.banner = banner;
     localStorage.setItem('player', JSON.stringify(me));
@@ -1393,6 +1490,17 @@ function handleAvatarUpload(input) {
   });
 })();
 
+(function initUploadChooser() {
+  const bg = document.getElementById('upload-chooser-bg');
+  if (!bg) return;
+  bg.addEventListener('click', (event) => {
+    if (event.target === bg) closeUploadChooser();
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && bg.classList.contains('show')) closeUploadChooser();
+  });
+})();
+
 function resizeImage(dataUrl, maxSize) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1409,19 +1517,19 @@ function resizeImage(dataUrl, maxSize) {
   });
 }
 
-// ── Déconnexion ───────────────────────────────────────────────────────────────
-// ── Fermeture de compte ───────────────────────────────────────────────────────
+// â”€â”€ DÃ©connexion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Fermeture de compte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function confirmCloseAccount() {
   const modal = document.createElement('div');
   modal.id = 'delete-modal';
   modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
   modal.innerHTML = `
     <div style="background:var(--surface);border:1px solid rgba(255,59,48,0.3);border-radius:18px;padding:36px 32px;max-width:380px;width:90%;text-align:center">
-      <div style="font-size:36px;margin-bottom:16px">⚠️</div>
+      <div style="font-size:36px;margin-bottom:16px">âš ï¸</div>
       <div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;color:#ff3b30">Fermer le compte ?</div>
       <div style="font-size:13px;color: var(--muted);margin-bottom:24px;line-height:1.6">
-        Ton compte sera définitivement supprimé.<br>
-        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color: var(--muted)">Joueur supprimé</strong>.
+        Ton compte sera dÃ©finitivement supprimÃ©.<br>
+        Tes parties resteront dans l'historique des autres joueurs<br>sous le nom <strong style="color: var(--muted)">Joueur supprimÃ©</strong>.
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
         <button onclick="document.getElementById('delete-modal').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color: var(--muted);font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer">Annuler</button>
@@ -1456,8 +1564,8 @@ function logout() {
   window.location.href = '/';
 }
 
-// ── Recherche joueur ──────────────────────────────────────────────────────────
-// ── Autocomplete ──────────────────────────────────────────────────────────────
+// â”€â”€ Recherche joueur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€ Autocomplete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let _acTimer = null;
 let _acIndex = -1;
 let _acResults = [];
@@ -1483,7 +1591,7 @@ async function onSearchInput(val) {
 function renderAcList(players) {
   const list = document.getElementById('autocomplete-list');
   if (!players.length) {
-    list.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--muted);">Aucun pseudo trouvé</div>';
+    list.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--muted);">Aucun pseudo trouvÃ©</div>';
     list.style.display = 'block';
     return;
   }
@@ -1529,7 +1637,7 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.search-row')) document.getElementById('autocomplete-list').style.display = 'none';
 });
 
-// ── Boost VIP ──────────────────────────────────────────────────────────────────
+// â”€â”€ Boost VIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function initVipBoostUI() {
   const wrap = document.getElementById('vip-boost-wrap');
   if (!wrap) return;
@@ -1544,16 +1652,16 @@ async function initVipBoostUI() {
       const mins = Math.ceil(data.remainingMs / 60000);
       btn.disabled = true;
       btn.style.opacity = '0.5';
-      btn.textContent = '⚡ BOOST ACTIF';
+      btn.textContent = 'âš¡ BOOST ACTIF';
       stat.textContent = `Se termine dans ${mins} min`;
       stat.style.color = '#ffd60a';
     } else if (data.usedToday) {
       btn.disabled = true;
       btn.style.opacity = '0.5';
-      btn.textContent = '⚡ BOOST UTILISÉ';
-      stat.textContent = 'Disponible à minuit (Paris)';
+      btn.textContent = 'âš¡ BOOST UTILISÃ‰';
+      stat.textContent = 'Disponible Ã  minuit (Paris)';
     } else {
-      btn.textContent = '⚡ ACTIVER BOOST VIP (+20% ELO · 1h)';
+      btn.textContent = 'âš¡ ACTIVER BOOST VIP (+20% ELO Â· 1h)';
     }
   } catch(e) {}
 }
@@ -1571,20 +1679,20 @@ async function activateVipBoost() {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert('❌ ' + (data.error || 'Erreur'));
+      alert('âŒ ' + (data.error || 'Erreur'));
       return;
     }
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
     btn.disabled = true;
     btn.style.opacity = '0.5';
-    btn.textContent = '⚡ BOOST ACTIF';
+    btn.textContent = 'âš¡ BOOST ACTIF';
     stat.textContent = 'Se termine dans 60 min';
     stat.style.color = '#ffd60a';
-  } catch(e) { alert('Erreur réseau'); }
+  } catch(e) { alert('Erreur rÃ©seau'); }
 }
 
-// ── Auto-rejoin toggle ────────────────────────────────────────────────────────
+// â”€â”€ Auto-rejoin toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function initAutoRejoinToggle() {
   const toggle = document.getElementById('auto-rejoin-toggle');
   if (!toggle) return;
@@ -1602,7 +1710,7 @@ function updateAutoRejoinSub(checked) {
   const sub = document.getElementById('auto-rejoin-sub');
   if (sub) sub.textContent = checked
     ? 'Rejoindre la queue automatiquement'
-    : 'Attendre sur l\'écran d\'accueil';
+    : 'Attendre sur l\'Ã©cran d\'accueil';
 }
 
 async function searchPlayer() {
@@ -1624,7 +1732,7 @@ async function searchPlayer() {
     if (!res.ok) throw new Error();
     const player = await res.json();
 
-    // Afficher le résultat
+    // Afficher le rÃ©sultat
     const color   = player.color || '#ff2d55';
     const total   = (player.wins||0) + (player.losses||0) + (player.draws||0);
     const wr      = total > 0 ? Math.round(((player.wins||0)/total)*100) : 0;
@@ -1638,7 +1746,7 @@ async function searchPlayer() {
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').textContent = player.pseudo;
-    document.getElementById('sr-stats').textContent  = `${player.wins||0}V · ${player.losses||0}D · ${wr}% WR`;
+    document.getElementById('sr-stats').textContent  = `${player.wins||0}V Â· ${player.losses||0}D Â· ${wr}% WR`;
     document.getElementById('sr-elo').textContent    = player.elo;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
     result.classList.add('show');
@@ -1651,7 +1759,7 @@ async function searchPlayer() {
   }
 }
 
-// ── Color picker (propre profil) ─────────────────────────────────────────────
+// â”€â”€ Color picker (propre profil) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const COLOR_PRESETS = [
   '#ff2d55','#ffd60a','#30d158','#0a84ff','#bf5af2','#ff9f0a','#00c7be','#ff375f',
 ];
@@ -1697,21 +1805,21 @@ function hexToRgb(hex) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-// ── Shape picker ──────────────────────────────────────────────────────────────
+// â”€â”€ Shape picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SHAPES = [
-  { id: 'circle',   label: '●' },
-  { id: 'triangle', label: '▲' },
-  { id: 'diamond',  label: '◆' },
-  { id: 'star',     label: '★' },
-  { id: 'heart',    label: '♥' },
-  { id: 'emoji',    label: '😀' },
+  { id: 'circle',   label: 'â—' },
+  { id: 'triangle', label: 'â–²' },
+  { id: 'diamond',  label: 'â—†' },
+  { id: 'star',     label: 'â˜…' },
+  { id: 'heart',    label: 'â™¥' },
+  { id: 'emoji',    label: 'ðŸ˜€' },
 ];
 let selectedShape = 'circle';
-let selectedEmoji = '⭐';
+let selectedEmoji = 'â­';
 
 function initShapePicker(currentShape, currentEmoji) {
   selectedShape = currentShape || 'circle';
-  selectedEmoji = currentEmoji || '⭐';
+  selectedEmoji = currentEmoji || 'â­';
   const row = document.getElementById('shape-row');
   if (!row) return;
   row.innerHTML = '';
@@ -1771,8 +1879,8 @@ function onEmojiInput(val) {
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   } else {
-    // Champ vide → fallback ⭐
-    selectedEmoji = '⭐';
+    // Champ vide â†’ fallback â­
+    selectedEmoji = 'â­';
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
@@ -1783,21 +1891,21 @@ async function toggleAdminPwd() {
   const btn  = document.getElementById('admin-pwd-btn');
   if (wrap.style.display === 'block') {
     wrap.style.display = 'none';
-    btn.textContent = '🔑 Afficher le mot de passe';
+    btn.textContent = 'ðŸ”‘ Afficher le mot de passe';
     return;
   }
   const token = localStorage.getItem('token');
   const res   = await fetch('/api/admin/password', { headers: { 'x-token': token } });
-  if (!res.ok) return alert('Accès refusé.');
+  if (!res.ok) return alert('AccÃ¨s refusÃ©.');
   const { password } = await res.json();
   wrap.textContent   = password;
   wrap.style.display = 'block';
-  btn.textContent    = '🙈 Masquer';
+  btn.textContent    = 'ðŸ™ˆ Masquer';
 }
 
-// ── Statut en ligne ──────────────────────────────────────────────────────────
+// â”€â”€ Statut en ligne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function formatLastSeen(ts) {
-  if (!ts) return 'Jamais connecté';
+  if (!ts) return 'Jamais connectÃ©';
   const diff = Date.now() - ts;
   const s = Math.floor(diff / 1000);
   const m = Math.floor(s / 60);
@@ -1839,15 +1947,15 @@ async function loadStatus(playerId) {
   } catch(e) {}
 }
 
-// ── Simulateur ELO ───────────────────────────────────────────────────────────
-// Table des rangs (miroir de rank.js côté client)
+// â”€â”€ Simulateur ELO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Table des rangs (miroir de rank.js cÃ´tÃ© client)
 const RANKS_SIM = [
   { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
   { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
   { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
   { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
   { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
-  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+  { name:'AmÃ©thyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
 ];
 const LEVEL_NAMES = ['I','II','III','IV','V'];
 
@@ -1866,7 +1974,7 @@ function openEloSim() {
   const bg = document.getElementById('elo-sim-bg');
   if (!bg) return;
   bg.classList.add('show');
-  // Init slider à l'ELO actuel du joueur affiché
+  // Init slider Ã  l'ELO actuel du joueur affichÃ©
   const elo = currentPlayer?.elo || 1000;
   const slider = document.getElementById('elo-sim-slider');
   if (slider) { slider.value = elo; }
@@ -1881,7 +1989,7 @@ function updateEloSim(elo) {
   elo = Number(elo);
   const rank = getSimRank(elo);
 
-  // Valeur ELO affichée
+  // Valeur ELO affichÃ©e
   const valEl = document.getElementById('elo-sim-value');
   if (valEl) { valEl.textContent = elo; valEl.style.color = rank.color; }
 
@@ -1908,7 +2016,7 @@ function updateEloSim(elo) {
 
   // Tranche ELO
   const rangeEl = document.getElementById('elo-sim-range');
-  if (rangeEl) rangeEl.textContent = rank.min + ' – ' + rank.max + ' ELO';
+  if (rangeEl) rangeEl.textContent = rank.min + ' â€“ ' + rank.max + ' ELO';
 
   // Barre progression
   const prog = document.getElementById('elo-sim-prog');
@@ -1917,8 +2025,8 @@ function updateEloSim(elo) {
   // Next
   const nextEl = document.getElementById('elo-sim-next');
   if (nextEl) nextEl.textContent = rank.next
-    ? rank.progress + '% · Prochain rang à ' + rank.next + ' ELO'
-    : '✨ Rang maximum atteint';
+    ? rank.progress + '% Â· Prochain rang Ã  ' + rank.next + ' ELO'
+    : 'âœ¨ Rang maximum atteint';
 }
 
 function linkDiscord() {
@@ -1928,9 +2036,9 @@ function linkDiscord() {
   window.location.href = '/auth/discord/link?playerId=' + me.id;
 }
 
-// ── Discord Info ─────────────────────────────────────────────────────────────
+// â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };
-const NITRO_ICONS  = { 0: '', 1: '💎', 2: '💎', 3: '🔷' };
+const NITRO_ICONS  = { 0: '', 1: 'ðŸ’Ž', 2: 'ðŸ’Ž', 3: 'ðŸ”·' };
 
 function syncStoredPlayerPatch(patch) {
   try {
@@ -2010,18 +2118,18 @@ async function loadDiscordInfo() {
         <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
         <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${tag}</span>
         ${globalName}
-        ${d.verified ? '<span title="Email vérifié" style="font-size:13px">✅</span>' : ''}
-        ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">🔐</span>' : ''}
+        ${d.verified ? '<span title="Email vÃ©rifiÃ©" style="font-size:13px">âœ…</span>' : ''}
+        ${d.mfa_enabled ? '<span title="2FA activÃ©" style="font-size:13px">ðŸ”</span>' : ''}
       </div>
 
       <!-- Infos lignes -->
       <div style="margin-bottom:12px">
-        ${row('🆔', 'ID Discord',        d.id)}
-        ${row('📅', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
-        ${row('🔗', 'Lié le',            linkedStr)}
-        ${d.on_server && joinedStr ? row('🏠', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('🏠', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
-        ${d.server_nick ? row('✏️', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
-        ${d.server_roles?.length ? row('🎭', 'Rôles sur serveur',
+        ${row('ðŸ†”', 'ID Discord',        d.id)}
+        ${row('ðŸ“…', 'Compte crÃ©Ã© le',    createdStr + ' (' + ageStr + ')')}
+        ${row('ðŸ”—', 'LiÃ© le',            linkedStr)}
+        ${d.on_server && joinedStr ? row('ðŸ ', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('ðŸ ', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
+        ${d.server_nick ? row('âœï¸', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
+        ${d.server_roles?.length ? row('ðŸŽ­', 'RÃ´les sur serveur',
           '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;">' +
           d.server_roles.map(r => {
             const col = r.color && r.color !== '#000000' ? r.color : '#99aab5';
@@ -2039,10 +2147,10 @@ async function loadDiscordInfo() {
   }
 }
 
-// ── Déliaison Discord ────────────────────────────────────────────────────────
+// â”€â”€ DÃ©liaison Discord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function requestUnlink() {
   const btn = document.getElementById('btn-unlink');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Envoi en cours…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'â³ Envoi en coursâ€¦'; }
 
   try {
     const token = localStorage.getItem('token');
@@ -2063,9 +2171,9 @@ async function requestUnlink() {
     }
   } catch(e) {
     PROFIL_SFX.error();
-    alert('Erreur réseau');
+    alert('Erreur rÃ©seau');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔓 Délier Discord'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'ðŸ”“ DÃ©lier Discord'; }
   }
 }
 
@@ -2082,7 +2190,7 @@ async function confirmUnlink() {
   const code  = document.getElementById('unlink-code-input')?.value?.trim();
   const errEl = document.getElementById('unlink-error');
   if (!code || code.length !== 6) {
-    if (errEl) errEl.textContent = 'Entre un code à 6 chiffres';
+    if (errEl) errEl.textContent = 'Entre un code Ã  6 chiffres';
     return;
   }
 
@@ -2098,14 +2206,14 @@ async function confirmUnlink() {
     if (data.ok) {
       PROFIL_SFX.success();
       closeUnlinkModal();
-      // Recharger le profil pour refléter la déliaison
+      // Recharger le profil pour reflÃ©ter la dÃ©liaison
       setTimeout(() => location.reload(), 800);
     } else {
       PROFIL_SFX.error();
-      if (errEl) errEl.textContent = data.error || 'Code invalide ou expiré';
+      if (errEl) errEl.textContent = data.error || 'Code invalide ou expirÃ©';
     }
   } catch(e) {
-    if (errEl) errEl.textContent = 'Erreur réseau';
+    if (errEl) errEl.textContent = 'Erreur rÃ©seau';
   }
 }
 
@@ -2113,7 +2221,7 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || '⭐')) : selectedShape;
+  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || 'â­')) : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shape: shapeVal, token }),
@@ -2124,7 +2232,7 @@ async function saveShape() {
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
     const c = document.getElementById('shape-confirm');
-    if (c) { c.textContent = '✓ Enregistré !'; c.style.opacity = 1; setTimeout(() => c.style.opacity = 0, 2000); }
+    if (c) { c.textContent = 'âœ“ EnregistrÃ© !'; c.style.opacity = 1; setTimeout(() => c.style.opacity = 0, 2000); }
   } else {
     PROFIL_SFX.error();
   }
@@ -2164,4 +2272,5 @@ load();
 <script src="/presence.js"></script>
 </body>
 </html>
+
 

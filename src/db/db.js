@@ -102,6 +102,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -130,6 +132,7 @@ const pQ = {
   updateBanner:   db.prepare(`UPDATE players SET banner   = @banner   WHERE id = @id`),
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
+  updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
@@ -231,6 +234,11 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   // Boost VIP individuel sur le gagnant
   const vipActive  = winnerId && !isDraw ? vipQ.getActive.get(winnerId, Date.now()) : null;
   const vipMult    = vipActive ? 1.2 : 1;
+  const meta = {
+    globalMultiplier: globalMult,
+    vipApplied: !!vipActive,
+    vipAppliedTo: vipActive ? winnerId : null,
+  };
   // Arrondi au supérieur pour éviter les décimales
   const ceil = Math.ceil.bind(Math);
   const floor = Math.floor.bind(Math);
@@ -240,6 +248,7 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
     return {
       dW: p1Delta >= 0 ? ceil(p1Delta) : floor(p1Delta),
       dL: p2Delta >= 0 ? ceil(p2Delta) : floor(p2Delta),
+      ...meta,
     };
   }
   return {
@@ -254,7 +263,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const player2 = pQ.getById.get(game.player2_id);
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
-  const { dW, dL } = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
+  const { dW, dL, vipApplied, vipAppliedTo, globalMultiplier } = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
 
@@ -293,6 +302,9 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return {
     dW: p1Delta,
     dL: p2Delta,
+    vipApplied,
+    vipAppliedTo,
+    globalMultiplier,
     player1EloNow: pQ.getById.get(game.player1_id).elo,
     player2EloNow: pQ.getById.get(game.player2_id).elo,
     winnerEloNow: pQ.getById.get(winnerId).elo,

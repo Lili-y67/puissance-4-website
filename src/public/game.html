@@ -920,11 +920,21 @@ function onGameOver(data) {
   titleEl.style.webkitTextFillColor  = 'transparent';
 
   const eloEl = document.getElementById('result-elo');
-  eloEl.style.display = 'none';
+  const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && Number(eloD) > 0;
+  const sign = eloD >= 0 ? '+' : '';
+  eloEl.style.display = '';
+  eloEl.textContent = sign + eloD + ' ELO';
+  eloEl.style.color = vipBoostApplied ? 'var(--yellow)' : (eloD >= 0 ? '#30d158' : 'var(--red)');
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner
-      ? 'Adversaire déconnecté' : 'Déconnexion détectée';
+      ? 'Adversaire d??connect??' : 'D??connexion d??tect??e';
+  } else if (data.reason === 'draw') {
+    document.getElementById('result-reason').textContent = 'Partie nulle';
+  } else {
+    document.getElementById('result-reason').textContent = vipBoostApplied
+      ? 'Boost VIP applique sur le gain ELO'
+      : (isWinner ? 'ELO mis a jour apres la victoire' : 'ELO mis a jour apres la defaite');
   }
 
   document.getElementById('btn-replay').href = '/replay/' + data.gameId;

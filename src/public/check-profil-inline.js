@@ -96,6 +96,7 @@ const PROFIL_SFX = (() => {
 let currentPlayer = null;
 let viewerPlayer  = null;
 let isOwnProfile  = false;
+let uploadChooserTarget = null;
 
 async function load() {
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
@@ -174,7 +175,7 @@ function render(player, games, following, followers, followStatus) {
 
   const avatarSection = isOwnProfile
     ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
-         <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Changer la photo">
+         <div class="avatar-wrap" onclick="openUploadChooser('avatar')" title="Changer la photo">
            <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
            <div class="avatar-overlay">📷</div>
            <div class="avatar-ring" id="avatar-ring"></div>
@@ -200,7 +201,7 @@ function render(player, games, following, followers, followStatus) {
     <!-- Header -->
     <div class="profile-header">
       <!-- Bannière -->
-      <div class="profile-banner" ${isOwnProfile ? 'onclick="document.getElementById(\'banner-input\').click()" title="Changer la bannière"' : ''}>
+      <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la bannière"' : ''}>
         ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
         ${isOwnProfile ? '<div class="profile-banner-overlay">🖼️</div>' : ''}
       </div>
@@ -600,10 +601,65 @@ function renderPlayers(players, emptyMsg) {
 }
 
 // ── Banner upload ─────────────────────────────────────────────────────────────
+function getUploadInput(target) {
+  return target === 'banner' ? document.getElementById('banner-input') : document.getElementById('avatar-input');
+}
+
+function getUploadTargetInfo(target) {
+  if (target === 'banner') {
+    return {
+      title: 'Choisir une banniere',
+      subtitle: 'Format paysage conseille pour un resultat plus propre.',
+      imageMeta: 'PNG / JPG / WEBP - 1500x500 conseille - max 4 Mo',
+      gifMeta: 'GIF VIP - 1500x500 conseille - max 5 Mo',
+      note: 'Banniere: dimensions optimales 1500x500. Images statiques max 4 Mo, GIF VIP max 5 Mo.'
+    };
+  }
+  return {
+    title: 'Choisir un avatar',
+    subtitle: 'Format carre conseille pour un recadrage plus net.',
+    imageMeta: 'PNG / JPG / WEBP - 500x500 conseille - max 2 Mo',
+    gifMeta: 'GIF VIP - 500x500 conseille - max 5 Mo',
+    note: 'Avatar: dimensions optimales 500x500. Images statiques max 2 Mo, GIF VIP max 5 Mo.'
+  };
+}
+
+function openUploadChooser(target) {
+  uploadChooserTarget = target;
+  const info = getUploadTargetInfo(target);
+  const isVip = Number(currentPlayer?.is_vip) === 1;
+  document.getElementById('upload-chooser-title').textContent = info.title;
+  document.getElementById('upload-chooser-sub').textContent = info.subtitle;
+  document.getElementById('upload-image-meta').textContent = info.imageMeta;
+  document.getElementById('upload-gif-meta').textContent = isVip ? info.gifMeta : 'Reserve VIP - active ton role VIP pour envoyer un GIF';
+  document.getElementById('upload-chooser-note').textContent = info.note;
+  document.getElementById('upload-gif-btn').disabled = !isVip;
+  const bg = document.getElementById('upload-chooser-bg');
+  bg.classList.add('show');
+  bg.setAttribute('aria-hidden', 'false');
+}
+
+function closeUploadChooser() {
+  const bg = document.getElementById('upload-chooser-bg');
+  bg.classList.remove('show');
+  bg.setAttribute('aria-hidden', 'true');
+  uploadChooserTarget = null;
+}
+
+function chooseUploadKind(kind) {
+  if (!uploadChooserTarget) return;
+  const input = getUploadInput(uploadChooserTarget);
+  if (!input) return;
+  input.value = '';
+  input.accept = kind === 'gif' ? 'image/gif' : 'image/png,image/jpeg,image/jpg,image/webp';
+  closeUploadChooser();
+  input.click();
+}
+
 (function() {
   const inp = document.createElement('input');
   inp.type = 'file'; inp.id = 'banner-input';
-  inp.accept = 'image/*'; inp.style.display = 'none';
+  inp.accept = 'image/png,image/jpeg,image/jpg,image/webp'; inp.style.display = 'none';
   inp.onchange = () => saveBanner(inp);
   document.body.appendChild(inp);
 })();
@@ -814,7 +870,7 @@ async function uploadBannerData(banner, me, token) {
     const bannerEl = document.querySelector('.profile-banner');
     if (bannerEl) {
       bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">🖼️</div>';
-      bannerEl.onclick = () => document.getElementById('banner-input').click();
+      bannerEl.onclick = () => openUploadChooser('banner');
     }
     me.banner = banner;
     localStorage.setItem('player', JSON.stringify(me));
@@ -958,6 +1014,17 @@ function handleAvatarUpload(input) {
 
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && bg.classList.contains('show')) closeImageEditor();
+  });
+})();
+
+(function initUploadChooser() {
+  const bg = document.getElementById('upload-chooser-bg');
+  if (!bg) return;
+  bg.addEventListener('click', (event) => {
+    if (event.target === bg) closeUploadChooser();
+  });
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && bg.classList.contains('show')) closeUploadChooser();
   });
 })();
 
