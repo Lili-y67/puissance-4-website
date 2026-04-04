@@ -2157,6 +2157,38 @@ function startBot() {
         ctx.restore();
       };
 
+      const drawMiniLogo = (x, y, scale = 1) => {
+        const cols = 7;
+        const rows = 6;
+        const gap = 4 * scale;
+        const cell = 12 * scale;
+        const w = cols * cell + (cols - 1) * gap + 18 * scale;
+        const h = rows * cell + (rows - 1) * gap + 18 * scale;
+        drawPanel(x, y, w, h, '#6edbff', 16 * scale, 0.72);
+        const pieces = new Map([
+          ['2:3', '#ff4d6d'],
+          ['3:2', '#ff4d6d'],
+          ['3:3', '#ffd44d'],
+          ['4:3', '#ff4d6d'],
+          ['2:2', '#ffd44d'],
+          ['4:2', '#ffd44d'],
+        ]);
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const cx = x + 9 * scale + col * (cell + gap) + cell / 2;
+            const cy = y + 9 * scale + row * (cell + gap) + cell / 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, cell / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fillStyle = pieces.get(`${col}:${rows - 1 - row}`) || 'rgba(12,16,30,0.82)';
+            ctx.fill();
+            ctx.lineWidth = 1.5 * scale;
+            ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+            ctx.stroke();
+          }
+        }
+      };
+
       if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
       else {
         const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -2173,7 +2205,7 @@ function startBot() {
       ctx.fillStyle = overlay;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      drawGlowText('PUISSANCE 4 RANKED', 42, 44, '#ffd60a', '400 28px "Bebas Neue"', 16);
+      drawMiniLogo(38, 30, 1.05);
 
       ctx.save();
       ctx.beginPath();
@@ -2206,21 +2238,19 @@ function startBot() {
       else if (data.role === 'moderator') badges.push('MODO');
       const badgeText = badges.length ? ` / ${badges.join(' / ')}` : '';
 
-      drawGlowText(data.pseudo || 'Joueur', 204, 114, '#f5f4ff', fontHero, 20);
+      drawGlowText(data.pseudo || 'Joueur', 204, 118, '#f5f4ff', fontHero, 20);
       ctx.fillStyle = '#ffe27a';
       ctx.font = fontSub;
-      ctx.fillText(`${data.elo} ELO / ${rank.label}${badgeText}`, 206, 158);
+      ctx.fillText(`${rank.label}${badgeText}`, 206, 162);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontMeta;
-      ctx.fillText(`ID ${data.id} / Forme ${shapeLabel}`, 206, 190);
-      ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0} / Membre ${data.memberDate || '-'}`, 206, 218);
+      ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0}`, 206, 196);
 
       const infoX = 42;
-      const infoY = 258;
+      const infoY = 244;
       const infoLines = [
-        `Pastille couleur`,
-        `Forme : ${shapeLabel}`,
-        `Membre depuis : ${data.memberDate || '--'}`,
+        `Cosmetiques`,
+        `Forme`,
       ];
       drawGlowText('PROFIL', infoX, infoY, '#f5f4ff', '400 30px "Bebas Neue"', 12);
       ctx.fillStyle = '#d7d5ef';
@@ -2229,7 +2259,7 @@ function startBot() {
 
       ctx.save();
       ctx.beginPath();
-      ctx.arc(infoX + 182, infoY + 52, 13, 0, Math.PI * 2);
+      ctx.arc(infoX + 168, infoY + 52, 13, 0, Math.PI * 2);
       ctx.closePath();
       ctx.fillStyle = colorHex;
       ctx.shadowColor = colorHex;
@@ -2244,7 +2274,7 @@ function startBot() {
       ctx.font = '28px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
       ctx.textAlign = 'center';
       ctx.fillStyle = '#f5f4ff';
-      ctx.fillText(shapeDisplay, infoX + 102, infoY + 92);
+      ctx.fillText(shapeDisplay, infoX + 92, infoY + 88);
       ctx.restore();
 
       const rankX = 744;
@@ -2272,10 +2302,11 @@ function startBot() {
         ctx.fillText('[]', rankX + 96, rankY + 120);
         ctx.restore();
       }
-      drawGlowText(rank.label, rankX + 148, rankY + 112, '#ffe27a', '400 42px "Bebas Neue"', 14);
+      drawGlowText(rank.label, rankX + 148, rankY + 106, '#ffe27a', '400 38px "Bebas Neue"', 14);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontSmall;
-      ctx.fillText(`${rank.progress || 0}% de progression`, rankX + 82, rankY + 158);
+      ctx.fillText(`${data.elo} ELO`, rankX + 148, rankY + 142);
+      ctx.fillText(`${rank.progress || 0}% de progression`, rankX + 82, rankY + 166);
       roundRectBot(ctx, rankX + 52, rankY + 176, rankW - 104, 22, 11);
       ctx.fillStyle = 'rgba(255,255,255,0.18)';
       ctx.fill();
