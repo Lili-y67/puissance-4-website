@@ -1193,10 +1193,26 @@ function clampImageEditorOffsets() {
   const metrics = getStageMetrics(IMAGE_EDITOR.mode);
   const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom;
   const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom;
-  if (drawWidth <= metrics.width) IMAGE_EDITOR.offsetX = (metrics.width - drawWidth) / 2;
-  else IMAGE_EDITOR.offsetX = Math.min(0, Math.max(metrics.width - drawWidth, IMAGE_EDITOR.offsetX));
-  if (drawHeight <= metrics.height) IMAGE_EDITOR.offsetY = (metrics.height - drawHeight) / 2;
-  else IMAGE_EDITOR.offsetY = Math.min(0, Math.max(metrics.height - drawHeight, IMAGE_EDITOR.offsetY));
+  const cropLeft = (metrics.width - IMAGE_EDITOR.cropWidth) / 2;
+  const cropTop = (metrics.height - IMAGE_EDITOR.cropHeight) / 2;
+  const cropRight = cropLeft + IMAGE_EDITOR.cropWidth;
+  const cropBottom = cropTop + IMAGE_EDITOR.cropHeight;
+
+  if (drawWidth <= IMAGE_EDITOR.cropWidth) {
+    IMAGE_EDITOR.offsetX = cropLeft + (IMAGE_EDITOR.cropWidth - drawWidth) / 2;
+  } else {
+    const minX = cropRight - drawWidth;
+    const maxX = cropLeft;
+    IMAGE_EDITOR.offsetX = Math.max(minX, Math.min(maxX, IMAGE_EDITOR.offsetX));
+  }
+
+  if (drawHeight <= IMAGE_EDITOR.cropHeight) {
+    IMAGE_EDITOR.offsetY = cropTop + (IMAGE_EDITOR.cropHeight - drawHeight) / 2;
+  } else {
+    const minY = cropBottom - drawHeight;
+    const maxY = cropTop;
+    IMAGE_EDITOR.offsetY = Math.max(minY, Math.min(maxY, IMAGE_EDITOR.offsetY));
+  }
 }
 
 function syncImageEditorZoomLabel() {
