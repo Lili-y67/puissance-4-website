@@ -7,7 +7,7 @@ const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ } = require('./db/db');
 const { getRank } = require('./rank');
-const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 // Map IP AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA Set<playerId> AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA en mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmoire uniquement, reset au redAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmarrage
 const ipToPlayers  = new Map(); // ip AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA Set of playerIds
@@ -1600,9 +1600,11 @@ app.get('/api/leaderboard/wins', (_, res) => {
   res.json(q.all().map(sanitize));
 });
 app.get('/api/site-stats', (_, res) => {
+  const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
   res.json({
     online: onlineSockets.size,
     queue: mm?.q?.length || 0,
+    activeGames,
   });
 });
 
@@ -2480,38 +2482,39 @@ function startBot() {
           menuRows.push(new ActionRowBuilder().addComponents(emptyMenu));
         }
 
-        const cardAttachment = await generateProfileCardAttachment({
-          ...data,
-          discordInfo: di,
-          rank: rankInfo,
-          rankEmoji: rank.emoji,
-          winRate: wr,
-          avg_accuracy: prec,
-          following: followCounts?.following || 0,
-          followers: followCounts?.followers || 0,
-          memberDate,
-          latestGames: games.map(g => {
-            const isP1 = g.player1_id === data.id;
-            return {
-              opp: safe(isP1 ? g.p2_pseudo : g.p1_pseudo),
-              delta: isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0),
-              won: g.winner_id === data.id,
-              draw: g.winner_id === null,
-              date: g.finished_at ? g.finished_at.slice(0, 10) : '--',
-            };
-          }),
-        });
+        const roleBadges = [];
+        if (Number(data.is_vip) === 1) roleBadges.push('VIP');
+        if (data.role === 'admin') roleBadges.push('ADMIN');
+        else if (data.role === 'moderator') roleBadges.push('MODO');
 
-        if (!cardAttachment) {
-          console.error(`[BOT /profil] echec generation carte id=${data.id}`);
-          return interaction.editReply({
-            content: `Impossible de generer la carte de profil de **${data.pseudo}** pour le moment.`,
-            components: menuRows,
-          });
-        }
+        const profileEmbed = new EmbedBuilder()
+          .setColor(data.color || '#ff2d55')
+          .setTitle(`${rank.emoji} ${data.pseudo}`)
+          .setURL(`${API}/profil?id=${data.id}`)
+          .setDescription([
+            `**${data.elo} ELO**`,
+            `Rang : **${rankInfo.label}**`,
+            roleBadges.length ? `Badges : **${roleBadges.join(' / ')}**` : null,
+          ].filter(Boolean).join('\n'))
+          .setThumbnail(data.avatar || null)
+          .addFields(
+            { name: 'Statistiques', value: `Victoires: **${data.wins || 0}**\nDefaites: **${data.losses || 0}**\nNuls: **${data.draws || 0}**`, inline: true },
+            { name: 'Performance', value: `Parties: **${total}**\nWin rate: **${wr}**\nPrecision: **${prec}**`, inline: true },
+            { name: 'Profil', value: `Suivis: **${followCounts?.following || 0}**\nAbonnes: **${followCounts?.followers || 0}**\nMembre: **${memberDate}**`, inline: true },
+          )
+          .setFooter({ text: `ID ${data.id} • Puissance 4 Ranked` });
 
-        console.log(`[BOT /profil] carte OK pour ${data.pseudo}`);
-        return interaction.editReply({ files: [cardAttachment], components: menuRows });
+        if (data.banner) profileEmbed.setImage(data.banner);
+
+        const buttonRow = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Voir profil')
+            .setStyle(ButtonStyle.Link)
+            .setURL(`${API}/profil?id=${data.id}`)
+        );
+
+        console.log(`[BOT /profil] embed OK pour ${data.pseudo}`);
+        return interaction.editReply({ embeds: [profileEmbed], components: [...menuRows, buttonRow] });
       }
       if (interaction.commandName === 'classement') {
         const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id!=? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);

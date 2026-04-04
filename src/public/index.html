@@ -188,6 +188,30 @@ html, body {
   background:#30d158;
   box-shadow:0 0 0 4px rgba(48,209,88,0.12);
 }
+.site-games-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(255,159,10,0.12);
+  border:1px solid rgba(255,159,10,0.28);
+  color:#ff9f0a;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+}
+.site-games-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#ff9f0a;
+  box-shadow:0 0 0 4px rgba(255,159,10,0.12);
+}
 
 /* ── Board decoration ───────────────────────────────────────────────────────── */
 .board-deco {
@@ -799,6 +823,10 @@ html, body {
       <span class="site-online-dot"></span>
       <span id="site-online-count">0</span> connectes
     </div>
+    <div class="site-games-badge" id="site-games-badge">
+      <span class="site-games-dot"></span>
+      <span id="site-games-count">0</span> parties en cours
+    </div>
 
     <!-- Mini board decoration -->
     <div class="board-deco" id="board-deco"></div>
@@ -928,10 +956,6 @@ html, body {
 
     <!-- QUEUE VIEW -->
     <div id="view-queue" style="display:none">
-      <div class="queue-online-badge" id="queue-online-badge">
-        <span class="queue-online-dot"></span>
-        <span id="queue-online-count">0</span> connectés
-      </div>
       <div class="queue-inner">
         <div class="pulse-ring">
           <div class="pulse-dot"></div>
@@ -1333,10 +1357,17 @@ async function refreshSiteStats() {
     const res = await fetch('/api/site-stats', { cache: 'no-store' });
     if (!res.ok) return;
     const data = await res.json();
-    const badge = document.getElementById('site-online-badge');
-    const count = document.getElementById('site-online-count');
-    if (!badge || !count) return;
-    count.textContent = String(Math.max(0, Number(data.online) || 0));
+    const onlineBadge = document.getElementById('site-online-badge');
+    const onlineCount = document.getElementById('site-online-count');
+    const gamesBadge = document.getElementById('site-games-badge');
+    const gamesCount = document.getElementById('site-games-count');
+    if (onlineBadge && onlineCount) {
+      onlineCount.textContent = String(Math.max(0, Number(data.online) || 0));
+    }
+    if (gamesBadge && gamesCount) {
+      const activeGames = Math.max(0, Number(data.activeGames) || 0);
+      gamesCount.textContent = String(activeGames);
+    }
   } catch (_) {}
 }
 
