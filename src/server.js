@@ -2121,6 +2121,11 @@ function startBot() {
       const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
       const di = (() => { try { return data.discord_info ? JSON.parse(data.discord_info) : null; } catch { return null; } })();
       const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
+      const rawShape = data.shape || 'circle';
+      const shapeDisplay = rawShape.startsWith('emoji:')
+        ? (rawShape.slice(6).trim() || '●')
+        : ({ circle: '●', diamond: '◆', triangle: '▲', star: '★', heart: '♥' }[rawShape] || '●');
+      const colorHex = String(data.color || '#ff2d55').toUpperCase();
 
       const fontHero = '400 64px "Bebas Neue"';
       const fontSub = '700 26px "Barlow Condensed"';
@@ -2207,25 +2212,33 @@ function startBot() {
       ctx.fillText(`${data.elo} ELO / ${rank.label}${badgeText}`, 206, 166);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontMeta;
-      ctx.fillText(`ID ${data.id} / Couleur ${String(data.color || '#ff2d55').toUpperCase()} / Forme ${data.shape || 'circle'}`, 206, 204);
+      ctx.fillText(`ID ${data.id} / Couleur ${colorHex} / Forme ${shapeDisplay}`, 206, 204);
       ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0} / Membre ${data.memberDate || '-'}`, 206, 236);
 
       const infoX = 42;
       const infoY = 278;
       const infoLines = [
-        di?.username ? `Compte : ${di.global_name || di.username}` : 'Compte Discord non lie',
-        di?.server_nick ? `Pseudo serveur : ${di.server_nick}` : `Couleur du jeton : ${String(data.color || '#ff2d55').toUpperCase()}`,
-        di?.server_joined ? `Rejoint le : ${new Date(di.server_joined).toLocaleDateString('fr-FR')}` : `Shape : ${data.shape || 'circle'}`,
-        di?.boosting_since ? 'Booster actif' : 'Boost serveur : non',
+        `Pastille couleur : ${colorHex}`,
+        `Forme : ${shapeDisplay}`,
+        data.created_at ? `Rejoint le : ${new Date(data.created_at).toLocaleDateString('fr-FR')}` : `Rejoint le : --`,
       ];
-      if (di?.server_roles?.length) {
-        const roleNames = di.server_roles.filter(r => r.name && r.name !== '@everyone').map(r => r.name).slice(0, 4).join(' / ');
-        if (roleNames) infoLines[3] = `Roles : ${roleNames}`;
-      }
-      drawGlowText('DISCORD ET PROFIL', infoX, infoY, '#f5f4ff', '400 30px "Bebas Neue"', 12);
+      drawGlowText('PROFIL', infoX, infoY, '#f5f4ff', '400 30px "Bebas Neue"', 12);
       ctx.fillStyle = '#d7d5ef';
       ctx.font = fontMeta;
       infoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 38 + i * 28));
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(infoX + 230, infoY + 54, 14, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.fillStyle = colorHex;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.stroke();
+      ctx.restore();
 
       const rankX = 744;
       const rankY = 58;
