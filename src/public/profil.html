@@ -325,6 +325,35 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .discord-card { padding: 12px; }
   .discord-row { flex-wrap: wrap; gap: 6px; }
 }
+.image-editor-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;z-index:3000;background:rgba(0,0,0,0.82);backdrop-filter:blur(10px);}
+.image-editor-bg.show{display:flex;}
+.image-editor-modal{width:min(92vw,760px);background:linear-gradient(180deg,rgba(18,18,36,0.98),rgba(10,10,22,0.98));border:1px solid rgba(255,255,255,0.08);border-radius:24px;box-shadow:0 30px 80px rgba(0,0,0,0.55);padding:22px;display:flex;flex-direction:column;gap:18px;}
+.image-editor-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.image-editor-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;}
+.image-editor-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.image-editor-close{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:18px;}
+.image-editor-close:hover{color:var(--text);border-color:rgba(255,255,255,0.18);}
+.image-editor-stage{position:relative;border-radius:22px;overflow:hidden;background:radial-gradient(circle at top,rgba(76,110,245,0.18),transparent 50%),var(--surface2);border:1px solid rgba(255,255,255,0.06);}
+.image-editor-canvas{display:block;width:100%;height:auto;touch-action:none;cursor:grab;}
+.image-editor-canvas.dragging{cursor:grabbing;}
+.image-editor-frame{position:absolute;inset:24px;border:2px solid rgba(255,255,255,0.85);box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 26px rgba(255,255,255,0.18);pointer-events:none;}
+.image-editor-frame.avatar{border-radius:50%;aspect-ratio:1/1;width:min(calc(100% - 48px),380px);height:auto;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);}
+.image-editor-frame.banner{border-radius:22px;inset:38px 28px;aspect-ratio:3/1;}
+.image-editor-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.image-editor-zoom{display:flex;align-items:center;gap:10px;flex:1;min-width:220px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);}
+.image-editor-zoom label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.image-editor-zoom input{flex:1;accent-color:var(--accent);}
+.image-editor-zoom-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;min-width:50px;text-align:right;}
+.image-editor-actions{display:flex;gap:10px;justify-content:flex-end;}
+.image-editor-btn{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:11px 18px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;transition:all 0.2s;}
+.image-editor-btn:hover{transform:translateY(-1px);border-color:rgba(255,255,255,0.18);}
+.image-editor-btn.primary{background:linear-gradient(135deg,var(--accent),#758bff);border-color:transparent;color:#fff;box-shadow:0 12px 28px rgba(76,110,245,0.35);}
+@media (max-width:640px){
+  .image-editor-modal{padding:18px;}
+  .image-editor-frame.banner{inset:26px 16px;}
+  .image-editor-actions{width:100%;}
+  .image-editor-btn{flex:1;}
+}
 </style>
 </head>
 <body>
@@ -374,6 +403,32 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 </div>
 
 <input type="file" id="avatar-input" accept="image/*" onchange="handleAvatarUpload(this)">
+<div class="image-editor-bg" id="image-editor-bg" aria-hidden="true">
+  <div class="image-editor-modal">
+    <div class="image-editor-head">
+      <div>
+        <div class="image-editor-title" id="image-editor-title">Ajuster l'image</div>
+        <div class="image-editor-sub" id="image-editor-sub">Zoomez et deplacez l'image comme sur Discord.</div>
+      </div>
+      <button class="image-editor-close" type="button" onclick="closeImageEditor()">✕</button>
+    </div>
+    <div class="image-editor-stage" id="image-editor-stage">
+      <canvas class="image-editor-canvas" id="image-editor-canvas" width="640" height="420"></canvas>
+      <div class="image-editor-frame avatar" id="image-editor-frame"></div>
+    </div>
+    <div class="image-editor-controls">
+      <div class="image-editor-zoom">
+        <label for="image-editor-zoom">Zoom</label>
+        <input type="range" id="image-editor-zoom" min="100" max="300" value="100">
+        <div class="image-editor-zoom-val" id="image-editor-zoom-val">100%</div>
+      </div>
+      <div class="image-editor-actions">
+        <button class="image-editor-btn" type="button" onclick="closeImageEditor()">Annuler</button>
+        <button class="image-editor-btn primary" type="button" onclick="confirmImageEditor()">Appliquer</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── Audio Profil ──────────────────────────────────────────────────────────────
@@ -985,65 +1040,339 @@ function renderPlayers(players, emptyMsg) {
   document.body.appendChild(inp);
 })();
 
+async function readApiError(res, fallback) {
+  try {
+    const data = await res.json();
+    if (data && data.error) return data.error;
+  } catch {}
+  return fallback;
+}
+
+const IMAGE_EDITOR = {
+  mode: null,
+  file: null,
+  dataUrl: '',
+  isGif: false,
+  img: null,
+  zoom: 1,
+  minZoom: 1,
+  maxZoom: 3.2,
+  offsetX: 0,
+  offsetY: 0,
+  cropWidth: 0,
+  cropHeight: 0,
+  outputWidth: 0,
+  outputHeight: 0,
+  dragging: false,
+  dragStartX: 0,
+  dragStartY: 0,
+  startOffsetX: 0,
+  startOffsetY: 0,
+};
+
+function getImageEditorElements() {
+  return {
+    bg: document.getElementById('image-editor-bg'),
+    title: document.getElementById('image-editor-title'),
+    sub: document.getElementById('image-editor-sub'),
+    canvas: document.getElementById('image-editor-canvas'),
+    stage: document.getElementById('image-editor-stage'),
+    frame: document.getElementById('image-editor-frame'),
+    zoom: document.getElementById('image-editor-zoom'),
+    zoomVal: document.getElementById('image-editor-zoom-val'),
+  };
+}
+
+function getStageMetrics(mode) {
+  return mode === 'avatar'
+    ? { width: 640, height: 420, cropWidth: 280, cropHeight: 280, outputWidth: 500, outputHeight: 500 }
+    : { width: 640, height: 420, cropWidth: 560, cropHeight: 186, outputWidth: 1500, outputHeight: 500 };
+}
+
+function clampImageEditorOffsets() {
+  if (!IMAGE_EDITOR.img) return;
+  const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom;
+  const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom;
+  const minX = IMAGE_EDITOR.cropWidth - drawWidth;
+  const minY = IMAGE_EDITOR.cropHeight - drawHeight;
+  IMAGE_EDITOR.offsetX = Math.min(0, Math.max(minX, IMAGE_EDITOR.offsetX));
+  IMAGE_EDITOR.offsetY = Math.min(0, Math.max(minY, IMAGE_EDITOR.offsetY));
+}
+
+function syncImageEditorZoomLabel() {
+  const { zoomVal } = getImageEditorElements();
+  if (zoomVal) zoomVal.textContent = Math.round(IMAGE_EDITOR.zoom * 100) + '%';
+}
+
+function drawImageEditor() {
+  const { canvas, frame } = getImageEditorElements();
+  if (!canvas || !IMAGE_EDITOR.img) return;
+  const ctx = canvas.getContext('2d');
+  const metrics = getStageMetrics(IMAGE_EDITOR.mode);
+  canvas.width = metrics.width;
+  canvas.height = metrics.height;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#0b0b18';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const cropLeft = (canvas.width - IMAGE_EDITOR.cropWidth) / 2;
+  const cropTop = (canvas.height - IMAGE_EDITOR.cropHeight) / 2;
+  const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom;
+  const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom;
+
+  ctx.save();
+  if (IMAGE_EDITOR.mode === 'avatar') {
+    ctx.beginPath();
+    ctx.arc(cropLeft + IMAGE_EDITOR.cropWidth / 2, cropTop + IMAGE_EDITOR.cropHeight / 2, IMAGE_EDITOR.cropWidth / 2, 0, Math.PI * 2);
+    ctx.clip();
+  } else {
+    ctx.beginPath();
+    ctx.roundRect(cropLeft, cropTop, IMAGE_EDITOR.cropWidth, IMAGE_EDITOR.cropHeight, 18);
+    ctx.clip();
+  }
+  ctx.drawImage(IMAGE_EDITOR.img, cropLeft + IMAGE_EDITOR.offsetX, cropTop + IMAGE_EDITOR.offsetY, drawWidth, drawHeight);
+  ctx.restore();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cropLeft + 0.5, cropTop + 0.5, IMAGE_EDITOR.cropWidth - 1, IMAGE_EDITOR.cropHeight - 1);
+
+  if (frame) frame.className = 'image-editor-frame ' + IMAGE_EDITOR.mode;
+  syncImageEditorZoomLabel();
+}
+
+function updateImageEditorZoom(value) {
+  IMAGE_EDITOR.zoom = Number(value);
+  clampImageEditorOffsets();
+  drawImageEditor();
+}
+
+function openImageEditor(dataUrl, mode) {
+  const els = getImageEditorElements();
+  const metrics = getStageMetrics(mode);
+  IMAGE_EDITOR.mode = mode;
+  IMAGE_EDITOR.dataUrl = dataUrl;
+  IMAGE_EDITOR.cropWidth = metrics.cropWidth;
+  IMAGE_EDITOR.cropHeight = metrics.cropHeight;
+  IMAGE_EDITOR.outputWidth = metrics.outputWidth;
+  IMAGE_EDITOR.outputHeight = metrics.outputHeight;
+
+  const img = new Image();
+  img.onload = () => {
+    IMAGE_EDITOR.img = img;
+    IMAGE_EDITOR.minZoom = Math.max(metrics.cropWidth / img.width, metrics.cropHeight / img.height, 1);
+    IMAGE_EDITOR.zoom = IMAGE_EDITOR.minZoom;
+    IMAGE_EDITOR.offsetX = (metrics.cropWidth - img.width * IMAGE_EDITOR.zoom) / 2;
+    IMAGE_EDITOR.offsetY = (metrics.cropHeight - img.height * IMAGE_EDITOR.zoom) / 2;
+    clampImageEditorOffsets();
+
+    if (els.zoom) {
+      els.zoom.min = Math.round(IMAGE_EDITOR.minZoom * 100);
+      els.zoom.max = Math.max(Math.round(IMAGE_EDITOR.minZoom * 100), 320);
+      els.zoom.value = Math.round(IMAGE_EDITOR.zoom * 100);
+    }
+    if (els.title) els.title.textContent = mode === 'avatar' ? "Ajuster l'avatar" : 'Ajuster la banniere';
+    if (els.sub) els.sub.textContent = mode === 'avatar'
+      ? 'Zoomez et deplacez votre avatar avant validation.'
+      : 'Placez votre banniere exactement comme vous le souhaitez.';
+    if (els.bg) {
+      els.bg.classList.add('show');
+      els.bg.setAttribute('aria-hidden', 'false');
+    }
+    drawImageEditor();
+  };
+  img.src = dataUrl;
+}
+
+function closeImageEditor() {
+  const { bg } = getImageEditorElements();
+  if (bg) {
+    bg.classList.remove('show');
+    bg.setAttribute('aria-hidden', 'true');
+  }
+  IMAGE_EDITOR.dragging = false;
+  IMAGE_EDITOR.file = null;
+  IMAGE_EDITOR.img = null;
+}
+
+function exportImageEditor() {
+  const canvas = document.createElement('canvas');
+  canvas.width = IMAGE_EDITOR.outputWidth;
+  canvas.height = IMAGE_EDITOR.outputHeight;
+  const ctx = canvas.getContext('2d');
+  const scale = IMAGE_EDITOR.outputWidth / IMAGE_EDITOR.cropWidth;
+  const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom * scale;
+  const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom * scale;
+  const offsetX = IMAGE_EDITOR.offsetX * scale;
+  const offsetY = IMAGE_EDITOR.offsetY * scale;
+
+  if (IMAGE_EDITOR.mode === 'avatar') {
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2, canvas.height / 2, canvas.width / 2, 0, Math.PI * 2);
+    ctx.clip();
+  }
+  ctx.drawImage(IMAGE_EDITOR.img, offsetX, offsetY, drawWidth, drawHeight);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+async function uploadBannerData(banner, me, token) {
+  const res = await fetch('/api/players/' + me.id + '/banner', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ banner, token }),
+  });
+  if (res.ok) {
+    PROFIL_SFX.upload();
+    const bannerEl = document.querySelector('.profile-banner');
+    if (bannerEl) {
+      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">🖼️</div>';
+      bannerEl.onclick = () => document.getElementById('banner-input').click();
+    }
+    me.banner = banner;
+    localStorage.setItem('player', JSON.stringify(me));
+    return true;
+  }
+  PROFIL_SFX.error();
+  alert(await readApiError(res, 'Erreur upload banniere.'));
+  return false;
+}
+
+async function uploadAvatarData(avatarData, me) {
+  const res = await fetch('/api/players/' + me.id + '/avatar', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ avatar: avatarData, token: localStorage.getItem('token') }),
+  });
+  if (res.ok) {
+    PROFIL_SFX.upload();
+    const el = document.getElementById('avatar-el');
+    if (el) el.innerHTML = '<img src="' + avatarData + '" alt="avatar">';
+    me.avatar = avatarData;
+    localStorage.setItem('player', JSON.stringify(me));
+    return true;
+  }
+  PROFIL_SFX.error();
+  alert(await readApiError(res, 'Erreur upload.'));
+  return false;
+}
+
+async function confirmImageEditor() {
+  if (!IMAGE_EDITOR.img || !IMAGE_EDITOR.mode || !IMAGE_EDITOR.file) return;
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token');
+  if (!me.id || !token) return;
+  const output = exportImageEditor();
+  const ok = IMAGE_EDITOR.mode === 'avatar'
+    ? await uploadAvatarData(output, me)
+    : await uploadBannerData(output, me, token);
+  if (ok) closeImageEditor();
+}
+
 async function saveBanner(input) {
   const file = input.files[0];
   if (!file) return;
-  if (file.size > 4 * 1024 * 1024) return alert('Bannière trop lourde (max 4MB).');
-  const me    = JSON.parse(localStorage.getItem('player') || '{}');
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
   const token = localStorage.getItem('token');
+  const isGif = (file.type || '').toLowerCase() === 'image/gif';
+  const maxBytes = isGif && me.is_vip ? 5 * 1024 * 1024 : 4 * 1024 * 1024;
+  if (isGif && !me.is_vip) return alert('Les GIF sont reserves aux VIP.');
+  if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Banniere trop lourde (max 4MB).');
   if (!me.id || !token) return;
+
   const reader = new FileReader();
   reader.onload = async e => {
     const banner = e.target.result;
-    const res = await fetch('/api/players/' + me.id + '/banner', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ banner, token }),
-    });
-    if (res.ok) {
-      PROFIL_SFX.upload();
-      const bannerEl = document.querySelector('.profile-banner');
-      if (bannerEl) {
-        bannerEl.innerHTML = '<img src="' + banner + '" alt="bannière"><div class="profile-banner-overlay">🖼️</div>';
-        bannerEl.onclick = () => document.getElementById('banner-input').click();
-      }
-      me.banner = banner;
-      localStorage.setItem('player', JSON.stringify(me));
-    } else {
-      PROFIL_SFX.error();
-      alert('Erreur upload bannière.');
+    if (isGif) {
+      await uploadBannerData(banner, me, token);
+      input.value = '';
+      return;
     }
+    IMAGE_EDITOR.file = file;
+    IMAGE_EDITOR.isGif = false;
+    openImageEditor(banner, 'banner');
+    input.value = '';
   };
   reader.readAsDataURL(file);
 }
 
-// ── Avatar upload ─────────────────────────────────────────────────────────────
 function handleAvatarUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) return alert('Image trop lourde (max 2MB).');
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  const isGif = (file.type || '').toLowerCase() === 'image/gif';
+  const maxBytes = isGif && me.is_vip ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+  if (isGif && !me.is_vip) return alert('Les GIF sont reserves aux VIP.');
+  if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Image trop lourde (max 2MB).');
+
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const resized = await resizeImage(e.target.result, 200);
-    const me = JSON.parse(localStorage.getItem('player') || '{}');
-    const res = await fetch(`/api/players/${me.id}/avatar`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ avatar: resized, token: localStorage.getItem('token') }),
-    });
-    if (res.ok) {
-      PROFIL_SFX.upload();
-      const el = document.getElementById('avatar-el');
-      if (el) el.innerHTML = `<img src="${resized}" alt="avatar">`;
-      me.avatar = resized;
-      localStorage.setItem('player', JSON.stringify(me));
-    } else {
-      PROFIL_SFX.error();
-      alert('Erreur upload.');
+    if (isGif) {
+      await uploadAvatarData(e.target.result, me);
+      input.value = '';
+      return;
     }
+    IMAGE_EDITOR.file = file;
+    IMAGE_EDITOR.isGif = false;
+    openImageEditor(e.target.result, 'avatar');
+    input.value = '';
   };
   reader.readAsDataURL(file);
 }
+
+(function initImageEditor() {
+  const { bg, canvas, zoom } = getImageEditorElements();
+  if (!bg || !canvas || !zoom) return;
+
+  zoom.addEventListener('input', () => updateImageEditorZoom(zoom.value));
+
+  const getPoint = (event) => {
+    const src = event.touches ? event.touches[0] : event;
+    return { x: src.clientX, y: src.clientY };
+  };
+
+  const startDrag = (event) => {
+    if (!IMAGE_EDITOR.img) return;
+    const point = getPoint(event);
+    IMAGE_EDITOR.dragging = true;
+    IMAGE_EDITOR.dragStartX = point.x;
+    IMAGE_EDITOR.dragStartY = point.y;
+    IMAGE_EDITOR.startOffsetX = IMAGE_EDITOR.offsetX;
+    IMAGE_EDITOR.startOffsetY = IMAGE_EDITOR.offsetY;
+    canvas.classList.add('dragging');
+    event.preventDefault();
+  };
+
+  const moveDrag = (event) => {
+    if (!IMAGE_EDITOR.dragging) return;
+    const point = getPoint(event);
+    IMAGE_EDITOR.offsetX = IMAGE_EDITOR.startOffsetX + (point.x - IMAGE_EDITOR.dragStartX);
+    IMAGE_EDITOR.offsetY = IMAGE_EDITOR.startOffsetY + (point.y - IMAGE_EDITOR.dragStartY);
+    clampImageEditorOffsets();
+    drawImageEditor();
+    event.preventDefault();
+  };
+
+  const stopDrag = () => {
+    IMAGE_EDITOR.dragging = false;
+    canvas.classList.remove('dragging');
+  };
+
+  canvas.addEventListener('mousedown', startDrag);
+  canvas.addEventListener('touchstart', startDrag, { passive: false });
+  window.addEventListener('mousemove', moveDrag);
+  window.addEventListener('touchmove', moveDrag, { passive: false });
+  window.addEventListener('mouseup', stopDrag);
+  window.addEventListener('touchend', stopDrag);
+
+  bg.addEventListener('click', (event) => {
+    if (event.target === bg) closeImageEditor();
+  });
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && bg.classList.contains('show')) closeImageEditor();
+  });
+})();
 
 function resizeImage(dataUrl, maxSize) {
   return new Promise(resolve => {
