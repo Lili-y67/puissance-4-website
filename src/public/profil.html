@@ -658,6 +658,25 @@ function getVipMediaRemainingMs() {
   return remaining > 0 ? remaining : 0;
 }
 
+function isVipPlus(player = currentPlayer) {
+  return Number(player?.is_vip_plus) === 1;
+}
+
+function getVipAccent(player = currentPlayer) {
+  return isVipPlus(player)
+    ? { color: '#85EBFF', bg: 'rgba(133,235,255,0.14)', border: 'rgba(133,235,255,0.42)', label: 'VIP+' }
+    : { color: '#ffd60a', bg: 'rgba(255,214,10,0.14)', border: 'rgba(255,214,10,0.32)', label: 'VIP' };
+}
+
+function getVipExpiryLabel(player = currentPlayer) {
+  if (!player?.is_vip || player?.is_vip_plus || !player?.vip_expires_at) return '';
+  try {
+    return `VIP jusqu'au ${new Date(player.vip_expires_at).toLocaleDateString('fr-FR')}`;
+  } catch(e) {
+    return '';
+  }
+}
+
 function formatRemainingTime(ms) {
   const totalMinutes = Math.ceil(ms / 60000);
   const hours = Math.floor(totalMinutes / 60);
@@ -781,11 +800,12 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div class="profile-pseudo">${player.pseudo}</div>
           <div class="profile-badges">
-            ${player.is_vip ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,214,10,0.14);color:#ffd60a;border:1px solid rgba(255,214,10,0.32);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; VIP</span>' : ''}
+            ${player.is_vip ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getVipAccent(player).bg};color:${getVipAccent(player).color};border:1px solid ${getVipAccent(player).border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; ${getVipAccent(player).label}</span>` : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
             ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 14px ${player.custom_role_color}55,inset 0 0 10px ${player.custom_role_color}18;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${player.custom_role_emoji ? `<span style="margin-right:4px">${player.custom_role_emoji}</span>` : ''}${String(player.custom_role_text).toUpperCase()}</span>` : ''}
           </div>
+          ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
         </div>
@@ -814,9 +834,9 @@ function render(player, games, following, followers, followStatus) {
           ${isOwnProfile && player.is_vip ? `
           <div id="vip-boost-wrap" style="margin-top:4px;">
             <button id="vip-boost-btn" onclick="activateVipBoost()"
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,214,10,0.3);background:rgba(255,214,10,0.08);color:#ffd60a;font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
-              onmouseover="this.style.background='rgba(255,214,10,0.15)'" onmouseout="this.style.background='rgba(255,214,10,0.08)'">
-              &#9889; BOOST VIP
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${isVipPlus(player) ? 'rgba(133,235,255,0.35)' : 'rgba(255,214,10,0.3)'};background:${isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'};color:${isVipPlus(player) ? '#85EBFF' : '#ffd60a'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
+              onmouseover="this.style.background='${isVipPlus(player) ? 'rgba(133,235,255,0.15)' : 'rgba(255,214,10,0.15)'}'" onmouseout="this.style.background='${isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'}'">
+              &#9889; BOOST ${isVipPlus(player) ? 'VIP+' : 'VIP'}
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
           </div>` : ''}
@@ -1861,20 +1881,24 @@ async function initVipBoostUI() {
     const data = await fetch('/api/players/' + me.id + '/vip-boost').then(r=>r.json());
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
+    const accent = data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
+    const bonusPct = data.tier === 'vip_plus' ? 30 : 20;
     if (data.active) {
       const mins = Math.ceil(data.remainingMs / 60000);
       btn.disabled = true;
       btn.style.opacity = '0.5';
       btn.textContent = '\u26A1 BOOST ACTIF';
       stat.textContent = `Se termine dans ${mins} min`;
-      stat.style.color = '#ffd60a';
+      stat.style.color = accent;
     } else if (data.usedToday) {
       btn.disabled = true;
       btn.style.opacity = '0.5';
       btn.textContent = 'BOOST UTILISÉ';
       stat.textContent = 'Disponible à minuit (Paris)';
+      stat.style.color = accent;
     } else {
-      btn.textContent = '\u26A1 ACTIVER BOOST VIP (+20% ELO · 1h)';
+      btn.textContent = `\u26A1 ACTIVER BOOST ${data.tier === 'vip_plus' ? 'VIP+' : 'VIP'} (+${bonusPct}% ELO · 1h)`;
+      stat.style.color = 'var(--muted)';
     }
   } catch(e) {}
 }
@@ -1897,11 +1921,12 @@ async function activateVipBoost() {
     }
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
+    const accent = data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
     btn.disabled = true;
     btn.style.opacity = '0.5';
     btn.textContent = '\u26A1 BOOST ACTIF';
     stat.textContent = 'Se termine dans 60 min';
-    stat.style.color = '#ffd60a';
+    stat.style.color = accent;
   } catch(e) { alert('Erreur réseau'); }
 }
 
@@ -2138,6 +2163,7 @@ function refreshTokenEmojiPreview() {
   const shapePreview = document.querySelector('.shape-btn[data-shape="emoji_image"] .shape-preview');
   if (!preview) return;
   const isVip = Number(currentPlayer?.is_vip) === 1;
+  const accent = getVipAccent(currentPlayer);
   const remaining = isVip ? getVipMediaRemainingMs() : 0;
   const previewImage = pendingTokenEmojiImage || selectedTokenEmojiImage;
   if (previewImage) {
@@ -2152,10 +2178,10 @@ function refreshTokenEmojiPreview() {
     } else {
       shapePreview.innerHTML = '';
       shapePreview.textContent = 'VIP';
-      shapePreview.style.color = '#ffd60a';
+      shapePreview.style.color = accent.color;
       shapePreview.style.fontSize = '11px';
       shapePreview.style.fontFamily = 'Barlow Condensed, sans-serif';
-      shapePreview.style.background = 'rgba(255,214,10,0.08)';
+      shapePreview.style.background = accent.bg;
     }
   }
   if (meta) {
@@ -2168,7 +2194,7 @@ function refreshTokenEmojiPreview() {
         : selectedTokenEmojiImage
           ? 'Emoji perso VIP pret. Recadrage 128x128, max 1 Mo, cooldown 24h.'
           : 'Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.';
-    meta.style.color = pendingTokenEmojiImage || remaining > 0 ? '#ffd60a' : 'var(--muted)';
+    meta.style.color = pendingTokenEmojiImage || remaining > 0 ? accent.color : 'var(--muted)';
     meta.style.textAlign = remaining > 0 ? 'center' : 'left';
   }
   if (btn) {
@@ -2181,14 +2207,14 @@ function refreshTokenEmojiPreview() {
           ? 'Emoji actif'
           : 'Importer un emoji VIP';
     btn.style.background = remaining > 0
-      ? 'rgba(255,214,10,0.08)'
+      ? accent.bg
       : pendingTokenEmojiImage
-        ? 'rgba(255,214,10,0.08)'
-        : 'rgba(255,214,10,0.1)';
+        ? accent.bg
+        : accent.bg;
     btn.style.borderColor = remaining > 0 || pendingTokenEmojiImage
-      ? 'rgba(255,214,10,0.3)'
-      : 'rgba(255,214,10,0.24)';
-    btn.style.color = '#ffd60a';
+      ? accent.border
+      : accent.border;
+    btn.style.color = accent.color;
     btn.title = !isVip
       ? 'Reserve au role VIP'
       : pendingTokenEmojiImage
@@ -2382,13 +2408,15 @@ async function refreshDiscordState(player) {
     });
     const data = await res.json();
     if (data?.unlinked) {
-      syncStoredPlayerPatch({ role: 'user', is_vip: 0, discord_id: null });
-      return { ...player, role: 'user', is_vip: 0, discord_id: null };
+      syncStoredPlayerPatch({ role: 'user', is_vip: 0, is_vip_plus: 0, discord_id: null });
+      return { ...player, role: 'user', is_vip: 0, is_vip_plus: 0, discord_id: null };
     }
-    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number') {
+    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number' || typeof data?.is_vip_plus === 'number' || 'vip_expires_at' in (data || {})) {
       const patch = {};
       if (data?.role) patch.role = data.role;
       if (typeof data?.is_vip === 'number') patch.is_vip = data.is_vip;
+      if (typeof data?.is_vip_plus === 'number') patch.is_vip_plus = data.is_vip_plus;
+      if ('vip_expires_at' in (data || {})) patch.vip_expires_at = data.vip_expires_at;
       syncStoredPlayerPatch(patch);
       return { ...player, ...patch };
     }

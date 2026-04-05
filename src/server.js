@@ -54,15 +54,33 @@ function getParisMidnightTs(now = Date.now()) {
 }
 
 function hasVipRoleIds(roleIds = []) {
-  return Array.isArray(roleIds) && roleIds.includes(DISCORD_ROLE_VIP);
+  return Array.isArray(roleIds) && (roleIds.includes(DISCORD_ROLE_VIP) || roleIds.includes(DISCORD_ROLE_VIP_PLUS));
+}
+
+function hasVipPlusRoleIds(roleIds = []) {
+  return Array.isArray(roleIds) && roleIds.includes(DISCORD_ROLE_VIP_PLUS);
 }
 
 function isVipPlayer(player) {
   if (!player) return false;
+  const vipExpiresAt = Number(player.vip_expires_at || 0);
+  if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1) return false;
   if (Number(player.is_vip) === 1) return true;
+  if (Number(player.is_vip_plus) === 1) return true;
   try {
     const info = player.discord_info ? JSON.parse(player.discord_info) : null;
     return hasVipRoleIds((info?.server_roles || []).map(r => r.id));
+  } catch(e) {
+    return false;
+  }
+}
+
+function isVipPlusPlayer(player) {
+  if (!player) return false;
+  if (Number(player.is_vip_plus) === 1) return true;
+  try {
+    const info = player.discord_info ? JSON.parse(player.discord_info) : null;
+    return hasVipPlusRoleIds((info?.server_roles || []).map(r => r.id));
   } catch(e) {
     return false;
   }
@@ -332,7 +350,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, is_vip_plus, vip_expires_at, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -347,7 +365,8 @@ app.get('/api/admin/players', (req, res) => {
 app.patch('/api/admin/players/:id/role', async (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles.' });
   const { role } = req.body;
-  if (!['user','vip','moderator','admin'].includes(role)) return res.status(400).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle invalide.' });
+  const vipDuration = String(req.body?.vipDuration || '').trim();
+  if (!['user','vip','vipplus','moderator','admin'].includes(role)) return res.status(400).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle invalide.' });
   const targetId = Number(req.params.id);
   const session = getAdminSession(req);
   const target = pQ.getById.get(targetId);
@@ -358,12 +377,27 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   }
   const oldRole = target.role;
   const oldVip  = Number(target.is_vip) === 1;
+  const oldVipPlus = Number(target.is_vip_plus) === 1;
+  const vipExpiryMap = { '1m': 30 * 24 * 60 * 60 * 1000, '1y': 365 * 24 * 60 * 60 * 1000 };
   if (role === 'vip') {
+    if (!vipExpiryMap[vipDuration]) return res.status(400).json({ error: 'Choisis une duree VIP valide.' });
     WH.wlogAdminAction('VIP accordAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
+    pQ.updateVipExpiry.run({ vip_expires_at: Date.now() + vipExpiryMap[vipDuration], id: targetId });
+  } else if (role === 'vipplus') {
+    WH.wlogAdminAction('VIP+ accorde', target.pseudo, req.params.id, [['VIP+ avant', oldVipPlus ? 'oui' : 'non', true], ['VIP+ apres', 'oui', true]]);
+    pQ.updateVip.run({ is_vip: 1, id: targetId });
+    pQ.updateVipPlus.run({ is_vip_plus: 1, id: targetId });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
   } else {
     WH.wlogAdminAction('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
     pQ.updateRole.run({ role, id: targetId });
+    if (role === 'user' || role === 'moderator' || role === 'admin') {
+      pQ.updateVip.run({ is_vip: 0, id: targetId });
+      pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
+      pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
+    }
   }
 
   // Sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord si liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
@@ -372,7 +406,8 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
       await syncDiscordRole(
         target.discord_id,
         role === 'vip' ? target.role : role,
-        role === 'vip' ? true : oldVip,
+        role === 'vip' || role === 'vipplus' ? true : oldVip,
+        role === 'vipplus' ? true : (role === 'vip' ? false : oldVipPlus),
         !!String(target.custom_role_text || '').trim()
       );
     } catch(e) {}
@@ -384,6 +419,8 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
       '',
       role === 'vip'
         ? 'Le statut **VIP** vient de tAAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtre attribuAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.'
+        : role === 'vipplus'
+          ? 'Le statut **VIP+** vient de t etre attribue.'
         : `Ton rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle a AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA modifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA : **${oldRole}** AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA **${role}**`,
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
@@ -421,6 +458,7 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
       target.discord_id,
       target.role,
       Number(target.is_vip) === 1,
+      Number(target.is_vip_plus) === 1,
       !!rawText
     ).catch(() => {});
   }
@@ -511,6 +549,7 @@ const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
+const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
 
 // Envoyer un DM Discord via le bot
@@ -560,16 +599,18 @@ async function renameOnServer(discordId, nickname) {
 }
 
 // Synchroniser le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord d'un membre (ajoute/retire les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles)
-async function syncDiscordRole(discordId, role, isVip = false, hasCustomRole = false) {
+async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false, hasCustomRole = false) {
   const { botToken } = discordConfig();
   if (!botToken) return;
   const STAFF_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD];
   const STAFF_TARGET = role === 'admin' ? DISCORD_ROLE_ADM
                     : role === 'moderator' ? DISCORD_ROLE_MOD
                     : null;
-  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP, DISCORD_ROLE_CUSTOM]) {
+  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP, DISCORD_ROLE_VIP_PLUS, DISCORD_ROLE_CUSTOM]) {
     const shouldHave = rid === DISCORD_ROLE_VIP
-      ? !!isVip
+      ? (!!isVip && !isVipPlus)
+      : rid === DISCORD_ROLE_VIP_PLUS
+        ? !!isVipPlus
       : rid === DISCORD_ROLE_CUSTOM
         ? !!hasCustomRole
         : rid === STAFF_TARGET;
@@ -598,10 +639,17 @@ async function getDiscordRole(discordUserId, botToken) {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 setInterval(async () => {
   const { botToken } = discordConfig();
-  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
     const newRole = await getDiscordRole(player.discord_id, botToken);
-    const vipNow = isVipPlayer(player) ? 1 : 0;
+    const roles = (() => {
+      try {
+        const info = player.discord_info ? JSON.parse(player.discord_info) : null;
+        return (info?.server_roles || []).map(r => r.id);
+      } catch(e) { return []; }
+    })();
+    const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : Number(player.is_vip_plus || 0);
+    const vipNow = hasVipRoleIds(roles) ? 1 : Number(player.is_vip || 0);
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
       console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ${newRole}`);
@@ -610,9 +658,27 @@ setInterval(async () => {
     if (vipNow !== Number(player.is_vip)) {
       pQ.updateVip.run({ is_vip: vipNow, id: player.id });
     }
+    if (vipPlusNow !== Number(player.is_vip_plus || 0)) {
+      pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id: player.id });
+    }
+    if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) {
+      pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
+    }
     try {
-      await syncDiscordRole(player.discord_id, newRole, vipNow === 1, !!String(player.custom_role_text || '').trim());
+      await syncDiscordRole(player.discord_id, newRole, vipNow === 1, vipPlusNow === 1, !!String(player.custom_role_text || '').trim());
     } catch(e) {}
+  }
+}, 60 * 1000);
+
+setInterval(() => {
+  const now = Date.now();
+  const expiredVip = db.prepare(`SELECT id, discord_id, role, custom_role_text FROM players WHERE deleted = 0 AND is_vip = 1 AND is_vip_plus = 0 AND vip_expires_at IS NOT NULL AND vip_expires_at > 0 AND vip_expires_at <= ?`).all(now);
+  for (const player of expiredVip) {
+    pQ.updateVip.run({ is_vip: 0, id: player.id });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
+    if (player.discord_id) {
+      syncDiscordRole(player.discord_id, player.role, false, false, !!String(player.custom_role_text || '').trim()).catch(() => {});
+    }
   }
 }, 60 * 1000);
 
@@ -965,11 +1031,15 @@ function sanitize(p) {
       discord_id: null,
       banner:     null,
       is_vip:     0,
+      is_vip_plus: 0,
+      vip_expires_at: null,
     };
   }
   return {
     ...rest,
     is_vip: isVipPlayer(rest) ? 1 : 0,
+    is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
+    vip_expires_at: Number(rest.vip_expires_at || 0) || null,
   };
 }
 
@@ -1366,6 +1436,8 @@ app.post('/api/discord/unlink/confirm', (req, res) => {
   rQ.markUnlink.run(row.id);
   rQ.clearDiscord.run(playerId);
   pQ.updateVip.run({ is_vip: 0, id: playerId });
+  pQ.updateVipPlus.run({ is_vip_plus: 0, id: playerId });
+  pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
   if (player && player.role !== 'user') {
     pQ.updateRole.run({ role: 'user', id: playerId });
   }
@@ -1526,7 +1598,10 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
     const newRole = await getDiscordRole(player.discord_id, bt);
     if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
     const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip || 0);
+    const vipPlusNow = hasVipPlusRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip_plus || 0);
     if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id });
+    if (vipPlusNow !== Number(player.is_vip_plus || 0)) pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id });
+    if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) pQ.updateVipExpiry.run({ vip_expires_at: null, id });
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour discord_info
     const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
     const updated = {
@@ -1537,7 +1612,8 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       boosting_since: memberInfo.premium_since || null,
     };
     rQ.setDiscord.run(player.discord_id, JSON.stringify(updated), id);
-    res.json({ ok: true, roles: server_roles_rich, role: newRole, is_vip: vipNow });
+    const fresh = pQ.getById.get(id);
+    res.json({ ok: true, roles: server_roles_rich, role: newRole, is_vip: vipNow, is_vip_plus: vipPlusNow, vip_expires_at: Number(fresh?.vip_expires_at || 0) || null });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -1556,6 +1632,8 @@ app.post('/api/players/:id/vip-boost', (req, res) => {
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
   if (!isVipPlayer(player)) return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux VIP.' });
+  const isVipPlus = isVipPlusPlayer(player);
+  const boostMultiplier = isVipPlus ? 1.3 : 1.2;
 
   const now = Date.now();
   // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier si dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  actif
@@ -1573,7 +1651,7 @@ app.post('/api/players/:id/vip-boost', (req, res) => {
   // Activer le boost (1 heure)
   const expiresAt = now + 60 * 60 * 1000;
   vipQ.activate.run(id, now, expiresAt);
-  res.json({ ok: true, expiresAt, message: 'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA Boost VIP activAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA pour 1 heure !' });
+  res.json({ ok: true, expiresAt, multiplier: boostMultiplier, tier: isVipPlus ? 'vip_plus' : 'vip', message: 'Boost VIP active pour 1 heure !' });
 });
 
 // Statut du boost VIP d'un joueur
@@ -1589,6 +1667,8 @@ app.get('/api/players/:id/vip-boost', (req, res) => {
     usedToday:  !!usedToday,
     remainingMs: active ? active.expires_at - now : 0,
     resetAt: midnightTs + 24 * 60 * 60 * 1000,
+    multiplier: isVipPlusPlayer(pQ.getById.get(id)) ? 1.3 : 1.2,
+    tier: isVipPlusPlayer(pQ.getById.get(id)) ? 'vip_plus' : 'vip',
   });
 });
 
@@ -1605,6 +1685,8 @@ app.get('/api/admin/vip-boosts', (req, res) => {
     avatar:    b.avatar,
     expiresAt: b.expires_at,
     remainingMin: Math.round((b.expires_at - now) / 60000),
+    tier: Number(b.is_vip_plus) === 1 ? 'vip_plus' : 'vip',
+    multiplier: Number(b.is_vip_plus) === 1 ? 1.3 : 1.2,
   })));
 });
 
@@ -2368,7 +2450,8 @@ function startBot() {
       ctx.stroke();
 
       const badges = [];
-      if (data.is_vip) badges.push('VIP');
+      if (data.is_vip_plus) badges.push('VIP+');
+      else if (data.is_vip) badges.push('VIP');
       if (data.role === 'admin') badges.push('ADMIN');
       else if (data.role === 'moderator') badges.push('MODO');
       const badgeText = badges.length ? ` / ${badges.join(' / ')}` : '';
@@ -2599,7 +2682,8 @@ function startBot() {
         }
 
         const roleBadges = [];
-        if (Number(data.is_vip) === 1) roleBadges.push('VIP');
+        if (Number(data.is_vip_plus) === 1) roleBadges.push('VIP+');
+        else if (Number(data.is_vip) === 1) roleBadges.push('VIP');
         if (data.role === 'admin') roleBadges.push('ADMIN');
         else if (data.role === 'moderator') roleBadges.push('MODO');
 

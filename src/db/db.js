@@ -100,6 +100,8 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TE
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_vip_plus INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN vip_expires_at INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
@@ -135,6 +137,8 @@ const pQ = {
   updateBanner:   db.prepare(`UPDATE players SET banner   = @banner   WHERE id = @id`),
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
+  updateVipPlus:  db.prepare(`UPDATE players SET is_vip_plus = @is_vip_plus WHERE id = @id`),
+  updateVipExpiry: db.prepare(`UPDATE players SET vip_expires_at = @vip_expires_at WHERE id = @id`),
   updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_emoji = @emoji WHERE id = @id`),
   updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
@@ -238,11 +242,14 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   const globalMult = bQ.getActive.get()?.multiplier ?? 1;
   // Boost VIP individuel sur le gagnant
   const vipActive  = winnerId && !isDraw ? vipQ.getActive.get(winnerId, Date.now()) : null;
-  const vipMult    = vipActive ? 1.2 : 1;
+  const winnerPlayer = winnerId && !isDraw ? pQ.getById.get(winnerId) : null;
+  const vipMult    = vipActive ? (Number(winnerPlayer?.is_vip_plus) === 1 ? 1.3 : 1.2) : 1;
   const meta = {
     globalMultiplier: globalMult,
     vipApplied: !!vipActive,
     vipAppliedTo: vipActive ? winnerId : null,
+    vipMultiplier: vipMult,
+    vipTier: vipActive ? (Number(winnerPlayer?.is_vip_plus) === 1 ? 'vip_plus' : 'vip') : null,
   };
   // Arrondi au supérieur pour éviter les décimales
   const ceil = Math.ceil.bind(Math);
@@ -268,7 +275,14 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const player2 = pQ.getById.get(game.player2_id);
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
-  const { dW, dL, vipApplied, vipAppliedTo, globalMultiplier } = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
+  const eloCalc = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
+  const dW = eloCalc.dW;
+  const dL = eloCalc.dL;
+  const vipApplied = isDraw ? false : !!vipQ.getActive.get(winnerId, Date.now());
+  const vipAppliedTo = vipApplied ? winnerId : null;
+  const globalMultiplier = eloCalc.globalMultiplier ?? (bQ.getActive.get()?.multiplier ?? 1);
+  const vipMultiplier = vipApplied ? (Number(winner?.is_vip_plus) === 1 ? 1.3 : 1.2) : 1;
+  const vipTier = vipApplied ? (Number(winner?.is_vip_plus) === 1 ? 'vip_plus' : 'vip') : null;
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
 
@@ -310,6 +324,8 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     vipApplied,
     vipAppliedTo,
     globalMultiplier,
+    vipMultiplier,
+    vipTier,
     player1EloNow: pQ.getById.get(game.player1_id).elo,
     player2EloNow: pQ.getById.get(game.player2_id).elo,
     winnerEloNow: pQ.getById.get(winnerId).elo,
@@ -347,7 +363,7 @@ const vipQ = {
   // Vérifier si déjà utilisé aujourd'hui (reset à minuit)
   usedToday:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND activated_at >= ? LIMIT 1`),
   listActive: db.prepare(`
-    SELECT v.*, p.pseudo, p.elo, p.color, p.avatar
+    SELECT v.*, p.pseudo, p.elo, p.color, p.avatar, p.is_vip_plus
     FROM vip_boosts v JOIN players p ON v.player_id = p.id
     WHERE v.expires_at > ? ORDER BY v.expires_at DESC
   `),

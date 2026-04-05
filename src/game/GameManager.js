@@ -195,6 +195,8 @@ class GameManager {
         vipApplied: !!elo.vipApplied,
         vipAppliedTo: elo.vipAppliedTo ?? null,
         globalMultiplier: elo.globalMultiplier ?? 1,
+        vipMultiplier: elo.vipMultiplier ?? 1,
+        vipTier: elo.vipTier ?? null,
       },
     };
 
@@ -218,6 +220,8 @@ class GameManager {
         vipApplied: !!elo.vipApplied,
         vipAppliedTo: elo.vipAppliedTo ?? null,
         globalMultiplier: elo.globalMultiplier ?? 1,
+        vipMultiplier: elo.vipMultiplier ?? 1,
+        vipTier: elo.vipTier ?? null,
       },
       isSuspect,
       eloNow: {

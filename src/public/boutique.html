@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - Boutique</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06060e;--surface:#101022;--surface2:#16162c;--border:rgba(255,255,255,.08);
+  --text:#f4f4fb;--muted:rgba(244,244,251,.58);--red:#ff2d55;--yellow:#ffd60a;--blue:#85EBFF;--green:#30d158;
+}
+body{min-height:100vh;background:radial-gradient(circle at top,rgba(133,235,255,.08),transparent 24%),var(--bg);color:var(--text);font-family:'Barlow',sans-serif}
+.bg-grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:42px 42px}
+.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 18px 60px;display:flex;flex-direction:column;gap:22px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text)}
+.logo span{color:var(--red)}
+.nav a.btn{padding:10px 16px;border-radius:10px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}
+.hero{padding:28px;border-radius:26px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px solid var(--border);box-shadow:0 25px 60px rgba(0,0,0,.35)}
+.kicker{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+.hero h1{font-family:'Barlow Condensed',sans-serif;font-size:62px;line-height:.95;letter-spacing:1px}
+.hero p{max-width:760px;margin-top:14px;font-size:16px;color:var(--muted);line-height:1.7}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{padding:20px;border-radius:22px;background:var(--surface);border:1px solid var(--border);display:flex;flex-direction:column;gap:14px;box-shadow:0 18px 40px rgba(0,0,0,.25)}
+.card.vip{border-color:rgba(255,214,10,.25);box-shadow:0 0 0 1px rgba(255,214,10,.08),0 18px 40px rgba(0,0,0,.25)}
+.card.vipplus{border-color:rgba(133,235,255,.35);box-shadow:0 0 24px rgba(133,235,255,.08),0 18px 40px rgba(0,0,0,.25)}
+.tier{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.badge{padding:5px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.badge.vip{background:rgba(255,214,10,.12);border:1px solid rgba(255,214,10,.3);color:var(--yellow)}
+.badge.vipplus{background:rgba(133,235,255,.12);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
+.price{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900}
+.card h2{font-family:'Barlow Condensed',sans-serif;font-size:34px;letter-spacing:1px}
+.meta{font-size:14px;color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:8px;color:var(--text)}
+.list div{padding:10px 12px;border-radius:12px;background:var(--surface2);font-size:14px}
+.cta{margin-top:auto;padding:12px 16px;border-radius:12px;text-align:center;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border);text-decoration:none}
+.cta.vip{color:var(--yellow);border-color:rgba(255,214,10,.3);background:rgba(255,214,10,.08)}
+.cta.vipplus{color:var(--blue);border-color:rgba(133,235,255,.35);background:rgba(133,235,255,.08)}
+.note{padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:14px;color:var(--muted);line-height:1.7}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.hero h1{font-size:46px}}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="page">
+  <div class="nav">
+    <a class="logo" href="/">Puissance <span>4</span></a>
+    <a class="btn" href="/">Retour</a>
+  </div>
+
+  <section class="hero">
+    <div class="kicker">Boutique</div>
+    <h1>Boosts, cosmétiques et avantages premium</h1>
+    <p>La page est prête pour brancher les achats plus tard. Pour l’instant, elle sert de vitrine claire pour les offres VIP, VIP 1 an et VIP+ à vie.</p>
+  </section>
+
+  <section class="grid">
+    <article class="card vip">
+      <div class="tier">
+        <span class="badge vip">VIP</span>
+        <div class="price">1 mois</div>
+      </div>
+      <h2>VIP Mensuel</h2>
+      <div class="meta">Accès temporaire premium avec expiration automatique après 30 jours.</div>
+      <div class="list">
+        <div>+20% ELO sur le boost quotidien</div>
+        <div>GIF avatar / bannière</div>
+        <div>Emoji VIP personnalisé</div>
+      </div>
+      <a class="cta vip" href="#" onclick="return false;">Bientôt disponible</a>
+    </article>
+
+    <article class="card vip">
+      <div class="tier">
+        <span class="badge vip">VIP</span>
+        <div class="price">1 an</div>
+      </div>
+      <h2>VIP Annuel</h2>
+      <div class="meta">Même avantages VIP avec une durée longue, idéale pour éviter les renouvellements fréquents.</div>
+      <div class="list">
+        <div>+20% ELO sur le boost quotidien</div>
+        <div>Durée 365 jours</div>
+        <div>Cosmétiques premium inclus</div>
+      </div>
+      <a class="cta vip" href="#" onclick="return false;">Bientôt disponible</a>
+    </article>
+
+    <article class="card vipplus">
+      <div class="tier">
+        <span class="badge vipplus">VIP+</span>
+        <div class="price">À vie</div>
+      </div>
+      <h2>VIP+ Lifetime</h2>
+      <div class="meta">Le rang premium définitif, sans expiration, avec accent bleu et boost renforcé.</div>
+      <div class="list">
+        <div>+30% ELO sur le boost quotidien</div>
+        <div>Rôle Discord VIP+ à vie</div>
+        <div>Couleur premium bleue partout</div>
+      </div>
+      <a class="cta vipplus" href="#" onclick="return false;">Bientôt disponible</a>
+    </article>
+  </section>
+
+  <div class="note">
+    Les achats ne sont pas encore connectés. Pour l’instant, les attributions passent par l’administration, mais la logique VIP temporaire et VIP+ à vie est désormais prête côté site.
+  </div>
+</div>
+</body>
+</html>

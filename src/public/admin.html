@@ -359,7 +359,8 @@ async function loadPlayers() {
 
 function renderStats() {
   const total    = allPlayers.length;
-  const vip      = allPlayers.filter(p => p.is_vip).length;
+  const vip      = allPlayers.filter(p => p.is_vip && !p.is_vip_plus).length;
+  const vipPlus  = allPlayers.filter(p => p.is_vip_plus).length;
   const banned   = allPlayers.filter(p => p.banned).length;
   const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
   const suspect  = allPlayers.filter(p => p.suspicious).length;
@@ -368,7 +369,7 @@ function renderStats() {
   document.getElementById('stats-row').innerHTML = [
     { val: total,   lbl: 'Joueurs',   color: 'var(--text)' },
     { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
-    { val: vip,     lbl: 'VIP',       color: 'var(--yellow)' },
+    { val: vip + vipPlus, lbl: 'VIP', color: 'var(--yellow)' },
     { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
     { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
     { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
@@ -405,6 +406,25 @@ function customRoleBadge(player) {
   return `<span class="badge badge-custom" style="color:${color};border-color:${color};box-shadow:0 0 14px ${color}55,inset 0 0 10px ${color}18">${prefix}${safeText}</span>`;
 }
 
+function vipBadge(player, compact = false) {
+  if (player.is_vip_plus) {
+    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.42);box-shadow:0 0 14px rgba(133,235,255,0.22)">vip+</span>`;
+  }
+  if (player.is_vip) {
+    return `<span class="badge badge-vip" style="${compact ? 'font-size:10px' : ''}">vip</span>`;
+  }
+  return '';
+}
+
+function vipExpiryText(player) {
+  if (!player.is_vip || player.is_vip_plus || !player.vip_expires_at) return '';
+  try {
+    return `VIP jusqu'au ${new Date(player.vip_expires_at).toLocaleDateString('fr-FR')}`;
+  } catch(e) {
+    return '';
+  }
+}
+
 function renderPlayers(players) {
   const now = Date.now();
 
@@ -420,7 +440,7 @@ function renderPlayers(players) {
         <div class="mobile-card-pseudo">
           ${onlineDot(p.online)}${p.pseudo}
           <span class="badge badge-${p.role}" style="font-size:10px">${p.role}</span>
-          ${p.is_vip ? '<span class="badge badge-vip" style="font-size:10px">vip</span>' : ''}
+          ${vipBadge(p, true)}
           ${customRoleBadge(p)}
           ${discordBadge(p.discord_linked)} ${flags}
         </div>
@@ -428,6 +448,7 @@ function renderPlayers(players) {
           <span>ID ${p.id}</span>
           <span style="color:var(--muted)">·</span>
           <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
+          ${vipExpiryText(p) ? `<span style="color:var(--muted)">·</span><span>${vipExpiryText(p)}</span>` : ''}
         </div>
       </div>
       <div class="mobile-card-elo">${p.elo}</div>
@@ -451,18 +472,19 @@ function renderPlayers(players) {
           ${onlineDot(p.online)}
           <div>
             <a href="/profil?id=${p.id}" target="_blank" style="color:var(--text);text-decoration:none;font-weight:600">${p.pseudo}</a>
-            <div style="font-size:11px;color:var(--muted)">ID ${p.id}</div>
+          <div style="font-size:11px;color:var(--muted)">ID ${p.id}${vipExpiryText(p) ? ' · ' + vipExpiryText(p) : ''}</div>
           </div>
           ${discordBadge(p.discord_linked)}
         </div>
       </td>
       <td><strong>${p.elo}</strong></td>
       <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
-      <td><span class="badge badge-${p.role}">${p.role}</span>${p.is_vip ? ' <span class="badge badge-vip">vip</span>' : ''} ${customRoleBadge(p)}</td>
+      <td><span class="badge badge-${p.role}">${p.role}</span>${vipBadge(p) ? ' ' + vipBadge(p) : ''} ${customRoleBadge(p)}</td>
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
-          ${myRole === 'admin' && !p.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip')">VIP</button>` : ''}
+          ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${p.id},'vip','1y')">VIP 1A</button>` : ''}
+          ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${p.id},'vipplus')">VIP+</button>` : ''}
           <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id})">Gérer</button>
         </div>
       </td>
@@ -492,7 +514,8 @@ function openModal(id) {
     ? `
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${roleButtons}
-        ${!player.is_vip ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${id},'vip')">VIP</button>` : ''}
+        ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${id},'vip','1y')">VIP 1A</button>` : ''}
+        ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${id},'vipplus')">VIP+</button>` : ''}
       </div>
     `
     : `<div style="font-size:13px;color:var(--muted)">Les changements de rôle et le VIP sont réservés aux admins.</div>`;
@@ -575,8 +598,10 @@ async function changePseudo(id) {
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur pseudo.');
 }
 
-async function changeRole(id, role) {
-  const data = await api('PATCH', `/api/admin/players/${id}/role`, { role });
+async function changeRole(id, role, vipDuration = null) {
+  const body = { role };
+  if (vipDuration) body.vipDuration = vipDuration;
+  const data = await api('PATCH', `/api/admin/players/${id}/role`, body);
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur role.');
 }
 
@@ -746,17 +771,20 @@ async function loadVipBoosts() {
     }
     el.innerHTML = boosts.map(b => {
       const color = b.color || '#ffd60a';
+      const accent = b.tier === 'vip_plus' ? '#85EBFF' : 'var(--yellow)';
+      const bg = b.tier === 'vip_plus' ? 'rgba(133,235,255,0.06)' : 'rgba(255,214,10,0.05)';
+      const border = b.tier === 'vip_plus' ? 'rgba(133,235,255,0.18)' : 'rgba(255,214,10,0.15)';
       const av = b.avatar && b.avatar.startsWith('http')
         ? `<img src="${b.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
         : `<div style="width:28px;height:28px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${color};">${(b.pseudo||'?')[0].toUpperCase()}</div>`;
-      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,214,10,0.05);border:1px solid rgba(255,214,10,0.15);border-radius:10px;">
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${bg};border:1px solid ${border};border-radius:10px;">
         ${av}
         <div style="flex:1">
-          <div style="font-weight:600;font-size:13px;">${b.pseudo}</div>
+          <div style="font-weight:600;font-size:13px;">${b.pseudo} <span style="font-size:10px;color:${accent};font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase">${b.tier === 'vip_plus' ? 'VIP+' : 'VIP'}</span></div>
           <div style="font-size:11px;color:var(--muted);">${b.elo} ELO</div>
         </div>
         <div style="text-align:right;">
-          <div style="color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;">x1.2</div>
+          <div style="color:${accent};font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;">x${Number(b.multiplier || 1.2).toFixed(1)}</div>
           <div style="font-size:10px;color:var(--muted);">${b.remainingMin} min restantes</div>
         </div>
       </div>`;

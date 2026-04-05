@@ -963,10 +963,11 @@ function onGameOver(data) {
 
   const eloEl = document.getElementById('result-elo');
   const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && Number(eloD) > 0;
+  const vipPlusBoostApplied = vipBoostApplied && data.boostInfo?.vipTier === 'vip_plus';
   const sign = eloD >= 0 ? '+' : '';
   eloEl.style.display = '';
   eloEl.textContent = sign + eloD + ' ELO';
-  eloEl.style.color = vipBoostApplied ? 'var(--yellow)' : (eloD >= 0 ? '#30d158' : 'var(--red)');
+  eloEl.style.color = vipBoostApplied ? (vipPlusBoostApplied ? '#85EBFF' : 'var(--yellow)') : (eloD >= 0 ? '#30d158' : 'var(--red)');
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner
@@ -975,7 +976,7 @@ function onGameOver(data) {
     document.getElementById('result-reason').textContent = 'Partie nulle';
   } else {
     document.getElementById('result-reason').textContent = vipBoostApplied
-      ? 'Boost VIP applique sur le gain ELO'
+      ? (vipPlusBoostApplied ? 'Boost VIP+ applique sur le gain ELO' : 'Boost VIP applique sur le gain ELO')
       : (isWinner ? 'ELO mis a jour apres la victoire' : 'ELO mis a jour apres la defaite');
   }
 
