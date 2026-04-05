@@ -184,12 +184,16 @@ const gQ = {
       p1.color_secondary AS p1_color_secondary,
       COALESCE(g.p1_shape, 'circle') AS p1_shape,
       p1.avatar AS p1_avatar,
+      p1.avatar_decoration AS p1_avatar_decoration,
+      p1.profile_banner AS p1_profile_banner,
       p1.token_emoji_image AS p1_token_emoji_image,
       p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
       COALESCE(g.p2_color, p2.color, '#ffd60a') AS p2_color,
       p2.color_secondary AS p2_color_secondary,
       COALESCE(g.p2_shape, 'circle') AS p2_shape,
       p2.avatar AS p2_avatar,
+      p2.avatar_decoration AS p2_avatar_decoration,
+      p2.profile_banner AS p2_profile_banner,
       p2.token_emoji_image AS p2_token_emoji_image,
       w.pseudo  AS winner_pseudo
     FROM games g

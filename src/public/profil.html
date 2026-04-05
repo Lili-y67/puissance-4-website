@@ -616,6 +616,61 @@ const PROFIL_SFX = (() => {
   function play(fn) { try { fn(getCtx()); } catch(e) {} }
 
   return {
+    hover() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(520, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.03, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        o.start(t); o.stop(t + 0.06);
+      });
+    },
+    click() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(360, t);
+        o.frequency.exponentialRampToValueAtTime(520, t + 0.08);
+        g.gain.setValueAtTime(0.06, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+        o.start(t); o.stop(t + 0.09);
+      });
+    },
+    popupOpen() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [320, 480, 720].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, t + i * 0.03);
+          g.gain.setValueAtTime(0.0001, t + i * 0.03);
+          g.gain.linearRampToValueAtTime(0.08, t + i * 0.03 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.03 + 0.15);
+          o.start(t + i * 0.03); o.stop(t + i * 0.03 + 0.15);
+        });
+      });
+    },
+    popupClose() {
+      play(ctx => {
+        const t = ctx.currentTime;
+        [680, 460].forEach((freq, i) => {
+          const o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = 'sine';
+          o.frequency.setValueAtTime(freq, t + i * 0.04);
+          g.gain.setValueAtTime(0.05, t + i * 0.04);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.04 + 0.1);
+          o.start(t + i * 0.04); o.stop(t + i * 0.04 + 0.1);
+        });
+      });
+    },
     success() {
       play(ctx => {
         const t = ctx.currentTime;
@@ -1551,6 +1606,7 @@ function getUploadTargetInfo(target) {
 }
 
 function openUploadChooser(target) {
+  PROFIL_SFX.popupOpen();
   uploadChooserTarget = target;
   const info = getUploadTargetInfo(target);
   const hasVipMediaAccess = isVip(currentPlayer);
@@ -1578,6 +1634,7 @@ function openUploadChooser(target) {
 }
 
 function closeUploadChooser() {
+  PROFIL_SFX.popupClose();
   const bg = document.getElementById('upload-chooser-bg');
   bg.classList.remove('show');
   bg.setAttribute('aria-hidden', 'true');
@@ -1586,6 +1643,7 @@ function closeUploadChooser() {
 
 function chooseUploadKind(kind) {
   if (!uploadChooserTarget) return;
+  PROFIL_SFX.click();
   const input = getUploadInput(uploadChooserTarget);
   if (!input) return;
   input.value = '';
@@ -1752,6 +1810,7 @@ function updateImageEditorZoom(value) {
 }
 
 function openImageEditor(dataUrl, mode) {
+  PROFIL_SFX.popupOpen();
   const els = getImageEditorElements();
   const metrics = getStageMetrics(mode);
   IMAGE_EDITOR.mode = mode;
@@ -1801,6 +1860,7 @@ function openImageEditor(dataUrl, mode) {
 }
 
 function closeImageEditor() {
+  PROFIL_SFX.popupClose();
   const { bg } = getImageEditorElements();
   if (bg) {
     bg.classList.remove('show');
@@ -2726,6 +2786,7 @@ function openTokenEmojiPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me?.is_vip_plus && String(me?.role || '') !== 'admin') return;
   if (getVipMediaRemainingMs() > 0) return;
+  PROFIL_SFX.click();
   document.getElementById('token-emoji-input')?.click();
 }
 
@@ -2793,12 +2854,14 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
 function openAvatarDecorationPicker() {
   const bg = document.getElementById('avatar-decoration-modal-bg');
   if (!bg) return;
+  PROFIL_SFX.popupOpen();
   bg.classList.add('show');
   renderAvatarDecorationGallery(currentPlayer);
   refreshAvatarDecorationPreview(currentPlayer);
 }
 
 function closeAvatarDecorationPicker() {
+  PROFIL_SFX.popupClose();
   document.getElementById('avatar-decoration-modal-bg')?.classList.remove('show');
 }
 
@@ -2832,6 +2895,7 @@ function renderProfileBannerGallery(player = currentPlayer) {
 }
 
 function selectProfileBanner(src) {
+  PROFIL_SFX.click();
   pendingProfileBanner = String(src || '');
   refreshProfileBannerPreview(currentPlayer);
 }
@@ -2904,12 +2968,14 @@ function refreshProfileBannerPreview(player = currentPlayer) {
 function openProfileBannerPicker() {
   const bg = document.getElementById('profile-banner-modal-bg');
   if (!bg) return;
+  PROFIL_SFX.popupOpen();
   bg.classList.add('show');
   renderProfileBannerGallery(currentPlayer);
   refreshProfileBannerPreview(currentPlayer);
 }
 
 function closeProfileBannerPicker() {
+  PROFIL_SFX.popupClose();
   document.getElementById('profile-banner-modal-bg')?.classList.remove('show');
 }
 
@@ -2998,6 +3064,7 @@ function getSimRank(elo) {
 }
 
 function openEloSim() {
+  PROFIL_SFX.popupOpen();
   const bg = document.getElementById('elo-sim-bg');
   if (!bg) return;
   bg.classList.add('show');
@@ -3009,6 +3076,7 @@ function openEloSim() {
 }
 
 function closeEloSim() {
+  PROFIL_SFX.popupClose();
   document.getElementById('elo-sim-bg')?.classList.remove('show');
 }
 
@@ -3208,6 +3276,7 @@ async function requestUnlink() {
 }
 
 function closeUnlinkModal() {
+  PROFIL_SFX.popupClose();
   const modal = document.getElementById('unlink-modal-bg');
   if (modal) modal.style.display = 'none';
   const input = document.getElementById('unlink-code-input');
@@ -3325,7 +3394,11 @@ async function saveProfilePseudo() {
   const input = document.getElementById('profile-pseudo-input');
   const btn = document.getElementById('btn-save-pseudo');
   const pseudo = String(input?.value || '').trim();
-  if (!pseudo) return alert('Entre un pseudo.');
+  if (!pseudo) {
+    PROFIL_SFX.error();
+    return alert('Entre un pseudo.');
+  }
+  PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
   try {
@@ -3336,6 +3409,7 @@ async function saveProfilePseudo() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      PROFIL_SFX.error();
       alert(data.error || 'Pseudo invalide.');
       return;
     }
@@ -3350,6 +3424,7 @@ async function saveProfilePseudo() {
       confirm.style.opacity = '1';
       setTimeout(() => confirm.style.opacity = '0', 2000);
     }
+    PROFIL_SFX.success();
   } finally {
     btn.disabled = false;
     btn.textContent = '✏️ Enregistrer';
@@ -3366,6 +3441,7 @@ async function saveProfileCustomRole() {
   const text = String(textInput?.value || '').trim().slice(0, 6);
   const emoji = [...String(emojiInput?.value || '').trim()][0] || '';
   const color = String(colorInput?.value || '#FF7A45').toUpperCase();
+  PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
   try {
@@ -3376,6 +3452,7 @@ async function saveProfileCustomRole() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      PROFIL_SFX.error();
       alert(data.error || 'Impossible d enregistrer le badge perso.');
       return;
     }
@@ -3393,6 +3470,7 @@ async function saveProfileCustomRole() {
       confirm.style.opacity = '1';
       setTimeout(() => confirm.style.opacity = '0', 2000);
     }
+    PROFIL_SFX.success();
     await load();
   } finally {
     btn.disabled = false;
@@ -3407,6 +3485,7 @@ async function removeProfileCustomRole() {
   const textInput = document.getElementById('perso-role-text-input');
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
+  PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
   try {
@@ -3417,6 +3496,7 @@ async function removeProfileCustomRole() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      PROFIL_SFX.error();
       alert(data.error || 'Impossible de retirer le grade perso.');
       return;
     }
@@ -3428,6 +3508,7 @@ async function removeProfileCustomRole() {
     if (textInput) textInput.value = '';
     if (emojiInput) emojiInput.value = '';
     if (colorInput) colorInput.value = '#FF7A45';
+    PROFIL_SFX.success();
     await load();
   } finally {
     btn.disabled = false;
@@ -3435,6 +3516,41 @@ async function removeProfileCustomRole() {
   }
 }
 
+function initProfileInteractionSounds() {
+  const hoverSelectors = [
+    '.btn-nav', '.btn-follow', '.search-btn', '.search-result', '.social-card',
+    '.tab', '.game-row', '.player-row', '.color-preset', '.color-custom-wrap',
+    '.shape-btn', '.avatar-decoration-option', '.avatar-decoration-btn',
+    '.upload-chooser-btn', '.image-editor-btn', '.pg-btn'
+  ];
+  const clickSelectors = [
+    '.btn-nav', '.btn-follow', '.search-btn', '.social-card', '.tab',
+    '.color-preset', '.color-custom-wrap', '.shape-btn', '.avatar-decoration-option',
+    '.avatar-decoration-btn', '.upload-chooser-btn', '.pg-btn',
+    '#profile-banner-btn', '#avatar-decoration-btn', '#admin-pwd-btn', '#btn-close-account'
+  ];
+  const hovered = new WeakSet();
+
+  document.addEventListener('mouseover', (event) => {
+    const target = event.target.closest(hoverSelectors.join(','));
+    if (!target || hovered.has(target) || target.disabled || target.classList?.contains('locked')) return;
+    hovered.add(target);
+    PROFIL_SFX.hover();
+  });
+
+  document.addEventListener('mouseout', (event) => {
+    const target = event.target.closest(hoverSelectors.join(','));
+    if (target) hovered.delete(target);
+  });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target.closest(clickSelectors.join(','));
+    if (!target || target.disabled || target.classList?.contains('locked')) return;
+    PROFIL_SFX.click();
+  });
+}
+
+initProfileInteractionSounds();
 load();
 </script>
 <script src="/presence.js"></script>

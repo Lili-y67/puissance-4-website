@@ -1377,8 +1377,8 @@ app.get('/api/live', (_, res) => {
         // Si les deux joueurs ont la mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme couleur, forcer p2 en jaune
         if (c1.toLowerCase() === c2.toLowerCase()) c2 = '#ffd60a';
         return {
-          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle' },
-          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle' },
+          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle', token_emoji_image: state.players[1].token_emoji_image || '', avatar_decoration: state.players[1].avatar_decoration || '', profile_banner: state.players[1].profile_banner || '', color_secondary: state.players[1].color_secondary || '' },
+          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', avatar_decoration: state.players[2].avatar_decoration || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '' },
         };
       })(),
       grid:    state.board.grid,
@@ -2539,8 +2539,8 @@ io.on('connection', socket => {
         gameId,
         side,
         players: {
-          1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle' },
-          2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle' },
+          1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
+          2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
         },
         grid:    state.board.grid,
         current: state.current,
@@ -2707,8 +2707,8 @@ function _startMatch(p1, p2) {
   const base = {
     gameId: state.id,
     players: {
-      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle' },
-      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle' },
+      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
+      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
     },
     startsIn: 3,
   };

@@ -62,17 +62,26 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .lobby-player {
   background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
   padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  transition: all 0.4s;
+  transition: all 0.4s; position:relative; overflow:hidden;
 }
+.lobby-plaque{position:absolute;left:10px;right:10px;top:10px;height:30px;border-radius:999px;background-size:cover;background-position:center;opacity:.95;border:1px solid rgba(255,255,255,.08);display:none}
+.lobby-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,14,.72),rgba(7,7,14,.25),rgba(7,7,14,.72));border-radius:inherit}
+.lobby-player.has-plaque .lobby-plaque{display:block}
+.lobby-player.has-plaque{padding-top:50px}
 .lobby-player.p1 { border-color: var(--p1); box-shadow: 0 0 32px var(--p1-dim); }
 .lobby-player.p2 { border-color: var(--p2); box-shadow: 0 0 32px var(--p2-dim); }
 
+.lobby-avatar-wrap{position:relative;width:56px;height:56px}
+.lobby-avatar-decoration{position:absolute;inset:-10px;pointer-events:none;display:none}
+.lobby-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.18))}
+.lobby-avatar-wrap.has-decoration .lobby-avatar-decoration{display:block}
 .lobby-avatar {
   width: 56px; height: 56px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900;
-  transition: all 0.3s;
+  transition: all 0.3s; position:relative; z-index:1; overflow:hidden;
 }
+.lobby-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .lobby-player.p1 .lobby-avatar { background: var(--p1-dim); color: var(--p1); border: 2px solid var(--p1); }
 .lobby-player.p2 .lobby-avatar { background: var(--p2-dim); color: var(--p2); border: 2px solid var(--p2); }
 
@@ -99,6 +108,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   padding: 12px 16px; display: flex; align-items: center; gap: 10px;
   transition: all 0.3s; position: relative; overflow: hidden;
 }
+.player-card-banner{position:absolute;left:10px;right:10px;top:10px;height:22px;border-radius:999px;background-size:cover;background-position:center;display:none;border:1px solid rgba(255,255,255,.07);opacity:.95}
+.player-card-banner::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(9,10,20,.78),rgba(9,10,20,.26),rgba(9,10,20,.78))}
+.player-card.has-plaque .player-card-banner{display:block}
+.player-card.has-plaque{padding-top:36px}
 .player-card::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .player-card.p1::after { background: linear-gradient(135deg, var(--p1-dim), transparent); }
 .player-card.p2::after { background: linear-gradient(225deg, var(--p2-dim), transparent); }
@@ -106,7 +119,13 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .player-card.p1.active { border-color: var(--p1); box-shadow: 0 0 18px var(--p1-dim); }
 .player-card.p2.active { border-color: var(--p2); box-shadow: 0 0 18px var(--p2-dim); }
 
-.pc-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; transition: all 0.3s; }
+.pc-avatar-wrap{position:relative;width:34px;height:34px;flex-shrink:0}
+.pc-avatar{width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;position:relative;z-index:1;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.pc-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.pc-avatar-decoration{position:absolute;inset:-7px;pointer-events:none;display:none}
+.pc-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 8px rgba(255,255,255,.16))}
+.pc-avatar-wrap.has-decoration .pc-avatar-decoration{display:block}
+.pc-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; transition: all 0.3s; }
 .player-card.p1 .pc-dot { background: var(--p1); box-shadow: 0 0 8px var(--p1-glow); }
 .player-card.p2 .pc-dot { background: var(--p2); box-shadow: 0 0 8px var(--p2-glow); }
 
@@ -278,7 +297,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 <div class="lobby-overlay" id="lobby-overlay">
   <div class="lobby-players">
     <div class="lobby-player p1" id="lp1">
-      <div class="lobby-avatar" id="lav1">?</div>
+      <div class="lobby-plaque" id="lplaque1"></div>
+      <div class="lobby-avatar-wrap" id="law1">
+        <div class="lobby-avatar-decoration" id="ldeco1"></div>
+        <div class="lobby-avatar" id="lav1">?</div>
+      </div>
       <div class="lobby-pseudo" id="lpseudo1">—</div>
       <div class="lobby-elo"    id="lelo1">— ELO</div>
     </div>
@@ -287,7 +310,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="countdown" id="countdown">3</div>
     </div>
     <div class="lobby-player p2" id="lp2">
-      <div class="lobby-avatar" id="lav2">?</div>
+      <div class="lobby-plaque" id="lplaque2"></div>
+      <div class="lobby-avatar-wrap" id="law2">
+        <div class="lobby-avatar-decoration" id="ldeco2"></div>
+        <div class="lobby-avatar" id="lav2">?</div>
+      </div>
       <div class="lobby-pseudo" id="lpseudo2">—</div>
       <div class="lobby-elo"    id="lelo2">— ELO</div>
     </div>
@@ -310,6 +337,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 
   <div class="players-row">
     <div class="player-card p1" id="card-p1">
+      <div class="player-card-banner" id="banner-p1"></div>
+      <div class="pc-avatar-wrap" id="pwrap1">
+        <div class="pc-avatar-decoration" id="deco-p1"></div>
+        <div class="pc-avatar" id="avatar-p1">?</div>
+      </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
         <div class="pc-name" id="name-p1">Joueur 1</div>
@@ -321,6 +353,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="turn-lbl" id="turn-lbl">—</div>
     </div>
     <div class="player-card p2" id="card-p2">
+      <div class="player-card-banner" id="banner-p2"></div>
+      <div class="pc-avatar-wrap" id="pwrap2">
+        <div class="pc-avatar-decoration" id="deco-p2"></div>
+        <div class="pc-avatar" id="avatar-p2">?</div>
+      </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
         <div class="pc-name" id="name-p2">Joueur 2</div>
@@ -392,6 +429,51 @@ let p1Emoji   = '⭐';
 let p2Emoji   = '💎';
 let p1EmojiImage = '';
 let p2EmojiImage = '';
+
+function getRenderableMediaSrc(src) {
+  return typeof src === 'string' ? src : '';
+}
+
+function renderMiniAvatar(el, pseudo, avatar) {
+  if (!el) return;
+  const avatarSrc = getRenderableMediaSrc(avatar || '');
+  if (avatarSrc) el.innerHTML = `<img src="${avatarSrc}" alt="avatar">`;
+  else el.textContent = (pseudo || '?')[0]?.toUpperCase?.() || '?';
+}
+
+function applyLobbyPlayerVisual(side, player) {
+  const plaque = document.getElementById('lplaque' + side);
+  const lobbyCard = document.getElementById('lp' + side);
+  const avatarWrap = document.getElementById('law' + side);
+  const avatar = document.getElementById('lav' + side);
+  const deco = document.getElementById('ldeco' + side);
+  const plaqueSrc = getRenderableMediaSrc(player?.profile_banner || '');
+  const decoSrc = getRenderableMediaSrc(player?.avatar_decoration || '');
+  if (plaque) {
+    plaque.style.backgroundImage = plaqueSrc ? `url("${plaqueSrc}")` : '';
+    lobbyCard?.classList.toggle('has-plaque', !!plaqueSrc);
+  }
+  if (deco) deco.innerHTML = decoSrc ? `<img src="${decoSrc}" alt="">` : '';
+  avatarWrap?.classList.toggle('has-decoration', !!decoSrc);
+  renderMiniAvatar(avatar, player?.pseudo, player?.avatar);
+}
+
+function applyPlayerCardVisual(side, player) {
+  const plaque = document.getElementById('banner-p' + side);
+  const card = document.getElementById('card-p' + side);
+  const avatarWrap = document.getElementById('pwrap' + side);
+  const avatar = document.getElementById('avatar-p' + side);
+  const deco = document.getElementById('deco-p' + side);
+  const plaqueSrc = getRenderableMediaSrc(player?.profile_banner || '');
+  const decoSrc = getRenderableMediaSrc(player?.avatar_decoration || '');
+  if (plaque) {
+    plaque.style.backgroundImage = plaqueSrc ? `url("${plaqueSrc}")` : '';
+    card?.classList.toggle('has-plaque', !!plaqueSrc);
+  }
+  if (deco) deco.innerHTML = decoSrc ? `<img src="${decoSrc}" alt="">` : '';
+  avatarWrap?.classList.toggle('has-decoration', !!decoSrc);
+  renderMiniAvatar(avatar, player?.pseudo, player?.avatar);
+}
 
 // ── Helpers couleur ───────────────────────────────────────────────────────────
 function colorDistance(h1, h2) {
@@ -550,6 +632,8 @@ function connectSocket(pendingMatch) {
     document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
     document.getElementById('name-p2').textContent = data.players[2].pseudo;
     document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+    applyPlayerCardVisual(1, data.players[1]);
+    applyPlayerCardVisual(2, data.players[2]);
     currentTurn = data.current;
     updateTurnUI();
 
@@ -682,12 +766,7 @@ function setupLobby(data) {
 
   [1,2].forEach(s => {
     const p = data.players[s];
-    const lavEl = document.getElementById('lav' + s);
-    if (p.avatar) {
-      lavEl.innerHTML = `<img src="${p.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
-    } else {
-      lavEl.textContent = p.pseudo[0].toUpperCase();
-    }
+    applyLobbyPlayerVisual(s, p);
     document.getElementById('lpseudo'+ s).textContent = p.pseudo;
     document.getElementById('lelo'   + s).textContent = p.elo + ' ELO';
     if (s === mySide) {
@@ -725,6 +804,8 @@ function startGame(data) {
   document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
   document.getElementById('name-p2').textContent = data.players[2].pseudo;
   document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+  applyPlayerCardVisual(1, data.players[1]);
+  applyPlayerCardVisual(2, data.players[2]);
 
   currentTurn = 1;
   gameOver    = false;
@@ -1081,6 +1162,10 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   document.getElementById('lpseudo2').textContent = botName;
   document.getElementById('lelo1').textContent = (myPlayer.elo || '—') + ' ELO';
   document.getElementById('lelo2').textContent = diffLabel;
+  applyLobbyPlayerVisual(1, savedPlayer);
+  applyLobbyPlayerVisual(2, { pseudo: botName, avatar: '', avatar_decoration: '', profile_banner: '' });
+  const iaLobbyBotAvatar = document.getElementById('lav2');
+  if (iaLobbyBotAvatar) iaLobbyBotAvatar.textContent = 'B';
   const badge = document.createElement('div');
   badge.className = 'lobby-you'; badge.textContent = 'TOI';
   document.getElementById('lp1').appendChild(badge);
@@ -1099,6 +1184,10 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       document.getElementById('elo-p1').textContent  = (myPlayer.elo || '—') + ' ELO';
       document.getElementById('name-p2').textContent = '🤖 ' + botName;
       document.getElementById('elo-p2').textContent  = diffLabel;
+      applyPlayerCardVisual(1, savedPlayer);
+      applyPlayerCardVisual(2, { pseudo: 'ðŸ¤– ' + botName, avatar: '', avatar_decoration: '', profile_banner: '' });
+      const iaBotAvatar = document.getElementById('avatar-p2');
+      if (iaBotAvatar) iaBotAvatar.textContent = 'B';
       renderBoard();
       const boardEl = document.getElementById('board');
       boardEl.classList.add('locked');
