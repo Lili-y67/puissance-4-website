@@ -66,6 +66,10 @@ function isPersoPlayer(player) {
   return Number(player.is_perso) === 1;
 }
 
+function canUseGradientPlayer(player) {
+  return isVipPlusPlayer(player) || isPersoPlayer(player);
+}
+
 function getPremiumTier(player) {
   if (isPersoPlayer(player)) return 'perso';
   if (isVipPlusPlayer(player)) return 'vip_plus';
@@ -1142,7 +1146,7 @@ app.patch('/api/players/:id/color', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   const normalizedSecondary = String(colorSecondary || '').trim();
   if (normalizedSecondary && !/^#[0-9a-fA-F]{6}$/.test(normalizedSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
-  if (normalizedSecondary && !isVipPlusPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+.' });
+  if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+ ou Perso.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   pQ.updateColorSecondary.run({ color_secondary: normalizedSecondary ? normalizedSecondary.toUpperCase() : '', id: Number(req.params.id) });
   res.json({ ok: true });

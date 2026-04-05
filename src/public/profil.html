@@ -691,6 +691,10 @@ function isPerso(player = currentPlayer) {
   return Number(player?.is_perso) === 1;
 }
 
+function canUseGradient(player = currentPlayer) {
+  return isVipPlus(player) || isPerso(player);
+}
+
 function getPremiumTier(player = currentPlayer) {
   if (isVipPlus(player)) return 'vip_plus';
   if (isPerso(player)) return 'perso';
@@ -950,7 +954,7 @@ function render(player, games, following, followers, followStatus) {
           <div class="color-hex" id="profil-color-hex">#ff2d55</div>
         </div>
         <input type="color" id="profil-color-input" oninput="onProfilColorInput(this.value)">
-        ${isVipPlus(player) ? `
+        ${canUseGradient(player) ? `
         <div class="color-custom-wrap" onclick="document.getElementById('profil-color-secondary-input').click()">
           <div class="color-dot" id="profil-color-secondary-dot"></div>
           <div class="color-hex" id="profil-color-secondary-hex">#85EBFF</div>
@@ -958,7 +962,7 @@ function render(player, games, following, followers, followStatus) {
         <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">` : ''}
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
-      ${isVipPlus(player) ? `<div style="font-size:11px;color:var(--muted)">VIP+ : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
+      ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
     </div>
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2789,14 +2793,14 @@ async function saveColor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         color: selectedProfilColor,
-        colorSecondary: isVipPlus(me) ? selectedProfilSecondaryColor : '',
+        colorSecondary: canUseGradient(me) ? selectedProfilSecondaryColor : '',
         token: localStorage.getItem('token')
       }),
     });
     if (res.ok) {
       PROFIL_SFX.success();
       me.color = selectedProfilColor;
-      me.color_secondary = isVipPlus(me) ? selectedProfilSecondaryColor : '';
+      me.color_secondary = canUseGradient(me) ? selectedProfilSecondaryColor : '';
       localStorage.setItem('player', JSON.stringify(me));
       sessionStorage.setItem('player', JSON.stringify(me));
       // Feedback visuel
