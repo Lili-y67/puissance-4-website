@@ -121,10 +121,10 @@ body{
 .preview-showcase.booster-elo{background:radial-gradient(circle at top, rgba(255,214,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,214,10,.08), rgba(255,255,255,.02))}
 .preview-showcase.booster-coin{background:radial-gradient(circle at top, rgba(255,159,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,159,10,.08), rgba(255,255,255,.02))}
 .preview-profile{width:min(100%,340px);display:flex;flex-direction:column;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(8,9,18,.76);box-shadow:0 18px 44px rgba(0,0,0,.35)}
-.preview-profile-banner{height:78px;background:linear-gradient(135deg, rgba(133,235,255,.16), rgba(255,45,85,.16));background-size:cover;background-position:center;position:relative}
-.preview-profile-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(7,7,14,.08), rgba(7,7,14,.38))}
-.preview-profile-banner-strip{position:absolute;left:14px;right:14px;top:12px;height:26px;border-radius:999px;background-size:cover;background-position:center;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 24px rgba(0,0,0,.22)}
-.preview-profile-banner-strip::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.62), rgba(7,7,14,.18), rgba(7,7,14,.62))}
+.preview-profile-banner{height:64px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));position:relative;border-bottom:1px solid rgba(255,255,255,.06)}
+.preview-profile-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(7,7,14,.08), rgba(7,7,14,.26))}
+.preview-profile-banner-strip{position:absolute;left:18px;right:18px;top:18px;height:18px;border-radius:999px;background-size:cover;background-position:center;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.preview-profile-banner-strip::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.38), rgba(7,7,14,.08), rgba(7,7,14,.38))}
 .preview-profile-body{padding:14px 16px 16px;display:flex;gap:12px;align-items:flex-start;position:relative}
 .preview-avatar-wrap{position:relative;flex-shrink:0;width:64px;height:64px}
 .preview-avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,#7d8cff,#ff6bd6)}
@@ -140,12 +140,12 @@ body{
 .preview-pill.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.3);color:var(--yellow)}
 .preview-pill.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.34);color:var(--blue)}
 .preview-pill.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
-.preview-meta-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.preview-meta-row{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin-top:12px;flex-wrap:wrap}
 .preview-token{display:flex;align-items:center;gap:8px}
 .preview-token-dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 14px rgba(255,255,255,.12)}
 .preview-token-duo{display:flex;align-items:center;gap:6px}
 .preview-token-duo .preview-token-dot{width:20px;height:20px}
-.preview-elo{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900}
+.preview-chip{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .preview-boost-btn{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-align:center}
 @keyframes preview-spin{to{transform:rotate(360deg)}}
 @keyframes preview-gif{0%,100%{transform:translateX(-120%)}50%{transform:translateX(120%)}}
@@ -571,7 +571,7 @@ function renderPreviewShowcase(item) {
   const tokenStyle = item.key === 'vip_plus' || item.key === 'perso'
     ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
     : `background:${state.primary};`;
-  const pseudoBanner = state.banner
+  const pseudoBanner = state.banner && item.key === 'perso'
     ? `<div class="preview-profile-banner-strip" style="background-image:url('${state.banner}')"></div>`
     : '';
   const decoration = state.decoration
@@ -584,7 +584,7 @@ function renderPreviewShowcase(item) {
     : item.theme === 'perso' ? 'style="color:var(--orange);border-color:rgba(255,122,69,.28);background:rgba(255,122,69,.08)"'
     : 'style="color:var(--yellow);border-color:rgba(255,214,10,.26);background:rgba(255,214,10,.08)"';
   return `<div class="preview-profile">
-    <div class="preview-profile-banner" style="${state.banner ? `background-image:url('${state.banner}');` : ''}">
+    <div class="preview-profile-banner">
       ${pseudoBanner}
     </div>
     <div class="preview-profile-body">
@@ -603,7 +603,7 @@ function renderPreviewShowcase(item) {
             <div class="preview-token-dot" style="${tokenStyle}"></div>
             ${(item.key === 'vip_plus' || item.key === 'perso') ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
           </div>
-          <div class="preview-elo">1000</div>
+          <div class="preview-chip">${item.key === 'perso' ? 'Banniere pseudo' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
         </div>
         <div class="preview-subline">${item.key === 'perso' ? 'Bannière pseudo, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
         <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' ? 'Activer Boost VIP+ (+30%)' : 'Activer Boost VIP (+20%)'}</div>
