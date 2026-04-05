@@ -297,6 +297,21 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .avatar-decoration-btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;border-radius:10px;background:rgba(133,235,255,0.1);border:1px solid rgba(133,235,255,0.24);color:#85EBFF;cursor:pointer;transition:all .2s}
 .avatar-decoration-btn:hover{background:rgba(133,235,255,0.18)}
 .avatar-decoration-btn:disabled{opacity:.55;cursor:not-allowed}
+.avatar-decoration-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:10px}
+.avatar-decoration-option{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  aspect-ratio:1/1;border-radius:14px;background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);cursor:pointer;transition:all .18s;
+  overflow:hidden;
+}
+.avatar-decoration-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,0.26);background:rgba(133,235,255,0.06)}
+.avatar-decoration-option img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.avatar-decoration-option.active{border-color:#85EBFF;box-shadow:0 0 0 1px rgba(133,235,255,0.18),0 0 18px rgba(133,235,255,0.14)}
+.avatar-decoration-option.locked{opacity:.45;cursor:not-allowed;filter:saturate(.7)}
+.avatar-decoration-option-none{
+  font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;
+  text-transform:uppercase;color:var(--muted);
+}
 
 /* â”€â”€ Search bar â”€â”€ */
 .search-wrap{
@@ -657,6 +672,29 @@ let viewerPlayer  = null;
 let isOwnProfile  = false;
 let uploadChooserTarget = null;
 const GIF_URL_CACHE = new Map();
+const AVATAR_DECORATION_LIBRARY = [
+  '/decorations/2fc3e75a9f2c1a02f15464a0573065ca.jpg',
+  '/decorations/5deecfde67ddd0d18b152ddf4a0ec9bb.jpg',
+  '/decorations/7c256b9a693661dc7a65343befbd74db.jpg',
+  '/decorations/28231f6cc375c9c4e417957f22a1665b.jpg',
+  '/decorations/a_3cf1ad31f0c0c77a90319c13632d808e.png',
+  '/decorations/a_9a6bf0ab30a6719d6eb09fa4996984ca.png',
+  '/decorations/a_9d2ff9685be0c668ef6990b0035fac17.png',
+  '/decorations/a_365eed4178528fe8293c4212e8e2d5cb.png',
+  '/decorations/a_a02f615e00ef516c98adf7e93ebe881f.png',
+  '/decorations/a_e72e44eeea89e92dc02c9bec8b02d158.png',
+  '/decorations/Betterimage.ai_1738503261662-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503267157-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503272412-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503286035-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503294919-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503305126-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503311391-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503318383-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503328968-removebg-preview.png',
+  '/decorations/Betterimage.ai_1738503337387-removebg-preview.png',
+  '/decorations/Test.png'
+];
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -782,6 +820,7 @@ async function load() {
       ? await refreshDiscordState(player)
       : player;
     currentPlayer = freshPlayer;
+    pendingAvatarDecoration = null;
 
     render(freshPlayer, games, following || [], followers || [], followStatus);
 
@@ -1051,9 +1090,10 @@ function render(player, games, following, followers, followStatus) {
           <div class="base" id="avatar-decoration-base">${avatarHtml}</div>
           <div class="overlay" id="avatar-decoration-overlay">${avatarDecorationSrc ? `<img src="${avatarDecorationSrc}" alt="décoration">` : ''}</div>
         </div>
-        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Importe une décoration autour de l'avatar. Réservé au VIP+ · changement toutes les 24h.</div>
+        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
       </div>
-      <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Importer une décoration</button>
+      <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
+      <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
     </div>
 
     <!-- Carte mot de passe admin -->
@@ -1718,6 +1758,7 @@ async function uploadAvatarDecorationData(imageData, me) {
     PROFIL_SFX.upload();
     me.avatar_decoration = imageData;
     me.avatar_decoration_changed_at = Date.now();
+    pendingAvatarDecoration = null;
     if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
       currentPlayer.avatar_decoration = imageData;
       currentPlayer.avatar_decoration_changed_at = me.avatar_decoration_changed_at;
@@ -1730,6 +1771,41 @@ async function uploadAvatarDecorationData(imageData, me) {
   PROFIL_SFX.error();
   alert(await readApiError(res, 'Erreur upload décoration avatar.'));
   return false;
+}
+
+function renderAvatarDecorationGallery(player = currentPlayer) {
+  const gallery = document.getElementById('avatar-decoration-gallery');
+  if (!gallery) return;
+  const canEdit = Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  const currentValue = String(player?.avatar_decoration || '');
+  const selectedValue = pendingAvatarDecoration === null ? currentValue : String(pendingAvatarDecoration || '');
+  const cards = [
+    `<button type="button" class="avatar-decoration-option ${selectedValue === '' ? 'active' : ''} ${!canEdit ? 'locked' : ''}" ${canEdit ? `onclick="selectAvatarDecoration('')"` : 'disabled'} title="Aucune décoration">
+      <span class="avatar-decoration-option-none">Aucune</span>
+    </button>`
+  ];
+  for (const src of AVATAR_DECORATION_LIBRARY) {
+    const active = selectedValue === src ? 'active' : '';
+    const locked = !canEdit ? 'locked' : '';
+    cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="Décoration">
+      <img src="${src}" alt="décoration">
+    </button>`);
+  }
+  gallery.innerHTML = cards.join('');
+}
+
+function selectAvatarDecoration(src) {
+  pendingAvatarDecoration = String(src || '');
+  refreshAvatarDecorationPreview(currentPlayer);
+}
+
+async function saveSelectedAvatarDecoration() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me?.id) return;
+  const nextValue = String(pendingAvatarDecoration === null ? (me.avatar_decoration || '') : pendingAvatarDecoration || '');
+  const currentValue = String(me.avatar_decoration || '');
+  if (nextValue === currentValue) return;
+  await uploadAvatarDecorationData(nextValue, me);
 }
 
 async function confirmImageEditor() {
@@ -2291,6 +2367,7 @@ let selectedShape = 'circle';
 let selectedEmoji = DEFAULT_PROFILE_EMOJI;
 let selectedTokenEmojiImage = '';
 let pendingTokenEmojiImage = '';
+let pendingAvatarDecoration = null;
 
 function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = '') {
   selectedShape = currentShape || 'circle';
@@ -2469,33 +2546,43 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
   const headerOverlay = document.getElementById('avatar-decoration-el');
   const meta = document.getElementById('avatar-decoration-meta');
   const btn = document.getElementById('avatar-decoration-btn');
-  const src = getRenderableMediaSrc(player?.avatar_decoration);
+  const effectiveDecoration = pendingAvatarDecoration === null
+    ? String(player?.avatar_decoration || '')
+    : String(pendingAvatarDecoration || '');
+  const src = getRenderableMediaSrc(effectiveDecoration);
   const remaining = getAvatarDecorationRemainingMs(player);
-  const isVipPlusTier = Number(player?.is_vip_plus) === 1;
+  const isVipPlusTier = Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  const hasPendingChange = pendingAvatarDecoration !== null && String(pendingAvatarDecoration || '') !== String(player?.avatar_decoration || '');
   if (overlay) overlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
   if (headerOverlay) headerOverlay.innerHTML = src ? `<img src="${src}" alt="décoration avatar">` : '';
   if (meta) {
     meta.textContent = !isVipPlusTier
       ? 'Reserve au role VIP+.'
+      : hasPendingChange
+        ? 'Clique sur Appliquer la sélection pour enregistrer cette décoration.'
       : remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 24h.`
         : src
           ? 'Décoration active. Tu peux la modifier toutes les 24h.'
-          : 'Importe une décoration autour de l avatar. Changement toutes les 24h.';
-    meta.style.color = remaining > 0 ? '#85EBFF' : 'var(--muted)';
+          : 'Choisis une décoration de la collection VIP+. Changement toutes les 24h.';
+    meta.style.color = remaining > 0 || hasPendingChange ? '#85EBFF' : 'var(--muted)';
   }
   if (btn) {
-    btn.disabled = !isVipPlusTier || remaining > 0;
-    btn.textContent = remaining > 0 ? 'Décoration active' : 'Importer une décoration';
-    btn.title = !isVipPlusTier ? 'Reserve au role VIP+' : remaining > 0 ? `Disponible dans ${formatRemainingTime(remaining)}` : 'Importer une décoration';
+    btn.disabled = !isVipPlusTier || remaining > 0 || !hasPendingChange;
+    btn.textContent = hasPendingChange ? 'Appliquer la sélection' : (remaining > 0 ? 'Décoration active' : 'Déjà appliquée');
+    btn.title = !isVipPlusTier
+      ? 'Reserve au role VIP+'
+      : remaining > 0
+        ? `Disponible dans ${formatRemainingTime(remaining)}`
+        : hasPendingChange
+          ? 'Enregistrer la décoration choisie'
+          : 'Choisis une autre décoration pour appliquer un changement';
   }
+  renderAvatarDecorationGallery(player);
 }
 
 function openAvatarDecorationPicker() {
-  const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me?.is_vip_plus && String(me?.role || '') !== 'admin') return;
-  if (getAvatarDecorationRemainingMs(me) > 0) return;
-  document.getElementById('avatar-decoration-input')?.click();
+  return;
 }
 
 async function toggleAdminPwd() {

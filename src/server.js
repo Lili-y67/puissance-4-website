@@ -140,6 +140,30 @@ function validateSession(token) {
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const AVATAR_DECORATION_LIBRARY = [
+  '2fc3e75a9f2c1a02f15464a0573065ca.jpg',
+  '5deecfde67ddd0d18b152ddf4a0ec9bb.jpg',
+  '7c256b9a693661dc7a65343befbd74db.jpg',
+  '28231f6cc375c9c4e417957f22a1665b.jpg',
+  'a_3cf1ad31f0c0c77a90319c13632d808e.png',
+  'a_9a6bf0ab30a6719d6eb09fa4996984ca.png',
+  'a_9d2ff9685be0c668ef6990b0035fac17.png',
+  'a_365eed4178528fe8293c4212e8e2d5cb.png',
+  'a_a02f615e00ef516c98adf7e93ebe881f.png',
+  'a_e72e44eeea89e92dc02c9bec8b02d158.png',
+  'Betterimage.ai_1738503261662-removebg-preview.png',
+  'Betterimage.ai_1738503267157-removebg-preview.png',
+  'Betterimage.ai_1738503272412-removebg-preview.png',
+  'Betterimage.ai_1738503286035-removebg-preview.png',
+  'Betterimage.ai_1738503294919-removebg-preview.png',
+  'Betterimage.ai_1738503305126-removebg-preview.png',
+  'Betterimage.ai_1738503311391-removebg-preview.png',
+  'Betterimage.ai_1738503318383-removebg-preview.png',
+  'Betterimage.ai_1738503328968-removebg-preview.png',
+  'Betterimage.ai_1738503337387-removebg-preview.png',
+  'Test.png',
+];
+const AVATAR_DECORATION_PATHS = new Set(AVATAR_DECORATION_LIBRARY.map(name => `/decorations/${name}`));
 
 function getVipMediaRemainingMs(player) {
   if (isAdminPlayer(player)) return 0;
@@ -1431,18 +1455,21 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
   if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
-  if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
+  const nextDecoration = String(image || '').trim();
+  const isPreset = AVATAR_DECORATION_PATHS.has(nextDecoration);
+  const isInlineImage = /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(nextDecoration);
+  if (nextDecoration && !isPreset && !isInlineImage) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
   const remaining = getAvatarDecorationRemainingMs(player);
   if (remaining > 0) {
     return res.status(429).json({ error: `Decoration avatar disponible dans ${formatCooldownHours(remaining)}.` });
   }
-  const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
-  if (!isAdminPlayer(player) && approxBytes > 1024 * 1024) {
+  const approxBytes = isInlineImage ? Math.ceil((nextDecoration.length - nextDecoration.indexOf(',') - 1) * 3 / 4) : 0;
+  if (!isAdminPlayer(player) && isInlineImage && approxBytes > 1024 * 1024) {
     return res.status(413).json({ error: 'Decoration trop lourde (max 1MB).' });
   }
-  pQ.updateAvatarDecoration.run({ image, id });
+  pQ.updateAvatarDecoration.run({ image: nextDecoration, id });
   pQ.updateAvatarDecorationChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true });
 });
