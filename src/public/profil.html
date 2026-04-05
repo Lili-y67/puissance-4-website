@@ -1537,6 +1537,11 @@ async function uploadTokenEmojiData(imageData, me) {
     selectedTokenEmojiImage = imageData;
     pendingTokenEmojiImage = '';
     me.token_emoji_image = imageData;
+    me.vip_media_changed_at = Date.now();
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
+      currentPlayer.token_emoji_image = imageData;
+      currentPlayer.vip_media_changed_at = me.vip_media_changed_at;
+    }
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
     refreshTokenEmojiPreview();
@@ -2165,7 +2170,13 @@ function refreshTokenEmojiPreview() {
   }
   if (btn) {
     btn.disabled = !isVip || remaining > 0 || !!pendingTokenEmojiImage;
-    btn.textContent = pendingTokenEmojiImage ? 'Emoji pret' : 'Importer un emoji VIP';
+    btn.textContent = !isVip
+      ? 'Emoji VIP'
+      : pendingTokenEmojiImage
+        ? 'Emoji pret'
+        : remaining > 0
+          ? `Patiente ${formatRemainingTime(remaining)}`
+          : 'Importer un emoji VIP';
     btn.title = !isVip
       ? 'Reserve au role VIP'
       : pendingTokenEmojiImage
