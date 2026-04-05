@@ -120,12 +120,43 @@ body{
 .preview-showcase.perso{background:radial-gradient(circle at top, rgba(255,122,69,.18), transparent 55%), linear-gradient(180deg, rgba(255,122,69,.08), rgba(255,255,255,.02))}
 .preview-showcase.booster-elo{background:radial-gradient(circle at top, rgba(255,214,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,214,10,.08), rgba(255,255,255,.02))}
 .preview-showcase.booster-coin{background:radial-gradient(circle at top, rgba(255,159,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,159,10,.08), rgba(255,255,255,.02))}
+.preview-profile{width:min(100%,340px);display:flex;flex-direction:column;border-radius:22px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:rgba(8,9,18,.76);box-shadow:0 18px 44px rgba(0,0,0,.35)}
+.preview-profile-banner{height:78px;background:linear-gradient(135deg, rgba(133,235,255,.16), rgba(255,45,85,.16));background-size:cover;background-position:center;position:relative}
+.preview-profile-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg, rgba(7,7,14,.08), rgba(7,7,14,.38))}
+.preview-profile-banner-strip{position:absolute;left:14px;right:14px;top:12px;height:26px;border-radius:999px;background-size:cover;background-position:center;overflow:hidden;border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 24px rgba(0,0,0,.22)}
+.preview-profile-banner-strip::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.62), rgba(7,7,14,.18), rgba(7,7,14,.62))}
+.preview-profile-body{padding:14px 16px 16px;display:flex;gap:12px;align-items:flex-start;position:relative}
+.preview-avatar-wrap{position:relative;flex-shrink:0;width:64px;height:64px}
+.preview-avatar{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,#7d8cff,#ff6bd6)}
+.preview-avatar::before{content:'';position:absolute;inset:-18%;background:conic-gradient(from 0deg, rgba(255,255,255,.0), rgba(255,255,255,.34), rgba(255,255,255,.0));animation:preview-spin 2.8s linear infinite}
+.preview-avatar.gifish::after{content:'';position:absolute;inset:-30%;background:linear-gradient(115deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0));transform:translateX(-120%);animation:preview-gif 2.2s ease-in-out infinite}
+.preview-avatar span{position:relative;z-index:1}
+.preview-avatar-decoration{position:absolute;inset:-9px;pointer-events:none}
+.preview-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 12px rgba(255,255,255,.14))}
+.preview-profile-main{flex:1;min-width:0}
+.preview-profile-name{font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.95;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.preview-profile-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.preview-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.preview-pill.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.3);color:var(--yellow)}
+.preview-pill.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.34);color:var(--blue)}
+.preview-pill.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
+.preview-meta-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px}
+.preview-token{display:flex;align-items:center;gap:8px}
+.preview-token-dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.35);box-shadow:0 0 14px rgba(255,255,255,.12)}
+.preview-token-duo{display:flex;align-items:center;gap:6px}
+.preview-token-duo .preview-token-dot{width:20px;height:20px}
+.preview-elo{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900}
+.preview-boost-btn{margin-top:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-align:center}
+@keyframes preview-spin{to{transform:rotate(360deg)}}
+@keyframes preview-gif{0%,100%{transform:translateX(-120%)}50%{transform:translateX(120%)}}
 .preview-rank-badge{padding:10px 16px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-rank-badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
 .preview-rank-badge.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
 .preview-rank-badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
 .preview-booster-stat{font-family:'Barlow Condensed',sans-serif;font-size:72px;font-weight:900;letter-spacing:1px}
 .preview-mini-note{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+.preview-subline{font-size:12px;color:var(--muted);margin-top:6px}
+.preview-random-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);margin-top:10px}
 @media (max-width:760px){.preview-grid{grid-template-columns:1fr}.preview-title{font-size:30px}}
 .panel{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border)}
 .panel-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
@@ -372,6 +403,10 @@ let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
 let currentCategory = 'ranks';
+let previewDecorations = [];
+let previewProfileBanners = [];
+const PREVIEW_NAMES = ['Lili_y', 'Crystal', 'Nyra', 'Aelys', 'Mitsuki', 'Soline'];
+const PREVIEW_COLORS = ['#FF4D6D', '#FFD84D', '#43D65C', '#2F80FF', '#B657FF', '#FFAA33', '#2DC5C1', '#FF7EB6', '#85EBFF'];
 
 function getStoredPlayer() {
   try { return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null'); }
@@ -490,17 +525,90 @@ function getDisplayItem(pack) {
   return item;
 }
 
+function pickRandom(arr, fallback = '') {
+  return Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fallback;
+}
+
+function buildPreviewState(item) {
+  const primary = pickRandom(PREVIEW_COLORS, '#85EBFF');
+  let secondary = pickRandom(PREVIEW_COLORS.filter((c) => c !== primary), '#FF7EB6');
+  if (item.key === 'vip_1m' || item.key === 'vip_1y') secondary = primary;
+  const hasDecoration = item.key === 'vip_plus';
+  const hasPseudoBanner = item.key === 'perso';
+  return {
+    name: pickRandom(PREVIEW_NAMES, 'Lili_y'),
+    primary,
+    secondary,
+    decoration: hasDecoration ? pickRandom(previewDecorations, '') : '',
+    banner: hasPseudoBanner ? pickRandom(previewProfileBanners, '') : pickRandom(previewProfileBanners, ''),
+    customRole: item.key === 'perso'
+      ? { text: pickRandom(['LILI', 'MOON', 'STAR', 'LOVE'], 'LILI'), emoji: pickRandom(['💖', '🌙', '✨', '🦋'], '✨') }
+      : null,
+  };
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 function renderPreviewShowcase(item) {
   if (item.type === 'booster') {
     return `<div style="text-align:center">
       <div class="preview-booster-stat">${item.duration}</div>
       <div class="preview-mini-note">${item.statSub}</div>
+      <div class="preview-random-pill">Exemple visuel de booster</div>
     </div>`;
   }
-  return `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
-    <div class="preview-rank-badge ${item.theme}">${item.badge}</div>
-    <div style="font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:900;letter-spacing:1px">${item.stat}</div>
-    <div class="preview-mini-note">${item.statSub}</div>
+  const state = buildPreviewState(item);
+  const avatarStyle = item.key === 'vip_plus' || item.key === 'perso'
+    ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
+    : `background:${state.primary};`;
+  const tokenStyle = item.key === 'vip_plus' || item.key === 'perso'
+    ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
+    : `background:${state.primary};`;
+  const pseudoBanner = state.banner
+    ? `<div class="preview-profile-banner-strip" style="background-image:url('${state.banner}')"></div>`
+    : '';
+  const decoration = state.decoration
+    ? `<div class="preview-avatar-decoration"><img src="${state.decoration}" alt=""></div>`
+    : '';
+  const customRole = state.customRole
+    ? `<span class="preview-pill perso">${escapeHtml(state.customRole.emoji)} ${escapeHtml(state.customRole.text)}</span>`
+    : '';
+  const boostClass = item.theme === 'vipplus' ? 'style="color:var(--blue);border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.08)"'
+    : item.theme === 'perso' ? 'style="color:var(--orange);border-color:rgba(255,122,69,.28);background:rgba(255,122,69,.08)"'
+    : 'style="color:var(--yellow);border-color:rgba(255,214,10,.26);background:rgba(255,214,10,.08)"';
+  return `<div class="preview-profile">
+    <div class="preview-profile-banner" style="${state.banner ? `background-image:url('${state.banner}');` : ''}">
+      ${pseudoBanner}
+    </div>
+    <div class="preview-profile-body">
+      <div class="preview-avatar-wrap">
+        <div class="preview-avatar gifish" style="${avatarStyle}"><span>${escapeHtml(state.name.slice(0,1).toUpperCase())}</span></div>
+        ${decoration}
+      </div>
+      <div class="preview-profile-main">
+        <div class="preview-profile-name">${escapeHtml(state.name)}</div>
+        <div class="preview-profile-badges">
+          <span class="preview-pill ${item.theme}">${item.badge}</span>
+          ${customRole}
+        </div>
+        <div class="preview-meta-row">
+          <div class="${item.key === 'vip_plus' || item.key === 'perso' ? 'preview-token-duo' : 'preview-token'}">
+            <div class="preview-token-dot" style="${tokenStyle}"></div>
+            ${(item.key === 'vip_plus' || item.key === 'perso') ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
+          </div>
+          <div class="preview-elo">1000</div>
+        </div>
+        <div class="preview-subline">${item.key === 'perso' ? 'Bannière pseudo, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
+        <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' ? 'Activer Boost VIP+ (+30%)' : 'Activer Boost VIP (+20%)'}</div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -583,7 +691,24 @@ function closePreview() {
   document.getElementById('preview-modal-bg')?.classList.remove('show');
 }
 
+async function loadPreviewAssets() {
+  const [decorationsRes, bannersRes] = await Promise.allSettled([
+    fetch('/api/decorations'),
+    fetch('/api/profile-banners'),
+  ]);
+
+  if (decorationsRes.status === 'fulfilled' && decorationsRes.value.ok) {
+    const data = await decorationsRes.value.json().catch(() => ({}));
+    previewDecorations = Array.isArray(data?.decorations) ? data.decorations : [];
+  }
+  if (bannersRes.status === 'fulfilled' && bannersRes.value.ok) {
+    const data = await bannersRes.value.json().catch(() => ({}));
+    previewProfileBanners = Array.isArray(data?.banners) ? data.banners : [];
+  }
+}
+
 async function loadShop() {
+  await loadPreviewAssets();
   const token = localStorage.getItem('token');
   if (!token) {
     setCoinsUi(0, 'Connecte-toi pour acheter.');
