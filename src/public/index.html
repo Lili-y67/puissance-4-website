@@ -997,6 +997,10 @@ html, body {
         <span>⚡</span> <span id="btn-play-txt">Se connecter</span>
       </button>
 
+      <button class="btn btn-ghost" onclick="loginWithDiscord()" style="margin-top:10px;border-color:rgba(88,101,242,0.35);color:#aab5ff;background:rgba(88,101,242,0.1)">
+        🔗 Connecter via Discord
+      </button>
+
       <div class="divider">ou</div>
 
       <button class="btn btn-ghost" onclick="window.location.href='/profil'">
@@ -1286,6 +1290,38 @@ async function handleAuth() {
     showError('Erreur réseau, réessaie.');
     btn.disabled = false;
     document.getElementById('btn-play-txt').textContent = origTxt;
+  }
+}
+
+function decodeBase64Url(input) {
+  const base64 = String(input || '').replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4 || 4)) % 4);
+  return atob(padded);
+}
+
+function loginWithDiscord() {
+  window.location.href = '/auth/discord/signin';
+}
+
+function tryCompleteDiscordAuth() {
+  const hash = String(location.hash || '');
+  const prefix = '#discord-auth=';
+  if (!hash.startsWith(prefix)) return false;
+  try {
+    const payload = JSON.parse(decodeBase64Url(hash.slice(prefix.length)));
+    if (!payload?.token || !payload?.player) throw new Error('invalid payload');
+    myPlayer = payload.player;
+    localStorage.setItem('token', payload.token);
+    localStorage.setItem('player', JSON.stringify(payload.player));
+    sessionStorage.setItem('player', JSON.stringify(payload.player));
+    history.replaceState(null, '', location.pathname + location.search);
+    connectAndQueue();
+    return true;
+  } catch (e) {
+    console.error('[discord-auth]', e);
+    history.replaceState(null, '', location.pathname + location.search);
+    showError('Connexion Discord impossible.');
+    return false;
   }
 }
 
@@ -1656,6 +1692,7 @@ document.addEventListener('click', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   initRegisterColorPicker();
   startSiteStatsPolling();
+  if (tryCompleteDiscordAuth()) return;
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
   const token = localStorage.getItem('token');
