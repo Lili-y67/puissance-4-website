@@ -648,6 +648,22 @@ function getRenderableMediaSrc(src) {
   }
 }
 
+function getVipMediaRemainingMs() {
+  const lastChanged = Number(currentPlayer?.vip_media_changed_at || 0);
+  if (!lastChanged) return 0;
+  const remaining = lastChanged + (24 * 60 * 60 * 1000) - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function formatRemainingTime(ms) {
+  const totalMinutes = Math.ceil(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
+}
+
 async function load() {
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
@@ -886,7 +902,7 @@ function render(player, games, following, followers, followStatus) {
           <div class="token-emoji-preview" id="token-emoji-preview">VIP</div>
           <div class="token-emoji-meta" id="token-emoji-meta">Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.</div>
         </div>
-        <button class="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP</button>
+        <button class="token-emoji-btn" id="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP</button>
       </div>
       <button class="btn-save-color" onclick="saveShape()">&#128309; Enregistrer</button>
     </div>
@@ -1190,12 +1206,24 @@ function openUploadChooser(target) {
   uploadChooserTarget = target;
   const info = getUploadTargetInfo(target);
   const isVip = Number(currentPlayer?.is_vip) === 1;
+  const remaining = isVip ? getVipMediaRemainingMs() : 0;
+  const gifLocked = !isVip || remaining > 0;
   document.getElementById('upload-chooser-title').textContent = info.title;
   document.getElementById('upload-chooser-sub').textContent = info.subtitle;
   document.getElementById('upload-image-meta').textContent = info.imageMeta;
-  document.getElementById('upload-gif-meta').textContent = isVip ? info.gifMeta : 'Reserve VIP - active ton role VIP pour envoyer un GIF';
+  document.getElementById('upload-gif-meta').textContent = !isVip
+    ? 'Reserve VIP - active ton role VIP pour envoyer un GIF'
+    : remaining > 0
+      ? `Disponible dans ${formatRemainingTime(remaining)}`
+      : info.gifMeta;
   document.getElementById('upload-chooser-note').textContent = info.note;
-  document.getElementById('upload-gif-btn').disabled = !isVip;
+  const gifBtn = document.getElementById('upload-gif-btn');
+  gifBtn.disabled = gifLocked;
+  gifBtn.title = !isVip
+    ? 'Reserve au role VIP'
+    : remaining > 0
+      ? `Disponible dans ${formatRemainingTime(remaining)}`
+      : 'GIF VIP disponible';
   const bg = document.getElementById('upload-chooser-bg');
   bg.classList.add('show');
   bg.setAttribute('aria-hidden', 'false');
@@ -2090,25 +2118,38 @@ function onEmojiInput(val) {
 function refreshTokenEmojiPreview() {
   const preview = document.getElementById('token-emoji-preview');
   const meta = document.getElementById('token-emoji-meta');
+  const btn = document.getElementById('token-emoji-btn');
   if (!preview) return;
+  const isVip = Number(currentPlayer?.is_vip) === 1;
+  const remaining = isVip ? getVipMediaRemainingMs() : 0;
   if (selectedTokenEmojiImage) {
     preview.innerHTML = `<img src="${getRenderableMediaSrc(selectedTokenEmojiImage)}" alt="emoji perso">`;
   } else {
     preview.textContent = 'VIP';
   }
   if (meta) {
-    meta.textContent = selectedTokenEmojiImage
-      ? 'Emoji perso VIP pret. Recadrage 128x128, max 1 Mo, cooldown 24h.'
-      : 'Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.';
+    meta.textContent = !isVip
+      ? 'Reserve au role VIP.'
+      : remaining > 0
+        ? `Disponible dans ${formatRemainingTime(remaining)}. Recadrage 128x128, max 1 Mo.`
+        : selectedTokenEmojiImage
+          ? 'Emoji perso VIP pret. Recadrage 128x128, max 1 Mo, cooldown 24h.'
+          : 'Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.';
+  }
+  if (btn) {
+    btn.disabled = !isVip || remaining > 0;
+    btn.title = !isVip
+      ? 'Reserve au role VIP'
+      : remaining > 0
+        ? `Disponible dans ${formatRemainingTime(remaining)}`
+        : 'Importer un emoji VIP';
   }
 }
 
 function openTokenEmojiPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me?.is_vip) {
-    alert('Reserve aux VIP.');
-    return;
-  }
+  if (!me?.is_vip) return;
+  if (getVipMediaRemainingMs() > 0) return;
   document.getElementById('token-emoji-input')?.click();
 }
 
