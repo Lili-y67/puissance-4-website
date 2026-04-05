@@ -558,7 +558,7 @@ function buildPreviewState(item) {
   const primary = pickRandom(PREVIEW_COLORS, '#85EBFF');
   let secondary = pickRandom(PREVIEW_COLORS.filter((c) => c !== primary), '#FF7EB6');
   if (item.key === 'vip_1m' || item.key === 'vip_1y') secondary = primary;
-  const hasDecoration = item.key === 'vip_plus';
+  const hasDecoration = item.key === 'vip_plus' || item.key === 'perso';
   const hasPseudoBanner = item.key === 'perso';
   return {
     name: pickRandom(PREVIEW_NAMES, 'Lili_y'),
@@ -705,9 +705,9 @@ function renderPreviewShowcase(item) {
             <div class="preview-token-dot" style="${tokenStyle}"></div>
             ${(item.key === 'vip_plus' || item.key === 'perso') ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
           </div>
-          <div class="preview-chip">${item.key === 'perso' ? 'Banniere pseudo' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
+          <div class="preview-chip">${item.key === 'perso' ? 'Deco + plaque' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
         </div>
-        <div class="preview-subline">${item.key === 'perso' ? 'Bannière pseudo, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
+        <div class="preview-subline">${item.key === 'perso' ? 'Deco aleatoire, banniere pseudo, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
         <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' ? 'Activer Boost VIP+ (+30%)' : 'Activer Boost VIP (+20%)'}</div>
       </div>
     </div>
