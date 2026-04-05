@@ -131,12 +131,13 @@ body{
 .preview-avatar::before{content:'';position:absolute;inset:-18%;background:conic-gradient(from 0deg, rgba(255,255,255,.0), rgba(255,255,255,.34), rgba(255,255,255,.0));animation:preview-spin 2.8s linear infinite}
 .preview-avatar.gifish::after{content:'';position:absolute;inset:-30%;background:linear-gradient(115deg, rgba(255,255,255,0), rgba(255,255,255,.18), rgba(255,255,255,0));transform:translateX(-120%);animation:preview-gif 2.2s ease-in-out infinite}
 .preview-avatar span{position:relative;z-index:1}
+.preview-avatar img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;display:block}
 .preview-avatar-decoration{position:absolute;inset:-9px;pointer-events:none}
 .preview-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 12px rgba(255,255,255,.14))}
 .preview-profile-main{flex:1;min-width:0}
 .preview-name-wrap{position:relative;min-height:34px;display:flex;align-items:center}
-.preview-name-plaque{position:absolute;left:0;right:0;top:50%;height:18px;transform:translateY(-50%);border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;border:1px solid rgba(255,255,255,.08);overflow:hidden;opacity:.96}
-.preview-name-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.96) 0%, rgba(7,7,14,.86) 42%, rgba(7,7,14,.30) 74%, rgba(7,7,14,.08) 100%)}
+.preview-name-plaque{position:absolute;left:0;right:0;top:50%;height:22px;transform:translateY(-50%);border-radius:999px;background-size:cover;background-repeat:no-repeat;background-position:center;border:1px solid rgba(255,255,255,.08);overflow:hidden;opacity:.98;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+.preview-name-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.70) 0%, rgba(7,7,14,.24) 48%, rgba(7,7,14,.58) 100%)}
 .preview-profile-name{font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.95;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-profile-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .preview-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
@@ -386,25 +387,25 @@ const SHOP_ITEMS = {
     key: 'elo_mini', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.05', title: 'Mini Boost',
     stat: '250', statSub: 'coins pour +0.05 ELO',
     meta: 'Petit booster ELO à stock limité pour les achats rapides.',
-    features: [['📦','Stock global','10 unités au lancement.'],['⚡','Effet','Booster ELO x0.05.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+    features: [['📦','Stock global','10 unités au lancement.'],['⚡','Effet','Booster ELO x1.05.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
   elo_classic: {
     key: 'elo_classic', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.1', title: 'Classic Boost',
     stat: '750', statSub: 'coins pour +0.1 ELO',
     meta: 'Le booster ELO standard avec un meilleur rendement.',
-    features: [['📦','Stock global','5 unités au lancement.'],['⚡','Effet','Booster ELO x0.1.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+    features: [['📦','Stock global','5 unités au lancement.'],['⚡','Effet','Booster ELO x1.1.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
   elo_max: {
-    key: 'elo_max', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.25', title: 'Max Boost',
+    key: 'elo_max', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x1.25', title: 'Max Boost',
     stat: '2500', statSub: 'coins pour +0.25 ELO',
     meta: 'Une version bien plus rare pour les gros achats de progression.',
-    features: [['📦','Stock global','3 unités au lancement.'],['⚡','Effet','Booster ELO x0.25.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+    features: [['📦','Stock global','3 unités au lancement.'],['⚡','Effet','Booster ELO x1.25.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
   elo_princess: {
-    key: 'elo_princess', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.5', title: 'Princess Boost',
+    key: 'elo_princess', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x1.5', title: 'Princess Boost',
     stat: '5000', statSub: 'coins pour +0.5 ELO',
     meta: 'Le booster ELO le plus rare de la boutique, réservé aux grosses dépenses.',
-    features: [['📦','Stock global','1 unité au lancement.'],['⚡','Effet','Booster ELO x0.5.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+    features: [['📦','Stock global','1 unité au lancement.'],['⚡','Effet','Booster ELO x1.5.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
   coin_boost: {
     key: 'coin_boost', type: 'booster', family: 'coins', theme: 'booster-coin', badge: '🪙 COINS', duration: 'x5', title: 'Coin Boost',
@@ -433,8 +434,8 @@ let currentCategory = 'ranks';
 let previewDecorations = [];
 let previewProfileBanners = [];
 let previewAnimTimer = null;
-const PREVIEW_NAMES = ['Lili_y', 'Crystal', 'Nyra', 'Aelys', 'Mitsuki', 'Soline'];
-const PREVIEW_COLORS = ['#FF4D6D', '#FFD84D', '#43D65C', '#2F80FF', '#B657FF', '#FFAA33', '#2DC5C1', '#FF7EB6', '#85EBFF'];
+const PREVIEW_NAME_PARTS = ['li', 'na', 'shi', 'ka', 'yo', 'mi', 'sa', 'ly', 'no', 'ra', 'el', 'ia', 'zu', 'ko', 'ri', 'ta', 'ma', 'ne', 'cy', 'va'];
+const PREVIEW_AVATAR_STYLES = ['adventurer', 'adventurer-neutral', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'pixel-art'];
 
 function getStoredPlayer() {
   try { return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null'); }
@@ -557,16 +558,38 @@ function pickRandom(arr, fallback = '') {
   return Array.isArray(arr) && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fallback;
 }
 
+function randomHexColor() {
+  const value = Math.floor(Math.random() * 0xffffff);
+  return `#${value.toString(16).padStart(6, '0').toUpperCase()}`;
+}
+
+function randomPreviewName() {
+  const targetLength = 3 + Math.floor(Math.random() * 14);
+  let out = '';
+  while (out.length < targetLength) out += pickRandom(PREVIEW_NAME_PARTS, 'li');
+  out = out.slice(0, targetLength);
+  return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+function randomPreviewAvatar(name) {
+  const style = pickRandom(PREVIEW_AVATAR_STYLES, 'adventurer');
+  const seed = encodeURIComponent(`${name}-${Math.random().toString(36).slice(2, 10)}`);
+  return `https://api.dicebear.com/9.x/${style}/svg?seed=${seed}&backgroundType=gradientLinear`;
+}
+
 function buildPreviewState(item) {
-  const primary = pickRandom(PREVIEW_COLORS, '#85EBFF');
-  let secondary = pickRandom(PREVIEW_COLORS.filter((c) => c !== primary), '#FF7EB6');
+  const name = randomPreviewName();
+  const primary = randomHexColor();
+  let secondary = randomHexColor();
+  while (secondary === primary) secondary = randomHexColor();
   if (item.key === 'vip_1m' || item.key === 'vip_1y') secondary = primary;
   const hasDecoration = item.key === 'vip_plus' || item.key === 'perso';
   const hasPseudoBanner = item.key === 'perso';
   return {
-    name: pickRandom(PREVIEW_NAMES, 'Lili_y'),
+    name,
     primary,
     secondary,
+    avatar: randomPreviewAvatar(name),
     decoration: hasDecoration ? pickRandom(previewDecorations, '') : '',
     banner: hasPseudoBanner ? pickRandom(previewProfileBanners, '') : pickRandom(previewProfileBanners, ''),
     customRole: item.key === 'perso'
@@ -694,7 +717,7 @@ function renderPreviewShowcase(item) {
     </div>
     <div class="preview-profile-body">
       <div class="preview-avatar-wrap">
-        <div class="preview-avatar gifish" style="${avatarStyle}"><span>${escapeHtml(state.name.slice(0,1).toUpperCase())}</span></div>
+        <div class="preview-avatar gifish" style="${avatarStyle}">${state.avatar ? `<img src="${state.avatar}" alt="${escapeHtml(state.name)}">` : `<span>${escapeHtml(state.name.slice(0,1).toUpperCase())}</span>`}</div>
         ${decoration}
       </div>
       <div class="preview-profile-main">
