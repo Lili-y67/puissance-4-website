@@ -1535,6 +1535,7 @@ async function uploadTokenEmojiData(imageData, me) {
   if (res.ok) {
     PROFIL_SFX.upload();
     selectedTokenEmojiImage = imageData;
+    pendingTokenEmojiImage = '';
     me.token_emoji_image = imageData;
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
@@ -1553,11 +1554,15 @@ async function confirmImageEditor() {
   const token = localStorage.getItem('token');
   if (!me.id || !token) return;
   const output = exportImageEditor();
+  if (IMAGE_EDITOR.mode === 'token') {
+    pendingTokenEmojiImage = output;
+    refreshTokenEmojiPreview();
+    closeImageEditor();
+    return;
+  }
   const ok = IMAGE_EDITOR.mode === 'avatar'
     ? await uploadAvatarData(output, me)
-    : IMAGE_EDITOR.mode === 'token'
-      ? await uploadTokenEmojiData(output, me)
-      : await uploadBannerData(output, me, token);
+    : await uploadBannerData(output, me, token);
   if (ok) closeImageEditor();
 }
 
@@ -2022,11 +2027,13 @@ const DEFAULT_PROFILE_EMOJI = String.fromCodePoint(0x2B50);
 let selectedShape = 'circle';
 let selectedEmoji = DEFAULT_PROFILE_EMOJI;
 let selectedTokenEmojiImage = '';
+let pendingTokenEmojiImage = '';
 
 function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = '') {
   selectedShape = currentShape || 'circle';
   selectedEmoji = currentEmoji || DEFAULT_PROFILE_EMOJI;
   selectedTokenEmojiImage = currentTokenEmojiImage || '';
+  pendingTokenEmojiImage = '';
   const row = document.getElementById('shape-row');
   if (!row) return;
   row.innerHTML = '';
@@ -2069,8 +2076,9 @@ function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = ''
       preview.style.alignItems = 'center';
       preview.style.justifyContent = 'center';
       preview.style.overflow = 'hidden';
-      if (selectedTokenEmojiImage) {
-        preview.innerHTML = `<img src="${getRenderableMediaSrc(selectedTokenEmojiImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+      const tokenPreviewImage = pendingTokenEmojiImage || selectedTokenEmojiImage;
+      if (tokenPreviewImage) {
+        preview.innerHTML = `<img src="${getRenderableMediaSrc(tokenPreviewImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
       } else {
         preview.style.color = '#ffd60a';
         preview.style.fontSize = '11px';
@@ -2121,17 +2129,34 @@ function refreshTokenEmojiPreview() {
   const preview = document.getElementById('token-emoji-preview');
   const meta = document.getElementById('token-emoji-meta');
   const btn = document.getElementById('token-emoji-btn');
+  const shapePreview = document.querySelector('.shape-btn[data-shape="emoji_image"] .shape-preview');
   if (!preview) return;
   const isVip = Number(currentPlayer?.is_vip) === 1;
   const remaining = isVip ? getVipMediaRemainingMs() : 0;
-  if (selectedTokenEmojiImage) {
-    preview.innerHTML = `<img src="${getRenderableMediaSrc(selectedTokenEmojiImage)}" alt="emoji perso">`;
+  const previewImage = pendingTokenEmojiImage || selectedTokenEmojiImage;
+  if (previewImage) {
+    preview.innerHTML = `<img src="${getRenderableMediaSrc(previewImage)}" alt="emoji perso">`;
   } else {
     preview.textContent = 'VIP';
+  }
+  if (shapePreview) {
+    if (previewImage) {
+      shapePreview.innerHTML = `<img src="${getRenderableMediaSrc(previewImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+      shapePreview.style.background = 'rgba(255,214,10,0.08)';
+    } else {
+      shapePreview.innerHTML = '';
+      shapePreview.textContent = 'VIP';
+      shapePreview.style.color = '#ffd60a';
+      shapePreview.style.fontSize = '11px';
+      shapePreview.style.fontFamily = 'Barlow Condensed, sans-serif';
+      shapePreview.style.background = 'rgba(255,214,10,0.08)';
+    }
   }
   if (meta) {
     meta.textContent = !isVip
       ? 'Reserve au role VIP.'
+      : pendingTokenEmojiImage
+        ? 'Emoji VIP pret. Clique sur Enregistrer pour l appliquer.'
       : remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}. Recadrage 128x128, max 1 Mo.`
         : selectedTokenEmojiImage
@@ -2139,9 +2164,12 @@ function refreshTokenEmojiPreview() {
           : 'Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.';
   }
   if (btn) {
-    btn.disabled = !isVip || remaining > 0;
+    btn.disabled = !isVip || remaining > 0 || !!pendingTokenEmojiImage;
+    btn.textContent = pendingTokenEmojiImage ? 'Emoji pret' : 'Importer un emoji VIP';
     btn.title = !isVip
       ? 'Reserve au role VIP'
+      : pendingTokenEmojiImage
+        ? 'Clique sur Enregistrer pour appliquer'
       : remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}`
         : 'Importer un emoji VIP';
@@ -2490,10 +2518,14 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  if (selectedShape === 'emoji_image' && !selectedTokenEmojiImage) {
+  if (selectedShape === 'emoji_image' && !selectedTokenEmojiImage && !pendingTokenEmojiImage) {
     PROFIL_SFX.error();
     alert('Importe d\'abord un emoji VIP.');
     return;
+  }
+  if (selectedShape === 'emoji_image' && pendingTokenEmojiImage) {
+    const uploaded = await uploadTokenEmojiData(pendingTokenEmojiImage, me);
+    if (!uploaded) return;
   }
   const shapeVal = selectedShape === 'emoji'
     ? ('emoji:' + (selectedEmoji || DEFAULT_PROFILE_EMOJI))
