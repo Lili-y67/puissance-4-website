@@ -93,14 +93,40 @@ body{
 .feature-emoji{font-size:16px;line-height:1.1}
 .feature-copy strong{display:block;font-size:14px}
 .feature-copy span{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.card-actions{display:flex;gap:10px;margin-top:auto}
+.preview-btn{flex:1;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s;background:rgba(255,255,255,.03);color:var(--text)}
+.preview-btn:hover{background:rgba(255,255,255,.06)}
 .cta{margin-top:auto;width:100%;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s}
 .cta.vip{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
 .cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.08);color:var(--blue)}
 .cta.perso{border-color:rgba(255,122,69,.22);background:rgba(255,122,69,.08);color:var(--orange)}
 .cta.booster-elo{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
 .cta.booster-coin{border-color:rgba(255,159,10,.22);background:rgba(255,159,10,.08);color:var(--orange)}
+.card-actions .cta{margin-top:0;flex:1}
 .cta:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.7)}
 .cta small{display:block;font-size:11px;letter-spacing:.6px;margin-top:3px}
+.preview-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:30;padding:18px;align-items:center;justify-content:center}
+.preview-modal-bg.show{display:flex}
+.preview-modal{width:min(760px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:26px;background:linear-gradient(180deg, rgba(17,18,31,.98), rgba(10,11,22,.98));border:1px solid var(--border);box-shadow:0 30px 90px rgba(0,0,0,.45)}
+.preview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+.preview-title{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.preview-copy{font-size:14px;color:var(--muted);line-height:1.7;margin-top:10px}
+.preview-close{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:20px}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.preview-side{padding:18px;border-radius:20px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
+.preview-showcase{min-height:220px;border-radius:22px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.preview-showcase.vip{background:radial-gradient(circle at top, rgba(255,214,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,214,10,.08), rgba(255,255,255,.02))}
+.preview-showcase.vipplus{background:radial-gradient(circle at top, rgba(133,235,255,.2), transparent 55%), linear-gradient(180deg, rgba(133,235,255,.08), rgba(255,255,255,.02))}
+.preview-showcase.perso{background:radial-gradient(circle at top, rgba(255,122,69,.18), transparent 55%), linear-gradient(180deg, rgba(255,122,69,.08), rgba(255,255,255,.02))}
+.preview-showcase.booster-elo{background:radial-gradient(circle at top, rgba(255,214,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,214,10,.08), rgba(255,255,255,.02))}
+.preview-showcase.booster-coin{background:radial-gradient(circle at top, rgba(255,159,10,.18), transparent 55%), linear-gradient(180deg, rgba(255,159,10,.08), rgba(255,255,255,.02))}
+.preview-rank-badge{padding:10px 16px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.preview-rank-badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
+.preview-rank-badge.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
+.preview-rank-badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
+.preview-booster-stat{font-family:'Barlow Condensed',sans-serif;font-size:72px;font-weight:900;letter-spacing:1px}
+.preview-mini-note{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
+@media (max-width:760px){.preview-grid{grid-template-columns:1fr}.preview-title{font-size:30px}}
 .panel{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border)}
 .panel-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
 .status-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
@@ -233,6 +259,27 @@ body{
       </div>
     </div>
   </section>
+</div>
+
+<div class="preview-modal-bg" id="preview-modal-bg" onclick="if(event.target===this)closePreview()">
+  <div class="preview-modal">
+    <div class="preview-head">
+      <div>
+        <div class="preview-title" id="preview-title">Aperçu</div>
+        <div class="preview-copy" id="preview-copy"></div>
+      </div>
+      <button class="preview-close" type="button" onclick="closePreview()">×</button>
+    </div>
+    <div class="preview-grid">
+      <div class="preview-side">
+        <div class="preview-showcase" id="preview-showcase"></div>
+        <div class="preview-mini-note" id="preview-mini-note"></div>
+      </div>
+      <div class="preview-side">
+        <div class="feature-list" id="preview-features"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -382,8 +429,83 @@ function getButtonState(pack) {
   return { disabled: false, note: `${price} coins` };
 }
 
-function renderCard(pack) {
+function getDisplayItem(pack) {
   const item = SHOP_ITEMS[pack];
+  if (!item) return null;
+  if (pack === 'vip_1m') {
+    return {
+      ...item,
+      badge: '⭐ VIP',
+      features: [
+        ['🎭', 'Emoji custom', 'Choisis ton emoji de pion personnalisé.'],
+        ['🖼️', 'Avatar et bannière GIF', 'GIF autorisés sur ton profil avec cooldown de 24h.'],
+        ['⏱️', 'Boost quotidien', 'Une activation par jour, active pendant 1 heure à +20% ELO.']
+      ]
+    };
+  }
+  if (pack === 'vip_1y') {
+    return {
+      ...item,
+      badge: '⭐ VIP',
+      features: [
+        ['🗓️', '1 an complet', 'Le VIP dure 365 jours et peut être prolongé.'],
+        ['🎨', 'Emoji custom VIP', 'Même confort que le VIP mensuel pour ton pion.'],
+        ['💾', 'GIF médias', 'Avatar et bannière GIF avec cooldown de 24h.']
+      ]
+    };
+  }
+  if (pack === 'vip_plus') {
+    return {
+      ...item,
+      badge: '💎 VIP+',
+      duration: 'À vie',
+      features: [
+        ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
+        ['🖼️', 'GIF rapides', 'Avatar et bannière GIF avec cooldown réduit à 12h.'],
+        ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
+        ['✨', 'Décorations avatar', 'Accès à la collection de décorations VIP+ et leur sélecteur dédié.']
+      ]
+    };
+  }
+  if (pack === 'perso') {
+    return {
+      ...item,
+      badge: '✨ Perso',
+      meta: 'Le pack identité pour les profils spéciaux : badge perso, bannière pseudo et bonus dédié.',
+      features: [
+        ['🏷️', 'Badge personnalisé', 'Texte, couleur et emoji dédiés sur ton profil.'],
+        ['🌈', 'Dégradé', 'Ajoute une seconde couleur pour un pion en dégradé.'],
+        ['🪧', 'Bannière pseudo', 'Choisis une plaque nominative visible dans la recherche profil.'],
+        ['📥', 'Replay HTML', 'Télécharge une partie en HTML autonome depuis le replay.'],
+        ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
+      ]
+    };
+  }
+  if (String(item.type) === 'booster') {
+    return {
+      ...item,
+      badge: item.family === 'coins' ? '🪙 COINS' : '⚡ ELO'
+    };
+  }
+  return item;
+}
+
+function renderPreviewShowcase(item) {
+  if (item.type === 'booster') {
+    return `<div style="text-align:center">
+      <div class="preview-booster-stat">${item.duration}</div>
+      <div class="preview-mini-note">${item.statSub}</div>
+    </div>`;
+  }
+  return `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+    <div class="preview-rank-badge ${item.theme}">${item.badge}</div>
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:900;letter-spacing:1px">${item.stat}</div>
+    <div class="preview-mini-note">${item.statSub}</div>
+  </div>`;
+}
+
+function renderCard(pack) {
+  const item = getDisplayItem(pack);
   const price = SHOP_PRICES[pack];
   const btnState = getButtonState(pack);
   const stock = item.type === 'booster' ? getStockQty(pack) : null;
@@ -407,10 +529,13 @@ function renderCard(pack) {
         ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
         ${item.type === 'booster' ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) · inventaire perso ${inv}.</span></div></div>` : ''}
       </div>
-      <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
-        ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
-        <small id="buy-${pack}-note">${btnState.note}</small>
-      </button>
+      <div class="card-actions">
+        <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
+        <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+          ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
+          <small id="buy-${pack}-note">${btnState.note}</small>
+        </button>
+      </div>
     </article>
   `;
 }
@@ -427,6 +552,35 @@ function switchShopCategory(category) {
   document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
   document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
   document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
+}
+
+function openPreview(pack) {
+  const item = getDisplayItem(pack);
+  if (!item) return;
+  const bg = document.getElementById('preview-modal-bg');
+  const title = document.getElementById('preview-title');
+  const copy = document.getElementById('preview-copy');
+  const showcase = document.getElementById('preview-showcase');
+  const note = document.getElementById('preview-mini-note');
+  const features = document.getElementById('preview-features');
+  title.textContent = item.title;
+  copy.textContent = item.meta;
+  showcase.className = `preview-showcase ${item.theme}`;
+  showcase.innerHTML = renderPreviewShowcase(item);
+  note.textContent = item.type === 'booster'
+    ? `Prix : ${SHOP_PRICES[pack]} coins · Stock global limité`
+    : `Prix : ${SHOP_PRICES[pack]} coins · Aperçu uniquement, rien n’est sauvegardé`;
+  features.innerHTML = item.features.map(([emoji, t, text]) => `
+    <div class="feature">
+      <div class="feature-emoji">${emoji}</div>
+      <div class="feature-copy"><strong>${t}</strong><span>${text}</span></div>
+    </div>
+  `).join('');
+  bg.classList.add('show');
+}
+
+function closePreview() {
+  document.getElementById('preview-modal-bg')?.classList.remove('show');
 }
 
 async function loadShop() {
