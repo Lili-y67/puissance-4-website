@@ -304,8 +304,17 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
-  const p1Coins = isSuspect ? 0 : (1 + Math.floor(Math.random() * 3));
-  const p2Coins = isSuspect ? 0 : (1 + Math.floor(Math.random() * 3));
+  const coinBoost = (() => {
+    try {
+      const multiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
+      const expiresAt = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0);
+      return expiresAt > Date.now() ? Math.max(1, multiplier) : 1;
+    } catch(e) {
+      return 1;
+    }
+  })();
+  const p1Coins = isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p2Coins = isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
 
   if (!isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
@@ -349,6 +358,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     globalMultiplier,
     vipMultiplier,
     vipTier,
+    coinBoostMultiplier: coinBoost,
     coins: {
       [game.player1_id]: p1Coins,
       [game.player2_id]: p2Coins,

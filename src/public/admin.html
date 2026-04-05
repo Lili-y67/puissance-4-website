@@ -192,8 +192,8 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Boosts ELO</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gestion du boost global et suivi des boosts VIP actifs.</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Boosts</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gestion du boost ELO global, du boost coins et suivi des boosts VIP actifs.</div>
       </div>
       <div id="boost-status" style="font-size:13px;color:var(--muted);"></div>
     </div>
@@ -210,7 +210,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
 
     <div id="boost-panel-global">
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
         <div style="flex:1;min-width:220px;">
           <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Multiplicateur global</div>
           <input id="boost-slider" type="range" min="1" max="2" step="0.1" value="1"
@@ -223,6 +223,27 @@ tr:hover td{background:rgba(255,255,255,0.02)}
         <div id="boost-global-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);" onclick="setBoost(Number(document.getElementById('boost-slider').value))">Appliquer</button>
           <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1)">Désactiver</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Boost coins</div>
+          <input id="coin-boost-slider" type="range" min="1" max="10" step="1" value="1"
+            style="width:100%;accent-color:#ff9f0a;"
+            oninput="document.getElementById('coin-boost-val').textContent = Math.ceil(Number(this.value)) + 'x'">
+        </div>
+        <div style="min-width:72px;text-align:center;">
+          <div id="coin-boost-val" style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--orange);">1x</div>
+        </div>
+        <div style="min-width:160px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Durée</div>
+          <input id="coin-boost-duration" type="number" min="1" max="1440" value="60" class="search-input" style="margin:0;height:40px" placeholder="Minutes">
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;">Durée custom, max 24h.</div>
+        </div>
+        <div id="coin-boost-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-sm" style="background:rgba(255,159,10,0.16);color:var(--orange);border:1px solid rgba(255,159,10,0.3);" onclick="setCoinBoost(Math.ceil(Number(document.getElementById('coin-boost-slider').value)), Math.ceil(Number(document.getElementById('coin-boost-duration').value)))">Appliquer</button>
+          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setCoinBoost(1,0)">Désactiver</button>
         </div>
       </div>
     </div>
@@ -336,7 +357,10 @@ async function showPanel() {
   }
   const globalActions = document.getElementById('boost-global-actions');
   if (globalActions) globalActions.style.display = myRole === 'admin' ? 'flex' : 'none';
+  const coinActions = document.getElementById('coin-boost-actions');
+  if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   await loadBoostStatus();
+  await loadCoinBoostStatus();
   await loadVipBoosts();
   await loadPlayers();
 }
@@ -847,15 +871,55 @@ async function loadBoostStatus() {
     }
   } catch(e) {}
 }
+
+async function loadCoinBoostStatus() {
+  try {
+    const data = await api('GET', '/api/admin/coin-boost');
+    const el = document.getElementById('boost-status');
+    if (!el) return;
+    const coinVal = document.getElementById('coin-boost-val');
+    const coinSlider = document.getElementById('coin-boost-slider');
+    if (coinSlider) coinSlider.value = Math.ceil(Number(data.multiplier || 1));
+    if (coinVal) coinVal.textContent = Math.ceil(Number(data.multiplier || 1)) + 'x';
+    const durationInput = document.getElementById('coin-boost-duration');
+    if (durationInput && data.remainingMs > 0) {
+      durationInput.value = Math.max(1, Math.ceil(Number(data.remainingMs || 0) / 60000));
+    }
+    const coinLine = data.active
+      ? `<span style="color:var(--orange)"> · Coins : <strong>x${Math.ceil(Number(data.multiplier || 1))}</strong> (${Math.ceil(Number(data.remainingMs || 0) / 60000)} min)</span>`
+      : `<span style="color:var(--muted)"> · Coins : x1</span>`;
+    if (el.innerHTML.includes('Coins')) {
+      el.innerHTML = el.innerHTML.replace(/<span style="color:var\(--orange\)"> · Coins[\s\S]*?<\/span>|<span style="color:var\(--muted\)"> · Coins : x1<\/span>/, coinLine);
+    } else {
+      el.innerHTML += coinLine;
+    }
+  } catch(e) {}
+}
+
 async function setBoost(mult) {
   try {
     await api('POST', '/api/admin/boost', { multiplier: mult });
     await loadBoostStatus();
+    await loadCoinBoostStatus();
     const t = document.createElement('div');
     t.textContent = mult > 1 ? `Boost x${mult} activé !` : 'Boost désactivé';
     Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
     document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
   } catch(e) {}
+}
+
+async function setCoinBoost(mult, durationMinutes) {
+  try {
+    await api('POST', '/api/admin/coin-boost', { multiplier: mult, durationMinutes });
+    await loadBoostStatus();
+    await loadCoinBoostStatus();
+    const t = document.createElement('div');
+    t.textContent = mult > 1 && durationMinutes > 0 ? `Boost coins x${Math.ceil(mult)} activé !` : 'Boost coins désactivé';
+    Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
+  } catch(e) {
+    alert('Erreur boost coins.');
+  }
 }
 
 </script>

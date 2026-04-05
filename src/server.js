@@ -2061,6 +2061,41 @@ app.post('/api/admin/boost', (req, res) => {
   res.json({ ok: true, multiplier: m });
 });
 
+app.get('/api/admin/coin-boost', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const multiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
+  const expiresAt = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0);
+  const now = Date.now();
+  const active = expiresAt > now && multiplier > 1;
+  res.json({
+    active,
+    multiplier: active ? multiplier : 1,
+    expiresAt: active ? expiresAt : null,
+    remainingMs: active ? (expiresAt - now) : 0,
+  });
+});
+
+app.post('/api/admin/coin-boost', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
+  const multiplier = Math.ceil(Number(req.body?.multiplier || 1));
+  const durationMinutes = Math.ceil(Number(req.body?.durationMinutes || 0));
+  if (!Number.isFinite(multiplier) || multiplier < 1 || multiplier > 10) {
+    return res.status(400).json({ error: 'Multiplicateur invalide (1 a 10).' });
+  }
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 0 || durationMinutes > 1440) {
+    return res.status(400).json({ error: 'Duree invalide (max 24h).' });
+  }
+  if (multiplier === 1 || durationMinutes === 0) {
+    db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', '1') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+    db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', '0') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+    return res.json({ ok: true, multiplier: 1, expiresAt: null });
+  }
+  const expiresAt = Date.now() + durationMinutes * 60 * 1000;
+  db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
+  db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(expiresAt));
+  res.json({ ok: true, multiplier, expiresAt });
+});
+
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
