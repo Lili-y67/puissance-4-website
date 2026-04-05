@@ -312,6 +312,22 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;
   text-transform:uppercase;color:var(--muted);
 }
+.avatar-decoration-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:2200;padding:20px;align-items:center;justify-content:center}
+.avatar-decoration-modal-bg.show{display:flex}
+.avatar-decoration-modal{width:min(960px,100%);max-height:min(86vh,900px);overflow:auto;background:linear-gradient(180deg,rgba(16,16,26,0.98),rgba(12,12,22,0.98));border:1px solid rgba(133,235,255,0.16);border-radius:22px;box-shadow:0 20px 80px rgba(0,0,0,0.45),0 0 40px rgba(133,235,255,0.08);padding:22px}
+.avatar-decoration-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.avatar-decoration-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:#e6faff}
+.avatar-decoration-modal-sub{font-size:12px;color:var(--muted);line-height:1.5;max-width:560px}
+.avatar-decoration-modal-close{width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);cursor:pointer;font-size:20px;line-height:1}
+.avatar-decoration-modal-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px}
+.avatar-decoration-sidecard{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.avatar-decoration-sidecard .avatar-decoration-preview{width:112px;height:112px;margin:0 auto}
+.avatar-decoration-modal-actions{display:flex;flex-direction:column;gap:10px}
+@media (max-width: 760px){
+  .avatar-decoration-modal{padding:18px 16px}
+  .avatar-decoration-modal-layout{grid-template-columns:1fr}
+  .avatar-decoration-modal-head{align-items:center}
+}
 
 /* â”€â”€ Search bar â”€â”€ */
 .search-wrap{
@@ -1138,11 +1154,34 @@ function render(player, games, following, followers, followStatus) {
         </div>
         <div class="avatar-decoration-meta" id="avatar-decoration-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
       </div>
-      <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
       <div style="font-size:11px;color:var(--muted);line-height:1.5">
         Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)"> lili_crystal_</strong>
       </div>
-      <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
+      <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Choisir une décoration</button>
+    </div>
+    <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
+      <div class="avatar-decoration-modal">
+        <div class="avatar-decoration-modal-head">
+          <div>
+            <div class="avatar-decoration-modal-title">Décorations Avatar</div>
+            <div class="avatar-decoration-modal-sub">Choisis une décoration de la collection VIP+ puis applique-la quand le rendu te plaît. La prévisualisation se met à jour immédiatement.</div>
+          </div>
+          <button class="avatar-decoration-modal-close" type="button" onclick="closeAvatarDecorationPicker()">×</button>
+        </div>
+        <div class="avatar-decoration-modal-layout">
+          <div class="avatar-decoration-sidecard">
+            <div class="avatar-decoration-preview" id="avatar-decoration-modal-preview">
+              <div class="base" id="avatar-decoration-modal-base">${avatarHtml}</div>
+              <div class="overlay" id="avatar-decoration-modal-overlay">${avatarDecorationSrc ? `<img src="${avatarDecorationSrc}" alt="décoration">` : ''}</div>
+            </div>
+            <div class="avatar-decoration-meta" id="avatar-decoration-modal-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
+            <div class="avatar-decoration-modal-actions">
+              <button class="avatar-decoration-btn" id="avatar-decoration-apply-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
+            </div>
+          </div>
+          <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Carte mot de passe admin -->
@@ -1854,7 +1893,8 @@ async function saveSelectedAvatarDecoration() {
   const nextValue = String(pendingAvatarDecoration === null ? (me.avatar_decoration || '') : pendingAvatarDecoration || '');
   const currentValue = String(me.avatar_decoration || '');
   if (nextValue === currentValue) return;
-  await uploadAvatarDecorationData(nextValue, me);
+  const ok = await uploadAvatarDecorationData(nextValue, me);
+  if (ok) closeAvatarDecorationPicker();
 }
 
 async function confirmImageEditor() {
@@ -2606,8 +2646,11 @@ function openTokenEmojiPicker() {
 function refreshAvatarDecorationPreview(player = currentPlayer) {
   const overlay = document.getElementById('avatar-decoration-overlay');
   const headerOverlay = document.getElementById('avatar-decoration-el');
+  const modalOverlay = document.getElementById('avatar-decoration-modal-overlay');
   const meta = document.getElementById('avatar-decoration-meta');
+  const modalMeta = document.getElementById('avatar-decoration-modal-meta');
   const btn = document.getElementById('avatar-decoration-btn');
+  const applyBtn = document.getElementById('avatar-decoration-apply-btn');
   const effectiveDecoration = pendingAvatarDecoration === null
     ? String(player?.avatar_decoration || '')
     : String(pendingAvatarDecoration || '');
@@ -2617,22 +2660,40 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
   const hasPendingChange = pendingAvatarDecoration !== null && String(pendingAvatarDecoration || '') !== String(player?.avatar_decoration || '');
   if (overlay) overlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
   if (headerOverlay) headerOverlay.innerHTML = src ? `<img src="${src}" alt="décoration avatar">` : '';
+  if (modalOverlay) modalOverlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
+  const message = !isVipPlusTier
+    ? 'Reserve au role VIP+.'
+    : hasPendingChange
+      ? 'Clique sur Appliquer la sélection pour enregistrer cette décoration.'
+    : remaining > 0
+      ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 24h.`
+      : src
+        ? 'Décoration active. Tu peux la modifier toutes les 24h.'
+        : 'Choisis une décoration de la collection VIP+. Changement toutes les 24h.';
+  const messageColor = remaining > 0 || hasPendingChange ? '#85EBFF' : 'var(--muted)';
   if (meta) {
-    meta.textContent = !isVipPlusTier
-      ? 'Reserve au role VIP+.'
-      : hasPendingChange
-        ? 'Clique sur Appliquer la sélection pour enregistrer cette décoration.'
-      : remaining > 0
-        ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 24h.`
-        : src
-          ? 'Décoration active. Tu peux la modifier toutes les 24h.'
-          : 'Choisis une décoration de la collection VIP+. Changement toutes les 24h.';
-    meta.style.color = remaining > 0 || hasPendingChange ? '#85EBFF' : 'var(--muted)';
+    meta.textContent = message;
+    meta.style.color = messageColor;
+  }
+  if (modalMeta) {
+    modalMeta.textContent = message;
+    modalMeta.style.color = messageColor;
   }
   if (btn) {
-    btn.disabled = !isVipPlusTier || remaining > 0 || !hasPendingChange;
-    btn.textContent = hasPendingChange ? 'Appliquer la sélection' : (remaining > 0 ? 'Décoration active' : 'Déjà appliquée');
+    btn.disabled = !isVipPlusTier;
+    btn.textContent = !isVipPlusTier
+      ? 'Reserve VIP+'
+      : hasPendingChange
+        ? 'Continuer la sélection'
+        : src ? 'Changer la décoration' : 'Choisir une décoration';
     btn.title = !isVipPlusTier
+      ? 'Reserve au role VIP+'
+      : 'Ouvrir la galerie des décorations';
+  }
+  if (applyBtn) {
+    applyBtn.disabled = !isVipPlusTier || remaining > 0 || !hasPendingChange;
+    applyBtn.textContent = hasPendingChange ? 'Appliquer la sélection' : (remaining > 0 ? 'Décoration active' : 'Déjà appliquée');
+    applyBtn.title = !isVipPlusTier
       ? 'Reserve au role VIP+'
       : remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}`
@@ -2644,7 +2705,15 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
 }
 
 function openAvatarDecorationPicker() {
-  return;
+  const bg = document.getElementById('avatar-decoration-modal-bg');
+  if (!bg) return;
+  bg.classList.add('show');
+  renderAvatarDecorationGallery(currentPlayer);
+  refreshAvatarDecorationPreview(currentPlayer);
+}
+
+function closeAvatarDecorationPicker() {
+  document.getElementById('avatar-decoration-modal-bg')?.classList.remove('show');
 }
 
 async function toggleAdminPwd() {
@@ -3174,5 +3243,3 @@ load();
 <script src="/presence.js"></script>
 </body>
 </html>
-
-
