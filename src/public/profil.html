@@ -673,6 +673,7 @@ let isOwnProfile  = false;
 let uploadChooserTarget = null;
 const GIF_URL_CACHE = new Map();
 let avatarDecorationLibrary = [];
+let profileShopInventory = {};
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -701,6 +702,31 @@ async function loadAvatarDecorationLibrary() {
   } catch {
     avatarDecorationLibrary = [];
   }
+}
+
+async function loadProfileShopInventory() {
+  const token = localStorage.getItem('token');
+  if (!token || !isOwnProfile) {
+    profileShopInventory = {};
+    return;
+  }
+  try {
+    const res = await fetch('/api/shop/me', { headers: { 'x-session-token': token } });
+    const data = await res.json();
+    profileShopInventory = data?.inventory && typeof data.inventory === 'object' ? data.inventory : {};
+  } catch {
+    profileShopInventory = {};
+  }
+}
+
+function getProfileBoosterCounts() {
+  const elo = Number(profileShopInventory.elo_mini || 0)
+    + Number(profileShopInventory.elo_classic || 0)
+    + Number(profileShopInventory.elo_max || 0)
+    + Number(profileShopInventory.elo_princess || 0);
+  const coins = Number(profileShopInventory.coin_boost || 0)
+    + Number(profileShopInventory.coin_boost_plus || 0);
+  return { elo, coins };
 }
 
 function getVipMediaRemainingMs() {
@@ -773,6 +799,7 @@ function formatRemainingTime(ms) {
 
 async function load() {
   await loadAvatarDecorationLibrary();
+  await loadProfileShopInventory();
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
   viewerPlayer   = saved ? JSON.parse(saved) : null;
@@ -876,6 +903,7 @@ function render(player, games, following, followers, followStatus) {
          ${followStatus.isFollowing ? '✓ Suivi' : '+ Suivre'}
        </button>`
     : '';
+  const boosterCounts = isOwnProfile ? getProfileBoosterCounts() : { elo: 0, coins: 0 };
 
   document.getElementById('content').innerHTML = `
     <!-- Header -->
@@ -930,6 +958,17 @@ function render(player, games, following, followers, followStatus) {
               &#9889; BOOST ${isPerso(player) ? 'PERSO' : isVipPlus(player) ? 'VIP+' : 'VIP'}
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
+          </div>` : ''}
+          ${isOwnProfile ? `
+          <div id="profile-boosters-wrap" style="margin-top:4px;display:flex;flex-direction:column;gap:6px;width:100%">
+            <button id="profile-elo-booster-btn" onclick="openOwnedBooster('elo')" ${boosterCounts.elo <= 0 ? 'disabled' : ''}
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.elo > 0 ? 'rgba(255,214,10,0.32)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.elo > 0 ? 'rgba(255,214,10,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.elo > 0 ? '#ffd60a' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.elo > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
+              ⚡ Booster ELO${boosterCounts.elo > 0 ? ` · ${boosterCounts.elo}` : ''}
+            </button>
+            <button id="profile-coin-booster-btn" onclick="openOwnedBooster('coins')" ${boosterCounts.coins <= 0 ? 'disabled' : ''}
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.35)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.coins > 0 ? '#ff9f0a' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.coins > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
+              🪙 Booster Coins${boosterCounts.coins > 0 ? ` · ${boosterCounts.coins}` : ''}
+            </button>
           </div>` : ''}
           ${isOwnProfile ? `
           <label class="toggle-wrap" style="margin-top:4px;">
@@ -992,10 +1031,10 @@ function render(player, games, following, followers, followStatus) {
         <span class="save-confirm" id="pseudo-confirm">✓ Enregistré !</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="profile-pseudo-input" class="search-input" style="max-width:260px;margin:0" type="text" maxlength="20" value="${player.pseudo.replace(/"/g, '&quot;')}">
+        <input id="profile-pseudo-input" class="search-input" style="max-width:260px;margin:0" type="text" maxlength="16" value="${player.pseudo.replace(/"/g, '&quot;')}">
         <button class="btn-save-color" id="btn-save-pseudo" onclick="saveProfilePseudo()">✏️ Enregistrer</button>
       </div>
-      <div style="font-size:11px;color:var(--muted)">Tu peux changer ton pseudo directement depuis ton profil.</div>
+      <div style="font-size:11px;color:var(--muted)">3 à 16 caractères. Changement possible une fois tous les 30 jours.</div>
     </div>
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -1082,6 +1121,9 @@ function render(player, games, following, followers, followStatus) {
         <div class="avatar-decoration-meta" id="avatar-decoration-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
       </div>
       <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">
+        Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)">lili_crystal_</strong>
+      </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
     </div>
 
@@ -2192,6 +2234,15 @@ async function activateVipBoost() {
     stat.textContent = `Se termine dans ${mins} min`;
     stat.style.color = accent;
   } catch(e) { alert('Erreur réseau'); }
+}
+
+function openOwnedBooster(kind) {
+  const counts = getProfileBoosterCounts();
+  if (kind === 'elo' && counts.elo <= 0) return;
+  if (kind === 'coins' && counts.coins <= 0) return;
+  alert(kind === 'elo'
+    ? `Tu as ${counts.elo} booster(s) ELO dans ton inventaire.`
+    : `Tu as ${counts.coins} booster(s) Coins dans ton inventaire.`);
 }
 
 // â”€â”€ Auto-rejoin toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

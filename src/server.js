@@ -141,6 +141,7 @@ function validateSession(token) {
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 
 function getAvatarDecorationPaths() {
@@ -1428,13 +1429,24 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
   const { pseudo, token } = req.body;
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
   const nextPseudo = String(pseudo || '').trim();
-  if (!/^[A-Za-z0-9_.-]{3,20}$/.test(nextPseudo)) {
-    return res.status(400).json({ error: 'Pseudo invalide. Utilise 3 a 20 caracteres (lettres, chiffres, _, -, .).' });
+  if (!/^[A-Za-z0-9_.-]{3,16}$/.test(nextPseudo)) {
+    return res.status(400).json({ error: 'Pseudo invalide. Utilise 3 a 16 caracteres (lettres, chiffres, _, -, .).' });
   }
   const existing = pQ.getByPseudo.get(nextPseudo);
   if (existing && Number(existing.id) !== id) return res.status(409).json({ error: 'Pseudo deja pris.' });
+  if (String(player.pseudo || '').toLowerCase() === nextPseudo.toLowerCase()) {
+    return res.json({ ok: true, pseudo: player.pseudo, unchanged: true });
+  }
+  const remaining = Number(player.pseudo_changed_at || 0) + PSEUDO_CHANGE_COOLDOWN_MS - Date.now();
+  if (remaining > 0) {
+    const days = Math.ceil(remaining / (24 * 60 * 60 * 1000));
+    return res.status(429).json({ error: `Pseudo modifiable dans ${days} jour(s).`, remainingMs: remaining });
+  }
   pQ.updatePseudo.run({ pseudo: nextPseudo, id });
+  pQ.updatePseudoChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true, pseudo: nextPseudo });
 });
 
