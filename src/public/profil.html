@@ -708,12 +708,13 @@ function getPremiumTier(player = currentPlayer) {
 }
 
 function getVipAccent(player = currentPlayer) {
-  if (isPerso(player)) {
-    return { color: '#ff7a45', bg: 'rgba(255,122,69,0.14)', border: 'rgba(255,122,69,0.36)', label: 'PERSO' };
-  }
   return isVipPlus(player)
     ? { color: '#85EBFF', bg: 'rgba(133,235,255,0.14)', border: 'rgba(133,235,255,0.42)', label: 'VIP+' }
     : { color: '#ffd60a', bg: 'rgba(255,214,10,0.14)', border: 'rgba(255,214,10,0.32)', label: 'VIP' };
+}
+
+function getPersoAccent() {
+  return { color: '#ff7a45', bg: 'rgba(255,122,69,0.14)', border: 'rgba(255,122,69,0.36)', label: 'PERSO' };
 }
 
 function getVipExpiryLabel(player = currentPlayer) {
@@ -851,8 +852,8 @@ function render(player, games, following, followers, followStatus) {
         <div class="profile-info">
           <div class="profile-pseudo">${player.pseudo}</div>
           <div class="profile-badges">
-            ${player.is_vip ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getVipAccent(player).bg};color:${getVipAccent(player).color};border:1px solid ${getVipAccent(player).border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; ${getVipAccent(player).label}</span>` : ''}
-            ${player.is_perso ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,122,69,0.14);color:#ff7a45;border:1px solid rgba(255,122,69,0.36);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; PERSO</span>` : ''}
+            ${(player.is_vip || player.is_vip_plus) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getVipAccent(player).bg};color:${getVipAccent(player).color};border:1px solid ${getVipAccent(player).border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; ${getVipAccent(player).label}</span>` : ''}
+            ${player.is_perso ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
             ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 14px ${player.custom_role_color}55,inset 0 0 10px ${player.custom_role_color}18;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${player.custom_role_emoji ? `<span style="margin-right:4px">${player.custom_role_emoji}</span>` : ''}${String(player.custom_role_text).toUpperCase()}</span>` : ''}
@@ -980,12 +981,33 @@ function render(player, games, following, followers, followStatus) {
         </div>
         <div class="color-picker-inline">
           <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">
-          <span>Dégradé</span>
+          <span>Couleur 2</span>
+        </div>
+        <div class="color-custom-wrap" title="Aperçu du dégradé">
+          <div class="color-dot" id="profil-color-gradient-dot"></div>
+          <div class="color-hex" id="profil-color-gradient-hex">Aperçu</div>
         </div>` : ''}
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
       ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
     </div>
+    ${isPerso(player) ? `
+    <div class="color-card" id="perso-role-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Badge Perso</span>
+        <span class="save-confirm" id="perso-role-confirm">✓ Enregistré !</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input id="perso-role-text-input" class="search-input" style="max-width:140px;margin:0" type="text" maxlength="6" placeholder="LILI" value="${String(player.custom_role_text || '').replace(/"/g, '&quot;')}">
+        <input id="perso-role-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="✨" value="${String(player.custom_role_emoji || '').replace(/"/g, '&quot;')}">
+        <div class="color-picker-inline" style="min-width:132px">
+          <input type="color" id="perso-role-color-input" value="${player.custom_role_color || '#FF7A45'}">
+          <span>Couleur</span>
+        </div>
+        <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 6 caractères.</div>
+    </div>` : ''}
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Forme de pion</span>
@@ -2187,6 +2209,7 @@ function initColorPicker(currentColor) {
 function onProfilColorInput(c) {
   selectedProfilColor = c;
   updateColorDot(c);
+  updateGradientPreview();
   document.querySelectorAll('.color-preset').forEach(d => d.classList.remove('active'));
 }
 
@@ -2194,13 +2217,8 @@ function updateColorDot(c) {
   const dot = document.getElementById('profil-color-dot');
   const hex = document.getElementById('profil-color-hex');
   if (dot) {
-    if (canUseGradient(currentPlayer) && selectedProfilSecondaryColor) {
-      dot.style.background = `linear-gradient(135deg, ${selectedProfilSecondaryColor}, ${c})`;
-      dot.style.boxShadow = `0 0 10px ${c}55`;
-    } else {
-      dot.style.background = c;
-      dot.style.boxShadow = '';
-    }
+    dot.style.background = c;
+    dot.style.boxShadow = `0 0 10px ${c}55`;
   }
   if (hex) hex.textContent = c.toUpperCase();
 }
@@ -2214,7 +2232,22 @@ function onProfilSecondaryColorInput(c) {
     dot.style.boxShadow = selectedProfilSecondaryColor ? `0 0 10px ${selectedProfilSecondaryColor}55` : '';
   }
   if (hex) hex.textContent = (selectedProfilSecondaryColor || '#85EBFF').toUpperCase();
-  updateColorDot(selectedProfilColor);
+  updateGradientPreview();
+}
+
+function updateGradientPreview() {
+  const dot = document.getElementById('profil-color-gradient-dot');
+  const hex = document.getElementById('profil-color-gradient-hex');
+  if (!dot) return;
+  if (canUseGradient(currentPlayer) && selectedProfilSecondaryColor) {
+    dot.style.background = `linear-gradient(135deg, ${selectedProfilColor}, ${selectedProfilSecondaryColor})`;
+    dot.style.boxShadow = `0 0 10px ${selectedProfilColor}55, 0 0 16px ${selectedProfilSecondaryColor}33`;
+    if (hex) hex.textContent = 'Aperçu';
+  } else {
+    dot.style.background = selectedProfilColor;
+    dot.style.boxShadow = `0 0 10px ${selectedProfilColor}55`;
+    if (hex) hex.textContent = 'Simple';
+  }
 }
 
 function hexToRgb(hex) {
@@ -2884,6 +2917,50 @@ async function saveProfilePseudo() {
   } finally {
     btn.disabled = false;
     btn.textContent = '✏️ Enregistrer';
+  }
+}
+
+async function saveProfileCustomRole() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  const textInput = document.getElementById('perso-role-text-input');
+  const emojiInput = document.getElementById('perso-role-emoji-input');
+  const colorInput = document.getElementById('perso-role-color-input');
+  const btn = document.getElementById('btn-save-perso-role');
+  const text = String(textInput?.value || '').trim().slice(0, 6);
+  const emoji = [...String(emojiInput?.value || '').trim()][0] || '';
+  const color = String(colorInput?.value || '#FF7A45').toUpperCase();
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await fetch(`/api/players/${me.id}/custom-role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, emoji, color, token: localStorage.getItem('token') }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Impossible d enregistrer le badge perso.');
+      return;
+    }
+    const patch = {
+      custom_role_text: data.text ?? text,
+      custom_role_color: data.color ?? (text ? color : ''),
+      custom_role_emoji: data.emoji ?? (text ? emoji : ''),
+    };
+    if (currentPlayer) Object.assign(currentPlayer, patch);
+    Object.assign(me, patch);
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    const confirm = document.getElementById('perso-role-confirm');
+    if (confirm) {
+      confirm.style.opacity = '1';
+      setTimeout(() => confirm.style.opacity = '0', 2000);
+    }
+    await load();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Enregistrer';
   }
 }
 

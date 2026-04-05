@@ -454,7 +454,7 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
         updatedTarget?.role || target.role,
         Number(updatedTarget?.is_vip || 0) === 1,
         Number(updatedTarget?.is_vip_plus || 0) === 1,
-        !!String(updatedTarget?.custom_role_text || '').trim()
+        Number(updatedTarget?.is_perso || 0) === 1
       );
     } catch(e) {}
     // DM de notification
@@ -512,6 +512,44 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
     ).catch(() => {});
   }
   res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/custom-role', (req, res) => {
+  const id = Number(req.params.id);
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId || playerId !== id) return res.status(401).json({ error: 'Session invalide.' });
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (Number(target.is_perso || 0) !== 1) {
+    return res.status(403).json({ error: 'Le badge personnalise est reserve au pack Perso.' });
+  }
+
+  const rawText = String(req.body?.text || '').trim();
+  const rawColor = String(req.body?.color || '').trim();
+  const rawEmoji = String(req.body?.emoji || '').trim();
+  if (rawText.length > 6) return res.status(400).json({ error: 'Le badge perso doit faire 6 caracteres max.' });
+  if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise.' });
+  if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
+  const emoji = rawEmoji ? [...rawEmoji][0] : '';
+  const nextColor = rawText ? rawColor.toUpperCase() : '';
+
+  pQ.updateCustomRole.run({
+    id,
+    text: rawText,
+    color: nextColor,
+    emoji: rawText ? emoji : '',
+  });
+
+  try {
+    WH.wlogAdminAction('Badge perso profil', target.pseudo, id, [
+      ['Texte', rawText || 'aucun', true],
+      ['Couleur', nextColor || 'aucune', true],
+      ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
+    ]);
+  } catch(e) {}
+
+  res.json({ ok: true, text: rawText, color: nextColor, emoji: rawText ? emoji : '' });
 });
 
 // Changer le pseudo
