@@ -136,8 +136,6 @@ body{
 .preview-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 12px rgba(255,255,255,.14))}
 .preview-profile-main{flex:1;min-width:0}
 .preview-name-wrap{position:relative;min-height:34px;display:flex;align-items:center}
-.preview-name-plaque{position:absolute;left:0;right:0;top:50%;height:22px;transform:translateY(-50%);border-radius:999px;background-size:cover;background-repeat:no-repeat;background-position:center;border:1px solid rgba(255,255,255,.08);overflow:hidden;opacity:.98;box-shadow:0 8px 20px rgba(0,0,0,.18)}
-.preview-name-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.70) 0%, rgba(7,7,14,.24) 48%, rgba(7,7,14,.58) 100%)}
 .preview-profile-name{font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.95;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-profile-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .preview-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
@@ -535,11 +533,10 @@ function getDisplayItem(pack) {
     return {
       ...item,
       badge: '✨ Perso',
-      meta: 'Le pack identité pour les profils spéciaux : badge perso, bannière pseudo et bonus dédié.',
+      meta: 'Le pack identité pour les profils spéciaux : badge perso, décoration avatar et bonus dédié.',
       features: [
         ['🏷️', 'Badge personnalisé', 'Texte, couleur et emoji dédiés sur ton profil.'],
         ['🌈', 'Dégradé', 'Ajoute une seconde couleur pour un pion en dégradé.'],
-        ['🪧', 'Bannière pseudo', 'Choisis une plaque nominative visible dans la recherche profil.'],
         ['📥', 'Replay HTML', 'Télécharge une partie en HTML autonome depuis le replay.'],
         ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
       ]
@@ -699,9 +696,6 @@ function renderPreviewShowcase(item) {
   const tokenStyle = item.key === 'vip_plus' || item.key === 'perso'
     ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
     : `background:${state.primary};`;
-  const pseudoBanner = state.banner && item.key === 'perso'
-    ? `<div class="preview-profile-banner-strip" style="background-image:url('${state.banner}')"></div>`
-    : '';
   const decoration = state.decoration
     ? `<div class="preview-avatar-decoration"><img src="${state.decoration}" alt=""></div>`
     : '';
@@ -712,9 +706,7 @@ function renderPreviewShowcase(item) {
     : item.theme === 'perso' ? 'style="color:var(--orange);border-color:rgba(255,122,69,.28);background:rgba(255,122,69,.08)"'
     : 'style="color:var(--yellow);border-color:rgba(255,214,10,.26);background:rgba(255,214,10,.08)"';
   return `<div class="preview-profile">
-    <div class="preview-profile-banner">
-      ${pseudoBanner}
-    </div>
+    <div class="preview-profile-banner"></div>
     <div class="preview-profile-body">
       <div class="preview-avatar-wrap">
         <div class="preview-avatar gifish" style="${avatarStyle}">${state.avatar ? `<img src="${state.avatar}" alt="${escapeHtml(state.name)}">` : `<span>${escapeHtml(state.name.slice(0,1).toUpperCase())}</span>`}</div>
@@ -722,7 +714,6 @@ function renderPreviewShowcase(item) {
       </div>
       <div class="preview-profile-main">
         <div class="preview-name-wrap">
-          ${item.key === 'perso' && state.banner ? `<div class="preview-name-plaque" style="background-image:url('${state.banner}')"></div>` : ''}
           <div class="preview-profile-name" style="position:relative;z-index:1;padding:0 10px">${escapeHtml(state.name)}</div>
         </div>
         <div class="preview-profile-badges">
@@ -734,9 +725,9 @@ function renderPreviewShowcase(item) {
             <div class="preview-token-dot" style="${tokenStyle}"></div>
             ${(item.key === 'vip_plus' || item.key === 'perso') ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
           </div>
-          <div class="preview-chip">${item.key === 'perso' ? 'Deco + plaque' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
+          <div class="preview-chip">${item.key === 'perso' ? 'Deco active' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
         </div>
-        <div class="preview-subline">${item.key === 'perso' ? 'Deco aleatoire, banniere pseudo, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
+        <div class="preview-subline">${item.key === 'perso' ? 'Deco aleatoire, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
         <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' ? 'Activer Boost VIP+ (+30%)' : 'Activer Boost VIP (+20%)'}</div>
       </div>
     </div>
