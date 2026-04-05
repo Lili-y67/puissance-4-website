@@ -64,10 +64,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px;
   transition: all 0.4s; position:relative; overflow:hidden;
 }
-.lobby-plaque{position:absolute;left:10px;right:10px;top:10px;height:30px;border-radius:999px;background-size:cover;background-position:center;opacity:.95;border:1px solid rgba(255,255,255,.08);display:none}
-.lobby-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,14,.72),rgba(7,7,14,.25),rgba(7,7,14,.72));border-radius:inherit}
+.lobby-plaque{position:absolute;left:82px;right:12px;top:12px;height:22px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;opacity:.95;border:1px solid rgba(255,255,255,.08);display:none}
+.lobby-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,14,.94) 0%,rgba(7,7,14,.82) 38%,rgba(7,7,14,.28) 72%,rgba(7,7,14,.08) 100%);border-radius:inherit}
 .lobby-player.has-plaque .lobby-plaque{display:block}
-.lobby-player.has-plaque{padding-top:50px}
+.lobby-player.has-plaque{padding-top:44px}
 .lobby-player.p1 { border-color: var(--p1); box-shadow: 0 0 32px var(--p1-dim); }
 .lobby-player.p2 { border-color: var(--p2); box-shadow: 0 0 32px var(--p2-dim); }
 
@@ -108,10 +108,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   padding: 12px 16px; display: flex; align-items: center; gap: 10px;
   transition: all 0.3s; position: relative; overflow: hidden;
 }
-.player-card-banner{position:absolute;left:10px;right:10px;top:10px;height:22px;border-radius:999px;background-size:cover;background-position:center;display:none;border:1px solid rgba(255,255,255,.07);opacity:.95}
-.player-card-banner::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(9,10,20,.78),rgba(9,10,20,.26),rgba(9,10,20,.78))}
+.player-card-banner{position:absolute;left:72px;right:10px;top:10px;height:18px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;display:none;border:1px solid rgba(255,255,255,.07);opacity:.95}
+.player-card-banner::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(9,10,20,.94) 0%,rgba(9,10,20,.82) 40%,rgba(9,10,20,.26) 74%,rgba(9,10,20,.08) 100%)}
 .player-card.has-plaque .player-card-banner{display:block}
-.player-card.has-plaque{padding-top:36px}
+.player-card.has-plaque{padding-top:32px}
 .player-card::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .player-card.p1::after { background: linear-gradient(135deg, var(--p1-dim), transparent); }
 .player-card.p2::after { background: linear-gradient(225deg, var(--p2-dim), transparent); }

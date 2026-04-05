@@ -197,13 +197,13 @@ input[type="file"]{display:none;}
 .player-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
 .player-row-content,.search-result-content{position:relative;z-index:1;display:flex;align-items:center;gap:12px;width:100%}
 .pseudo-banner-strip{
-  position:absolute;left:54px;right:52px;top:9px;bottom:9px;border-radius:10px;
-  background-size:cover;background-position:center;pointer-events:none;z-index:0;opacity:.98;
+  position:absolute;left:92px;right:12px;top:9px;bottom:9px;border-radius:10px;
+  background-size:auto 100%;background-repeat:no-repeat;background-position:right center;pointer-events:none;z-index:0;opacity:.96;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04);
 }
 .pseudo-banner-strip::after{
   content:'';position:absolute;inset:0;
-  background:linear-gradient(90deg,rgba(14,14,24,0.9) 0%,rgba(14,14,24,0.46) 34%,rgba(14,14,24,0.46) 66%,rgba(14,14,24,0.9) 100%);
+  background:linear-gradient(90deg,rgba(14,14,24,0.95) 0%,rgba(14,14,24,0.88) 42%,rgba(14,14,24,0.36) 74%,rgba(14,14,24,0.10) 100%);
 }
 .player-mini-avatar{width:36px;height:36px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:900;}
 .player-mini-avatar img{width:100%;height:100%;object-fit:cover;}
@@ -2325,7 +2325,7 @@ function renderAcList(players) {
       ? `<img src="${getRenderableMediaSrc(p.avatar)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
       : `<div style="width:28px;height:28px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${color};">${p.pseudo[0].toUpperCase()}</div>`;
     return `<div class="ac-item" data-index="${i}" onclick="selectAc(${i})" style="position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.1s;overflow:hidden;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-      ${plaque ? `<div style="position:absolute;inset:0;background-image:linear-gradient(90deg,rgba(7,7,14,0.92),rgba(7,7,14,0.42) 45%,rgba(7,7,14,0.82)),url('${plaque}');background-size:cover;background-position:center;opacity:.96;pointer-events:none"></div>` : ''}
+      ${plaque ? `<div class="pseudo-banner-strip" style="left:56px;right:10px;top:6px;bottom:6px;border-radius:8px;background-image:url('${plaque}')"></div>` : ''}
       <div style="position:relative;z-index:1;display:flex;align-items:center;gap:10px;width:100%">
         ${av}
         <span style="font-weight:600;font-size:13px;flex:1;">${p.pseudo}</span>

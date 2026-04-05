@@ -621,7 +621,7 @@ function renderBoosterPreviewShowcase(item) {
   const gainLabel = item.family === 'coins' ? 'Gain de base' : 'Gain normal';
   const totalLabel = item.family === 'coins' ? 'Total apres partie' : 'Nouveau total';
   const title = item.family === 'coins' ? 'Simulation d\'une victoire coins' : 'Simulation d\'une victoire elo';
-  const boostLabel = item.family === 'coins' ? 'Multiplicateur' : 'Bonus booster';
+  const boostLabel = 'Multiplicateur';
   return ` <div class="preview-booster-demo" data-preview-family="${theme}">
     <div class="preview-demo-head">
       <div class="preview-demo-label">${title}</div>
@@ -648,7 +648,7 @@ function renderBoosterPreviewShowcase(item) {
         </div>
         <div class="preview-demo-gain-block right">
           <span>${boostLabel}</span>
-          <strong class="js-preview-boost-bonus">${item.family === 'coins' ? escapeHtml(data.multiplierLabel) : '+0'}</strong>
+          <strong class="js-preview-boost-bonus">${item.family === 'coins' ? escapeHtml(data.multiplierLabel) : `x${(1 + Number(item.duration.replace('x', ''))).toFixed(2)}`}</strong>
         </div>
       </div>
       <div class="preview-demo-progress">
@@ -749,7 +749,9 @@ async function startBoosterPreviewAnimation(item, showcase) {
     startEl.textContent = String(data.baseTotal);
     endEl.textContent = String(data.baseTotal);
     gainBaseEl.textContent = `+${data.baseGain}`;
-    boostBonusEl.textContent = item.family === 'coins' ? data.multiplierLabel : '+0';
+    boostBonusEl.textContent = item.family === 'coins'
+      ? data.multiplierLabel
+      : `x${(1 + Number(item.duration.replace('x', ''))).toFixed(2)}`;
     progressEl.style.width = '0%';
     captionEl.textContent = item.family === 'coins'
       ? 'Base aleatoire : 1 a 3 coins'
@@ -759,14 +761,11 @@ async function startBoosterPreviewAnimation(item, showcase) {
     await new Promise((resolve) => setTimeout(resolve, 260));
     captionEl.textContent = item.family === 'coins'
       ? 'Le multiplicateur coins se declenche'
-      : 'Le booster elo ajoute son bonus';
+      : 'Le multiplicateur elo se declenche';
     progressEl.style.width = '38%';
-    if (item.family === 'elo') {
-      await animateCounter(boostBonusEl, 0, data.boostBonus, '+', '', 620);
-    }
     breakdownEl.textContent = item.family === 'coins'
-      ? `+${data.baseGain} ? ${data.multiplierLabel} = +${data.finalGain}`
-      : `+${data.baseGain} + ${data.boostBonus} = +${data.finalGain}`;
+      ? `+${data.baseGain} × ${data.multiplierLabel} = +${data.finalGain}`
+      : `+${data.baseGain} × x${(1 + Number(item.duration.replace('x', ''))).toFixed(2)} = +${data.finalGain}`;
     progressEl.style.width = '100%';
     captionEl.textContent = item.family === 'coins' ? 'Nouveau total de coins estime' : 'Nouveau total elo estime';
     await animateCounter(endEl, data.baseTotal, data.finalTotal, '', '', 920);
