@@ -66,14 +66,7 @@ function hasPersoRoleIds(roleIds = []) {
 }
 
 function isPersoPlayer(player) {
-  if (!player) return false;
-  if (Number(player.is_perso) === 1) return true;
-  try {
-    const info = player.discord_info ? JSON.parse(player.discord_info) : null;
-    return hasPersoRoleIds((info?.server_roles || []).map(r => r.id));
-  } catch(e) {
-    return false;
-  }
+  return !!player && Number(player.is_perso) === 1;
 }
 
 function canUseGradientPlayer(player) {
@@ -99,25 +92,11 @@ function isVipPlayer(player) {
   if (!player) return false;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
   if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1) return false;
-  if (Number(player.is_vip) === 1) return true;
-  if (Number(player.is_vip_plus) === 1) return true;
-  try {
-    const info = player.discord_info ? JSON.parse(player.discord_info) : null;
-    return hasVipRoleIds((info?.server_roles || []).map(r => r.id));
-  } catch(e) {
-    return false;
-  }
+  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1;
 }
 
 function isVipPlusPlayer(player) {
-  if (!player) return false;
-  if (Number(player.is_vip_plus) === 1) return true;
-  try {
-    const info = player.discord_info ? JSON.parse(player.discord_info) : null;
-    return hasVipPlusRoleIds((info?.server_roles || []).map(r => r.id));
-  } catch(e) {
-    return false;
-  }
+  return !!player && Number(player.is_vip_plus) === 1;
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Sessions tokens (SQLite) AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -749,21 +728,52 @@ async function getDiscordRole(discordUserId, botToken) {
   } catch(e) { return 'user'; }
 }
 
+async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
+  try {
+    const [memberRes, rolesRes] = await Promise.all([
+      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
+        headers: { 'Authorization': 'Bot ' + botToken },
+      }),
+      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+        headers: { 'Authorization': 'Bot ' + botToken },
+      }),
+    ]);
+    if (!memberRes.ok) return null;
+    const memberInfo = await memberRes.json();
+    const guildRoles = rolesRes.ok ? await rolesRes.json() : [];
+    const rolesMap = {};
+    guildRoles.forEach(r => {
+      rolesMap[r.id] = {
+        name: r.name,
+        color: r.color ? '#' + r.color.toString(16).padStart(6, '0') : null,
+      };
+    });
+    const server_roles_rich = (memberInfo.roles || [])
+      .map(rid => ({ id: rid, name: rolesMap[rid]?.name || rid, color: rolesMap[rid]?.color || null }))
+      .filter(r => r.name !== '@everyone');
+    const newRole = Array.isArray(memberInfo.roles) && memberInfo.roles.includes(DISCORD_ROLE_ADM)
+      ? 'admin'
+      : Array.isArray(memberInfo.roles) && memberInfo.roles.includes(DISCORD_ROLE_MOD)
+        ? 'moderator'
+        : 'user';
+    return { memberInfo, server_roles_rich, newRole };
+  } catch(e) {
+    return null;
+  }
+}
+
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 setInterval(async () => {
   const { botToken } = discordConfig();
   const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, is_perso, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
-    const newRole = await getDiscordRole(player.discord_id, botToken);
-    const roles = (() => {
-      try {
-        const info = player.discord_info ? JSON.parse(player.discord_info) : null;
-        return (info?.server_roles || []).map(r => r.id);
-      } catch(e) { return []; }
-    })();
-    const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : Number(player.is_vip_plus || 0);
-    const vipNow = hasVipRoleIds(roles) ? 1 : Number(player.is_vip || 0);
-    const persoNow = hasPersoRoleIds(roles) ? 1 : Number(player.is_perso || 0);
+    const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
+    if (!snapshot) continue;
+    const { memberInfo, server_roles_rich, newRole } = snapshot;
+    const roles = memberInfo.roles || [];
+    const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : 0;
+    const vipNow = hasVipRoleIds(roles) ? 1 : 0;
+    const persoNow = hasPersoRoleIds(roles) ? 1 : 0;
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
       console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ${newRole}`);
@@ -781,6 +791,13 @@ setInterval(async () => {
     if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) {
       pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
     }
+    try {
+      const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
+      rQ.setDiscord.run(player.discord_id, JSON.stringify({
+        ...existing,
+        server_roles: server_roles_rich,
+      }), player.id);
+    } catch(e) {}
     try {
       await syncDiscordRole(player.discord_id, newRole, vipNow === 1, vipPlusNow === 1, persoNow === 1);
     } catch(e) {}
@@ -1833,28 +1850,22 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
   if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
   try {
     const { botToken: bt } = discordConfig();
-    const [mRes, rolesRes] = await Promise.all([
-      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}`, { headers: { Authorization: 'Bot ' + bt } }),
-      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, { headers: { Authorization: 'Bot ' + bt } }),
-    ]);
-    if (!mRes.ok) {
+    const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, bt);
+    if (!snapshot) {
       rQ.clearDiscord.run(id);
       pQ.updateRole.run({ role: 'user', id });
+      pQ.updateVip.run({ is_vip: 0, id });
+      pQ.updateVipPlus.run({ is_vip_plus: 0, id });
+      pQ.updatePerso.run({ is_perso: 0, id });
+      pQ.updateVipExpiry.run({ vip_expires_at: null, id });
       revokeAdminSessionsForPlayer(id);
       return res.status(404).json({ error: 'Membre introuvable sur le serveur.', unlinked: true, role: 'user' });
     }
-    const memberInfo = await mRes.json();
-    const guildRoles = rolesRes.ok ? await rolesRes.json() : [];
-    const rolesMap = {};
-    guildRoles.forEach(r => { rolesMap[r.id] = { name: r.name, color: r.color }; });
-    const server_roles_rich = (memberInfo.roles || [])
-      .map(rid => ({ id: rid, name: rolesMap[rid]?.name || rid, color: rolesMap[rid]?.color ? '#' + rolesMap[rid].color.toString(16).padStart(6,'0') : null }))
-      .filter(r => r.name !== '@everyone');
-    const newRole = await getDiscordRole(player.discord_id, bt);
+    const { memberInfo, server_roles_rich, newRole } = snapshot;
     if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
-    const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip || 0);
-    const vipPlusNow = hasVipPlusRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_vip_plus || 0);
-    const persoNow = hasPersoRoleIds(memberInfo.roles || []) ? 1 : Number(player.is_perso || 0);
+    const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : 0;
+    const vipPlusNow = hasVipPlusRoleIds(memberInfo.roles || []) ? 1 : 0;
+    const persoNow = hasPersoRoleIds(memberInfo.roles || []) ? 1 : 0;
     if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id });
     if (vipPlusNow !== Number(player.is_vip_plus || 0)) pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id });
     if (persoNow !== Number(player.is_perso || 0)) pQ.updatePerso.run({ is_perso: persoNow, id });

@@ -227,6 +227,13 @@ input[type="file"]{display:none;}
 .color-custom-wrap:hover{border-color:rgba(255,255,255,0.15);}
 .color-dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);flex-shrink:0;transition:background 0.2s, box-shadow 0.2s;}
 .color-hex{font-size:12px;color:var(--muted);}
+.color-editor{display:grid;grid-template-columns:minmax(190px,220px) 1fr auto;gap:12px;align-items:center}
+.color-preview-card{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;min-height:70px}
+.color-preview-big{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,0.18);flex-shrink:0;transition:background .2s,box-shadow .2s}
+.color-preview-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.color-preview-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.color-preview-value{font-size:13px;color:var(--text);font-weight:600}
+.color-inputs{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:none;}
 .btn-save-color{
   font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
@@ -965,28 +972,33 @@ function render(player, games, following, followers, followStatus) {
         <span class="save-confirm" id="save-confirm">✓ Enregistré !</span>
       </div>
       <div class="color-row" id="color-presets-wrap"></div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <div class="color-custom-wrap" onclick="document.getElementById('profil-color-input').click()">
-          <div class="color-dot" id="profil-color-dot"></div>
-          <div class="color-hex" id="profil-color-hex">#ff2d55</div>
+      <div class="color-editor">
+        <div class="color-preview-card">
+          <div class="color-preview-big" id="profil-color-gradient-dot"></div>
+          <div class="color-preview-meta">
+            <div class="color-preview-title">Aperçu final</div>
+            <div class="color-preview-value" id="profil-color-gradient-hex">Simple</div>
+          </div>
         </div>
-        <div class="color-picker-inline">
-          <input type="color" id="profil-color-input" oninput="onProfilColorInput(this.value)">
-          <span>Libre</span>
+        <div class="color-inputs">
+          <div class="color-custom-wrap" onclick="document.getElementById('profil-color-input').click()">
+            <div class="color-dot" id="profil-color-dot"></div>
+            <div class="color-hex" id="profil-color-hex">#ff2d55</div>
+          </div>
+          <div class="color-picker-inline">
+            <input type="color" id="profil-color-input" oninput="onProfilColorInput(this.value)">
+            <span>Couleur 1</span>
+          </div>
+          ${canUseGradient(player) ? `
+          <div class="color-custom-wrap" onclick="document.getElementById('profil-color-secondary-input').click()">
+            <div class="color-dot" id="profil-color-secondary-dot"></div>
+            <div class="color-hex" id="profil-color-secondary-hex">#85EBFF</div>
+          </div>
+          <div class="color-picker-inline">
+            <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">
+            <span>Couleur 2</span>
+          </div>` : ''}
         </div>
-        ${canUseGradient(player) ? `
-        <div class="color-custom-wrap" onclick="document.getElementById('profil-color-secondary-input').click()">
-          <div class="color-dot" id="profil-color-secondary-dot"></div>
-          <div class="color-hex" id="profil-color-secondary-hex">#85EBFF</div>
-        </div>
-        <div class="color-picker-inline">
-          <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">
-          <span>Couleur 2</span>
-        </div>
-        <div class="color-custom-wrap" title="Aperçu du dégradé">
-          <div class="color-dot" id="profil-color-gradient-dot"></div>
-          <div class="color-hex" id="profil-color-gradient-hex">Aperçu</div>
-        </div>` : ''}
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
       ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
