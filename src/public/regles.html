@@ -118,6 +118,20 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
 .card-body .hi-red    { color: var(--red);    font-weight: 600; }
 .card-body .hi-yellow { color: var(--yellow); font-weight: 600; }
 .card-body .hi-green  { color: var(--green);  font-weight: 600; }
+@media (max-width: 480px) {
+  .page { padding: 20px 10px 42px; gap: 16px; }
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .logo-sm,
+  .btn-back { text-align: center; }
+  .hero-title { font-size: clamp(38px, 15vw, 58px); }
+  .board-demo { gap: 4px; padding: 8px; }
+  .card { padding: 18px 14px; }
+  .card-header { gap: 10px; }
+}
 
 /* ── Rule steps ── */
 .steps { display: flex; flex-direction: column; gap: 10px; }

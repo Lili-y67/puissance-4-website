@@ -296,34 +296,78 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
 
 @media (max-width: 480px) {
-  .profile-header { flex-wrap: wrap; gap: 12px; padding: 16px; }
+  .page { padding: 10px 8px 28px; gap: 14px; }
+  .nav { align-items: stretch; }
+  .nav-btns { width: 100%; justify-content: center; flex-wrap: wrap; }
+  .btn-nav { flex: 1 1 140px; text-align: center; }
+  .profile-banner { height: 132px; }
+  .profile-header-inner { padding: 16px 14px 18px; gap: 14px; }
+  .profile-avatar { width: 84px; height: 84px; font-size: 34px; }
   .profile-pseudo { font-size: 24px; }
-  .profile-elo    { font-size: 32px; }
-  .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .profile-elo    { font-size: 30px; text-align: center; }
+  .profile-elo-lbl { text-align: center; }
+  .social-row { gap: 6px; }
+  .social-card { padding: 10px 8px; }
+  .social-val { font-size: 22px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat-card { min-width: 0; }
   .stat-val { font-size: 24px; }
-  .tabs-row .tab { font-size: 11px; padding: 6px; }
+  .winrate-card { padding: 14px 12px; }
+  .tabs-row .tab { font-size: 11px; padding: 7px 5px; }
+  .game-row { padding: 12px; align-items: flex-start; }
+  .game-meta { width: 100%; text-align: left; }
+  .player-row { padding: 12px; }
+  .color-card,
+  .shape-card { padding: 14px 12px; }
+  .btn-save-color,
+  .btn-save-shape,
+  .btn-follow { width: 100%; justify-content: center; }
 }
 
 /* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 600px) {
   .page { padding: 12px 10px 32px; max-width: 100%; }
-  .banner-wrap { height: 120px; border-radius: 14px; }
-  .profile-info { flex-direction: column; align-items: center; text-align: center; gap: 8px; }
-  .profile-pseudo { font-size: 24px; }
-  .elo-block { align-items: center; }
-  .stats-row { gap: 6px; }
-  .stat-card { padding: 10px 8px; }
-  .stat-val { font-size: 22px; }
-  .games-list .game-row { flex-wrap: wrap; gap: 4px; font-size: 12px; }
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .logo-sm { text-align: center; }
+  .nav-btns {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
   .search-wrap { padding: 12px; }
   .search-row { flex-direction: column; gap: 6px; }
   .search-input { width: 100%; }
   .search-btn { width: 100%; }
-  #autocomplete-list { right: 0; }
-  .tabs { gap: 4px; }
-  .tab-btn { padding: 8px 10px; font-size: 12px; }
-  .discord-card { padding: 12px; }
+  #autocomplete-list { right: 0; left: 0; }
+  .profile-header-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 18px 16px 20px;
+  }
+  .profile-info { width: 100%; min-width: 0; }
+  .rank-badge { justify-content: center; }
+  .profile-pseudo { font-size: 26px; }
+  .social-row { flex-wrap: wrap; }
+  .social-card { min-width: 0; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .game-vs,
+  .game-meta {
+    width: 100%;
+    text-align: left;
+  }
+  .tabs-row { width: 100%; }
+  .tab { min-width: 0; }
   .discord-row { flex-wrap: wrap; gap: 6px; }
+  .toggle-wrap { align-items: flex-start; }
 }
 .image-editor-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;z-index:3000;background:rgba(0,0,0,0.82);backdrop-filter:blur(10px);}
 .image-editor-bg.show{display:flex;}
@@ -367,6 +411,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .upload-chooser-note{padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted);line-height:1.6}
 @media (max-width:640px){
   .image-editor-modal{padding:18px;}
+  .image-editor-head{align-items:flex-start;flex-direction:column;}
+  .image-editor-close{align-self:flex-end;}
   .image-editor-frame.banner{inset:26px 16px;}
   .image-editor-actions{width:100%;}
   .image-editor-btn{flex:1;}

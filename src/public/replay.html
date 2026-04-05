@@ -213,6 +213,35 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .cls-mistake   {background:rgba(255,159,10,0.12);color:#ff9f0a;border:1px solid rgba(255,159,10,0.25);}
 .cls-blunder   {background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);}
 
+@media (max-width: 760px){
+  .page{max-width:100%;padding:16px 10px 30px;gap:12px}
+  .nav{flex-direction:column;align-items:stretch;gap:10px}
+  .logo-sm{text-align:center}
+  .btn-back{width:100%;text-align:center}
+  .replay-header{padding:14px 12px}
+  .replay-vs{flex-direction:column;gap:10px}
+  .vs-mid{font-size:18px}
+  .replay-meta{justify-content:flex-start;gap:8px 14px}
+  .progress-wrap,.think-box,.end-card,.analyse-panel{padding:14px 12px}
+  .board{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));width:min(100vw - 20px,560px);aspect-ratio:7/6;gap:5px;padding:8px}
+  .cell .token{inset:3px}
+  .accuracy-row{flex-direction:column}
+  .analyse-moves{max-height:none}
+}
+@media (max-width: 480px){
+  .page{padding:12px 8px 24px}
+  .rp-name{font-size:13px}
+  .rmeta{font-size:11px}
+  .progress-top{flex-direction:column;align-items:flex-start;gap:4px}
+  .think-box{flex-wrap:wrap;justify-content:flex-start}
+  .board{width:min(100vw - 16px,420px);gap:4px;padding:6px;border-radius:14px}
+  .analyse-move{padding:10px}
+  .am-head{gap:6px}
+  .am-metrics{gap:4px}
+  .end-btns{width:100%}
+  .btn-action{width:100%;justify-content:center}
+}
+
 </style>
 </head>
 <body>

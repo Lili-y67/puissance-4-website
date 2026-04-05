@@ -773,6 +773,106 @@ html, body {
   .side-quick-menu.open .side-quick-panel { width: min(78vw, 260px); }
 }
 
+@media (max-width: 480px) {
+  .page {
+    justify-content: flex-start;
+    padding: 18px 10px 86px;
+  }
+  .hero {
+    width: 100%;
+    margin-bottom: 28px;
+    gap: 6px;
+  }
+  .logo-eyebrow {
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-align: center;
+  }
+  .logo {
+    font-size: clamp(40px, 16vw, 58px);
+    text-align: center;
+  }
+  .logo-tagline {
+    font-size: 10px;
+    letter-spacing: 1.6px;
+    text-align: center;
+  }
+  .site-online-badge,
+  .site-games-badge {
+    max-width: 92vw;
+    justify-content: center;
+    text-align: center;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+  .board-deco {
+    grid-template-columns: repeat(7, 24px);
+    grid-template-rows: repeat(3, 24px);
+    gap: 4px;
+    margin-top: 14px;
+  }
+  .board-deco-cell {
+    width: 24px;
+    height: 24px;
+  }
+  .card {
+    max-width: 100%;
+    padding: 16px 12px;
+  }
+  .card-label {
+    text-align: center;
+    line-height: 1.2;
+  }
+  .auth-tabs {
+    width: 100%;
+  }
+  .auth-tab {
+    min-width: 0;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .input-wrap {
+    width: 100%;
+  }
+  .btn,
+  .btn-robot {
+    width: 100%;
+  }
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .stats-strip .stat {
+    min-width: 0;
+  }
+  .queue-inner {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+  .queue-title {
+    font-size: 34px;
+    line-height: 0.95;
+    text-align: center;
+  }
+  .queue-sub {
+    text-align: center;
+    font-size: 12px;
+  }
+  .queue-timer {
+    font-size: 20px;
+  }
+  .queue-volume {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    justify-content: center;
+  }
+  .queue-volume-slider {
+    width: min(42vw, 140px);
+  }
+}
+
 /* ── IA overlay ── */
 </style>
 </head>

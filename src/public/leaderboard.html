@@ -170,8 +170,45 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
 .empty-icon { font-size: 40px; margin-bottom: 12px; }
 .empty-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 2px; color: var(--text); }
 
+@media (max-width: 760px) {
+  .page { padding: 18px 12px 42px; }
+  .nav {
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: 24px;
+  }
+  .logo { text-align: center; }
+  .nav-links { width: 100%; }
+  .nav-btn {
+    flex: 1;
+    text-align: center;
+  }
+  .page-title { font-size: 34px; }
+  .page-sub { margin-bottom: 20px; }
+  .tabs {
+    width: 100%;
+    max-width: 360px;
+  }
+  .tab-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+  }
+  .podium {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .podium-slot {
+    flex: 1 1 160px;
+  }
+  .list-row {
+    padding: 12px;
+    gap: 10px;
+  }
+}
 @media (max-width: 480px) {
   .podium { gap: 6px; }
+  .podium-slot { flex: 1 1 100%; }
   .podium-card { min-width: 96px; padding: 12px 8px 10px; }
   .podium-slot.rank-1 .podium-card { min-width: 116px; }
   .podium-pseudo { font-size: 12px; max-width: 90px; }
@@ -181,6 +218,17 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
   .podium-slot.rank-1 .podium-avatar { width: 48px; height: 48px; }
   .podium-trophy { width: 44px; height: 44px; }
   .podium-slot.rank-1 .podium-trophy { width: 58px; height: 58px; }
+  .list-row {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .row-value {
+    margin-left: auto;
+  }
+  .rank-img {
+    order: 5;
+    margin-left: auto;
+  }
 }
 </style>
 </head>
