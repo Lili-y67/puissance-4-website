@@ -157,6 +157,25 @@ body{
 .preview-mini-note{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
 .preview-subline{font-size:12px;color:var(--muted);margin-top:6px}
 .preview-random-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);margin-top:10px}
+.preview-booster-demo{width:min(100%,340px);display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.preview-demo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.preview-demo-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.preview-demo-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.preview-demo-badge.elo{background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.24);color:var(--yellow)}
+.preview-demo-badge.coins{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.28);color:var(--orange)}
+.preview-demo-card{padding:16px;border-radius:20px;background:rgba(8,9,18,.78);border:1px solid rgba(255,255,255,.07);box-shadow:0 18px 36px rgba(0,0,0,.28)}
+.preview-demo-row{display:flex;align-items:end;justify-content:space-between;gap:12px}
+.preview-demo-value{font-family:'Barlow Condensed',sans-serif;font-size:52px;font-weight:900;line-height:.9}
+.preview-demo-unit{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.preview-demo-arrow{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;color:var(--muted)}
+.preview-demo-gain{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.preview-demo-gain strong{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900}
+.preview-demo-gain span{font-size:12px;color:var(--muted)}
+.preview-demo-progress{height:6px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:12px}
+.preview-demo-progress-fill{height:100%;width:0%;border-radius:999px;transition:width .22s ease}
+.preview-demo-progress-fill.elo{background:linear-gradient(90deg, rgba(255,214,10,.35), var(--yellow))}
+.preview-demo-progress-fill.coins{background:linear-gradient(90deg, rgba(255,159,10,.35), var(--orange))}
+.preview-demo-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px;color:var(--muted)}
 @media (max-width:760px){.preview-grid{grid-template-columns:1fr}.preview-title{font-size:30px}}
 .panel{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border)}
 .panel-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
@@ -405,6 +424,7 @@ let shopInventory = {};
 let currentCategory = 'ranks';
 let previewDecorations = [];
 let previewProfileBanners = [];
+let previewAnimTimer = null;
 const PREVIEW_NAMES = ['Lili_y', 'Crystal', 'Nyra', 'Aelys', 'Mitsuki', 'Soline'];
 const PREVIEW_COLORS = ['#FF4D6D', '#FFD84D', '#43D65C', '#2F80FF', '#B657FF', '#FFAA33', '#2DC5C1', '#FF7EB6', '#85EBFF'];
 
@@ -556,13 +576,75 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function getBoosterPreviewNumbers(item) {
+  const baseTotal = item.family === 'coins'
+    ? 120 + Math.floor(Math.random() * 260)
+    : 980 + Math.floor(Math.random() * 180);
+  const baseGain = item.family === 'coins'
+    ? 1 + Math.floor(Math.random() * 3)
+    : 16 + Math.floor(Math.random() * 13);
+
+  if (item.family === 'coins') {
+    const multiplier = Number(item.duration.replace('x', '')) || 1;
+    const finalGain = Math.ceil(baseGain * multiplier);
+    return { baseTotal, baseGain, finalGain, finalTotal: baseTotal + finalGain, multiplierLabel: item.duration };
+  }
+
+  const bonus = Number(item.duration.replace('x', '')) || 0;
+  const finalGain = Math.ceil(baseGain * (1 + bonus));
+  return { baseTotal, baseGain, finalGain, finalTotal: baseTotal + finalGain, multiplierLabel: item.duration };
+}
+
+function renderBoosterPreviewShowcase(item) {
+  const data = getBoosterPreviewNumbers(item);
+  const theme = item.family === 'coins' ? 'coins' : 'elo';
+  const unit = item.family === 'coins' ? 'coins' : 'elo';
+  const gainLabel = item.family === 'coins' ? 'Gain de coins' : 'Gain ELO';
+  const totalLabel = item.family === 'coins' ? 'Total apres partie' : 'Nouveau total';
+  const title = item.family === 'coins' ? 'Simulation d\'une victoire coins' : 'Simulation d\'une victoire elo';
+  return `<div class="preview-booster-demo" data-preview-family="${theme}">
+    <div class="preview-demo-head">
+      <div class="preview-demo-label">${title}</div>
+      <div class="preview-demo-badge ${theme}">${escapeHtml(item.duration)}</div>
+    </div>
+    <div class="preview-demo-card">
+      <div class="preview-demo-row">
+        <div>
+          <div class="preview-demo-label">Avant match</div>
+          <div class="preview-demo-value js-preview-total-start">${data.baseTotal}</div>
+          <div class="preview-demo-unit">${unit}</div>
+        </div>
+        <div class="preview-demo-arrow">→</div>
+        <div style="text-align:right">
+          <div class="preview-demo-label">${totalLabel}</div>
+          <div class="preview-demo-value js-preview-total-end">${data.baseTotal}</div>
+          <div class="preview-demo-unit">${unit}</div>
+        </div>
+      </div>
+      <div class="preview-demo-gain">
+        <div>
+          <span>${gainLabel}</span>
+          <strong class="js-preview-gain-final">+${data.baseGain}</strong>
+        </div>
+        <div style="text-align:right">
+          <span>Boost applique</span>
+          <strong class="js-preview-multiplier">${escapeHtml(data.multiplierLabel)}</strong>
+        </div>
+      </div>
+      <div class="preview-demo-progress">
+        <div class="preview-demo-progress-fill ${theme} js-preview-progress"></div>
+      </div>
+      <div class="preview-demo-foot">
+        <span class="js-preview-caption">Victoire simple detectee</span>
+        <span class="js-preview-breakdown">+${data.baseGain} × ${escapeHtml(data.multiplierLabel)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderPreviewShowcase(item) {
   if (item.type === 'booster') {
-    return `<div style="text-align:center">
-      <div class="preview-booster-stat">${item.duration}</div>
-      <div class="preview-mini-note">${item.statSub}</div>
-      <div class="preview-random-pill">Exemple visuel de booster</div>
-    </div>`;
+    return renderBoosterPreviewShowcase(item);
   }
   const state = buildPreviewState(item);
   const avatarStyle = item.key === 'vip_plus' || item.key === 'perso'
@@ -610,6 +692,60 @@ function renderPreviewShowcase(item) {
       </div>
     </div>
   </div>`;
+}
+
+function animateCounter(el, from, to, prefix = '', suffix = '', duration = 850) {
+  if (!el) return Promise.resolve();
+  const startedAt = performance.now();
+  return new Promise((resolve) => {
+    function tick(now) {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const value = Math.round(from + (to - from) * eased);
+      el.textContent = `${prefix}${value}${suffix}`;
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        resolve();
+      }
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+async function startBoosterPreviewAnimation(item, showcase) {
+  if (!item || item.type !== 'booster' || !showcase) return;
+  const startEl = showcase.querySelector('.js-preview-total-start');
+  const endEl = showcase.querySelector('.js-preview-total-end');
+  const gainEl = showcase.querySelector('.js-preview-gain-final');
+  const progressEl = showcase.querySelector('.js-preview-progress');
+  const captionEl = showcase.querySelector('.js-preview-caption');
+  const breakdownEl = showcase.querySelector('.js-preview-breakdown');
+  if (!startEl || !endEl || !gainEl || !progressEl || !captionEl || !breakdownEl) return;
+
+  const run = async () => {
+    const data = getBoosterPreviewNumbers(item);
+    startEl.textContent = String(data.baseTotal);
+    endEl.textContent = String(data.baseTotal);
+    gainEl.textContent = `+${data.baseGain}`;
+    progressEl.style.width = '0%';
+    captionEl.textContent = item.family === 'coins' ? 'Victoire simple detectee' : 'Fin de partie remportee';
+    breakdownEl.textContent = item.family === 'coins'
+      ? `+${data.baseGain} × ${data.multiplierLabel}`
+      : `+${data.baseGain} ELO + ${data.multiplierLabel}`;
+
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    captionEl.textContent = item.family === 'coins' ? 'Le booster coins se declenche' : 'Le booster elo se declenche';
+    progressEl.style.width = '38%';
+    await animateCounter(gainEl, data.baseGain, data.finalGain, '+', '', 720);
+    progressEl.style.width = '100%';
+    captionEl.textContent = item.family === 'coins' ? 'Nouveau total de coins estime' : 'Nouveau total elo estime';
+    await animateCounter(endEl, data.baseTotal, data.finalTotal, '', '', 920);
+  };
+
+  clearTimeout(previewAnimTimer);
+  await run();
+  previewAnimTimer = setTimeout(() => startBoosterPreviewAnimation(item, showcase), 1500);
 }
 
 function renderCard(pack) {
@@ -665,6 +801,8 @@ function switchShopCategory(category) {
 function openPreview(pack) {
   const item = getDisplayItem(pack);
   if (!item) return;
+  clearTimeout(previewAnimTimer);
+  previewAnimTimer = null;
   const bg = document.getElementById('preview-modal-bg');
   const title = document.getElementById('preview-title');
   const copy = document.getElementById('preview-copy');
@@ -685,9 +823,14 @@ function openPreview(pack) {
     </div>
   `).join('');
   bg.classList.add('show');
+  if (item.type === 'booster') {
+    startBoosterPreviewAnimation(item, showcase);
+  }
 }
 
 function closePreview() {
+  clearTimeout(previewAnimTimer);
+  previewAnimTimer = null;
   document.getElementById('preview-modal-bg')?.classList.remove('show');
 }
 
