@@ -134,6 +134,9 @@ body{
 .preview-avatar-decoration{position:absolute;inset:-9px;pointer-events:none}
 .preview-avatar-decoration img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 12px rgba(255,255,255,.14))}
 .preview-profile-main{flex:1;min-width:0}
+.preview-name-wrap{position:relative;min-height:34px;display:flex;align-items:center}
+.preview-name-plaque{position:absolute;left:0;right:0;top:50%;height:18px;transform:translateY(-50%);border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;border:1px solid rgba(255,255,255,.08);overflow:hidden;opacity:.96}
+.preview-name-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(7,7,14,.96) 0%, rgba(7,7,14,.86) 42%, rgba(7,7,14,.30) 74%, rgba(7,7,14,.08) 100%)}
 .preview-profile-name{font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.95;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-profile-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .preview-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
@@ -695,7 +698,10 @@ function renderPreviewShowcase(item) {
         ${decoration}
       </div>
       <div class="preview-profile-main">
-        <div class="preview-profile-name">${escapeHtml(state.name)}</div>
+        <div class="preview-name-wrap">
+          ${item.key === 'perso' && state.banner ? `<div class="preview-name-plaque" style="background-image:url('${state.banner}')"></div>` : ''}
+          <div class="preview-profile-name" style="position:relative;z-index:1;padding:0 10px">${escapeHtml(state.name)}</div>
+        </div>
         <div class="preview-profile-badges">
           <span class="preview-pill ${item.theme}">${item.badge}</span>
           ${customRole}

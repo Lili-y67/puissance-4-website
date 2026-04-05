@@ -64,10 +64,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   padding: 24px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px;
   transition: all 0.4s; position:relative; overflow:hidden;
 }
-.lobby-plaque{position:absolute;left:82px;right:12px;top:12px;height:22px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;opacity:.95;border:1px solid rgba(255,255,255,.08);display:none}
+.lobby-plaque{position:absolute;left:0;right:0;top:0;height:18px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;opacity:.95;border:1px solid rgba(255,255,255,.08);display:none}
 .lobby-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,7,14,.94) 0%,rgba(7,7,14,.82) 38%,rgba(7,7,14,.28) 72%,rgba(7,7,14,.08) 100%);border-radius:inherit}
 .lobby-player.has-plaque .lobby-plaque{display:block}
-.lobby-player.has-plaque{padding-top:44px}
+.lobby-player.has-plaque{padding-top:18px}
 .lobby-player.p1 { border-color: var(--p1); box-shadow: 0 0 32px var(--p1-dim); }
 .lobby-player.p2 { border-color: var(--p2); box-shadow: 0 0 32px var(--p2-dim); }
 
@@ -85,8 +85,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .lobby-player.p1 .lobby-avatar { background: var(--p1-dim); color: var(--p1); border: 2px solid var(--p1); }
 .lobby-player.p2 .lobby-avatar { background: var(--p2-dim); color: var(--p2); border: 2px solid var(--p2); }
 
-.lobby-pseudo { font-weight: 600; font-size: 15px; text-align: center; }
-.lobby-elo { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
+.lobby-info{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 8px 0}
+.lobby-player.has-plaque .lobby-info{padding-top:4px}
+.lobby-pseudo { position:relative;z-index:1;font-weight: 600; font-size: 15px; text-align: center; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 10px; }
+.lobby-elo { position:relative;z-index:1;font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 1px; color: var(--muted); }
 .lobby-you { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; }
 .lobby-player.p1 .lobby-you { background: var(--p1-dim); color: var(--p1); }
 .lobby-player.p2 .lobby-you { background: var(--p2-dim); color: var(--p2); }
@@ -108,10 +110,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   padding: 12px 16px; display: flex; align-items: center; gap: 10px;
   transition: all 0.3s; position: relative; overflow: hidden;
 }
-.player-card-banner{position:absolute;left:72px;right:10px;top:10px;height:18px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;display:none;border:1px solid rgba(255,255,255,.07);opacity:.95}
+.player-card-banner{position:absolute;left:0;right:0;top:0;height:16px;border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;display:none;border:1px solid rgba(255,255,255,.07);opacity:.95}
 .player-card-banner::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,rgba(9,10,20,.94) 0%,rgba(9,10,20,.82) 40%,rgba(9,10,20,.26) 74%,rgba(9,10,20,.08) 100%)}
 .player-card.has-plaque .player-card-banner{display:block}
-.player-card.has-plaque{padding-top:32px}
+.player-card.has-plaque{padding-top:20px}
 .player-card::after { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .player-card.p1::after { background: linear-gradient(135deg, var(--p1-dim), transparent); }
 .player-card.p2::after { background: linear-gradient(225deg, var(--p2-dim), transparent); }
@@ -129,9 +131,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .player-card.p1 .pc-dot { background: var(--p1); box-shadow: 0 0 8px var(--p1-glow); }
 .player-card.p2 .pc-dot { background: var(--p2); box-shadow: 0 0 8px var(--p2-glow); }
 
-.pc-info { flex: 1; min-width: 0; }
-.pc-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pc-elo  { font-size: 11px; color: var(--muted); }
+.pc-info { position:relative; flex: 1; min-width: 0; display:flex; flex-direction:column; justify-content:center; padding:0 8px 0 0; }
+.player-card.has-plaque .pc-info{padding-top:4px}
+.pc-name { position:relative; z-index:1; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding:0 10px; }
+.pc-elo  { position:relative; z-index:1; font-size: 11px; color: var(--muted); padding:0 10px; }
 .turn-mid { text-align: center; }
 .vs-sm { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; color: var(--muted); letter-spacing: 2px; }
 .turn-lbl { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
@@ -297,26 +300,30 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 <div class="lobby-overlay" id="lobby-overlay">
   <div class="lobby-players">
     <div class="lobby-player p1" id="lp1">
-      <div class="lobby-plaque" id="lplaque1"></div>
       <div class="lobby-avatar-wrap" id="law1">
         <div class="lobby-avatar-decoration" id="ldeco1"></div>
         <div class="lobby-avatar" id="lav1">?</div>
       </div>
-      <div class="lobby-pseudo" id="lpseudo1">—</div>
-      <div class="lobby-elo"    id="lelo1">— ELO</div>
+      <div class="lobby-info">
+        <div class="lobby-plaque" id="lplaque1"></div>
+        <div class="lobby-pseudo" id="lpseudo1">—</div>
+        <div class="lobby-elo"    id="lelo1">— ELO</div>
+      </div>
     </div>
     <div class="vs-col">
       <div class="vs-text">VS</div>
       <div class="countdown" id="countdown">3</div>
     </div>
     <div class="lobby-player p2" id="lp2">
-      <div class="lobby-plaque" id="lplaque2"></div>
       <div class="lobby-avatar-wrap" id="law2">
         <div class="lobby-avatar-decoration" id="ldeco2"></div>
         <div class="lobby-avatar" id="lav2">?</div>
       </div>
-      <div class="lobby-pseudo" id="lpseudo2">—</div>
-      <div class="lobby-elo"    id="lelo2">— ELO</div>
+      <div class="lobby-info">
+        <div class="lobby-plaque" id="lplaque2"></div>
+        <div class="lobby-pseudo" id="lpseudo2">—</div>
+        <div class="lobby-elo"    id="lelo2">— ELO</div>
+      </div>
     </div>
   </div>
 </div>
@@ -337,13 +344,13 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 
   <div class="players-row">
     <div class="player-card p1" id="card-p1">
-      <div class="player-card-banner" id="banner-p1"></div>
       <div class="pc-avatar-wrap" id="pwrap1">
         <div class="pc-avatar-decoration" id="deco-p1"></div>
         <div class="pc-avatar" id="avatar-p1">?</div>
       </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
+        <div class="player-card-banner" id="banner-p1"></div>
         <div class="pc-name" id="name-p1">Joueur 1</div>
         <div class="pc-elo"  id="elo-p1">— ELO</div>
       </div>
@@ -353,13 +360,13 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="turn-lbl" id="turn-lbl">—</div>
     </div>
     <div class="player-card p2" id="card-p2">
-      <div class="player-card-banner" id="banner-p2"></div>
       <div class="pc-avatar-wrap" id="pwrap2">
         <div class="pc-avatar-decoration" id="deco-p2"></div>
         <div class="pc-avatar" id="avatar-p2">?</div>
       </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
+        <div class="player-card-banner" id="banner-p2"></div>
         <div class="pc-name" id="name-p2">Joueur 2</div>
         <div class="pc-elo"  id="elo-p2">— ELO</div>
       </div>

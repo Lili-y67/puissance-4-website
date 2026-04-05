@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 â€” Replay</title>
+<title>Puissance 4 - Replay</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -251,7 +251,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 <div class="page">
   <nav class="nav">
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
-    <a class="btn-back" id="back-btn" href="/profil">â† Profil</a>
+    <a class="btn-back" id="back-btn" href="/profil">&#8592; Profil</a>
   </nav>
 
   <div id="content"><div class="loading">Chargement du replay...</div></div>
@@ -293,10 +293,10 @@ async function init() {
     // Adapter le pseudo du bot pour l'affichage
     if (isBot) {
       if (gameData.player2_id === botId) {
-        gameData.p2_pseudo = 'ðŸ¤– ' + (gameData.p2_pseudo || 'Puissance4-AI');
+        gameData.p2_pseudo = 'Bot ' + (gameData.p2_pseudo || 'Puissance4-AI');
         gameData.p2_elo_display = 'IA';
       } else {
-        gameData.p1_pseudo = 'ðŸ¤– ' + (gameData.p1_pseudo || 'Puissance4-AI');
+        gameData.p1_pseudo = 'Bot ' + (gameData.p1_pseudo || 'Puissance4-AI');
         gameData.p1_elo_display = 'IA';
       }
     }
@@ -362,14 +362,14 @@ function applyPlayerColors() {
 // â”€â”€ Shapes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let p1Shape = 'circle', p2Shape = 'circle';
 let p1EmojiImage = '', p2EmojiImage = '';
-let p1Emoji = 'â­',    p2Emoji = 'ðŸ’Ž';
+let p1Emoji = '★',    p2Emoji = '◆';
 
 function initShapes() {
   const raw1 = gameData.p1_shape || 'circle';
   const raw2 = gameData.p2_shape || 'circle';
-  if (raw1.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = raw1.slice(6) || 'â­'; }
+  if (raw1.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = raw1.slice(6) || '★'; }
   else p1Shape = raw1;
-  if (raw2.startsWith('emoji:')) { p2Shape = 'emoji'; p2Emoji = raw2.slice(6) || 'ðŸ’Ž'; }
+  if (raw2.startsWith('emoji:')) { p2Shape = 'emoji'; p2Emoji = raw2.slice(6) || '◆'; }
   else p2Shape = raw2;
   if (raw1 === 'emoji_image') p1EmojiImage = gameData.p1_token_emoji_image || '';
   if (raw2 === 'emoji_image') p2EmojiImage = gameData.p2_token_emoji_image || '';
@@ -448,7 +448,7 @@ function renderShell() {
 
   const date = g.finished_at
     ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-    : 'â€”';
+    : '—';
 
   document.getElementById('content').innerHTML = `
     <div class="replay-header">
@@ -457,21 +457,21 @@ function renderShell() {
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p1_pseudo}</div>
           <div class="rp-elo">${g.p1_elo_display ?? (g.p1_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DÃ‰FAITE')}</div>
+          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DEFAITE')}</div>
         </div>
         <div class="vs-mid">VS</div>
         <div class="rp p2 ${isDraw?'draw':(p2Won?'winner':'loser')}">
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p2_pseudo}</div>
           <div class="rp-elo">${g.p2_elo_display ?? (g.p2_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DÃ‰FAITE')}</div>
+          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DEFAITE')}</div>
         </div>
       </div>
       <div class="replay-meta">
-        <div class="rmeta">ðŸ“… <strong>${date}</strong></div>
-        <div class="rmeta">ðŸŽ¯ <strong>${g.move_count} coups</strong></div>
-        <div class="rmeta">â±ï¸ <strong>${g.duration}s</strong></div>
-        ${g.suspicious ? `<div class="rmeta" style="color:#ff9f0a;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);border-radius:6px;padding:4px 10px;">âš ï¸ <strong>Double compte dÃ©tectÃ© â€” ELO non comptabilisÃ©</strong></div>` : ''}
+        <div class="rmeta">Date <strong>${date}</strong></div>
+        <div class="rmeta">Coups <strong>${g.move_count} coups</strong></div>
+        <div class="rmeta">Temps <strong>${g.duration}s</strong></div>
+        ${g.suspicious ? `<div class="rmeta" style="color:#ff9f0a;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);border-radius:6px;padding:4px 10px;">Alerte <strong>Double compte detecte - ELO non comptabilise</strong></div>` : ''}
       </div>
     </div>
 
@@ -480,7 +480,7 @@ function renderShell() {
       <div class="progress-top">
         <span class="progress-label">Replay en cours</span>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">TÃ©lÃ©charger partie</button>
+          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Telecharger partie</button>
           <span style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Vitesse</span>
           ${[1,2,4].map(s => `<button id="speed-btn-${s}" onclick="setSpeed(${s})" style="padding:2px 8px;border-radius:6px;border:1px solid ${s===1?'rgba(76,110,245,0.5)':'rgba(255,255,255,0.1)'};background:${s===1?'rgba(76,110,245,0.2)':'transparent'};color:${s===1?'#8b9cf4':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">x${s}</button>`).join('')}
           <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
@@ -494,14 +494,14 @@ function renderShell() {
     <!-- Think timer -->
     <div class="think-box" id="think-box">
       <div class="think-dot p1" id="think-dot"></div>
-      <div class="think-text" id="think-text">DÃ©but dans un instant...</div>
+      <div class="think-text" id="think-text">Debut dans un instant...</div>
       <div class="think-timer" id="think-timer"></div>
     </div>
 
     <!-- Board -->
     <div class="board-inspect-bar" id="board-inspect-bar">
-      <span id="board-inspect-text">Position au coup sÃ©lectionnÃ©</span>
-      <button onclick="clearInspect()" style="background:transparent;border:none;color:rgba(139,156,244,0.6);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px" title="Revenir au replay">âœ• Quitter</button>
+      <span id="board-inspect-text">Position au coup selectionne</span>
+      <button onclick="clearInspect()" style="background:transparent;border:none;color:rgba(139,156,244,0.6);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px" title="Revenir au replay">× Quitter</button>
     </div>
     <div class="board-wrap">
       <div class="board" id="board"></div>
@@ -512,20 +512,20 @@ function renderShell() {
       <div class="end-title" id="end-title"></div>
       <div class="end-sub" id="end-sub"></div>
       <div class="end-btns">
-        <button class="btn-action primary" onclick="restartReplay()">â†º Revoir</button>
-        <button class="btn-action ghost" onclick="downloadReplayHtml()">TÃ©lÃ©charger partie</button>
-        <a class="btn-action ghost" href="/">âš¡ Jouer</a>
+        <button class="btn-action primary" onclick="restartReplay()">↺ Revoir</button>
+        <button class="btn-action ghost" onclick="downloadReplayHtml()">Telecharger partie</button>
+        <a class="btn-action ghost" href="/">Jouer</a>
       </div>
     </div>
 
     <!-- Bouton lancer l'analyse -->
     <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" style="display:none">
-      ðŸ”¬ Analyser la partie
+      Analyser la partie
     </button>
 
     <!-- Barre de progression analyse -->
     <div class="analyse-progress-wrap" id="analyse-progress">
-      <div class="analyse-progress-label">âš™ï¸ Analyse en cours...</div>
+      <div class="analyse-progress-label">Analyse en cours...</div>
       <div class="analyse-progress-bar-bg">
         <div class="analyse-progress-bar-fill" id="analyse-bar"></div>
       </div>
@@ -742,8 +742,6 @@ function toggleAuto(){
 }
 render();
 autoTimer=setTimeout(nextMove, 420);
-}
-render();
 \u003C/script>
 </body>
 </html>`;
@@ -850,17 +848,17 @@ function finishReplay() {
 
   if (isDraw) {
     SFX.draw();
-    titleEl.textContent = 'âš–ï¸ Ã‰GALITÃ‰';
+    titleEl.textContent = 'EGALITE';
     titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
   } else {
     SFX.win();
-    titleEl.textContent = `ðŸ† ${winnerPs.toUpperCase()}`;
+    titleEl.textContent = `VICTOIRE ${winnerPs.toUpperCase()}`;
     titleEl.style.background = 'linear-gradient(135deg, var(--red), var(--yellow))';
   }
   titleEl.style.webkitBackgroundClip = 'text';
   titleEl.style.webkitTextFillColor  = 'transparent';
 
-  subEl.textContent = `${gameData.move_count} coups Â· ${gameData.duration}s`;
+  subEl.textContent = `${gameData.move_count} coups · ${gameData.duration}s`;
 
   setTimeout(() => {
     document.getElementById('end-card').classList.add('show');

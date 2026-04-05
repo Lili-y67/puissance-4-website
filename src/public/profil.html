@@ -333,8 +333,17 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .avatar-decoration-sidecard{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px}
 .avatar-decoration-sidecard .avatar-decoration-preview{width:112px;height:112px;margin:0 auto}
 .avatar-decoration-modal-actions{display:flex;flex-direction:column;gap:10px}
-.profile-banner-choice-preview{position:relative;width:100%;max-width:360px;height:96px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08)}
+.profile-banner-choice-preview{position:relative;width:100%;max-width:360px;height:96px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:14px}
 .profile-banner-choice-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.profile-banner-mini-card{position:relative;width:100%;display:flex;align-items:center;gap:12px;z-index:1}
+.profile-banner-mini-avatar{width:42px;height:42px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;color:#fff}
+.profile-banner-mini-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.profile-banner-mini-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.profile-banner-mini-name-wrap{position:relative;min-height:22px;display:flex;align-items:center}
+.profile-banner-mini-plaque{position:absolute;left:0;right:0;top:50%;height:18px;transform:translateY(-50%);border-radius:999px;background-size:auto 100%;background-repeat:no-repeat;background-position:right center;border:1px solid rgba(255,255,255,0.08);overflow:hidden;opacity:.96}
+.profile-banner-mini-plaque::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,14,24,0.96) 0%,rgba(14,14,24,0.88) 42%,rgba(14,14,24,0.36) 74%,rgba(14,14,24,0.10) 100%)}
+.profile-banner-mini-name{position:relative;z-index:1;font-weight:700;font-size:14px;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profile-banner-mini-sub{position:relative;z-index:1;font-size:11px;color:var(--muted);padding:0 10px}
 .profile-banner-choice-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 @media (max-width: 760px){
   .avatar-decoration-modal{padding:18px 16px}
@@ -2928,6 +2937,28 @@ async function saveSelectedProfileBanner() {
   closeProfileBannerPicker();
 }
 
+function buildProfileBannerPreviewMarkup(player, bannerValue) {
+  const src = getRenderableMediaSrc(bannerValue || '');
+  if (!src) return `<div class="profile-banner-choice-empty">Aucune</div>`;
+  const avatarSrc = getRenderableMediaSrc(player?.avatar || '');
+  const color = String(player?.color || '#ff2d55');
+  const avatarHtml = avatarSrc
+    ? `<img src="${avatarSrc}" alt="avatar">`
+    : String(player?.pseudo || '?').charAt(0).toUpperCase();
+  const total = Number(player?.wins || 0) + Number(player?.losses || 0) + Number(player?.draws || 0);
+  const wr = total > 0 ? Math.round((Number(player?.wins || 0) / total) * 100) : 0;
+  return `<div class="profile-banner-mini-card">
+    <div class="profile-banner-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
+    <div class="profile-banner-mini-main">
+      <div class="profile-banner-mini-name-wrap">
+        <div class="profile-banner-mini-plaque" style="background-image:url('${src}')"></div>
+        <div class="profile-banner-mini-name">${escapeHtml(player?.pseudo || 'Pseudo')}</div>
+      </div>
+      <div class="profile-banner-mini-sub">${Number(player?.elo || 1000)} ELO · ${wr}% WR</div>
+    </div>
+  </div>`;
+}
+
 function refreshProfileBannerPreview(player = currentPlayer) {
   const preview = document.getElementById('profile-banner-preview');
   const modalPreview = document.getElementById('profile-banner-modal-preview');
@@ -2936,11 +2967,10 @@ function refreshProfileBannerPreview(player = currentPlayer) {
   const btn = document.getElementById('profile-banner-btn');
   const applyBtn = document.getElementById('profile-banner-apply-btn');
   const effectiveBanner = pendingProfileBanner === null ? String(player?.profile_banner || '') : String(pendingProfileBanner || '');
-  const src = getRenderableMediaSrc(effectiveBanner);
   const remaining = getProfileBannerRemainingMs(player);
   const canEdit = isPerso(player) || String(player?.role || '') === 'admin';
   const hasPendingChange = pendingProfileBanner !== null && String(pendingProfileBanner || '') !== String(player?.profile_banner || '');
-  const previewHtml = src ? `<img src="${src}" alt="bannière pseudo">` : `<div class="profile-banner-choice-empty">Aucune</div>`;
+  const previewHtml = buildProfileBannerPreviewMarkup(player, effectiveBanner);
   if (preview) preview.innerHTML = previewHtml;
   if (modalPreview) modalPreview.innerHTML = previewHtml;
   const message = !canEdit
@@ -2949,14 +2979,14 @@ function refreshProfileBannerPreview(player = currentPlayer) {
       ? 'Clique sur Appliquer la sélection pour enregistrer cette bannière pseudo.'
       : remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 1 semaine.`
-        : src
+        : effectiveBanner
           ? 'Bannière pseudo active. Tu peux la modifier toutes les 1 semaine.'
           : 'Choisis une bannière de pseudo Perso. Changement toutes les 1 semaine.';
   if (meta) { meta.textContent = message; meta.style.color = remaining > 0 || hasPendingChange ? '#ff7a45' : 'var(--muted)'; }
   if (modalMeta) { modalMeta.textContent = message; modalMeta.style.color = remaining > 0 || hasPendingChange ? '#ff7a45' : 'var(--muted)'; }
   if (btn) {
     btn.disabled = !canEdit;
-    btn.textContent = !canEdit ? 'Reserve Perso' : src ? 'Changer la bannière' : 'Choisir une bannière';
+    btn.textContent = !canEdit ? 'Reserve Perso' : effectiveBanner ? 'Changer la bannière' : 'Choisir une bannière';
   }
   if (applyBtn) {
     applyBtn.disabled = !canEdit || remaining > 0 || !hasPendingChange;
