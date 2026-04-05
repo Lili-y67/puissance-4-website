@@ -779,6 +779,23 @@ function getPersoAccent() {
   return { color: '#ff7a45', bg: 'rgba(255,122,69,0.14)', border: 'rgba(255,122,69,0.36)', label: 'PERSO' };
 }
 
+function getPersoRoleAccent(player = currentPlayer) {
+  const defaultAccent = getPersoAccent();
+  const rawColor = String(player?.custom_role_color || '').trim();
+  const color = /^#[0-9a-fA-F]{6}$/.test(rawColor) ? rawColor.toUpperCase() : defaultAccent.color;
+  return {
+    color,
+    bg: `${color}18`,
+    border: `${color}66`,
+    label: String(player?.custom_role_text || '').trim().toUpperCase() || defaultAccent.label,
+    emoji: String(player?.custom_role_emoji || '').trim(),
+  };
+}
+
+function hasCustomPersoRole(player = currentPlayer) {
+  return isPerso(player) && !!String(player?.custom_role_text || '').trim() && !!String(player?.custom_role_color || '').trim();
+}
+
 function getVipExpiryLabel(player = currentPlayer) {
   if (!player?.is_vip || player?.is_vip_plus || !player?.vip_expires_at) return '';
   try {
@@ -919,10 +936,10 @@ function render(player, games, following, followers, followStatus) {
           <div class="profile-pseudo">${player.pseudo}</div>
           <div class="profile-badges">
             ${(player.is_vip || player.is_vip_plus) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getVipAccent(player).bg};color:${getVipAccent(player).color};border:1px solid ${getVipAccent(player).border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; ${getVipAccent(player).label}</span>` : ''}
-            ${player.is_perso ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
+            ${player.is_perso && !hasCustomPersoRole(player) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
-            ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${player.custom_role_color}18;color:${player.custom_role_color};border:1px solid ${player.custom_role_color};box-shadow:0 0 14px ${player.custom_role_color}55,inset 0 0 10px ${player.custom_role_color}18;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${player.custom_role_emoji ? `<span style="margin-right:4px">${player.custom_role_emoji}</span>` : ''}${String(player.custom_role_text).toUpperCase()}</span>` : ''}
+            ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoRoleAccent(player).bg};color:${getPersoRoleAccent(player).color};border:1px solid ${getPersoRoleAccent(player).border};box-shadow:0 0 14px ${getPersoRoleAccent(player).color}55,inset 0 0 10px ${getPersoRoleAccent(player).bg};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${getPersoRoleAccent(player).emoji ? `<span style="margin-right:4px">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -953,8 +970,8 @@ function render(player, games, following, followers, followStatus) {
           ${isOwnProfile && getPremiumTier(player) ? `
           <div id="vip-boost-wrap" style="margin-top:4px;">
             <button id="vip-boost-btn" onclick="activateVipBoost()"
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${isPerso(player) ? 'rgba(255,122,69,0.35)' : isVipPlus(player) ? 'rgba(133,235,255,0.35)' : 'rgba(255,214,10,0.3)'};background:${isPerso(player) ? 'rgba(255,122,69,0.08)' : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'};color:${isPerso(player) ? '#ff7a45' : isVipPlus(player) ? '#85EBFF' : '#ffd60a'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
-              onmouseover="this.style.background='${isPerso(player) ? 'rgba(255,122,69,0.16)' : isVipPlus(player) ? 'rgba(133,235,255,0.15)' : 'rgba(255,214,10,0.15)'}'" onmouseout="this.style.background='${isPerso(player) ? 'rgba(255,122,69,0.08)' : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'}'">
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${isPerso(player) ? getPersoRoleAccent(player).border : isVipPlus(player) ? 'rgba(133,235,255,0.35)' : 'rgba(255,214,10,0.3)'};background:${isPerso(player) ? getPersoRoleAccent(player).bg : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'};color:${isPerso(player) ? getPersoRoleAccent(player).color : isVipPlus(player) ? '#85EBFF' : '#ffd60a'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
+              onmouseover="this.style.background='${isPerso(player) ? `${getPersoRoleAccent(player).color}28` : isVipPlus(player) ? 'rgba(133,235,255,0.15)' : 'rgba(255,214,10,0.15)'}'" onmouseout="this.style.background='${isPerso(player) ? getPersoRoleAccent(player).bg : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'}'">
               &#9889; BOOST ${isPerso(player) ? 'PERSO' : isVipPlus(player) ? 'VIP+' : 'VIP'}
             </button>
             <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
@@ -1087,6 +1104,7 @@ function render(player, games, following, followers, followStatus) {
           <span>Couleur</span>
         </div>
         <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
+        <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 6 caractères.</div>
     </div>` : ''}
@@ -1122,7 +1140,7 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
       <div style="font-size:11px;color:var(--muted);line-height:1.5">
-        Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)">lili_crystal_</strong>
+        Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)"> lili_crystal_</strong>
       </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
     </div>
@@ -2183,7 +2201,9 @@ async function initVipBoostUI() {
     const data = await fetch('/api/players/' + me.id + '/vip-boost').then(r=>r.json());
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
-    const accent = data.tier === 'perso' ? '#ff7a45' : data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
+    const accent = data.tier === 'perso'
+      ? getPersoRoleAccent(me).color
+      : data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
     const bonusPct = data.tier === 'vip' ? 20 : 30;
     const durationLabel = data.tier === 'perso' ? '2h' : '1h';
     if (data.active) {
@@ -2226,7 +2246,9 @@ async function activateVipBoost() {
     }
     const btn  = document.getElementById('vip-boost-btn');
     const stat = document.getElementById('vip-boost-status');
-    const accent = data.tier === 'perso' ? '#ff7a45' : data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
+    const accent = data.tier === 'perso'
+      ? getPersoRoleAccent(me).color
+      : data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
     const mins = Math.ceil(((data.expiresAt || Date.now()) - Date.now()) / 60000);
     btn.disabled = true;
     btn.style.opacity = '0.5';
@@ -3109,6 +3131,41 @@ async function saveProfileCustomRole() {
   } finally {
     btn.disabled = false;
     btn.textContent = '✨ Enregistrer';
+  }
+}
+
+async function removeProfileCustomRole() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  const btn = document.getElementById('btn-remove-perso-role');
+  const textInput = document.getElementById('perso-role-text-input');
+  const emojiInput = document.getElementById('perso-role-emoji-input');
+  const colorInput = document.getElementById('perso-role-color-input');
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await fetch(`/api/players/${me.id}/custom-role`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '', emoji: '', color: '', token: localStorage.getItem('token') }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Impossible de retirer le grade perso.');
+      return;
+    }
+    const patch = { custom_role_text: '', custom_role_color: '', custom_role_emoji: '' };
+    if (currentPlayer) Object.assign(currentPlayer, patch);
+    Object.assign(me, patch);
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    if (textInput) textInput.value = '';
+    if (emojiInput) emojiInput.value = '';
+    if (colorInput) colorInput.value = '#FF7A45';
+    await load();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '- Retirer';
   }
 }
 
