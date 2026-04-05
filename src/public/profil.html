@@ -215,6 +215,11 @@ input[type="file"]{display:none;}
   animation:slide-in 0.5s 0.08s cubic-bezier(0.22,1,0.36,1) both;
 }
 .color-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.color-picker-inline{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:8px 12px;min-width:118px}
+.color-picker-inline input[type="color"]{appearance:none;-webkit-appearance:none;width:28px;height:28px;border:none;background:transparent;padding:0;cursor:pointer;opacity:1;position:static;pointer-events:auto}
+.color-picker-inline input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+.color-picker-inline input[type="color"]::-webkit-color-swatch{border:none;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,0.14)}
+.color-picker-inline span{font-size:11px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}
 .color-preset{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all 0.2s;flex-shrink:0;}
 .color-preset:hover{transform:scale(1.2);}
 .color-preset.active{border-color:var(--text);transform:scale(1.15);}
@@ -942,6 +947,17 @@ function render(player, games, following, followers, followStatus) {
 
     <!-- Changement de couleur (propre profil uniquement) -->
     ${isOwnProfile ? `
+    <div class="color-card" id="pseudo-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Pseudo du profil</span>
+        <span class="save-confirm" id="pseudo-confirm">✓ Enregistré !</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input id="profile-pseudo-input" class="search-input" style="max-width:260px;margin:0" type="text" maxlength="20" value="${player.pseudo.replace(/"/g, '&quot;')}">
+        <button class="btn-save-color" id="btn-save-pseudo" onclick="saveProfilePseudo()">✏️ Enregistrer</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">Tu peux changer ton pseudo directement depuis ton profil.</div>
+    </div>
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Couleur de jeton</span>
@@ -953,13 +969,19 @@ function render(player, games, following, followers, followStatus) {
           <div class="color-dot" id="profil-color-dot"></div>
           <div class="color-hex" id="profil-color-hex">#ff2d55</div>
         </div>
-        <input type="color" id="profil-color-input" oninput="onProfilColorInput(this.value)">
+        <div class="color-picker-inline">
+          <input type="color" id="profil-color-input" oninput="onProfilColorInput(this.value)">
+          <span>Libre</span>
+        </div>
         ${canUseGradient(player) ? `
         <div class="color-custom-wrap" onclick="document.getElementById('profil-color-secondary-input').click()">
           <div class="color-dot" id="profil-color-secondary-dot"></div>
           <div class="color-hex" id="profil-color-secondary-hex">#85EBFF</div>
         </div>
-        <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">` : ''}
+        <div class="color-picker-inline">
+          <input type="color" id="profil-color-secondary-input" oninput="onProfilSecondaryColorInput(this.value)">
+          <span>Dégradé</span>
+        </div>` : ''}
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
       ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
@@ -2598,14 +2620,15 @@ async function refreshDiscordState(player) {
     });
     const data = await res.json();
     if (data?.unlinked) {
-      syncStoredPlayerPatch({ role: 'user', is_vip: 0, is_vip_plus: 0, discord_id: null });
-      return { ...player, role: 'user', is_vip: 0, is_vip_plus: 0, discord_id: null };
+      syncStoredPlayerPatch({ role: 'user', is_vip: 0, is_vip_plus: 0, is_perso: 0, discord_id: null });
+      return { ...player, role: 'user', is_vip: 0, is_vip_plus: 0, is_perso: 0, discord_id: null };
     }
-    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number' || typeof data?.is_vip_plus === 'number' || 'vip_expires_at' in (data || {})) {
+    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number' || typeof data?.is_vip_plus === 'number' || typeof data?.is_perso === 'number' || 'vip_expires_at' in (data || {})) {
       const patch = {};
       if (data?.role) patch.role = data.role;
       if (typeof data?.is_vip === 'number') patch.is_vip = data.is_vip;
       if (typeof data?.is_vip_plus === 'number') patch.is_vip_plus = data.is_vip_plus;
+      if (typeof data?.is_perso === 'number') patch.is_perso = data.is_perso;
       if ('vip_expires_at' in (data || {})) patch.vip_expires_at = data.vip_expires_at;
       syncStoredPlayerPatch(patch);
       return { ...player, ...patch };
@@ -2824,6 +2847,43 @@ async function saveColor() {
   } finally {
     btn.disabled = false;
     btn.textContent = '\uD83C\uDFA8 Enregistrer';
+  }
+}
+
+async function saveProfilePseudo() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  const input = document.getElementById('profile-pseudo-input');
+  const btn = document.getElementById('btn-save-pseudo');
+  const pseudo = String(input?.value || '').trim();
+  if (!pseudo) return alert('Entre un pseudo.');
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    const res = await fetch(`/api/players/${me.id}/pseudo`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pseudo, token: localStorage.getItem('token') }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Pseudo invalide.');
+      return;
+    }
+    me.pseudo = data.pseudo || pseudo;
+    if (currentPlayer) currentPlayer.pseudo = me.pseudo;
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    const pseudoEl = document.querySelector('.profile-pseudo');
+    if (pseudoEl) pseudoEl.textContent = me.pseudo;
+    const confirm = document.getElementById('pseudo-confirm');
+    if (confirm) {
+      confirm.style.opacity = '1';
+      setTimeout(() => confirm.style.opacity = '0', 2000);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✏️ Enregistrer';
   }
 }
 

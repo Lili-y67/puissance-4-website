@@ -70,7 +70,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
 .modal-btns{display:flex;gap:8px;margin-top:16px}
 
-/* â”€â”€ Mobile â”€â”€ */
+/* Mobile */
 @media(max-width:900px){
   .page { padding: 18px 12px 54px; }
   .nav {
@@ -285,14 +285,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
 <script>
 let adminToken = sessionStorage.getItem('adminToken');
-let myRole     = sessionStorage.getItem('adminRole') || 'admin'; // 'admin' ou 'moderator'
+let myRole     = sessionStorage.getItem('adminRole') || 'admin';
 let allPlayers = [];
 
 if (adminToken) showPanel();
 
 async function login() {
   const pwd = document.getElementById('pwd-input').value;
-  // Passer le token joueur pour dÃ©tecter le rÃ´le (moderator vs admin)
+  // Passer le token joueur pour détecter le rôle (moderator vs admin)
   const playerToken = localStorage.getItem('token') || null;
   const res  = await fetch('/api/admin/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -321,12 +321,12 @@ function logout() {
 async function showPanel() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('panel').style.display = 'block';
-  // RÃ©cupÃ©rer le rÃ´le depuis /api/admin/me si dÃ©jÃ  connectÃ©
+  // Récupérer le rôle depuis /api/admin/me si déjà connecté
   try {
     const me = await api('GET', '/api/admin/me');
     if (me.role) { myRole = me.role; sessionStorage.setItem('adminRole', myRole); }
   } catch(e) {}
-  // Afficher badge rÃ´le dans le header
+  // Afficher le badge de rôle dans le header
   const roleEl = document.getElementById('my-role-badge');
   if (roleEl) {
     roleEl.textContent = myRole === 'admin' ? 'Admin' : 'Modérateur';
@@ -354,7 +354,7 @@ async function loadPlayers() {
   if (!Array.isArray(data)) { logout(); return; }
   allPlayers = data;
   renderStats();
-  renderPlayers(allPlayers);
+  filterPlayers();
 }
 
 function renderStats() {
@@ -409,13 +409,13 @@ function customRoleBadge(player) {
 
 function vipBadge(player, compact = false) {
   if (player.is_vip_plus) {
-    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.42);box-shadow:0 0 14px rgba(133,235,255,0.22)">vip+</span>`;
+    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.42);box-shadow:0 0 14px rgba(133,235,255,0.22)">VIP+</span>`;
   }
   if (player.is_perso) {
-    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(255,122,69,0.14);color:#ff7a45;border:1px solid rgba(255,122,69,0.42);box-shadow:0 0 14px rgba(255,122,69,0.18)">perso</span>`;
+    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(255,122,69,0.14);color:#ff7a45;border:1px solid rgba(255,122,69,0.42);box-shadow:0 0 14px rgba(255,122,69,0.18)">PERSO</span>`;
   }
   if (player.is_vip) {
-    return `<span class="badge badge-vip" style="${compact ? 'font-size:10px' : ''}">vip</span>`;
+    return `<span class="badge badge-vip" style="${compact ? 'font-size:10px' : ''}">VIP</span>`;
   }
   return '';
 }
@@ -498,6 +498,7 @@ function renderPlayers(players) {
 }
 
 function openModal(id) {
+  document.getElementById('admin-modal')?.remove();
   const player = allPlayers.find(p => Number(p.id) === Number(id));
   if (!player) return;
   const pseudo = player.pseudo;
@@ -656,7 +657,11 @@ async function clearSuspicious(id) {
 
 function closeAndReload() {
   document.getElementById('admin-modal')?.remove();
-  loadPlayers();
+  if (currentAdminTab === 'games') {
+    loadAdminGames();
+  } else {
+    loadPlayers();
+  }
 }
 let currentAdminTab = 'players';
 function switchAdminTab(tab) {
@@ -671,7 +676,7 @@ function switchAdminTab(tab) {
   if (tab === 'games') loadAdminGames();
 }
 
-// â”€â”€ Gestion des parties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Gestion des parties
 let adminGamesOffset = 0;
 const ADMIN_GAMES_LIMIT = 25;
 
@@ -757,7 +762,7 @@ ${res.p2.pseudo} -> ${res.p2.eloBefore} ELO`);
   }
 }
 
-// â”€â”€ Boost ELO Global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Boost ELO global
 function switchBoostTab(tab) {
   const isGlobal = tab === 'global';
   document.getElementById('boost-panel-global').style.display = isGlobal ? 'block' : 'none';
