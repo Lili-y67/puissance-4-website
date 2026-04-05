@@ -198,6 +198,7 @@ class GameManager {
         vipMultiplier: elo.vipMultiplier ?? 1,
         vipTier: elo.vipTier ?? null,
       },
+      coinChanges: elo.coins || {},
     };
 
     // Cleanup sockets immédiatement
@@ -222,6 +223,11 @@ class GameManager {
         globalMultiplier: elo.globalMultiplier ?? 1,
         vipMultiplier: elo.vipMultiplier ?? 1,
         vipTier: elo.vipTier ?? null,
+      },
+      coinChanges: elo.coins || {},
+      coinsNow: {
+        [state.players[1].id]: elo.player1CoinsNow,
+        [state.players[2].id]: elo.player2CoinsNow,
       },
       isSuspect,
       eloNow: {

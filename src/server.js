@@ -638,6 +638,12 @@ const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
+const SHOP_PRICES = Object.freeze({
+  vip_1m: 100,
+  vip_1y: 1000,
+  vip_plus: 5000,
+  perso: 15000,
+});
 
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
@@ -1029,6 +1035,87 @@ app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/li
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
+
+app.get('/api/shop/me', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  res.json({
+    player: sanitize(player),
+    prices: SHOP_PRICES,
+  });
+});
+
+app.post('/api/shop/buy', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+
+  const pack = String(req.body?.pack || '').trim();
+  if (!SHOP_PRICES[pack]) return res.status(400).json({ error: 'Pack invalide.' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  if (Number(player.coins || 0) < SHOP_PRICES[pack]) {
+    return res.status(400).json({ error: 'Pas assez de coins.' });
+  }
+  if (pack === 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
+    return res.status(400).json({ error: 'VIP+ deja actif.' });
+  }
+  if (pack === 'perso' && Number(player.is_perso || 0) === 1) {
+    return res.status(400).json({ error: 'Pack Perso deja actif.' });
+  }
+  if (pack !== 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
+    return res.status(400).json({ error: 'VIP+ est deja actif a vie.' });
+  }
+
+  const now = Date.now();
+  const currentCoins = Number(player.coins || 0);
+  const currentVipExpiry = Number(player.vip_expires_at || 0);
+  const baseExpiry = currentVipExpiry > now ? currentVipExpiry : now;
+  const nextCoins = currentCoins - SHOP_PRICES[pack];
+
+  pQ.updateCoins.run({ coins: nextCoins, id: playerId });
+
+  if (pack === 'vip_1m') {
+    pQ.updateVip.run({ is_vip: 1, id: playerId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: playerId });
+    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (30 * 24 * 60 * 60 * 1000), id: playerId });
+  } else if (pack === 'vip_1y') {
+    pQ.updateVip.run({ is_vip: 1, id: playerId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: playerId });
+    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (365 * 24 * 60 * 60 * 1000), id: playerId });
+  } else if (pack === 'vip_plus') {
+    pQ.updateVip.run({ is_vip: 1, id: playerId });
+    pQ.updateVipPlus.run({ is_vip_plus: 1, id: playerId });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
+  } else if (pack === 'perso') {
+    pQ.updatePerso.run({ is_perso: 1, id: playerId });
+  }
+
+  const fresh = pQ.getById.get(playerId);
+  if (fresh?.discord_id) {
+    try {
+      await syncDiscordRole(
+        fresh.discord_id,
+        fresh.role,
+        Number(fresh.is_vip || 0) === 1,
+        Number(fresh.is_vip_plus || 0) === 1,
+        Number(fresh.is_perso || 0) === 1
+      );
+    } catch(e) {}
+  }
+
+  res.json({
+    ok: true,
+    pack,
+    prices: SHOP_PRICES,
+    player: sanitize(pQ.getById.get(playerId)),
+  });
+});
 
 app.get('/api/live', (_, res) => {
   const games = [];

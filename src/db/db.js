@@ -113,6 +113,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT N
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -158,6 +159,8 @@ const pQ = {
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
+  updateCoins:  db.prepare(`UPDATE players SET coins = @coins WHERE id = @id`),
+  addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
   loss:         db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
@@ -301,11 +304,15 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
+  const p1Coins = isSuspect ? 0 : (1 + Math.floor(Math.random() * 3));
+  const p2Coins = isSuspect ? 0 : (1 + Math.floor(Math.random() * 3));
 
   if (!isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
     pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
     pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
+    pQ.addCoins.run({ delta: p1Coins, id: game.player1_id });
+    pQ.addCoins.run({ delta: p2Coins, id: game.player2_id });
     if (isDraw) {
       pQ.draw.run(game.player1_id);
       pQ.draw.run(game.player2_id);
@@ -342,6 +349,12 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     globalMultiplier,
     vipMultiplier,
     vipTier,
+    coins: {
+      [game.player1_id]: p1Coins,
+      [game.player2_id]: p2Coins,
+    },
+    player1CoinsNow: pQ.getById.get(game.player1_id).coins,
+    player2CoinsNow: pQ.getById.get(game.player2_id).coins,
     player1EloNow: pQ.getById.get(game.player1_id).elo,
     player2EloNow: pQ.getById.get(game.player2_id).elo,
     winnerEloNow: pQ.getById.get(winnerId).elo,

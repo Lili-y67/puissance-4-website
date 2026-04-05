@@ -9,9 +9,9 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#06060e;
+  --bg:#070711;
   --surface:#101120;
-  --surface-2:#15172a;
+  --surface-2:#17192d;
   --border:rgba(255,255,255,.08);
   --text:#f4f4fb;
   --muted:rgba(244,244,251,.62);
@@ -29,9 +29,9 @@ body{
   color:var(--text);
   font-family:'Barlow',sans-serif;
   background:
-    radial-gradient(circle at 14% 16%, rgba(255,45,85,.14), transparent 20%),
-    radial-gradient(circle at 82% 12%, rgba(133,235,255,.10), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(255,214,10,.09), transparent 28%),
+    radial-gradient(circle at 15% 18%, rgba(255,45,85,.12), transparent 22%),
+    radial-gradient(circle at 84% 14%, rgba(133,235,255,.10), transparent 24%),
+    radial-gradient(circle at 52% 100%, rgba(255,214,10,.09), transparent 28%),
     var(--bg);
 }
 .bg-grid{
@@ -79,6 +79,21 @@ body{
   padding:20px;border-radius:24px;background:rgba(10,11,22,.72);
   border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)
 }
+.coins-panel{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:14px 16px;border-radius:18px;background:var(--surface-2);border:1px solid rgba(255,255,255,.06);margin-bottom:14px
+}
+.coins-left{display:flex;align-items:center;gap:12px}
+.coin-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  min-height:58px;padding:10px 14px;border-radius:18px;
+  background:linear-gradient(180deg, rgba(255,122,69,.24), rgba(255,122,69,.12));
+  border:1px solid rgba(255,122,69,.35);
+  box-shadow:0 0 22px rgba(255,122,69,.14), inset 0 0 14px rgba(255,255,255,.03);
+}
+.coin-icon{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,214,10,.32))}
+.coins-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.coins-value{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;color:var(--yellow);line-height:1}
 .hero-side-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
 .hero-side-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .hero-side-item{
@@ -90,10 +105,10 @@ body{
 .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .section-sub{font-size:14px;color:var(--muted);max-width:760px}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .card{
   position:relative;overflow:hidden;
-  min-height:468px;padding:22px;border-radius:26px;
+  min-height:490px;padding:22px;border-radius:26px;
   background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;
   box-shadow:0 22px 44px rgba(0,0,0,.26);
@@ -119,14 +134,18 @@ body{
 .card h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .meta{font-size:14px;line-height:1.7;color:var(--muted)}
 .stat-line{
-  display:flex;align-items:baseline;gap:10px;padding:14px 16px;border-radius:18px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)
 }
-.stat-line strong{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
-.stat-line span{font-size:13px;color:var(--muted)}
-.stat-line.vip strong{color:var(--yellow);text-shadow:0 0 20px rgba(255,214,10,.22)}
-.stat-line.vipplus strong{color:var(--blue);text-shadow:0 0 20px rgba(133,235,255,.20)}
-.stat-line.perso strong{color:var(--orange);text-shadow:0 0 20px rgba(255,122,69,.22)}
+.stat-line-left strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
+.stat-line-left span{font-size:13px;color:var(--muted)}
+.price{
+  display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900
+}
+.price img{width:30px;height:30px;object-fit:contain}
+.stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
+.stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
+.stat-line.perso .price,.stat-line.perso strong{color:var(--orange)}
 .feature-list{display:flex;flex-direction:column;gap:10px}
 .feature{
   display:flex;gap:10px;align-items:flex-start;
@@ -138,31 +157,27 @@ body{
 .cta{
   margin-top:auto;width:100%;padding:13px 16px;border-radius:14px;
   font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
-  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);color:rgba(244,244,251,.45);cursor:not-allowed
+  border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s
 }
-.cta.vip{border-color:rgba(255,214,10,.18);background:rgba(255,214,10,.06)}
-.cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.06)}
-.cta.perso{border-color:rgba(255,122,69,.18);background:rgba(255,122,69,.06)}
+.cta.vip{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
+.cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.08);color:var(--blue)}
+.cta.perso{border-color:rgba(255,122,69,.22);background:rgba(255,122,69,.08);color:var(--orange)}
+.cta:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.7)}
 .cta small{display:block;font-size:11px;letter-spacing:.6px;margin-top:3px}
-.faq{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
 .panel{
   padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   border:1px solid var(--border)
 }
 .panel-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.faq-list{display:flex;flex-direction:column;gap:12px}
-.faq-item{padding:14px 16px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
-.faq-item strong{display:block;font-size:14px}
-.faq-item span{display:block;font-size:13px;color:var(--muted);margin-top:5px;line-height:1.6}
 .status-line{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:14px 16px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)
 }
 .status-line span{font-size:13px;color:var(--muted)}
 .status-line strong{font-family:'Barlow Condensed',sans-serif;font-size:24px}
-.foot-note{font-size:13px;color:var(--muted);line-height:1.7}
+.note{font-size:13px;color:var(--muted);line-height:1.7}
 @media (max-width:980px){
-  .hero-inner,.faq,.grid{grid-template-columns:1fr}
+  .hero-inner,.grid{grid-template-columns:1fr}
   .hero-title{font-size:54px}
 }
 @media (max-width:640px){
@@ -171,6 +186,7 @@ body{
   .hero-title{font-size:42px}
   .section-title{font-size:32px}
   .card{min-height:auto}
+  .coins-panel{align-items:flex-start;flex-direction:column}
 }
 </style>
 </head>
@@ -188,21 +204,33 @@ body{
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-kicker">Boutique premium</div>
-        <h1 class="hero-title">Choisis ton <span>style</span> et ton bonus</h1>
+        <div class="hero-kicker">Boutique en coins</div>
+        <h1 class="hero-title">Depense tes <span>coins</span> pour evoluer</h1>
         <p class="hero-copy">
-          La boutique est prête visuellement. Les prix arriveront plus tard, donc les achats restent
-          volontairement désactivés pour le moment. En revanche, les packs sont déjà définis proprement
-          sur le site pour préparer la suite.
+          Chaque partie te fait gagner entre 1 et 3 coins. Tu peux ensuite les depenser ici
+          pour debloquer VIP, VIP+, ou le pack Perso directement depuis le site.
         </p>
         <div class="hero-pills">
+          <div class="pill">1 a 3 coins par partie</div>
           <div class="pill">VIP : emoji custom + GIF +20%</div>
-          <div class="pill">VIP+ : emoji image + déco +30%</div>
-          <div class="pill">Perso : badge perso + boost 2h + export replay</div>
+          <div class="pill">VIP+ : emoji image + deco +30%</div>
+          <div class="pill">Perso : badge perso + replay HTML</div>
         </div>
       </div>
       <div class="hero-side">
-        <div class="hero-side-title">Résumé rapide</div>
+        <div class="coins-panel">
+          <div class="coins-left">
+            <div class="coin-badge">
+              <img class="coin-icon" src="/coin.png" alt="coin">
+              <div>
+                <div class="coins-label">Mes coins</div>
+                <div class="coins-value" id="coins-value">0</div>
+              </div>
+            </div>
+          </div>
+          <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
+        </div>
+        <div class="hero-side-title">Rappel rapide</div>
         <div class="hero-side-list">
           <div class="hero-side-item">
             <div>
@@ -214,16 +242,16 @@ body{
           <div class="hero-side-item">
             <div>
               <strong>VIP+</strong>
-              <span>À vie, style bleu</span>
+              <span>A vie, style bleu</span>
             </div>
-            <strong style="color:var(--blue)">+30%</strong>
+            <strong style="color:var(--blue)">5000</strong>
           </div>
           <div class="hero-side-item">
             <div>
               <strong>Perso</strong>
-              <span>Pack créateur / identité</span>
+              <span>Badge perso + export replay</span>
             </div>
-            <strong style="color:var(--orange)">2h</strong>
+            <strong style="color:var(--orange)">15000</strong>
           </div>
         </div>
       </div>
@@ -235,8 +263,7 @@ body{
       <div>
         <div class="section-title">Formules disponibles</div>
         <div class="section-sub">
-          Trois packs clairs pour éviter les doublons : VIP pour l’emoji custom et les médias GIF,
-          VIP+ pour le visuel avancé en jeu, et Perso pour le badge personnalisé et l’export de replay.
+          Les achats se font en coins du site. Les packs s'activent directement apres validation si ton solde est suffisant.
         </div>
       </div>
     </div>
@@ -249,159 +276,265 @@ body{
         <div class="duration">1 mois</div>
       </div>
       <h2>VIP Mensuel</h2>
-      <div class="meta">Le pack premium souple pour profiter du contenu VIP pendant 30 jours, avec retrait automatique à expiration.</div>
+      <div class="meta">Le pack premium simple pour profiter du contenu VIP pendant 30 jours.</div>
       <div class="stat-line vip">
-        <strong>+20%</strong>
-        <span>sur le boost ELO quotidien</span>
+        <div class="stat-line-left">
+          <strong>+20%</strong>
+          <span>sur le boost ELO quotidien</span>
+        </div>
+        <div class="price"><img src="/coin.png" alt="">100</div>
       </div>
       <div class="feature-list">
-        <div class="feature">
-          <div class="feature-emoji">🎭</div>
-          <div class="feature-copy">
-            <strong>Emoji custom</strong>
-            <span>Tu peux choisir ton emoji de pion personnalisé, sans image importée.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">🖼️</div>
-          <div class="feature-copy">
-            <strong>Avatar et bannière GIF</strong>
-            <span>Les GIF sont réservés au premium VIP, avec cooldown protégé côté serveur.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">⏱️</div>
-          <div class="feature-copy">
-            <strong>Boost quotidien unique</strong>
-            <span>Une seule activation par jour, active pendant 1 heure à +20% ELO.</span>
-          </div>
-        </div>
+        <div class="feature"><div class="feature-emoji">🎭</div><div class="feature-copy"><strong>Emoji custom</strong><span>Tu peux choisir ton emoji de pion personnalise.</span></div></div>
+        <div class="feature"><div class="feature-emoji">🖼️</div><div class="feature-copy"><strong>Avatar et banniere GIF</strong><span>Les GIF sont reserves au VIP pour ton profil.</span></div></div>
+        <div class="feature"><div class="feature-emoji">⏱️</div><div class="feature-copy"><strong>Boost quotidien</strong><span>Une activation par jour, active pendant 1 heure.</span></div></div>
       </div>
-      <button class="cta vip" disabled>
-        Acheter bientôt
-        <small>Le prix sera ajouté plus tard</small>
+      <button class="cta vip" id="buy-vip-1m" onclick="buyPack('vip_1m')">
+        Acheter VIP 1 mois
+        <small id="buy-vip-1m-note">100 coins</small>
+      </button>
+    </article>
+
+    <article class="card vip">
+      <div class="tier">
+        <span class="badge vip">⭐ VIP</span>
+        <div class="duration">1 an</div>
+      </div>
+      <h2>VIP Annuel</h2>
+      <div class="meta">La version longue duree du pack VIP, parfaite si tu veux garder tous les avantages pendant un an.</div>
+      <div class="stat-line vip">
+        <div class="stat-line-left">
+          <strong>+20%</strong>
+          <span>sur le boost ELO quotidien</span>
+        </div>
+        <div class="price"><img src="/coin.png" alt="">1000</div>
+      </div>
+      <div class="feature-list">
+        <div class="feature"><div class="feature-emoji">🗓️</div><div class="feature-copy"><strong>1 an complet</strong><span>Le VIP dure 365 jours et peut etre prolonge si tu le rachetes.</span></div></div>
+        <div class="feature"><div class="feature-emoji">🎨</div><div class="feature-copy"><strong>Emoji custom VIP</strong><span>Tu gardes le meme confort que le VIP mensuel pour ton pion.</span></div></div>
+        <div class="feature"><div class="feature-emoji">💾</div><div class="feature-copy"><strong>GIF medias</strong><span>Avatar et banniere GIF avec les memes protections serveur.</span></div></div>
+      </div>
+      <button class="cta vip" id="buy-vip-1y" onclick="buyPack('vip_1y')">
+        Acheter VIP 1 an
+        <small id="buy-vip-1y-note">1000 coins</small>
       </button>
     </article>
 
     <article class="card vipplus">
       <div class="tier">
         <span class="badge vipplus">💎 VIP+</span>
-        <div class="duration">À vie</div>
+        <div class="duration">A vie</div>
       </div>
       <h2>VIP+ Lifetime</h2>
-      <div class="meta">Le rang premium permanent pour les joueurs qui veulent une identité visuelle plus poussée et un bonus plus fort.</div>
+      <div class="meta">Le rang premium permanent pour les joueurs qui veulent le style le plus pousse et le meilleur bonus VIP.</div>
       <div class="stat-line vipplus">
-        <strong>+30%</strong>
-        <span>sur le boost ELO quotidien</span>
+        <div class="stat-line-left">
+          <strong>+30%</strong>
+          <span>sur le boost ELO quotidien</span>
+        </div>
+        <div class="price"><img src="/coin.png" alt="">5000</div>
       </div>
       <div class="feature-list">
-        <div class="feature">
-          <div class="feature-emoji">🧩</div>
-          <div class="feature-copy">
-            <strong>Emoji image 128x128</strong>
-            <span>Import, recadrage et rendu direct dans la grille sous forme de pion image.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">🌀</div>
-          <div class="feature-copy">
-            <strong>Dégradé de couleur</strong>
-            <span>Ajoute une seconde couleur pour obtenir un pion à double teinte en partie.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">✨</div>
-          <div class="feature-copy">
-            <strong>Décoration d’avatar</strong>
-            <span>Une surcouche importée autour de l’avatar, pensée pour le profil premium avancé.</span>
-          </div>
-        </div>
+        <div class="feature"><div class="feature-emoji">🧩</div><div class="feature-copy"><strong>Emoji image 128x128</strong><span>Import, recadrage et rendu direct dans la grille.</span></div></div>
+        <div class="feature"><div class="feature-emoji">🌈</div><div class="feature-copy"><strong>Double couleur</strong><span>Ajoute une seconde couleur pour un vrai pion en degrade.</span></div></div>
+        <div class="feature"><div class="feature-emoji">✨</div><div class="feature-copy"><strong>Deco avatar</strong><span>Une decoration importee autour de ton avatar.</span></div></div>
       </div>
-      <button class="cta vipplus" disabled>
-        Acheter bientôt
-        <small>Le prix sera ajouté plus tard</small>
+      <button class="cta vipplus" id="buy-vip-plus" onclick="buyPack('vip_plus')">
+        Acheter VIP+
+        <small id="buy-vip-plus-note">5000 coins</small>
       </button>
     </article>
 
     <article class="card perso">
       <div class="tier">
         <span class="badge perso">✨ Perso</span>
-        <div class="duration">Créateur</div>
+        <div class="duration">Createur</div>
       </div>
       <h2>Pack Perso</h2>
-      <div class="meta">Le pack identité pour les profils spéciaux : badge custom, boost plus long et export propre des replays.</div>
+      <div class="meta">Le pack identite pour les profils speciaux : badge perso, export replay HTML et bonus dedie.</div>
       <div class="stat-line perso">
-        <strong>2h</strong>
-        <span>de boost ELO à +30%</span>
+        <div class="stat-line-left">
+          <strong>2h</strong>
+          <span>de boost ELO a +30%</span>
+        </div>
+        <div class="price"><img src="/coin.png" alt="">15000</div>
       </div>
       <div class="feature-list">
-        <div class="feature">
-          <div class="feature-emoji">🏷️</div>
-          <div class="feature-copy">
-            <strong>Badge personnalisé</strong>
-            <span>Texte, couleur et emoji dédiés pour avoir un vrai badge à ton image.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">📥</div>
-          <div class="feature-copy">
-            <strong>Replay HTML</strong>
-            <span>Télécharge une partie en HTML autonome depuis le replay, sans l’analyse automatique.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">🚀</div>
-          <div class="feature-copy">
-            <strong>Boost premium plus long</strong>
-            <span>Activation de 2 heures à +30% ELO, pensée comme un bonus événementiel premium.</span>
-          </div>
-        </div>
+        <div class="feature"><div class="feature-emoji">🏷️</div><div class="feature-copy"><strong>Badge personnalise</strong><span>Texte, couleur et emoji dedies directement sur ton profil.</span></div></div>
+        <div class="feature"><div class="feature-emoji">📥</div><div class="feature-copy"><strong>Replay HTML</strong><span>Telecharge une partie en HTML autonome depuis le replay.</span></div></div>
+        <div class="feature"><div class="feature-emoji">🚀</div><div class="feature-copy"><strong>Boost Perso</strong><span>Activation speciale de 2 heures a +30% ELO.</span></div></div>
       </div>
-      <button class="cta perso" disabled>
-        Acheter bientôt
-        <small>Le prix sera ajouté plus tard</small>
+      <button class="cta perso" id="buy-perso" onclick="buyPack('perso')">
+        Acheter Perso
+        <small id="buy-perso-note">15000 coins</small>
       </button>
     </article>
   </section>
 
-  <section class="faq">
-    <div class="panel">
-      <div class="panel-title">Questions rapides</div>
-      <div class="faq-list">
-        <div class="faq-item">
-          <strong>VIP et VIP+ ont-ils le même emoji ?</strong>
-          <span>Non. VIP utilise un emoji custom classique, tandis que VIP+ débloque un vrai pion image importé.</span>
-        </div>
-        <div class="faq-item">
-          <strong>Le pack Perso remplace-t-il VIP+ ?</strong>
-          <span>Non. Perso se concentre sur le badge custom, le boost 2h à +30% et l’export HTML des replays.</span>
-        </div>
-        <div class="faq-item">
-          <strong>Les achats sont-ils déjà disponibles ?</strong>
-          <span>Pas encore. La page est prête et les boutons restent désactivés tant que les prix ne sont pas définis.</span>
-        </div>
-      </div>
+  <section class="panel">
+    <div class="panel-title">Comment gagner des coins ?</div>
+    <div class="status-line">
+      <span>Chaque partie jouee</span>
+      <strong style="color:var(--yellow)">+1 a +3</strong>
     </div>
-    <div class="panel">
-      <div class="panel-title">État de la boutique</div>
-      <div class="status-line">
-        <span>Paiement intégré</span>
-        <strong style="color:var(--muted)">OFF</strong>
-      </div>
-      <div class="status-line">
-        <span>UI publique</span>
-        <strong style="color:var(--green)">ON</strong>
-      </div>
-      <div class="status-line">
-        <span>Packs VIP / VIP+ / Perso</span>
-        <strong style="color:var(--green)">READY</strong>
-      </div>
-      <p class="foot-note" style="margin-top:16px">
-        Les prix et le paiement seront ajoutés plus tard. Pour l’instant, la structure visuelle sert
-        de base propre pour la future boutique du site.
-      </p>
+    <div class="status-line" style="margin-top:12px">
+      <span>Achats boutique</span>
+      <strong style="color:var(--green)">ACTIFS</strong>
     </div>
+    <p class="note" style="margin-top:16px">
+      Les coins sont gagnes automatiquement a la fin des parties legitimes. Les parties suspectes n'en donnent pas.
+    </p>
   </section>
 </div>
+
+<script>
+const SHOP_PRICES = {
+  vip_1m: 100,
+  vip_1y: 1000,
+  vip_plus: 5000,
+  perso: 15000,
+};
+
+let shopPlayer = null;
+
+function getStoredPlayer() {
+  try {
+    return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function setStoredPlayer(player) {
+  if (!player) return;
+  try { localStorage.setItem('player', JSON.stringify(player)); } catch {}
+  try { sessionStorage.setItem('player', JSON.stringify(player)); } catch {}
+}
+
+function setCoinsUi(coins, stateText) {
+  const coinsEl = document.getElementById('coins-value');
+  const stateEl = document.getElementById('coins-state');
+  if (coinsEl) coinsEl.textContent = Number(coins || 0);
+  if (stateEl) stateEl.textContent = stateText || '';
+}
+
+function packOwned(pack) {
+  if (!shopPlayer) return false;
+  if (pack === 'vip_plus') return Number(shopPlayer.is_vip_plus || 0) === 1;
+  if (pack === 'perso') return Number(shopPlayer.is_perso || 0) === 1;
+  if (pack === 'vip_1m' || pack === 'vip_1y') return Number(shopPlayer.is_vip_plus || 0) === 1 ? 'vip_plus' : false;
+  return false;
+}
+
+function updateButton(pack, buttonId, noteId) {
+  const btn = document.getElementById(buttonId);
+  const note = document.getElementById(noteId);
+  if (!btn || !note) return;
+  const price = SHOP_PRICES[pack];
+  const coins = Number(shopPlayer?.coins || 0);
+  const owned = packOwned(pack);
+
+  if (!shopPlayer) {
+    btn.disabled = true;
+    note.textContent = 'Connecte-toi pour acheter';
+    return;
+  }
+  if (owned === 'vip_plus') {
+    btn.disabled = true;
+    note.textContent = 'VIP+ deja actif a vie';
+    return;
+  }
+  if (owned === true) {
+    btn.disabled = true;
+    note.textContent = 'Deja actif';
+    return;
+  }
+  if (coins < price) {
+    btn.disabled = true;
+    note.textContent = `Il manque ${price - coins} coins`;
+    return;
+  }
+
+  btn.disabled = false;
+  note.textContent = `${price} coins`;
+}
+
+function refreshButtons() {
+  updateButton('vip_1m', 'buy-vip-1m', 'buy-vip-1m-note');
+  updateButton('vip_1y', 'buy-vip-1y', 'buy-vip-1y-note');
+  updateButton('vip_plus', 'buy-vip-plus', 'buy-vip-plus-note');
+  updateButton('perso', 'buy-perso', 'buy-perso-note');
+}
+
+async function loadShop() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    setCoinsUi(0, 'Connecte-toi pour acheter.');
+    refreshButtons();
+    return;
+  }
+  try {
+    const res = await fetch('/api/shop/me', { headers: { 'x-session-token': token } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur boutique');
+    shopPlayer = data.player || null;
+    setStoredPlayer(shopPlayer);
+    setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
+    refreshButtons();
+  } catch (e) {
+    setCoinsUi(0, 'Impossible de charger ton solde.');
+    refreshButtons();
+  }
+}
+
+async function buyPack(pack) {
+  const token = localStorage.getItem('token');
+  if (!token) return alert('Connecte-toi d abord.');
+  const btnMap = {
+    vip_1m: 'buy-vip-1m',
+    vip_1y: 'buy-vip-1y',
+    vip_plus: 'buy-vip-plus',
+    perso: 'buy-perso',
+  };
+  const btn = document.getElementById(btnMap[pack]);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Achat...';
+  }
+  try {
+    const res = await fetch('/api/shop/buy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, pack }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Impossible d acheter ce pack.');
+      return;
+    }
+    shopPlayer = data.player || shopPlayer;
+    setStoredPlayer(shopPlayer);
+    setCoinsUi(shopPlayer?.coins || 0, 'Achat valide avec succes.');
+    refreshButtons();
+  } catch (e) {
+    alert('Erreur reseau.');
+  } finally {
+    if (btn) {
+      const label = pack === 'vip_1m' ? 'Acheter VIP 1 mois'
+        : pack === 'vip_1y' ? 'Acheter VIP 1 an'
+        : pack === 'vip_plus' ? 'Acheter VIP+'
+        : 'Acheter Perso';
+      const noteId = pack === 'vip_1m' ? 'buy-vip-1m-note'
+        : pack === 'vip_1y' ? 'buy-vip-1y-note'
+        : pack === 'vip_plus' ? 'buy-vip-plus-note'
+        : 'buy-perso-note';
+      const noteText = document.getElementById(noteId)?.textContent || `${SHOP_PRICES[pack]} coins`;
+      btn.innerHTML = `${label}<small id="${noteId}">${noteText}</small>`;
+    }
+  }
+}
+
+loadShop();
+</script>
 </body>
 </html>
