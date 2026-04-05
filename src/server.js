@@ -395,7 +395,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, coins, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -404,6 +404,26 @@ app.get('/api/admin/players', (req, res) => {
     discord_linked: !!(p.discord_id),
   }));
   res.json(enriched);
+});
+
+app.patch('/api/admin/players/:id/coins', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const delta = Number(req.body?.delta);
+  if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta <= 0) {
+    return res.status(400).json({ error: 'Montant invalide.' });
+  }
+  const nextCoins = Number(target.coins || 0) + delta;
+  pQ.updateCoins.run({ coins: nextCoins, id });
+  try {
+    WH.wlogAdminAction('Coins ajoutes', target.pseudo, id, [
+      ['Ajout', String(delta), true],
+      ['Nouveau total', String(nextCoins), true],
+    ]);
+  } catch(e) {}
+  res.json({ ok: true, coins: nextCoins, added: delta });
 });
 
 // Changer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle

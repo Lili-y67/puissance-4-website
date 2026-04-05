@@ -270,6 +270,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
           <th>#</th>
           <th>Joueur</th>
           <th>ELO</th>
+          <th>Coins</th>
           <th>W/L/D</th>
           <th>Rôle</th>
           <th>Statut</th>
@@ -451,6 +452,8 @@ function renderPlayers(players) {
         <div class="mobile-card-sub">
           <span>ID ${p.id}</span>
           <span style="color:var(--muted)">·</span>
+          <span style="color:var(--yellow)">${Number(p.coins || 0)} coins</span>
+          <span style="color:var(--muted)">·</span>
           <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
           ${vipExpiryText(p) ? `<span style="color:var(--muted)">·</span><span>${vipExpiryText(p)}</span>` : ''}
         </div>
@@ -482,6 +485,7 @@ function renderPlayers(players) {
         </div>
       </td>
       <td><strong>${p.elo}</strong></td>
+      <td><strong style="color:var(--yellow)">${Number(p.coins || 0)}</strong></td>
       <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
       <td><span class="badge badge-${p.role}">${p.role}</span>${vipBadge(p) ? ' ' + vipBadge(p) : ''} ${customRoleBadge(p)}</td>
       <td>${statusBadges}</td>
@@ -512,6 +516,7 @@ function openModal(id) {
   const customRoleText = String(player.custom_role_text || '').replace(/"/g, '&quot;');
   const customRoleColor = /^#[0-9a-fA-F]{6}$/.test(String(player.custom_role_color || '')) ? player.custom_role_color : '#ff9f0a';
   const customRoleEmoji = String(player.custom_role_emoji || '').replace(/"/g, '&quot;');
+  const currentCoins = Number(player.coins || 0);
   const canManageRoles = myRole === 'admin';
   const roleButtons = ['user','moderator','admin'].map(r => `
     <button class="btn-sm" style="flex:1;background:${r===role?'rgba(76,110,245,0.25)':'rgba(255,255,255,0.05)'};color:${r===role?'#8b9cf4':'var(--muted)'}" onclick="changeRole(${id},'${r}')">${r}</button>
@@ -575,6 +580,15 @@ function openModal(id) {
       </div>
 
       <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Coins</div>
+        <div style="font-size:12px;color:var(--yellow);margin-bottom:8px">Total actuel : <strong>${currentCoins}</strong></div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="give-coins" value="100" min="1" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <button class="btn-sm" style="background:rgba(255,214,10,0.15);color:var(--yellow)" onclick="giveCoins(${id})">Give</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Mute</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
           ${[1,6,24,72].map(h => `<button class="btn-sm" style="background:rgba(255,159,10,0.12);color:var(--orange)" onclick="mute(${id},${h})">${h}h</button>`).join('')}
@@ -632,6 +646,12 @@ async function resetElo(id) {
   const elo = Number(document.getElementById('new-elo').value);
   const data = await api('PATCH', `/api/admin/players/${id}/elo`, { elo });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur ELO.');
+}
+
+async function giveCoins(id) {
+  const delta = Number(document.getElementById('give-coins')?.value || 0);
+  const data = await api('PATCH', `/api/admin/players/${id}/coins`, { delta });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur coins.');
 }
 
 async function mute(id, hours) {
