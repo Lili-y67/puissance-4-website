@@ -101,6 +101,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip_plus INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_perso INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_expires_at INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -109,6 +110,9 @@ try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_image TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -116,8 +120,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   player_id    INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
   activated_at INTEGER NOT NULL,
-  expires_at   INTEGER NOT NULL
+  expires_at   INTEGER NOT NULL,
+  tier         TEXT    NOT NULL DEFAULT 'vip',
+  multiplier   REAL    NOT NULL DEFAULT 1.2
 )`);
+try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN tier TEXT NOT NULL DEFAULT 'vip'`); } catch(e) {}
+try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN multiplier REAL NOT NULL DEFAULT 1.2`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p2 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN reverted      INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -138,10 +146,14 @@ const pQ = {
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
   updateVipPlus:  db.prepare(`UPDATE players SET is_vip_plus = @is_vip_plus WHERE id = @id`),
+  updatePerso:    db.prepare(`UPDATE players SET is_perso = @is_perso WHERE id = @id`),
   updateVipExpiry: db.prepare(`UPDATE players SET vip_expires_at = @vip_expires_at WHERE id = @id`),
   updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_emoji = @emoji WHERE id = @id`),
   updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
+  updateAvatarDecoration: db.prepare(`UPDATE players SET avatar_decoration = @image WHERE id = @id`),
+  updateAvatarDecorationChangedAt: db.prepare(`UPDATE players SET avatar_decoration_changed_at = @changedAt WHERE id = @id`),
+  updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
@@ -160,12 +172,16 @@ const gQ = {
     SELECT g.*,
       p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
       COALESCE(g.p1_color, p1.color, '#ff2d55') AS p1_color,
+      p1.color_secondary AS p1_color_secondary,
       COALESCE(g.p1_shape, 'circle') AS p1_shape,
       p1.avatar AS p1_avatar,
+      p1.token_emoji_image AS p1_token_emoji_image,
       p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
       COALESCE(g.p2_color, p2.color, '#ffd60a') AS p2_color,
+      p2.color_secondary AS p2_color_secondary,
       COALESCE(g.p2_shape, 'circle') AS p2_shape,
       p2.avatar AS p2_avatar,
+      p2.token_emoji_image AS p2_token_emoji_image,
       w.pseudo  AS winner_pseudo
     FROM games g
     JOIN players p1 ON g.player1_id = p1.id
@@ -242,14 +258,13 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   const globalMult = bQ.getActive.get()?.multiplier ?? 1;
   // Boost VIP individuel sur le gagnant
   const vipActive  = winnerId && !isDraw ? vipQ.getActive.get(winnerId, Date.now()) : null;
-  const winnerPlayer = winnerId && !isDraw ? pQ.getById.get(winnerId) : null;
-  const vipMult    = vipActive ? (Number(winnerPlayer?.is_vip_plus) === 1 ? 1.3 : 1.2) : 1;
+  const vipMult    = vipActive ? Number(vipActive.multiplier || 1) : 1;
   const meta = {
     globalMultiplier: globalMult,
     vipApplied: !!vipActive,
     vipAppliedTo: vipActive ? winnerId : null,
     vipMultiplier: vipMult,
-    vipTier: vipActive ? (Number(winnerPlayer?.is_vip_plus) === 1 ? 'vip_plus' : 'vip') : null,
+    vipTier: vipActive ? String(vipActive.tier || 'vip') : null,
   };
   // Arrondi au supérieur pour éviter les décimales
   const ceil = Math.ceil.bind(Math);
@@ -281,8 +296,9 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const vipApplied = isDraw ? false : !!vipQ.getActive.get(winnerId, Date.now());
   const vipAppliedTo = vipApplied ? winnerId : null;
   const globalMultiplier = eloCalc.globalMultiplier ?? (bQ.getActive.get()?.multiplier ?? 1);
-  const vipMultiplier = vipApplied ? (Number(winner?.is_vip_plus) === 1 ? 1.3 : 1.2) : 1;
-  const vipTier = vipApplied ? (Number(winner?.is_vip_plus) === 1 ? 'vip_plus' : 'vip') : null;
+  const activeBoost = vipApplied ? vipQ.getActive.get(winnerId, Date.now()) : null;
+  const vipMultiplier = vipApplied ? Number(activeBoost?.multiplier || 1) : 1;
+  const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;
   const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
   const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
 
@@ -358,12 +374,12 @@ db.exec(`CREATE TABLE IF NOT EXISTS unlink_codes (
 try { db.exec(`ALTER TABLE reset_codes ADD COLUMN ip_hash TEXT`); } catch(e) {}
 
 const vipQ = {
-  activate:   db.prepare(`INSERT INTO vip_boosts (player_id, activated_at, expires_at) VALUES (?,?,?)`),
+  activate:   db.prepare(`INSERT INTO vip_boosts (player_id, activated_at, expires_at, tier, multiplier) VALUES (?,?,?,?,?)`),
   getActive:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND expires_at > ? LIMIT 1`),
   // Vérifier si déjà utilisé aujourd'hui (reset à minuit)
-  usedToday:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND activated_at >= ? LIMIT 1`),
+  usedToday:  db.prepare(`SELECT * FROM vip_boosts WHERE player_id=? AND activated_at >= ? AND tier IN ('vip','vip_plus') LIMIT 1`),
   listActive: db.prepare(`
-    SELECT v.*, p.pseudo, p.elo, p.color, p.avatar, p.is_vip_plus
+    SELECT v.*, p.pseudo, p.elo, p.color, p.avatar, p.is_vip_plus, p.is_perso
     FROM vip_boosts v JOIN players p ON v.player_id = p.id
     WHERE v.expires_at > ? ORDER BY v.expires_at DESC
   `),

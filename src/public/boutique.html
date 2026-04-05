@@ -20,6 +20,8 @@
   --yellow-soft:rgba(255,214,10,.14);
   --blue:#85EBFF;
   --blue-soft:rgba(133,235,255,.14);
+  --orange:#ff7a45;
+  --orange-soft:rgba(255,122,69,.14);
   --green:#30d158;
 }
 html,body{min-height:100%}
@@ -27,9 +29,9 @@ body{
   color:var(--text);
   font-family:'Barlow',sans-serif;
   background:
-    radial-gradient(circle at 15% 15%, rgba(255,45,85,.12), transparent 20%),
-    radial-gradient(circle at 80% 10%, rgba(133,235,255,.10), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(255,214,10,.08), transparent 28%),
+    radial-gradient(circle at 14% 16%, rgba(255,45,85,.14), transparent 20%),
+    radial-gradient(circle at 82% 12%, rgba(133,235,255,.10), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255,214,10,.09), transparent 28%),
     var(--bg);
 }
 .bg-grid{
@@ -39,8 +41,8 @@ body{
     linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
   background-size:44px 44px;
 }
-.page{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:28px 18px 70px;display:flex;flex-direction:column;gap:24px}
-.nav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.page{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:24px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:2px;color:var(--text);text-decoration:none}
 .logo span{color:var(--red)}
 .nav-actions{display:flex;gap:10px;flex-wrap:wrap}
@@ -51,11 +53,9 @@ body{
   font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
 }
 .hero{
-  position:relative;overflow:hidden;
-  padding:34px;border-radius:30px;
+  position:relative;overflow:hidden;padding:34px;border-radius:30px;
   background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
-  border:1px solid var(--border);
-  box-shadow:0 28px 80px rgba(0,0,0,.35);
+  border:1px solid var(--border);box-shadow:0 28px 80px rgba(0,0,0,.35);
 }
 .hero::before{
   content:'';position:absolute;inset:auto -120px -120px auto;width:320px;height:320px;border-radius:50%;
@@ -65,7 +65,7 @@ body{
   content:'';position:absolute;inset:-120px auto auto -120px;width:280px;height:280px;border-radius:50%;
   background:radial-gradient(circle, rgba(255,214,10,.13), transparent 65%);
 }
-.hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1.25fr .95fr;gap:24px;align-items:center}
+.hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1.2fr .9fr;gap:24px;align-items:center}
 .hero-kicker{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
 .hero-title{font-family:'Barlow Condensed',sans-serif;font-size:74px;line-height:.92;letter-spacing:1px;text-transform:uppercase}
 .hero-title span{color:var(--red);text-shadow:0 0 24px rgba(255,45,85,.35)}
@@ -89,11 +89,11 @@ body{
 .hero-side-item span{font-size:12px;color:var(--muted)}
 .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
-.section-sub{font-size:14px;color:var(--muted);max-width:680px}
+.section-sub{font-size:14px;color:var(--muted);max-width:760px}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .card{
   position:relative;overflow:hidden;
-  min-height:420px;padding:22px;border-radius:26px;
+  min-height:468px;padding:22px;border-radius:26px;
   background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;
   box-shadow:0 22px 44px rgba(0,0,0,.26);
@@ -102,10 +102,10 @@ body{
   content:'';position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(145deg, rgba(255,255,255,.04), transparent 35%);
 }
-.card > *{position:relative;z-index:1}
+.card>*{position:relative;z-index:1}
 .card.vip{border-color:rgba(255,214,10,.26);box-shadow:0 0 0 1px rgba(255,214,10,.08),0 22px 44px rgba(0,0,0,.26)}
 .card.vipplus{border-color:rgba(133,235,255,.34);box-shadow:0 0 24px rgba(133,235,255,.10),0 22px 44px rgba(0,0,0,.26)}
-.card.featured{transform:translateY(-6px)}
+.card.perso{border-color:rgba(255,122,69,.28);box-shadow:0 0 24px rgba(255,122,69,.08),0 22px 44px rgba(0,0,0,.26)}
 .tier{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .badge{
   display:inline-flex;align-items:center;gap:6px;
@@ -114,6 +114,7 @@ body{
 }
 .badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
 .badge.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
+.badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
 .duration{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:1px}
 .card h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .meta{font-size:14px;line-height:1.7;color:var(--muted)}
@@ -125,6 +126,7 @@ body{
 .stat-line span{font-size:13px;color:var(--muted)}
 .stat-line.vip strong{color:var(--yellow);text-shadow:0 0 20px rgba(255,214,10,.22)}
 .stat-line.vipplus strong{color:var(--blue);text-shadow:0 0 20px rgba(133,235,255,.20)}
+.stat-line.perso strong{color:var(--orange);text-shadow:0 0 20px rgba(255,122,69,.22)}
 .feature-list{display:flex;flex-direction:column;gap:10px}
 .feature{
   display:flex;gap:10px;align-items:flex-start;
@@ -140,10 +142,9 @@ body{
 }
 .cta.vip{border-color:rgba(255,214,10,.18);background:rgba(255,214,10,.06)}
 .cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.06)}
+.cta.perso{border-color:rgba(255,122,69,.18);background:rgba(255,122,69,.06)}
 .cta small{display:block;font-size:11px;letter-spacing:.6px;margin-top:3px}
-.faq{
-  display:grid;grid-template-columns:1.1fr .9fr;gap:18px
-}
+.faq{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
 .panel{
   padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
   border:1px solid var(--border)
@@ -163,7 +164,6 @@ body{
 @media (max-width:980px){
   .hero-inner,.faq,.grid{grid-template-columns:1fr}
   .hero-title{font-size:54px}
-  .card.featured{transform:none}
 }
 @media (max-width:640px){
   .page{padding:20px 14px 56px}
@@ -188,42 +188,42 @@ body{
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-kicker">Boutique Premium</div>
-        <h1 class="hero-title">Passe en <span>premium</span> et personnalise ton profil</h1>
+        <div class="hero-kicker">Boutique premium</div>
+        <h1 class="hero-title">Choisis ton <span>style</span> et ton bonus</h1>
         <p class="hero-copy">
-          La boutique est maintenant prête côté site pour accueillir les futures offres.
-          Les cartes ci-dessous présentent clairement les formules VIP temporaires et le VIP+ à vie.
+          La boutique est prête visuellement. Les prix arriveront plus tard, donc les achats restent
+          volontairement désactivés pour le moment. En revanche, les packs sont déjà définis proprement
+          sur le site pour préparer la suite.
         </p>
         <div class="hero-pills">
-          <div class="pill">Boost quotidien unique</div>
-          <div class="pill">GIF avatar et bannière</div>
-          <div class="pill">Emoji VIP personnalisé</div>
-          <div class="pill">Rôles Discord synchronisés</div>
+          <div class="pill">VIP : emoji custom + GIF +20%</div>
+          <div class="pill">VIP+ : emoji image + déco +30%</div>
+          <div class="pill">Perso : badge perso + boost 2h + export replay</div>
         </div>
       </div>
       <div class="hero-side">
-        <div class="hero-side-title">Résumé des avantages</div>
+        <div class="hero-side-title">Résumé rapide</div>
         <div class="hero-side-list">
           <div class="hero-side-item">
             <div>
               <strong>VIP</strong>
-              <span>Durée limitée, 1 mois ou 1 an</span>
+              <span>1 mois ou 1 an</span>
             </div>
             <strong style="color:var(--yellow)">+20%</strong>
           </div>
           <div class="hero-side-item">
             <div>
               <strong>VIP+</strong>
-              <span>Accès à vie avec style bleu</span>
+              <span>À vie, style bleu</span>
             </div>
             <strong style="color:var(--blue)">+30%</strong>
           </div>
           <div class="hero-side-item">
             <div>
-              <strong>Achat bientôt</strong>
-              <span>Les boutons sont volontairement désactivés</span>
+              <strong>Perso</strong>
+              <span>Pack créateur / identité</span>
             </div>
-            <strong style="color:var(--muted)">OFF</strong>
+            <strong style="color:var(--orange)">2h</strong>
           </div>
         </div>
       </div>
@@ -234,7 +234,10 @@ body{
     <div class="section-head">
       <div>
         <div class="section-title">Formules disponibles</div>
-        <div class="section-sub">Le design est prêt, mais les paiements ne sont pas encore connectés. Les boutons d’achat restent donc désactivés pour le moment.</div>
+        <div class="section-sub">
+          Trois packs clairs pour éviter les doublons : VIP pour l’emoji custom et les médias GIF,
+          VIP+ pour le visuel avancé en jeu, et Perso pour le badge personnalisé et l’export de replay.
+        </div>
       </div>
     </div>
   </section>
@@ -246,71 +249,31 @@ body{
         <div class="duration">1 mois</div>
       </div>
       <h2>VIP Mensuel</h2>
-      <div class="meta">Le format souple pour profiter des options premium pendant 30 jours, avec retrait automatique à expiration.</div>
+      <div class="meta">Le pack premium souple pour profiter du contenu VIP pendant 30 jours, avec retrait automatique à expiration.</div>
       <div class="stat-line vip">
         <strong>+20%</strong>
         <span>sur le boost ELO quotidien</span>
       </div>
       <div class="feature-list">
         <div class="feature">
-          <div class="feature-emoji">🎨</div>
+          <div class="feature-emoji">🎭</div>
           <div class="feature-copy">
-            <strong>Cosmétiques avancés</strong>
-            <span>GIF avatar, bannière animée et personnalisation plus poussée.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">🪙</div>
-          <div class="feature-copy">
-            <strong>Emoji de pion VIP</strong>
-            <span>Import et recadrage d’un emoji VIP personnalisé pour la grille.</span>
-          </div>
-        </div>
-        <div class="feature">
-          <div class="feature-emoji">⏳</div>
-          <div class="feature-copy">
-            <strong>Expiration automatique</strong>
-            <span>Le rôle s’arrête tout seul après 30 jours sans manipulation admin.</span>
-          </div>
-        </div>
-      </div>
-      <button class="cta vip" disabled>
-        Acheter bientôt
-        <small>Le prix sera ajouté plus tard</small>
-      </button>
-    </article>
-
-    <article class="card vip featured">
-      <div class="tier">
-        <span class="badge vip">⭐ VIP</span>
-        <div class="duration">1 an</div>
-      </div>
-      <h2>VIP Annuel</h2>
-      <div class="meta">Une formule longue durée pour garder les mêmes avantages premium sans renouvellement fréquent.</div>
-      <div class="stat-line vip">
-        <strong>+20%</strong>
-        <span>sur le boost ELO quotidien</span>
-      </div>
-      <div class="feature-list">
-        <div class="feature">
-          <div class="feature-emoji">📅</div>
-          <div class="feature-copy">
-            <strong>Durée 365 jours</strong>
-            <span>Idéal pour les joueurs réguliers qui veulent une formule stable.</span>
+            <strong>Emoji custom</strong>
+            <span>Tu peux choisir ton emoji de pion personnalisé, sans image importée.</span>
           </div>
         </div>
         <div class="feature">
           <div class="feature-emoji">🖼️</div>
           <div class="feature-copy">
-            <strong>Médias premium</strong>
-            <span>Profite des mêmes imports GIF et éléments VIP pendant toute l’année.</span>
+            <strong>Avatar et bannière GIF</strong>
+            <span>Les GIF sont réservés au premium VIP, avec cooldown protégé côté serveur.</span>
           </div>
         </div>
         <div class="feature">
-          <div class="feature-emoji">🔁</div>
+          <div class="feature-emoji">⏱️</div>
           <div class="feature-copy">
-            <strong>Gestion simple</strong>
-            <span>Le panel admin sait déjà attribuer et prolonger ce format.</span>
+            <strong>Boost quotidien unique</strong>
+            <span>Une seule activation par jour, active pendant 1 heure à +20% ELO.</span>
           </div>
         </div>
       </div>
@@ -326,35 +289,75 @@ body{
         <div class="duration">À vie</div>
       </div>
       <h2>VIP+ Lifetime</h2>
-      <div class="meta">Le rang premium permanent, avec thème bleu, rôle Discord dédié et bonus renforcé sur le boost quotidien.</div>
+      <div class="meta">Le rang premium permanent pour les joueurs qui veulent une identité visuelle plus poussée et un bonus plus fort.</div>
       <div class="stat-line vipplus">
         <strong>+30%</strong>
         <span>sur le boost ELO quotidien</span>
       </div>
       <div class="feature-list">
         <div class="feature">
-          <div class="feature-emoji">🔷</div>
+          <div class="feature-emoji">🧩</div>
           <div class="feature-copy">
-            <strong>Identité VIP+ bleue</strong>
-            <span>Badges, accents visuels et retours premium harmonisés autour du bleu.</span>
+            <strong>Emoji image 128x128</strong>
+            <span>Import, recadrage et rendu direct dans la grille sous forme de pion image.</span>
           </div>
         </div>
         <div class="feature">
-          <div class="feature-emoji">♾️</div>
+          <div class="feature-emoji">🌀</div>
           <div class="feature-copy">
-            <strong>Aucune expiration</strong>
-            <span>Le statut reste actif à vie une fois attribué.</span>
+            <strong>Dégradé de couleur</strong>
+            <span>Ajoute une seconde couleur pour obtenir un pion à double teinte en partie.</span>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-emoji">✨</div>
+          <div class="feature-copy">
+            <strong>Décoration d’avatar</strong>
+            <span>Une surcouche importée autour de l’avatar, pensée pour le profil premium avancé.</span>
+          </div>
+        </div>
+      </div>
+      <button class="cta vipplus" disabled>
+        Acheter bientôt
+        <small>Le prix sera ajouté plus tard</small>
+      </button>
+    </article>
+
+    <article class="card perso">
+      <div class="tier">
+        <span class="badge perso">✨ Perso</span>
+        <div class="duration">Créateur</div>
+      </div>
+      <h2>Pack Perso</h2>
+      <div class="meta">Le pack identité pour les profils spéciaux : badge custom, boost plus long et export propre des replays.</div>
+      <div class="stat-line perso">
+        <strong>2h</strong>
+        <span>de boost ELO à +30%</span>
+      </div>
+      <div class="feature-list">
+        <div class="feature">
+          <div class="feature-emoji">🏷️</div>
+          <div class="feature-copy">
+            <strong>Badge personnalisé</strong>
+            <span>Texte, couleur et emoji dédiés pour avoir un vrai badge à ton image.</span>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-emoji">📥</div>
+          <div class="feature-copy">
+            <strong>Replay HTML</strong>
+            <span>Télécharge une partie en HTML autonome depuis le replay, sans l’analyse automatique.</span>
           </div>
         </div>
         <div class="feature">
           <div class="feature-emoji">🚀</div>
           <div class="feature-copy">
-            <strong>Boost supérieur</strong>
-            <span>Un vrai palier premium avec bonus ELO plus fort que le VIP classique.</span>
+            <strong>Boost premium plus long</strong>
+            <span>Activation de 2 heures à +30% ELO, pensée comme un bonus événementiel premium.</span>
           </div>
         </div>
       </div>
-      <button class="cta vipplus" disabled>
+      <button class="cta perso" disabled>
         Acheter bientôt
         <small>Le prix sera ajouté plus tard</small>
       </button>
@@ -366,35 +369,36 @@ body{
       <div class="panel-title">Questions rapides</div>
       <div class="faq-list">
         <div class="faq-item">
-          <strong>Le boost premium est-il limité ?</strong>
-          <span>Oui. Le boost VIP et VIP+ reste volontairement limité à une seule activation par jour.</span>
+          <strong>VIP et VIP+ ont-ils le même emoji ?</strong>
+          <span>Non. VIP utilise un emoji custom classique, tandis que VIP+ débloque un vrai pion image importé.</span>
         </div>
         <div class="faq-item">
-          <strong>Que se passe-t-il à la fin du VIP ?</strong>
-          <span>Le statut VIP temporaire est retiré automatiquement côté serveur quand la date d’expiration est atteinte.</span>
+          <strong>Le pack Perso remplace-t-il VIP+ ?</strong>
+          <span>Non. Perso se concentre sur le badge custom, le boost 2h à +30% et l’export HTML des replays.</span>
         </div>
         <div class="faq-item">
-          <strong>VIP+ peut-il expirer ?</strong>
-          <span>Non. VIP+ est conçu comme un rang à vie, tant qu’il n’est pas retiré manuellement.</span>
+          <strong>Les achats sont-ils déjà disponibles ?</strong>
+          <span>Pas encore. La page est prête et les boutons restent désactivés tant que les prix ne sont pas définis.</span>
         </div>
       </div>
     </div>
     <div class="panel">
       <div class="panel-title">État de la boutique</div>
       <div class="status-line">
-        <span>Achat intégré</span>
+        <span>Paiement intégré</span>
         <strong style="color:var(--muted)">OFF</strong>
       </div>
       <div class="status-line">
-        <span>Page publique</span>
+        <span>UI publique</span>
         <strong style="color:var(--green)">ON</strong>
       </div>
       <div class="status-line">
-        <span>Système VIP / VIP+</span>
+        <span>Packs VIP / VIP+ / Perso</span>
         <strong style="color:var(--green)">READY</strong>
       </div>
       <p class="foot-note" style="margin-top:16px">
-        La partie paiement n’est pas encore branchée, mais la structure visuelle et la logique de rôles sont déjà prêtes pour l’arrivée de la boutique.
+        Les prix et le paiement seront ajoutés plus tard. Pour l’instant, la structure visuelle sert
+        de base propre pour la future boutique du site.
       </p>
     </div>
   </section>

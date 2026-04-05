@@ -361,6 +361,7 @@ function renderStats() {
   const total    = allPlayers.length;
   const vip      = allPlayers.filter(p => p.is_vip && !p.is_vip_plus).length;
   const vipPlus  = allPlayers.filter(p => p.is_vip_plus).length;
+  const perso    = allPlayers.filter(p => p.is_perso).length;
   const banned   = allPlayers.filter(p => p.banned).length;
   const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
   const suspect  = allPlayers.filter(p => p.suspicious).length;
@@ -369,7 +370,7 @@ function renderStats() {
   document.getElementById('stats-row').innerHTML = [
     { val: total,   lbl: 'Joueurs',   color: 'var(--text)' },
     { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
-    { val: vip + vipPlus, lbl: 'VIP', color: 'var(--yellow)' },
+    { val: vip + vipPlus + perso, lbl: 'Premium', color: 'var(--yellow)' },
     { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
     { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
     { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
@@ -409,6 +410,9 @@ function customRoleBadge(player) {
 function vipBadge(player, compact = false) {
   if (player.is_vip_plus) {
     return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.42);box-shadow:0 0 14px rgba(133,235,255,0.22)">vip+</span>`;
+  }
+  if (player.is_perso) {
+    return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(255,122,69,0.14);color:#ff7a45;border:1px solid rgba(255,122,69,0.42);box-shadow:0 0 14px rgba(255,122,69,0.18)">perso</span>`;
   }
   if (player.is_vip) {
     return `<span class="badge badge-vip" style="${compact ? 'font-size:10px' : ''}">vip</span>`;
@@ -485,6 +489,7 @@ function renderPlayers(players) {
         <div class="actions">
           ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${p.id},'vip','1y')">VIP 1A</button>` : ''}
           ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${p.id},'vipplus')">VIP+</button>` : ''}
+          ${myRole === 'admin' && !p.is_perso ? `<button class="btn-sm" style="background:rgba(255,122,69,0.16);color:#ff7a45;border:1px solid rgba(255,122,69,0.3)" onclick="changeRole(${p.id},'perso')">Perso</button>` : ''}
           <button class="btn-sm" style="background:rgba(76,110,245,0.15);color:#8b9cf4" onclick="openModal(${p.id})">Gérer</button>
         </div>
       </td>
@@ -516,10 +521,11 @@ function openModal(id) {
         ${roleButtons}
         ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${id},'vip','1y')">VIP 1A</button>` : ''}
         ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${id},'vipplus')">VIP+</button>` : ''}
+        ${!player.is_perso ? `<button class="btn-sm" style="background:rgba(255,122,69,0.16);color:#ff7a45;border:1px solid rgba(255,122,69,0.3)" onclick="changeRole(${id},'perso')">Perso</button>` : ''}
       </div>
     `
     : `<div style="font-size:13px;color:var(--muted)">Les changements de rôle et le VIP sont réservés aux admins.</div>`;
-  const customRoleSection = canManageRoles
+  const customRoleSection = canManageRoles && player.is_perso
     ? `
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Rôle personnalisé</div>
@@ -533,7 +539,9 @@ function openModal(id) {
         <div style="font-size:12px;color:var(--muted);margin-top:7px">Texte libre, 6 caractères maximum, avec emoji optionnel.</div>
       </div>
     `
-    : '';
+    : canManageRoles
+      ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted)">Le badge personnalisé se débloque avec le pack Perso.</div>`
+      : '';
 
   const modal = document.createElement('div');
   modal.className = 'modal-bg';
@@ -771,16 +779,24 @@ async function loadVipBoosts() {
     }
     el.innerHTML = boosts.map(b => {
       const color = b.color || '#ffd60a';
-      const accent = b.tier === 'vip_plus' ? '#85EBFF' : 'var(--yellow)';
-      const bg = b.tier === 'vip_plus' ? 'rgba(133,235,255,0.06)' : 'rgba(255,214,10,0.05)';
-      const border = b.tier === 'vip_plus' ? 'rgba(133,235,255,0.18)' : 'rgba(255,214,10,0.15)';
+      const accent = b.tier === 'vip_plus' ? '#85EBFF' : b.tier === 'perso' ? '#ff7a45' : 'var(--yellow)';
+      const bg = b.tier === 'vip_plus'
+        ? 'rgba(133,235,255,0.06)'
+        : b.tier === 'perso'
+          ? 'rgba(255,122,69,0.08)'
+          : 'rgba(255,214,10,0.05)';
+      const border = b.tier === 'vip_plus'
+        ? 'rgba(133,235,255,0.18)'
+        : b.tier === 'perso'
+          ? 'rgba(255,122,69,0.22)'
+          : 'rgba(255,214,10,0.15)';
       const av = b.avatar && b.avatar.startsWith('http')
         ? `<img src="${b.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">`
         : `<div style="width:28px;height:28px;border-radius:50%;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:${color};">${(b.pseudo||'?')[0].toUpperCase()}</div>`;
       return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${bg};border:1px solid ${border};border-radius:10px;">
         ${av}
         <div style="flex:1">
-          <div style="font-weight:600;font-size:13px;">${b.pseudo} <span style="font-size:10px;color:${accent};font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase">${b.tier === 'vip_plus' ? 'VIP+' : 'VIP'}</span></div>
+          <div style="font-weight:600;font-size:13px;">${b.pseudo} <span style="font-size:10px;color:${accent};font-family:'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase">${b.tier === 'vip_plus' ? 'VIP+' : b.tier === 'perso' ? 'PERSO' : 'VIP'}</span></div>
           <div style="font-size:11px;color:var(--muted);">${b.elo} ELO</div>
         </div>
         <div style="text-align:right;">

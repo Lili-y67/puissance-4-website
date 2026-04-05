@@ -185,11 +185,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 
 /* Formes via clip-path + border-radius */
 .cell.p1 .token {
-  background: radial-gradient(circle at 35% 30%, var(--p1-light, #ff6b85), var(--p1, #ff2d55));
+  background: linear-gradient(135deg, var(--p1-secondary, var(--p1-light, #ff6b85)), var(--p1, #ff2d55));
   box-shadow: 0 0 18px var(--p1-glow), inset 0 -3px 6px rgba(0,0,0,0.3);
 }
 .cell.p2 .token {
-  background: radial-gradient(circle at 35% 30%, var(--p2-light, #ffe566), var(--p2, #ffd60a));
+  background: linear-gradient(135deg, var(--p2-secondary, var(--p2-light, #ffe566)), var(--p2, #ffd60a));
   box-shadow: 0 0 18px var(--p2-glow), inset 0 -3px 6px rgba(0,0,0,0.3);
 }
 /* Shapes — appliquées en inline style via JS pour éviter les conflits de spécificité */
@@ -430,14 +430,16 @@ function lightenHex(hex, amt) {
   const b = Math.min(255, parseInt(hex.slice(5,7),16) + amt);
   return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
-function applyColors(c1, c2) {
+function applyColors(c1, c2, s1 = '', s2 = '') {
   const root = document.documentElement;
   root.style.setProperty('--p1',       c1);
   root.style.setProperty('--p1-light', lightenHex(c1, 45));
+  root.style.setProperty('--p1-secondary', s1 || '');
   root.style.setProperty('--p1-glow',  hexToRgba(c1, 0.45));
   root.style.setProperty('--p1-dim',   hexToRgba(c1, 0.15));
   root.style.setProperty('--p2',       c2);
   root.style.setProperty('--p2-light', lightenHex(c2, 45));
+  root.style.setProperty('--p2-secondary', s2 || '');
   root.style.setProperty('--p2-glow',  hexToRgba(c2, 0.45));
   root.style.setProperty('--p2-dim',   hexToRgba(c2, 0.15));
 }
@@ -517,7 +519,12 @@ function connectSocket(pendingMatch) {
     mySide = data.side;
 
     // Appliquer couleurs et shapes
-    applyColors(data.players[1].color || '#ff2d55', data.players[2].color || '#ffd60a');
+    applyColors(
+      data.players[1].color || '#ff2d55',
+      data.players[2].color || '#ffd60a',
+      data.players[1].color_secondary || '',
+      data.players[2].color_secondary || ''
+    );
     const rawS1 = data.players[1].shape || 'circle';
     const rawS2 = data.players[2].shape || 'circle';
     if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
@@ -580,7 +587,12 @@ function connectSocket(pendingMatch) {
     if (!lobbyData) return;
     const side = lobbyData.players[1].id === playerId ? 1 : 2;
     lobbyData.players[side].color = color;
-    applyColors(lobbyData.players[1].color, lobbyData.players[2].color);
+    applyColors(
+      lobbyData.players[1].color,
+      lobbyData.players[2].color,
+      lobbyData.players[1].color_secondary || '',
+      lobbyData.players[2].color_secondary || ''
+    );
   });
   socket.on('opponent_disconnected', ({ pseudo, timeout }) => {
     const banner = document.getElementById('disconnect-banner');
@@ -645,7 +657,7 @@ function setupLobby(data) {
     c2 = shiftHue(c2, 150);
     data.players[2]._colorOverride = c2;
   }
-  applyColors(c1, c2);
+  applyColors(c1, c2, data.players[1].color_secondary || '', data.players[2].color_secondary || '');
 
   // Stocker les shapes (format 'circle' ou 'emoji:⭐')
   const rawS1 = data.players[1].shape || 'circle';
@@ -963,11 +975,13 @@ function onGameOver(data) {
 
   const eloEl = document.getElementById('result-elo');
   const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && Number(eloD) > 0;
-  const vipPlusBoostApplied = vipBoostApplied && data.boostInfo?.vipTier === 'vip_plus';
+  const premiumBoostTier = vipBoostApplied ? String(data.boostInfo?.vipTier || 'vip') : null;
   const sign = eloD >= 0 ? '+' : '';
   eloEl.style.display = '';
   eloEl.textContent = sign + eloD + ' ELO';
-  eloEl.style.color = vipBoostApplied ? (vipPlusBoostApplied ? '#85EBFF' : 'var(--yellow)') : (eloD >= 0 ? '#30d158' : 'var(--red)');
+  eloEl.style.color = vipBoostApplied
+    ? (premiumBoostTier === 'vip_plus' ? '#85EBFF' : premiumBoostTier === 'perso' ? '#ff7a45' : 'var(--yellow)')
+    : (eloD >= 0 ? '#30d158' : 'var(--red)');
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner
@@ -976,7 +990,11 @@ function onGameOver(data) {
     document.getElementById('result-reason').textContent = 'Partie nulle';
   } else {
     document.getElementById('result-reason').textContent = vipBoostApplied
-      ? (vipPlusBoostApplied ? 'Boost VIP+ applique sur le gain ELO' : 'Boost VIP applique sur le gain ELO')
+      ? (premiumBoostTier === 'vip_plus'
+          ? 'Boost VIP+ applique sur le gain ELO'
+          : premiumBoostTier === 'perso'
+            ? 'Boost Perso applique sur le gain ELO'
+            : 'Boost VIP applique sur le gain ELO')
       : (isWinner ? 'ELO mis a jour apres la victoire' : 'ELO mis a jour apres la defaite');
   }
 
@@ -1050,7 +1068,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   }
 
   const playerColor = myPlayer.color || '#ff2d55';
-  applyColors(playerColor, botColor);
+  applyColors(playerColor, botColor, savedPlayer.color_secondary || '', '');
 
   const diffLabel = { easy:'🟢 Facile', medium:'🟡 Moyen', hard:'🔴 Difficile' }[difficulty] || '';
 

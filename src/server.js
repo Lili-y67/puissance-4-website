@@ -61,6 +61,26 @@ function hasVipPlusRoleIds(roleIds = []) {
   return Array.isArray(roleIds) && roleIds.includes(DISCORD_ROLE_VIP_PLUS);
 }
 
+function isPersoPlayer(player) {
+  if (!player) return false;
+  return Number(player.is_perso) === 1;
+}
+
+function getPremiumTier(player) {
+  if (isPersoPlayer(player)) return 'perso';
+  if (isVipPlusPlayer(player)) return 'vip_plus';
+  if (isVipPlayer(player)) return 'vip';
+  return null;
+}
+
+function getPremiumBoostConfig(player) {
+  const tier = getPremiumTier(player);
+  if (tier === 'vip') return { tier, multiplier: 1.2, durationMs: 60 * 60 * 1000, daily: true, label: 'VIP' };
+  if (tier === 'vip_plus') return { tier, multiplier: 1.3, durationMs: 60 * 60 * 1000, daily: true, label: 'VIP+' };
+  if (tier === 'perso') return { tier, multiplier: 1.3, durationMs: 2 * 60 * 60 * 1000, daily: false, label: 'PERSO' };
+  return null;
+}
+
 function isVipPlayer(player) {
   if (!player) return false;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
@@ -121,10 +141,17 @@ function validateSession(token) {
 }
 
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const AVATAR_DECORATION_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getVipMediaRemainingMs(player) {
   const lastChanged = Number(player?.vip_media_changed_at || 0);
   const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function getAvatarDecorationRemainingMs(player) {
+  const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
+  const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -217,6 +244,10 @@ app.delete('/api/players/:id', (req, res) => {
     password  = '',
     avatar    = '',
     color     = '#444444',
+    color_secondary = '',
+    is_vip = 0,
+    is_vip_plus = 0,
+    is_perso = 0,
     discord_id = NULL,
     suspicious = 0
   WHERE id = ?`).run(pseudo, id);
@@ -350,7 +381,7 @@ app.get('/api/admin/me', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
-  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, is_vip_plus, vip_expires_at, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -366,7 +397,7 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles.' });
   const { role } = req.body;
   const vipDuration = String(req.body?.vipDuration || '').trim();
-  if (!['user','vip','vipplus','moderator','admin'].includes(role)) return res.status(400).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle invalide.' });
+  if (!['user','vip','vipplus','perso','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Role invalide.' });
   const targetId = Number(req.params.id);
   const session = getAdminSession(req);
   const target = pQ.getById.get(targetId);
@@ -378,17 +409,28 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   const oldRole = target.role;
   const oldVip  = Number(target.is_vip) === 1;
   const oldVipPlus = Number(target.is_vip_plus) === 1;
+  const oldPerso = Number(target.is_perso) === 1;
   const vipExpiryMap = { '1m': 30 * 24 * 60 * 60 * 1000, '1y': 365 * 24 * 60 * 60 * 1000 };
   if (role === 'vip') {
     if (!vipExpiryMap[vipDuration]) return res.status(400).json({ error: 'Choisis une duree VIP valide.' });
     WH.wlogAdminAction('VIP accordAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
+    pQ.updatePerso.run({ is_perso: 0, id: targetId });
+    pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
     pQ.updateVipExpiry.run({ vip_expires_at: Date.now() + vipExpiryMap[vipDuration], id: targetId });
   } else if (role === 'vipplus') {
     WH.wlogAdminAction('VIP+ accorde', target.pseudo, req.params.id, [['VIP+ avant', oldVipPlus ? 'oui' : 'non', true], ['VIP+ apres', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
     pQ.updateVipPlus.run({ is_vip_plus: 1, id: targetId });
+    pQ.updatePerso.run({ is_perso: 0, id: targetId });
+    pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
+  } else if (role === 'perso') {
+    WH.wlogAdminAction('Perso accorde', target.pseudo, req.params.id, [['Perso avant', oldPerso ? 'oui' : 'non', true], ['Perso apres', 'oui', true]]);
+    pQ.updateVip.run({ is_vip: 0, id: targetId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
+    pQ.updatePerso.run({ is_perso: 1, id: targetId });
     pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
   } else {
     WH.wlogAdminAction('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
@@ -396,6 +438,8 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
     if (role === 'user' || role === 'moderator' || role === 'admin') {
       pQ.updateVip.run({ is_vip: 0, id: targetId });
       pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
+      pQ.updatePerso.run({ is_perso: 0, id: targetId });
+      pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
       pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
     }
   }
@@ -405,10 +449,10 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
     try {
       await syncDiscordRole(
         target.discord_id,
-        role === 'vip' ? target.role : role,
-        role === 'vip' || role === 'vipplus' ? true : oldVip,
-        role === 'vipplus' ? true : (role === 'vip' ? false : oldVipPlus),
-        !!String(target.custom_role_text || '').trim()
+        role === 'vip' || role === 'vipplus' || role === 'perso' ? target.role : role,
+        role === 'vip' || role === 'vipplus' ? true : false,
+        role === 'vipplus',
+        role === 'perso' ? !!String(target.custom_role_text || '').trim() : !!String(target.custom_role_text || '').trim()
       );
     } catch(e) {}
     // DM de notification
@@ -433,6 +477,9 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
   const id = Number(req.params.id);
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (Number(target.is_perso) !== 1 && String(req.body?.text || '').trim()) {
+    return res.status(403).json({ error: 'Le badge personnalise est reserve au pack Perso.' });
+  }
 
   const rawText = String(req.body?.text || '').trim();
   const rawColor = String(req.body?.color || '').trim();
@@ -1027,12 +1074,15 @@ function sanitize(p) {
       ...rest,
       pseudo:     '[SupprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA]',
       avatar:     '',
+      avatar_decoration: '',
       token_emoji_image: '',
       color:      '#555555',
+      color_secondary: '',
       discord_id: null,
       banner:     null,
       is_vip:     0,
       is_vip_plus: 0,
+      is_perso: 0,
       vip_expires_at: null,
     };
   }
@@ -1040,6 +1090,7 @@ function sanitize(p) {
     ...rest,
     is_vip: isVipPlayer(rest) ? 1 : 0,
     is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
+    is_perso: isPersoPlayer(rest) ? 1 : 0,
     vip_expires_at: Number(rest.vip_expires_at || 0) || null,
   };
 }
@@ -1060,8 +1111,13 @@ app.delete('/api/players/:id', (req, res) => {
     password   = '',
     color      = '#555555',
     avatar     = '',
+    avatar_decoration = '',
     banner     = '',
     token_emoji_image = '',
+    color_secondary = '',
+    is_vip = 0,
+    is_vip_plus = 0,
+    is_perso = 0,
     discord_id = NULL,
     deleted    = 1
   WHERE id = ?`).run(id);
@@ -1077,6 +1133,12 @@ app.patch('/api/players/:id/shape', (req, res) => {
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
   const player = pQ.getById.get(Number(req.params.id));
+  if (base === 'emoji' && !isVipPlayer(player)) {
+    return res.status(403).json({ error: 'L emoji perso est reserve au VIP.' });
+  }
+  if (base === 'emoji_image' && !isVipPlusPlayer(player)) {
+    return res.status(403).json({ error: 'L emoji image est reserve au VIP+.' });
+  }
   if (base === 'emoji_image' && !player?.token_emoji_image) {
     return res.status(400).json({ error: 'Ajoute d\'abord un emoji perso VIP.' });
   }
@@ -1086,10 +1148,15 @@ app.patch('/api/players/:id/shape', (req, res) => {
 
 app.patch('/api/players/:id/color', (req, res) => {
   if (Number(req.params.id) === BOT_PLAYER_ID) return res.status(403).json({ error: 'Bot non modifiable.' });
-  const { color, token } = req.body;
+  const { color, colorSecondary = '', token } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  const player = pQ.getById.get(Number(req.params.id));
+  const normalizedSecondary = String(colorSecondary || '').trim();
+  if (normalizedSecondary && !/^#[0-9a-fA-F]{6}$/.test(normalizedSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
+  if (normalizedSecondary && !isVipPlusPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
+  pQ.updateColorSecondary.run({ color_secondary: normalizedSecondary ? normalizedSecondary.toUpperCase() : '', id: Number(req.params.id) });
   res.json({ ok: true });
 });
 
@@ -1099,9 +1166,9 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(banner);
-  const maxBytes = isGif && player?.is_vip ? 5 * 1024 * 1024 : 4 * 1024 * 1024;
+  const maxBytes = isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 4 * 1024 * 1024;
   const approxBytes = Math.ceil((banner.length - banner.indexOf(',') - 1) * 3 / 4);
-  if (isGif && !player?.is_vip) {
+  if (isGif && !isVipPlayer(player)) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
   const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
@@ -1125,9 +1192,9 @@ app.patch('/api/players/:id/avatar', (req, res) => {
     return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(avatar);
-  const maxBytes = isGif && player?.is_vip ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+  const maxBytes = isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
   const approxBytes = Math.ceil((avatar.length - avatar.indexOf(',') - 1) * 3 / 4);
-  if (isGif && !player?.is_vip) {
+  if (isGif && !isVipPlayer(player)) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
   const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
@@ -1149,7 +1216,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!player?.is_vip) return res.status(403).json({ error: 'Reserve aux VIP.' });
+  if (!isVipPlusPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
@@ -1163,6 +1230,28 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   }
   pQ.updateTokenEmojiImage.run({ image, id });
   pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id });
+  res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/avatar-decoration', (req, res) => {
+  const { image, token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!isVipPlusPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
+    return res.status(400).json({ error: 'Image invalide.' });
+  }
+  const remaining = getAvatarDecorationRemainingMs(player);
+  if (remaining > 0) {
+    return res.status(429).json({ error: `Decoration avatar disponible dans ${formatCooldownHours(remaining)}.` });
+  }
+  const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
+  if (approxBytes > 1024 * 1024) {
+    return res.status(413).json({ error: 'Decoration trop lourde (max 1MB).' });
+  }
+  pQ.updateAvatarDecoration.run({ image, id });
+  pQ.updateAvatarDecorationChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true });
 });
 
@@ -1632,27 +1721,31 @@ app.post('/api/players/:id/vip-boost', (req, res) => {
 
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isVipPlayer(player)) return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux VIP.' });
-  const isVipPlus = isVipPlusPlayer(player);
-  const boostMultiplier = isVipPlus ? 1.3 : 1.2;
+  const config = getPremiumBoostConfig(player);
+  if (!config) return res.status(403).json({ error: 'Boost reserve aux packs premium.' });
 
   const now = Date.now();
-  // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier si dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  actif
   const currentBoost = vipQ.getActive.get(id, now);
   if (currentBoost) {
     const remaining = Math.round((currentBoost.expires_at - now) / 60000);
-    return res.status(400).json({ error: `Boost dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  actif encore ${remaining} minute(s).`, remaining });
+    return res.status(400).json({ error: `Boost actif encore ${remaining} minute(s).`, remaining });
   }
 
-  // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier si dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  utilisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aujourd'hui (reset AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  minuit, heure de Paris)
-  const midnightTs = getParisMidnightTs(now);
-  const usedToday = vipQ.usedToday.get(id, midnightTs);
-  if (usedToday) return res.status(400).json({ error: "Boost dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  utilisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aujourd'hui. Reviens AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  minuit (heure de Paris) !" });
+  if (config.daily) {
+    const midnightTs = getParisMidnightTs(now);
+    const usedToday = vipQ.usedToday.get(id, midnightTs);
+    if (usedToday) return res.status(400).json({ error: "Boost deja utilise aujourd'hui. Reviens a minuit (heure de Paris)." });
+  }
 
-  // Activer le boost (1 heure)
-  const expiresAt = now + 60 * 60 * 1000;
-  vipQ.activate.run(id, now, expiresAt);
-  res.json({ ok: true, expiresAt, multiplier: boostMultiplier, tier: isVipPlus ? 'vip_plus' : 'vip', message: 'Boost VIP active pour 1 heure !' });
+  const expiresAt = now + config.durationMs;
+  vipQ.activate.run(id, now, expiresAt, config.tier, config.multiplier);
+  res.json({
+    ok: true,
+    expiresAt,
+    multiplier: config.multiplier,
+    tier: config.tier,
+    message: `Boost ${config.label} active pour ${Math.round(config.durationMs / 3600000)} heure(s) !`,
+  });
 });
 
 // Statut du boost VIP d'un joueur
@@ -1662,14 +1755,16 @@ app.get('/api/players/:id/vip-boost', (req, res) => {
   const active = vipQ.getActive.get(id, now);
   const midnightTs = getParisMidnightTs(now);
   const usedToday = vipQ.usedToday.get(id, midnightTs);
+  const player = pQ.getById.get(id);
+  const config = getPremiumBoostConfig(player);
   res.json({
     active:     !!active,
     expiresAt:  active?.expires_at ?? null,
-    usedToday:  !!usedToday,
+    usedToday:  config?.daily ? !!usedToday : false,
     remainingMs: active ? active.expires_at - now : 0,
     resetAt: midnightTs + 24 * 60 * 60 * 1000,
-    multiplier: isVipPlusPlayer(pQ.getById.get(id)) ? 1.3 : 1.2,
-    tier: isVipPlusPlayer(pQ.getById.get(id)) ? 'vip_plus' : 'vip',
+    multiplier: active ? Number(active.multiplier || 1) : (config?.multiplier || 1),
+    tier: active ? String(active.tier || 'vip') : (config?.tier || null),
   });
 });
 
@@ -1686,8 +1781,8 @@ app.get('/api/admin/vip-boosts', (req, res) => {
     avatar:    b.avatar,
     expiresAt: b.expires_at,
     remainingMin: Math.round((b.expires_at - now) / 60000),
-    tier: Number(b.is_vip_plus) === 1 ? 'vip_plus' : 'vip',
-    multiplier: Number(b.is_vip_plus) === 1 ? 1.3 : 1.2,
+    tier: String(b.tier || (Number(b.is_perso) === 1 ? 'perso' : Number(b.is_vip_plus) === 1 ? 'vip_plus' : 'vip')),
+    multiplier: Number(b.multiplier || (Number(b.is_perso) === 1 || Number(b.is_vip_plus) === 1 ? 1.3 : 1.2)),
   })));
 });
 
