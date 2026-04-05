@@ -141,14 +141,27 @@ function validateSession(token) {
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
+const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 
 function getAvatarDecorationPaths() {
   try {
     return fs.readdirSync(DECORATIONS_DIR, { withFileTypes: true })
       .filter(entry => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name))
       .map(entry => `/decorations/${entry.name}`)
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
+
+function getProfileBannerPaths() {
+  try {
+    return fs.readdirSync(PROFILE_BANNERS_DIR, { withFileTypes: true })
+      .filter(entry => entry.isFile() && /\.(png|jpe?g|webp|gif)$/i.test(entry.name))
+      .map(entry => `/banners/${entry.name}`)
       .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   } catch {
     return [];
@@ -167,6 +180,13 @@ function getAvatarDecorationRemainingMs(player) {
   if (isAdminPlayer(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function getProfileBannerRemainingMs(player) {
+  if (isAdminPlayer(player)) return 0;
+  const lastChanged = Number(player?.profile_banner_changed_at || 0);
+  const remaining = lastChanged + PROFILE_BANNER_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -1140,6 +1160,10 @@ app.get('/api/decorations', (_, res) => {
   res.json({ decorations: getAvatarDecorationPaths() });
 });
 
+app.get('/api/profile-banners', (_, res) => {
+  res.json({ banners: getProfileBannerPaths() });
+});
+
 app.get('/api/shop/me', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = validateSession(token);
@@ -1341,6 +1365,7 @@ function sanitize(p) {
       avatar:     '',
       avatar_decoration: '',
       token_emoji_image: '',
+      profile_banner: '',
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -1378,6 +1403,7 @@ app.delete('/api/players/:id', (req, res) => {
     avatar     = '',
     avatar_decoration = '',
     banner     = '',
+    profile_banner = '',
     token_emoji_image = '',
     color_secondary = '',
     is_vip = 0,
@@ -1550,6 +1576,26 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   res.json({ ok: true });
 });
 
+app.patch('/api/players/:id/profile-banner', (req, res) => {
+  const { image, token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!isPersoPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au pack Perso.' });
+  const nextBanner = String(image || '').trim();
+  const isPreset = nextBanner === '' || getProfileBannerPaths().includes(nextBanner);
+  if (!isPreset) {
+    return res.status(400).json({ error: 'Banniere invalide.' });
+  }
+  const remaining = getProfileBannerRemainingMs(player);
+  if (remaining > 0 && nextBanner !== String(player?.profile_banner || '')) {
+    return res.status(429).json({ error: `Banniere pseudo disponible dans ${formatCooldownHours(remaining)}.` });
+  }
+  pQ.updateProfileBanner.run({ image: nextBanner, id });
+  pQ.updateProfileBannerChangedAt.run({ changedAt: Date.now(), id });
+  res.json({ ok: true });
+});
+
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs
 app.get('/api/players/search', (req, res) => {
   try {
@@ -1558,13 +1604,13 @@ app.get('/api/players/search', (req, res) => {
     // Autoriser alphanum + _ + - + . (suffisant, pas de regex bloquante)
     if (q.length > 20) return res.json([]);
     const rows = db.prepare(`
-      SELECT id, pseudo, elo, avatar, color
+      SELECT id, pseudo, elo, avatar, color, profile_banner
       FROM players
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
       ORDER BY elo DESC LIMIT 8
     `).all(q.replace(/%/g, '') + '%');
-    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color })));
+    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '' })));
   } catch(e) {
     console.error('[search]', e.message);
     res.json([]);

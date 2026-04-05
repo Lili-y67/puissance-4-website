@@ -115,6 +115,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration_changed_at INTEG
 try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -155,6 +157,8 @@ const pQ = {
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
   updateAvatarDecoration: db.prepare(`UPDATE players SET avatar_decoration = @image WHERE id = @id`),
   updateAvatarDecorationChangedAt: db.prepare(`UPDATE players SET avatar_decoration_changed_at = @changedAt WHERE id = @id`),
+  updateProfileBanner: db.prepare(`UPDATE players SET profile_banner = @image WHERE id = @id`),
+  updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
   updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
