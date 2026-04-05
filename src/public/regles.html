@@ -290,21 +290,21 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
     </div>
     <div class="card-body" style="margin-bottom:4px">
       Chaque joueur commence à <strong>1000 ELO</strong>. Après chaque partie, ton score évolue selon
-      la force de ton adversaire — battre un joueur plus fort rapporte <span class="hi-green">plus de points</span>,
-      perdre contre un joueur plus faible en <span class="hi-red">coûte davantage</span>.
+      la force de ton adversaire : battre un joueur plus fort rapporte <span class="hi-green">davantage de points</span>,
+      alors que perdre contre un joueur plus faible en <span class="hi-red">fait perdre plus</span>.
     </div>
     <div class="elo-grid">
       <div class="elo-item">
-        <div class="elo-val pos">+16 à +30</div>
+        <div class="elo-val pos">+1 à +32</div>
         <div class="elo-lbl">Points gagnés (victoire)</div>
       </div>
       <div class="elo-item">
-        <div class="elo-val neg">-16 à -30</div>
+        <div class="elo-val neg">-1 à -32</div>
         <div class="elo-lbl">Points perdus (défaite)</div>
       </div>
       <div class="elo-item">
-        <div class="elo-val" style="color:var(--muted)">±0 à ±5</div>
-        <div class="elo-lbl">Match nul</div>
+        <div class="elo-val" style="color:var(--muted)">0 ou faible variation</div>
+        <div class="elo-lbl">Match nul selon l'écart</div>
       </div>
       <div class="elo-item">
         <div class="elo-val" style="color:var(--accent)">1000</div>
@@ -312,6 +312,9 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
       </div>
     </div>
     <div class="card-body" style="font-size:13px">
+      Les <strong>boosters ELO</strong> ajoutent un bonus sur ton gain de victoire, puis le résultat est
+      <strong>arrondi au supérieur</strong>. Les <strong>coins</strong>, eux, se gagnent entre <strong>1 et 3</strong>
+      par partie légitime, puis un éventuel booster coins applique aussi son multiplicateur avec arrondi au supérieur.
       Si ton adversaire se <strong>déconnecte</strong> en cours de partie, tu remportes automatiquement la victoire et les points ELO associés.
     </div>
   </div>
