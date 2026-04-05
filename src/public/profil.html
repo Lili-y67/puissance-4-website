@@ -2938,6 +2938,12 @@ async function saveSelectedProfileBanner() {
 }
 
 function buildProfileBannerPreviewMarkup(player, bannerValue) {
+  const esc = (value) => String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
   const src = getRenderableMediaSrc(bannerValue || '');
   if (!src) return `<div class="profile-banner-choice-empty">Aucune</div>`;
   const avatarSrc = getRenderableMediaSrc(player?.avatar || '');
@@ -2952,7 +2958,7 @@ function buildProfileBannerPreviewMarkup(player, bannerValue) {
     <div class="profile-banner-mini-main">
       <div class="profile-banner-mini-name-wrap">
         <div class="profile-banner-mini-plaque" style="background-image:url('${src}')"></div>
-        <div class="profile-banner-mini-name">${escapeHtml(player?.pseudo || 'Pseudo')}</div>
+        <div class="profile-banner-mini-name">${esc(player?.pseudo || 'Pseudo')}</div>
       </div>
       <div class="profile-banner-mini-sub">${Number(player?.elo || 1000)} ELO · ${wr}% WR</div>
     </div>
