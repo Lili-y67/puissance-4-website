@@ -416,43 +416,31 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
     WH.wlogAdminAction('VIP accordAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
-    pQ.updatePerso.run({ is_perso: 0, id: targetId });
-    pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
     pQ.updateVipExpiry.run({ vip_expires_at: Date.now() + vipExpiryMap[vipDuration], id: targetId });
   } else if (role === 'vipplus') {
     WH.wlogAdminAction('VIP+ accorde', target.pseudo, req.params.id, [['VIP+ avant', oldVipPlus ? 'oui' : 'non', true], ['VIP+ apres', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
     pQ.updateVipPlus.run({ is_vip_plus: 1, id: targetId });
-    pQ.updatePerso.run({ is_perso: 0, id: targetId });
-    pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
     pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
   } else if (role === 'perso') {
     WH.wlogAdminAction('Perso accorde', target.pseudo, req.params.id, [['Perso avant', oldPerso ? 'oui' : 'non', true], ['Perso apres', 'oui', true]]);
-    pQ.updateVip.run({ is_vip: 0, id: targetId });
-    pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
     pQ.updatePerso.run({ is_perso: 1, id: targetId });
-    pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
   } else {
     WH.wlogAdminAction('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
     pQ.updateRole.run({ role, id: targetId });
-    if (role === 'user' || role === 'moderator' || role === 'admin') {
-      pQ.updateVip.run({ is_vip: 0, id: targetId });
-      pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
-      pQ.updatePerso.run({ is_perso: 0, id: targetId });
-      pQ.updateCustomRole.run({ id: targetId, text: '', color: '', emoji: '' });
-      pQ.updateVipExpiry.run({ vip_expires_at: null, id: targetId });
-    }
   }
+
+  const updatedTarget = pQ.getById.get(targetId);
 
   // Sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord si liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
   if (target.discord_id) {
     try {
       await syncDiscordRole(
         target.discord_id,
-        role === 'vip' || role === 'vipplus' || role === 'perso' ? target.role : role,
-        role === 'vip' || role === 'vipplus' ? true : false,
-        role === 'vipplus',
-        role === 'perso' ? !!String(target.custom_role_text || '').trim() : !!String(target.custom_role_text || '').trim()
+        updatedTarget?.role || target.role,
+        Number(updatedTarget?.is_vip || 0) === 1,
+        Number(updatedTarget?.is_vip_plus || 0) === 1,
+        !!String(updatedTarget?.custom_role_text || '').trim()
       );
     } catch(e) {}
     // DM de notification

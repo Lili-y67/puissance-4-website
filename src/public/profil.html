@@ -683,13 +683,17 @@ function isVipPlus(player = currentPlayer) {
   return Number(player?.is_vip_plus) === 1;
 }
 
+function isVip(player = currentPlayer) {
+  return Number(player?.is_vip) === 1;
+}
+
 function isPerso(player = currentPlayer) {
   return Number(player?.is_perso) === 1;
 }
 
 function getPremiumTier(player = currentPlayer) {
-  if (isPerso(player)) return 'perso';
   if (isVipPlus(player)) return 'vip_plus';
+  if (isPerso(player)) return 'perso';
   if (Number(player?.is_vip) === 1) return 'vip';
   return null;
 }
