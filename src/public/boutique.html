@@ -9,185 +9,106 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#070711;
-  --surface:#101120;
-  --surface-2:#17192d;
-  --border:rgba(255,255,255,.08);
-  --text:#f4f4fb;
-  --muted:rgba(244,244,251,.62);
-  --red:#ff2d55;
-  --yellow:#ffd60a;
-  --yellow-soft:rgba(255,214,10,.14);
-  --blue:#85EBFF;
-  --blue-soft:rgba(133,235,255,.14);
-  --orange:#ff7a45;
-  --orange-soft:rgba(255,122,69,.14);
-  --green:#30d158;
+  --bg:#070711;--surface:#101120;--surface-2:#17192d;--border:rgba(255,255,255,.08);
+  --text:#f4f4fb;--muted:rgba(244,244,251,.62);--red:#ff2d55;--yellow:#ffd60a;
+  --yellow-soft:rgba(255,214,10,.14);--blue:#85EBFF;--blue-soft:rgba(133,235,255,.14);
+  --orange:#ff7a45;--orange-soft:rgba(255,122,69,.14);--green:#30d158;
 }
 html,body{min-height:100%}
 body{
-  color:var(--text);
-  font-family:'Barlow',sans-serif;
+  color:var(--text);font-family:'Barlow',sans-serif;
   background:
     radial-gradient(circle at 15% 18%, rgba(255,45,85,.12), transparent 22%),
     radial-gradient(circle at 84% 14%, rgba(133,235,255,.10), transparent 24%),
     radial-gradient(circle at 52% 100%, rgba(255,214,10,.09), transparent 28%),
     var(--bg);
 }
-.bg-grid{
-  position:fixed;inset:0;pointer-events:none;
-  background-image:
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size:44px 44px;
-}
+.bg-grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);background-size:44px 44px}
 .page{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:24px}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .logo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:2px;color:var(--text);text-decoration:none}
 .logo span{color:var(--red)}
 .nav-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:11px 16px;border-radius:12px;border:1px solid var(--border);
-  color:var(--muted);text-decoration:none;background:rgba(255,255,255,.02);
-  font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
-}
-.hero{
-  position:relative;overflow:hidden;padding:34px;border-radius:30px;
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
-  border:1px solid var(--border);box-shadow:0 28px 80px rgba(0,0,0,.35);
-}
-.hero::before{
-  content:'';position:absolute;inset:auto -120px -120px auto;width:320px;height:320px;border-radius:50%;
-  background:radial-gradient(circle, rgba(133,235,255,.16), transparent 65%);
-}
-.hero::after{
-  content:'';position:absolute;inset:-120px auto auto -120px;width:280px;height:280px;border-radius:50%;
-  background:radial-gradient(circle, rgba(255,214,10,.13), transparent 65%);
-}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;border:1px solid var(--border);color:var(--muted);text-decoration:none;background:rgba(255,255,255,.02);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.hero{position:relative;overflow:hidden;padding:34px;border-radius:30px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));border:1px solid var(--border);box-shadow:0 28px 80px rgba(0,0,0,.35)}
+.hero::before{content:'';position:absolute;inset:auto -120px -120px auto;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle, rgba(133,235,255,.16), transparent 65%)}
+.hero::after{content:'';position:absolute;inset:-120px auto auto -120px;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle, rgba(255,214,10,.13), transparent 65%)}
 .hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:1.2fr .9fr;gap:24px;align-items:center}
 .hero-kicker{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
 .hero-title{font-family:'Barlow Condensed',sans-serif;font-size:74px;line-height:.92;letter-spacing:1px;text-transform:uppercase}
 .hero-title span{color:var(--red);text-shadow:0 0 24px rgba(255,45,85,.35)}
 .hero-copy{margin-top:14px;max-width:680px;font-size:16px;line-height:1.75;color:var(--muted)}
 .hero-pills{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
-.pill{
-  padding:8px 12px;border-radius:999px;border:1px solid var(--border);
-  background:rgba(255,255,255,.03);font-size:12px;color:var(--text)
-}
-.hero-side{
-  padding:20px;border-radius:24px;background:rgba(10,11,22,.72);
-  border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)
-}
-.coins-panel{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;
-  padding:14px 16px;border-radius:18px;background:var(--surface-2);border:1px solid rgba(255,255,255,.06);margin-bottom:14px
-}
+.pill{padding:8px 12px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-size:12px;color:var(--text)}
+.hero-side{padding:20px;border-radius:24px;background:rgba(10,11,22,.72);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px)}
+.coins-panel{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:18px;background:var(--surface-2);border:1px solid rgba(255,255,255,.06);margin-bottom:14px}
 .coins-left{display:flex;align-items:center;gap:12px}
-.coin-badge{
-  display:inline-flex;align-items:center;gap:10px;
-  min-height:58px;padding:10px 14px;border-radius:18px;
-  background:linear-gradient(180deg, rgba(255,122,69,.24), rgba(255,122,69,.12));
-  border:1px solid rgba(255,122,69,.35);
-  box-shadow:0 0 22px rgba(255,122,69,.14), inset 0 0 14px rgba(255,255,255,.03);
-}
+.coin-badge{display:inline-flex;align-items:center;gap:10px;min-height:58px;padding:10px 14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,122,69,.24), rgba(255,122,69,.12));border:1px solid rgba(255,122,69,.35);box-shadow:0 0 22px rgba(255,122,69,.14), inset 0 0 14px rgba(255,255,255,.03)}
 .coin-icon{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,214,10,.32))}
 .coins-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .coins-value{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;color:var(--yellow);line-height:1}
 .hero-side-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
 .hero-side-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
-.hero-side-item{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:12px 14px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)
-}
+.hero-side-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .hero-side-item strong{font-size:14px}
 .hero-side-item span{font-size:12px;color:var(--muted)}
 .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .section-sub{font-size:14px;color:var(--muted);max-width:760px}
+.category-tabs{display:flex;gap:10px;flex-wrap:wrap}
+.category-tab{padding:10px 16px;border-radius:999px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.03);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.category-tab.active{background:rgba(255,45,85,.14);border-color:rgba(255,45,85,.32);color:#fff}
+.subsection-label{margin:4px 0 2px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.card{
-  position:relative;overflow:hidden;
-  min-height:490px;padding:22px;border-radius:26px;
-  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-  border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;
-  box-shadow:0 22px 44px rgba(0,0,0,.26);
-}
-.card::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.04), transparent 35%);
-}
+.card{position:relative;overflow:hidden;min-height:470px;padding:22px;border-radius:26px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;box-shadow:0 22px 44px rgba(0,0,0,.26)}
+.card::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(145deg, rgba(255,255,255,.04), transparent 35%)}
 .card>*{position:relative;z-index:1}
-.card.vip{border-color:rgba(255,214,10,.26);box-shadow:0 0 0 1px rgba(255,214,10,.08),0 22px 44px rgba(0,0,0,.26)}
+.card.vip{border-color:rgba(255,214,10,.26)}
 .card.vipplus{border-color:rgba(133,235,255,.34);box-shadow:0 0 24px rgba(133,235,255,.10),0 22px 44px rgba(0,0,0,.26)}
 .card.perso{border-color:rgba(255,122,69,.28);box-shadow:0 0 24px rgba(255,122,69,.08),0 22px 44px rgba(0,0,0,.26)}
+.card.booster-elo{border-color:rgba(255,214,10,.18)}
+.card.booster-coin{border-color:rgba(255,159,10,.24);box-shadow:0 0 24px rgba(255,159,10,.08),0 22px 44px rgba(0,0,0,.26)}
 .tier{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.badge{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;
-  font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase
-}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
 .badge.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
 .badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
+.badge.booster-elo{background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.2);color:var(--yellow)}
+.badge.booster-coin{background:rgba(255,159,10,.10);border:1px solid rgba(255,159,10,.28);color:var(--orange)}
 .duration{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:1px}
 .card h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .meta{font-size:14px;line-height:1.7;color:var(--muted)}
-.stat-line{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;
-  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)
-}
+.stat-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
 .stat-line-left strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
 .stat-line-left span{font-size:13px;color:var(--muted)}
-.price{
-  display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900
-}
+.price{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
 .price img{width:30px;height:30px;object-fit:contain}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
 .stat-line.perso .price,.stat-line.perso strong{color:var(--orange)}
+.stat-line.booster-elo .price,.stat-line.booster-elo strong{color:var(--yellow)}
+.stat-line.booster-coin .price,.stat-line.booster-coin strong{color:var(--orange)}
 .feature-list{display:flex;flex-direction:column;gap:10px}
-.feature{
-  display:flex;gap:10px;align-items:flex-start;
-  padding:11px 12px;border-radius:14px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)
-}
+.feature{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:14px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .feature-emoji{font-size:16px;line-height:1.1}
 .feature-copy strong{display:block;font-size:14px}
 .feature-copy span{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
-.cta{
-  margin-top:auto;width:100%;padding:13px 16px;border-radius:14px;
-  font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
-  border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s
-}
+.cta{margin-top:auto;width:100%;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s}
 .cta.vip{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
 .cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.08);color:var(--blue)}
 .cta.perso{border-color:rgba(255,122,69,.22);background:rgba(255,122,69,.08);color:var(--orange)}
+.cta.booster-elo{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
+.cta.booster-coin{border-color:rgba(255,159,10,.22);background:rgba(255,159,10,.08);color:var(--orange)}
 .cta:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.7)}
 .cta small{display:block;font-size:11px;letter-spacing:.6px;margin-top:3px}
-.panel{
-  padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-  border:1px solid var(--border)
-}
+.panel{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border)}
 .panel-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px}
-.status-line{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:14px 16px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)
-}
+.status-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .status-line span{font-size:13px;color:var(--muted)}
 .status-line strong{font-family:'Barlow Condensed',sans-serif;font-size:24px}
 .note{font-size:13px;color:var(--muted);line-height:1.7}
-@media (max-width:980px){
-  .hero-inner,.grid{grid-template-columns:1fr}
-  .hero-title{font-size:54px}
-}
-@media (max-width:640px){
-  .page{padding:20px 14px 56px}
-  .hero{padding:24px}
-  .hero-title{font-size:42px}
-  .section-title{font-size:32px}
-  .card{min-height:auto}
-  .coins-panel{align-items:flex-start;flex-direction:column}
-}
+@media (max-width:980px){.hero-inner,.grid{grid-template-columns:1fr}.hero-title{font-size:54px}}
+@media (max-width:640px){.page{padding:20px 14px 56px}.hero{padding:24px}.hero-title{font-size:42px}.section-title{font-size:32px}.card{min-height:auto}.coins-panel{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -207,14 +128,14 @@ body{
         <div class="hero-kicker">Boutique en coins</div>
         <h1 class="hero-title">Depense tes <span>coins</span> pour evoluer</h1>
         <p class="hero-copy">
-          Chaque partie te fait gagner entre 1 et 3 coins. Tu peux ensuite les depenser ici
-          pour debloquer VIP, VIP+, ou le pack Perso directement depuis le site.
+          Deux catégories sont disponibles : les rangs premium, puis les boosters à stock limité.
+          Les rangs s’activent directement, et les boosters achetés vont dans ton inventaire.
         </p>
         <div class="hero-pills">
-          <div class="pill">1 a 3 coins par partie</div>
-          <div class="pill">VIP : emoji custom + GIF +20%</div>
-          <div class="pill">VIP+ : emoji image + deco +30%</div>
-          <div class="pill">Perso : badge perso + replay HTML</div>
+          <div class="pill">1 à 3 coins par partie</div>
+          <div class="pill">Rangs : VIP, VIP+, Perso</div>
+          <div class="pill">Boosters ELO à stock global</div>
+          <div class="pill">Boosters Coins à stock global</div>
         </div>
       </div>
       <div class="hero-side">
@@ -232,27 +153,9 @@ body{
         </div>
         <div class="hero-side-title">Rappel rapide</div>
         <div class="hero-side-list">
-          <div class="hero-side-item">
-            <div>
-              <strong>VIP</strong>
-              <span>1 mois ou 1 an</span>
-            </div>
-            <strong style="color:var(--yellow)">+20%</strong>
-          </div>
-          <div class="hero-side-item">
-            <div>
-              <strong>VIP+</strong>
-              <span>A vie, style bleu</span>
-            </div>
-            <strong style="color:var(--blue)">5000</strong>
-          </div>
-          <div class="hero-side-item">
-            <div>
-              <strong>Perso</strong>
-              <span>Badge perso + export replay</span>
-            </div>
-            <strong style="color:var(--orange)">15000</strong>
-          </div>
+          <div class="hero-side-item"><div><strong>Rangs</strong><span>Activation directe</span></div><strong style="color:var(--yellow)">Premium</strong></div>
+          <div class="hero-side-item"><div><strong>Boosters ELO</strong><span>Mini, Classic, Max, Princess</span></div><strong style="color:var(--yellow)">Stock</strong></div>
+          <div class="hero-side-item"><div><strong>Boosters Coins</strong><span>Coin Boost et Coin Boost +</span></div><strong style="color:var(--orange)">Stock</strong></div>
         </div>
       </div>
     </div>
@@ -261,148 +164,130 @@ body{
   <section>
     <div class="section-head">
       <div>
-        <div class="section-title">Formules disponibles</div>
-        <div class="section-sub">
-          Les achats se font en coins du site. Les packs s'activent directement apres validation si ton solde est suffisant.
-        </div>
+        <div class="section-title">Catégories</div>
+        <div class="section-sub">Les rangs restent disponibles en continu. Les boosters utilisent un stock global décrémenté à chaque achat.</div>
+      </div>
+      <div class="category-tabs">
+        <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
+        <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
       </div>
     </div>
   </section>
 
-  <section class="grid">
-    <article class="card vip">
-      <div class="tier">
-        <span class="badge vip">⭐ VIP</span>
-        <div class="duration">1 mois</div>
-      </div>
-      <h2>VIP Mensuel</h2>
-      <div class="meta">Le pack premium simple pour profiter du contenu VIP pendant 30 jours.</div>
-      <div class="stat-line vip">
-        <div class="stat-line-left">
-          <strong>+20%</strong>
-          <span>sur le boost ELO quotidien</span>
-        </div>
-        <div class="price"><img src="/coin.png" alt="">100</div>
-      </div>
-      <div class="feature-list">
-        <div class="feature"><div class="feature-emoji">🎭</div><div class="feature-copy"><strong>Emoji custom</strong><span>Tu peux choisir ton emoji de pion personnalise.</span></div></div>
-        <div class="feature"><div class="feature-emoji">🖼️</div><div class="feature-copy"><strong>Avatar et banniere GIF</strong><span>Les GIF sont reserves au VIP pour ton profil.</span></div></div>
-        <div class="feature"><div class="feature-emoji">⏱️</div><div class="feature-copy"><strong>Boost quotidien</strong><span>Une activation par jour, active pendant 1 heure.</span></div></div>
-      </div>
-      <button class="cta vip" id="buy-vip-1m" onclick="buyPack('vip_1m')">
-        Acheter VIP 1 mois
-        <small id="buy-vip-1m-note">100 coins</small>
-      </button>
-    </article>
+  <section id="shop-ranks-section" class="grid"></section>
 
-    <article class="card vip">
-      <div class="tier">
-        <span class="badge vip">⭐ VIP</span>
-        <div class="duration">1 an</div>
-      </div>
-      <h2>VIP Annuel</h2>
-      <div class="meta">La version longue duree du pack VIP, parfaite si tu veux garder tous les avantages pendant un an.</div>
-      <div class="stat-line vip">
-        <div class="stat-line-left">
-          <strong>+20%</strong>
-          <span>sur le boost ELO quotidien</span>
-        </div>
-        <div class="price"><img src="/coin.png" alt="">1000</div>
-      </div>
-      <div class="feature-list">
-        <div class="feature"><div class="feature-emoji">🗓️</div><div class="feature-copy"><strong>1 an complet</strong><span>Le VIP dure 365 jours et peut etre prolonge si tu le rachetes.</span></div></div>
-        <div class="feature"><div class="feature-emoji">🎨</div><div class="feature-copy"><strong>Emoji custom VIP</strong><span>Tu gardes le meme confort que le VIP mensuel pour ton pion.</span></div></div>
-        <div class="feature"><div class="feature-emoji">💾</div><div class="feature-copy"><strong>GIF medias</strong><span>Avatar et banniere GIF avec les memes protections serveur.</span></div></div>
-      </div>
-      <button class="cta vip" id="buy-vip-1y" onclick="buyPack('vip_1y')">
-        Acheter VIP 1 an
-        <small id="buy-vip-1y-note">1000 coins</small>
-      </button>
-    </article>
-
-    <article class="card vipplus">
-      <div class="tier">
-        <span class="badge vipplus">💎 VIP+</span>
-        <div class="duration">A vie</div>
-      </div>
-      <h2>VIP+ Lifetime</h2>
-      <div class="meta">Le rang premium permanent pour les joueurs qui veulent le style le plus pousse et le meilleur bonus VIP.</div>
-      <div class="stat-line vipplus">
-        <div class="stat-line-left">
-          <strong>+30%</strong>
-          <span>sur le boost ELO quotidien</span>
-        </div>
-        <div class="price"><img src="/coin.png" alt="">5000</div>
-      </div>
-      <div class="feature-list">
-        <div class="feature"><div class="feature-emoji">🧩</div><div class="feature-copy"><strong>Emoji image 128x128</strong><span>Import, recadrage et rendu direct dans la grille.</span></div></div>
-        <div class="feature"><div class="feature-emoji">🌈</div><div class="feature-copy"><strong>Double couleur</strong><span>Ajoute une seconde couleur pour un vrai pion en degrade.</span></div></div>
-        <div class="feature"><div class="feature-emoji">✨</div><div class="feature-copy"><strong>Deco avatar</strong><span>Une decoration importee autour de ton avatar.</span></div></div>
-      </div>
-      <button class="cta vipplus" id="buy-vip-plus" onclick="buyPack('vip_plus')">
-        Acheter VIP+
-        <small id="buy-vip-plus-note">5000 coins</small>
-      </button>
-    </article>
-
-    <article class="card perso">
-      <div class="tier">
-        <span class="badge perso">✨ Perso</span>
-        <div class="duration">Createur</div>
-      </div>
-      <h2>Pack Perso</h2>
-      <div class="meta">Le pack identite pour les profils speciaux : badge perso, export replay HTML et bonus dedie.</div>
-      <div class="stat-line perso">
-        <div class="stat-line-left">
-          <strong>2h</strong>
-          <span>de boost ELO a +30%</span>
-        </div>
-        <div class="price"><img src="/coin.png" alt="">15000</div>
-      </div>
-      <div class="feature-list">
-        <div class="feature"><div class="feature-emoji">🏷️</div><div class="feature-copy"><strong>Badge personnalise</strong><span>Texte, couleur et emoji dedies directement sur ton profil.</span></div></div>
-        <div class="feature"><div class="feature-emoji">📥</div><div class="feature-copy"><strong>Replay HTML</strong><span>Telecharge une partie en HTML autonome depuis le replay.</span></div></div>
-        <div class="feature"><div class="feature-emoji">🚀</div><div class="feature-copy"><strong>Boost Perso</strong><span>Activation speciale de 2 heures a +30% ELO.</span></div></div>
-      </div>
-      <button class="cta perso" id="buy-perso" onclick="buyPack('perso')">
-        Acheter Perso
-        <small id="buy-perso-note">15000 coins</small>
-      </button>
-    </article>
+  <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
+    <div class="subsection-label">Boosters Elo</div>
+    <div class="grid" id="shop-elo-boosters-grid"></div>
+    <div class="subsection-label">Boosters Coins</div>
+    <div class="grid" id="shop-coin-boosters-grid"></div>
   </section>
 
   <section class="panel">
-    <div class="panel-title">Comment gagner des coins ?</div>
-    <div class="status-line">
-      <span>Chaque partie jouee</span>
-      <strong style="color:var(--yellow)">+1 a +3</strong>
-    </div>
-    <div class="status-line" style="margin-top:12px">
-      <span>Achats boutique</span>
-      <strong style="color:var(--green)">ACTIFS</strong>
-    </div>
+    <div class="panel-title">Comment ça marche ?</div>
+    <div class="status-line"><span>Chaque partie jouée</span><strong style="color:var(--yellow)">+1 à +3</strong></div>
+    <div class="status-line" style="margin-top:12px"><span>Rangs premium</span><strong style="color:var(--green)">Directs</strong></div>
+    <div class="status-line" style="margin-top:12px"><span>Boosters</span><strong style="color:var(--orange)">Stock limité</strong></div>
     <p class="note" style="margin-top:16px">
-      Les coins sont gagnes automatiquement a la fin des parties legitimes. Les parties suspectes n'en donnent pas.
+      Les boosters achetés vont dans ton inventaire personnel. Le stock global baisse à chaque achat pour éviter les achats massifs.
     </p>
   </section>
 </div>
 
 <script>
+const SHOP_ITEMS = {
+  vip_1m: {
+    key: 'vip_1m', type: 'rank', theme: 'vip', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
+    stat: '+20%', statSub: 'sur le boost ELO quotidien',
+    meta: 'Le pack premium simple pour profiter du contenu VIP pendant 30 jours.',
+    features: [
+      ['🎭', 'Emoji custom', 'Choisis ton emoji de pion personnalisé.'],
+      ['🖼️', 'Avatar et bannière GIF', 'GIF autorisés sur ton profil avec cooldown premium.'],
+      ['⏱️', 'Boost quotidien', 'Une activation par jour, active pendant 1 heure.']
+    ]
+  },
+  vip_1y: {
+    key: 'vip_1y', type: 'rank', theme: 'vip', badge: '⭐ VIP', duration: '1 an', title: 'VIP Annuel',
+    stat: '+20%', statSub: 'sur le boost ELO quotidien',
+    meta: 'La version longue durée du pack VIP pour garder les avantages pendant un an.',
+    features: [
+      ['🗓️', '1 an complet', 'Le VIP dure 365 jours et peut être prolongé.'],
+      ['🎨', 'Emoji custom VIP', 'Même confort que le VIP mensuel pour ton pion.'],
+      ['💾', 'GIF médias', 'Avatar et bannière GIF avec les mêmes protections serveur.']
+    ]
+  },
+  vip_plus: {
+    key: 'vip_plus', type: 'rank', theme: 'vipplus', badge: '💎 VIP+', duration: 'À vie', title: 'VIP+ Lifetime',
+    stat: '+30%', statSub: 'sur le boost ELO quotidien',
+    meta: 'Le rang premium permanent pour le meilleur style et le plus gros bonus VIP.',
+    features: [
+      ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
+      ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
+      ['✨', 'Décorations avatar', 'Accès à la collection de décorations VIP+.']
+    ]
+  },
+  perso: {
+    key: 'perso', type: 'rank', theme: 'perso', badge: '✨ Perso', duration: 'Créateur', title: 'Pack Perso',
+    stat: '2h', statSub: 'de boost ELO à +30%',
+    meta: 'Le pack identité pour les profils spéciaux : badge perso, export replay HTML et bonus dédié.',
+    features: [
+      ['🏷️', 'Badge personnalisé', 'Texte, couleur et emoji dédiés sur ton profil.'],
+      ['📥', 'Replay HTML', 'Télécharge une partie en HTML autonome depuis le replay.'],
+      ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
+    ]
+  },
+  elo_mini: {
+    key: 'elo_mini', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.05', title: 'Mini Boost',
+    stat: '250', statSub: 'coins pour +0.05 ELO',
+    meta: 'Petit booster ELO à stock limité pour les achats rapides.',
+    features: [['📦','Stock global','10 unités au lancement.'],['⚡','Effet','Booster ELO x0.05.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  elo_classic: {
+    key: 'elo_classic', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.1', title: 'Classic Boost',
+    stat: '750', statSub: 'coins pour +0.1 ELO',
+    meta: 'Le booster ELO standard avec un meilleur rendement.',
+    features: [['📦','Stock global','5 unités au lancement.'],['⚡','Effet','Booster ELO x0.1.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  elo_max: {
+    key: 'elo_max', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.25', title: 'Max Boost',
+    stat: '2500', statSub: 'coins pour +0.25 ELO',
+    meta: 'Une version bien plus rare pour les gros achats de progression.',
+    features: [['📦','Stock global','3 unités au lancement.'],['⚡','Effet','Booster ELO x0.25.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  elo_princess: {
+    key: 'elo_princess', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.5', title: 'Princess Boost',
+    stat: '5000', statSub: 'coins pour +0.5 ELO',
+    meta: 'Le booster ELO le plus rare de la boutique, réservé aux grosses dépenses.',
+    features: [['📦','Stock global','1 unité au lancement.'],['⚡','Effet','Booster ELO x0.5.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  coin_boost: {
+    key: 'coin_boost', type: 'booster', family: 'coins', theme: 'booster-coin', badge: '🪙 COINS', duration: 'x5', title: 'Coin Boost',
+    stat: '3000', statSub: 'coins pour x5',
+    meta: 'Booster dédié aux gains de coins avec un stock limité global.',
+    features: [['📦','Stock global','5 unités au lancement.'],['🪙','Effet','Booster Coins x5.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  coin_boost_plus: {
+    key: 'coin_boost_plus', type: 'booster', family: 'coins', theme: 'booster-coin', badge: '🪙 COINS', duration: 'x10', title: 'Coin Boost +',
+    stat: '6000', statSub: 'coins pour x10',
+    meta: 'La version maximale pour les gains de coins, avec stock très réduit.',
+    features: [['📦','Stock global','3 unités au lancement.'],['🪙','Effet','Booster Coins x10.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  }
+};
+
 const SHOP_PRICES = {
-  vip_1m: 100,
-  vip_1y: 1000,
-  vip_plus: 5000,
-  perso: 15000,
+  vip_1m: 100, vip_1y: 1000, vip_plus: 5000, perso: 15000,
+  elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
+  coin_boost: 3000, coin_boost_plus: 6000,
 };
 
 let shopPlayer = null;
+let shopStock = {};
+let shopInventory = {};
+let currentCategory = 'ranks';
 
 function getStoredPlayer() {
-  try {
-    return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null'); }
+  catch { return null; }
 }
 
 function setStoredPlayer(player) {
@@ -425,56 +310,90 @@ function packOwned(pack) {
   if (pack === 'vip_1m' || pack === 'vip_1y') {
     if (Number(shopPlayer.is_vip_plus || 0) === 1) return 'vip_plus';
     if (Number(shopPlayer.is_vip || 0) === 1) return true;
-    return false;
   }
   return false;
 }
 
-function updateButton(pack, buttonId, noteId) {
-  const btn = document.getElementById(buttonId);
-  const note = document.getElementById(noteId);
-  if (!btn || !note) return;
-  const price = SHOP_PRICES[pack];
-  const coins = Number(shopPlayer?.coins || 0);
-  const owned = packOwned(pack);
-
-  if (!shopPlayer) {
-    btn.disabled = true;
-    note.textContent = 'Connecte-toi pour acheter';
-    return;
-  }
-  if (owned === 'vip_plus') {
-    btn.disabled = true;
-    note.textContent = '✓ Vous avez deja ce role';
-    return;
-  }
-  if (owned === true) {
-    btn.disabled = true;
-    note.textContent = '✓ Vous avez deja ce role';
-    return;
-  }
-  if (coins < price) {
-    btn.disabled = true;
-    note.textContent = `Il manque ${price - coins} coins`;
-    return;
-  }
-
-  btn.disabled = false;
-  note.textContent = `${price} coins`;
+function getInventoryQty(pack) {
+  return Number(shopInventory?.[pack] || 0);
 }
 
-function refreshButtons() {
-  updateButton('vip_1m', 'buy-vip-1m', 'buy-vip-1m-note');
-  updateButton('vip_1y', 'buy-vip-1y', 'buy-vip-1y-note');
-  updateButton('vip_plus', 'buy-vip-plus', 'buy-vip-plus-note');
-  updateButton('perso', 'buy-perso', 'buy-perso-note');
+function getStockQty(pack) {
+  const raw = shopStock?.[pack];
+  return Number.isFinite(Number(raw)) ? Number(raw) : null;
+}
+
+function getButtonState(pack) {
+  const price = SHOP_PRICES[pack];
+  const coins = Number(shopPlayer?.coins || 0);
+  const item = SHOP_ITEMS[pack];
+  const owned = item.type === 'rank' ? packOwned(pack) : false;
+  const stock = item.type === 'booster' ? getStockQty(pack) : null;
+
+  if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
+  if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
+  if (item.type === 'booster' && stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
+  if (coins < price) return { disabled: true, note: `Il manque ${price - coins} coins` };
+  if (item.type === 'booster') {
+    const inv = getInventoryQty(pack);
+    return { disabled: false, note: `Stock ${stock} · Inventaire ${inv}` };
+  }
+  return { disabled: false, note: `${price} coins` };
+}
+
+function renderCard(pack) {
+  const item = SHOP_ITEMS[pack];
+  const price = SHOP_PRICES[pack];
+  const btnState = getButtonState(pack);
+  const stock = item.type === 'booster' ? getStockQty(pack) : null;
+  const inv = item.type === 'booster' ? getInventoryQty(pack) : null;
+  return `
+    <article class="card ${item.theme}">
+      <div class="tier">
+        <span class="badge ${item.theme}">${item.badge}</span>
+        <div class="duration">${item.duration}</div>
+      </div>
+      <h2>${item.title}</h2>
+      <div class="meta">${item.meta}</div>
+      <div class="stat-line ${item.theme}">
+        <div class="stat-line-left">
+          <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
+          <span>${item.type === 'booster' ? item.statSub : item.statSub}</span>
+        </div>
+        <div class="price"><img src="/coin.png" alt="">${price}</div>
+      </div>
+      <div class="feature-list">
+        ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
+        ${item.type === 'booster' ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) · inventaire perso ${inv}.</span></div></div>` : ''}
+      </div>
+      <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+        ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
+        <small id="buy-${pack}-note">${btnState.note}</small>
+      </button>
+    </article>
+  `;
+}
+
+function renderShop() {
+  document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso'].map(renderCard).join('');
+  document.getElementById('shop-elo-boosters-grid').innerHTML = ['elo_mini','elo_classic','elo_max','elo_princess'].map(renderCard).join('');
+  document.getElementById('shop-coin-boosters-grid').innerHTML = ['coin_boost','coin_boost_plus'].map(renderCard).join('');
+}
+
+function switchShopCategory(category) {
+  currentCategory = category;
+  document.getElementById('tab-ranks').classList.toggle('active', category === 'ranks');
+  document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
+  document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
+  document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
 }
 
 async function loadShop() {
   const token = localStorage.getItem('token');
   if (!token) {
     setCoinsUi(0, 'Connecte-toi pour acheter.');
-    refreshButtons();
+    renderShop();
+    switchShopCategory(currentCategory);
     return;
   }
   try {
@@ -482,38 +401,28 @@ async function loadShop() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur boutique');
     shopPlayer = data.player || null;
+    shopStock = data.stock || {};
+    shopInventory = data.inventory || {};
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
-    refreshButtons();
   } catch (e) {
     setCoinsUi(0, 'Impossible de charger ton solde.');
-    refreshButtons();
   }
+  renderShop();
+  switchShopCategory(currentCategory);
 }
 
 async function buyPack(pack) {
   const token = localStorage.getItem('token');
   if (!token) return alert('Connecte-toi d abord.');
-  const owned = packOwned(pack);
-  if (owned) return;
+  const state = getButtonState(pack);
+  if (state.disabled) return;
 
-  const packLabel = pack === 'vip_1m'
-    ? 'VIP 1 mois'
-    : pack === 'vip_1y'
-      ? 'VIP 1 an'
-      : pack === 'vip_plus'
-        ? 'VIP+'
-        : 'Perso';
+  const packLabel = SHOP_ITEMS[pack]?.title || pack;
   const price = SHOP_PRICES[pack];
   if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} coins ?`)) return;
 
-  const btnMap = {
-    vip_1m: 'buy-vip-1m',
-    vip_1y: 'buy-vip-1y',
-    vip_plus: 'buy-vip-plus',
-    perso: 'buy-perso',
-  };
-  const btn = document.getElementById(btnMap[pack]);
+  const btn = document.getElementById(`buy-${pack}`);
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Achat...';
@@ -526,28 +435,19 @@ async function buyPack(pack) {
     });
     const data = await res.json();
     if (!res.ok) {
-      alert(data.error || 'Impossible d acheter ce pack.');
+      alert(data.error || 'Impossible d acheter cet objet.');
       return;
     }
     shopPlayer = data.player || shopPlayer;
+    shopStock = data.stock || shopStock;
+    shopInventory = data.inventory || shopInventory;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, 'Achat valide avec succes.');
-    refreshButtons();
+    setCoinsUi(shopPlayer?.coins || 0, SHOP_ITEMS[pack].type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
   } catch (e) {
     alert('Erreur reseau.');
   } finally {
-    if (btn) {
-      const label = pack === 'vip_1m' ? 'Acheter VIP 1 mois'
-        : pack === 'vip_1y' ? 'Acheter VIP 1 an'
-        : pack === 'vip_plus' ? 'Acheter VIP+'
-        : 'Acheter Perso';
-      const noteId = pack === 'vip_1m' ? 'buy-vip-1m-note'
-        : pack === 'vip_1y' ? 'buy-vip-1y-note'
-        : pack === 'vip_plus' ? 'buy-vip-plus-note'
-        : 'buy-perso-note';
-      const noteText = document.getElementById(noteId)?.textContent || `${SHOP_PRICES[pack]} coins`;
-      btn.innerHTML = `${label}<small id="${noteId}">${noteText}</small>`;
-    }
+    renderShop();
+    switchShopCategory(currentCategory);
   }
 }
 

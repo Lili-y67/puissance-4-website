@@ -672,29 +672,7 @@ let viewerPlayer  = null;
 let isOwnProfile  = false;
 let uploadChooserTarget = null;
 const GIF_URL_CACHE = new Map();
-const AVATAR_DECORATION_LIBRARY = [
-  '/decorations/2fc3e75a9f2c1a02f15464a0573065ca.jpg',
-  '/decorations/5deecfde67ddd0d18b152ddf4a0ec9bb.jpg',
-  '/decorations/7c256b9a693661dc7a65343befbd74db.jpg',
-  '/decorations/28231f6cc375c9c4e417957f22a1665b.jpg',
-  '/decorations/a_3cf1ad31f0c0c77a90319c13632d808e.png',
-  '/decorations/a_9a6bf0ab30a6719d6eb09fa4996984ca.png',
-  '/decorations/a_9d2ff9685be0c668ef6990b0035fac17.png',
-  '/decorations/a_365eed4178528fe8293c4212e8e2d5cb.png',
-  '/decorations/a_a02f615e00ef516c98adf7e93ebe881f.png',
-  '/decorations/a_e72e44eeea89e92dc02c9bec8b02d158.png',
-  '/decorations/Betterimage.ai_1738503261662-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503267157-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503272412-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503286035-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503294919-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503305126-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503311391-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503318383-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503328968-removebg-preview.png',
-  '/decorations/Betterimage.ai_1738503337387-removebg-preview.png',
-  '/decorations/Test.png'
-];
+let avatarDecorationLibrary = [];
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -712,6 +690,16 @@ function getRenderableMediaSrc(src) {
     return url;
   } catch {
     return src;
+  }
+}
+
+async function loadAvatarDecorationLibrary() {
+  try {
+    const res = await fetch('/api/decorations');
+    const data = await res.json();
+    avatarDecorationLibrary = Array.isArray(data?.decorations) ? data.decorations : [];
+  } catch {
+    avatarDecorationLibrary = [];
   }
 }
 
@@ -784,6 +772,7 @@ function formatRemainingTime(ms) {
 }
 
 async function load() {
+  await loadAvatarDecorationLibrary();
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
   viewerPlayer   = saved ? JSON.parse(saved) : null;
@@ -1784,7 +1773,7 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
       <span class="avatar-decoration-option-none">Aucune</span>
     </button>`
   ];
-  for (const src of AVATAR_DECORATION_LIBRARY) {
+  for (const src of avatarDecorationLibrary) {
     const active = selectedValue === src ? 'active' : '';
     const locked = !canEdit ? 'locked' : '';
     cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="Décoration">

@@ -2,6 +2,7 @@
 const express    = require('express');
 const http       = require('http');
 const { Server } = require('socket.io');
+const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
 
@@ -140,30 +141,18 @@ function validateSession(token) {
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const AVATAR_DECORATION_LIBRARY = [
-  '2fc3e75a9f2c1a02f15464a0573065ca.jpg',
-  '5deecfde67ddd0d18b152ddf4a0ec9bb.jpg',
-  '7c256b9a693661dc7a65343befbd74db.jpg',
-  '28231f6cc375c9c4e417957f22a1665b.jpg',
-  'a_3cf1ad31f0c0c77a90319c13632d808e.png',
-  'a_9a6bf0ab30a6719d6eb09fa4996984ca.png',
-  'a_9d2ff9685be0c668ef6990b0035fac17.png',
-  'a_365eed4178528fe8293c4212e8e2d5cb.png',
-  'a_a02f615e00ef516c98adf7e93ebe881f.png',
-  'a_e72e44eeea89e92dc02c9bec8b02d158.png',
-  'Betterimage.ai_1738503261662-removebg-preview.png',
-  'Betterimage.ai_1738503267157-removebg-preview.png',
-  'Betterimage.ai_1738503272412-removebg-preview.png',
-  'Betterimage.ai_1738503286035-removebg-preview.png',
-  'Betterimage.ai_1738503294919-removebg-preview.png',
-  'Betterimage.ai_1738503305126-removebg-preview.png',
-  'Betterimage.ai_1738503311391-removebg-preview.png',
-  'Betterimage.ai_1738503318383-removebg-preview.png',
-  'Betterimage.ai_1738503328968-removebg-preview.png',
-  'Betterimage.ai_1738503337387-removebg-preview.png',
-  'Test.png',
-];
-const AVATAR_DECORATION_PATHS = new Set(AVATAR_DECORATION_LIBRARY.map(name => `/decorations/${name}`));
+const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
+
+function getAvatarDecorationPaths() {
+  try {
+    return fs.readdirSync(DECORATIONS_DIR, { withFileTypes: true })
+      .filter(entry => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name))
+      .map(entry => `/decorations/${entry.name}`)
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
 
 function getVipMediaRemainingMs(player) {
   if (isAdminPlayer(player)) return 0;
@@ -669,12 +658,54 @@ const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
-const SHOP_PRICES = Object.freeze({
-  vip_1m: 100,
-  vip_1y: 1000,
-  vip_plus: 5000,
-  perso: 15000,
+const SHOP_ITEMS = Object.freeze({
+  vip_1m: { key: 'vip_1m', category: 'ranks', label: 'VIP 1 mois', price: 100 },
+  vip_1y: { key: 'vip_1y', category: 'ranks', label: 'VIP 1 an', price: 1000 },
+  vip_plus: { key: 'vip_plus', category: 'ranks', label: 'VIP+', price: 5000 },
+  perso: { key: 'perso', category: 'ranks', label: 'Perso', price: 15000 },
+  elo_mini: { key: 'elo_mini', category: 'elo_boosters', label: 'Mini Boost', price: 250, boostType: 'elo', multiplier: 1.05, defaultStock: 10 },
+  elo_classic: { key: 'elo_classic', category: 'elo_boosters', label: 'Classic Boost', price: 750, boostType: 'elo', multiplier: 1.10, defaultStock: 5 },
+  elo_max: { key: 'elo_max', category: 'elo_boosters', label: 'Max Boost', price: 2500, boostType: 'elo', multiplier: 1.25, defaultStock: 3 },
+  elo_princess: { key: 'elo_princess', category: 'elo_boosters', label: 'Princess Boost', price: 5000, boostType: 'elo', multiplier: 1.50, defaultStock: 1 },
+  coin_boost: { key: 'coin_boost', category: 'coin_boosters', label: 'Coin Boost', price: 3000, boostType: 'coins', multiplier: 5, defaultStock: 5 },
+  coin_boost_plus: { key: 'coin_boost_plus', category: 'coin_boosters', label: 'Coin Boost +', price: 6000, boostType: 'coins', multiplier: 10, defaultStock: 3 },
 });
+const SHOP_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, v.price])));
+const SHOP_STOCK_KEYS = Object.freeze(
+  Object.fromEntries(Object.values(SHOP_ITEMS).filter(v => Number.isFinite(v.defaultStock)).map(v => [v.key, `shop_stock_${v.key}`]))
+);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS player_shop_items (
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    item_key  TEXT NOT NULL,
+    quantity  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (player_id, item_key)
+  );
+`);
+
+const shopItemQ = {
+  getAllForPlayer: db.prepare(`SELECT item_key, quantity FROM player_shop_items WHERE player_id = ?`),
+  getOne: db.prepare(`SELECT quantity FROM player_shop_items WHERE player_id = ? AND item_key = ?`),
+  addOne: db.prepare(`
+    INSERT INTO player_shop_items (player_id, item_key, quantity)
+    VALUES (?, ?, 1)
+    ON CONFLICT(player_id, item_key) DO UPDATE SET quantity = quantity + 1
+  `),
+};
+
+for (const item of Object.values(SHOP_ITEMS)) {
+  if (!Number.isFinite(item.defaultStock)) continue;
+  db.prepare(`INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`).run(SHOP_STOCK_KEYS[item.key], String(item.defaultStock));
+}
+
+function getShopStock(itemKey) {
+  const item = SHOP_ITEMS[itemKey];
+  if (!item || !Number.isFinite(item.defaultStock)) return null;
+  const row = db.prepare(`SELECT value FROM config WHERE key = ?`).get(SHOP_STOCK_KEYS[itemKey]);
+  const value = Number(row?.value);
+  return Number.isFinite(value) ? Math.max(0, value) : item.defaultStock;
+}
 
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
@@ -1104,6 +1135,9 @@ app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/li
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
+app.get('/api/decorations', (_, res) => {
+  res.json({ decorations: getAvatarDecorationPaths() });
+});
 
 app.get('/api/shop/me', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
@@ -1111,9 +1145,17 @@ app.get('/api/shop/me', (req, res) => {
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
+  const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
+  const stock = Object.fromEntries(
+    Object.keys(SHOP_STOCK_KEYS).map(key => [key, getShopStock(key)])
+  );
   res.json({
     player: sanitize(player),
+    items: SHOP_ITEMS,
     prices: SHOP_PRICES,
+    stock,
+    inventory,
   });
 });
 
@@ -1123,12 +1165,15 @@ app.post('/api/shop/buy', async (req, res) => {
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
 
   const pack = String(req.body?.pack || '').trim();
-  if (!SHOP_PRICES[pack]) return res.status(400).json({ error: 'Pack invalide.' });
+  if (!SHOP_ITEMS[pack]) return res.status(400).json({ error: 'Pack invalide.' });
 
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
 
-  if (Number(player.coins || 0) < SHOP_PRICES[pack]) {
+  const item = SHOP_ITEMS[pack];
+  const price = Number(item.price || 0);
+
+  if (Number(player.coins || 0) < price) {
     return res.status(400).json({ error: 'Pas assez de coins.' });
   }
   if (pack === 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
@@ -1140,12 +1185,15 @@ app.post('/api/shop/buy', async (req, res) => {
   if (pack !== 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: 'VIP+ est deja actif a vie.' });
   }
+  if (Number.isFinite(item.defaultStock) && getShopStock(pack) <= 0) {
+    return res.status(400).json({ error: 'Rupture de stock.' });
+  }
 
   const now = Date.now();
   const currentCoins = Number(player.coins || 0);
   const currentVipExpiry = Number(player.vip_expires_at || 0);
   const baseExpiry = currentVipExpiry > now ? currentVipExpiry : now;
-  const nextCoins = currentCoins - SHOP_PRICES[pack];
+  const nextCoins = currentCoins - price;
 
   pQ.updateCoins.run({ coins: nextCoins, id: playerId });
 
@@ -1163,6 +1211,12 @@ app.post('/api/shop/buy', async (req, res) => {
     pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
   } else if (pack === 'perso') {
     pQ.updatePerso.run({ is_perso: 1, id: playerId });
+  } else {
+    shopItemQ.addOne.run(playerId, pack);
+    const stockKey = SHOP_STOCK_KEYS[pack];
+    if (stockKey) {
+      db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
+    }
   }
 
   const fresh = pQ.getById.get(playerId);
@@ -1178,10 +1232,20 @@ app.post('/api/shop/buy', async (req, res) => {
     } catch(e) {}
   }
 
+  const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
+  const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
+  const stock = Object.fromEntries(
+    Object.keys(SHOP_STOCK_KEYS).map(key => [key, getShopStock(key)])
+  );
+
   res.json({
     ok: true,
     pack,
+    item,
     prices: SHOP_PRICES,
+    items: SHOP_ITEMS,
+    stock,
+    inventory,
     player: sanitize(pQ.getById.get(playerId)),
   });
 });
@@ -1456,7 +1520,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   const player = pQ.getById.get(id);
   if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   const nextDecoration = String(image || '').trim();
-  const isPreset = AVATAR_DECORATION_PATHS.has(nextDecoration);
+  const isPreset = getAvatarDecorationPaths().includes(nextDecoration);
   const isInlineImage = /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(nextDecoration);
   if (nextDecoration && !isPreset && !isInlineImage) {
     return res.status(400).json({ error: 'Image invalide.' });
