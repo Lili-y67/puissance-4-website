@@ -524,7 +524,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
       </button>
       <button class="upload-chooser-btn vip" type="button" id="upload-gif-btn" onclick="chooseUploadKind('gif')">
         <div class="upload-chooser-btn-title">Choisir un GIF</div>
-        <div class="upload-chooser-btn-meta" id="upload-gif-meta">Reserve VIP - max 5 Mo</div>
+        <div class="upload-chooser-btn-meta" id="upload-gif-meta">Reserve VIP/VIP+ - max 5 Mo</div>
       </button>
     </div>
     <div class="upload-chooser-note" id="upload-chooser-note">Dimensions conseillees et taille max affichees ici.</div>
@@ -678,25 +678,28 @@ function getRenderableMediaSrc(src) {
 }
 
 function getVipMediaRemainingMs() {
+  if (String(currentPlayer?.role || '') === 'admin') return 0;
   const lastChanged = Number(currentPlayer?.vip_media_changed_at || 0);
+  if (!lastChanged) return 0;
+  const cooldown = Number(currentPlayer?.is_vip_plus) === 1 ? (12 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
+  const remaining = lastChanged + cooldown - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function getAvatarDecorationRemainingMs(player = currentPlayer) {
+  if (String(player?.role || '') === 'admin') return 0;
+  const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   if (!lastChanged) return 0;
   const remaining = lastChanged + (24 * 60 * 60 * 1000) - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
-function getAvatarDecorationRemainingMs(player = currentPlayer) {
-  const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
-  if (!lastChanged) return 0;
-  const remaining = lastChanged + (7 * 24 * 60 * 60 * 1000) - Date.now();
-  return remaining > 0 ? remaining : 0;
-}
-
 function isVipPlus(player = currentPlayer) {
-  return Number(player?.is_vip_plus) === 1;
+  return Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isVip(player = currentPlayer) {
-  return Number(player?.is_vip) === 1;
+  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isPerso(player = currentPlayer) {
@@ -1033,7 +1036,7 @@ function render(player, games, following, followers, followStatus) {
       <div class="token-emoji-wrap" id="token-emoji-wrap">
         <div class="token-emoji-row">
           <div class="token-emoji-preview" id="token-emoji-preview">VIP</div>
-          <div class="token-emoji-meta" id="token-emoji-meta">Emoji image VIP+ 128x128 conseille. Max 1 Mo, changement toutes les 24h.</div>
+          <div class="token-emoji-meta" id="token-emoji-meta">Emoji image VIP+ 128x128 conseille. Max 1 Mo, changement toutes les 12h.</div>
         </div>
         <button class="token-emoji-btn" id="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP+</button>
       </div>
@@ -1048,7 +1051,7 @@ function render(player, games, following, followers, followStatus) {
           <div class="base" id="avatar-decoration-base">${avatarHtml}</div>
           <div class="overlay" id="avatar-decoration-overlay">${avatarDecorationSrc ? `<img src="${avatarDecorationSrc}" alt="décoration">` : ''}</div>
         </div>
-        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Importe une décoration autour de l'avatar. Réservé au VIP+ · changement toutes les 1 semaine.</div>
+        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Importe une décoration autour de l'avatar. Réservé au VIP+ · changement toutes les 24h.</div>
       </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Importer une décoration</button>
     </div>
@@ -1336,38 +1339,38 @@ function getUploadTargetInfo(target) {
       title: 'Choisir une banniere',
       subtitle: 'Format paysage conseille pour un resultat plus propre.',
       imageMeta: 'PNG / JPG / WEBP - 1500x500 conseille - max 4 Mo',
-      gifMeta: 'GIF VIP - 1500x500 conseille - max 5 Mo',
-      note: 'Banniere: dimensions optimales 1500x500. Images statiques max 4 Mo, GIF VIP max 5 Mo.'
+      gifMeta: 'GIF VIP/VIP+ - 1500x500 conseille - max 5 Mo',
+      note: 'Banniere: dimensions optimales 1500x500. Images statiques max 4 Mo, GIF VIP max 5 Mo. Cooldown: VIP 24h, VIP+ 12h.'
     };
   }
   return {
     title: 'Choisir un avatar',
     subtitle: 'Format carre conseille pour un recadrage plus net.',
     imageMeta: 'PNG / JPG / WEBP - 500x500 conseille - max 2 Mo',
-    gifMeta: 'GIF VIP - 500x500 conseille - max 5 Mo',
-    note: 'Avatar: dimensions optimales 500x500. Images statiques max 2 Mo, GIF VIP max 5 Mo.'
+    gifMeta: 'GIF VIP/VIP+ - 500x500 conseille - max 5 Mo',
+    note: 'Avatar: dimensions optimales 500x500. Images statiques max 2 Mo, GIF VIP max 5 Mo. Cooldown: VIP 24h, VIP+ 12h.'
   };
 }
 
 function openUploadChooser(target) {
   uploadChooserTarget = target;
   const info = getUploadTargetInfo(target);
-  const isVip = Number(currentPlayer?.is_vip) === 1;
-  const remaining = isVip ? getVipMediaRemainingMs() : 0;
-  const gifLocked = !isVip || remaining > 0;
+  const hasVipMediaAccess = isVip(currentPlayer);
+  const remaining = hasVipMediaAccess ? getVipMediaRemainingMs() : 0;
+  const gifLocked = !hasVipMediaAccess || remaining > 0;
   document.getElementById('upload-chooser-title').textContent = info.title;
   document.getElementById('upload-chooser-sub').textContent = info.subtitle;
   document.getElementById('upload-image-meta').textContent = info.imageMeta;
-  document.getElementById('upload-gif-meta').textContent = !isVip
-    ? 'Reserve VIP - active ton role VIP pour envoyer un GIF'
+  document.getElementById('upload-gif-meta').textContent = !hasVipMediaAccess
+    ? 'Reserve VIP/VIP+ - active un pack premium pour envoyer un GIF'
     : remaining > 0
       ? `Disponible dans ${formatRemainingTime(remaining)}`
       : info.gifMeta;
   document.getElementById('upload-chooser-note').textContent = info.note;
   const gifBtn = document.getElementById('upload-gif-btn');
   gifBtn.disabled = gifLocked;
-  gifBtn.title = !isVip
-    ? 'Reserve au role VIP'
+  gifBtn.title = !hasVipMediaAccess
+    ? 'Reserve au role VIP ou VIP+'
     : remaining > 0
       ? `Disponible dans ${formatRemainingTime(remaining)}`
       : 'GIF VIP disponible';
@@ -1758,8 +1761,10 @@ async function saveBanner(input) {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const token = localStorage.getItem('token');
   const isGif = (file.type || '').toLowerCase() === 'image/gif';
-  const maxBytes = isGif && me.is_vip ? 5 * 1024 * 1024 : 4 * 1024 * 1024;
-  if (isGif && !me.is_vip) return alert('Les GIF sont reserves aux VIP.');
+  const premiumGifAccess = isVip(me);
+  const isAdminTier = String(me?.role || '') === 'admin';
+  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 4 * 1024 * 1024);
+  if (isGif && !premiumGifAccess) return alert('Les GIF sont reserves aux VIP et VIP+.');
   if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Banniere trop lourde (max 4MB).');
   if (!me.id || !token) return;
 
@@ -1784,8 +1789,10 @@ function handleAvatarUpload(input) {
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const isGif = (file.type || '').toLowerCase() === 'image/gif';
-  const maxBytes = isGif && me.is_vip ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
-  if (isGif && !me.is_vip) return alert('Les GIF sont reserves aux VIP.');
+  const premiumGifAccess = isVip(me);
+  const isAdminTier = String(me?.role || '') === 'admin';
+  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 2 * 1024 * 1024);
+  if (isGif && !premiumGifAccess) return alert('Les GIF sont reserves aux VIP et VIP+.');
   if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Image trop lourde (max 2MB).');
 
   const reader = new FileReader();
@@ -1807,7 +1814,8 @@ function handleTokenEmojiUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me.is_vip_plus) {
+  const isAdminTier = String(me?.role || '') === 'admin';
+  if (!me.is_vip_plus && !isAdminTier) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -1815,7 +1823,7 @@ function handleTokenEmojiUpload(input) {
     input.value = '';
     return alert('Format invalide. Utilise PNG, JPG ou WEBP.');
   }
-  if (file.size > 1024 * 1024) {
+  if (!isAdminTier && file.size > 1024 * 1024) {
     input.value = '';
     return alert('Emoji perso trop lourd (max 1MB).');
   }
@@ -1833,7 +1841,8 @@ function handleAvatarDecorationUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me.is_vip_plus) {
+  const isAdminTier = String(me?.role || '') === 'admin';
+  if (!me.is_vip_plus && !isAdminTier) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -1841,7 +1850,7 @@ function handleAvatarDecorationUpload(input) {
     input.value = '';
     return alert('Format invalide. Utilise PNG, JPG ou WEBP.');
   }
-  if (file.size > 1024 * 1024) {
+  if (!isAdminTier && file.size > 1024 * 1024) {
     input.value = '';
     return alert('Decoration trop lourde (max 1MB).');
   }
@@ -2415,8 +2424,8 @@ function refreshTokenEmojiPreview() {
       : remaining > 0
         ? `Se termine dans ${formatRemainingTime(remaining)}`
         : selectedTokenEmojiImage
-          ? 'Emoji image VIP+ prêt. Recadrage 128x128, max 1 Mo, cooldown 24h.'
-          : 'Emoji image VIP+ 128x128 conseillé. Max 1 Mo, changement toutes les 24h.';
+          ? 'Emoji image VIP+ prêt. Recadrage 128x128, max 1 Mo, cooldown 12h.'
+          : 'Emoji image VIP+ 128x128 conseillé. Max 1 Mo, changement toutes les 12h.';
     meta.style.color = pendingTokenEmojiImage || remaining > 0 ? accent.color : 'var(--muted)';
     meta.style.textAlign = remaining > 0 ? 'center' : 'left';
   }
@@ -2450,7 +2459,7 @@ function refreshTokenEmojiPreview() {
 
 function openTokenEmojiPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me?.is_vip_plus) return;
+  if (!me?.is_vip_plus && String(me?.role || '') !== 'admin') return;
   if (getVipMediaRemainingMs() > 0) return;
   document.getElementById('token-emoji-input')?.click();
 }
@@ -2469,10 +2478,10 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
     meta.textContent = !isVipPlusTier
       ? 'Reserve au role VIP+.'
       : remaining > 0
-        ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 1 semaine.`
+        ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 24h.`
         : src
-          ? 'Décoration active. Tu peux la modifier toutes les 1 semaine.'
-          : 'Importe une décoration autour de l avatar. Changement toutes les 1 semaine.';
+          ? 'Décoration active. Tu peux la modifier toutes les 24h.'
+          : 'Importe une décoration autour de l avatar. Changement toutes les 24h.';
     meta.style.color = remaining > 0 ? '#85EBFF' : 'var(--muted)';
   }
   if (btn) {
@@ -2484,7 +2493,7 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
 
 function openAvatarDecorationPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me?.is_vip_plus) return;
+  if (!me?.is_vip_plus && String(me?.role || '') !== 'admin') return;
   if (getAvatarDecorationRemainingMs(me) > 0) return;
   document.getElementById('avatar-decoration-input')?.click();
 }

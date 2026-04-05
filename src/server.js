@@ -69,8 +69,12 @@ function isPersoPlayer(player) {
   return !!player && Number(player.is_perso) === 1;
 }
 
+function isAdminPlayer(player) {
+  return !!player && String(player.role || '') === 'admin';
+}
+
 function canUseGradientPlayer(player) {
-  return isVipPlusPlayer(player) || isPersoPlayer(player);
+  return isAdminPlayer(player) || isVipPlusPlayer(player) || isPersoPlayer(player);
 }
 
 function getPremiumTier(player) {
@@ -134,15 +138,19 @@ function validateSession(token) {
 }
 
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const AVATAR_DECORATION_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function getVipMediaRemainingMs(player) {
+  if (isAdminPlayer(player)) return 0;
   const lastChanged = Number(player?.vip_media_changed_at || 0);
-  const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
+  const cooldown = isVipPlusPlayer(player) ? VIP_PLUS_MEDIA_COOLDOWN_MS : VIP_MEDIA_COOLDOWN_MS;
+  const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
 function getAvatarDecorationRemainingMs(player) {
+  if (isAdminPlayer(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
@@ -1301,10 +1309,10 @@ app.patch('/api/players/:id/shape', (req, res) => {
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
   const player = pQ.getById.get(Number(req.params.id));
-  if (base === 'emoji' && !isVipPlayer(player)) {
+  if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
     return res.status(403).json({ error: 'L emoji perso est reserve au VIP.' });
   }
-  if (base === 'emoji_image' && !isVipPlusPlayer(player)) {
+  if (base === 'emoji_image' && !isVipPlusPlayer(player) && !isAdminPlayer(player)) {
     return res.status(403).json({ error: 'L emoji image est reserve au VIP+.' });
   }
   if (base === 'emoji_image' && !player?.token_emoji_image) {
@@ -1322,7 +1330,7 @@ app.patch('/api/players/:id/color', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   const normalizedSecondary = String(colorSecondary || '').trim();
   if (normalizedSecondary && !/^#[0-9a-fA-F]{6}$/.test(normalizedSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
-  if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+ ou Perso.' });
+  if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+, Perso ou Admin.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   pQ.updateColorSecondary.run({ color_secondary: normalizedSecondary ? normalizedSecondary.toUpperCase() : '', id: Number(req.params.id) });
   res.json({ ok: true });
@@ -1348,9 +1356,10 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(banner);
-  const maxBytes = isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 4 * 1024 * 1024;
+  const isAdminTier = isAdminPlayer(player);
+  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 4 * 1024 * 1024);
   const approxBytes = Math.ceil((banner.length - banner.indexOf(',') - 1) * 3 / 4);
-  if (isGif && !isVipPlayer(player)) {
+  if (isGif && !isVipPlayer(player) && !isAdminTier) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
   const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
@@ -1374,9 +1383,10 @@ app.patch('/api/players/:id/avatar', (req, res) => {
     return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(avatar);
-  const maxBytes = isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 2 * 1024 * 1024;
+  const isAdminTier = isAdminPlayer(player);
+  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 2 * 1024 * 1024);
   const approxBytes = Math.ceil((avatar.length - avatar.indexOf(',') - 1) * 3 / 4);
-  if (isGif && !isVipPlayer(player)) {
+  if (isGif && !isVipPlayer(player) && !isAdminTier) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
   const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
@@ -1398,7 +1408,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
@@ -1407,7 +1417,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
     return res.status(429).json({ error: `Emoji perso disponible dans ${formatCooldownHours(remaining)}.` });
   }
   const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
-  if (approxBytes > 1024 * 1024) {
+  if (!isAdminPlayer(player) && approxBytes > 1024 * 1024) {
     return res.status(413).json({ error: 'Emoji perso trop lourd (max 1MB).' });
   }
   pQ.updateTokenEmojiImage.run({ image, id });
@@ -1420,7 +1430,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
@@ -1429,7 +1439,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
     return res.status(429).json({ error: `Decoration avatar disponible dans ${formatCooldownHours(remaining)}.` });
   }
   const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
-  if (approxBytes > 1024 * 1024) {
+  if (!isAdminPlayer(player) && approxBytes > 1024 * 1024) {
     return res.status(413).json({ error: 'Decoration trop lourde (max 1MB).' });
   }
   pQ.updateAvatarDecoration.run({ image, id });

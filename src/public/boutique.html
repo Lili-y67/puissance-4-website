@@ -422,7 +422,11 @@ function packOwned(pack) {
   if (!shopPlayer) return false;
   if (pack === 'vip_plus') return Number(shopPlayer.is_vip_plus || 0) === 1;
   if (pack === 'perso') return Number(shopPlayer.is_perso || 0) === 1;
-  if (pack === 'vip_1m' || pack === 'vip_1y') return Number(shopPlayer.is_vip_plus || 0) === 1 ? 'vip_plus' : false;
+  if (pack === 'vip_1m' || pack === 'vip_1y') {
+    if (Number(shopPlayer.is_vip_plus || 0) === 1) return 'vip_plus';
+    if (Number(shopPlayer.is_vip || 0) === 1) return true;
+    return false;
+  }
   return false;
 }
 
@@ -441,12 +445,12 @@ function updateButton(pack, buttonId, noteId) {
   }
   if (owned === 'vip_plus') {
     btn.disabled = true;
-    note.textContent = 'VIP+ deja actif a vie';
+    note.textContent = '✓ Vous avez deja ce role';
     return;
   }
   if (owned === true) {
     btn.disabled = true;
-    note.textContent = 'Deja actif';
+    note.textContent = '✓ Vous avez deja ce role';
     return;
   }
   if (coins < price) {
@@ -490,6 +494,19 @@ async function loadShop() {
 async function buyPack(pack) {
   const token = localStorage.getItem('token');
   if (!token) return alert('Connecte-toi d abord.');
+  const owned = packOwned(pack);
+  if (owned) return;
+
+  const packLabel = pack === 'vip_1m'
+    ? 'VIP 1 mois'
+    : pack === 'vip_1y'
+      ? 'VIP 1 an'
+      : pack === 'vip_plus'
+        ? 'VIP+'
+        : 'Perso';
+  const price = SHOP_PRICES[pack];
+  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} coins ?`)) return;
+
   const btnMap = {
     vip_1m: 'buy-vip-1m',
     vip_1y: 'buy-vip-1y',
