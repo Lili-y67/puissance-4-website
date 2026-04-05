@@ -1533,7 +1533,10 @@ function connectAndQueue() {
     localStorage.setItem('player', JSON.stringify(myPlayer));
     // Envoyer la shape depuis localStorage (plus fiable que la DB Railway)
     const lsPlayer = JSON.parse(localStorage.getItem('player') || '{}');
-    socket.emit('queue_join', { shape: lsPlayer.shape || 'circle' });
+    socket.emit('queue_join', {
+      shape: lsPlayer.shape || 'circle',
+      tokenEmojiImage: lsPlayer.token_emoji_image || '',
+    });
   });
   socket.on('queue_joined', ({ position, reason }) => {
     QueueMusic.start();

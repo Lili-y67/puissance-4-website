@@ -259,6 +259,14 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .emoji-input-wrap{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;display:none;}
 .emoji-input-wrap.visible{display:flex;}
 .emoji-input{background:transparent;border:none;color:var(--text);font-size:22px;width:40px;text-align:center;outline:none;}
+.token-emoji-wrap{display:none;flex-direction:column;gap:10px;padding:10px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;}
+.token-emoji-wrap.visible{display:flex;}
+.token-emoji-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.token-emoji-preview{width:56px;height:56px;border-radius:14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;}
+.token-emoji-preview img{width:100%;height:100%;object-fit:cover;display:block;}
+.token-emoji-meta{font-size:12px;color:var(--muted);line-height:1.5;flex:1;min-width:140px;}
+.token-emoji-btn{font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;border-radius:10px;background:rgba(255,214,10,0.1);border:1px solid rgba(255,214,10,0.24);color:var(--yellow);cursor:pointer;transition:all .2s;}
+.token-emoji-btn:hover{background:rgba(255,214,10,0.18);}
 
 /* â”€â”€ Search bar â”€â”€ */
 .search-wrap{
@@ -383,6 +391,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .image-editor-frame{position:absolute;inset:24px;border:2px solid rgba(255,255,255,0.85);box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 26px rgba(255,255,255,0.18);pointer-events:none;}
 .image-editor-frame.avatar{border-radius:50%;aspect-ratio:1/1;width:min(calc(100% - 48px),380px);height:auto;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);box-shadow:none;}
 .image-editor-frame.banner{border-radius:22px;inset:38px 28px;aspect-ratio:3/1;}
+.image-editor-frame.token{border-radius:18px;aspect-ratio:1/1;width:min(calc(100% - 56px),240px);height:auto;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);box-shadow:none;}
 .image-editor-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .image-editor-zoom{display:flex;align-items:center;gap:10px;flex:1;min-width:220px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);}
 .image-editor-zoom label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
@@ -467,6 +476,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 </div>
 
 <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarUpload(this)">
+<input type="file" id="token-emoji-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleTokenEmojiUpload(this)">
 <div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
   <div class="upload-chooser-modal">
     <div class="upload-chooser-head">
@@ -615,6 +625,26 @@ let currentPlayer = null;
 let viewerPlayer  = null;
 let isOwnProfile  = false;
 let uploadChooserTarget = null;
+const GIF_URL_CACHE = new Map();
+
+function getRenderableMediaSrc(src) {
+  if (!src || typeof src !== 'string') return '';
+  if (!/^data:image\/gif;base64,/i.test(src)) return src;
+  if (GIF_URL_CACHE.has(src)) return GIF_URL_CACHE.get(src);
+  try {
+    const match = src.match(/^data:([^;]+);base64,(.+)$/i);
+    if (!match) return src;
+    const mime = match[1] || 'image/gif';
+    const binary = atob(match[2]);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    GIF_URL_CACHE.set(src, url);
+    return url;
+  } catch {
+    return src;
+  }
+}
 
 async function load() {
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
@@ -680,9 +710,11 @@ async function load() {
 function render(player, games, following, followers, followStatus) {
   const total = player.wins + player.losses + player.draws;
   const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
+  const avatarSrc = getRenderableMediaSrc(player.avatar);
+  const bannerSrc = getRenderableMediaSrc(player.banner);
 
-  const avatarHtml = player.avatar
-    ? `<img src="${player.avatar}" alt="avatar">`
+  const avatarHtml = avatarSrc
+    ? `<img src="${avatarSrc}" alt="avatar">`
     : player.pseudo[0].toUpperCase();
 
   // Appliquer la couleur du joueur aux variables CSS pour l'avatar
@@ -720,7 +752,7 @@ function render(player, games, following, followers, followStatus) {
     <div class="profile-header">
       <!-- Bannière -->
       <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la bannière"' : ''}>
-        ${player.banner ? '<img src="' + player.banner + '" alt="bannière">' : ''}
+        ${bannerSrc ? '<img src="' + bannerSrc + '" alt="bannière">' : ''}
         ${isOwnProfile ? '<div class="profile-banner-overlay">Modifier</div>' : ''}
       </div>
       <div class="profile-header-inner">
@@ -847,6 +879,13 @@ function render(player, games, following, followers, followStatus) {
         <span style="font-size:12px;color:var(--muted);font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;">Ton emoji :</span>
         <input class="emoji-input" id="emoji-input" maxlength="2" placeholder="&#11088;" oninput="onEmojiInput(this.value)">
       </div>
+      <div class="token-emoji-wrap" id="token-emoji-wrap">
+        <div class="token-emoji-row">
+          <div class="token-emoji-preview" id="token-emoji-preview">VIP</div>
+          <div class="token-emoji-meta" id="token-emoji-meta">Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.</div>
+        </div>
+        <button class="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP</button>
+      </div>
       <button class="btn-save-color" onclick="saveShape()">&#128309; Enregistrer</button>
     </div>
 
@@ -963,7 +1002,8 @@ function render(player, games, following, followers, followStatus) {
     const isEmoji  = shapeRaw.startsWith('emoji:');
     setTimeout(() => {
       initColorPicker(player.color);
-      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : DEFAULT_PROFILE_EMOJI);
+      initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : DEFAULT_PROFILE_EMOJI, player.token_emoji_image || '');
+      refreshTokenEmojiPreview();
     }, 50);
   }
   // Initialiser la pagination des parties et le toggle auto-rejoin
@@ -1102,8 +1142,9 @@ function renderGames(games, me) {
 function renderPlayers(players, emptyMsg) {
   if (!players.length) return `<div class="empty-state">${emptyMsg}</div>`;
   return players.map(p => {
-    const avatarHtml = p.avatar
-      ? `<img src="${p.avatar}" alt="${p.pseudo}">`
+    const avatarSrc = getRenderableMediaSrc(p.avatar);
+    const avatarHtml = avatarSrc
+      ? `<img src="${avatarSrc}" alt="${p.pseudo}">`
       : p.pseudo[0].toUpperCase();
     const color  = p.color || '#ff2d55';
     const total  = (p.wins||0) + (p.losses||0) + (p.draws||0);
@@ -1229,9 +1270,13 @@ function getImageEditorElements() {
 }
 
 function getStageMetrics(mode) {
-  return mode === 'avatar'
-    ? { width: 640, height: 420, cropWidth: 280, cropHeight: 280, outputWidth: 500, outputHeight: 500 }
-    : { width: 640, height: 420, cropWidth: 560, cropHeight: 186, outputWidth: 1500, outputHeight: 500 };
+  if (mode === 'avatar') {
+    return { width: 640, height: 420, cropWidth: 280, cropHeight: 280, outputWidth: 500, outputHeight: 500 };
+  }
+  if (mode === 'token') {
+    return { width: 640, height: 420, cropWidth: 220, cropHeight: 220, outputWidth: 128, outputHeight: 128 };
+  }
+  return { width: 640, height: 420, cropWidth: 560, cropHeight: 186, outputWidth: 1500, outputHeight: 500 };
 }
 
 function clampImageEditorOffsets() {
@@ -1301,12 +1346,16 @@ function drawImageEditor() {
     ctx.strokeStyle = 'rgba(255,255,255,0.2)';
     ctx.lineWidth = 1;
     ctx.strokeRect(cropLeft + 0.5, cropTop + 0.5, IMAGE_EDITOR.cropWidth - 1, IMAGE_EDITOR.cropHeight - 1);
-  } else {
+  } else if (IMAGE_EDITOR.mode === 'avatar') {
     ctx.strokeStyle = 'rgba(255,255,255,0.95)';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(cropLeft + IMAGE_EDITOR.cropWidth / 2, cropTop + IMAGE_EDITOR.cropHeight / 2, IMAGE_EDITOR.cropWidth / 2, 0, Math.PI * 2);
     ctx.stroke();
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cropLeft + 0.5, cropTop + 0.5, IMAGE_EDITOR.cropWidth - 1, IMAGE_EDITOR.cropHeight - 1);
   }
 
   if (frame) frame.className = 'image-editor-frame ' + IMAGE_EDITOR.mode;
@@ -1347,10 +1396,16 @@ function openImageEditor(dataUrl, mode) {
       els.zoom.max = 100;
       els.zoom.value = 0;
     }
-    if (els.title) els.title.textContent = mode === 'avatar' ? "Ajuster l'avatar" : 'Ajuster la banniere';
+    if (els.title) els.title.textContent = mode === 'avatar'
+      ? "Ajuster l'avatar"
+      : mode === 'token'
+        ? "Ajuster l'emoji VIP"
+        : 'Ajuster la banniere';
     if (els.sub) els.sub.textContent = mode === 'avatar'
       ? 'Zoomez et deplacez votre avatar avant validation.'
-      : 'Placez votre banniere exactement comme vous le souhaitez.';
+      : mode === 'token'
+        ? 'Recadrez votre emoji VIP en 128x128 avant validation.'
+        : 'Placez votre banniere exactement comme vous le souhaitez.';
     if (els.bg) {
       els.bg.classList.add('show');
       els.bg.setAttribute('aria-hidden', 'false');
@@ -1391,7 +1446,9 @@ function exportImageEditor() {
     ctx.clip();
   }
   ctx.drawImage(IMAGE_EDITOR.img, offsetX, offsetY, drawWidth, drawHeight);
-  return canvas.toDataURL('image/jpeg', 0.92);
+  return IMAGE_EDITOR.mode === 'banner'
+    ? canvas.toDataURL('image/jpeg', 0.92)
+    : canvas.toDataURL('image/png');
 }
 
 async function uploadBannerData(banner, me, token) {
@@ -1403,8 +1460,9 @@ async function uploadBannerData(banner, me, token) {
   if (res.ok) {
     PROFIL_SFX.upload();
     const bannerEl = document.querySelector('.profile-banner');
+    const renderSrc = getRenderableMediaSrc(banner);
     if (bannerEl) {
-      bannerEl.innerHTML = '<img src="' + banner + '" alt="banniere"><div class="profile-banner-overlay">Modifier</div>';
+      bannerEl.innerHTML = '<img src="' + renderSrc + '" alt="banniere"><div class="profile-banner-overlay">Modifier</div>';
       bannerEl.onclick = () => openUploadChooser('banner');
     }
     me.banner = banner;
@@ -1425,13 +1483,35 @@ async function uploadAvatarData(avatarData, me) {
   if (res.ok) {
     PROFIL_SFX.upload();
     const el = document.getElementById('avatar-el');
-    if (el) el.innerHTML = '<img src="' + avatarData + '" alt="avatar">';
+    const renderSrc = getRenderableMediaSrc(avatarData);
+    if (el) el.innerHTML = '<img src="' + renderSrc + '" alt="avatar">';
     me.avatar = avatarData;
     localStorage.setItem('player', JSON.stringify(me));
     return true;
   }
   PROFIL_SFX.error();
   alert(await readApiError(res, 'Erreur upload.'));
+  return false;
+}
+
+async function uploadTokenEmojiData(imageData, me) {
+  const res = await fetch('/api/players/' + me.id + '/token-emoji', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: imageData, token: localStorage.getItem('token') }),
+  });
+  if (res.ok) {
+    PROFIL_SFX.upload();
+    selectedTokenEmojiImage = imageData;
+    me.token_emoji_image = imageData;
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    refreshTokenEmojiPreview();
+    initShapePicker(selectedShape, selectedEmoji, selectedTokenEmojiImage);
+    return true;
+  }
+  PROFIL_SFX.error();
+  alert(await readApiError(res, 'Erreur upload emoji VIP.'));
   return false;
 }
 
@@ -1443,7 +1523,9 @@ async function confirmImageEditor() {
   const output = exportImageEditor();
   const ok = IMAGE_EDITOR.mode === 'avatar'
     ? await uploadAvatarData(output, me)
-    : await uploadBannerData(output, me, token);
+    : IMAGE_EDITOR.mode === 'token'
+      ? await uploadTokenEmojiData(output, me)
+      : await uploadBannerData(output, me, token);
   if (ok) closeImageEditor();
 }
 
@@ -1493,6 +1575,32 @@ function handleAvatarUpload(input) {
     IMAGE_EDITOR.file = file;
     IMAGE_EDITOR.isGif = false;
     openImageEditor(e.target.result, 'avatar');
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handleTokenEmojiUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.is_vip) {
+    input.value = '';
+    return alert('Reserve aux VIP.');
+  }
+  if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type || '')) {
+    input.value = '';
+    return alert('Format invalide. Utilise PNG, JPG ou WEBP.');
+  }
+  if (file.size > 1024 * 1024) {
+    input.value = '';
+    return alert('Emoji perso trop lourd (max 1MB).');
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    IMAGE_EDITOR.file = file;
+    IMAGE_EDITOR.isGif = false;
+    openImageEditor(e.target.result, 'token');
     input.value = '';
   };
   reader.readAsDataURL(file);
@@ -1799,12 +1907,13 @@ async function searchPlayer() {
     const total   = (player.wins||0) + (player.losses||0) + (player.draws||0);
     const wr      = total > 0 ? Math.round(((player.wins||0)/total)*100) : 0;
     const avatar  = document.getElementById('sr-avatar');
+    const avatarSrc = getRenderableMediaSrc(player.avatar);
 
     avatar.style.background = color + '22';
     avatar.style.border = `2px solid ${color}`;
     avatar.style.color  = color;
-    avatar.innerHTML    = player.avatar
-      ? `<img src="${player.avatar}" style="width:100%;height:100%;object-fit:cover">`
+    avatar.innerHTML    = avatarSrc
+      ? `<img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover">`
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').textContent = player.pseudo;
@@ -1875,14 +1984,17 @@ const SHAPES = [
   { id: 'star',     label: '★' },
   { id: 'heart',    label: '♥' },
   { id: 'emoji',    label: 'Emoji' },
+  { id: 'emoji_image', label: 'VIP' },
 ];
 const DEFAULT_PROFILE_EMOJI = String.fromCodePoint(0x2B50);
 let selectedShape = 'circle';
 let selectedEmoji = DEFAULT_PROFILE_EMOJI;
+let selectedTokenEmojiImage = '';
 
-function initShapePicker(currentShape, currentEmoji) {
+function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = '') {
   selectedShape = currentShape || 'circle';
   selectedEmoji = currentEmoji || DEFAULT_PROFILE_EMOJI;
+  selectedTokenEmojiImage = currentTokenEmojiImage || '';
   const row = document.getElementById('shape-row');
   if (!row) return;
   row.innerHTML = '';
@@ -1893,8 +2005,10 @@ function initShapePicker(currentShape, currentEmoji) {
     star:     { borderRadius: '0',    clipPath: 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)' },
     heart:    { borderRadius: '0',    clipPath: 'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)' },
     emoji:    { borderRadius: '50%',  clipPath: '' },
+    emoji_image: { borderRadius: '12px', clipPath: '' },
   };
   SHAPES.forEach(s => {
+    if (s.id === 'emoji_image' && !currentPlayer?.is_vip) return;
     const btn = document.createElement('div');
     btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '');
     btn.dataset.shape = s.id;
@@ -1912,6 +2026,21 @@ function initShapePicker(currentShape, currentEmoji) {
       preview.style.alignItems   = 'center';
       preview.style.justifyContent = 'center';
       preview.textContent = selectedEmoji || DEFAULT_PROFILE_EMOJI;
+    } else if (s.id === 'emoji_image') {
+      preview.style.borderRadius = '10px';
+      preview.style.background = 'rgba(255,214,10,0.08)';
+      preview.style.display = 'flex';
+      preview.style.alignItems = 'center';
+      preview.style.justifyContent = 'center';
+      preview.style.overflow = 'hidden';
+      if (selectedTokenEmojiImage) {
+        preview.innerHTML = `<img src="${getRenderableMediaSrc(selectedTokenEmojiImage)}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`;
+      } else {
+        preview.style.color = '#ffd60a';
+        preview.style.fontSize = '11px';
+        preview.style.fontFamily = 'Barlow Condensed, sans-serif';
+        preview.textContent = 'VIP';
+      }
     } else {
       const c = CLIPS[s.id];
       preview.style.borderRadius = c.borderRadius;
@@ -1933,6 +2062,8 @@ function selectShape(id) {
 function updateEmojiWrap() {
   const w = document.getElementById('emoji-wrap');
   if (w) w.classList.toggle('visible', selectedShape === 'emoji');
+  const tokenWrap = document.getElementById('token-emoji-wrap');
+  if (tokenWrap) tokenWrap.classList.toggle('visible', selectedShape === 'emoji_image');
 }
 
 function onEmojiInput(val) {
@@ -1948,6 +2079,31 @@ function onEmojiInput(val) {
     const btn = document.querySelector('.shape-btn[data-shape="emoji"] .shape-preview');
     if (btn) btn.textContent = selectedEmoji;
   }
+}
+
+function refreshTokenEmojiPreview() {
+  const preview = document.getElementById('token-emoji-preview');
+  const meta = document.getElementById('token-emoji-meta');
+  if (!preview) return;
+  if (selectedTokenEmojiImage) {
+    preview.innerHTML = `<img src="${getRenderableMediaSrc(selectedTokenEmojiImage)}" alt="emoji perso">`;
+  } else {
+    preview.textContent = 'VIP';
+  }
+  if (meta) {
+    meta.textContent = selectedTokenEmojiImage
+      ? 'Emoji perso VIP pret. Recadrage 128x128, max 1 Mo, cooldown 24h.'
+      : 'Emoji perso VIP 128x128 conseille. Max 1 Mo, changement toutes les 24h.';
+  }
+}
+
+function openTokenEmojiPicker() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me?.is_vip) {
+    alert('Reserve aux VIP.');
+    return;
+  }
+  document.getElementById('token-emoji-input')?.click();
 }
 
 async function toggleAdminPwd() {
@@ -2285,7 +2441,14 @@ async function saveShape() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const token = localStorage.getItem('token');
-  const shapeVal = selectedShape === 'emoji' ? ('emoji:' + (selectedEmoji || DEFAULT_PROFILE_EMOJI)) : selectedShape;
+  if (selectedShape === 'emoji_image' && !selectedTokenEmojiImage) {
+    PROFIL_SFX.error();
+    alert('Importe d\'abord un emoji VIP.');
+    return;
+  }
+  const shapeVal = selectedShape === 'emoji'
+    ? ('emoji:' + (selectedEmoji || DEFAULT_PROFILE_EMOJI))
+    : selectedShape;
   const res = await fetch(`/api/players/${me.id}/shape`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ shape: shapeVal, token }),

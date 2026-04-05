@@ -101,6 +101,19 @@ function validateSession(token) {
   if (Date.now() > row.expires) { sQ.del.run(token); return null; }
   return row.player_id;
 }
+
+const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+function getVipMediaRemainingMs(player) {
+  const lastChanged = Number(player?.vip_media_changed_at || 0);
+  const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function formatCooldownHours(ms) {
+  const hours = Math.ceil(ms / (60 * 60 * 1000));
+  return `${hours}h`;
+}
 // Purger les sessions expirAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAes au dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmarrage
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
@@ -947,6 +960,7 @@ function sanitize(p) {
       ...rest,
       pseudo:     '[SupprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA]',
       avatar:     '',
+      token_emoji_image: '',
       color:      '#555555',
       discord_id: null,
       banner:     null,
@@ -975,6 +989,8 @@ app.delete('/api/players/:id', (req, res) => {
     password   = '',
     color      = '#555555',
     avatar     = '',
+    banner     = '',
+    token_emoji_image = '',
     discord_id = NULL,
     deleted    = 1
   WHERE id = ?`).run(id);
@@ -986,9 +1002,13 @@ app.delete('/api/players/:id', (req, res) => {
 app.patch('/api/players/:id/shape', (req, res) => {
   const { shape, token } = req.body;
   const base = shape?.split(':')[0];
-  const allowed = ['circle','triangle','diamond','star','heart','emoji'];
+  const allowed = ['circle','triangle','diamond','star','heart','emoji','emoji_image'];
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  const player = pQ.getById.get(Number(req.params.id));
+  if (base === 'emoji_image' && !player?.token_emoji_image) {
+    return res.status(400).json({ error: 'Ajoute d\'abord un emoji perso VIP.' });
+  }
   pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA'
   res.json({ ok: true });
 });
@@ -1013,10 +1033,15 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (isGif && !player?.is_vip) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
+  const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
+  if (remaining > 0) {
+    return res.status(429).json({ error: `Changement GIF disponible dans ${formatCooldownHours(remaining)}.` });
+  }
   if (approxBytes > maxBytes) {
     return res.status(413).json({ error: isGif ? 'GIF trop lourd (max 5MB).' : 'Banniere trop lourde (max 4MB).' });
   }
   pQ.updateBanner.run({ banner, id: Number(req.params.id) });
+  if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pBanner = pQ.getById.get(Number(req.params.id));
   WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024));
   res.json({ ok: true });
@@ -1034,12 +1059,39 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   if (isGif && !player?.is_vip) {
     return res.status(403).json({ error: 'Les GIF sont reserves aux VIP.' });
   }
+  const remaining = isGif ? getVipMediaRemainingMs(player) : 0;
+  if (remaining > 0) {
+    return res.status(429).json({ error: `Changement GIF disponible dans ${formatCooldownHours(remaining)}.` });
+  }
   if (approxBytes > maxBytes) {
     return res.status(413).json({ error: isGif ? 'GIF trop lourd (max 5MB).' : 'Image trop lourde (max 2MB).' });
   }
   pQ.updateAvatar.run({ avatar, id: Number(req.params.id) });
+  if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pAvatar = pQ.getById.get(Number(req.params.id));
   WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024));
+  res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/token-emoji', (req, res) => {
+  const { image, token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!player?.is_vip) return res.status(403).json({ error: 'Reserve aux VIP.' });
+  if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
+    return res.status(400).json({ error: 'Image invalide.' });
+  }
+  const remaining = getVipMediaRemainingMs(player);
+  if (remaining > 0) {
+    return res.status(429).json({ error: `Emoji perso disponible dans ${formatCooldownHours(remaining)}.` });
+  }
+  const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
+  if (approxBytes > 1024 * 1024) {
+    return res.status(413).json({ error: 'Emoji perso trop lourd (max 1MB).' });
+  }
+  pQ.updateTokenEmojiImage.run({ image, id });
+  pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true });
 });
 
@@ -1705,7 +1757,7 @@ io.on('connection', socket => {
     if (socket.playerId) rQ.updateLastSeen.run(Date.now(), socket.playerId);
   });
 
-  socket.on('queue_join', ({ shape } = {}) => {
+  socket.on('queue_join', ({ shape, tokenEmojiImage } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
     // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier ban/mute
@@ -1717,6 +1769,9 @@ io.on('connection', socket => {
     socket.playerData = sanitize(freshPlayer);
     // Shape envoyAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe par le client (localStorage) AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA prioritAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA sur la DB
     if (shape) socket.playerData.shape = shape;
+    if (tokenEmojiImage && socket.playerData.shape === 'emoji_image') {
+      socket.playerData.token_emoji_image = tokenEmojiImage;
+    }
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
     if (!joined) return socket.emit('error', { message: 'DAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id) });

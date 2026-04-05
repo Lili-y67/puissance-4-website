@@ -390,6 +390,8 @@ let p1Shape   = 'circle';
 let p2Shape   = 'circle';
 let p1Emoji   = '⭐';
 let p2Emoji   = '💎';
+let p1EmojiImage = '';
+let p2EmojiImage = '';
 
 // ── Helpers couleur ───────────────────────────────────────────────────────────
 function colorDistance(h1, h2) {
@@ -524,6 +526,18 @@ function connectSocket(pendingMatch) {
     else p2Shape = rawS2;
 
     // Démarrer directement (sans lobby si rejoin)
+    if (rawS1 === 'emoji_image') {
+      p1Shape = 'emoji_image';
+      p1EmojiImage = data.players[1].token_emoji_image || '';
+    } else if (p1Shape !== 'emoji') {
+      p1EmojiImage = '';
+    }
+    if (rawS2 === 'emoji_image') {
+      p2Shape = 'emoji_image';
+      p2EmojiImage = data.players[2].token_emoji_image || '';
+    } else if (p2Shape !== 'emoji') {
+      p2EmojiImage = '';
+    }
     document.getElementById('lobby-overlay').classList.add('hidden');
     document.getElementById('name-p1').textContent = data.players[1].pseudo;
     document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
@@ -640,6 +654,19 @@ function setupLobby(data) {
   else p1Shape = rawS1;
   if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
   else p2Shape = rawS2;
+
+  if (rawS1 === 'emoji_image') {
+    p1Shape = 'emoji_image';
+    p1EmojiImage = data.players[1].token_emoji_image || '';
+  } else if (p1Shape !== 'emoji') {
+    p1EmojiImage = '';
+  }
+  if (rawS2 === 'emoji_image') {
+    p2Shape = 'emoji_image';
+    p2EmojiImage = data.players[2].token_emoji_image || '';
+  } else if (p2Shape !== 'emoji') {
+    p2EmojiImage = '';
+  }
 
   [1,2].forEach(s => {
     const p = data.players[s];
@@ -813,6 +840,17 @@ function lightenHex(hex, amount) {
   return `rgb(${lr},${lg},${lb})`;
 }
 
+function makeImageToken(tokenEl, imageSrc, glowColor) {
+  tokenEl.textContent = '';
+  tokenEl.className = 'token s-emoji';
+  tokenEl.style.background = 'transparent';
+  tokenEl.style.boxShadow = 'none';
+  tokenEl.style.clipPath = 'none';
+  tokenEl.style.borderRadius = '0';
+  tokenEl.style.filter = `drop-shadow(0 0 8px ${glowColor})`;
+  tokenEl.innerHTML = `<img src="${imageSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:18%;display:block;">`;
+}
+
 const SHAPE_CLIPS = {
   circle:   { borderRadius: '50%',   clipPath: '' },
   triangle: { borderRadius: '0',     clipPath: 'polygon(50% 8%, 95% 92%, 5% 92%)' },
@@ -829,7 +867,11 @@ function applyToken(row, col, player) {
   const token = cell.querySelector('.token');
   if (token) {
     const shape = player === 1 ? p1Shape : p2Shape;
-    if (shape === 'emoji') {
+    if (shape === 'emoji_image') {
+      const imgSrc = player === 1 ? p1EmojiImage : p2EmojiImage;
+      const glow = getComputedStyle(document.documentElement).getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
+      if (imgSrc) makeImageToken(token, imgSrc, glow);
+    } else if (shape === 'emoji') {
       const root = document.documentElement;
       const cs   = getComputedStyle(root);
       const col  = cs.getPropertyValue(player === 1 ? '--p1' : '--p2').trim();
@@ -987,15 +1029,24 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
     const botInfo = await fetch('/api/bot-id').then(r => r.json());
     iaBotColor = botInfo.color || botColor;
     p2Shape    = botInfo.shape || 'circle';
+    p2EmojiImage = botInfo.token_emoji_image || '';
   } catch(e) {
     iaBotColor = botColor;
     p2Shape    = 'circle';
+    p2EmojiImage = '';
   }
 
   const savedPlayer = JSON.parse(localStorage.getItem('player') || '{}');
   const rawShape = savedPlayer.shape || 'circle';
   if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;
+
+  if (rawShape === 'emoji_image') {
+    p1Shape = 'emoji_image';
+    p1EmojiImage = savedPlayer.token_emoji_image || '';
+  } else if (p1Shape !== 'emoji') {
+    p1EmojiImage = '';
+  }
 
   const playerColor = myPlayer.color || '#ff2d55';
   applyColors(playerColor, botColor);

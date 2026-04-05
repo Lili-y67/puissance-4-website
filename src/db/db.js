@@ -105,6 +105,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_image TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -134,6 +136,8 @@ const pQ = {
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
   updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_emoji = @emoji WHERE id = @id`),
+  updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),
+  updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
