@@ -244,6 +244,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 }
 .shape-btn:hover{border-color:rgba(255,255,255,0.2);transform:scale(1.08);}
 .shape-btn.active{border-color:var(--accent);background:rgba(76,110,245,0.1);}
+.shape-btn.disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.18);}
+.shape-btn.disabled:hover{transform:none;border-color:var(--border);}
 .shape-preview{
   width:28px;height:28px;
   background:var(--red);
@@ -1984,7 +1986,7 @@ const SHAPES = [
   { id: 'star',     label: '★' },
   { id: 'heart',    label: '♥' },
   { id: 'emoji',    label: 'Emoji' },
-  { id: 'emoji_image', label: 'VIP' },
+  { id: 'emoji_image', label: 'Emoji VIP' },
 ];
 const DEFAULT_PROFILE_EMOJI = String.fromCodePoint(0x2B50);
 let selectedShape = 'circle';
@@ -2008,11 +2010,15 @@ function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = ''
     emoji_image: { borderRadius: '12px', clipPath: '' },
   };
   SHAPES.forEach(s => {
-    if (s.id === 'emoji_image' && !currentPlayer?.is_vip) return;
+    const lockedVip = s.id === 'emoji_image' && !currentPlayer?.is_vip;
     const btn = document.createElement('div');
-    btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '');
+    btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '') + (lockedVip ? ' disabled' : '');
     btn.dataset.shape = s.id;
-    btn.onclick = () => selectShape(s.id);
+    btn.title = lockedVip ? 'Reserve au role VIP' : '';
+    btn.onclick = () => {
+      if (lockedVip) return;
+      selectShape(s.id);
+    };
 
     const preview = document.createElement('div');
     preview.className = 'shape-preview';
