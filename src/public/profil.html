@@ -3024,6 +3024,7 @@ async function loadDiscordInfo() {
   if (!zone) return;
   const token = localStorage.getItem('token');
   if (!token) return;
+  const DISCORD_INVITE = 'https://discord.gg/ap73mMTX7a';
 
   try {
     const res  = await fetch('/api/me/discord-info', { headers: { 'x-session-token': token } });
@@ -3055,6 +3056,16 @@ async function loadDiscordInfo() {
         <span style="font-size:12px;color:${color||'rgba(238,238,245,0.8)'};font-weight:600">${value}</span>
       </div>`;
 
+    const joinServerNotice = !d.on_server ? `
+      <div style="margin:0 0 14px;padding:10px 12px;border-radius:12px;background:rgba(255,214,10,0.08);border:1px solid rgba(255,214,10,0.18);display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:12px;color:#ffd84d;font-weight:700;line-height:1.5">
+          Rejoins le serveur pour acceder aux fonctionnalites Discord.
+        </div>
+        <a href="${DISCORD_INVITE}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:10px;background:rgba(88,101,242,0.16);border:1px solid rgba(88,101,242,0.32);color:#8b9cf4;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;max-width:220px">
+          Rejoindre le serveur
+        </a>
+      </div>` : '';
+
     zone.innerHTML = `
       <!-- Header username -->
       <div style="display:flex;align-items:center;gap:8px;margin:10px 0 14px">
@@ -3064,6 +3075,8 @@ async function loadDiscordInfo() {
         ${d.verified ? '<span title="Email vérifié" style="font-size:13px">OK</span>' : ''}
         ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">2FA</span>' : ''}
       </div>
+
+      ${joinServerNotice}
 
       <!-- Infos lignes -->
       <div style="margin-bottom:12px">
