@@ -181,21 +181,30 @@ body{
   animation-duration:14s;
 }
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-.disc{
-  width:108px;height:108px;border-radius:50%;
-  background:linear-gradient(135deg, #ff7eb6, #ff2d55 44%, #85EBFF 100%);
-  box-shadow:0 0 30px rgba(255,45,85,.35), 0 0 70px rgba(133,235,255,.15);
+.wrench-wrap{
+  width:124px;height:124px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle, rgba(255,255,255,.06), rgba(255,255,255,.015));
+  box-shadow:0 0 30px rgba(255,45,85,.18), 0 0 70px rgba(133,235,255,.12);
   position:relative;
-  animation:discGlow 2.6s ease-in-out infinite;
 }
-.disc::after{
+.wrench-wrap::before{
   content:"";
-  position:absolute;inset:18px;border-radius:50%;
-  background:#0b0f1e;
+  position:absolute;inset:10px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.08);
 }
-@keyframes discGlow{
-  0%,100%{transform:scale(1)}
-  50%{transform:scale(1.06)}
+.wrench{
+  font-size:72px;line-height:1;
+  filter:drop-shadow(0 0 10px rgba(255,216,77,.35));
+  animation:wrenchSpin 2.8s ease-in-out infinite;
+  transform-origin:50% 50%;
+}
+@keyframes wrenchSpin{
+  0%{transform:rotate(0deg) scale(1)}
+  15%{transform:rotate(-18deg) scale(1.02)}
+  45%{transform:rotate(140deg) scale(1.06)}
+  70%{transform:rotate(320deg) scale(1)}
+  100%{transform:rotate(360deg) scale(1)}
 }
 .footer{
   margin-top:26px;padding-top:20px;
@@ -259,7 +268,9 @@ body{
         <div class="visual">
           <div class="ring one"></div>
           <div class="ring two"></div>
-          <div class="disc"></div>
+          <div class="wrench-wrap">
+            <div class="wrench">🔧</div>
+          </div>
         </div>
       </div>
 
