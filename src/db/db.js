@@ -135,6 +135,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
 db.exec(`
   CREATE TABLE IF NOT EXISTS tournaments (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    public_id         TEXT,
     name              TEXT    NOT NULL,
     created_by        INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     mode              TEXT    NOT NULL DEFAULT 'manual',
@@ -148,6 +149,7 @@ db.exec(`
     starts_at         INTEGER NOT NULL,
     ends_at           INTEGER NOT NULL,
     status            TEXT    NOT NULL DEFAULT 'active',
+    paused_at         INTEGER,
     finished_at       INTEGER
   )
 `);
@@ -174,6 +176,8 @@ db.exec(`
 `);
 try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN tier TEXT NOT NULL DEFAULT 'vip'`); } catch(e) {}
 try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN multiplier REAL NOT NULL DEFAULT 1.2`); } catch(e) {}
+try { db.exec(`ALTER TABLE tournaments ADD COLUMN public_id TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE tournaments ADD COLUMN paused_at INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p2 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN reverted      INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -515,14 +519,15 @@ const sQ = {
 const tQ = {
   create: db.prepare(`
     INSERT INTO tournaments (
-      name, created_by, mode, password, duration_minutes, move_time_seconds,
-      reward_1, reward_2, reward_3, created_at, starts_at, ends_at, status
+      public_id, name, created_by, mode, password, duration_minutes, move_time_seconds,
+      reward_1, reward_2, reward_3, created_at, starts_at, ends_at, status, paused_at
     ) VALUES (
-      @name, @created_by, @mode, @password, @duration_minutes, @move_time_seconds,
-      @reward_1, @reward_2, @reward_3, @created_at, @starts_at, @ends_at, @status
+      @public_id, @name, @created_by, @mode, @password, @duration_minutes, @move_time_seconds,
+      @reward_1, @reward_2, @reward_3, @created_at, @starts_at, @ends_at, @status, @paused_at
     )
   `),
   getById: db.prepare(`SELECT * FROM tournaments WHERE id = ?`),
+  getByPublicId: db.prepare(`SELECT * FROM tournaments WHERE public_id = ?`),
   listAll: db.prepare(`
     SELECT
       t.*,
@@ -533,8 +538,8 @@ const tQ = {
     LEFT JOIN tournament_players tp ON tp.tournament_id = t.id
     GROUP BY t.id
     ORDER BY
-      CASE t.status WHEN 'active' THEN 0 ELSE 1 END,
-      t.ends_at ASC,
+      CASE t.status WHEN 'active' THEN 0 WHEN 'pending' THEN 1 WHEN 'paused' THEN 2 ELSE 3 END,
+      t.starts_at ASC,
       t.created_at DESC
   `),
   listActiveForPair: db.prepare(`
@@ -570,7 +575,22 @@ const tQ = {
   `),
   markFinished: db.prepare(`
     UPDATE tournaments
-    SET status = 'finished', finished_at = @finished_at
+    SET status = 'finished', finished_at = @finished_at, paused_at = NULL
+    WHERE id = @id
+  `),
+  markActive: db.prepare(`
+    UPDATE tournaments
+    SET status = 'active', paused_at = NULL
+    WHERE id = @id
+  `),
+  markPaused: db.prepare(`
+    UPDATE tournaments
+    SET status = 'paused', paused_at = @paused_at
+    WHERE id = @id
+  `),
+  resumePaused: db.prepare(`
+    UPDATE tournaments
+    SET status = 'active', paused_at = NULL, ends_at = @ends_at
     WHERE id = @id
   `),
   addWinner: db.prepare(`
@@ -605,6 +625,11 @@ const tQ = {
     SELECT * FROM tournaments
     WHERE status = 'active' AND ends_at <= ?
     ORDER BY ends_at ASC
+  `),
+  listPendingToStart: db.prepare(`
+    SELECT * FROM tournaments
+    WHERE status = 'pending' AND starts_at <= ?
+    ORDER BY starts_at ASC
   `),
 };
 

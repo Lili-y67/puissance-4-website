@@ -750,6 +750,55 @@ function hashTournamentPassword(password = '') {
   return password ? crypto.createHash('sha256').update(`tournoi:${password}`).digest('hex') : '';
 }
 
+function generateTournamentPublicId() {
+  let id = '';
+  do {
+    id = 'TRN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+  } while (tQ.getByPublicId.get(id));
+  return id;
+}
+
+function getParisDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second),
+  };
+}
+
+function getParisTimestampFor(dayOffset, hour, minute = 0, second = 0) {
+  const now = new Date();
+  const paris = getParisDateParts(now);
+  const utcGuess = new Date(Date.UTC(paris.year, paris.month - 1, paris.day + dayOffset, hour, minute, second));
+  const corrected = new Date(utcGuess.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+  const offset = corrected.getTime() - utcGuess.getTime();
+  return utcGuess.getTime() - offset;
+}
+
+function getAutoTournamentName(hour) {
+  return `Tournoi public ${String(hour).padStart(2, '0')}h`;
+}
+
+function findTournamentByRef(ref) {
+  const value = String(ref || '').trim();
+  if (!value) return null;
+  return tQ.getByPublicId.get(value) || tQ.getById.get(Number(value));
+}
+
 function getTournamentTop3(tournamentId) {
   return tQ.standings.all(tournamentId).slice(0, 3).map((entry, index) => ({
     place: index + 1,
@@ -767,8 +816,10 @@ function serializeTournament(row, playerId = null) {
   const top3 = getTournamentTop3(row.id);
   const joined = playerId ? !!tQ.getEntry.get(row.id, playerId) : false;
   const me = playerId ? tQ.getEntry.get(row.id, playerId) : null;
+  const now = Date.now();
   return {
     id: row.id,
+    public_id: row.public_id || `TRN-${row.id}`,
     name: row.name,
     mode: row.mode,
     duration_minutes: Number(row.duration_minutes || 0),
@@ -780,7 +831,9 @@ function serializeTournament(row, playerId = null) {
     starts_at: Number(row.starts_at || 0),
     ends_at: Number(row.ends_at || 0),
     status: row.status,
+    paused_at: Number(row.paused_at || 0) || null,
     finished_at: Number(row.finished_at || 0) || null,
+    starts_in_ms: Math.max(0, Number(row.starts_at || 0) - now),
     creator_pseudo: row.creator_pseudo || '',
     participants: Number(row.participants || 0),
     has_password: !!row.password,
@@ -797,6 +850,61 @@ function getPublicActiveTournament() {
   return row ? serializeTournament(row, null) : null;
 }
 
+function getPublicPendingTournament() {
+  const row = tQ.listAll.all().find(entry => entry.status === 'pending' && !entry.password);
+  return row ? serializeTournament(row, null) : null;
+}
+
+function clearTournamentQueue(tournamentId) {
+  try { tournamentQueues.get(Number(tournamentId))?.reset?.(); } catch (e) {}
+}
+
+function ensureAutoTournaments() {
+  if (!BOT_PLAYER_ID) return;
+  const slots = [12, 20];
+  for (const dayOffset of [0, 1]) {
+    for (const hour of slots) {
+      const startsAt = getParisTimestampFor(dayOffset, hour, 0, 0);
+      const endsAt = startsAt + 60 * 60 * 1000;
+      const exists = db.prepare(`
+        SELECT id FROM tournaments
+        WHERE mode = 'auto' AND starts_at = ? AND created_by = ?
+        LIMIT 1
+      `).get(startsAt, BOT_PLAYER_ID);
+      if (exists) continue;
+      tQ.create.run({
+        public_id: generateTournamentPublicId(),
+        name: getAutoTournamentName(hour),
+        created_by: BOT_PLAYER_ID,
+        mode: 'auto',
+        password: '',
+        duration_minutes: 60,
+        move_time_seconds: 30,
+        reward_1: 1000,
+        reward_2: 500,
+        reward_3: 250,
+        created_at: Date.now(),
+        starts_at: startsAt,
+        ends_at: endsAt,
+        status: startsAt > Date.now() ? 'pending' : 'active',
+        paused_at: null,
+      });
+    }
+  }
+}
+
+function activatePendingTournaments() {
+  const now = Date.now();
+  const pending = tQ.listPendingToStart.all(now);
+  for (const tournament of pending) {
+    try {
+      tQ.markActive.run({ id: tournament.id });
+    } catch (e) {
+      console.error('[TOURNOI] activate:', e.message);
+    }
+  }
+}
+
 const finalizeTournament = db.transaction((tournamentId, finishedAt) => {
   const tournament = tQ.getById.get(tournamentId);
   if (!tournament || tournament.status !== 'active') return null;
@@ -811,11 +919,14 @@ const finalizeTournament = db.transaction((tournamentId, finishedAt) => {
 });
 
 function finalizeExpiredTournaments() {
+  ensureAutoTournaments();
+  activatePendingTournaments();
   const now = Date.now();
   const expired = tQ.listExpiredActive.all(now);
   for (const tournament of expired) {
     try {
       finalizeTournament(tournament.id, now);
+      clearTournamentQueue(tournament.id);
     } catch (e) {
       console.error('[TOURNOI] finalize:', e.message);
     }
@@ -1382,11 +1493,11 @@ app.get('/api/tournaments/:id', (req, res) => {
   finalizeExpiredTournaments();
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = validateSession(token);
-  const tournament = tQ.listAll.all().find(row => Number(row.id) === Number(req.params.id));
+  const tournament = findTournamentByRef(req.params.id);
   if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
   res.json({
     tournament: serializeTournament(tournament, playerId || null),
-    standings: tQ.standings.all(Number(req.params.id)).map((entry, index) => ({
+    standings: tQ.standings.all(Number(tournament.id)).map((entry, index) => ({
       rank: index + 1,
       player_id: entry.player_id,
       pseudo: entry.pseudo,
@@ -1425,6 +1536,7 @@ app.post('/api/tournaments', (req, res) => {
   const now = Date.now();
   const endsAt = now + durationMinutes * 60 * 1000;
   const info = {
+    public_id: generateTournamentPublicId(),
     name,
     created_by: playerId,
     mode,
@@ -1438,6 +1550,7 @@ app.post('/api/tournaments', (req, res) => {
     starts_at: now,
     ends_at: endsAt,
     status: 'active',
+    paused_at: null,
   };
   const result = tQ.create.run(info);
   tQ.join.run({ tournament_id: result.lastInsertRowid, player_id: playerId, joined_at: now });
@@ -1450,9 +1563,9 @@ app.post('/api/tournaments/:id/join', (req, res) => {
   const token = String(req.body?.token || '');
   const playerId = validateSession(token);
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
-  const tournament = tQ.getById.get(Number(req.params.id));
+  const tournament = findTournamentByRef(req.params.id);
   if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
-  if (tournament.status !== 'active' || Number(tournament.ends_at || 0) <= Date.now()) {
+  if (['finished'].includes(String(tournament.status)) || Number(tournament.ends_at || 0) <= Date.now()) {
     return res.status(400).json({ error: 'Ce tournoi est termine.' });
   }
   const password = String(req.body?.password || '').trim();
@@ -1476,15 +1589,40 @@ app.get('/api/admin/tournaments', (req, res) => {
 
 app.post('/api/admin/tournaments/:id/finish', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
-  const id = Number(req.params.id);
+  const tournament = findTournamentByRef(req.params.id);
+  const id = Number(tournament?.id || 0);
   const result = finalizeTournament(id, Date.now());
   if (!result) return res.status(404).json({ error: 'Tournoi introuvable ou deja termine.' });
+  clearTournamentQueue(id);
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/tournaments/:id/pause', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const tournament = findTournamentByRef(req.params.id);
+  if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
+  if (tournament.status !== 'active') return res.status(400).json({ error: 'Tournoi non actif.' });
+  tQ.markPaused.run({ id: tournament.id, paused_at: Date.now() });
+  clearTournamentQueue(tournament.id);
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/tournaments/:id/resume', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const tournament = findTournamentByRef(req.params.id);
+  if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
+  if (tournament.status !== 'paused') return res.status(400).json({ error: 'Tournoi non en pause.' });
+  const pausedAt = Number(tournament.paused_at || 0);
+  const delta = pausedAt > 0 ? Math.max(0, Date.now() - pausedAt) : 0;
+  tQ.resumePaused.run({ id: tournament.id, ends_at: Number(tournament.ends_at || 0) + delta });
   res.json({ ok: true });
 });
 
 app.delete('/api/admin/tournaments/:id', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
-  const id = Number(req.params.id);
+  const tournament = findTournamentByRef(req.params.id);
+  const id = Number(tournament?.id || 0);
+  if (!id) return res.status(404).json({ error: 'Tournoi introuvable.' });
   db.prepare(`DELETE FROM tournaments WHERE id = ?`).run(id);
   tournamentQueues.delete(id);
   res.json({ ok: true });
@@ -2664,11 +2802,13 @@ app.get('/api/leaderboard/wins', (_, res) => {
 app.get('/api/site-stats', (_, res) => {
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
   const publicTournament = getPublicActiveTournament();
+  const upcomingPublicTournament = getPublicPendingTournament();
   res.json({
     online: onlineSockets.size,
     queue: mm?.queue?.length || 0,
     activeGames,
     publicTournament,
+    upcomingPublicTournament,
   });
 });
 
@@ -2736,7 +2876,10 @@ io.on('connection', socket => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const id = Number(tournamentId || 0);
     const tournament = tQ.getById.get(id);
-    if (!tournament || tournament.status !== 'active' || Number(tournament.ends_at || 0) <= Date.now()) {
+    if (!tournament) return socket.emit('error', { message: 'Tournoi introuvable.' });
+    if (tournament.status === 'pending') return socket.emit('error', { message: 'Le tournoi n a pas encore commence.' });
+    if (tournament.status === 'paused') return socket.emit('error', { message: 'Le tournoi est en pause.' });
+    if (tournament.status !== 'active' || Number(tournament.ends_at || 0) <= Date.now()) {
       return socket.emit('error', { message: 'Tournoi indisponible.' });
     }
     const entry = tQ.getEntry.get(id, socket.playerId);

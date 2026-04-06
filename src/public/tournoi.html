@@ -9,72 +9,64 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#070711;--surface:#101120;--surface2:#17192d;--border:rgba(255,255,255,.08);--text:#f4f4fb;--muted:rgba(244,244,251,.62);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--blue:#85EBFF;--orange:#ff9f0a}
-html,body{min-height:100%;overflow-x:hidden}
-body{color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradient(circle at 15% 18%, rgba(255,45,85,.12), transparent 22%),radial-gradient(circle at 84% 14%, rgba(133,235,255,.10), transparent 24%),radial-gradient(circle at 52% 100%, rgba(255,214,10,.09), transparent 28%),var(--bg)}
+body{min-height:100vh;color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradient(circle at 15% 18%, rgba(255,45,85,.12), transparent 22%),radial-gradient(circle at 84% 14%, rgba(133,235,255,.10), transparent 24%),radial-gradient(circle at 52% 100%, rgba(255,214,10,.09), transparent 28%),var(--bg)}
 .bg-grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg, rgba(255,255,255,.05) 1px,transparent 1px);background-size:44px 44px}
-.page{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:22px}
-.nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.page{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:20px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .logo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:2px;color:var(--text);text-decoration:none}
 .logo span{color:var(--red)}
 .nav-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn,.btn-ghost,.btn-primary,.btn-soft{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s}
-.btn-ghost{border:1px solid var(--border);color:var(--muted);background:rgba(255,255,255,.02)}
-.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.16)}
-.btn-primary{border:1px solid rgba(255,45,85,.28);background:rgba(255,45,85,.12);color:#fff}
-.btn-primary:hover{background:rgba(255,45,85,.18)}
-.btn-soft{border:1px solid rgba(133,235,255,.24);background:rgba(133,235,255,.08);color:var(--blue)}
-.btn-soft:hover{background:rgba(133,235,255,.14)}
-.btn-primary:disabled,.btn-ghost:disabled,.btn-soft:disabled{opacity:.45;cursor:not-allowed}
-.hero{padding:28px;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));border:1px solid var(--border);display:grid;grid-template-columns:1.1fr .9fr;gap:18px;align-items:stretch}
+.btn,.btn-ghost,.btn-primary,.btn-soft{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:12px;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s;border:1px solid transparent}
+.btn-ghost{border-color:var(--border);color:var(--muted);background:rgba(255,255,255,.02)}
+.btn-primary{border-color:rgba(255,45,85,.32);background:rgba(255,45,85,.14);color:#fff}
+.btn-soft{border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.08);color:var(--blue)}
+.btn:disabled,.btn-ghost:disabled,.btn-primary:disabled,.btn-soft:disabled{opacity:.45;cursor:not-allowed}
+.hero{padding:28px;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));border:1px solid var(--border);display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
 .hero-kicker{font-size:12px;letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:10px}
 .hero-title{font-family:'Barlow Condensed',sans-serif;font-size:68px;line-height:.92;text-transform:uppercase}
 .hero-title span{color:var(--red)}
-.hero-copy{margin-top:14px;color:var(--muted);line-height:1.75;max-width:680px}
+.hero-copy{margin-top:14px;color:var(--muted);line-height:1.75;max-width:700px}
 .hero-side{padding:18px;border-radius:22px;background:rgba(9,10,20,.76);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:14px}
 .hero-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .hero-stat{padding:14px 16px;border-radius:18px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
 .hero-stat strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900}
 .hero-stat span{font-size:12px;color:var(--muted)}
 .hero-live{padding:14px 16px;border-radius:18px;background:linear-gradient(135deg, rgba(48,209,88,.10), rgba(133,235,255,.06));border:1px solid rgba(48,209,88,.2);display:flex;flex-direction:column;gap:10px}
-.hero-live-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.hero-live-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
-.hero-live-sub{font-size:12px;color:var(--muted);line-height:1.5}
-.pulse-dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(48,209,88,.45);animation:pulse 1.6s infinite}
+.pulse-dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(48,209,88,.45);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(48,209,88,.45)}70%{box-shadow:0 0 0 12px rgba(48,209,88,0)}100%{box-shadow:0 0 0 0 rgba(48,209,88,0)}}
-.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.85fr);gap:18px;align-items:start}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.85fr);gap:18px}
 .panel{padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border);box-shadow:0 18px 42px rgba(0,0,0,.24)}
 .section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;text-transform:uppercase}
 .section-sub{font-size:14px;color:var(--muted);max-width:760px}
-.list{display:grid;grid-template-columns:1fr;gap:14px}
-.card{padding:20px;border-radius:22px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border);display:flex;flex-direction:column;gap:14px}
+.list{display:grid;gap:14px}
+.card{padding:20px;border-radius:22px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border);display:flex;flex-direction:column;gap:14px;cursor:pointer}
 .card.active{border-color:rgba(133,235,255,.28);box-shadow:0 0 0 1px rgba(133,235,255,.12),0 18px 44px rgba(0,0,0,.26)}
-.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.card-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;line-height:.95;text-transform:uppercase}
+.card-top,.detail-head,.hero-live-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.card-title,.detail-name,.modal-title{font-family:'Barlow Condensed',sans-serif;font-weight:900;line-height:.95;text-transform:uppercase}
+.card-title{font-size:30px}
+.detail-name{font-size:42px}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .badge.active{background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.28);color:var(--green)}
-.badge.finished{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--muted)}
+.badge.pending{background:rgba(255,214,10,.10);border:1px solid rgba(255,214,10,.22);color:var(--yellow)}
+.badge.paused{background:rgba(255,159,10,.10);border:1px solid rgba(255,159,10,.24);color:var(--orange)}
+.badge.finished,.badge.private{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--muted)}
 .badge.queue{background:rgba(133,235,255,.12);border:1px solid rgba(133,235,255,.28);color:var(--blue)}
-.badge.locked{background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.26);color:var(--orange)}
-.meta-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.meta-box{padding:12px;border-radius:16px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
-.meta-box strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900}
-.meta-box span{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 .tiny{font-size:12px;color:var(--muted);line-height:1.6}
+.meta-grid,.reward-grid,.hero-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.reward-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.meta-box,.reward,.hero-stat{padding:12px;border-radius:16px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
+.reward{background:rgba(255,214,10,.08);border-color:rgba(255,214,10,.18)}
+.meta-box strong,.reward strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900}
+.reward strong{color:var(--yellow)}
+.meta-box span,.reward span{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 .join-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .join-row input,.field input{width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:var(--surface2);color:var(--text);outline:none}
-.queue-banner{display:none;padding:12px 14px;border-radius:16px;background:rgba(133,235,255,.08);border:1px solid rgba(133,235,255,.24);gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.join-row .password-field{flex:1 1 220px}
+.queue-banner{display:none;padding:12px 14px;border-radius:16px;background:rgba(133,235,255,.08);border:1px solid rgba(133,235,255,.24);gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:14px}
 .queue-banner.show{display:flex}
-.queue-banner strong{font-family:'Barlow Condensed',sans-serif;font-size:22px;letter-spacing:1px}
 .detail-card{display:flex;flex-direction:column;gap:16px}
-.detail-empty{padding:26px;border-radius:20px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);text-align:center;color:var(--muted)}
-.detail-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.detail-name{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;line-height:.92;text-transform:uppercase}
-.detail-meta{display:flex;flex-wrap:wrap;gap:8px}
-.reward-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.reward{padding:12px;border-radius:16px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.18)}
-.reward strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;color:var(--yellow)}
-.reward span{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.detail-empty,.empty{padding:24px;border-radius:22px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);text-align:center;color:var(--muted)}
 .standings{display:flex;flex-direction:column;gap:8px}
 .standing{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
 .standing-left{display:flex;align-items:center;gap:10px;min-width:0}
@@ -82,12 +74,10 @@ body{color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradien
 .standing-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .standing-sub{font-size:11px;color:var(--muted)}
 .avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.06);flex-shrink:0}
-.empty{padding:24px;border-radius:22px;background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);text-align:center;color:var(--muted)}
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:30;padding:18px;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
 .modal{width:min(720px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:26px;background:linear-gradient(180deg, rgba(17,18,31,.98), rgba(10,11,22,.98));border:1px solid var(--border);box-shadow:0 30px 90px rgba(0,0,0,.45)}
 .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
-.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;text-transform:uppercase}
 .close{width:40px;height:40px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-size:20px;cursor:pointer}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .field{display:flex;flex-direction:column;gap:8px}
@@ -106,27 +96,28 @@ body{color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradien
     <div class="nav-actions">
       <a class="btn-ghost" href="/profil">Mon profil</a>
       <a class="btn-ghost" href="/">Retour</a>
-      <button class="btn-primary" id="open-create-btn" type="button" onclick="openCreateModal()">Créer tournoi</button>
+      <button class="btn-primary" id="open-create-btn" type="button" onclick="openCreateModal()">Creer tournoi</button>
     </div>
   </div>
+
   <section class="hero">
     <div>
-      <div class="hero-kicker">Compétition active</div>
+      <div class="hero-kicker">Competition active</div>
       <h1 class="hero-title">Mode <span>Tournoi</span></h1>
-      <p class="hero-copy">Une vraie file dédiée par tournoi, un timer par coup, un classement en direct et une fin automatique avec top 3. Les parties de tournoi continuent de compter en ELO, tout en faisant monter ton score tournoi.</p>
+      <p class="hero-copy">Deux tournois publics automatiques sont prepares chaque jour, a 12h et 20h. File dediee, timer par coup, classement live, ELO compte, et recompenses distribuees automatiquement a la fin.</p>
     </div>
     <div class="hero-side">
       <div class="hero-stats">
-        <div class="hero-stat"><strong id="hero-active">0</strong><span>Tournois actifs</span></div>
-        <div class="hero-stat"><strong id="hero-finished">0</strong><span>Tournois terminés</span></div>
+        <div class="hero-stat"><strong id="hero-active">0</strong><span>Actifs</span></div>
+        <div class="hero-stat"><strong id="hero-pending">0</strong><span>A venir</span></div>
         <div class="hero-stat"><strong id="hero-joined">0</strong><span>Mes inscriptions</span></div>
         <div class="hero-stat"><strong id="hero-score">0</strong><span>Mon score total</span></div>
       </div>
       <div class="hero-live">
         <div class="hero-live-top">
           <div>
-            <div class="hero-live-title">Tournoi public</div>
-            <div class="hero-live-sub" id="hero-live-sub">Aucun tournoi public en cours.</div>
+            <div class="card-title" style="font-size:24px">Tournoi public</div>
+            <div class="tiny" id="hero-live-sub">Aucun tournoi public disponible pour le moment.</div>
           </div>
           <div class="pulse-dot" id="hero-live-dot" style="display:none"></div>
         </div>
@@ -137,41 +128,44 @@ body{color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradien
       </div>
     </div>
   </section>
+
   <div class="layout">
     <section class="panel">
       <div class="section-head">
         <div>
-          <div class="section-title">Tournois présents</div>
-          <div class="section-sub">Tu t’inscris, tu entres dans la file du tournoi, puis le serveur apparie automatiquement les participants inscrits.</div>
+          <div class="section-title">Tournois presents</div>
+          <div class="section-sub">Inscris-toi au tournoi, puis entre dans sa file dediee quand il est actif. Les parties tournoi continuent de compter en ELO.</div>
         </div>
       </div>
       <div class="queue-banner" id="queue-banner">
         <div>
           <div class="tiny">File tournoi en cours</div>
-          <strong id="queue-banner-title">Position #1</strong>
-          <div class="tiny" id="queue-banner-sub">En attente d’un adversaire tournoi...</div>
+          <div class="card-title" id="queue-banner-title" style="font-size:26px">Position #1</div>
+          <div class="tiny" id="queue-banner-sub">En attente d un adversaire tournoi...</div>
         </div>
         <button class="btn-ghost" type="button" onclick="leaveTournamentQueue()">Quitter la file</button>
       </div>
       <div class="list" id="tournament-list"></div>
     </section>
+
     <aside class="panel detail-card">
       <div class="section-head" style="margin-bottom:0">
         <div>
-          <div class="section-title">Détail</div>
-          <div class="section-sub">Affichage direct du tournoi sélectionné, de son classement et de sa file.</div>
+          <div class="section-title">Detail</div>
+          <div class="section-sub">Affichage direct du tournoi selectionne, de son classement et de sa file.</div>
         </div>
       </div>
       <div id="tournament-detail" class="detail-empty">Choisis un tournoi dans la liste pour voir son classement et rejoindre sa file.</div>
     </aside>
   </div>
 </div>
+
 <div class="modal-bg" id="create-modal-bg">
   <div class="modal">
     <div class="modal-head">
       <div>
-        <div class="modal-title">Créer un tournoi</div>
-        <div class="tiny">Réservé aux comptes Perso et Administrateur.</div>
+        <div class="modal-title">Creer un tournoi</div>
+        <div class="tiny">Reserve aux comptes Perso et Administrateur.</div>
       </div>
       <button class="close" type="button" onclick="closeCreateModal()">×</button>
     </div>
@@ -180,52 +174,353 @@ body{color:var(--text);font-family:'Barlow',sans-serif;background:radial-gradien
       <div class="field"><label>Temps (minutes)</label><input id="create-duration" type="number" min="10" max="1440" value="60"></div>
       <div class="field"><label>Temps par coup (secondes)</label><input id="create-move-time" type="number" min="5" max="180" value="30"></div>
       <div class="field full"><label>Mot de passe</label><input id="create-password" maxlength="32" placeholder="Optionnel"></div>
-      <div class="field"><label>Récompense 1</label><input id="create-reward-1" type="number" min="0" value="300"></div>
-      <div class="field"><label>Récompense 2</label><input id="create-reward-2" type="number" min="0" value="150"></div>
-      <div class="field full"><label>Récompense 3</label><input id="create-reward-3" type="number" min="0" value="75"></div>
+      <div class="field"><label>Recompense 1</label><input id="create-reward-1" type="number" min="0" value="1000"></div>
+      <div class="field"><label>Recompense 2</label><input id="create-reward-2" type="number" min="0" value="500"></div>
+      <div class="field full"><label>Recompense 3</label><input id="create-reward-3" type="number" min="0" value="250"></div>
     </div>
     <div class="form-actions">
       <button class="btn-ghost" type="button" onclick="closeCreateModal()">Annuler</button>
-      <button class="btn-primary" type="button" onclick="createTournament()">Créer le tournoi</button>
+      <button class="btn-primary" type="button" onclick="createTournament()">Creer le tournoi</button>
     </div>
   </div>
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const token = localStorage.getItem('token') || '';
 const me = JSON.parse(localStorage.getItem('player') || 'null');
 let myProfile = null;
 let tournaments = [];
-let selectedTournamentId = Number(location.pathname.split('/').filter(Boolean).pop()) || null;
+let selectedTournamentId = location.pathname.startsWith('/tournoi/') ? location.pathname.split('/').filter(Boolean).pop() : null;
 let publicTournament = null;
+let upcomingTournament = null;
 let queueState = { tournamentId: null, position: 0 };
 let socket = null;
+
 function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function fmtRemaining(endsAt){const ms=Number(endsAt||0)-Date.now();if(ms<=0)return'Terminé';const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);const s=Math.floor((ms%60000)/1000);if(h>0)return`${h}h ${m}m restantes`;if(m>0)return`${m}m ${s}s restantes`;return`${s}s restantes`;}
 function formatDate(ts){return ts?new Date(ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';}
-function canCreateTournament(){return !!(myProfile&&(Number(myProfile.is_perso||0)===1||String(myProfile.role||'')==='admin'));}
-function getSelectedTournament(){return tournaments.find(t=>Number(t.id)===Number(selectedTournamentId))||null;}
-async function loadProfile(){if(!me?.id||!token)return;const res=await fetch(`/api/players/${me.id}?token=${encodeURIComponent(token)}`);if(res.ok)myProfile=await res.json();const btn=document.getElementById('open-create-btn');if(btn){btn.disabled=!canCreateTournament();btn.title=canCreateTournament()?'':'Réservé aux Perso';}}
-async function loadSiteStats(){const res=await fetch('/api/site-stats',{cache:'no-store'});if(!res.ok)return;const data=await res.json();publicTournament=data.publicTournament||null;renderPublicTournamentHero();}
-async function loadTournaments(selectId=null){const res=await fetch(`/api/tournaments?token=${encodeURIComponent(token)}`);const data=await res.json();tournaments=Array.isArray(data.tournaments)?data.tournaments:[];if(selectId)selectedTournamentId=Number(selectId);if(!getSelectedTournament()&&tournaments.length)selectedTournamentId=Number(tournaments[0].id);renderTournaments();await renderSelectedTournament();}
-async function loadTournamentDetail(id){const res=await fetch(`/api/tournaments/${id}?token=${encodeURIComponent(token)}`);if(!res.ok)return null;return res.json();}
-function updateHero(){document.getElementById('hero-active').textContent=tournaments.filter(t=>t.status==='active').length;document.getElementById('hero-finished').textContent=tournaments.filter(t=>t.status==='finished').length;document.getElementById('hero-joined').textContent=tournaments.filter(t=>t.joined).length;document.getElementById('hero-score').textContent=tournaments.reduce((sum,t)=>sum+Number(t.my_score||0),0);}
-function renderPublicTournamentHero(){const sub=document.getElementById('hero-live-sub');const dot=document.getElementById('hero-live-dot');const openBtn=document.getElementById('hero-open-public');const joinBtn=document.getElementById('hero-join-public');if(!publicTournament){sub.textContent='Aucun tournoi public en cours.';dot.style.display='none';openBtn.disabled=true;joinBtn.disabled=true;return;}dot.style.display='block';sub.textContent=`${publicTournament.name} · ${publicTournament.participants} inscrits · ${fmtRemaining(publicTournament.ends_at)}`;openBtn.disabled=false;joinBtn.disabled=!token||publicTournament.joined||publicTournament.status!=='active';}
-function openPublicTournament(){if(!publicTournament)return;selectedTournamentId=Number(publicTournament.id);if(history.replaceState)history.replaceState(null,'',`/tournoi/${publicTournament.id}`);renderTournaments();renderSelectedTournament();}
-async function joinPublicTournament(){if(!publicTournament)return;await joinTournament(publicTournament.id);}
-function renderTournaments(){updateHero();const list=document.getElementById('tournament-list');if(!tournaments.length){list.innerHTML='<div class=\"empty\">Aucun tournoi pour le moment.</div>';return;}list.innerHTML=tournaments.map(t=>{const selected=Number(t.id)===Number(selectedTournamentId);const joinDisabled=!token||t.joined||t.status!=='active';const queuedHere=Number(queueState.tournamentId||0)===Number(t.id);const canQueue=!!(t.joined&&t.status==='active');return `<div class="card ${selected?'active':''}" onclick="selectTournament(${t.id})"><div class="card-top"><div><div class="card-title">${escapeHtml(t.name)}</div><div class="tiny">Tournoi #${t.id} · Par ${escapeHtml(t.creator_pseudo||'Inconnu')} · ${t.mode==='auto'?'Automatique':'Manuel'}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${queuedHere?'<div class="badge queue">En file</div>':''}${t.has_password?'<div class="badge locked">Privé</div>':''}<div class="badge ${t.status==='active'?'active':'finished'}">${t.status==='active'?'Actif':'Terminé'}</div></div></div><div class="meta-grid"><div class="meta-box"><strong>${t.participants}</strong><span>Participants</span></div><div class="meta-box"><strong>${t.duration_minutes}m</strong><span>Durée</span></div><div class="meta-box"><strong>${t.move_time_seconds}s</strong><span>Par coup</span></div><div class="meta-box"><strong>${t.my_score||0}</strong><span>Mon score</span></div></div><div class="tiny">${fmtRemaining(t.ends_at)}${t.joined?' · Tu es inscrit':''}${t.my_streak?` · Streak ${t.my_streak}`:''}</div><div class="join-row"><input id="join-password-${t.id}" placeholder="${t.has_password?'Mot de passe':'Aucun mot de passe'}" ${t.has_password?'':'disabled'} onclick="event.stopPropagation()"><button class="btn-primary" type="button" ${joinDisabled?'disabled':''} onclick="event.stopPropagation();joinTournament(${t.id})">${t.joined?'Déjà inscrit':'Rejoindre'}</button><button class="btn-soft" type="button" ${canQueue?'':'disabled'} onclick="event.stopPropagation();${queuedHere?'leaveTournamentQueue()':`joinTournamentQueue(${t.id})`}">${queuedHere?'Quitter la file':'Entrer en file'}</button></div></div>`;}).join('');}
-async function renderSelectedTournament(){const selected=getSelectedTournament();const detail=document.getElementById('tournament-detail');if(!selected){detail.className='detail-empty';detail.innerHTML='Choisis un tournoi dans la liste pour voir son classement et rejoindre sa file.';return;}const data=await loadTournamentDetail(selected.id);const tournament=data?.tournament||selected;const standings=Array.isArray(data?.standings)?data.standings:[];const queuedHere=Number(queueState.tournamentId||0)===Number(tournament.id);const canQueue=!!(tournament.joined&&tournament.status==='active');detail.className='detail-card';detail.innerHTML=`<div class="detail-head"><div><div class="detail-name">${escapeHtml(tournament.name)}</div><div class="tiny">Tournoi #${tournament.id} · ${tournament.has_password?'Privé':'Public'} · ${tournament.mode==='auto'?'Arène auto':'Manuel'}</div></div><div class="detail-meta">${queuedHere?`<div class="badge queue">Position #${queueState.position||'?'}</div>`:''}<div class="badge ${tournament.status==='active'?'active':'finished'}">${tournament.status==='active'?'Actif':'Terminé'}</div></div></div><div class="meta-grid"><div class="meta-box"><strong>${tournament.participants}</strong><span>Inscrits</span></div><div class="meta-box"><strong>${tournament.move_time_seconds}s</strong><span>Temps par coup</span></div><div class="meta-box"><strong>${tournament.my_score||0}</strong><span>Mon score</span></div><div class="meta-box"><strong>${tournament.my_streak||0}</strong><span>Mon streak</span></div></div><div class="reward-grid"><div class="reward"><strong>${tournament.reward_1}</strong><span>Top 1</span></div><div class="reward"><strong>${tournament.reward_2}</strong><span>Top 2</span></div><div class="reward"><strong>${tournament.reward_3}</strong><span>Top 3</span></div></div><div class="tiny">Début : ${formatDate(tournament.starts_at)} · Fin : ${formatDate(tournament.ends_at)}${tournament.finished_at?` · Clôturé le ${formatDate(tournament.finished_at)}`:''}</div><div class="join-row"><input id="detail-join-password" placeholder="${tournament.has_password?'Mot de passe requis':'Aucun mot de passe'}" ${tournament.has_password?'':'disabled'}><button class="btn-primary" type="button" ${(!token||tournament.joined||tournament.status!=='active')?'disabled':''} onclick="joinTournament(${tournament.id}, true)">${tournament.joined?'Déjà inscrit':'Rejoindre ce tournoi'}</button><button class="btn-soft" type="button" ${canQueue?'':'disabled'} onclick="${queuedHere?'leaveTournamentQueue()':`joinTournamentQueue(${tournament.id})`}">${queuedHere?'Quitter la file':'Entrer en file'}</button></div><div><div class="section-sub" style="margin-bottom:10px">Classement en direct</div><div class="standings">${standings.length?standings.slice(0,12).map((row,index)=>`<div class="standing"><div class="standing-left"><div class="standing-rank">#${index+1}</div>${row.avatar?`<img class="avatar" src="${escapeHtml(row.avatar)}" alt="">`:`<div class="standing-rank" style="width:34px;height:34px">${escapeHtml((row.pseudo||'?').slice(0,1).toUpperCase())}</div>`}<div><div class="standing-name">${escapeHtml(row.pseudo)}</div><div class="standing-sub">${row.wins} wins · ${row.losses} défaites · ${row.draws} nuls · streak ${row.streak}</div></div></div><div style="text-align:right"><div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900">${row.score}</div><div class="standing-sub">${index===0?tournament.reward_1:index===1?tournament.reward_2:index===2?tournament.reward_3:0} coins</div></div></div>`).join(''):'<div class="detail-empty">Aucun match comptabilisé pour le moment.</div>'}</div></div>`;const pw=document.getElementById('join-password-'+tournament.id);const detailPw=document.getElementById('detail-join-password');if(pw&&detailPw)detailPw.value=pw.value;}
-function selectTournament(id){selectedTournamentId=Number(id);if(history.replaceState)history.replaceState(null,'',`/tournoi/${id}`);renderTournaments();renderSelectedTournament();}
-function openCreateModal(){if(!canCreateTournament())return;document.getElementById('create-modal-bg').classList.add('show');}
-function closeCreateModal(){document.getElementById('create-modal-bg').classList.remove('show');}
-async function createTournament(){const body={token,name:document.getElementById('create-name').value.trim(),duration_minutes:Number(document.getElementById('create-duration').value||60),move_time_seconds:Number(document.getElementById('create-move-time').value||30),password:document.getElementById('create-password').value.trim(),reward_1:Number(document.getElementById('create-reward-1').value||0),reward_2:Number(document.getElementById('create-reward-2').value||0),reward_3:Number(document.getElementById('create-reward-3').value||0)};const res=await fetch('/api/tournaments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await res.json();if(!res.ok)return alert(data.error||'Création impossible.');closeCreateModal();selectedTournamentId=Number(data.tournament?.id||selectedTournamentId);await loadTournaments(selectedTournamentId);}
-async function joinTournament(id,fromDetail=false){const passwordInput=fromDetail?document.getElementById('detail-join-password'):document.getElementById(`join-password-${id}`);const password=passwordInput?.value?.trim?.()||'';const res=await fetch(`/api/tournaments/${id}/join`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,password})});const data=await res.json();if(!res.ok)return alert(data.error||'Inscription impossible.');selectedTournamentId=Number(id);await loadTournaments(selectedTournamentId);await loadSiteStats();}
-function ensureSocket(){if(socket||!me?.id||!token)return;socket=io({transports:['polling']});socket.on('connect',()=>socket.emit('identify',{playerId:me.id,token}));socket.on('tournament_queue_joined',({tournamentId,position})=>{queueState={tournamentId:Number(tournamentId),position:Number(position||0)};renderQueueBanner();renderTournaments();renderSelectedTournament();});socket.on('tournament_queue_left',()=>{queueState={tournamentId:null,position:0};renderQueueBanner();renderTournaments();renderSelectedTournament();});socket.on('match_found',(data)=>{sessionStorage.setItem('match',JSON.stringify(data));location.href=`/game/${data.gameId}`;});socket.on('error',({message}={})=>{if(message)alert(message);});}
-function renderQueueBanner(){const banner=document.getElementById('queue-banner');const title=document.getElementById('queue-banner-title');const sub=document.getElementById('queue-banner-sub');if(!queueState.tournamentId){banner.classList.remove('show');return;}const t=tournaments.find(item=>Number(item.id)===Number(queueState.tournamentId));title.textContent=`${t?t.name:'Tournoi'} · Position #${queueState.position||'?'}`;sub.textContent=t?`File dédiée active · timer ${t.move_time_seconds}s par coup · ELO compté aussi`:'En attente d’un adversaire tournoi...';banner.classList.add('show');}
-function joinTournamentQueue(id){if(!token||!me?.id)return location.href='/';ensureSocket();if(!socket)return;queueState={tournamentId:Number(id),position:queueState.position||1};renderQueueBanner();socket.emit('tournament_queue_join',{tournamentId:Number(id)});}
-function leaveTournamentQueue(){if(!socket||!queueState.tournamentId)return;socket.emit('tournament_queue_leave',{tournamentId:queueState.tournamentId});}
-document.getElementById('create-modal-bg').addEventListener('click',e=>{if(e.target.id==='create-modal-bg')closeCreateModal();});
-(async function init(){await loadProfile();await loadTournaments(selectedTournamentId);await loadSiteStats();renderQueueBanner();setInterval(async()=>{await loadTournaments(selectedTournamentId);await loadSiteStats();},15000);})();
+function formatDuration(ms){
+  const safe = Math.max(0, Number(ms || 0));
+  const h = Math.floor(safe / 3600000);
+  const m = Math.floor((safe % 3600000) / 60000);
+  const s = Math.floor((safe % 60000) / 1000);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function getTournamentStatusLabel(status){
+  if (status === 'active') return 'Actif';
+  if (status === 'pending') return 'Bientot';
+  if (status === 'paused') return 'En pause';
+  return 'Termine';
+}
+function getTournamentStatusClass(status){
+  if (status === 'active') return 'active';
+  if (status === 'pending') return 'pending';
+  if (status === 'paused') return 'paused';
+  return 'finished';
+}
+function getTournamentTimingLabel(t){
+  if (t.status === 'pending') return `Commence dans ${formatDuration(t.starts_in_ms)}`;
+  if (t.status === 'paused') return 'Tournoi mis en pause par le staff';
+  if (t.status === 'finished') return 'Tournoi termine';
+  return `Se termine dans ${formatDuration(Number(t.ends_at || 0) - Date.now())}`;
+}
+function canCreateTournament(){return !!(myProfile && (Number(myProfile.is_perso||0)===1 || String(myProfile.role||'')==='admin'));}
+function getSelectedTournament(){return tournaments.find(t => String(t.public_id || t.id) === String(selectedTournamentId) || Number(t.id) === Number(selectedTournamentId)) || null;}
+
+async function loadProfile(){
+  if(!me?.id || !token) return;
+  const res = await fetch(`/api/players/${me.id}?token=${encodeURIComponent(token)}`);
+  if(res.ok) myProfile = await res.json();
+  const btn = document.getElementById('open-create-btn');
+  btn.disabled = !canCreateTournament();
+  btn.title = canCreateTournament() ? '' : 'Reserve aux Perso';
+}
+
+async function loadSiteStats(){
+  const res = await fetch('/api/site-stats',{cache:'no-store'});
+  if(!res.ok) return;
+  const data = await res.json();
+  publicTournament = data.publicTournament || null;
+  upcomingTournament = data.upcomingPublicTournament || null;
+  renderPublicTournamentHero();
+}
+
+async function loadTournaments(selectRef = null){
+  const res = await fetch(`/api/tournaments?token=${encodeURIComponent(token)}`);
+  const data = await res.json();
+  tournaments = Array.isArray(data.tournaments) ? data.tournaments : [];
+  if (selectRef) selectedTournamentId = String(selectRef);
+  if (!getSelectedTournament() && tournaments.length) selectedTournamentId = String(tournaments[0].public_id || tournaments[0].id);
+  renderTournaments();
+  await renderSelectedTournament();
+}
+
+async function loadTournamentDetail(ref){
+  const res = await fetch(`/api/tournaments/${encodeURIComponent(ref)}?token=${encodeURIComponent(token)}`);
+  if(!res.ok) return null;
+  return res.json();
+}
+
+function updateHero(){
+  document.getElementById('hero-active').textContent = tournaments.filter(t => t.status === 'active').length;
+  document.getElementById('hero-pending').textContent = tournaments.filter(t => t.status === 'pending').length;
+  document.getElementById('hero-joined').textContent = tournaments.filter(t => t.joined).length;
+  document.getElementById('hero-score').textContent = tournaments.reduce((sum, t) => sum + Number(t.my_score || 0), 0);
+}
+
+function renderPublicTournamentHero(){
+  const sub = document.getElementById('hero-live-sub');
+  const dot = document.getElementById('hero-live-dot');
+  const openBtn = document.getElementById('hero-open-public');
+  const joinBtn = document.getElementById('hero-join-public');
+  const target = publicTournament || upcomingTournament;
+  if(!target){
+    sub.textContent = 'Aucun tournoi public disponible pour le moment.';
+    dot.style.display = 'none';
+    openBtn.disabled = true;
+    joinBtn.disabled = true;
+    return;
+  }
+  dot.style.display = target.status === 'active' ? 'block' : 'none';
+  sub.textContent = `${target.name} · ${target.participants} inscrits · ${getTournamentTimingLabel(target)}`;
+  openBtn.disabled = false;
+  joinBtn.disabled = !token || target.joined || !['active','pending'].includes(String(target.status));
+}
+
+function openPublicTournament(){
+  const target = publicTournament || upcomingTournament;
+  if(!target) return;
+  selectedTournamentId = String(target.public_id || target.id);
+  if(history.replaceState) history.replaceState(null,'',`/tournoi/${encodeURIComponent(target.public_id || target.id)}`);
+  renderTournaments();
+  renderSelectedTournament();
+}
+
+async function joinPublicTournament(){
+  const target = publicTournament || upcomingTournament;
+  if(!target) return;
+  await joinTournament(target.public_id || target.id);
+}
+
+function renderTournaments(){
+  updateHero();
+  const list = document.getElementById('tournament-list');
+  if(!tournaments.length){
+    list.innerHTML = '<div class="empty">Aucun tournoi pour le moment.</div>';
+    return;
+  }
+  list.innerHTML = tournaments.map(t => {
+    const ref = String(t.public_id || t.id);
+    const selected = String(ref) === String(selectedTournamentId);
+    const queuedHere = Number(queueState.tournamentId || 0) === Number(t.id);
+    const canJoin = !!token && !t.joined && ['active','pending','paused'].includes(String(t.status));
+    const canQueue = !!(t.joined && t.status === 'active');
+    const disabledQueueText = t.status === 'pending' ? 'Le tournoi commence bientot' : t.status === 'paused' ? 'Tournoi en pause' : '';
+    return `
+      <div class="card ${selected ? 'active' : ''}" onclick="selectTournament('${escapeHtml(ref)}')">
+        <div class="card-top">
+          <div>
+            <div class="card-title">${escapeHtml(t.name)}</div>
+            <div class="tiny">${escapeHtml(ref)} · Par ${escapeHtml(t.creator_pseudo || 'Inconnu')} · ${t.mode === 'auto' ? 'Automatique' : 'Manuel'}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            ${queuedHere ? '<div class="badge queue">En file</div>' : ''}
+            ${t.has_password ? '<div class="badge private">Prive</div>' : ''}
+            <div class="badge ${getTournamentStatusClass(t.status)}">${getTournamentStatusLabel(t.status)}</div>
+          </div>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-box"><strong>${t.participants}</strong><span>Participants</span></div>
+          <div class="meta-box"><strong>${t.duration_minutes}m</strong><span>Duree</span></div>
+          <div class="meta-box"><strong>${t.move_time_seconds}s</strong><span>Par coup</span></div>
+          <div class="meta-box"><strong>${t.my_score || 0}</strong><span>Mon score</span></div>
+        </div>
+        <div class="tiny">${getTournamentTimingLabel(t)}${t.joined ? ' · Tu es inscrit' : ''}${t.my_streak ? ` · Streak ${t.my_streak}` : ''}</div>
+        <div class="join-row">
+          <input class="password-field" id="join-password-${escapeHtml(ref)}" placeholder="${t.has_password ? 'Mot de passe' : 'Aucun mot de passe'}" ${t.has_password ? '' : 'disabled'} onclick="event.stopPropagation()">
+          <button class="btn-primary" type="button" ${canJoin ? '' : 'disabled'} onclick="event.stopPropagation();joinTournament('${escapeHtml(ref)}')">${t.joined ? 'Inscrit' : 'Rejoindre'}</button>
+          <button class="btn-soft" type="button" ${canQueue ? '' : 'disabled'} title="${escapeHtml(disabledQueueText)}" onclick="event.stopPropagation();${queuedHere ? 'leaveTournamentQueue()' : `joinTournamentQueue(${Number(t.id)})`}">${queuedHere ? 'Quitter la file' : 'Entrer en file'}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function renderSelectedTournament(){
+  const selected = getSelectedTournament();
+  const detail = document.getElementById('tournament-detail');
+  if(!selected){
+    detail.className = 'detail-empty';
+    detail.innerHTML = 'Choisis un tournoi dans la liste pour voir son classement et rejoindre sa file.';
+    return;
+  }
+  const ref = selected.public_id || selected.id;
+  const data = await loadTournamentDetail(ref);
+  const tournament = data?.tournament || selected;
+  const standings = Array.isArray(data?.standings) ? data.standings : [];
+  const queuedHere = Number(queueState.tournamentId || 0) === Number(tournament.id);
+  const canQueue = !!(tournament.joined && tournament.status === 'active');
+  detail.className = 'detail-card';
+  detail.innerHTML = `
+    <div class="detail-head">
+      <div>
+        <div class="detail-name">${escapeHtml(tournament.name)}</div>
+        <div class="tiny">${escapeHtml(String(tournament.public_id || tournament.id))} · ${tournament.has_password ? 'Prive' : 'Public'} · ${tournament.mode === 'auto' ? 'Arene auto' : 'Manuel'}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${queuedHere ? `<div class="badge queue">Position #${queueState.position || '?'}</div>` : ''}
+        <div class="badge ${getTournamentStatusClass(tournament.status)}">${getTournamentStatusLabel(tournament.status)}</div>
+      </div>
+    </div>
+    <div class="meta-grid">
+      <div class="meta-box"><strong>${tournament.participants}</strong><span>Inscrits</span></div>
+      <div class="meta-box"><strong>${tournament.move_time_seconds}s</strong><span>Temps par coup</span></div>
+      <div class="meta-box"><strong>${tournament.my_score || 0}</strong><span>Mon score</span></div>
+      <div class="meta-box"><strong>${tournament.my_streak || 0}</strong><span>Mon streak</span></div>
+    </div>
+    <div class="reward-grid">
+      <div class="reward"><strong>${tournament.reward_1}</strong><span>Top 1</span></div>
+      <div class="reward"><strong>${tournament.reward_2}</strong><span>Top 2</span></div>
+      <div class="reward"><strong>${tournament.reward_3}</strong><span>Top 3</span></div>
+    </div>
+    <div class="tiny">Debut : ${formatDate(tournament.starts_at)} · Fin : ${formatDate(tournament.ends_at)} · ${getTournamentTimingLabel(tournament)}</div>
+    <div class="join-row">
+      <input class="password-field" id="detail-join-password" placeholder="${tournament.has_password ? 'Mot de passe requis' : 'Aucun mot de passe'}" ${tournament.has_password ? '' : 'disabled'}>
+      <button class="btn-primary" type="button" ${(!token || tournament.joined || !['active','pending','paused'].includes(String(tournament.status))) ? 'disabled' : ''} onclick="joinTournament('${escapeHtml(String(ref))}', true)">${tournament.joined ? 'Inscrit' : 'Rejoindre ce tournoi'}</button>
+      <button class="btn-soft" type="button" ${canQueue ? '' : 'disabled'} onclick="${queuedHere ? 'leaveTournamentQueue()' : `joinTournamentQueue(${Number(tournament.id)})`}">${queuedHere ? 'Quitter la file' : 'Entrer en file'}</button>
+    </div>
+    <div>
+      <div class="section-sub" style="margin-bottom:10px">Classement en direct</div>
+      <div class="standings">
+        ${standings.length ? standings.slice(0, 12).map((row, index) => `
+          <div class="standing">
+            <div class="standing-left">
+              <div class="standing-rank">#${index + 1}</div>
+              ${row.avatar ? `<img class="avatar" src="${escapeHtml(row.avatar)}" alt="">` : `<div class="standing-rank" style="width:34px;height:34px">${escapeHtml((row.pseudo || '?').slice(0, 1).toUpperCase())}</div>`}
+              <div>
+                <div class="standing-name">${escapeHtml(row.pseudo)}</div>
+                <div class="standing-sub">${row.wins} wins · ${row.losses} defaites · ${row.draws} nuls · streak ${row.streak}</div>
+              </div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900">${row.score}</div>
+              <div class="standing-sub">${index === 0 ? tournament.reward_1 : index === 1 ? tournament.reward_2 : index === 2 ? tournament.reward_3 : 0} coins</div>
+            </div>
+          </div>
+        `).join('') : '<div class="detail-empty">Aucun match comptabilise pour le moment.</div>'}
+      </div>
+    </div>`;
+  const cardPw = document.getElementById(`join-password-${String(ref)}`);
+  const detailPw = document.getElementById('detail-join-password');
+  if (cardPw && detailPw) detailPw.value = cardPw.value;
+}
+
+function selectTournament(ref){
+  selectedTournamentId = String(ref);
+  if(history.replaceState) history.replaceState(null,'',`/tournoi/${encodeURIComponent(ref)}`);
+  renderTournaments();
+  renderSelectedTournament();
+}
+
+function openCreateModal(){ if(canCreateTournament()) document.getElementById('create-modal-bg').classList.add('show'); }
+function closeCreateModal(){ document.getElementById('create-modal-bg').classList.remove('show'); }
+
+async function createTournament(){
+  const body = {
+    token,
+    name: document.getElementById('create-name').value.trim(),
+    duration_minutes: Number(document.getElementById('create-duration').value || 60),
+    move_time_seconds: Number(document.getElementById('create-move-time').value || 30),
+    password: document.getElementById('create-password').value.trim(),
+    reward_1: Number(document.getElementById('create-reward-1').value || 0),
+    reward_2: Number(document.getElementById('create-reward-2').value || 0),
+    reward_3: Number(document.getElementById('create-reward-3').value || 0),
+  };
+  const res = await fetch('/api/tournaments', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const data = await res.json();
+  if(!res.ok) return alert(data.error || 'Creation impossible.');
+  closeCreateModal();
+  await loadTournaments(data.tournament?.public_id || data.tournament?.id);
+}
+
+async function joinTournament(ref, fromDetail = false){
+  const pwInput = fromDetail ? document.getElementById('detail-join-password') : document.getElementById(`join-password-${String(ref)}`);
+  const password = pwInput?.value?.trim?.() || '';
+  const res = await fetch(`/api/tournaments/${encodeURIComponent(ref)}/join`, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ token, password })
+  });
+  const data = await res.json();
+  if(!res.ok) return alert(data.error || 'Inscription impossible.');
+  await loadTournaments(data.tournament?.public_id || data.tournament?.id || ref);
+  await loadSiteStats();
+}
+
+function ensureSocket(){
+  if(socket || !me?.id || !token) return;
+  socket = io({ transports:['polling'] });
+  socket.on('connect', () => socket.emit('identify', { playerId: me.id, token }));
+  socket.on('tournament_queue_joined', ({ tournamentId, position }) => {
+    queueState = { tournamentId: Number(tournamentId), position: Number(position || 0) };
+    renderQueueBanner();
+    renderTournaments();
+    renderSelectedTournament();
+  });
+  socket.on('tournament_queue_left', () => {
+    queueState = { tournamentId: null, position: 0 };
+    renderQueueBanner();
+    renderTournaments();
+    renderSelectedTournament();
+  });
+  socket.on('match_found', (data) => {
+    sessionStorage.setItem('match', JSON.stringify(data));
+    location.href = `/game/${data.gameId}`;
+  });
+  socket.on('error', ({ message } = {}) => { if(message) alert(message); });
+}
+
+function renderQueueBanner(){
+  const banner = document.getElementById('queue-banner');
+  const title = document.getElementById('queue-banner-title');
+  const sub = document.getElementById('queue-banner-sub');
+  if(!queueState.tournamentId){
+    banner.classList.remove('show');
+    return;
+  }
+  const t = tournaments.find(item => Number(item.id) === Number(queueState.tournamentId));
+  title.textContent = `${t ? t.name : 'Tournoi'} · Position #${queueState.position || '?'}`;
+  sub.textContent = t ? `Timer ${t.move_time_seconds}s par coup · ELO compte aussi` : 'En attente d un adversaire tournoi...';
+  banner.classList.add('show');
+}
+
+function joinTournamentQueue(id){
+  if(!token || !me?.id) return location.href = '/';
+  ensureSocket();
+  if(!socket) return;
+  socket.emit('tournament_queue_join', { tournamentId: Number(id) });
+}
+
+function leaveTournamentQueue(){
+  if(!socket || !queueState.tournamentId) return;
+  socket.emit('tournament_queue_leave', { tournamentId: queueState.tournamentId });
+}
+
+document.getElementById('create-modal-bg').addEventListener('click', (e) => {
+  if(e.target.id === 'create-modal-bg') closeCreateModal();
+});
+
+(async function init(){
+  await loadProfile();
+  await loadTournaments(selectedTournamentId);
+  await loadSiteStats();
+  renderQueueBanner();
+  setInterval(async () => {
+    await loadTournaments(selectedTournamentId);
+    await loadSiteStats();
+  }, 15000);
+})();
 </script>
 </body>
 </html>

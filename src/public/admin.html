@@ -836,22 +836,30 @@ async function loadAdminTournaments() {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucun tournoi</td></tr>';
     return;
   }
+  const statusMeta = {
+    active: { label: 'Actif', bg: 'rgba(48,209,88,0.12)', border: 'rgba(48,209,88,0.28)', color: 'var(--green)' },
+    pending: { label: 'Bientot', bg: 'rgba(255,214,10,0.10)', border: 'rgba(255,214,10,0.22)', color: 'var(--yellow)' },
+    paused: { label: 'Pause', bg: 'rgba(255,159,10,0.10)', border: 'rgba(255,159,10,0.24)', color: '#ff9f0a' },
+    finished: { label: 'Termine', bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.12)', color: 'var(--muted)' },
+  };
   tbody.innerHTML = rows.map(t => `
     <tr>
-      <td style="color:var(--muted)">#${t.id}</td>
+      <td style="color:var(--muted)">${t.public_id || ('#' + t.id)}</td>
       <td>
         <div style="font-weight:700">${t.name}</div>
         <div style="font-size:11px;color:var(--muted)">Par ${t.creator_pseudo || 'Inconnu'}${t.has_password ? ' · Privé' : ' · Public'}</div>
       </td>
-      <td><span class="badge" style="background:${t.status === 'active' ? 'rgba(48,209,88,0.12)' : 'rgba(255,255,255,0.08)'};border:1px solid ${t.status === 'active' ? 'rgba(48,209,88,0.28)' : 'rgba(255,255,255,0.12)'};color:${t.status === 'active' ? 'var(--green)' : 'var(--muted)'}">${t.status === 'active' ? 'Actif' : 'Terminé'}</span></td>
+      <td><span class="badge" style="background:${(statusMeta[t.status] || statusMeta.finished).bg};border:1px solid ${(statusMeta[t.status] || statusMeta.finished).border};color:${(statusMeta[t.status] || statusMeta.finished).color}">${(statusMeta[t.status] || statusMeta.finished).label}</span></td>
       <td><strong>${Number(t.participants || 0)}</strong></td>
       <td><strong style="color:#85EBFF">${Number(t.queue || 0)}</strong></td>
       <td>${Number(t.move_time_seconds || 0)}s</td>
-      <td style="font-size:11px;color:var(--muted)">${t.ends_at ? new Date(t.ends_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-'}</td>
+      <td style="font-size:11px;color:var(--muted)">${t.status === 'pending' ? `Commence ${new Date(t.starts_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}` : t.ends_at ? new Date(t.ends_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-'}</td>
       <td>
         <div class="actions">
+          ${myRole === 'admin' && t.status === 'active' ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="pauseTournament('${t.public_id || t.id}')">Pause</button>` : ''}
+          ${myRole === 'admin' && t.status === 'paused' ? `<button class="btn-sm" style="background:rgba(48,209,88,0.15);color:var(--green);border:1px solid rgba(48,209,88,0.3)" onclick="resumeTournament('${t.public_id || t.id}')">Reprendre</button>` : ''}
           ${myRole === 'admin' && t.status === 'active' ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="finishTournament(${t.id})">Forcer fin</button>` : ''}
-          ${myRole === 'admin' ? `<button class="btn-sm" style="background:rgba(255,45,85,0.12);color:var(--red);border:1px solid rgba(255,45,85,0.26)" onclick="deleteTournament(${t.id})">Supprimer</button>` : ''} 
+          ${myRole === 'admin' ? `<button class="btn-sm" style="background:rgba(255,45,85,0.12);color:var(--red);border:1px solid rgba(255,45,85,0.26)" onclick="deleteTournament('${t.public_id || t.id}')">Supprimer</button>` : ''} 
         </div>
       </td>
     </tr>
@@ -861,6 +869,18 @@ async function loadAdminTournaments() {
 async function finishTournament(id) {
   if (!confirm(`Clôturer immédiatement le tournoi #${id} ?`)) return;
   const data = await api('POST', `/api/admin/tournaments/${id}/finish`, {});
+  if (data.ok) loadAdminTournaments();
+  else alert(data.error || 'Erreur tournoi.');
+}
+
+async function pauseTournament(id) {
+  const data = await api('POST', `/api/admin/tournaments/${id}/pause`, {});
+  if (data.ok) loadAdminTournaments();
+  else alert(data.error || 'Erreur tournoi.');
+}
+
+async function resumeTournament(id) {
+  const data = await api('POST', `/api/admin/tournaments/${id}/resume`, {});
   if (data.ok) loadAdminTournaments();
   else alert(data.error || 'Erreur tournoi.');
 }
