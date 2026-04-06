@@ -24,9 +24,11 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .hero-sub{font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
 .board-demo{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;background:var(--grid);border-radius:14px;padding:10px;border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,.5)}
 .bd-cell{aspect-ratio:1;border-radius:50%;background:var(--cell);box-shadow:inset 0 3px 10px rgba(0,0,0,.7),inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);position:relative;overflow:hidden}
-.bd-cell .tok{position:absolute;inset:3px;border-radius:50%;transform:scale(0)}
+.bd-cell .tok{position:absolute;inset:3px;border-radius:50%;transform:scale(0);transition:transform .32s cubic-bezier(.22,1,.36,1),filter .28s ease,box-shadow .28s ease}
 .bd-cell.r .tok{background:radial-gradient(circle at 35% 30%, #ff6b85, var(--red));box-shadow:0 0 12px rgba(255,45,85,.4);transform:scale(1)}
 .bd-cell.y .tok{background:radial-gradient(circle at 35% 30%, #ffe566, var(--yellow));box-shadow:0 0 12px rgba(255,214,10,.4);transform:scale(1)}
+.bd-cell.win .tok{animation:rule-win-pulse .75s ease-in-out infinite alternate;filter:brightness(1.18)}
+@keyframes rule-win-pulse{from{transform:scale(1)}to{transform:scale(1.1)}}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
 .card-header{display:flex;align-items:center;gap:12px}
 .card-icon{font-size:24px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -199,23 +201,121 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   </div>
 </div>
 <script>
-const GRID = [
-  [0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0],
-  [0,0,0,'y',0,0,0],
-  [0,0,'r','y',0,0,0],
-  ['r','r','r','y','y',0,0],
-];
+const DEMO_ROWS = 6;
+const DEMO_COLS = 7;
 const demo = document.getElementById('board-demo');
-GRID.forEach(row => row.forEach(cell => {
-  const d = document.createElement('div');
-  d.className = 'bd-cell' + (cell ? ' ' + cell : '');
-  const t = document.createElement('div');
-  t.className = 'tok';
-  d.appendChild(t);
-  demo.appendChild(d);
-}));
+const WIN_SCENARIOS = [
+  {
+    name: 'horizontal',
+    cells: [
+      { r: 5, c: 1, p: 'y' }, { r: 4, c: 1, p: 'r' },
+      { r: 5, c: 2, p: 'y' }, { r: 4, c: 2, p: 'r' },
+      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'r' },
+      { r: 5, c: 4, p: 'y' }, { r: 4, c: 4, p: 'r' },
+    ],
+    win: [[4,1],[4,2],[4,3],[4,4]],
+  },
+  {
+    name: 'vertical',
+    cells: [
+      { r: 5, c: 3, p: 'y' }, { r: 5, c: 2, p: 'r' },
+      { r: 4, c: 3, p: 'y' }, { r: 5, c: 4, p: 'r' },
+      { r: 3, c: 3, p: 'y' }, { r: 5, c: 1, p: 'r' },
+      { r: 2, c: 3, p: 'y' },
+    ],
+    win: [[5,3],[4,3],[3,3],[2,3]],
+  },
+  {
+    name: 'diag-left',
+    cells: [
+      { r: 5, c: 0, p: 'r' },
+      { r: 5, c: 1, p: 'y' }, { r: 4, c: 1, p: 'r' },
+      { r: 5, c: 2, p: 'y' }, { r: 4, c: 2, p: 'y' }, { r: 3, c: 2, p: 'r' },
+      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'y' }, { r: 3, c: 3, p: 'y' }, { r: 2, c: 3, p: 'r' },
+    ],
+    win: [[5,0],[4,1],[3,2],[2,3]],
+  },
+  {
+    name: 'diag-right',
+    cells: [
+      { r: 5, c: 6, p: 'r' },
+      { r: 5, c: 5, p: 'y' }, { r: 4, c: 5, p: 'r' },
+      { r: 5, c: 4, p: 'y' }, { r: 4, c: 4, p: 'y' }, { r: 3, c: 4, p: 'r' },
+      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'y' }, { r: 3, c: 3, p: 'y' }, { r: 2, c: 3, p: 'r' },
+    ],
+    win: [[5,6],[4,5],[3,4],[2,3]],
+  }
+];
+
+let demoCycleTimeout = null;
+
+function buildDemoBoard() {
+  demo.innerHTML = '';
+  for (let r = 0; r < DEMO_ROWS; r += 1) {
+    for (let c = 0; c < DEMO_COLS; c += 1) {
+      const cell = document.createElement('div');
+      cell.className = 'bd-cell';
+      cell.id = `rules-cell-${r}-${c}`;
+      const tok = document.createElement('div');
+      tok.className = 'tok';
+      cell.appendChild(tok);
+      demo.appendChild(cell);
+    }
+  }
+}
+
+function clearDemoBoard() {
+  for (let r = 0; r < DEMO_ROWS; r += 1) {
+    for (let c = 0; c < DEMO_COLS; c += 1) {
+      const cell = document.getElementById(`rules-cell-${r}-${c}`);
+      if (cell) cell.className = 'bd-cell';
+    }
+  }
+}
+
+function paintCell(r, c, player) {
+  const cell = document.getElementById(`rules-cell-${r}-${c}`);
+  if (!cell) return;
+  cell.classList.remove('r', 'y', 'win');
+  cell.classList.add(player);
+}
+
+function highlightWin(line) {
+  line.forEach(([r, c]) => {
+    const cell = document.getElementById(`rules-cell-${r}-${c}`);
+    if (cell) cell.classList.add('win');
+  });
+}
+
+function wait(ms) {
+  return new Promise(resolve => {
+    demoCycleTimeout = setTimeout(resolve, ms);
+  });
+}
+
+async function playScenario(scenario) {
+  clearDemoBoard();
+  await wait(220);
+  for (const move of scenario.cells) {
+    paintCell(move.r, move.c, move.p);
+    await wait(180);
+  }
+  highlightWin(scenario.win);
+  await wait(3000);
+}
+
+async function runDemoLoop() {
+  buildDemoBoard();
+  while (true) {
+    const ordered = [...WIN_SCENARIOS].sort(() => Math.random() - 0.5);
+    for (const scenario of ordered) {
+      await playScenario(scenario);
+      await wait(280);
+    }
+  }
+}
+
+runDemoLoop();
 </script>
 <script src="/presence.js"></script>
 </body>
