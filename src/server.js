@@ -485,6 +485,9 @@ app.get('/api/admin/players', (req, res) => {
     ...p,
     online: onlineSockets.has(p.id) && onlineSockets.get(p.id).size > 0,
     discord_linked: !!(p.discord_id),
+    shop_inventory: Object.fromEntries(
+      shopItemQ.getAllForPlayer.all(p.id).map(row => [row.item_key, Number(row.quantity || 0)])
+    ),
   }));
   res.json(enriched);
 });
@@ -507,6 +510,37 @@ app.patch('/api/admin/players/:id/coins', (req, res) => {
     ]);
   } catch(e) {}
   res.json({ ok: true, coins: nextCoins, added: delta });
+});
+
+app.patch('/api/admin/players/:id/shop-item', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  const itemKey = String(req.body?.itemKey || '').trim();
+  const quantity = Number(req.body?.quantity);
+  const item = SHOP_ITEMS[itemKey];
+
+  if (!item || !item.boostType) {
+    return res.status(400).json({ error: 'Booster invalide.' });
+  }
+  if (!Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 999) {
+    return res.status(400).json({ error: 'Quantite invalide.' });
+  }
+
+  shopItemQ.addQty.run({ player_id: id, item_key: itemKey, quantity });
+  const nextQty = Number(shopItemQ.getOne.get(id, itemKey)?.quantity || 0);
+
+  try {
+    WH.wlogAdminAction('Boosters ajoutes', target.pseudo, id, [
+      ['Booster', item.label, true],
+      ['Ajout', String(quantity), true],
+      ['Nouveau total', String(nextQty), true],
+    ]);
+  } catch (e) {}
+
+  res.json({ ok: true, itemKey, quantity, total: nextQty });
 });
 
 // Changer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle
@@ -774,6 +808,11 @@ const shopItemQ = {
     INSERT INTO player_shop_items (player_id, item_key, quantity)
     VALUES (?, ?, 1)
     ON CONFLICT(player_id, item_key) DO UPDATE SET quantity = quantity + 1
+  `),
+  addQty: db.prepare(`
+    INSERT INTO player_shop_items (player_id, item_key, quantity)
+    VALUES (@player_id, @item_key, @quantity)
+    ON CONFLICT(player_id, item_key) DO UPDATE SET quantity = quantity + @quantity
   `),
 };
 
@@ -1520,6 +1559,7 @@ app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/bo
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
+app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
 app.get('/api/decorations', (_, res) => {
   res.json({ decorations: getAvatarDecorationPaths() });
 });

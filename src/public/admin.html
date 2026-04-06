@@ -344,6 +344,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 let adminToken = sessionStorage.getItem('adminToken');
 let myRole     = sessionStorage.getItem('adminRole') || 'admin';
 let allPlayers = [];
+const ADMIN_SHOP_BOOSTERS = {
+  elo_mini: 'Mini Boost ELO',
+  elo_classic: 'Classic Boost ELO',
+  elo_max: 'Max Boost ELO',
+  elo_princess: 'Princess Boost ELO',
+  coin_boost: 'Coin Boost',
+  coin_boost_plus: 'Coin Boost +',
+};
 
 if (adminToken) showPanel();
 
@@ -579,6 +587,15 @@ function openModal(id) {
   const customRoleColor = /^#[0-9a-fA-F]{6}$/.test(String(player.custom_role_color || '')) ? player.custom_role_color : '#ff9f0a';
   const customRoleEmoji = String(player.custom_role_emoji || '').replace(/"/g, '&quot;');
   const currentCoins = Number(player.coins || 0);
+  const inventory = player.shop_inventory || {};
+  const boosterInventory = Object.entries(ADMIN_SHOP_BOOSTERS)
+    .map(([key, label]) => {
+      const qty = Number(inventory[key] || 0);
+      return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;color:${qty > 0 ? 'var(--text)' : 'var(--muted)'}">
+        <span>${label}</span>
+        <strong style="color:${key.startsWith('coin_') ? 'var(--orange)' : '#85EBFF'}">${qty}</strong>
+      </div>`;
+    }).join('');
   const canManageRoles = myRole === 'admin';
   const roleButtons = ['user','moderator','admin'].map(r => `
     <button class="btn-sm" style="flex:1;background:${r===role?'rgba(76,110,245,0.25)':'rgba(255,255,255,0.05)'};color:${r===role?'#8b9cf4':'var(--muted)'}" onclick="changeRole(${id},'${r}')">${r}</button>
@@ -651,6 +668,21 @@ function openModal(id) {
       </div>
 
       <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Boosters boutique</div>
+        <div style="display:grid;gap:6px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);margin-bottom:10px">
+          ${boosterInventory}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="give-shop-item" style="flex:1;min-width:180px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;">
+            ${Object.entries(ADMIN_SHOP_BOOSTERS).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+          </select>
+          <input type="number" id="give-shop-item-qty" value="1" min="1" max="999" style="width:82px;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <button class="btn-sm" style="background:rgba(76,110,245,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.3)" onclick="giveShopItem(${id})">Give</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Ajoute directement des boosters ELO ou Coins dans l'inventaire du joueur.</div>
+      </div>
+
+      <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Mute</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
           ${[1,6,24,72].map(h => `<button class="btn-sm" style="background:rgba(255,159,10,0.12);color:var(--orange)" onclick="mute(${id},${h})">${h}h</button>`).join('')}
@@ -714,6 +746,13 @@ async function giveCoins(id) {
   const delta = Number(document.getElementById('give-coins')?.value || 0);
   const data = await api('PATCH', `/api/admin/players/${id}/coins`, { delta });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur coins.');
+}
+
+async function giveShopItem(id) {
+  const itemKey = String(document.getElementById('give-shop-item')?.value || '').trim();
+  const quantity = Number(document.getElementById('give-shop-item-qty')?.value || 0);
+  const data = await api('PATCH', `/api/admin/players/${id}/shop-item`, { itemKey, quantity });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur booster.');
 }
 
 async function mute(id, hours) {
