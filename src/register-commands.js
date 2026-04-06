@@ -44,6 +44,6 @@ const rest = new REST({ version: '10' }).setToken(BOT_TOKEN);
     await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands });
     console.log('✅ Commandes enregistrées !');
   } catch (e) {
-    console.error('❌ Erreur:', e);
+    console.error('❌ Erreur :', e);
   }
 })();
