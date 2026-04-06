@@ -39,8 +39,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .card-players{display:flex;align-items:center;gap:8px}
 .card-player{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
 .card-player.p2{flex-direction:row-reverse}
+.avatar-wrap{position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .p-avatar{width:32px;height:32px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;border:1.5px solid;flex-shrink:0}
 .p-avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-decoration{position:absolute;inset:-18%;width:136%;height:136%;pointer-events:none;object-fit:contain;filter:drop-shadow(0 0 10px rgba(0,0,0,.35))}
 .p-info{min-width:0;flex:1}
 .p-pseudo{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .p-elo{font-size:10px;color:var(--muted)}
@@ -71,6 +73,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .spec-player.right .spec-player-info{text-align:right}
 .spec-avatar{width:54px;height:54px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;border:2px solid;flex-shrink:0}
 .spec-avatar img{width:100%;height:100%;object-fit:cover}
+.avatar-wrap.large .avatar-decoration{inset:-20%;width:140%;height:140%}
 .spec-player-info{min-width:0}
 .spec-pseudo{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .spec-elo{font-size:12px;color:var(--muted)}
@@ -247,39 +250,72 @@ function parseShape(raw) {
   return { shape: raw, emoji: null };
 }
 
-function applyTokenStyle(el, color, rawShape, large = false) {
-  const { shape, emoji } = parseShape(rawShape);
+function tokenFill(color, secondary) {
+  if (secondary) return `linear-gradient(135deg, ${color} 0%, ${secondary} 100%)`;
+  return `radial-gradient(circle at 35% 30%, ${color}cc, ${color})`;
+}
+
+function applyTokenStyle(el, player, large = false) {
+  const color = player?.color || '#ff2d55';
+  const secondary = player?.color_secondary || '';
+  const emojiImage = player?.token_emoji_image || '';
+  const { shape, emoji } = parseShape(player?.shape);
   el.style.background = '';
   el.style.clipPath = '';
   el.style.borderRadius = '';
   el.style.boxShadow = '';
   el.textContent = '';
+  el.innerHTML = '';
+  el.style.display = 'flex';
+  el.style.alignItems = 'center';
+  el.style.justifyContent = 'center';
   if (shape === 'emoji' && emoji) {
     el.style.borderRadius = '50%';
-    el.style.background = color + '22';
-    el.style.display = 'flex';
-    el.style.alignItems = 'center';
-    el.style.justifyContent = 'center';
+    el.style.background = secondary ? `linear-gradient(135deg, ${color}33 0%, ${secondary}33 100%)` : color + '22';
     el.style.fontSize = large ? '74%' : '65%';
     el.textContent = emoji;
+    return;
+  }
+  if (shape === 'emoji_image' && emojiImage) {
+    el.style.borderRadius = '50%';
+    el.style.background = secondary ? `linear-gradient(135deg, ${color}33 0%, ${secondary}33 100%)` : color + '18';
+    el.style.boxShadow = `inset 0 1px 4px rgba(255,255,255,0.06), 0 0 ${large ? 16 : 7}px ${color}44`;
+    const img = document.createElement('img');
+    img.src = emojiImage;
+    img.alt = '';
+    img.style.width = large ? '78%' : '74%';
+    img.style.height = large ? '78%' : '74%';
+    img.style.objectFit = 'contain';
+    img.style.filter = 'drop-shadow(0 0 8px rgba(0,0,0,.28))';
+    el.appendChild(img);
     return;
   }
   const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
   el.style.borderRadius = clip.borderRadius;
   if (clip.clipPath) el.style.clipPath = clip.clipPath;
-  el.style.background = `radial-gradient(circle at 35% 30%, ${color}cc, ${color})`;
+  el.style.background = tokenFill(color, secondary);
   el.style.boxShadow = `inset 0 1px 4px rgba(255,255,255,0.06), 0 0 ${large ? 16 : 7}px ${color}44`;
 }
 
 function mkAvatar(player, large = false) {
+  const wrap = document.createElement('div');
+  wrap.className = large ? 'avatar-wrap large' : 'avatar-wrap';
   const av = document.createElement('div');
   av.className = large ? 'spec-avatar' : 'p-avatar';
-  av.style.borderColor = player.color;
-  av.style.background = player.color + '1a';
-  av.style.color = player.color;
+  av.style.borderColor = player.color || '#ff2d55';
+  av.style.background = (player.color || '#ff2d55') + '1a';
+  av.style.color = player.color || '#ff2d55';
   if (player.avatar) av.innerHTML = `<img src="${player.avatar}" alt="">`;
   else av.textContent = (player.pseudo || '?')[0].toUpperCase();
-  return av;
+  wrap.appendChild(av);
+  if (player.avatar_decoration) {
+    const deco = document.createElement('img');
+    deco.className = 'avatar-decoration';
+    deco.alt = '';
+    deco.src = player.avatar_decoration;
+    wrap.appendChild(deco);
+  }
+  return wrap;
 }
 
 function getInitialGameId() {
@@ -448,8 +484,8 @@ function renderList(games) {
         const cell = document.createElement('div');
         cell.className = 'mini-cell';
         const val = game.grid?.[r]?.[c] ?? 0;
-        if (val === 1) applyTokenStyle(cell, p1.color, p1.shape);
-        if (val === 2) applyTokenStyle(cell, p2.color, p2.shape);
+        if (val === 1) applyTokenStyle(cell, p1);
+        if (val === 2) applyTokenStyle(cell, p2);
         board.appendChild(cell);
       }
     }
@@ -522,7 +558,7 @@ function renderSpec(game) {
         const token = document.createElement('div');
         token.className = 'live-token';
         const pl = val === 1 ? p1 : p2;
-        applyTokenStyle(token, pl.color, pl.shape, true);
+        applyTokenStyle(token, pl, true);
         cell.appendChild(token);
       }
       board.appendChild(cell);
@@ -537,10 +573,12 @@ function renderSpec(game) {
   `;
 
   const analysis = evaluatePosition(game);
+  const p1Precision = Math.max(0, Math.min(99, Number(analysis.p1Precision) || 0));
+  const p2Precision = Math.max(0, Math.min(99, Number(analysis.p2Precision) || 0));
   document.getElementById('eval-p1').style.width = `${analysis.p1Share}%`;
   document.getElementById('eval-p2').style.width = `${analysis.p2Share}%`;
-  document.getElementById('precision-p1').textContent = `${analysis.p1Precision}%`;
-  document.getElementById('precision-p2').textContent = `${analysis.p2Precision}%`;
+  document.getElementById('precision-p1').textContent = `${p1Precision}%`;
+  document.getElementById('precision-p2').textContent = `${p2Precision}%`;
   document.getElementById('threats-p1').textContent = String(analysis.threats1);
   document.getElementById('threats-p2').textContent = String(analysis.threats2);
   document.getElementById('analysis-note').textContent = analysis.note;

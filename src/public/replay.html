@@ -480,7 +480,7 @@ function renderShell() {
       <div class="progress-top">
         <span class="progress-label">Replay en cours</span>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Telecharger partie</button>
+          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Telecharger la partie</button>
           <span style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Vitesse</span>
           ${[1,2,4].map(s => `<button id="speed-btn-${s}" onclick="setSpeed(${s})" style="padding:2px 8px;border-radius:6px;border:1px solid ${s===1?'rgba(76,110,245,0.5)':'rgba(255,255,255,0.1)'};background:${s===1?'rgba(76,110,245,0.2)':'transparent'};color:${s===1?'#8b9cf4':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">x${s}</button>`).join('')}
           <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
@@ -513,7 +513,7 @@ function renderShell() {
       <div class="end-sub" id="end-sub"></div>
       <div class="end-btns">
         <button class="btn-action primary" onclick="restartReplay()">↺ Revoir</button>
-        <button class="btn-action ghost" onclick="downloadReplayHtml()">Telecharger partie</button>
+        <button class="btn-action ghost" onclick="downloadReplayHtml()">Telecharger la partie</button>
         <a class="btn-action ghost" href="/">Jouer</a>
       </div>
     </div>
@@ -532,7 +532,7 @@ function renderShell() {
       <div class="analyse-progress-text" id="analyse-progress-text">Coup 0 / 0</div>
     </div>
 
-    <!-- Panel rÃ©sultats -->
+    <!-- Panel resultats -->
     <div class="analyse-panel" id="analyse-panel"></div>
   `;
 
@@ -787,7 +787,7 @@ function scheduleNextMove() {
   const txt  = document.getElementById('think-text');
   const tmr  = document.getElementById('think-timer');
   if (dot) { dot.className = 'think-dot p' + player; }
-  if (txt) { txt.textContent = `${pseudo} rÃ©flÃ©chit...`; }
+      if (txt) { txt.textContent = `${pseudo} reflechit...`; }
 
   // Countdown display
   let elapsed = 0;
@@ -836,7 +836,7 @@ function finishReplay() {
   const txt = document.getElementById('think-text');
   const tmr = document.getElementById('think-timer');
   if (dot) dot.style.opacity = '0';
-  if (txt) txt.textContent   = 'Partie terminÃ©e';
+  if (txt) txt.textContent   = 'Partie terminee';
   if (tmr) tmr.textContent   = '';
 
   // Show end card
@@ -862,7 +862,7 @@ function finishReplay() {
 
   setTimeout(() => {
     document.getElementById('end-card').classList.add('show');
-    // N'afficher le bouton que si l'analyse n'a pas encore Ã©tÃ© faite
+    // N'afficher le bouton que si l'analyse n'a pas encore ete faite
     const btn = document.getElementById('analyse-btn');
     if (btn && analysisResults.length === 0) btn.style.display = 'flex';
   }, 600);
@@ -947,14 +947,14 @@ const CLS_LABELS = {
   best:       'âœ… Meilleur',
   excellent:  'ðŸ‘ Excellent',
   good:       'ðŸŸ¢ Bon',
-  forced:     'â¬œ ForcÃ©',
-  inaccuracy: 'ðŸŸ¡ ImprÃ©cision',
+  forced:     'Force',
+  inaccuracy: 'Imprecision',
   mistake:    'âš ï¸ Erreur',
   blunder:    'ðŸ’€ Gaffe',
 };
 const CLS_COUNTS_LABEL = {
   best:'Meilleurs', excellent:'Excellents', good:'Bons',
-  forced:'ForcÃ©s', inaccuracy:'ImprÃ©cisions', mistake:'Erreurs', blunder:'Gaffes',
+  forced:'Forces', inaccuracy:'Imprecisions', mistake:'Erreurs', blunder:'Gaffes',
 };
 
 // Couleur selon % de prÃ©cision
@@ -1005,9 +1005,9 @@ function startAnalysis() {
       if (moveIndex === 0) {
         // Premier coup : estimer basÃ© sur ~2.5s par coup
         const est = Math.round(2.5 * total);
-        timeStr = ` Â· ~${est > 60 ? Math.ceil(est/60) + ' min' : est + 's'} estimÃ©es`;
+        timeStr = ` · ~${est > 60 ? Math.ceil(est/60) + ' min' : est + 's'} estimees`;
       } else if (remaining > 0) {
-        timeStr = ` Â· ~${remaining > 60 ? Math.ceil(remaining/60) + ' min' : remaining + 's'} restantes`;
+        timeStr = ` · ~${remaining > 60 ? Math.ceil(remaining/60) + ' min' : remaining + 's'} restantes`;
       }
 
       document.getElementById('analyse-bar').style.width = pct + '%';
@@ -1096,7 +1096,7 @@ function renderAnalysis(results, accuracy) {
   function summaryGrid(player) {
     const summary = playerSummary(player);
     const worstText = summary.worstMove
-      ? `coup ${summary.worstMove.moveIndex + 1} Â· ${classLabels[summary.worstMove.classification] || summary.worstMove.classification}`
+      ? `coup ${summary.worstMove.moveIndex + 1} · ${classLabels[summary.worstMove.classification] || summary.worstMove.classification}`
       : 'aucune';
     return `
       <div class="summary-grid">
@@ -1247,7 +1247,7 @@ function renderAnalysis(results, accuracy) {
               <div class="am-metrics">
                 ${r.playedWinPct !== undefined ? `<span class="am-metric"><strong>${fmtPct(r.playedWinPct)}</strong> pour ${pseudo}</span>` : ''}
                 ${r.bestWinPct !== undefined ? `<span class="am-metric">meilleur coup: <strong>${fmtPct(r.bestWinPct)}</strong></span>` : ''}
-                ${r.swing !== undefined ? `<span class="am-metric" title="Perte de chances entre le meilleur coup et le coup jouÃ©">swing: <strong>-${fmtPct(r.swing)}</strong> de chances</span>` : ''}
+                ${r.swing !== undefined ? `<span class="am-metric" title="Perte de chances entre le meilleur coup et le coup joue">swing: <strong>-${fmtPct(r.swing)}</strong> de chances</span>` : ''}
                 <span class="am-metric">avantage: <strong style="color:${ownerColor(r.evalScore || 0)}">${ownerName(r.evalScore || 0)}</strong></span>
                 ${r.bestCol !== undefined && r.bestCol !== r.playedCol ? `<span class="am-metric">meilleur choix: <strong>col.${r.bestCol + 1}</strong></span>` : ''}
               </div>
@@ -1285,7 +1285,7 @@ function showEvalTooltip(rectEl, moveIdx, score, pseudo, color) {
   tip.style.display = 'block';
   tip.style.left    = xPx + 'px';
   tip.style.color   = color;
-  tip.textContent   = `${score}  Â·  coup ${moveIdx + 1}`;
+  tip.textContent   = `${score} · coup ${moveIdx + 1}`;
 }
 
 function hideEvalTooltip() {
@@ -1324,7 +1324,7 @@ function showEvalTooltip(rectEl, moveIdx) {
   tip.style.display = 'block';
   tip.style.left    = xPx + 'px';
   tip.style.color   = color;
-  tip.innerHTML = `<div style="font-weight:700;color:${color}">${pseudo}</div><div>coup ${moveIdx + 1} Â· ${chance}% de controle</div><div style="color:rgba(238,238,245,0.72)">lecture: ${cp}</div>`;
+  tip.innerHTML = `<div style="font-weight:700;color:${color}">${pseudo}</div><div>coup ${moveIdx + 1} · ${chance}% de controle</div><div style="color:rgba(238,238,245,0.72)">lecture: ${cp}</div>`;
 }
 
 // â”€â”€ Inspection du plateau depuis l'analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1353,7 +1353,7 @@ function jumpToMove(moveIdx) {
   const p    = result.player === 1 ? gameData.p1_pseudo : gameData.p2_pseudo;
   const cls  = { best:'Meilleur', excellent:'Excellent', good:'Bon',
                  forced:'Force', inaccuracy:'Imprecision', mistake:'Erreur', blunder:'Gaffe' };
-  if (txt) txt.textContent = `Coup ${moveIdx + 1} Â· ${p} Â· ${cls[result.classification] || ''}`;
+  if (txt) txt.textContent = `Coup ${moveIdx + 1} · ${p} · ${cls[result.classification] || ''}`;
   if (bar) bar.classList.add('show');
 
   // Surligner le coup jouÃ©

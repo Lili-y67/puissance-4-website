@@ -253,6 +253,26 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 
+  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Alerte serveur</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Active ce panneau juste avant un redeploiement ou un reset Railway pour prevenir les joueurs.</div>
+      </div>
+      <div id="system-status-preview" style="font-size:13px;color:var(--muted);"></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Message affiche</div>
+        <input id="system-status-message" class="search-input" style="margin:0" maxlength="180" placeholder="Attention : redemarrage serveur en cours..." />
+      </div>
+      <div id="system-status-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-sm" style="background:rgba(255,159,10,0.16);color:var(--orange);border:1px solid rgba(255,159,10,0.3);" onclick="setSystemStatus(true)">Activer</button>
+        <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setSystemStatus(false)">Retirer</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Onglets Joueurs / Parties -->
   <div style="display:flex;gap:6px;margin-bottom:14px;">
     <button id="tab-players-btn" onclick="switchAdminTab('players')"
@@ -374,8 +394,11 @@ async function showPanel() {
   if (globalActions) globalActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const coinActions = document.getElementById('coin-boost-actions');
   if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
+  const systemActions = document.getElementById('system-status-actions');
+  if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   await loadBoostStatus();
   await loadCoinBoostStatus();
+  await loadSystemStatus();
   await loadVipBoosts();
   await loadPlayers();
 }
@@ -980,6 +1003,38 @@ async function loadCoinBoostStatus() {
       el.innerHTML += coinLine;
     }
   } catch(e) {}
+}
+
+async function loadSystemStatus() {
+  try {
+    const data = await fetch('/api/system-status', { cache: 'no-store' }).then(r => r.json());
+    const preview = document.getElementById('system-status-preview');
+    const input = document.getElementById('system-status-message');
+    if (input && !input.value) {
+      input.value = data.message || 'Attention : redemarrage serveur en cours. Les parties et stats en cours peuvent etre interrompues.';
+    }
+    if (!preview) return;
+    preview.innerHTML = data.restarting
+      ? `<span style="color:var(--orange)">Alerte active</span>`
+      : `<span style="color:var(--muted)">Aucune alerte active</span>`;
+  } catch (e) {}
+}
+
+async function setSystemStatus(restarting) {
+  try {
+    const message = (document.getElementById('system-status-message')?.value || '').trim();
+    await api('POST', '/api/admin/system-status', {
+      restarting,
+      message,
+    });
+    await loadSystemStatus();
+    const t = document.createElement('div');
+    t.textContent = restarting ? 'Alerte redemarrage activee !' : 'Alerte redemarrage retiree';
+    Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
+    document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
+  } catch (e) {
+    alert('Erreur systeme.');
+  }
 }
 
 async function setBoost(mult) {

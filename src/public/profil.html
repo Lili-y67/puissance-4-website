@@ -67,9 +67,12 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* Badges statut */
 .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-top:5px;}
 .status-badge.online{background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.3);color:#30d158;}
+.status-badge.live{background:rgba(255,45,85,0.12);border:1px solid rgba(255,45,85,0.3);color:#ff4d6d;cursor:pointer;transition:transform .15s,background .15s,border-color .15s;}
+.status-badge.live:hover{transform:translateY(-1px);background:rgba(255,45,85,0.18);border-color:rgba(255,45,85,0.42);}
 .status-badge.offline{background:rgba(99,99,102,0.15);border:1px solid rgba(99,99,102,0.3);color:#8e8e93;}
 .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .status-dot.online{background:#30d158;animation:pulse-online 1.5s ease-in-out infinite;}
+.status-dot.live{background:#ff4d6d;animation:pulse-online 1.15s ease-in-out infinite;}
 .status-dot.offline{background:#636366;}
 .status-lastseen{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
 @keyframes pulse-online{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,209,88,0.4);}50%{opacity:0.8;box-shadow:0 0 0 4px rgba(48,209,88,0);}}
@@ -752,6 +755,7 @@ const GIF_URL_CACHE = new Map();
 let avatarDecorationLibrary = [];
 let profileBannerLibrary = [];
 let profileShopInventory = {};
+let profileLivePoll = null;
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -952,6 +956,7 @@ async function load() {
     // Exposer pour que presence.js rappelle aprÃ¨s identified
     window._reloadStatus = () => loadStatus(freshPlayer.id);
     loadStatus(freshPlayer.id);
+    startProfileLivePolling(freshPlayer.id);
 
     // Charger les infos Discord si profil own + discord liÃ©
     if (isOwnProfile && freshPlayer.discord_id) {
@@ -2883,6 +2888,37 @@ async function loadStatus(playerId) {
       <div class="status-lastseen">${lastSeenStr}</div>`;
     }
   } catch(e) {}
+}
+
+async function refreshLiveBadge(playerId) {
+  try {
+    const wrap = document.getElementById('status-badge-wrap');
+    if (!wrap) return;
+    const res = await fetch('/api/live', { cache: 'no-store' });
+    if (!res.ok) return;
+    const games = await res.json();
+    const liveGame = Array.isArray(games)
+      ? games.find(g => g?.status === 'active' && (String(g?.players?.[1]?.id) === String(playerId) || String(g?.players?.[2]?.id) === String(playerId)))
+      : null;
+
+    const existing = wrap.querySelector('.status-badge.live');
+    if (liveGame) {
+      const html = `<div class="status-badge live" onclick="location.href='/spec/${liveGame.id}'" title="Voir la partie en direct">
+        <div class="status-dot live"></div>
+        En direct
+      </div>`;
+      if (existing) existing.outerHTML = html;
+      else wrap.insertAdjacentHTML('beforeend', html);
+      return;
+    }
+    if (existing) existing.remove();
+  } catch (e) {}
+}
+
+function startProfileLivePolling(playerId) {
+  if (profileLivePoll) clearInterval(profileLivePoll);
+  refreshLiveBadge(playerId);
+  profileLivePoll = setInterval(() => refreshLiveBadge(playerId), 10000);
 }
 
 // â”€â”€ Simulateur ELO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
