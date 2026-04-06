@@ -199,6 +199,7 @@ let socket = null;
 
 function escapeHtml(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function formatDate(ts){return ts?new Date(ts).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';}
+function formatShortDate(ts){return ts?new Date(ts).toLocaleString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';}
 function formatDuration(ms){
   const safe = Math.max(0, Number(ms || 0));
   const h = Math.floor(safe / 3600000);
@@ -250,7 +251,7 @@ async function loadSiteStats(){
 async function loadTournaments(selectRef = null){
   const res = await fetch(`/api/tournaments?token=${encodeURIComponent(token)}`);
   const data = await res.json();
-  tournaments = Array.isArray(data.tournaments) ? data.tournaments : [];
+  tournaments = (Array.isArray(data.tournaments) ? data.tournaments : []).filter(t => String(t.status) !== 'finished');
   if (selectRef) selectedTournamentId = String(selectRef);
   if (!getSelectedTournament() && tournaments.length) selectedTournamentId = String(tournaments[0].public_id || tournaments[0].id);
   renderTournaments();
@@ -324,6 +325,7 @@ function renderTournaments(){
           <div>
             <div class="card-title">${escapeHtml(t.name)}</div>
             <div class="tiny">${escapeHtml(ref)} · Par ${escapeHtml(t.creator_pseudo || 'Inconnu')} · ${t.mode === 'auto' ? 'Automatique' : 'Manuel'}</div>
+            <div class="tiny">Date : ${formatShortDate(t.starts_at)}</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
             ${queuedHere ? '<div class="badge queue">En file</div>' : ''}
@@ -367,6 +369,7 @@ async function renderSelectedTournament(){
       <div>
         <div class="detail-name">${escapeHtml(tournament.name)}</div>
         <div class="tiny">${escapeHtml(String(tournament.public_id || tournament.id))} · ${tournament.has_password ? 'Prive' : 'Public'} · ${tournament.mode === 'auto' ? 'Arene auto' : 'Manuel'}</div>
+        <div class="tiny">Date : ${formatShortDate(tournament.starts_at)}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${queuedHere ? `<div class="badge queue">Position #${queueState.position || '?'}</div>` : ''}

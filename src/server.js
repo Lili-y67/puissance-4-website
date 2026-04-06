@@ -861,35 +861,40 @@ function clearTournamentQueue(tournamentId) {
 
 function ensureAutoTournaments() {
   if (!BOT_PLAYER_ID) return;
-  const slots = [12, 20];
-  for (const dayOffset of [0, 1]) {
-    for (const hour of slots) {
+  const candidates = [];
+  for (const dayOffset of [0, 1, 2]) {
+    for (const hour of [12, 20]) {
       const startsAt = getParisTimestampFor(dayOffset, hour, 0, 0);
-      const endsAt = startsAt + 60 * 60 * 1000;
-      const exists = db.prepare(`
-        SELECT id FROM tournaments
-        WHERE mode = 'auto' AND starts_at = ? AND created_by = ?
-        LIMIT 1
-      `).get(startsAt, BOT_PLAYER_ID);
-      if (exists) continue;
-      tQ.create.run({
-        public_id: generateTournamentPublicId(),
-        name: getAutoTournamentName(hour),
-        created_by: BOT_PLAYER_ID,
-        mode: 'auto',
-        password: '',
-        duration_minutes: 60,
-        move_time_seconds: 30,
-        reward_1: 1000,
-        reward_2: 500,
-        reward_3: 250,
-        created_at: Date.now(),
-        starts_at: startsAt,
-        ends_at: endsAt,
-        status: startsAt > Date.now() ? 'pending' : 'active',
-        paused_at: null,
-      });
+      if (startsAt + (60 * 60 * 1000) <= Date.now()) continue;
+      candidates.push({ hour, startsAt });
     }
+  }
+  candidates.sort((a, b) => a.startsAt - b.startsAt);
+  for (const slot of candidates.slice(0, 2)) {
+    const endsAt = slot.startsAt + 60 * 60 * 1000;
+    const exists = db.prepare(`
+      SELECT id FROM tournaments
+      WHERE mode = 'auto' AND starts_at = ? AND created_by = ?
+      LIMIT 1
+    `).get(slot.startsAt, BOT_PLAYER_ID);
+    if (exists) continue;
+    tQ.create.run({
+      public_id: generateTournamentPublicId(),
+      name: getAutoTournamentName(slot.hour),
+      created_by: BOT_PLAYER_ID,
+      mode: 'auto',
+      password: '',
+      duration_minutes: 60,
+      move_time_seconds: 30,
+      reward_1: 1000,
+      reward_2: 500,
+      reward_3: 250,
+      created_at: Date.now(),
+      starts_at: slot.startsAt,
+      ends_at: endsAt,
+      status: slot.startsAt > Date.now() ? 'pending' : 'active',
+      paused_at: null,
+    });
   }
 }
 
