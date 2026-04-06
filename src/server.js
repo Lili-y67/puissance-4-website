@@ -6,7 +6,7 @@ const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
 const { getRank } = require('./rank');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
@@ -27,6 +27,13 @@ const io     = new Server(server, {
 
 const mm = new Matchmaking();
 const gm = new GameManager();
+const tournamentQueues = new Map();
+
+function getTournamentQueue(tournamentId) {
+  const id = Number(tournamentId);
+  if (!tournamentQueues.has(id)) tournamentQueues.set(id, new Matchmaking());
+  return tournamentQueues.get(id);
+}
 
 // Callback AFK AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmettre game_over quand un joueur est AFK trop longtemps
 gm._onAfkEnd = (result) => {
@@ -34,6 +41,14 @@ gm._onAfkEnd = (result) => {
   io.to('game:' + result.gameId).emit('game_over', result);
   io.to('live').emit('live_update');
   console.log(`[AFK] Partie ${result.gameId} terminAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA winner side ${result.winner}`);
+};
+gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
+  try {
+    applyTournamentResult(gameId, player1Id, player2Id, winnerId, isDraw);
+    finalizeExpiredTournaments();
+  } catch (e) {
+    console.error('[TOURNOI] result hook:', e.message);
+  }
 };
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Utilitaires sAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcuritAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -194,6 +209,9 @@ function formatCooldownHours(ms) {
   const hours = Math.ceil(ms / (60 * 60 * 1000));
   return `${hours}h`;
 }
+setInterval(() => {
+  try { finalizeExpiredTournaments(); } catch (e) {}
+}, 60_000);
 // Purger les sessions expirAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAes au dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmarrage
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
@@ -728,6 +746,101 @@ function getShopStock(itemKey) {
   return Number.isFinite(value) ? Math.max(0, value) : item.defaultStock;
 }
 
+function hashTournamentPassword(password = '') {
+  return password ? crypto.createHash('sha256').update(`tournoi:${password}`).digest('hex') : '';
+}
+
+function getTournamentTop3(tournamentId) {
+  return tQ.standings.all(tournamentId).slice(0, 3).map((entry, index) => ({
+    place: index + 1,
+    player_id: entry.player_id,
+    pseudo: entry.pseudo,
+    score: Number(entry.score || 0),
+    wins: Number(entry.wins || 0),
+    streak: Number(entry.streak || 0),
+    avatar: entry.avatar || '',
+    color: entry.color || '#ff2d55',
+  }));
+}
+
+function serializeTournament(row, playerId = null) {
+  const top3 = getTournamentTop3(row.id);
+  const joined = playerId ? !!tQ.getEntry.get(row.id, playerId) : false;
+  const me = playerId ? tQ.getEntry.get(row.id, playerId) : null;
+  return {
+    id: row.id,
+    name: row.name,
+    mode: row.mode,
+    duration_minutes: Number(row.duration_minutes || 0),
+    move_time_seconds: Number(row.move_time_seconds || 0),
+    reward_1: Number(row.reward_1 || 0),
+    reward_2: Number(row.reward_2 || 0),
+    reward_3: Number(row.reward_3 || 0),
+    created_at: Number(row.created_at || 0),
+    starts_at: Number(row.starts_at || 0),
+    ends_at: Number(row.ends_at || 0),
+    status: row.status,
+    finished_at: Number(row.finished_at || 0) || null,
+    creator_pseudo: row.creator_pseudo || '',
+    participants: Number(row.participants || 0),
+    has_password: !!row.password,
+    joined,
+    my_score: me ? Number(me.score || 0) : 0,
+    my_streak: me ? Number(me.streak || 0) : 0,
+    my_wins: me ? Number(me.wins || 0) : 0,
+    top3,
+  };
+}
+
+function getPublicActiveTournament() {
+  const row = tQ.listAll.all().find(entry => entry.status === 'active' && !entry.password);
+  return row ? serializeTournament(row, null) : null;
+}
+
+const finalizeTournament = db.transaction((tournamentId, finishedAt) => {
+  const tournament = tQ.getById.get(tournamentId);
+  if (!tournament || tournament.status !== 'active') return null;
+  const standings = tQ.standings.all(tournamentId);
+  const rewards = [Number(tournament.reward_1 || 0), Number(tournament.reward_2 || 0), Number(tournament.reward_3 || 0)];
+  standings.slice(0, 3).forEach((entry, index) => {
+    const reward = rewards[index] || 0;
+    if (reward > 0) pQ.addCoins.run({ delta: reward, id: entry.player_id });
+  });
+  tQ.markFinished.run({ id: tournamentId, finished_at: finishedAt });
+  return { tournamentId, standings: standings.slice(0, 3), rewards };
+});
+
+function finalizeExpiredTournaments() {
+  const now = Date.now();
+  const expired = tQ.listExpiredActive.all(now);
+  for (const tournament of expired) {
+    try {
+      finalizeTournament(tournament.id, now);
+    } catch (e) {
+      console.error('[TOURNOI] finalize:', e.message);
+    }
+  }
+}
+
+const applyTournamentResult = db.transaction((gameId, player1Id, player2Id, winnerId, isDraw) => {
+  const tournaments = tQ.listActiveForPair.all(player1Id, player2Id, Date.now());
+  for (const tournament of tournaments) {
+    if (tQ.hasMatch.get(tournament.id, gameId)) continue;
+    tQ.insertMatch.run(tournament.id, gameId, Date.now());
+    if (isDraw || !winnerId) {
+      tQ.addDraw.run({ tournament_id: tournament.id, player_id: player1Id });
+      tQ.addDraw.run({ tournament_id: tournament.id, player_id: player2Id });
+      continue;
+    }
+    const loserId = winnerId === player1Id ? player2Id : player1Id;
+    const winnerEntry = tQ.getEntry.get(tournament.id, winnerId);
+    const streak = Number(winnerEntry?.streak || 0);
+    const scoreGain = 1 + streak;
+    tQ.addWinner.run({ tournament_id: tournament.id, player_id: winnerId, score_gain: scoreGain });
+    tQ.addLoser.run({ tournament_id: tournament.id, player_id: loserId });
+  }
+});
+
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
   const { botToken } = discordConfig();
@@ -1244,6 +1357,8 @@ app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/reg
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
+app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
+app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
 app.get('/api/decorations', (_, res) => {
   res.json({ decorations: getAvatarDecorationPaths() });
@@ -1251,6 +1366,128 @@ app.get('/api/decorations', (_, res) => {
 
 app.get('/api/profile-banners', (_, res) => {
   res.json({ banners: getProfileBannerPaths() });
+});
+
+app.get('/api/tournaments', (req, res) => {
+  finalizeExpiredTournaments();
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  const rows = tQ.listAll.all();
+  res.json({
+    tournaments: rows.map(row => serializeTournament(row, playerId || null)),
+  });
+});
+
+app.get('/api/tournaments/:id', (req, res) => {
+  finalizeExpiredTournaments();
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  const tournament = tQ.listAll.all().find(row => Number(row.id) === Number(req.params.id));
+  if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
+  res.json({
+    tournament: serializeTournament(tournament, playerId || null),
+    standings: tQ.standings.all(Number(req.params.id)).map((entry, index) => ({
+      rank: index + 1,
+      player_id: entry.player_id,
+      pseudo: entry.pseudo,
+      avatar: entry.avatar || '',
+      color: entry.color || '#ff2d55',
+      elo: Number(entry.elo || 0),
+      score: Number(entry.score || 0),
+      wins: Number(entry.wins || 0),
+      losses: Number(entry.losses || 0),
+      draws: Number(entry.draws || 0),
+      streak: Number(entry.streak || 0),
+    })),
+  });
+});
+
+app.post('/api/tournaments', (req, res) => {
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Creation reservee aux Perso.' });
+  }
+
+  const name = String(req.body?.name || '').trim().slice(0, 48);
+  const durationMinutes = Math.max(10, Math.min(24 * 60, Number(req.body?.duration_minutes || 60)));
+  const moveTimeSeconds = Math.max(5, Math.min(180, Number(req.body?.move_time_seconds || 30)));
+  const password = String(req.body?.password || '').trim().slice(0, 32);
+  const reward1 = Math.max(0, Math.min(1_000_000, Number(req.body?.reward_1 || 0)));
+  const reward2 = Math.max(0, Math.min(1_000_000, Number(req.body?.reward_2 || 0)));
+  const reward3 = Math.max(0, Math.min(1_000_000, Number(req.body?.reward_3 || 0)));
+  const mode = String(req.body?.mode || 'manual') === 'auto' ? 'auto' : 'manual';
+  if (name.length < 3) return res.status(400).json({ error: 'Nom de tournoi trop court.' });
+
+  const now = Date.now();
+  const endsAt = now + durationMinutes * 60 * 1000;
+  const info = {
+    name,
+    created_by: playerId,
+    mode,
+    password: hashTournamentPassword(password),
+    duration_minutes: durationMinutes,
+    move_time_seconds: moveTimeSeconds,
+    reward_1: reward1,
+    reward_2: reward2,
+    reward_3: reward3,
+    created_at: now,
+    starts_at: now,
+    ends_at: endsAt,
+    status: 'active',
+  };
+  const result = tQ.create.run(info);
+  tQ.join.run({ tournament_id: result.lastInsertRowid, player_id: playerId, joined_at: now });
+  const row = tQ.listAll.all().find(entry => Number(entry.id) === Number(result.lastInsertRowid));
+  res.json({ ok: true, tournament: serializeTournament(row, playerId) });
+});
+
+app.post('/api/tournaments/:id/join', (req, res) => {
+  finalizeExpiredTournaments();
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const tournament = tQ.getById.get(Number(req.params.id));
+  if (!tournament) return res.status(404).json({ error: 'Tournoi introuvable.' });
+  if (tournament.status !== 'active' || Number(tournament.ends_at || 0) <= Date.now()) {
+    return res.status(400).json({ error: 'Ce tournoi est termine.' });
+  }
+  const password = String(req.body?.password || '').trim();
+  if (tournament.password && tournament.password !== hashTournamentPassword(password)) {
+    return res.status(403).json({ error: 'Mot de passe invalide.' });
+  }
+  tQ.join.run({ tournament_id: tournament.id, player_id: playerId, joined_at: Date.now() });
+  const row = tQ.listAll.all().find(entry => Number(entry.id) === Number(tournament.id));
+  res.json({ ok: true, tournament: serializeTournament(row, playerId) });
+});
+
+app.get('/api/admin/tournaments', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  finalizeExpiredTournaments();
+  const rows = tQ.listAll.all().map(row => ({
+    ...serializeTournament(row, null),
+    queue: getTournamentQueue(row.id).size(),
+  }));
+  res.json(rows);
+});
+
+app.post('/api/admin/tournaments/:id/finish', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const result = finalizeTournament(id, Date.now());
+  if (!result) return res.status(404).json({ error: 'Tournoi introuvable ou deja termine.' });
+  res.json({ ok: true });
+});
+
+app.delete('/api/admin/tournaments/:id', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  db.prepare(`DELETE FROM tournaments WHERE id = ?`).run(id);
+  tournamentQueues.delete(id);
+  res.json({ ok: true });
 });
 
 app.get('/api/shop/me', (req, res) => {
@@ -1797,6 +2034,35 @@ app.get('/api/players/:id', (req, res) => {
 
   const p = sanitize(player);
   res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0 }, games, following, followers });
+});
+
+app.get('/api/players/:id/tournaments', (req, res) => {
+  const playerId = Number(req.params.id);
+  const rows = db.prepare(`
+    SELECT
+      t.id, t.name, t.status, t.ends_at, t.reward_1, t.reward_2, t.reward_3,
+      tp.score, tp.wins, tp.losses, tp.draws, tp.streak
+    FROM tournament_players tp
+    JOIN tournaments t ON t.id = tp.tournament_id
+    WHERE tp.player_id = ?
+    ORDER BY
+      CASE t.status WHEN 'active' THEN 0 ELSE 1 END,
+      t.ends_at DESC
+  `).all(playerId);
+  res.json({
+    tournaments: rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      ends_at: Number(row.ends_at || 0),
+      score: Number(row.score || 0),
+      wins: Number(row.wins || 0),
+      losses: Number(row.losses || 0),
+      draws: Number(row.draws || 0),
+      streak: Number(row.streak || 0),
+      rewards: [Number(row.reward_1 || 0), Number(row.reward_2 || 0), Number(row.reward_3 || 0)],
+    })),
+  });
 });
 
 // Follow / Unfollow
@@ -2397,10 +2663,12 @@ app.get('/api/leaderboard/wins', (_, res) => {
 });
 app.get('/api/site-stats', (_, res) => {
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
+  const publicTournament = getPublicActiveTournament();
   res.json({
     online: onlineSockets.size,
-    queue: mm?.q?.length || 0,
+    queue: mm?.queue?.length || 0,
     activeGames,
+    publicTournament,
   });
 });
 
@@ -2464,6 +2732,41 @@ io.on('connection', socket => {
 
   socket.on('queue_leave', () => { mm.leave(socket.id); socket.emit('queue_left'); });
 
+  socket.on('tournament_queue_join', ({ tournamentId, shape, tokenEmojiImage } = {}) => {
+    if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
+    const id = Number(tournamentId || 0);
+    const tournament = tQ.getById.get(id);
+    if (!tournament || tournament.status !== 'active' || Number(tournament.ends_at || 0) <= Date.now()) {
+      return socket.emit('error', { message: 'Tournoi indisponible.' });
+    }
+    const entry = tQ.getEntry.get(id, socket.playerId);
+    if (!entry) return socket.emit('error', { message: 'Inscris-toi d\'abord au tournoi.' });
+    const freshPlayer = pQ.getById.get(socket.playerId);
+    socket.playerData = sanitize(freshPlayer);
+    if (shape) socket.playerData.shape = shape;
+    if (tokenEmojiImage && socket.playerData.shape === 'emoji_image') socket.playerData.token_emoji_image = tokenEmojiImage;
+    const tm = getTournamentQueue(id);
+    const joined = tm.join(socket.id, { ...socket.playerData, socketId: socket.id, tournamentId: id });
+    if (!joined) return socket.emit('error', { message: 'Deja en file tournoi.' });
+    socket.tournamentQueueId = id;
+    socket.emit('tournament_queue_joined', { tournamentId: id, position: tm.position(socket.id) });
+    const match = tm.tryMatch();
+    if (match) {
+      _startMatch(match.p1, match.p2, {
+        tournamentId: id,
+        tournamentName: tournament.name,
+        moveTimeSeconds: Number(tournament.move_time_seconds || 0),
+      });
+    }
+  });
+
+  socket.on('tournament_queue_leave', ({ tournamentId } = {}) => {
+    const id = Number(tournamentId || socket.tournamentQueueId || 0);
+    if (id) getTournamentQueue(id).leave(socket.id);
+    socket.tournamentQueueId = null;
+    socket.emit('tournament_queue_left');
+  });
+
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
@@ -2512,6 +2815,7 @@ io.on('connection', socket => {
       moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
       const p1db = pQ.getById.get(gameRow.player1_id);
       const p2db = pQ.getById.get(gameRow.player2_id);
+      const tournamentRow = gameRow.tournament_id ? tQ.getById.get(gameRow.tournament_id) : null;
       state = {
         id: gameId, board,
         players: {
@@ -2521,6 +2825,10 @@ io.on('connection', socket => {
         current: moves.length % 2 === 0 ? 1 : 2,
         startedAt: Date.now(), lastMoveAt: Date.now(),
         moveCount: moves.length, status: 'active',
+        tournamentId: gameRow.tournament_id || null,
+        tournamentName: tournamentRow?.name || '',
+        moveTimeSeconds: Number(gameRow.tournament_move_time_seconds || 0) || 0,
+        turnTimeLimitMs: Number(gameRow.tournament_move_time_seconds || 0) > 0 ? Number(gameRow.tournament_move_time_seconds) * 1000 : 0,
       };
       gm.games.set(gameId, state);
     }
@@ -2538,6 +2846,11 @@ io.on('connection', socket => {
       socket.emit('game_rejoined', {
         gameId,
         side,
+        tournament: state.tournamentId ? {
+          id: Number(state.tournamentId),
+          name: state.tournamentName || 'Tournoi',
+          moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 0,
+        } : null,
         players: {
           1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
           2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
@@ -2577,6 +2890,10 @@ io.on('connection', socket => {
       }
     }
     mm.leave(socket.id);
+    if (socket.tournamentQueueId) {
+      getTournamentQueue(socket.tournamentQueueId).leave(socket.id);
+      socket.tournamentQueueId = null;
+    }
 
     // Si le socket AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtait en transition (match_found mais pas encore rejoin_game)
     // on ne dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAclenche pas de forfait immAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAdiatement AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA le joueur charge /game
@@ -2638,7 +2955,7 @@ io.on('connection', socket => {
   });
 });
 
-function _startMatch(p1, p2) {
+function _startMatch(p1, p2, options = {}) {
   // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA MAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme IP AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ELO annulAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA direct AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
   const ip1 = playerToIp.get(p1.id);
   const ip2 = playerToIp.get(p2.id);
@@ -2699,13 +3016,18 @@ function _startMatch(p1, p2) {
   p1.color = _c1;
   p2.color = _c2;
 
-  const state = gm.create(p1, p2);
+  const state = gm.create(p1, p2, options);
   const room  = 'game:' + state.id;
   s1.join(room);
   s2.join(room);
 
   const base = {
     gameId: state.id,
+    tournament: options.tournamentId ? {
+      id: Number(options.tournamentId),
+      name: options.tournamentName || 'Tournoi',
+      moveTimeSeconds: Number(options.moveTimeSeconds || 0) || 0,
+    } : null,
     players: {
       1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
       2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },

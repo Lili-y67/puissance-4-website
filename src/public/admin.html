@@ -263,6 +263,10 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
       Parties
     </button>
+    <button id="tab-tournaments-btn" onclick="switchAdminTab('tournaments')"
+      style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+      Tournois
+    </button>
   </div>
 
   <!-- Section Parties -->
@@ -281,6 +285,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
       </table>
     </div>
     <div id="games-pagination-admin" style="display:flex;justify-content:center;gap:8px;margin-top:10px;"></div>
+  </div>
+
+  <div id="admin-tournaments-section" style="display:none;margin-bottom:20px;">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Nom</th><th>Statut</th><th>Inscrits</th><th>File</th><th>Temps/coup</th><th>Fin</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="tournaments-body"></tbody>
+      </table>
+    </div>
   </div>
 
   <div id="admin-players-section">
@@ -703,6 +718,8 @@ function closeAndReload() {
   document.getElementById('admin-modal')?.remove();
   if (currentAdminTab === 'games') {
     loadAdminGames();
+  } else if (currentAdminTab === 'tournaments') {
+    loadAdminTournaments();
   } else {
     loadPlayers();
   }
@@ -711,13 +728,19 @@ let currentAdminTab = 'players';
 function switchAdminTab(tab) {
   currentAdminTab = tab;
   const isPlayers = tab === 'players';
+  const isGames = tab === 'games';
+  const isTournaments = tab === 'tournaments';
   document.getElementById('admin-players-section').style.display = isPlayers ? 'block' : 'none';
-  document.getElementById('admin-games-section').style.display   = isPlayers ? 'none'  : 'block';
+  document.getElementById('admin-games-section').style.display   = isGames ? 'block' : 'none';
+  document.getElementById('admin-tournaments-section').style.display = isTournaments ? 'block' : 'none';
   document.getElementById('tab-players-btn').style.background    = isPlayers ? 'var(--red)' : 'rgba(255,255,255,0.05)';
   document.getElementById('tab-players-btn').style.color         = isPlayers ? '#fff' : 'var(--muted)';
-  document.getElementById('tab-games-btn').style.background      = isPlayers ? 'rgba(255,255,255,0.05)' : 'rgba(76,110,245,0.2)';
-  document.getElementById('tab-games-btn').style.color           = isPlayers ? 'var(--muted)' : '#8b9cf4';
-  if (tab === 'games') loadAdminGames();
+  document.getElementById('tab-games-btn').style.background      = isGames ? 'rgba(76,110,245,0.2)' : 'rgba(255,255,255,0.05)';
+  document.getElementById('tab-games-btn').style.color           = isGames ? '#8b9cf4' : 'var(--muted)';
+  document.getElementById('tab-tournaments-btn').style.background = isTournaments ? 'rgba(255,214,10,0.18)' : 'rgba(255,255,255,0.05)';
+  document.getElementById('tab-tournaments-btn').style.color      = isTournaments ? 'var(--yellow)' : 'var(--muted)';
+  if (isGames) loadAdminGames();
+  if (isTournaments) loadAdminTournaments();
 }
 
 // Gestion des parties
@@ -804,6 +827,49 @@ ${res.p2.pseudo} -> ${res.p2.eloBefore} ELO`);
   } catch(e) {
     alert('Erreur : ' + (e.message || 'Inconnue'));
   }
+}
+
+async function loadAdminTournaments() {
+  const rows = await api('GET', '/api/admin/tournaments');
+  const tbody = document.getElementById('tournaments-body');
+  if (!Array.isArray(rows) || !rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucun tournoi</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(t => `
+    <tr>
+      <td style="color:var(--muted)">#${t.id}</td>
+      <td>
+        <div style="font-weight:700">${t.name}</div>
+        <div style="font-size:11px;color:var(--muted)">Par ${t.creator_pseudo || 'Inconnu'}${t.has_password ? ' · Privé' : ' · Public'}</div>
+      </td>
+      <td><span class="badge" style="background:${t.status === 'active' ? 'rgba(48,209,88,0.12)' : 'rgba(255,255,255,0.08)'};border:1px solid ${t.status === 'active' ? 'rgba(48,209,88,0.28)' : 'rgba(255,255,255,0.12)'};color:${t.status === 'active' ? 'var(--green)' : 'var(--muted)'}">${t.status === 'active' ? 'Actif' : 'Terminé'}</span></td>
+      <td><strong>${Number(t.participants || 0)}</strong></td>
+      <td><strong style="color:#85EBFF">${Number(t.queue || 0)}</strong></td>
+      <td>${Number(t.move_time_seconds || 0)}s</td>
+      <td style="font-size:11px;color:var(--muted)">${t.ends_at ? new Date(t.ends_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-'}</td>
+      <td>
+        <div class="actions">
+          ${myRole === 'admin' && t.status === 'active' ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="finishTournament(${t.id})">Forcer fin</button>` : ''}
+          ${myRole === 'admin' ? `<button class="btn-sm" style="background:rgba(255,45,85,0.12);color:var(--red);border:1px solid rgba(255,45,85,0.26)" onclick="deleteTournament(${t.id})">Supprimer</button>` : ''} 
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function finishTournament(id) {
+  if (!confirm(`Clôturer immédiatement le tournoi #${id} ?`)) return;
+  const data = await api('POST', `/api/admin/tournaments/${id}/finish`, {});
+  if (data.ok) loadAdminTournaments();
+  else alert(data.error || 'Erreur tournoi.');
+}
+
+async function deleteTournament(id) {
+  if (!confirm(`Supprimer le tournoi #${id} ? Cette action est définitive.`)) return;
+  const data = await api('DELETE', `/api/admin/tournaments/${id}`);
+  if (data.ok) loadAdminTournaments();
+  else alert(data.error || 'Erreur suppression.');
 }
 
 // Boost ELO global

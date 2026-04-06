@@ -16,7 +16,9 @@ class GameManager {
       const now = Date.now();
       for (const [gameId, state] of this.games) {
         if (state.status !== 'active') continue;
-        if (now - state.lastMoveAt > AFK_LIMIT) {
+        const moveTimerLimit = Number(state.turnTimeLimitMs || 0);
+        const limit = moveTimerLimit > 0 ? moveTimerLimit : AFK_LIMIT;
+        if (now - state.lastMoveAt > limit) {
           // Le joueur dont c'est le tour est AFK → l'autre gagne
           const afkSide    = state.current;
           const winnerSide = afkSide === 1 ? 2 : 1;
@@ -26,16 +28,18 @@ class GameManager {
           if (this._onAfkEnd) this._onAfkEnd(result);
         }
       }
-    }, 30_000);
+    }, 1_000);
   }
 
-  create(p1, p2) {
+  create(p1, p2, options = {}) {
     const gameId = gQ.create.run({
       p1: p1.id, p2: p2.id,
       p1_color: p1.color || '#ff2d55',
       p2_color: p2.color || '#ffd60a',
       p1_shape: p1.shape || 'circle',
       p2_shape: p2.shape || 'circle',
+      tournament_id: options.tournamentId || null,
+      tournament_move_time_seconds: Number(options.moveTimeSeconds || 0) || 0,
     }).lastInsertRowid;
 
     const state = {
@@ -47,6 +51,10 @@ class GameManager {
       lastMoveAt: Date.now(),
       moveCount:  0,
       status:     'active',
+      tournamentId: options.tournamentId || null,
+      tournamentName: options.tournamentName || '',
+      turnTimeLimitMs: Number(options.moveTimeSeconds || 0) > 0 ? Number(options.moveTimeSeconds) * 1000 : 0,
+      moveTimeSeconds: Number(options.moveTimeSeconds || 0) || 0,
     };
 
     this.games.set(gameId, state);
@@ -207,7 +215,7 @@ class GameManager {
     // Retirer du Map après 6s (5s d'affichage + marge)
     setTimeout(() => { this.games.delete(state.id); }, 6000);
 
-    return {
+    const payload = {
       type:   'game_over',
       gameId: state.id,
       reason,
@@ -239,6 +247,25 @@ class GameManager {
         2: { id: state.players[2].id, pseudo: state.players[2].pseudo, color: state.players[2].color },
       },
     };
+
+    if (typeof this._onGameFinished === 'function') {
+      try {
+        this._onGameFinished({
+          gameId: state.id,
+          player1Id: state.players[1].id,
+          player2Id: state.players[2].id,
+          winnerId: isDraw ? null : winnerId,
+          loserId: isDraw ? null : loserId,
+          isDraw,
+          reason,
+          payload,
+        });
+      } catch (e) {
+        console.error('[TOURNOI] callback game finished:', e.message);
+      }
+    }
+
+    return payload;
   }
 }
 

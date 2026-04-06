@@ -922,9 +922,10 @@ async function load() {
   }
 
   try {
-    const [profileRes, followRes] = await Promise.all([
+    const [profileRes, followRes, tournamentsRes] = await Promise.all([
       fetch(`/api/players/${playerId}`),
       viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
+      fetch(`/api/players/${playerId}/tournaments`),
     ]);
     if (profileRes.status === 404) {
       document.getElementById('content').innerHTML = `
@@ -937,6 +938,7 @@ async function load() {
     }
     if (!profileRes.ok) throw new Error();
     const { player, games, following, followers } = await profileRes.json();
+    const tournamentData = tournamentsRes.ok ? await tournamentsRes.json() : { tournaments: [] };
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
     const freshPlayer = (isOwnProfile && player.discord_id)
       ? await refreshDiscordState(player)
@@ -944,7 +946,7 @@ async function load() {
     currentPlayer = freshPlayer;
     pendingAvatarDecoration = null;
 
-    render(freshPlayer, games, following || [], followers || [], followStatus);
+    render(freshPlayer, games, following || [], followers || [], followStatus, tournamentData.tournaments || []);
 
     // Charger le statut en ligne (tous les profils)
     // Exposer pour que presence.js rappelle aprÃ¨s identified
@@ -967,7 +969,7 @@ async function load() {
   }
 }
 
-function render(player, games, following, followers, followStatus) {
+function render(player, games, following, followers, followStatus, tournaments = []) {
   const total = player.wins + player.losses + player.draws;
   const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
   const avatarSrc = getRenderableMediaSrc(player.avatar);
@@ -1128,6 +1130,28 @@ function render(player, games, following, followers, followStatus) {
       </div>
       <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
     </div>
+
+    ${tournaments.length ? `
+    <div class="color-card" id="tournament-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Tournois</span>
+        <a href="/tournoi" style="font-size:11px;color:#8b9cf4;text-decoration:none;letter-spacing:1px;text-transform:uppercase">Voir la page tournoi</a>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${tournaments.slice(0, 6).map(t => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:var(--surface2);border:1px solid rgba(255,255,255,0.05)">
+            <div style="min-width:0">
+              <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+              <div style="font-size:11px;color:var(--muted)">Score ${t.score} · ${t.wins} wins · streak ${t.streak}${t.place ? ` · top ${t.place}` : ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:${t.status === 'active' ? '#30d158' : 'var(--yellow)'}">${t.status === 'active' ? 'ACTIF' : 'FINI'}</div>
+              <div style="font-size:10px;color:var(--muted)">#${t.id}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
 
     <!-- Changement de couleur (propre profil uniquement) -->
     ${isOwnProfile ? `

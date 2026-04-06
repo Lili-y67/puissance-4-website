@@ -17,6 +17,10 @@ db.pragma('foreign_keys = ON');
   try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) { /* déjà présente */ }
 });
 
+['tournament_id INTEGER', 'tournament_move_time_seconds INTEGER DEFAULT 0'].forEach(col => {
+  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) {}
+});
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS players (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -128,6 +132,46 @@ db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   tier         TEXT    NOT NULL DEFAULT 'vip',
   multiplier   REAL    NOT NULL DEFAULT 1.2
 )`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tournaments (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    name              TEXT    NOT NULL,
+    created_by        INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    mode              TEXT    NOT NULL DEFAULT 'manual',
+    password          TEXT    NOT NULL DEFAULT '',
+    duration_minutes  INTEGER NOT NULL DEFAULT 60,
+    move_time_seconds INTEGER NOT NULL DEFAULT 30,
+    reward_1          INTEGER NOT NULL DEFAULT 0,
+    reward_2          INTEGER NOT NULL DEFAULT 0,
+    reward_3          INTEGER NOT NULL DEFAULT 0,
+    created_at        INTEGER NOT NULL,
+    starts_at         INTEGER NOT NULL,
+    ends_at           INTEGER NOT NULL,
+    status            TEXT    NOT NULL DEFAULT 'active',
+    finished_at       INTEGER
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tournament_players (
+    tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    player_id     INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    score         INTEGER NOT NULL DEFAULT 0,
+    wins          INTEGER NOT NULL DEFAULT 0,
+    losses        INTEGER NOT NULL DEFAULT 0,
+    draws         INTEGER NOT NULL DEFAULT 0,
+    streak        INTEGER NOT NULL DEFAULT 0,
+    joined_at     INTEGER NOT NULL,
+    PRIMARY KEY (tournament_id, player_id)
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tournament_matches (
+    tournament_id INTEGER NOT NULL REFERENCES tournaments(id) ON DELETE CASCADE,
+    game_id       INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    created_at    INTEGER NOT NULL,
+    PRIMARY KEY (tournament_id, game_id)
+  )
+`);
 try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN tier TEXT NOT NULL DEFAULT 'vip'`); } catch(e) {}
 try { db.exec(`ALTER TABLE vip_boosts ADD COLUMN multiplier REAL NOT NULL DEFAULT 1.2`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) {}
@@ -176,7 +220,7 @@ const pQ = {
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const gQ = {
-  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape)`),
+  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape, tournament_id, tournament_move_time_seconds) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape, @tournament_id, @tournament_move_time_seconds)`),
   getById: db.prepare(`
     SELECT g.*,
       p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
@@ -468,6 +512,102 @@ const sQ = {
   purge: db.prepare('DELETE FROM sessions WHERE expires < ?'),
 };
 
+const tQ = {
+  create: db.prepare(`
+    INSERT INTO tournaments (
+      name, created_by, mode, password, duration_minutes, move_time_seconds,
+      reward_1, reward_2, reward_3, created_at, starts_at, ends_at, status
+    ) VALUES (
+      @name, @created_by, @mode, @password, @duration_minutes, @move_time_seconds,
+      @reward_1, @reward_2, @reward_3, @created_at, @starts_at, @ends_at, @status
+    )
+  `),
+  getById: db.prepare(`SELECT * FROM tournaments WHERE id = ?`),
+  listAll: db.prepare(`
+    SELECT
+      t.*,
+      p.pseudo AS creator_pseudo,
+      COUNT(tp.player_id) AS participants
+    FROM tournaments t
+    JOIN players p ON p.id = t.created_by
+    LEFT JOIN tournament_players tp ON tp.tournament_id = t.id
+    GROUP BY t.id
+    ORDER BY
+      CASE t.status WHEN 'active' THEN 0 ELSE 1 END,
+      t.ends_at ASC,
+      t.created_at DESC
+  `),
+  listActiveForPair: db.prepare(`
+    SELECT t.*
+    FROM tournaments t
+    JOIN tournament_players a ON a.tournament_id = t.id AND a.player_id = ?
+    JOIN tournament_players b ON b.tournament_id = t.id AND b.player_id = ?
+    WHERE t.status = 'active' AND t.ends_at > ?
+  `),
+  join: db.prepare(`
+    INSERT OR IGNORE INTO tournament_players (tournament_id, player_id, joined_at)
+    VALUES (@tournament_id, @player_id, @joined_at)
+  `),
+  getEntry: db.prepare(`
+    SELECT * FROM tournament_players
+    WHERE tournament_id = ? AND player_id = ?
+  `),
+  standings: db.prepare(`
+    SELECT
+      tp.*,
+      p.pseudo,
+      p.avatar,
+      p.color,
+      p.elo,
+      p.role,
+      p.is_vip,
+      p.is_vip_plus,
+      p.is_perso
+    FROM tournament_players tp
+    JOIN players p ON p.id = tp.player_id
+    WHERE tp.tournament_id = ?
+    ORDER BY tp.score DESC, tp.wins DESC, tp.streak DESC, tp.joined_at ASC
+  `),
+  markFinished: db.prepare(`
+    UPDATE tournaments
+    SET status = 'finished', finished_at = @finished_at
+    WHERE id = @id
+  `),
+  addWinner: db.prepare(`
+    UPDATE tournament_players
+    SET score = score + @score_gain,
+        wins = wins + 1,
+        streak = streak + 1
+    WHERE tournament_id = @tournament_id AND player_id = @player_id
+  `),
+  addLoser: db.prepare(`
+    UPDATE tournament_players
+    SET losses = losses + 1,
+        streak = 0
+    WHERE tournament_id = @tournament_id AND player_id = @player_id
+  `),
+  addDraw: db.prepare(`
+    UPDATE tournament_players
+    SET draws = draws + 1,
+        streak = 0
+    WHERE tournament_id = @tournament_id AND player_id = @player_id
+  `),
+  insertMatch: db.prepare(`
+    INSERT OR IGNORE INTO tournament_matches (tournament_id, game_id, created_at)
+    VALUES (?, ?, ?)
+  `),
+  hasMatch: db.prepare(`
+    SELECT 1
+    FROM tournament_matches
+    WHERE tournament_id = ? AND game_id = ?
+  `),
+  listExpiredActive: db.prepare(`
+    SELECT * FROM tournaments
+    WHERE status = 'active' AND ends_at <= ?
+    ORDER BY ends_at ASC
+  `),
+};
+
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, sQ, abQ, rQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, sQ, abQ, rQ, tQ, calcElo, finishGame };
