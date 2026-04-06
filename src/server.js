@@ -2868,12 +2868,22 @@ app.get('/api/site-stats', (_, res) => {
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
+  const activeBoost = bQ.getActive.get();
   res.json({
     online: onlineSockets.size,
     queue: mm?.queue?.length || 0,
     activeGames,
     publicTournament,
     upcomingPublicTournament,
+    boost: activeBoost ? {
+      active: true,
+      multiplier: Number(activeBoost.multiplier || 1),
+      appliedBy: activeBoost.applied_by || 'Admin',
+    } : {
+      active: false,
+      multiplier: 1,
+      appliedBy: '',
+    },
   });
 });
 

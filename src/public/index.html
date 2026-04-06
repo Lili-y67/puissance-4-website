@@ -558,6 +558,42 @@ html, body {
   color: var(--muted);
   letter-spacing: 1px;
 }
+.boost-alert{
+  display:none;
+  align-items:center;
+  gap:10px;
+  margin:14px auto 0;
+  padding:10px 14px;
+  max-width:360px;
+  border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,214,10,0.12),rgba(255,159,10,0.1));
+  border:1px solid rgba(255,214,10,0.25);
+  box-shadow:0 12px 28px rgba(0,0,0,.28),0 0 18px rgba(255,214,10,.08);
+  animation:boost-alert-in .35s cubic-bezier(.22,1,.36,1);
+}
+.boost-alert.show{display:flex}
+.boost-alert-badge{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,214,10,0.16);
+  color:var(--yellow);
+  box-shadow:0 0 0 0 rgba(255,214,10,.35);
+  animation:boost-pulse 1.3s ease-in-out infinite;
+  flex-shrink:0;
+}
+.boost-alert-copy{min-width:0}
+.boost-alert-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+  color:var(--yellow);
+}
+.boost-alert-sub{
+  font-size:11px;
+  color:rgba(238,238,245,0.82);
+  line-height:1.35;
+}
+@keyframes boost-alert-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes boost-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,214,10,.35)}50%{transform:scale(.92);box-shadow:0 0 0 8px rgba(255,214,10,0)}}
 
 /* ── Links ──────────────────────────────────────────────────────────────────── */
 .link {
@@ -1128,9 +1164,16 @@ html, body {
         <div class="pulse-ring">
           <div class="pulse-dot"></div>
         </div>
-        <div class="queue-title">Recherche en cours</div>
+      <div class="queue-title">Recherche en cours</div>
         <div class="queue-sub" id="queue-sub">En attente d'un adversaire...</div>
         <div class="queue-timer" id="queue-timer">00:00</div>
+        <div class="boost-alert" id="queue-boost-alert">
+          <div class="boost-alert-badge">⚡</div>
+          <div class="boost-alert-copy">
+            <div class="boost-alert-title">Boost actif</div>
+            <div class="boost-alert-sub" id="queue-boost-alert-text"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Avatar joueur dans la queue -->
@@ -1230,6 +1273,7 @@ let selectedRegisterColor = '#ff2d55';
 let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 let publicTournamentNotice = null;
 let siteStatsInterval = null;
+let currentGlobalBoost = null;
 
 function switchTab(mode) {
   authMode = mode;
@@ -1602,8 +1646,29 @@ async function refreshSiteStats() {
       const activeGames = Math.max(0, Number(data.activeGames) || 0);
       gamesCount.textContent = String(activeGames);
     }
+    currentGlobalBoost = data.boost && data.boost.active ? data.boost : null;
+    renderQueueBoostAlert(currentGlobalBoost);
     renderPublicTournamentNotice(data.publicTournament || null);
   } catch (_) {}
+}
+
+function renderQueueBoostAlert(boost) {
+  const queueBox = document.getElementById('queue-boost-alert');
+  const queueText = document.getElementById('queue-boost-alert-text');
+  const loggedBox = document.getElementById('logged-boost-alert');
+  const loggedText = document.getElementById('logged-boost-alert-text');
+  const message = boost && Number(boost.multiplier) > 1
+    ? `${boost.appliedBy || 'Quelqu un'} a booste le jeu en x${Number(boost.multiplier).toFixed(1)}.`
+    : '';
+
+  if (queueBox && queueText) {
+    queueText.textContent = message;
+    queueBox.classList.toggle('show', !!message);
+  }
+  if (loggedBox && loggedText) {
+    loggedText.textContent = message;
+    loggedBox.classList.toggle('show', !!message);
+  }
 }
 
 function startSiteStatsPolling() {
@@ -1629,6 +1694,13 @@ function showLoggedInView(p) {
       </div>
       <div style="font-size:13px;color:var(--muted);text-align:center;">
         Auto-rejoin désactivé — clique pour rejoindre la file d'attente.
+      </div>
+      <div class="boost-alert" id="logged-boost-alert">
+        <div class="boost-alert-badge">⚡</div>
+        <div class="boost-alert-copy">
+          <div class="boost-alert-title">Boost actif</div>
+          <div class="boost-alert-sub" id="logged-boost-alert-text"></div>
+        </div>
       </div>
       <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
         <span>⚡</span> <span>Rejoindre la partie</span>
@@ -1689,6 +1761,7 @@ function showQueueView(position) {
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
     document.getElementById('stat-games').textContent = myPlayer.wins + myPlayer.losses + myPlayer.draws;
     document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
+    renderQueueBoostAlert(currentGlobalBoost);
 
     // Avatar dans la queue
     const avatarWrap = document.getElementById('queue-avatar-wrap');

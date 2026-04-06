@@ -3,233 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 — Règles</title>
+<title>Puissance 4 - Regles</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:       #06060e;
-  --surface:  #0d0d1c;
-  --surface2: #13132a;
-  --border:   rgba(255,255,255,0.06);
-  --text:     #eeeef5;
-  --muted:    rgba(238,238,245,0.38);
-  --accent:   #4c6ef5;
-  --grid:     #1a1a3a;
-  --cell:     #0d0d22;
-  --red:      #ff2d55;
-  --red-dim:  rgba(255,45,85,0.15);
-  --red-glow: rgba(255,45,85,0.4);
-  --yellow:   #ffd60a;
-  --yel-dim:  rgba(255,214,10,0.1);
-  --yel-glow: rgba(255,214,10,0.4);
-  --green:    #30d158;
-  --orange:   #ff9f0a;
-}
-
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-/* Variables CSS du thème par défaut */
-
-html, body { min-height: 100%; background: var(--bg); background-attachment: fixed; color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
-
-.bg-grid {
-  position: fixed; inset: 0; z-index: 0;
-  background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  animation: grid-drift 20s linear infinite;
-}
-@keyframes grid-drift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
-
-.scanlines {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px);
-}
-
-/* ── Layout ── */
-.page {
-  position: relative; z-index: 2;
-  max-width: 560px; margin: 0 auto;
-  padding: 32px 16px 64px;
-  display: flex; flex-direction: column; gap: 20px;
-}
-
-/* ── Nav ── */
-.nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.logo-sm { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; letter-spacing: 2px; text-decoration: none; color: var(--text); }
-.logo-sm span { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
-.btn-back {
-  font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase; padding: 7px 16px; border-radius: 8px;
-  background: transparent; border: 1px solid var(--border); color: var(--muted);
-  cursor: pointer; text-decoration: none; transition: all 0.2s;
-}
-.btn-back:hover { border-color: var(--muted); color: var(--text); }
-
-/* ── Hero ── */
-.hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; animation: slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both; }
-@keyframes slide-in { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-
-.hero-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 5px; text-transform: uppercase; color: var(--red); }
-.hero-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(52px, 12vw, 80px); font-weight: 900; letter-spacing: -1px; line-height: 0.9; text-transform: uppercase; }
-.hero-title span { color: var(--red); text-shadow: 0 0 40px var(--red-glow); }
-.hero-sub { font-size: 13px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
-
-/* ── Mini board demo ── */
-.board-demo {
-  display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
-  background: var(--grid, #0a0a18); border-radius: 14px; padding: 10px;
-  border: 1px solid var(--border);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
-  animation: slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;
-}
-.bd-cell { aspect-ratio: 1; border-radius: 50%; background: var(--cell, #07071a); box-shadow: inset 0 3px 10px rgba(0,0,0,0.7), inset 0 1px 3px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04); position: relative; overflow: hidden; }
-.bd-cell .tok { position: absolute; inset: 3px; border-radius: 50%; transform: scale(0); }
-.bd-cell.r .tok { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 12px var(--red-glow); transform: scale(1); }
-.bd-cell.y .tok { background: radial-gradient(circle at 35% 30%, #ffe566, var(--yellow)); box-shadow: 0 0 12px var(--yel-glow); transform: scale(1); }
-.bd-cell.rw .tok { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 12px var(--red-glow); transform: scale(1); animation: win-pulse 0.7s ease-in-out infinite alternate; }
-@keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.12); filter: brightness(1.4); } }
-
-/* ── Cards ── */
-.card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
-  padding: 24px 22px; display: flex; flex-direction: column; gap: 16px;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
-}
-.card:nth-child(2) { animation: slide-in 0.5s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
-.card:nth-child(3) { animation: slide-in 0.5s 0.2s  cubic-bezier(0.22,1,0.36,1) both; }
-.card:nth-child(4) { animation: slide-in 0.5s 0.25s cubic-bezier(0.22,1,0.36,1) both; }
-.card:nth-child(5) { animation: slide-in 0.5s 0.3s  cubic-bezier(0.22,1,0.36,1) both; }
-.card:nth-child(6) { animation: slide-in 0.5s 0.35s cubic-bezier(0.22,1,0.36,1) both; }
-
-.card-header { display: flex; align-items: center; gap: 12px; }
-.card-icon { font-size: 24px; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.card-icon.red    { background: var(--red-dim);  border: 1px solid rgba(255,45,85,0.2); }
-.card-icon.yellow { background: var(--yel-dim);  border: 1px solid rgba(255,214,10,0.2); }
-.card-icon.green  { background: rgba(48,209,88,0.1); border: 1px solid rgba(48,209,88,0.2); }
-.card-icon.blue   { background: rgba(76,110,245,0.1); border: 1px solid rgba(76,110,245,0.2); }
-.card-icon.purple { background: rgba(191,90,242,0.1); border: 1px solid rgba(191,90,242,0.2); }
-
-.card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-.card-sub   { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 1px; }
-
-.card-body { font-size: 14px; line-height: 1.7; color: var(--muted); }
-.card-body strong { color: var(--text); font-weight: 600; }
-.card-body .hi-red    { color: var(--red);    font-weight: 600; }
-.card-body .hi-yellow { color: var(--yellow); font-weight: 600; }
-.card-body .hi-green  { color: var(--green);  font-weight: 600; }
-@media (max-width: 480px) {
-  .page { padding: 20px 10px 42px; gap: 16px; }
-  .nav {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .logo-sm,
-  .btn-back { text-align: center; }
-  .hero-title { font-size: clamp(38px, 15vw, 58px); }
-  .board-demo { gap: 4px; padding: 8px; }
-  .card { padding: 18px 14px; }
-  .card-header { gap: 10px; }
-}
-
-/* ── Rule steps ── */
-.steps { display: flex; flex-direction: column; gap: 10px; }
-.step  { display: flex; align-items: flex-start; gap: 12px; }
-.step-num {
-  width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
-  background: var(--red-dim); border: 1px solid rgba(255,45,85,0.25);
-  font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 800;
-  color: var(--red); display: flex; align-items: center; justify-content: center;
-  margin-top: 1px;
-}
-.step-text { font-size: 14px; line-height: 1.6; color: var(--muted); }
-.step-text strong { color: var(--text); }
-
-/* ── Win examples ── */
-.win-examples { display: flex; flex-direction: column; gap: 8px; }
-.win-ex {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
-  padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.win-ex-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.win-mini { display: flex; gap: 5px; align-items: center; }
-.win-mini .t { width: 28px; height: 28px; border-radius: 50%; background: var(--cell); flex-shrink:0; }
-.win-mini .t.r { background: radial-gradient(circle at 35% 30%, #ff6b85, var(--red)); box-shadow: 0 0 10px var(--red-glow); }
-.win-mini .t.y { background: radial-gradient(circle at 35% 30%, #ffe566, var(--yellow)); box-shadow: 0 0 10px var(--yel-glow); }
-.win-mini .t.e { background: var(--cell); border: 1px solid var(--border); }
-.win-mini-col { display: flex; flex-direction: column; gap: 5px; }
-
-/* ── Elo section ── */
-.elo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.elo-item {
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px; text-align: center;
-}
-.elo-val { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
-.elo-val.pos { color: var(--green); }
-.elo-val.neg { color: var(--red); }
-.elo-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: 1px; }
-
-/* ── Divider ── */
-.divider { height: 1px; background: var(--border); margin: 4px 0; }
-
-/* ── Tips ── */
-.tips { display: flex; flex-direction: column; gap: 8px; }
-.tip { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--surface2); border-radius: 10px; border: 1px solid var(--border); font-size: 13px; line-height: 1.5; color: var(--muted); }
-.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-.tip strong { color: var(--text); }
-
-/* ── CTA ── */
-.cta {
-  background: linear-gradient(135deg, var(--red-dim), var(--yel-dim));
-  border: 1px solid rgba(255,45,85,0.2); border-radius: 18px; padding: 24px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center;
-  animation: slide-in 0.5s 0.4s cubic-bezier(0.22,1,0.36,1) both;
-}
-.cta-title { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
-.cta-sub { font-size: 13px; color: var(--muted); }
-.btn-play {
-  font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700;
-  letter-spacing: 2px; text-transform: uppercase; padding: 14px 32px; border-radius: 12px;
-  background: var(--red); color: #fff; border: none; cursor: pointer;
-  box-shadow: 0 4px 24px var(--red-glow); text-decoration: none;
-  display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
-}
-.btn-play:hover { background: #ff4567; transform: translateY(-2px); box-shadow: 0 8px 32px var(--red-glow); }
-
-@media (max-width: 480px) {
-  .page { padding: 20px 10px 48px; }
-  .hero-title { font-size: clamp(44px, 14vw, 80px); }
-  .card { padding: 18px 14px; }
-  .win-ex { flex-direction: column; align-items: flex-start; gap: 8px; }
-  #ex-board { gap: 3px !important; padding: 6px !important; }
-}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,.06);--text:#eeeef5;--muted:rgba(238,238,245,.38);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--orange:#ff9f0a;--blue:#4c6ef5;--grid:#1a1a3a;--cell:#0d0d22}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px)}
+.page{position:relative;z-index:2;max-width:620px;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:20px}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.logo-sm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text)}
+.logo-sm span{color:var(--red)}
+.btn-back{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
+.hero{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--red)}
+.hero-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(52px,12vw,80px);font-weight:900;letter-spacing:-1px;line-height:.9;text-transform:uppercase}
+.hero-title span{color:var(--red)}
+.hero-sub{font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.board-demo{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;background:var(--grid);border-radius:14px;padding:10px;border:1px solid var(--border);box-shadow:0 16px 48px rgba(0,0,0,.5)}
+.bd-cell{aspect-ratio:1;border-radius:50%;background:var(--cell);box-shadow:inset 0 3px 10px rgba(0,0,0,.7),inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.04);position:relative;overflow:hidden}
+.bd-cell .tok{position:absolute;inset:3px;border-radius:50%;transform:scale(0)}
+.bd-cell.r .tok{background:radial-gradient(circle at 35% 30%, #ff6b85, var(--red));box-shadow:0 0 12px rgba(255,45,85,.4);transform:scale(1)}
+.bd-cell.y .tok{background:radial-gradient(circle at 35% 30%, #ffe566, var(--yellow));box-shadow:0 0 12px rgba(255,214,10,.4);transform:scale(1)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.card-header{display:flex;align-items:center;gap:12px}
+.card-icon{font-size:24px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card-icon.red{background:rgba(255,45,85,.12)}
+.card-icon.yellow{background:rgba(255,214,10,.12)}
+.card-icon.green{background:rgba(48,209,88,.12)}
+.card-icon.blue{background:rgba(76,110,245,.12)}
+.card-icon.purple{background:rgba(191,90,242,.12)}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
+.card-sub{font-size:11px;color:var(--muted);letter-spacing:1px}
+.card-body{font-size:14px;line-height:1.7;color:var(--muted)}
+.card-body strong,.step-text strong,.tip strong{color:var(--text)}
+.steps,.tips{display:flex;flex-direction:column;gap:10px}
+.step{display:flex;align-items:flex-start;gap:12px}
+.step-num{width:26px;height:26px;border-radius:8px;flex-shrink:0;background:rgba(255,45,85,.15);border:1px solid rgba(255,45,85,.25);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:var(--red);display:flex;align-items:center;justify-content:center;margin-top:1px}
+.step-text,.tip{font-size:14px;line-height:1.6;color:var(--muted)}
+.tip{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}
+.tip-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.elo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.elo-item{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center}
+.elo-val{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:1px}
+.elo-val.pos{color:var(--green)}
+.elo-val.neg{color:var(--red)}
+.elo-val.mid{color:var(--yellow)}
+.elo-lbl{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:1px}
+.shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shop-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px}
+.shop-box strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:1px}
+.shop-box span{display:block;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.cta{background:linear-gradient(135deg, rgba(255,45,85,.15), rgba(255,214,10,.10));border:1px solid rgba(255,45,85,.2);border-radius:18px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.cta-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
+.cta-sub{font-size:13px;color:var(--muted)}
+.btn-play{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 32px;border-radius:12px;background:var(--red);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 24px rgba(255,45,85,.4);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+@media (max-width:480px){.page{padding:20px 10px 48px}.hero-title{font-size:clamp(44px,14vw,80px)}.card{padding:18px 14px}.elo-grid,.shop-grid{grid-template-columns:1fr}.nav{flex-direction:column;align-items:stretch;gap:10px}.logo-sm,.btn-back{text-align:center}}
 </style>
 </head>
 <body>
 <div class="bg-grid"></div>
 <div class="scanlines"></div>
-
 <div class="page">
-
-  <!-- Nav -->
   <nav class="nav">
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
     <a class="btn-back" href="/">← Retour</a>
   </nav>
 
-  <!-- Hero -->
   <div class="hero">
     <div class="hero-eyebrow">Guide du joueur</div>
-    <div class="hero-title">Les <span>règles</span></div>
-    <div class="hero-sub">Tout ce qu'il faut savoir pour dominer</div>
+    <div class="hero-title">Les <span>regles</span></div>
+    <div class="hero-sub">Tout ce qu'il faut savoir pour jouer</div>
   </div>
 
-  <!-- Board demo animé -->
   <div class="board-demo" id="board-demo"></div>
 
-  <!-- Objectif -->
   <div class="card">
     <div class="card-header">
       <div class="card-icon red">🎯</div>
@@ -239,557 +89,134 @@ html, body { min-height: 100%; background: var(--bg); background-attachment: fix
       </div>
     </div>
     <div class="card-body">
-      Aligne <strong>4 jetons de ta couleur</strong> consécutivement avant ton adversaire.
-      L'alignement peut être <span class="hi-red">horizontal</span>, <span class="hi-yellow">vertical</span>
-      ou <span class="hi-green">diagonal</span> — dans n'importe quelle direction.
+      Aligne <strong>4 jetons</strong> de ta couleur avant ton adversaire. L'alignement peut etre horizontal, vertical ou diagonal.
     </div>
   </div>
 
-  <!-- Déroulement -->
   <div class="card">
     <div class="card-header">
       <div class="card-icon yellow">⚡</div>
       <div>
-        <div class="card-title">Déroulement</div>
+        <div class="card-title">Deroulement</div>
         <div class="card-sub">Comment se joue une partie</div>
       </div>
     </div>
     <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-text">La partie se joue sur une grille de <strong>6 lignes × 7 colonnes</strong>.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-text">Les deux joueurs jouent <strong>à tour de rôle</strong>. Le joueur 1 commence toujours.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-text">À ton tour, <strong>clique sur une colonne</strong> pour y faire tomber ton jeton. Il tombe jusqu'à la case libre la plus basse.</div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-text">Tu ne peux <strong>pas choisir la hauteur</strong> — la gravité fait tout !</div>
-      </div>
-      <div class="step">
-        <div class="step-num">5</div>
-        <div class="step-text">La partie se termine quand un joueur aligne 4 jetons, ou quand la grille est <strong>entièrement remplie</strong> (match nul).</div>
-      </div>
+      <div class="step"><div class="step-num">1</div><div class="step-text">La grille fait <strong>6 lignes × 7 colonnes</strong>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Les joueurs jouent <strong>a tour de role</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Tu cliques sur une colonne et ton jeton <strong>tombe jusqu'en bas</strong>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">La partie se termine sur un alignement de 4 ou si la grille est pleine.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Une deconnexion adverse peut donner la victoire automatique selon l'etat de la partie.</div></div>
     </div>
   </div>
 
-
-  <!-- Système ELO -->
   <div class="card">
     <div class="card-header">
       <div class="card-icon blue">📊</div>
       <div>
-        <div class="card-title">Système ELO</div>
-        <div class="card-sub">Comment évolue ton classement</div>
+        <div class="card-title">Systeme ELO</div>
+        <div class="card-sub">Comment evolue ton classement</div>
       </div>
     </div>
-    <div class="card-body" style="margin-bottom:4px">
-      Chaque joueur commence à <strong>1000 ELO</strong>. Après chaque partie, ton score évolue selon
-      la force de ton adversaire : battre un joueur plus fort rapporte <span class="hi-green">davantage de points</span>,
-      alors que perdre contre un joueur plus faible en <span class="hi-red">fait perdre plus</span>.
+    <div class="card-body">
+      Chaque joueur commence a <strong>1000 ELO</strong>. Le gain ou la perte depend de la force de l'adversaire et du resultat.
+      Les bonus premium et boosters ELO s'ajoutent ensuite sur le gain de victoire et sont <strong>arrondis au superieur</strong>.
     </div>
     <div class="elo-grid">
-      <div class="elo-item">
-        <div class="elo-val pos">+1 à +32</div>
-        <div class="elo-lbl">Points gagnés (victoire)</div>
-      </div>
-      <div class="elo-item">
-        <div class="elo-val neg">-1 à -32</div>
-        <div class="elo-lbl">Points perdus (défaite)</div>
-      </div>
-      <div class="elo-item">
-        <div class="elo-val" style="color:var(--muted)">0 ou faible variation</div>
-        <div class="elo-lbl">Match nul selon l'écart</div>
-      </div>
-      <div class="elo-item">
-        <div class="elo-val" style="color:var(--accent)">1000</div>
-        <div class="elo-lbl">ELO de départ</div>
-      </div>
-    </div>
-    <div class="card-body" style="font-size:13px">
-      Les <strong>boosters ELO</strong> ajoutent un bonus sur ton gain de victoire, puis le résultat est
-      <strong>arrondi au supérieur</strong>. Les <strong>coins</strong>, eux, se gagnent entre <strong>1 et 3</strong>
-      par partie légitime, puis un éventuel booster coins applique aussi son multiplicateur avec arrondi au supérieur.
-      Si ton adversaire se <strong>déconnecte</strong> en cours de partie, tu remportes automatiquement la victoire et les points ELO associés.
+      <div class="elo-item"><div class="elo-val pos">+1 a +32</div><div class="elo-lbl">Victoire normale</div></div>
+      <div class="elo-item"><div class="elo-val neg">-1 a -32</div><div class="elo-lbl">Defaite normale</div></div>
+      <div class="elo-item"><div class="elo-val mid">+ bonus</div><div class="elo-lbl">Premium / boosters</div></div>
+      <div class="elo-item"><div class="elo-val">1000</div><div class="elo-lbl">ELO de depart</div></div>
     </div>
   </div>
 
-  <!-- Système de Rangs -->
   <div class="card">
     <div class="card-header">
-      <div class="card-icon" style="background:rgba(155,89,182,0.15);color:#9b59b6">🏅</div>
+      <div class="card-icon green">🪙</div>
       <div>
-        <div class="card-title">Rangs</div>
-        <div class="card-sub">Progresse à travers 6 rangs et 30 niveaux</div>
+        <div class="card-title">Coins</div>
+        <div class="card-sub">Monnaie du site</div>
       </div>
     </div>
-    <div class="card-body" style="font-size:13px;margin-bottom:12px">
-      Chaque rang comporte <strong>5 niveaux</strong> (I à V). Plus ton ELO monte, plus tu gravis les échelons.
-      Le badge de ton rang actuel est visible sur ton profil et dans le classement.
+    <div class="card-body">
+      Les parties legitimes font gagner entre <strong>1 et 3 coins</strong>. Ces coins servent a acheter des rangs premium et des boosters dans la boutique.
+      Les boosts coins appliquent leur multiplicateur sur ce gain, puis le resultat est <strong>arrondi au superieur</strong>.
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(46,204,113,0.08);border:1px solid rgba(46,204,113,0.2);border-radius:12px">
-        <img src="/ranks/Malachite_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #2ecc7188)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#2ecc71">🟢 MALACHITE I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">100 – 699 ELO · Débuts sur le site</div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(176,190,197,0.08);border:1px solid rgba(176,190,197,0.2);border-radius:12px">
-        <img src="/ranks/Quartz_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #b0bec588)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#b0bec5">⚪ QUARTZ I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">700 – 1299 ELO · Rang de départ</div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(205,127,50,0.08);border:1px solid rgba(205,127,50,0.2);border-radius:12px">
-        <img src="/ranks/Ambre_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #cd7f3288)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#cd7f32">🟤 AMBRE I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">1300 – 1799 ELO · Joueur confirmé</div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(26,188,156,0.08);border:1px solid rgba(26,188,156,0.2);border-radius:12px">
-        <img src="/ranks/Jade_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #1abc9c88)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#1abc9c">🟦 JADE I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">1800 – 2299 ELO · Expert</div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.2);border-radius:12px">
-        <img src="/ranks/Saphir_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #3498db88)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#3498db">🔵 SAPHIR I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">2300 – 2799 ELO · Maître</div>
-        </div>
-      </div>
-
-      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.2);border-radius:12px">
-        <img src="/ranks/Amethiste_3.png" style="width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px #9b59b688)">
-        <div style="flex:1">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:#9b59b6">🟣 AMÉTHYSTE I – V</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:2px">2800 – 3500 ELO · Élite</div>
-        </div>
-      </div>
-
+    <div class="elo-grid">
+      <div class="elo-item"><div class="elo-val pos">1 a 3</div><div class="elo-lbl">Gain de base par partie</div></div>
+      <div class="elo-item"><div class="elo-val mid">x5 / x10</div><div class="elo-lbl">Boosters coins</div></div>
     </div>
   </div>
 
-  <!-- Conseils stratégiques -->
   <div class="card">
     <div class="card-header">
-      <div class="card-icon purple">🧠</div>
+      <div class="card-icon purple">🛍️</div>
       <div>
-        <div class="card-title">Stratégie</div>
-        <div class="card-sub">Conseils pour progresser</div>
+        <div class="card-title">Boosters et boutique</div>
+        <div class="card-sub">Ce que tu peux acheter</div>
+      </div>
+    </div>
+    <div class="shop-grid">
+      <div class="shop-box">
+        <strong>Boosters ELO</strong>
+        <span>Mini, Classic, Max et Princess ajoutent un bonus sur ton gain ELO en victoire.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Boosters Coins</strong>
+        <span>Coin Boost et Coin Boost+ multiplient les coins gagnes en partie legitime.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Stock global</strong>
+        <span>Certains boosters sont limites en stock et ne sont plus achetables quand le stock tombe a zero.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Inventaire</strong>
+        <span>Les boosters achetes vont dans ton inventaire, puis peuvent etre utilises depuis ton profil selon les fonctions actives.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon red">🧠</div>
+      <div>
+        <div class="card-title">Conseils rapides</div>
+        <div class="card-sub">Pour mieux jouer</div>
       </div>
     </div>
     <div class="tips">
-      <div class="tip">
-        <div class="tip-icon">🏗️</div>
-        <div><strong>Contrôle le centre.</strong> Les colonnes du milieu offrent le plus de possibilités d'alignement — occupe-les en priorité.</div>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">🔥</div>
-        <div><strong>Crée des doubles menaces.</strong> Si tu forces ton adversaire à bloquer deux alignements en même temps, l'un des deux sera gagnant.</div>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">🛡️</div>
-        <div><strong>Bloque à temps.</strong> Si ton adversaire a 3 jetons alignés, bloquer est prioritaire sur ton propre alignement.</div>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">⚠️</div>
-        <div><strong>Attention aux colonnes pleines.</strong> Une colonne remplie ne peut plus recevoir de jetons — anticipe les espaces disponibles.</div>
-      </div>
-      <div class="tip">
-        <div class="tip-icon">👁️</div>
-        <div><strong>Pense en diagonale.</strong> Les alignements diagonaux sont les plus difficiles à voir — et donc les plus dangereux !</div>
-      </div>
+      <div class="tip"><div class="tip-icon">🏗️</div><div><strong>Controle le centre.</strong> Les colonnes centrales offrent plus de possibilites d'alignement.</div></div>
+      <div class="tip"><div class="tip-icon">🔥</div><div><strong>Cree des doubles menaces.</strong> Forcer deux blocs a la fois met souvent l'adversaire en echec.</div></div>
+      <div class="tip"><div class="tip-icon">🛡️</div><div><strong>Bloque a temps.</strong> Si l'adversaire a 3 pions alignes, bloquer est prioritaire.</div></div>
+      <div class="tip"><div class="tip-icon">👁️</div><div><strong>Pense en diagonale.</strong> Les diagonales sont souvent les plus dures a lire.</div></div>
     </div>
   </div>
 
-
-  <!-- Partie exemple animée -->
-  <div class="card" id="card-example">
-    <div class="card-header">
-      <div class="card-icon red">🎮</div>
-      <div>
-        <div class="card-title">Partie exemple</div>
-        <div class="card-sub">Simulation IA vs IA — nouveaux bots à chaque partie !</div>
-      </div>
-    </div>
-
-    <!-- Joueurs -->
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,45,85,0.2);border-radius:10px;padding:10px 12px">
-        <div style="width:20px;height:20px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red-glow);flex-shrink:0"></div>
-        <div>
-          <div style="font-size:13px;font-weight:600" id="bot1-name">Bot 1</div>
-          <div style="font-size:11px;color:var(--muted)">IA Joueur 1</div>
-        </div>
-      </div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:900;color:var(--muted);letter-spacing:3px">VS</div>
-      <div style="display:flex;align-items:center;gap:8px;flex:1;background:var(--surface2);border:1px solid rgba(255,214,10,0.2);border-radius:10px;padding:10px 12px">
-        <div style="width:20px;height:20px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px var(--yel-glow);flex-shrink:0"></div>
-        <div>
-          <div style="font-size:13px;font-weight:600" id="bot2-name">Bot 2</div>
-          <div style="font-size:11px;color:var(--muted)">IA Joueur 2</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Commentaire du coup -->
-    <div id="ex-comment" style="font-size:13px;color:var(--muted);min-height:18px;text-align:center;transition:all 0.3s">
-      Prêt à jouer...
-    </div>
-
-    <!-- Board exemple -->
-    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
-      <div id="ex-board" style="
-        display:grid;grid-template-columns:repeat(7,1fr);gap:4px;
-        background:var(--grid);border-radius:14px;padding:8px;
-        border:1px solid var(--border);width:100%;
-        box-shadow:0 12px 32px rgba(0,0,0,0.5);
-      "></div>
-      <!-- Indicateur tour -->
-      <div id="ex-turn" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
-        <div id="ex-dot" style="width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red-glow)"></div>
-        <span id="ex-turn-txt">Chargement...</span>
-      </div>
-    </div>
-
-    <!-- Bouton rejouer -->
-    <button id="ex-replay-btn" onclick="startExample()" style="
-      display:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;
-      letter-spacing:2px;text-transform:uppercase;padding:10px 20px;border-radius:10px;
-      background:var(--red-dim);border:1px solid rgba(255,45,85,0.3);color:var(--red);
-      cursor:pointer;transition:all 0.2s;align-self:center;
-    " onmouseover="this.style.background='rgba(255,45,85,0.25)'" onmouseout="this.style.background='var(--red-dim)'">
-      🔄 Revoir la partie
-    </button>
-  </div>
-
-  <!-- CTA -->
   <div class="cta">
-    <div class="cta-title">Prêt à jouer ?</div>
-    <div class="cta-sub">Mets ta théorie en pratique !</div>
+    <div class="cta-title">Pret a jouer ?</div>
+    <div class="cta-sub">Mets la theorie en pratique.</div>
     <a class="btn-play" href="/">⚡ Jouer maintenant</a>
   </div>
-
 </div>
-
 <script>
-// ── Partie exemple animée ────────────────────────────────────────────────────
-// Séquence de coups : [col, joueur(1=rouge,2=jaune), commentaire]
-const EX_ROWS = 6;
-const EX_COLS = 7;
-
-let exGrid = [];
-let currentPlayer = 1;
-let exTimer = null;
-
-function initExBoard() {
-  exGrid = Array.from({length: EX_ROWS}, () => Array(EX_COLS).fill(0));
-  const board = document.getElementById('ex-board');
-  board.innerHTML = '';
-
-  for (let r = 0; r < EX_ROWS; r++) {
-    for (let c = 0; c < EX_COLS; c++) {
-
-      const cell = document.createElement('div');
-      cell.id = `ex-${r}-${c}`;
-      cell.style.cssText = `
-        aspect-ratio:1;border-radius:50%;background:var(--cell);
-        box-shadow:inset 0 3px 10px rgba(0,0,0,0.7),inset 0 1px 3px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.04);
-        position:relative;overflow:hidden;
-      `;
-
-      const tok = document.createElement('div');
-      tok.style.cssText = `
-        position:absolute;inset:3px;border-radius:50%;
-        transform:scale(0);
-        transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-      `;
-
-      cell.appendChild(tok);
-      board.appendChild(cell);
-    }
-  }
-}
-
-function getAvailableRow(col) {
-  for (let r = EX_ROWS - 1; r >= 0; r--) {
-    if (exGrid[r][col] === 0) return r;
-  }
-  return -1;
-}
-
-function dropToken(col, player) {
-
-  const r = getAvailableRow(col);
-  if (r === -1) return null;
-
-  exGrid[r][col] = player;
-
-  const tok = document.getElementById(`ex-${r}-${col}`).firstChild;
-
-  const c = player === 1 ? color1 : color2;
-  tok.style.background = `radial-gradient(circle at 35% 30%, ${c.light}, ${c.main})`;
-  tok.style.boxShadow  = `0 0 14px ${c.glow}`;
-
-  void tok.offsetWidth;
-  tok.style.transform = 'scale(1)';
-
-  return [r,col];
-}
-
-function checkWin(r,c,player) {
-
-  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
-
-  for (const [dr,dc] of dirs) {
-
-    let count = 1;
-
-    for (let i=1;i<4;i++){
-      const nr=r+dr*i,nc=c+dc*i;
-      if(exGrid[nr]?.[nc]===player) count++;
-      else break;
-    }
-
-    for (let i=1;i<4;i++){
-      const nr=r-dr*i,nc=c-dc*i;
-      if(exGrid[nr]?.[nc]===player) count++;
-      else break;
-    }
-
-    if(count>=4) return true;
-  }
-
-  return false;
-}
-
-function getValidColumns() {
-  const cols = [];
-  for (let c=0;c<EX_COLS;c++) {
-    if (getAvailableRow(c) !== -1) cols.push(c);
-  }
-  return cols;
-}
-
-function simulateMove(col,player) {
-
-  const r = getAvailableRow(col);
-  if (r === -1) return false;
-
-  exGrid[r][col] = player;
-  const win = checkWin(r,col,player);
-  exGrid[r][col] = 0;
-
-  return win;
-}
-
-function chooseMove(player) {
-
-  const opponent = player === 1 ? 2 : 1;
-  const valid = getValidColumns();
-
-  // gagner
-  for (const col of valid) {
-    if (simulateMove(col,player)) return col;
-  }
-
-  // bloquer
-  for (const col of valid) {
-    if (simulateMove(col,opponent)) return col;
-  }
-
-  // centre
-  if (valid.includes(3)) return 3;
-
-  // random
-  return valid[Math.floor(Math.random()*valid.length)];
-}
-
-function playBotTurn() {
-
-  const col = chooseMove(currentPlayer);
-  const pos = dropToken(col,currentPlayer);
-
-  if (!pos) return;
-
-  const [r,c] = pos;
-
-  if (checkWin(r,c,currentPlayer)) {
-
-    const winnerName = document.getElementById(currentPlayer === 1 ? 'bot1-name' : 'bot2-name')?.textContent || (currentPlayer === 1 ? 'Bot 1' : 'Bot 2');
-    const winColor = currentPlayer === 1 ? color1.main : color2.main;
-    const turnEl = document.getElementById('ex-turn-txt');
-    if (turnEl) { turnEl.textContent = `🏆 ${winnerName} gagne !`; turnEl.style.color = winColor; }
-
-    return;
-  }
-
-  currentPlayer = currentPlayer === 1 ? 2 : 1;
-
-  exTimer = setTimeout(playBotTurn, 700 + Math.random()*500);
-}
-const BOT_PREFIX = [
-"Neural", "Quantum", "Alpha", "Omega", "Titan",
-"Cyber", "Nova", "Apex", "Hyper", "Fusion",
-"Orion", "Atlas", "Zenith", "Pulse", "Vector"
-];
-
-const BOT_CORE = [
-"AI", "Bot", "Engine", "Core", "Mind",
-"Solver", "Matrix", "Brain", "Logic", "Drive"
-];
-
-function randomBotName() {
-  const p = BOT_PREFIX[Math.floor(Math.random()*BOT_PREFIX.length)];
-  const c = BOT_CORE[Math.floor(Math.random()*BOT_CORE.length)];
-  const v = (Math.random()*3+1).toFixed(1);
-
-  return `${p} ${c} v${v}`;
-}
-const bot1 = randomBotName();
-let bot2;
-do { bot2 = randomBotName(); } while (bot2 === bot1);
-
-// Couleur hex aléatoire avec teinte claire et glow dérivés
-function randomHex() {
-  // Saturation et luminosité forcées pour que ce soit beau
-  const h = Math.floor(Math.random() * 360);
-  const s = 75 + Math.floor(Math.random() * 25); // 75-100%
-  const l = 50 + Math.floor(Math.random() * 15); // 50-65%
-  return hslToHex(h, s, l);
-}
-
-function hslToHex(h, s, l) {
-  s /= 100; l /= 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => {
-    const k = (n + h / 30) % 12;
-    const c = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(255 * c).toString(16).padStart(2, '0');
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-}
-
-function lightenHex(hex, amt = 30) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  const lr = Math.min(255, r + amt).toString(16).padStart(2,'0');
-  const lg = Math.min(255, g + amt).toString(16).padStart(2,'0');
-  const lb = Math.min(255, b + amt).toString(16).padStart(2,'0');
-  return `#${lr}${lg}${lb}`;
-}
-
-function hexGlow(hex, a = 0.6) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function makeColor(hex) {
-  return { main: hex, light: lightenHex(hex, 40), glow: hexGlow(hex) };
-}
-
-function randomTwoColors() {
-  const h1 = Math.floor(Math.random() * 360);
-  // Forcer une différence de teinte d'au moins 60°
-  const h2 = (h1 + 60 + Math.floor(Math.random() * 240)) % 360;
-  return [
-    makeColor(hslToHex(h1, 80 + Math.floor(Math.random()*20), 55 + Math.floor(Math.random()*10))),
-    makeColor(hslToHex(h2, 80 + Math.floor(Math.random()*20), 55 + Math.floor(Math.random()*10))),
-  ];
-}
-
-let [color1, color2] = randomTwoColors();
-
-// Init noms et couleurs au chargement
-setTimeout(() => {
-  const n1 = document.getElementById('bot1-name');
-  const n2 = document.getElementById('bot2-name');
-  const d1 = document.getElementById('bot1-dot');
-  const d2 = document.getElementById('bot2-dot');
-  if (n1) n1.textContent = bot1;
-  if (n2) n2.textContent = bot2;
-  if (d1) { d1.style.background = color1.main; d1.style.boxShadow = `0 0 8px ${color1.glow}`; }
-  if (d2) { d2.style.background = color2.main; d2.style.boxShadow = `0 0 8px ${color2.glow}`; }
-  document.getElementById("ex-turn-txt").textContent = `🤖 ${bot1}  VS  🤖 ${bot2}`;
-}, 0);
-function startExample() {
-  clearTimeout(exTimer);
-  initExBoard();
-  currentPlayer = 1;
-
-  // Nouveau tirage de noms + couleurs à chaque relance
-  const [nc1, nc2] = randomTwoColors();
-  Object.assign(color1, nc1);
-  Object.assign(color2, nc2);
-  const newBot1 = randomBotName();
-  let newBot2;
-  do { newBot2 = randomBotName(); } while (newBot2 === newBot1);
-
-  // Mettre à jour l'UI
-  const n1 = document.getElementById('bot1-name');
-  const n2 = document.getElementById('bot2-name');
-  const d1 = document.getElementById('bot1-dot');
-  const d2 = document.getElementById('bot2-dot');
-  if (n1) n1.textContent = newBot1;
-  if (n2) n2.textContent = newBot2;
-  if (d1) { d1.style.background = color1.main; d1.style.boxShadow = `0 0 8px ${color1.glow}`; }
-  if (d2) { d2.style.background = color2.main; d2.style.boxShadow = `0 0 8px ${color2.glow}`; }
-
-  document.getElementById('ex-turn-txt').textContent = `🤖 ${newBot1}  VS  🤖 ${newBot2}`;
-  exTimer = setTimeout(playBotTurn, 800);
-}
-
-// Démarrer automatiquement quand visible
-const exObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting) {
-    startExample();
-    exObserver.disconnect();
-  }
-}, { threshold: 0.3 });
-exObserver.observe(document.getElementById('card-example'));
-
-// Board demo — position de démonstration avec 4 alignés animés
 const GRID = [
   [0,0,0,0,0,0,0],
   [0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0],
   [0,0,0,'y',0,0,0],
-  [0,0,'y','rw','y',0,0],
-  [0,'r','r','rw','r','y',0],
-  ['r','y','y','rw','y','r','y'],
+  [0,0,'r','y',0,0,0],
+  ['r','r','r','y','y',0,0],
 ];
-
 const demo = document.getElementById('board-demo');
-GRID.forEach(row => {
-  row.forEach(cell => {
-    const d = document.createElement('div');
-    d.className = 'bd-cell' + (cell ? ' ' + cell : '');
-    const t = document.createElement('div');
-    t.className = 'tok';
-    d.appendChild(t);
-    demo.appendChild(d);
-  });
-});
+GRID.forEach(row => row.forEach(cell => {
+  const d = document.createElement('div');
+  d.className = 'bd-cell' + (cell ? ' ' + cell : '');
+  const t = document.createElement('div');
+  t.className = 'tok';
+  d.appendChild(t);
+  demo.appendChild(d);
+}));
 </script>
 <script src="/presence.js"></script>
 </body>
 </html>
-
