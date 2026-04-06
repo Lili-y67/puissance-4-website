@@ -1550,6 +1550,22 @@ function loginWithDiscord() {
   window.location.href = '/auth/discord/signin';
 }
 
+function showDiscordQueryError() {
+  const params = new URLSearchParams(location.search);
+  const error = String(params.get('error') || '').trim();
+  if (!error) return;
+  const errorMap = {
+    discord_annule: 'Connexion Discord annulée.',
+    discord_token: 'Erreur Discord. Réessaie.',
+    discord_id: 'Impossible de récupérer ton compte Discord.',
+    erreur_serveur: 'Erreur serveur Discord. Réessaie plus tard.',
+    joueur_introuvable: 'Compte introuvable pour cette connexion Discord.',
+  };
+  showError(errorMap[error] || 'Connexion Discord impossible.');
+  params.delete('error');
+  history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : '') + location.hash);
+}
+
 function tryCompleteDiscordAuth() {
   const hash = String(location.hash || '');
   const prefix = '#discord-auth=';
@@ -2007,6 +2023,7 @@ document.addEventListener('click', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   initRegisterColorPicker();
   startSiteStatsPolling();
+  showDiscordQueryError();
   if (tryCompleteDiscordAuth()) return;
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');

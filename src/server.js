@@ -1274,13 +1274,25 @@ app.get('/auth/discord/reset', (req, res) => {
 // AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAtape 2 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Callback Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA envoyer le code par DM
 app.get('/auth/discord/callback', async (req, res) => {
   const { code, state, error } = req.query;
-  if (error || !code) return res.redirect('/forgot-password?error=discord_annulAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA');
+  let stateData = null;
+  try {
+    stateData = state ? JSON.parse(Buffer.from(state, 'base64').toString()) : null;
+  } catch (e) {
+    stateData = null;
+  }
+  const mode = String(stateData?.mode || 'reset');
+  const redirectDiscordError = (errorKey) => {
+    if (mode === 'signin') return res.redirect('/?error=' + encodeURIComponent(errorKey));
+    if (mode === 'link') return res.redirect('/profil?error=' + encodeURIComponent(errorKey));
+    return res.redirect('/forgot-password?error=' + encodeURIComponent(errorKey));
+  };
+
+  if (error || !code) return redirectDiscordError('discord_annule');
 
   try {
-    const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-    const { playerId, ipHash, mode } = stateData;
+    const { playerId, ipHash } = stateData || {};
     const player = playerId ? pQ.getById.get(playerId) : null;
-    if (mode !== 'signin' && !player) return res.redirect('/forgot-password?error=joueur_introuvable');
+    if (mode !== 'signin' && !player) return redirectDiscordError('joueur_introuvable');
 
     const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
     // AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAchanger le code contre un access_token
@@ -1296,14 +1308,14 @@ app.get('/auth/discord/callback', async (req, res) => {
       }),
     });
     const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.redirect('/forgot-password?error=discord_token');
+    if (!tokenData.access_token) return redirectDiscordError('discord_token');
 
     // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer l'identitAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA Discord
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: 'Bearer ' + tokenData.access_token },
     });
     const discordUser = await userRes.json();
-    if (!discordUser.id) return res.redirect('/forgot-password?error=discord_id');
+    if (!discordUser.id) return redirectDiscordError('discord_id');
 
     const freshPlayer = pQ.getById.get(playerId);
 
@@ -1477,7 +1489,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     // Mode reset AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA vAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier que c'est le bon Discord
     if (freshPlayer.discord_id && freshPlayer.discord_id !== discordUser.id) {
-      return res.redirect('/forgot-password?error=discord_mismatch');
+      return redirectDiscordError('discord_mismatch');
     }
     if (!freshPlayer.discord_id) {
       rQ.setDiscord.run(discordUser.id, null, playerId);
@@ -1500,7 +1512,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       body: JSON.stringify({ recipient_id: discordUser.id }),
     });
     const dmData = await dmRes.json();
-    if (!dmData.id) return res.redirect('/forgot-password?error=dm_impossible');
+    if (!dmData.id) return redirectDiscordError('dm_impossible');
 
     // 2. Envoyer le message
     await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {
@@ -1529,7 +1541,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     res.redirect('/reset-password?playerId=' + playerId);
   } catch (e) {
     console.error('[DISCORD RESET]', e);
-    res.redirect('/forgot-password?error=erreur_serveur');
+    redirectDiscordError('erreur_serveur');
   }
 });
 
