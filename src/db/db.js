@@ -121,9 +121,6 @@ try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`)
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN custom_bg_desktop TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN custom_bg_mobile TEXT NOT NULL DEFAULT ''`); } catch(e) {}
-try { db.exec(`ALTER TABLE players ADD COLUMN custom_bg_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 // Table boost VIP individuel
@@ -210,9 +207,6 @@ const pQ = {
   updateAvatarDecorationChangedAt: db.prepare(`UPDATE players SET avatar_decoration_changed_at = @changedAt WHERE id = @id`),
   updateProfileBanner: db.prepare(`UPDATE players SET profile_banner = @image WHERE id = @id`),
   updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
-  updateCustomBgDesktop: db.prepare(`UPDATE players SET custom_bg_desktop = @image WHERE id = @id`),
-  updateCustomBgMobile: db.prepare(`UPDATE players SET custom_bg_mobile = @image WHERE id = @id`),
-  updateCustomBgChangedAt: db.prepare(`UPDATE players SET custom_bg_changed_at = @changedAt WHERE id = @id`),
   updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
