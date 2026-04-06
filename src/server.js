@@ -2228,9 +2228,9 @@ app.patch('/api/players/:id/custom-background', (req, res) => {
     return res.status(400).json({ error: 'Formats autorises : PNG, WEBP, JPG.' });
   }
   const approxBytes = Math.ceil((nextImage.length - nextImage.indexOf(',') - 1) * 3 / 4);
-  const maxBytes = slot === 'desktop' ? 6 * 1024 * 1024 : 4 * 1024 * 1024;
+  const maxBytes = 5 * 1024 * 1024;
   if (!isAdminPlayer(player) && approxBytes > maxBytes) {
-    return res.status(413).json({ error: slot === 'desktop' ? 'Fond PC trop lourd (max 6 Mo).' : 'Fond telephone trop lourd (max 4 Mo).' });
+    return res.status(413).json({ error: 'Fond personnalise trop lourd (max 5 Mo).' });
   }
   const currentDesktop = String(player?.custom_bg_desktop || '');
   const currentMobile = String(player?.custom_bg_mobile || '');

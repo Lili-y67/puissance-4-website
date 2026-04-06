@@ -767,6 +767,11 @@ let avatarDecorationLibrary = [];
 let profileBannerLibrary = [];
 let profileShopInventory = {};
 let profileLivePoll = null;
+let currentGamesCache = [];
+let currentFollowingCache = [];
+let currentFollowersCache = [];
+let currentFollowStatusCache = { isFollowing: false, followers: 0, following: 0 };
+let currentTournamentsCache = [];
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -971,9 +976,14 @@ async function load() {
       ? await refreshDiscordState(player)
       : player;
     currentPlayer = freshPlayer;
+    currentGamesCache = games || [];
+    currentFollowingCache = following || [];
+    currentFollowersCache = followers || [];
+    currentFollowStatusCache = followStatus || { isFollowing: false, followers: 0, following: 0 };
+    currentTournamentsCache = tournamentData.tournaments || [];
     pendingAvatarDecoration = null;
 
-    render(freshPlayer, games, following || [], followers || [], followStatus, tournamentData.tournaments || []);
+    render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache);
 
     // Charger le statut en ligne (tous les profils)
     // Exposer pour que presence.js rappelle aprÃ¨s identified
@@ -1296,7 +1306,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="custom-bg-preview" id="custom-bg-desktop-preview">
             ${player.custom_bg_desktop ? `<img src="${getRenderableMediaSrc(player.custom_bg_desktop)}" alt="Fond PC">` : `<div class="custom-bg-preview-empty">Fond PC</div>`}
           </div>
-          <div class="custom-bg-slot-meta">Format conseillé 1920x1080. PNG ou WEBP avec transparence conseillé. Max 6 Mo.</div>
+          <div class="custom-bg-slot-meta">Format conseillé 1920x1080. PNG ou WEBP avec transparence conseillé. Max 5 Mo.</div>
           <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('desktop')" ${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'disabled' : ''}>${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'Patiente avant changement' : 'Choisir le fond PC'}</button>
         </div>
         <div class="custom-bg-slot">
@@ -1304,7 +1314,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="custom-bg-preview mobile" id="custom-bg-mobile-preview">
             ${player.custom_bg_mobile ? `<img src="${getRenderableMediaSrc(player.custom_bg_mobile)}" alt="Fond téléphone">` : `<div class="custom-bg-preview-empty">Fond téléphone</div>`}
           </div>
-          <div class="custom-bg-slot-meta">Format conseillé 1080x1920. Utilisé sur mobile quand l'interface est étroite. Max 4 Mo.</div>
+          <div class="custom-bg-slot-meta">Format conseillé 1080x1920. Utilisé sur mobile quand l'interface est étroite. Max 5 Mo.</div>
           <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('mobile')" ${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'disabled' : ''}>${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'Patiente avant changement' : 'Choisir le fond téléphone'}</button>
         </div>
       </div>
@@ -1968,11 +1978,9 @@ async function uploadCustomBackgroundData(imageData, target, me) {
       currentPlayer[field] = imageData;
       currentPlayer.custom_bg_changed_at = me.custom_bg_changed_at;
     }
-    localStorage.setItem('player', JSON.stringify(me));
-    sessionStorage.setItem('player', JSON.stringify(me));
-    syncStoredPlayerPatch({ [field]: imageData, custom_bg_changed_at: me.custom_bg_changed_at });
     refreshCustomBackgroundPreviews(me);
     if (typeof window.refreshCustomBackground === 'function') window.refreshCustomBackground();
+    render(currentPlayer || me, currentGamesCache || [], currentFollowingCache || [], currentFollowersCache || [], currentFollowStatusCache || { isFollowing: false, followers: 0, following: 0 }, currentTournamentsCache || []);
     return true;
   }
   PROFIL_SFX.error();
@@ -2093,9 +2101,9 @@ function handleCustomBackgroundUpload(input, target) {
     input.value = '';
     return;
   }
-  const maxBytes = target === 'mobile' ? 4 * 1024 * 1024 : 6 * 1024 * 1024;
+  const maxBytes = 5 * 1024 * 1024;
   if (file.size > maxBytes) {
-    alert(target === 'mobile' ? 'Fond téléphone trop lourd (max 4 Mo).' : 'Fond PC trop lourd (max 6 Mo).');
+    alert('Fond personnalisé trop lourd (max 5 Mo).');
     input.value = '';
     return;
   }
