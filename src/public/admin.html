@@ -273,6 +273,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 
+  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Sauvegarde bases</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Télécharge la base SQLite principale et ses fichiers WAL / SHM séparément.</div>
+      </div>
+      <div id="backup-status-preview" style="font-size:13px;color:var(--muted);"></div>
+    </div>
+    <div id="backup-files-list" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
+  </div>
+
   <!-- Onglets Joueurs / Parties -->
   <div style="display:flex;gap:6px;margin-bottom:14px;">
     <button id="tab-players-btn" onclick="switchAdminTab('players')"
@@ -404,9 +415,12 @@ async function showPanel() {
   if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const systemActions = document.getElementById('system-status-actions');
   if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
+  const backupList = document.getElementById('backup-files-list');
+  if (backupList && myRole !== 'admin') backupList.innerHTML = `<div style="font-size:12px;color:var(--muted)">Réservé aux administrateurs.</div>`;
   await loadBoostStatus();
   await loadCoinBoostStatus();
   await loadSystemStatus();
+  await loadBackupFiles();
   await loadVipBoosts();
   await loadPlayers();
 }
@@ -1057,6 +1071,63 @@ async function loadSystemStatus() {
       ? `<span style="color:var(--orange)">Alerte active</span>`
       : `<span style="color:var(--muted)">Aucune alerte active</span>`;
   } catch (e) {}
+}
+
+async function loadBackupFiles() {
+  const list = document.getElementById('backup-files-list');
+  const preview = document.getElementById('backup-status-preview');
+  if (!list) return;
+  if (myRole !== 'admin') {
+    list.innerHTML = `<div style="font-size:12px;color:var(--muted)">Réservé aux administrateurs.</div>`;
+    if (preview) preview.innerHTML = '';
+    return;
+  }
+  try {
+    const data = await api('GET', '/api/admin/backups');
+    const files = Array.isArray(data.files) ? data.files : [];
+    const available = files.filter(f => f.exists);
+    if (preview) {
+      preview.innerHTML = available.length
+        ? `<span style="color:var(--blue)">${available.length} fichier(s) disponible(s)</span>`
+        : `<span style="color:var(--muted)">Aucun fichier disponible</span>`;
+    }
+    list.innerHTML = files.map(file => {
+      const sizeKo = file.size ? `${Math.max(1, Math.round(file.size / 1024))} Ko` : 'indisponible';
+      return `
+        <button class="btn-sm" ${file.exists ? '' : 'disabled'}
+          style="background:${file.exists ? 'rgba(133,235,255,0.12)' : 'rgba(255,255,255,0.04)'};color:${file.exists ? 'var(--blue)' : 'var(--muted)'};border:1px solid ${file.exists ? 'rgba(133,235,255,0.28)' : 'rgba(255,255,255,0.06)'};"
+          onclick="${file.exists ? `downloadBackup('${file.key}', '${file.filename}')` : ''}">
+          ${file.label} · ${sizeKo}
+        </button>
+      `;
+    }).join('');
+  } catch (e) {
+    if (preview) preview.innerHTML = `<span style="color:var(--red)">Erreur de lecture</span>`;
+    list.innerHTML = '';
+  }
+}
+
+async function downloadBackup(key, filename) {
+  try {
+    const res = await fetch(`/api/admin/backups/${encodeURIComponent(key)}`, {
+      headers: { 'x-admin-token': adminToken }
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Téléchargement impossible.');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || `backup-${key}.db`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert(e.message || 'Erreur sauvegarde.');
+  }
 }
 
 async function setSystemStatus(restarting) {

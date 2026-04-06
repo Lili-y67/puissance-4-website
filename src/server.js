@@ -17,6 +17,8 @@ const onlineSockets = new Map(); // playerId AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasA
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
+const MAIN_DB_PATH = path.join(__dirname, '../data/p4.db');
+
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
@@ -2897,6 +2899,38 @@ app.post('/api/admin/system-status', (req, res) => {
   res.json({ ok: true, status });
 });
 
+app.get('/api/admin/backups', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
+  const files = [
+    { key: 'main', label: 'Base principale', filePath: MAIN_DB_PATH },
+    { key: 'wal', label: 'Journal WAL', filePath: `${MAIN_DB_PATH}-wal` },
+    { key: 'shm', label: 'Memoire SHM', filePath: `${MAIN_DB_PATH}-shm` },
+  ].map(entry => {
+    const exists = fs.existsSync(entry.filePath);
+    return {
+      key: entry.key,
+      label: entry.label,
+      filename: path.basename(entry.filePath),
+      exists,
+      size: exists ? fs.statSync(entry.filePath).size : 0,
+    };
+  });
+  res.json({ files });
+});
+
+app.get('/api/admin/backups/:key', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
+  const fileMap = {
+    main: MAIN_DB_PATH,
+    wal: `${MAIN_DB_PATH}-wal`,
+    shm: `${MAIN_DB_PATH}-shm`,
+  };
+  const filePath = fileMap[String(req.params.key || '')];
+  if (!filePath) return res.status(404).json({ error: 'Sauvegarde introuvable.' });
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Fichier indisponible.' });
+  res.download(filePath, path.basename(filePath));
+});
+
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
@@ -2906,11 +2940,13 @@ app.get('/api/leaderboard/wins', (_, res) => {
 });
 app.get('/api/site-stats', (_, res) => {
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
+  const registeredPlayers = db.prepare(`SELECT COUNT(*) as c FROM players`).get()?.c || 0;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get();
   res.json({
     online: onlineSockets.size,
+    registeredPlayers,
     queue: mm?.queue?.length || 0,
     activeGames,
     publicTournament,
