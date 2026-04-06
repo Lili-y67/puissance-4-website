@@ -1965,6 +1965,8 @@ function sanitize(p) {
       avatar_decoration: '',
       token_emoji_image: '',
       profile_banner: '',
+      custom_bg_desktop: '',
+      custom_bg_mobile: '',
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -2004,6 +2006,8 @@ app.delete('/api/players/:id', (req, res) => {
     banner     = '',
     profile_banner = '',
     token_emoji_image = '',
+    custom_bg_desktop = '',
+    custom_bg_mobile = '',
     color_secondary = '',
     is_vip = 0,
     is_vip_plus = 0,
@@ -2193,6 +2197,39 @@ app.patch('/api/players/:id/profile-banner', (req, res) => {
   pQ.updateProfileBanner.run({ image: nextBanner, id });
   pQ.updateProfileBannerChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/custom-background', (req, res) => {
+  const { image, token, target } = req.body || {};
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Reserve au pack Perso.' });
+  }
+  const slot = String(target || '').trim().toLowerCase();
+  if (!['desktop', 'mobile'].includes(slot)) {
+    return res.status(400).json({ error: 'Cible invalide.' });
+  }
+  const nextImage = String(image || '').trim();
+  if (!nextImage.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'Image invalide.' });
+  }
+  if (!/^data:image\/(png|webp|jpeg|jpg);base64,/i.test(nextImage)) {
+    return res.status(400).json({ error: 'Formats autorises : PNG, WEBP, JPG.' });
+  }
+  const approxBytes = Math.ceil((nextImage.length - nextImage.indexOf(',') - 1) * 3 / 4);
+  const maxBytes = slot === 'desktop' ? 6 * 1024 * 1024 : 4 * 1024 * 1024;
+  if (!isAdminPlayer(player) && approxBytes > maxBytes) {
+    return res.status(413).json({ error: slot === 'desktop' ? 'Fond PC trop lourd (max 6 Mo).' : 'Fond telephone trop lourd (max 4 Mo).' });
+  }
+  if (slot === 'desktop') {
+    pQ.updateCustomBgDesktop.run({ image: nextImage, id });
+  } else {
+    pQ.updateCustomBgMobile.run({ image: nextImage, id });
+  }
+  res.json({ ok: true, target: slot, player: sanitize(pQ.getById.get(id)) });
 });
 
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs

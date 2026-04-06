@@ -330,10 +330,19 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .profile-banner-choice-preview{position:relative;width:100%;max-width:360px;height:96px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:14px}
 .profile-banner-choice-preview img{width:100%;height:100%;object-fit:cover;display:block}
 .profile-banner-choice-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.custom-bg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.custom-bg-slot{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:16px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)}
+.custom-bg-preview{position:relative;height:112px;border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center}
+.custom-bg-preview.mobile{height:156px}
+.custom-bg-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.custom-bg-preview-empty{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center;padding:0 12px}
+.custom-bg-slot-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.custom-bg-slot-meta{font-size:11px;color:var(--muted);line-height:1.55}
 @media (max-width: 760px){
   .avatar-decoration-modal{padding:18px 16px}
   .avatar-decoration-modal-layout{grid-template-columns:1fr}
   .avatar-decoration-modal-head{align-items:center}
+  .custom-bg-grid{grid-template-columns:1fr}
 }
 
 /* â”€â”€ Search bar â”€â”€ */
@@ -548,6 +557,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarUpload(this)">
 <input type="file" id="token-emoji-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleTokenEmojiUpload(this)">
 <input type="file" id="avatar-decoration-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleAvatarDecorationUpload(this)">
+<input type="file" id="custom-bg-desktop-input" style="display:none" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleCustomBackgroundUpload(this,'desktop')">
+<input type="file" id="custom-bg-mobile-input" style="display:none" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleCustomBackgroundUpload(this,'mobile')">
 <div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
   <div class="upload-chooser-modal">
     <div class="upload-chooser-head">
@@ -848,6 +859,10 @@ function isVip(player = currentPlayer) {
 
 function isPerso(player = currentPlayer) {
   return Number(player?.is_perso) === 1;
+}
+
+function canUseCustomBackground(player = currentPlayer) {
+  return isPerso(player) || String(player?.role || '') === 'admin';
 }
 
 function canUseGradient(player = currentPlayer) {
@@ -1261,6 +1276,31 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Choisir une décoration</button>
     </div>
+    ${canUseCustomBackground(player) ? `
+    <div class="avatar-decoration-card" id="custom-background-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Fond personnalisé</span>
+        <span style="font-size:11px;color:var(--muted)">Le site applique automatiquement la version PC ou téléphone selon l'écran.</span>
+      </div>
+      <div class="custom-bg-grid">
+        <div class="custom-bg-slot">
+          <div class="custom-bg-slot-title">Fond PC</div>
+          <div class="custom-bg-preview" id="custom-bg-desktop-preview">
+            ${player.custom_bg_desktop ? `<img src="${getRenderableMediaSrc(player.custom_bg_desktop)}" alt="Fond PC">` : `<div class="custom-bg-preview-empty">Fond PC</div>`}
+          </div>
+          <div class="custom-bg-slot-meta">Format conseillé 1920x1080. PNG ou WEBP avec transparence conseillé. Max 6 Mo.</div>
+          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('desktop')">Choisir le fond PC</button>
+        </div>
+        <div class="custom-bg-slot">
+          <div class="custom-bg-slot-title">Fond téléphone</div>
+          <div class="custom-bg-preview mobile" id="custom-bg-mobile-preview">
+            ${player.custom_bg_mobile ? `<img src="${getRenderableMediaSrc(player.custom_bg_mobile)}" alt="Fond téléphone">` : `<div class="custom-bg-preview-empty">Fond téléphone</div>`}
+          </div>
+          <div class="custom-bg-slot-meta">Format conseillé 1080x1920. Utilisé sur mobile quand l'interface est étroite. Max 4 Mo.</div>
+          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('mobile')">Choisir le fond téléphone</button>
+        </div>
+      </div>
+    </div>` : ''}
     <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
       <div class="avatar-decoration-modal">
         <div class="avatar-decoration-modal-head">
@@ -1693,6 +1733,12 @@ function getStageMetrics(mode) {
   if (mode === 'token') {
     return { width: 640, height: 420, cropWidth: 220, cropHeight: 220, outputWidth: 128, outputHeight: 128 };
   }
+  if (mode === 'custom-bg-desktop') {
+    return { width: 640, height: 420, cropWidth: 560, cropHeight: 315, outputWidth: 1920, outputHeight: 1080 };
+  }
+  if (mode === 'custom-bg-mobile') {
+    return { width: 640, height: 420, cropWidth: 210, cropHeight: 374, outputWidth: 1080, outputHeight: 1920 };
+  }
   return { width: 640, height: 420, cropWidth: 560, cropHeight: 186, outputWidth: 1500, outputHeight: 500 };
 }
 
@@ -1820,6 +1866,10 @@ function openImageEditor(dataUrl, mode) {
         ? "Ajuster la décoration"
       : mode === 'token'
         ? "Ajuster l'emoji VIP"
+      : mode === 'custom-bg-desktop'
+        ? 'Ajuster le fond PC'
+      : mode === 'custom-bg-mobile'
+        ? 'Ajuster le fond téléphone'
         : 'Ajuster la banniere';
     if (els.sub) els.sub.textContent = mode === 'avatar'
       ? 'Zoomez et deplacez votre avatar avant validation.'
@@ -1827,6 +1877,10 @@ function openImageEditor(dataUrl, mode) {
         ? 'Placez votre décoration autour de l avatar avant validation.'
       : mode === 'token'
         ? 'Recadrez votre emoji VIP en 128x128 avant validation.'
+      : mode === 'custom-bg-desktop'
+        ? 'Le rendu PC sera utilise sur les interfaces larges.'
+      : mode === 'custom-bg-mobile'
+        ? 'Le rendu téléphone sera utilise automatiquement sur mobile.'
         : 'Placez votre banniere exactement comme vous le souhaitez.';
     if (els.bg) {
       els.bg.classList.add('show');
@@ -1872,6 +1926,48 @@ function exportImageEditor() {
   return IMAGE_EDITOR.mode === 'banner'
     ? canvas.toDataURL('image/jpeg', 0.92)
     : canvas.toDataURL('image/png');
+}
+
+function refreshCustomBackgroundPreviews(player = currentPlayer) {
+  const desktopPreview = document.getElementById('custom-bg-desktop-preview');
+  const mobilePreview = document.getElementById('custom-bg-mobile-preview');
+  const desktopSrc = getRenderableMediaSrc(player?.custom_bg_desktop || '');
+  const mobileSrc = getRenderableMediaSrc(player?.custom_bg_mobile || '');
+  if (desktopPreview) {
+    desktopPreview.innerHTML = desktopSrc
+      ? `<img src="${desktopSrc}" alt="Fond PC">`
+      : `<div class="custom-bg-preview-empty">Fond PC</div>`;
+  }
+  if (mobilePreview) {
+    mobilePreview.innerHTML = mobileSrc
+      ? `<img src="${mobileSrc}" alt="Fond téléphone">`
+      : `<div class="custom-bg-preview-empty">Fond téléphone</div>`;
+  }
+}
+
+async function uploadCustomBackgroundData(imageData, target, me) {
+  const res = await fetch('/api/players/' + me.id + '/custom-background', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: imageData, target, token: localStorage.getItem('token') }),
+  });
+  if (res.ok) {
+    PROFIL_SFX.upload();
+    const field = target === 'mobile' ? 'custom_bg_mobile' : 'custom_bg_desktop';
+    me[field] = imageData;
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
+      currentPlayer[field] = imageData;
+    }
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    syncStoredPlayerPatch({ [field]: imageData });
+    refreshCustomBackgroundPreviews(me);
+    if (typeof window.refreshCustomBackground === 'function') window.refreshCustomBackground();
+    return true;
+  }
+  PROFIL_SFX.error();
+  alert(await readApiError(res, 'Erreur upload fond personnalisé.'));
+  return false;
 }
 
 async function uploadBannerData(banner, me, token) {
@@ -1969,6 +2065,39 @@ async function uploadAvatarDecorationData(imageData, me) {
   return false;
 }
 
+function openCustomBackgroundPicker(target) {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me?.id || !canUseCustomBackground(me)) return;
+  const input = document.getElementById(target === 'mobile' ? 'custom-bg-mobile-input' : 'custom-bg-desktop-input');
+  if (!input) return;
+  input.value = '';
+  input.click();
+}
+
+function handleCustomBackgroundUpload(input, target) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const isStaticImage = /^image\/(png|jpeg|jpg|webp)$/i.test(file.type || '');
+  if (!isStaticImage) {
+    alert('Formats autorisés : PNG, WEBP ou JPG.');
+    input.value = '';
+    return;
+  }
+  const maxBytes = target === 'mobile' ? 4 * 1024 * 1024 : 6 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    alert(target === 'mobile' ? 'Fond téléphone trop lourd (max 4 Mo).' : 'Fond PC trop lourd (max 6 Mo).');
+    input.value = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = String(e?.target?.result || '');
+    IMAGE_EDITOR.file = file;
+    openImageEditor(dataUrl, target === 'mobile' ? 'custom-bg-mobile' : 'custom-bg-desktop');
+  };
+  reader.readAsDataURL(file);
+}
+
 function renderAvatarDecorationGallery(player = currentPlayer) {
   const gallery = document.getElementById('avatar-decoration-gallery');
   if (!gallery) return;
@@ -2019,6 +2148,11 @@ async function confirmImageEditor() {
   }
   if (IMAGE_EDITOR.mode === 'decoration') {
     const ok = await uploadAvatarDecorationData(output, me);
+    if (ok) closeImageEditor();
+    return;
+  }
+  if (IMAGE_EDITOR.mode === 'custom-bg-desktop' || IMAGE_EDITOR.mode === 'custom-bg-mobile') {
+    const ok = await uploadCustomBackgroundData(output, IMAGE_EDITOR.mode === 'custom-bg-mobile' ? 'mobile' : 'desktop', me);
     if (ok) closeImageEditor();
     return;
   }
@@ -3447,6 +3581,7 @@ function initProfileInteractionSounds() {
 initProfileInteractionSounds();
 load();
 </script>
+<script src="/custom-background.js"></script>
 <script src="/presence.js"></script>
 </body>
 </html>
