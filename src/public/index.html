@@ -995,12 +995,12 @@ html, body {
 <div class="side-quick-menu" id="side-quick-menu">
   <div class="side-quick-panel">
     <div class="side-quick-inner">
-      <div class="side-quick-title">AccÃ¨s rapides</div>
+      <div class="side-quick-title">Accès rapides</div>
       <div class="side-quick-links">
         <a class="side-quick-link" href="/regles">
           <span class="side-quick-emoji">&#128218;</span>
           <span class="side-quick-meta">
-            <span class="side-quick-label">RÃ¨gles</span>
+            <span class="side-quick-label">Règles</span>
             <span class="side-quick-sub">Guide de jeu</span>
           </span>
         </a>
@@ -1042,12 +1042,12 @@ html, body {
         <a class="side-quick-link" href="/forgot-password">
           <span class="side-quick-emoji">&#128273;</span>
           <span class="side-quick-meta">
-            <span class="side-quick-label">Mot de passe oubliÃ©</span>
-            <span class="side-quick-sub">RÃ©cupÃ©ration</span>
+            <span class="side-quick-label">Mot de passe oublié</span>
+            <span class="side-quick-sub">Récupération</span>
           </span>
         </a>
       </div>
-      <div class="side-quick-footer">Â© 2026 Puissance 4 Ranked Â· <a href="/cgu">Conditions d'utilisation</a></div>
+      <div class="side-quick-footer">&copy; 2026 Puissance 4 Ranked · <a href="/cgu">Conditions d'utilisation</a></div>
     </div>
   </div>
   <button class="side-quick-toggle" id="side-quick-toggle" type="button" onclick="toggleQuickMenu()" aria-label="Ouvrir le menu rapide">
@@ -1061,7 +1061,7 @@ html, body {
     <span class="tournament-notice-dot"></span>
     <span>Tournoi public en cours</span>
   </div>
-  <div class="tournament-notice-body" id="tournament-notice-body">Une arÃ¨ne publique est disponible.</div>
+  <div class="tournament-notice-body" id="tournament-notice-body">Une arène publique est disponible.</div>
   <div class="tournament-notice-actions">
     <button class="btn btn-ghost" type="button" onclick="openPublicTournamentNotice()">Voir</button>
     <button class="btn btn-play" type="button" onclick="joinPublicTournamentNotice()">Rejoindre</button>
@@ -1075,11 +1075,11 @@ html, body {
     <div class="logo">
       <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
     </div>
-    <div class="logo-tagline">Connecte Â· DÃ©fie Â· Domine</div>
+    <div class="logo-tagline">Connecte · Défie · Domine</div>
 
         <div class="site-online-badge" id="site-online-badge">
       <span class="site-online-dot"></span>
-      <span id="site-online-count">0</span> connectes
+      <span id="site-online-count">0</span> connectés
     </div>
     <div class="site-games-badge" id="site-games-badge">
       <span class="site-games-dot"></span>
@@ -1093,21 +1093,21 @@ html, body {
   <div class="card" id="main-card">
     <!-- LOGIN VIEW -->
     <div id="view-login">
-      <div class="card-label">Entrer dans l'arÃ¨ne</div>
+      <div class="card-label">Entrer dans l'arène</div>
 
       <!-- Tabs login / register -->
       <div class="auth-tabs">
         <button class="auth-tab active" id="tab-login"    onclick="switchTab('login')">Connexion</button>
-        <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">CrÃ©er un compte</button>
+        <button class="auth-tab"        id="tab-register" onclick="switchTab('register')">Créer un compte</button>
       </div>
 
       <div class="input-wrap">
-        <span class="input-icon">âš”ï¸</span>
+        <span class="input-icon">&#9876;&#65039;</span>
         <input class="input" id="input-pseudo" placeholder="Pseudo" maxlength="20" autocomplete="off" spellcheck="false" />
       </div>
 
       <div class="input-wrap">
-        <span class="input-icon">ðŸ”’</span>
+        <span class="input-icon">&#128274;</span>
         <input class="input" id="input-password" type="password" placeholder="Mot de passe" autocomplete="current-password" />
       </div>
 
@@ -1119,7 +1119,7 @@ html, body {
         <div class="token-color-custom">
           <div class="token-color-preview" id="token-color-preview"></div>
           <div class="token-color-meta">
-            <div class="token-color-title">Couleur personnalisÃ©e</div>
+            <div class="token-color-title">Couleur personnalisée</div>
             <div class="token-color-value" id="token-color-value">#FF2D55</div>
           </div>
           <input class="token-color-picker" id="token-color-picker" type="color" value="#ff2d55" oninput="onRegisterColorInput(this.value)">
@@ -1129,27 +1129,27 @@ html, body {
       <div class="error-msg" id="error-msg"></div>
 
       <button class="btn btn-play" id="btn-play" onclick="handleAuth()">
-        <span>âš¡</span> <span id="btn-play-txt">Se connecter</span>
+        <span>&#9889;</span> <span id="btn-play-txt">Se connecter</span>
       </button>
 
       <button class="btn btn-ghost" onclick="loginWithDiscord()" style="margin-top:10px;border-color:rgba(88,101,242,0.35);color:#aab5ff;background:rgba(88,101,242,0.1)">
-        ðŸ”— Connecter via Discord
+        &#128279; Connecter via Discord
       </button>
 
       <div class="divider">ou</div>
 
       <button class="btn btn-ghost" onclick="window.location.href='/profil'">
-        ðŸ‘¤ Voir mon profil
+        &#128100; Voir mon profil
       </button>
 
       <button class="btn btn-robot" onclick="openBotModal()">
-        ðŸ¤– Jouer contre l'ordinateur
+        &#129302; Jouer contre l'ordinateur
       </button>
 
-      <!-- Modal sÃ©lection difficultÃ© bot -->
+      <!-- Modal sélection difficulté bot -->
       <div id="bot-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;color:var(--text);">ðŸ¤– MODE IA</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;color:var(--text);">&#129302; MODE IA</div>
 
           <!-- Tabs -->
           <div style="display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:3px;">
@@ -1168,17 +1168,17 @@ html, body {
             <button onclick="startVsIA('easy')"
               style="padding:13px 16px;border-radius:12px;border:1px solid rgba(48,209,88,0.3);background:rgba(48,209,88,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
               onmouseover="this.style.background='rgba(48,209,88,0.18)'" onmouseout="this.style.background='rgba(48,209,88,0.08)'">
-              ðŸŸ¢ FACILE <span style="font-weight:400;font-size:12px;color:var(--muted);">â€” ~500 ELO, erreurs frÃ©quentes</span>
+              &#128994; FACILE <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~500 ELO, erreurs fréquentes</span>
             </button>
             <button onclick="startVsIA('medium')"
               style="padding:13px 16px;border-radius:12px;border:1px solid rgba(255,159,10,0.3);background:rgba(255,159,10,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
               onmouseover="this.style.background='rgba(255,159,10,0.18)'" onmouseout="this.style.background='rgba(255,159,10,0.08)'">
-              ðŸŸ¡ MOYEN <span style="font-weight:400;font-size:12px;color:var(--muted);">â€” ~1200 ELO, dÃ©fense correcte</span>
+              &#128993; MOYEN <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~1200 ELO, défense correcte</span>
             </button>
             <button onclick="startVsIA('hard')"
               style="padding:13px 16px;border-radius:12px;border:1px solid rgba(255,45,85,0.3);background:rgba(255,45,85,0.08);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;text-align:left;transition:all 0.15s;"
               onmouseover="this.style.background='rgba(255,45,85,0.18)'" onmouseout="this.style.background='rgba(255,45,85,0.08)'">
-              ðŸ”´ DIFFICILE <span style="font-weight:400;font-size:12px;color:var(--muted);">â€” ~2800 ELO, Minimax optimal</span>
+              &#128308; DIFFICILE <span style="font-weight:400;font-size:12px;color:var(--muted);">— ~2800 ELO, Minimax optimal</span>
             </button>
           </div>
 
@@ -1203,7 +1203,7 @@ html, body {
             <div id="bot-elo-desc" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.02);font-size:12px;color:var(--muted);min-height:44px;"></div>
             <button onclick="startVsIA('elo', parseInt(document.getElementById('bot-elo-slider').value))"
               style="padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;cursor:pointer;">
-              âš¡ JOUER
+              &#9889; JOUER
             </button>
           </div>
 
@@ -1226,7 +1226,7 @@ html, body {
         <div class="queue-sub" id="queue-sub">En attente d'un adversaire...</div>
         <div class="queue-timer" id="queue-timer">00:00</div>
         <div class="boost-alert" id="queue-boost-alert">
-          <div class="boost-alert-badge">âš¡</div>
+          <div class="boost-alert-badge">&#9889;</div>
           <div class="boost-alert-copy">
             <div class="boost-alert-title">Boost actif</div>
             <div class="boost-alert-sub" id="queue-boost-alert-text"></div>
@@ -1248,28 +1248,28 @@ html, body {
       <!-- Player stats recap -->
       <div class="stats-strip" id="queue-stats" style="display:none">
         <div class="stat-item elo">
-          <div class="stat-val" id="stat-elo">â€”</div>
+          <div class="stat-val" id="stat-elo">—</div>
           <div class="stat-key">ELO</div>
         </div>
         <div class="stat-item wins">
-          <div class="stat-val" id="stat-wins">â€”</div>
+          <div class="stat-val" id="stat-wins">—</div>
           <div class="stat-key">Victoires</div>
         </div>
         <div class="stat-item">
-          <div class="stat-val" id="stat-games">â€”</div>
+          <div class="stat-val" id="stat-games">—</div>
           <div class="stat-key">Parties</div>
         </div>
       </div>
 
       <button class="btn btn-cancel" onclick="handleLeaveQueue()">
-        âœ• Annuler la recherche
+        &#10005; Annuler la recherche
       </button>
     </div>
   </div>
 </div>
 
 <div class="queue-volume" id="queue-volume">
-  <span class="queue-volume-icon" id="queue-volume-icon">ðŸ”Š</span>
+  <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
   <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
   <span class="queue-volume-val" id="queue-volume-val">35%</span>
 </div>
@@ -1337,7 +1337,7 @@ function switchTab(mode) {
   authMode = mode;
   document.getElementById('tab-login').classList.toggle('active', mode === 'login');
   document.getElementById('tab-register').classList.toggle('active', mode === 'register');
-  document.getElementById('btn-play-txt').textContent = mode === 'login' ? 'Se connecter' : 'CrÃ©er mon compte';
+  document.getElementById('btn-play-txt').textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte';
   const colorSection = document.getElementById('token-color-section');
   if (colorSection) colorSection.style.display = mode === 'register' ? 'flex' : 'none';
   document.getElementById('error-msg').textContent = '';
@@ -1431,7 +1431,7 @@ async function handleAuth() {
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     connectAndQueue();
   } catch {
-    showError('Erreur rÃ©seau, rÃ©essaie.');
+    showError('Erreur réseau, réessaie.');
     btn.disabled = false;
     document.getElementById('btn-play-txt').textContent = origTxt;
   }
@@ -1480,9 +1480,9 @@ function showError(msg) {
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // â”€â”€ Noms alÃ©atoires pour le robot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BOT_NAMES = [
-  'GalaxBot','NÃ©onRex','CirKuit','PlasmaZen','VortexOS',
-  'NovaByte','CryptoKid','OmÃ©gaDrift','SynthWave','TurboNul',
-  'ZÃ©roMiss','ByteStorm','QuasarBot','GlitchMod','NeuroPix',
+  'GalaxBot','NéonRex','CirKuit','PlasmaZen','VortexOS',
+  'NovaByte','CryptoKid','OmégaDrift','SynthWave','TurboNul',
+  'ZéroMiss','ByteStorm','QuasarBot','GlitchMod','NeuroPix',
   'PulseCore','DataWraith','XenonBot','CosmoNerd','ArcFlash',
 ];
 function randomBotName() {
@@ -1540,12 +1540,12 @@ function setBotTab(tab) {
 }
 
 const _BOT_RANKS = [
-  { min:100,  max:699,  name:'Malachite', color:'#2ecc71', depth:0, desc:"Joue alÃ©atoirement, rate mÃªme les victoires Ã©videntes." },
-  { min:700,  max:1299, name:'Quartz',    color:'#b0bec5', depth:1, desc:"Voit les victoires immÃ©diates et les bloquages simples." },
-  { min:1300, max:1799, name:'Ambre',     color:'#cd7f32', depth:3, desc:"Minimax profondeur 3 â€” commet des erreurs rÃ©guliÃ¨rement." },
-  { min:1800, max:2299, name:'Jade',      color:'#1abc9c', depth:5, desc:"Minimax profondeur 5 â€” dÃ©fense solide, quelques erreurs." },
-  { min:2300, max:2799, name:'Saphir',    color:'#3498db', depth:7, desc:"Minimax profondeur 7 â€” trÃ¨s fort, peu d'erreurs." },
-  { min:2800, max:3500, name:'AmÃ©thyste', color:'#9b59b6', depth:10,desc:"Minimax profondeur 10 â€” jeu quasi optimal." },
+  { min:100,  max:699,  name:'Malachite', color:'#2ecc71', depth:0, desc:"Joue aléatoirement, rate même les victoires évidentes." },
+  { min:700,  max:1299, name:'Quartz',    color:'#b0bec5', depth:1, desc:"Voit les victoires immédiates et les bloquages simples." },
+  { min:1300, max:1799, name:'Ambre',     color:'#cd7f32', depth:3, desc:"Minimax profondeur 3 — commet des erreurs régulièrement." },
+  { min:1800, max:2299, name:'Jade',      color:'#1abc9c', depth:5, desc:"Minimax profondeur 5 — défense solide, quelques erreurs." },
+  { min:2300, max:2799, name:'Saphir',    color:'#3498db', depth:7, desc:"Minimax profondeur 7 — très fort, peu d'erreurs." },
+  { min:2800, max:3500, name:'Améthyste', color:'#9b59b6', depth:10,desc:"Minimax profondeur 10 — jeu quasi optimal." },
 ];
 
 function getBotRankInfo(elo) {
@@ -1603,7 +1603,7 @@ const QueueMusic = (() => {
     const pct = Math.round(volume * 100);
     if (slider) slider.value = String(pct);
     if (valueEl) valueEl.textContent = pct + '%';
-    if (icon) icon.textContent = pct === 0 ? 'ðŸ”‡' : (pct < 50 ? 'ðŸ”‰' : 'ðŸ”Š');
+    if (icon) icon.textContent = pct === 0 ? '🔇' : (pct < 50 ? '🔉' : '🔊');
   }
   return {
     start() {
@@ -1664,7 +1664,7 @@ function renderPublicTournamentNotice(tournament) {
     box.classList.remove('show');
     return;
   }
-  body.textContent = `${tournament.name} Â· ${tournament.participants || 0} inscrits Â· ${Math.max(0, Number(tournament.move_time_seconds || 0))}s par coup`;
+  body.textContent = `${tournament.name} · ${tournament.participants || 0} inscrits · ${Math.max(0, Number(tournament.move_time_seconds || 0))}s par coup`;
   box.classList.add('show');
 }
 
@@ -1751,23 +1751,23 @@ function showLoggedInView(p) {
         Salut, <span style="color:var(--red)">${p.pseudo}</span> !
       </div>
       <div style="font-size:13px;color:var(--muted);text-align:center;">
-        Auto-rejoin dÃ©sactivÃ© â€” clique pour rejoindre la file d'attente.
+        Auto-rejoin désactivé — clique pour rejoindre la file d'attente.
       </div>
       <div class="boost-alert" id="logged-boost-alert">
-        <div class="boost-alert-badge">âš¡</div>
+          <div class="boost-alert-badge">&#9889;</div>
         <div class="boost-alert-copy">
           <div class="boost-alert-title">Boost actif</div>
           <div class="boost-alert-sub" id="logged-boost-alert-text"></div>
         </div>
       </div>
       <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
-        <span>âš¡</span> <span>Rejoindre la partie</span>
+        <span>&#9889;</span> <span>Rejoindre la partie</span>
       </button>
       <button class="btn btn-robot" style="width:100%" onclick="openBotModal()">
-        <span>ðŸ¤–</span> <span>Jouer contre l'ordinateur</span>
+        <span>&#129302;</span> <span>Jouer contre l'ordinateur</span>
       </button>
       <a href="/profil?id=${p.id}" style="font-size:12px;color:var(--muted);text-decoration:none;">
-        â†’ Mon profil
+        &rarr; Mon profil
       </a>
     </div>
   `;
@@ -1792,7 +1792,7 @@ function connectAndQueue() {
     showQueueView(position);
     if (reason === 'anti_rematch') {
       const sub = document.getElementById('queue-sub');
-      if (sub) sub.textContent = "â™»ï¸ Adversaire rÃ©cent â€” recherche d'un autre joueur...";
+      if (sub) sub.textContent = "↻ Adversaire récent — recherche d'un autre joueur...";
     }
   });
   socket.on('match_found',  (data) => {
@@ -1914,7 +1914,7 @@ window.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem('token');
       localStorage.removeItem('player');
       localStorage.removeItem('last_active');
-      showError('â±ï¸ Session expirÃ©e aprÃ¨s 10 minutes d\'inactivitÃ©. Reconnecte-toi.');
+      showError("⏱️ Session expirée après 10 minutes d'inactivité. Reconnecte-toi.");
     } else {
       myPlayer = p;
       localStorage.setItem('last_active', Date.now());
