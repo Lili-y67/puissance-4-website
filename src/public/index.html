@@ -783,6 +783,27 @@ html, body {
   filter: drop-shadow(0 0 10px rgba(255,255,255,0.24));
   animation: sideQuickEmojiBob 0.55s ease;
 }
+.side-quick-link[href="/regles"]:hover .side-quick-emoji {
+  animation: sideQuickBookFlip 0.7s ease;
+}
+.side-quick-link[href="/live"]:hover .side-quick-emoji {
+  animation: sideQuickPulse 0.8s ease;
+}
+.side-quick-link[href="/leaderboard"]:hover .side-quick-emoji {
+  animation: sideQuickTrophyHop 0.7s ease;
+}
+.side-quick-link[href="/tournoi"]:hover .side-quick-emoji {
+  animation: sideQuickMedalSpin 0.85s ease;
+}
+.side-quick-link[href="/boutique"]:hover .side-quick-emoji {
+  animation: sideQuickCartRoll 0.75s ease;
+}
+.side-quick-link[href="/api-doc"]:hover .side-quick-emoji {
+  animation: sideQuickFlaskSwirl 0.8s ease;
+}
+.side-quick-link[href="/forgot-password"]:hover .side-quick-emoji {
+  animation: sideQuickKeyTurn 0.7s ease;
+}
 .side-quick-link:hover .side-quick-label {
   transform: translateX(4px);
   text-shadow: 0 0 12px rgba(255,255,255,0.16);
@@ -852,6 +873,53 @@ html, body {
   0% { transform: rotate(0deg) scale(1); }
   45% { transform: rotate(-18deg) scale(1.16) translateY(-1px); }
   100% { transform: rotate(-16deg) scale(1.14); }
+}
+
+@keyframes sideQuickBookFlip {
+  0% { transform: perspective(120px) rotateY(0deg) scale(1); }
+  35% { transform: perspective(120px) rotateY(-28deg) scale(1.08); }
+  70% { transform: perspective(120px) rotateY(10deg) scale(1.12); }
+  100% { transform: perspective(120px) rotateY(-12deg) scale(1.1); }
+}
+
+@keyframes sideQuickPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(255,80,110,0)); }
+  40% { transform: scale(1.22); filter: drop-shadow(0 0 12px rgba(255,80,110,0.55)); }
+  100% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(255,80,110,0.3)); }
+}
+
+@keyframes sideQuickTrophyHop {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  35% { transform: translateY(-4px) rotate(-10deg) scale(1.15); }
+  65% { transform: translateY(0) rotate(8deg) scale(1.1); }
+  100% { transform: translateY(-1px) rotate(-8deg) scale(1.1); }
+}
+
+@keyframes sideQuickMedalSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  45% { transform: rotate(18deg) scale(1.12); }
+  100% { transform: rotate(-14deg) scale(1.1); }
+}
+
+@keyframes sideQuickCartRoll {
+  0% { transform: translateX(0) rotate(0deg) scale(1); }
+  35% { transform: translateX(3px) rotate(-8deg) scale(1.11); }
+  70% { transform: translateX(-1px) rotate(5deg) scale(1.08); }
+  100% { transform: translateX(1px) rotate(-6deg) scale(1.1); }
+}
+
+@keyframes sideQuickFlaskSwirl {
+  0% { transform: rotate(0deg) scale(1); }
+  30% { transform: rotate(-12deg) scale(1.1); }
+  65% { transform: rotate(10deg) scale(1.14); }
+  100% { transform: rotate(-10deg) scale(1.1); }
+}
+
+@keyframes sideQuickKeyTurn {
+  0% { transform: rotate(0deg) scale(1); }
+  40% { transform: rotate(22deg) scale(1.12); }
+  70% { transform: rotate(-6deg) scale(1.08); }
+  100% { transform: rotate(-12deg) scale(1.1); }
 }
 
 @keyframes sideQuickSheen {
