@@ -159,6 +159,7 @@ const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const CUSTOM_BACKGROUND_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
@@ -204,6 +205,13 @@ function getProfileBannerRemainingMs(player) {
   if (isAdminPlayer(player)) return 0;
   const lastChanged = Number(player?.profile_banner_changed_at || 0);
   const remaining = lastChanged + PROFILE_BANNER_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function getCustomBackgroundRemainingMs(player) {
+  if (isAdminPlayer(player)) return 0;
+  const lastChanged = Number(player?.custom_bg_changed_at || 0);
+  const remaining = lastChanged + CUSTOM_BACKGROUND_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -2224,11 +2232,19 @@ app.patch('/api/players/:id/custom-background', (req, res) => {
   if (!isAdminPlayer(player) && approxBytes > maxBytes) {
     return res.status(413).json({ error: slot === 'desktop' ? 'Fond PC trop lourd (max 6 Mo).' : 'Fond telephone trop lourd (max 4 Mo).' });
   }
+  const currentDesktop = String(player?.custom_bg_desktop || '');
+  const currentMobile = String(player?.custom_bg_mobile || '');
+  const currentValue = slot === 'desktop' ? currentDesktop : currentMobile;
+  const remaining = getCustomBackgroundRemainingMs(player);
+  if (remaining > 0 && nextImage !== currentValue) {
+    return res.status(429).json({ error: `Fond personnalise disponible dans ${formatCooldownHours(remaining)}.` });
+  }
   if (slot === 'desktop') {
     pQ.updateCustomBgDesktop.run({ image: nextImage, id });
   } else {
     pQ.updateCustomBgMobile.run({ image: nextImage, id });
   }
+  pQ.updateCustomBgChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true, target: slot, player: sanitize(pQ.getById.get(id)) });
 });
 

@@ -849,6 +849,14 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
   return remaining > 0 ? remaining : 0;
 }
 
+function getCustomBackgroundRemainingMs(player = currentPlayer) {
+  if (String(player?.role || '') === 'admin') return 0;
+  const lastChanged = Number(player?.custom_bg_changed_at || 0);
+  if (!lastChanged) return 0;
+  const remaining = lastChanged + (7 * 24 * 60 * 60 * 1000) - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
 function isVipPlus(player = currentPlayer) {
   return Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
 }
@@ -1280,7 +1288,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     <div class="avatar-decoration-card" id="custom-background-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Fond personnalisé</span>
-        <span style="font-size:11px;color:var(--muted)">Le site applique automatiquement la version PC ou téléphone selon l'écran.</span>
+        <span style="font-size:11px;color:${getCustomBackgroundRemainingMs(player) > 0 ? '#85EBFF' : 'var(--muted)'}">${String(player.role || '') === 'admin' ? 'Admin : aucun délai' : (getCustomBackgroundRemainingMs(player) > 0 ? `Disponible dans ${formatRemainingTime(getCustomBackgroundRemainingMs(player))}` : 'Le site applique automatiquement la version PC ou téléphone selon l écran.')}</span>
       </div>
       <div class="custom-bg-grid">
         <div class="custom-bg-slot">
@@ -1289,7 +1297,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.custom_bg_desktop ? `<img src="${getRenderableMediaSrc(player.custom_bg_desktop)}" alt="Fond PC">` : `<div class="custom-bg-preview-empty">Fond PC</div>`}
           </div>
           <div class="custom-bg-slot-meta">Format conseillé 1920x1080. PNG ou WEBP avec transparence conseillé. Max 6 Mo.</div>
-          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('desktop')">Choisir le fond PC</button>
+          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('desktop')" ${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'disabled' : ''}>${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'Patiente avant changement' : 'Choisir le fond PC'}</button>
         </div>
         <div class="custom-bg-slot">
           <div class="custom-bg-slot-title">Fond téléphone</div>
@@ -1297,7 +1305,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.custom_bg_mobile ? `<img src="${getRenderableMediaSrc(player.custom_bg_mobile)}" alt="Fond téléphone">` : `<div class="custom-bg-preview-empty">Fond téléphone</div>`}
           </div>
           <div class="custom-bg-slot-meta">Format conseillé 1080x1920. Utilisé sur mobile quand l'interface est étroite. Max 4 Mo.</div>
-          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('mobile')">Choisir le fond téléphone</button>
+          <button class="avatar-decoration-btn" type="button" onclick="openCustomBackgroundPicker('mobile')" ${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'disabled' : ''}>${getCustomBackgroundRemainingMs(player) > 0 && String(player.role || '') !== 'admin' ? 'Patiente avant changement' : 'Choisir le fond téléphone'}</button>
         </div>
       </div>
     </div>` : ''}
@@ -1955,12 +1963,14 @@ async function uploadCustomBackgroundData(imageData, target, me) {
     PROFIL_SFX.upload();
     const field = target === 'mobile' ? 'custom_bg_mobile' : 'custom_bg_desktop';
     me[field] = imageData;
+    me.custom_bg_changed_at = Date.now();
     if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
       currentPlayer[field] = imageData;
+      currentPlayer.custom_bg_changed_at = me.custom_bg_changed_at;
     }
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
-    syncStoredPlayerPatch({ [field]: imageData });
+    syncStoredPlayerPatch({ [field]: imageData, custom_bg_changed_at: me.custom_bg_changed_at });
     refreshCustomBackgroundPreviews(me);
     if (typeof window.refreshCustomBackground === 'function') window.refreshCustomBackground();
     return true;
