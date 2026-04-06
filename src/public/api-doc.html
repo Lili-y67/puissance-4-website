@@ -102,13 +102,13 @@ ul{padding-left:18px}
         <a href="#tournaments">Tournois</a>
         <a href="#discord">Discord</a>
         <a href="#admin">Administration</a>
-        <a href="#system">Syst?me</a>
+        <a href="#system">Syst&egrave;me</a>
         <a href="#socketio">WebSockets</a>
       </div>
     </aside>
     <main class="content">
-      <section class="section" id="auth"><div class="section-head"><div><h2>Authentification</h2><p>Cr?ation de compte, connexion classique et reset de mot de passe.</p></div><div class="legend"><span class="chip post">POST</span><span class="chip get">GET</span></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/auth/register</span></div><p>Cr?e un nouveau compte joueur.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>pseudo</code>, <code>password</code>, <code>color</code>, <code>shape</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pseudo d?j? pris, pseudo invalide, mot de passe manquant</div></div></div><div class="subgrid"><pre><code>await fetch('/api/auth/register', {
+      <section class="section" id="auth"><div class="section-head"><div><h2>Authentification</h2><p>Cr&eacute;ation de compte, connexion classique et reset de mot de passe.</p></div><div class="legend"><span class="chip post">POST</span><span class="chip get">GET</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/auth/register</span></div><p>Cr&eacute;e un nouveau compte joueur.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>pseudo</code>, <code>password</code>, <code>color</code>, <code>shape</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pseudo d&eacute;j&agrave; pris, pseudo invalide, mot de passe manquant</div></div></div><div class="subgrid"><pre><code>await fetch('/api/auth/register', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -129,10 +129,10 @@ const data = await res.json();
 localStorage.setItem('token', data.token);</code></pre><pre><code>curl -X POST http://localhost:8080/api/auth/login ^
   -H "Content-Type: application/json" ^
   -d "{\"pseudo\":\"Lili_y\",\"password\":\"MonMotDePasse\"}"</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/reset-password</span></div><p>R?initialise le mot de passe avec un code envoy? via Discord.</p><div class="note">Erreurs typiques : joueur introuvable, code expir?, code invalide.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/reset-password</span></div><p>R&eacute;initialise le mot de passe avec un code envoy&eacute; via Discord.</p><div class="note">Erreurs typiques : joueur introuvable, code expir&eacute;, code invalide.</div></article>
       </div></section>
-      <section class="section" id="players"><div class="section-head"><div><h2>Joueurs et Profil</h2><p>Lecture de profil, recherche, follow, cosm?tique, statut live et premium.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip patch">PATCH</span><span class="chip post">POST</span><span class="chip delete">DELETE</span></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id</span></div><p>Retourne le profil complet d?un joueur.</p><div class="subgrid"><pre><code>{
+      <section class="section" id="players"><div class="section-head"><div><h2>Joueurs et Profil</h2><p>Lecture de profil, recherche, follow, cosm&eacute;tique, statut live et premium.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip patch">PATCH</span><span class="chip post">POST</span><span class="chip delete">DELETE</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id</span></div><p>Retourne le profil complet d&rsquo;un joueur.</p><div class="subgrid"><pre><code>{
   "id": 2,
   "pseudo": "Lili_y",
   "elo": 1000,
@@ -148,42 +148,42 @@ localStorage.setItem('token', data.token);</code></pre><pre><code>curl -X POST h
   "color": "#ff2d55",
   "color_secondary": "#85EBFF"
 }</code></pre><pre><code>const player = await fetch('/api/players/2').then(r => r.json());</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/search?q=...</span></div><p>Recherche des joueurs par pseudo. Utilis? par le profil et l?autocomplete.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/search?q=...</span></div><p>Recherche des joueurs par pseudo. Utilis&eacute; par le profil et l&rsquo;autocomplete.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/by-pseudo/:pseudo</span></div><p>Lookup direct par pseudo exact.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/pseudo</span></div><p>Change le pseudo c?t? joueur.</p><div class="meta"><div class="box"><div class="label">R?gles</div><div class="value">3 ? 16 caract?res, unique, 1 fois / 30 jours</div></div><div class="box"><div class="label">Erreurs</div><div class="value">session invalide, pseudo pris, cooldown actif, format invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/players/2/pseudo', {
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/pseudo</span></div><p>Change le pseudo c&ocirc;t&eacute; joueur.</p><div class="meta"><div class="box"><div class="label">R&egrave;gles</div><div class="value">3 &agrave; 16 caract&egrave;res, unique, 1 fois / 30 jours</div></div><div class="box"><div class="label">Erreurs</div><div class="value">session invalide, pseudo pris, cooldown actif, format invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/players/2/pseudo', {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ token, pseudo: 'Crystal' })
 });</code></pre><pre><code>curl -X PATCH http://localhost:8080/api/players/2/pseudo ^
   -H "Content-Type: application/json" ^
   -d "{\"token\":\"SESSION_TOKEN\",\"pseudo\":\"Crystal\"}"</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/color</span></div><p>Met ? jour la couleur principale du pion, et selon le pack la seconde couleur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/shape</span></div><p>D?finit la forme active du pion.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/avatar</span></div><p>Change l?avatar. Erreurs typiques : fichier trop lourd, GIF non autoris?, cooldown VIP/VIP+ actif.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/banner</span></div><p>Change la banni?re principale du profil.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/token-emoji</span></div><p>D?finit l?emoji custom ou l?image emoji selon le pack.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/avatar-decoration</span></div><p>Applique une d?coration d?avatar depuis la biblioth?que serveur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/profile-banner</span></div><p>Applique une banni?re pseudo depuis la biblioth?que serveur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/decorations</span></div><p>Liste auto des d?corations disponibles.</p><pre><code>{ "decorations": ["/decorations/a.png", "/decorations/b.png"] }</code></pre></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/profile-banners</span></div><p>Liste auto des banni?res pseudo disponibles.</p><pre><code>{ "banners": ["/banners/static.png", "/banners/static2.png"] }</code></pre></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/color</span></div><p>Met &agrave; jour la couleur principale du pion, et selon le pack la seconde couleur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/shape</span></div><p>D&eacute;finit la forme active du pion.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/avatar</span></div><p>Change l&rsquo;avatar. Erreurs typiques : fichier trop lourd, GIF non autoris&eacute;, cooldown VIP/VIP+ actif.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/banner</span></div><p>Change la banni&egrave;re principale du profil.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/token-emoji</span></div><p>D&eacute;finit l&rsquo;emoji custom ou l&rsquo;image emoji selon le pack.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/avatar-decoration</span></div><p>Applique une d&eacute;coration d&rsquo;avatar depuis la biblioth&egrave;que serveur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/profile-banner</span></div><p>Applique une banni&egrave;re pseudo depuis la biblioth&egrave;que serveur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/decorations</span></div><p>Liste auto des d&eacute;corations disponibles.</p><pre><code>{ "decorations": ["/decorations/a.png", "/decorations/b.png"] }</code></pre></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/profile-banners</span></div><p>Liste auto des banni&egrave;res pseudo disponibles.</p><pre><code>{ "banners": ["/banners/static.png", "/banners/static2.png"] }</code></pre></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/follow</span></div><p>Suit un joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/players/:id/follow</span></div><p>Retire un follow.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/follow-status</span></div><p>Retourne l??tat de follow entre le joueur courant et le profil cibl?.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/status</span></div><p>Retourne l??tat live d?un joueur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/tournaments</span></div><p>Liste les tournois li?s ? ce joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/follow-status</span></div><p>Retourne l&rsquo;&eacute;tat de follow entre le joueur courant et le profil cibl&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/status</span></div><p>Retourne l&rsquo;&eacute;tat live d&rsquo;un joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/tournaments</span></div><p>Liste les tournois li&eacute;s &agrave; ce joueur.</p></article>
       </div></section>
-      <section class="section" id="games"><div class="section-head"><div><h2>Parties, Live et Replay</h2><p>Donn?es live, reconstruction des coups, analyse, pr?cision et IA.</p></div></div><div class="group">
+      <section class="section" id="games"><div class="section-head"><div><h2>Parties, Live et Replay</h2><p>Donn&eacute;es live, reconstruction des coups, analyse, pr&eacute;cision et IA.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/live</span></div><p>Liste les parties actives visibles sur la page live et en spectateur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id</span></div><p>Donn?es de base d?une partie.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/moves</span></div><p>Liste ordonn?e des coups pour reconstruire la grille.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id</span></div><p>Donn&eacute;es de base d&rsquo;une partie.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/moves</span></div><p>Liste ordonn&eacute;e des coups pour reconstruire la grille.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/replay-view</span></div><p>Payload enrichi pour <code>replay.html</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/analysis</span></div><p>Enregistre l?analyse d?une partie. Erreurs typiques : partie introuvable, payload vide.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/analysis</span></div><p>Relit l?analyse enregistr?e.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/accuracy</span></div><p>Stocke la pr?cision finale c?t? base.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot-replay</span></div><p>Calcul bot / ELO bot / r?sultat IA pour le mode contre l?ordinateur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/analysis</span></div><p>Enregistre l&rsquo;analyse d&rsquo;une partie. Erreurs typiques : partie introuvable, payload vide.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/analysis</span></div><p>Relit l&rsquo;analyse enregistr&eacute;e.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/accuracy</span></div><p>Stocke la pr&eacute;cision finale c&ocirc;t&eacute; base.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot-replay</span></div><p>Calcul bot / ELO bot / r&eacute;sultat IA pour le mode contre l&rsquo;ordinateur.</p></article>
       </div></section>
       <section class="section" id="shop"><div class="section-head"><div><h2>Boutique, Coins et Boosters</h2><p>Inventaire joueur, achat de packs premium et gestion des boosters.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/shop/me</span></div><p>Retourne l??tat complet de la boutique pour le joueur courant.</p><div class="subgrid"><pre><code>{
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/shop/me</span></div><p>Retourne l&rsquo;&eacute;tat complet de la boutique pour le joueur courant.</p><div class="subgrid"><pre><code>{
   "player": { "id": 2, "coins": 4800 },
   "items": { "elo_mini": { "price": 250, "multiplier": 1.05 } },
   "prices": { "elo_mini": 250 },
@@ -191,36 +191,36 @@ localStorage.setItem('token', data.token);</code></pre><pre><code>curl -X POST h
   "inventory": { "elo_mini": 2, "coin_boost": 1 }
 }</code></pre><pre><code>const shop = await fetch('/api/shop/me?token=' + token)
   .then(r => r.json());</code></pre></div><pre><code>curl "http://localhost:8080/api/shop/me?token=SESSION_TOKEN"</code></pre></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/buy</span></div><p>Ach?te un pack ou un booster avec des coins.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>pack</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pas assez de coins, pack d?j? actif, rupture de stock, session invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/shop/buy', {
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/buy</span></div><p>Ach&egrave;te un pack ou un booster avec des coins.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>pack</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pas assez de coins, pack d&eacute;j&agrave; actif, rupture de stock, session invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/shop/buy', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ token, pack: 'elo_mini' })
 });</code></pre><pre><code>curl -X POST http://localhost:8080/api/shop/buy ^
   -H "Content-Type: application/json" ^
   -d "{\"token\":\"SESSION_TOKEN\",\"pack\":\"elo_mini\"}"</code></pre></div></article>
-        <article class="endpoint"><div class="note ok">Les coins sont gagn?s via les parties. Les boosters ELO / coins sont des items d?inventaire, distincts des boosts globaux admin.</div></article>
+        <article class="endpoint"><div class="note ok">Les coins sont gagn&eacute;s via les parties. Les boosters ELO / coins sont des items d&rsquo;inventaire, distincts des boosts globaux admin.</div></article>
       </div></section>
-      <section class="section" id="tournaments"><div class="section-head"><div><h2>Tournois</h2><p>Cr?ation, lecture, inscription et gestion du mode tournoi.</p></div></div><div class="group">
+      <section class="section" id="tournaments"><div class="section-head"><div><h2>Tournois</h2><p>Cr&eacute;ation, lecture, inscription et gestion du mode tournoi.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments</span></div><p>Liste les tournois disponibles pour <code>tournoi.html</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments/:id</span></div><p>D?tail d?un tournoi via id public ou interne.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments</span></div><p>Cr?e un tournoi. Erreurs typiques : non autoris?, session invalide, param?tres invalides.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments/:id/join</span></div><p>Inscrit le joueur au tournoi. G?re aussi le mot de passe si tournoi priv?.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments/:id</span></div><p>D&eacute;tail d&rsquo;un tournoi via id public ou interne.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments</span></div><p>Cr&eacute;e un tournoi. Erreurs typiques : non autoris&eacute;, session invalide, param&egrave;tres invalides.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments/:id/join</span></div><p>Inscrit le joueur au tournoi. G&egrave;re aussi le mot de passe si tournoi priv&eacute;.</p></article>
       </div></section>
-      <section class="section" id="discord"><div class="section-head"><div><h2>Discord</h2><p>Liaison, connexion OAuth, refresh des r?les et d?liaison s?curis?e.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/link</span></div><p>D?marre la liaison Discord d?un compte existant.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/signin</span></div><p>Connexion ou cr?ation de compte directement via Discord.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/reset</span></div><p>D?marre le flow de reset mot de passe via Discord.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/callback</span></div><p>Callback OAuth. ? ne pas appeler manuellement.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/me/discord-info</span></div><p>Retourne l??tat Discord du compte courant.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/refresh-discord</span></div><p>Resynchronise le profil et les r?les Discord du joueur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/request</span></div><p>Demande un code de d?liaison Discord.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/confirm</span></div><p>Confirme la d?liaison avec le code re?u.</p></article>
+      <section class="section" id="discord"><div class="section-head"><div><h2>Discord</h2><p>Liaison, connexion OAuth, refresh des r&ocirc;les et d&eacute;liaison s&eacute;curis&eacute;e.</p></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/link</span></div><p>D&eacute;marre la liaison Discord d&rsquo;un compte existant.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/signin</span></div><p>Connexion ou cr&eacute;ation de compte directement via Discord.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/reset</span></div><p>D&eacute;marre le flow de reset mot de passe via Discord.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/callback</span></div><p>Callback OAuth. &Agrave; ne pas appeler manuellement.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/me/discord-info</span></div><p>Retourne l&rsquo;&eacute;tat Discord du compte courant.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/refresh-discord</span></div><p>Resynchronise le profil et les r&ocirc;les Discord du joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/request</span></div><p>Demande un code de d&eacute;liaison Discord.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/confirm</span></div><p>Confirme la d&eacute;liaison avec le code re&ccedil;u.</p></article>
       </div></section>
       <section class="section" id="admin"><div class="section-head"><div><h2>Administration</h2><p>Panel admin, joueurs, coins, boosters, boosts globaux, games et tournois.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/login</span></div><p>Connexion admin / mod?ration. Erreurs typiques : mot de passe invalide, droits insuffisants.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/login</span></div><p>Connexion admin / mod&eacute;ration. Erreurs typiques : mot de passe invalide, droits insuffisants.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/players</span></div><p>Liste enrichie des joueurs pour le panel admin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/coins</span></div><p>Ajoute des coins ? un joueur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/shop-item</span></div><p>Ajoute des boosters ELO / coins ? l?inventaire d?un joueur.</p><div class="subgrid"><pre><code>await fetch('/api/admin/players/2/shop-item', {
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/coins</span></div><p>Ajoute des coins &agrave; un joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/shop-item</span></div><p>Ajoute des boosters ELO / coins &agrave; l&rsquo;inventaire d&rsquo;un joueur.</p><div class="subgrid"><pre><code>await fetch('/api/admin/players/2/shop-item', {
   method: 'PATCH',
   headers: {
     'Content-Type': 'application/json',
@@ -231,58 +231,58 @@ localStorage.setItem('token', data.token);</code></pre><pre><code>curl -X POST h
   -H "Content-Type: application/json" ^
   -H "x-admin-token: ADMIN_TOKEN" ^
   -d "{\"itemKey\":\"elo_classic\",\"quantity\":3}"</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/role</span></div><p>Modifie r?le, VIP, VIP+, Perso et dur?e VIP.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/custom-role</span></div><p>D?finit le badge custom d?un profil Perso.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/pseudo</span></div><p>Force un changement de pseudo c?t? admin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/elo</span></div><p>Force / reset l?ELO d?un joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/role</span></div><p>Modifie r&ocirc;le, VIP, VIP+, Perso et dur&eacute;e VIP.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/custom-role</span></div><p>D&eacute;finit le badge custom d&rsquo;un profil Perso.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/pseudo</span></div><p>Force un changement de pseudo c&ocirc;t&eacute; admin.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/elo</span></div><p>Force / reset l&rsquo;ELO d&rsquo;un joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/mute</span></div><p>Mute standard ou custom en minutes.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/ban</span></div><p>Ban / unban un joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/games</span></div><p>Liste des parties pour le panel admin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/games/:id/revert</span></div><p>Revert d?une partie. Restaure les ELO d?avant match.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/games/:id/revert</span></div><p>Revert d&rsquo;une partie. Restaure les ELO d&rsquo;avant match.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/boost</span></div><p>Lit le boost ELO global actif.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/boost</span></div><p>Active ou retire le boost ELO global.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/coin-boost</span></div><p>Lit le boost coins global actif.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/coin-boost</span></div><p>Active le boost coins global entre x1 et x10 avec dur?e custom.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/tournaments</span></div><p>Liste les tournois c?t? admin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/finish</span></div><p>Force la fin d?un tournoi.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/coin-boost</span></div><p>Active le boost coins global entre x1 et x10 avec dur&eacute;e custom.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/tournaments</span></div><p>Liste les tournois c&ocirc;t&eacute; admin.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/finish</span></div><p>Force la fin d&rsquo;un tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/pause</span></div><p>Met un tournoi en pause.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/resume</span></div><p>Reprend un tournoi en pause.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/admin/tournaments/:id</span></div><p>Supprime un tournoi.</p></article>
       </div></section>
-      <section class="section" id="system"><div class="section-head"><div><h2>Syst?me</h2><p>Endpoints transverses utilis?s par l?UI, le live et les alertes.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/system-status</span></div><p>?tat manuel du serveur : maintenance / red?marrage / message flottant.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/system-status</span></div><p>Met ? jour l?alerte serveur affich?e en front.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/site-stats</span></div><p>Retourne les stats globales : connect?s, parties live, boost global, tournoi public.</p></article>
+      <section class="section" id="system"><div class="section-head"><div><h2>Syst&egrave;me</h2><p>Endpoints transverses utilis&eacute;s par l&rsquo;UI, le live et les alertes.</p></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/system-status</span></div><p>&Eacute;tat manuel du serveur : maintenance / red&eacute;marrage / message flottant.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/system-status</span></div><p>Met &agrave; jour l&rsquo;alerte serveur affich&eacute;e en front.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/site-stats</span></div><p>Retourne les stats globales : connect&eacute;s, parties live, boost global, tournoi public.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard</span></div><p>Classement ELO principal.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard/wins</span></div><p>Classement alternatif par victoires.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot-id</span></div><p>Retourne l?ID du bot joueur utilis? c?t? site.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot-id</span></div><p>Retourne l&rsquo;ID du bot joueur utilis&eacute; c&ocirc;t&eacute; site.</p></article>
       </div></section>
-      <section class="section" id="socketio"><div class="section-head"><div><h2>Socket.IO</h2><p>?v?nements utilis?s par la file d?attente, les parties live, le tournoi et les alertes syst?me.</p></div><div class="legend"><span class="chip socket">SOCKET</span></div></div><div class="group">
+      <section class="section" id="socketio"><div class="section-head"><div><h2>Socket.IO</h2><p>&Eacute;v&eacute;nements utilis&eacute;s par la file d&rsquo;attente, les parties live, le tournoi et les alertes syst&egrave;me.</p></div><div class="legend"><span class="chip socket">SOCKET</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">identify</span></div><p>Identifie la socket avec <code>playerId</code> + <code>token</code>.</p><pre><code>socket.emit('identify', {
   playerId: myPlayer.id,
   token: localStorage.getItem('token')
 });</code></pre></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">identified</span></div><p>R?ponse apr?s identification r?ussie. Contient le joueur sanitiz?.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">identified</span></div><p>R&eacute;ponse apr&egrave;s identification r&eacute;ussie. Contient le joueur sanitiz&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">queue_join</span></div><p>Rejoint la file ranked classique.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">queue_joined</span></div><p>Confirmation d?entr?e en file avec position.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">queue_joined</span></div><p>Confirmation d&rsquo;entr&eacute;e en file avec position.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">queue_leave</span></div><p>Quitte la file ranked.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">match_found</span></div><p>Match trouv?, payload de partie ? charger sur <code>/game</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_join</span></div><p>Rejoint la file d?un tournoi actif.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">tournament_queue_joined</span></div><p>Confirmation d?entr?e en file tournoi.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">match_found</span></div><p>Match trouv&eacute;, payload de partie &agrave; charger sur <code>/game</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_join</span></div><p>Rejoint la file d&rsquo;un tournoi actif.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">tournament_queue_joined</span></div><p>Confirmation d&rsquo;entr&eacute;e en file tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_leave</span></div><p>Quitte la file tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">play_move</span></div><p>Joue un coup en envoyant une colonne.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">move_played</span></div><p>Un coup a ?t? jou?. Sert ? mettre ? jour la grille.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_over</span></div><p>Partie termin?e. R?sultat final, deltas ELO, coins, boosts, etc.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">rejoin_game</span></div><p>Rejoint une partie active apr?s refresh ou reconnexion.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_rejoined</span></div><p>R?ponse compl?te contenant l??tat de la partie apr?s rejoin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">opponent_disconnected / opponent_reconnected</span></div><p>Signaux de pr?sence de l?adversaire pendant une partie.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">color_updated</span></div><p>Mise ? jour live d?une couleur de pion.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">move_played</span></div><p>Un coup a &eacute;t&eacute; jou&eacute;. Sert &agrave; mettre &agrave; jour la grille.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_over</span></div><p>Partie termin&eacute;e. R&eacute;sultat final, deltas ELO, coins, boosts, etc.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">rejoin_game</span></div><p>Rejoint une partie active apr&egrave;s refresh ou reconnexion.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_rejoined</span></div><p>R&eacute;ponse compl&egrave;te contenant l&rsquo;&eacute;tat de la partie apr&egrave;s rejoin.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">opponent_disconnected / opponent_reconnected</span></div><p>Signaux de pr&eacute;sence de l&rsquo;adversaire pendant une partie.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">color_updated</span></div><p>Mise &agrave; jour live d&rsquo;une couleur de pion.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">join_live</span></div><p>Inscrit la socket au salon live pour recevoir les refreshs de parties.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">live_update</span></div><p>Demande au client de relire <code>/api/live</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">system_status_update</span></div><p>Mise ? jour push de l?alerte syst?me / red?marrage.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">error</span></div><p>Erreur g?n?rique temps r?el.</p><pre><code>{ "message": "Session invalide. Reconnecte-toi." }</code></pre><div class="note warn">Cas fr?quents : session invalide, compte banni, d?j? en file, tournoi indisponible, coup invalide, game not found.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">system_status_update</span></div><p>Mise &agrave; jour push de l&rsquo;alerte syst&egrave;me / red&eacute;marrage.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">error</span></div><p>Erreur g&eacute;n&eacute;rique temps r&eacute;el.</p><pre><code>{ "message": "Session invalide. Reconnecte-toi." }</code></pre><div class="note warn">Cas fr&eacute;quents : session invalide, compte banni, d&eacute;j&agrave; en file, tournoi indisponible, coup invalide, game not found.</div></article>
       </div></section>
-      <div class="foot">Cette doc colle au backend actuel du projet. Elle couvre les routes utiles, les erreurs probables, les ?v?nements Socket.IO et des exemples d?int?gration.<ul><li>Headers priv?s : <code>x-session-token</code> pour le joueur, <code>x-admin-token</code> pour l?admin.</li><li>Beaucoup de routes front acceptent aussi <code>token</code> dans le body JSON.</li><li>Les pages HTML publiques restent accessibles via <code>/</code>, <code>/profil</code>, <code>/game</code>, <code>/live</code>, <code>/boutique</code>, <code>/tournoi</code>, etc.</li></ul></div>
+      <div class="foot">Cette doc colle au backend actuel du projet. Elle couvre les routes utiles, les erreurs probables, les &eacute;v&eacute;nements Socket.IO et des exemples d&rsquo;int&eacute;gration.<ul><li>Headers priv&eacute;s : <code>x-session-token</code> pour le joueur, <code>x-admin-token</code> pour l&rsquo;admin.</li><li>Beaucoup de routes front acceptent aussi <code>token</code> dans le body JSON.</li><li>Les pages HTML publiques restent accessibles via <code>/</code>, <code>/profil</code>, <code>/game</code>, <code>/live</code>, <code>/boutique</code>, <code>/tournoi</code>, etc.</li></ul></div>
     </main>
   </div>
 </div>
