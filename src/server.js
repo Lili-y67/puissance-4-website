@@ -2462,32 +2462,36 @@ app.post('/api/bot-replay', (req, res) => {
   const botPlayer = pQ.getById.get(botPlayerId);
   const botColor  = botPlayer?.color || '#ffd60a';
   const botShape  = botPlayer?.shape || 'circle';
-  const humanElo  = p1?.elo ?? 1000;
   const botElo    = botPlayer?.elo ?? 1000;
 
-  // Calcul ELO bot selon la difficultAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
+  // Calcul ELO bot stable par difficulte, sans prendre en compte l ELO humain.
+  // L objectif est d eviter les deltas absurdes contre des comptes tres bas.
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-  const K = 32;
-  const expBot = 1 / (1 + Math.pow(10, (humanElo - botElo) / 400));
   let botDelta = 0;
-
-  if (difficulty === 'easy') {
-    // Facile : win +15AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA+30 / perd -1AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA-5 / nul = standard
-    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
-    else if (winner === 2) botDelta = +randInt(15, 30);
-    else                   botDelta = -randInt(1, 5);
-
-  } else if (difficulty === 'hard') {
-    // Difficile : win +5AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA+10 / perd -10AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA-20 / nul = standard
-    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
-    else if (winner === 2) botDelta = +randInt(5, 10);
-    else                   botDelta = -randInt(10, 20);
-
+  const botEloRanges = {
+    easy: {
+      win: [16, 24],
+      draw: [4, 8],
+      loss: [-4, -1],
+    },
+    medium: {
+      win: [8, 14],
+      draw: [1, 4],
+      loss: [-10, -5],
+    },
+    hard: {
+      win: [4, 8],
+      draw: [-2, 2],
+      loss: [-18, -10],
+    },
+  };
+  const rules = botEloRanges[difficulty] || botEloRanges.medium;
+  if (isDraw) {
+    botDelta = randInt(rules.draw[0], rules.draw[1]);
+  } else if (winner === 2) {
+    botDelta = randInt(rules.win[0], rules.win[1]);
   } else {
-    // Moyen (et fallback) : formule ELO standard
-    if (isDraw)       botDelta = Math.round(K * (0.5 - expBot));
-    else if (winner === 2) botDelta = Math.round(K * (1 - expBot));
-    else                   botDelta = Math.round(K * (0 - expBot));
+    botDelta = randInt(rules.loss[0], rules.loss[1]);
   }
 
   // Appliquer delta ELO uniquement au bot
