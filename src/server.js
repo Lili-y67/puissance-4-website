@@ -322,7 +322,7 @@ app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 function discordConfig() {
   return {
     clientId:     '1477252548090921060',
-    clientSecret: 'zkIJArhzeumtKZJBxSmAtjEaE9Euugj8',
+    clientSecret: 'KUUu6l5hxe9AIFdUI6V8ie7n8_3HxgVZ',
     botToken:     'MTQ3NzI1MjU0ODA5MDkyMTA2MA.Gxv9su.HtL_16ym65VieW5VEL4Pr8EQI_AcZ6jFbgZKrc',
     baseUrl:      process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app',
   };
