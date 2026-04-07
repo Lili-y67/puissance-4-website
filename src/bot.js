@@ -10,7 +10,7 @@ const {
 const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
 
-const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
+const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.Gxv9su.HtL_16ym65VieW5VEL4Pr8EQI_AcZ6jFbgZKrc';
 const API       = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
 const PROFILE_BG_URL = 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg';
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || '1477252548090921060';

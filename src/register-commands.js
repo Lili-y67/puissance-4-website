@@ -5,7 +5,7 @@
  */
 const { REST, Routes } = require('discord.js');
 
-const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.GEJCC1.RcGqtpcrM8uFTqClZAVCILtiEMAxNisTFm3PuA';
+const BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.Gxv9su.HtL_16ym65VieW5VEL4Pr8EQI_AcZ6jFbgZKrc';
 const CLIENT_ID = '1477252548090921060';
 
 const commands = [
