@@ -227,20 +227,73 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 /* Shapes — appliquées en inline style via JS pour éviter les conflits de spécificité */
 .token.s-emoji { border-radius: 0 !important; overflow: visible; }
 .token.s-emoji canvas { display: block; width: 100%; height: 100%; }
+.cell.winning {
+  box-shadow:
+    inset 0 3px 10px rgba(0,0,0,0.7),
+    inset 0 1px 3px rgba(0,0,0,0.5),
+    inset 0 0 0 2px rgba(255,255,255,0.22),
+    0 0 0 2px rgba(255,255,255,0.16),
+    0 0 24px rgba(255,255,255,0.1);
+}
 .cell.winning .token { animation: win-pulse 0.7s ease-in-out infinite alternate; }
 @keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.1); filter: brightness(1.3); } }
 
 /* ── Result overlay ── */
 .result-overlay {
-  position: absolute; inset: 0; background: rgba(6,6,14,0.88);
-  border-radius: 18px; display: none; flex-direction: column;
-  align-items: center; justify-content: center; gap: 12px; backdrop-filter: blur(10px);
+  display: none;
+  margin-top: 14px;
+  width: 100%;
+  max-width: 560px;
+  background: rgba(13,13,28,0.94);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.35);
 }
-.result-overlay.show { display: flex; }
-.result-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(42px,8vw,64px); font-weight: 900; letter-spacing: 4px; text-align: center; line-height: 1; }
-.result-elo { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: 3px; }
-.result-reason { font-size: 13px; color: var(--muted); }
-.result-btns { display: flex; gap: 10px; margin-top: 4px; }
+.result-overlay.show { display: flex; animation: result-pop 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes result-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.result-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(30px,6vw,44px); font-weight: 900; letter-spacing: 3px; text-align: center; line-height: 1; }
+.result-elo { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 1px; text-align: center; }
+.result-reason { font-size: 13px; color: var(--muted); text-align: center; }
+.result-meta {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.result-meta-chip {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.result-meta-chip strong {
+  color: var(--text);
+  margin-left: 6px;
+}
+.result-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.result-player-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.result-player-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800; letter-spacing: 1px; }
+.result-player-elo { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; line-height: 1; }
+.result-player-delta { font-size: 12px; color: var(--muted); }
+.result-btns { display: flex; gap: 10px; margin-top: 4px; justify-content: center; }
 .btn-action {
   font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700;
   letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; border-radius: 10px;
@@ -286,9 +339,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .col-btn::after { font-size: 8px; }
 
   /* Result */
-  .result-overlay { padding: 20px 14px; }
-  .result-title { font-size: 32px !important; }
-  .result-elo   { font-size: 15px !important; }
+  .result-overlay { padding: 16px 14px; margin-top: 10px; }
+  .result-title { font-size: 28px !important; }
+  .result-elo   { font-size: 14px !important; }
+  .result-summary { grid-template-columns: 1fr; }
+  .result-player-elo { font-size: 22px; }
   .btn-action   { padding: 10px 16px; font-size: 13px; }
 
   /* Disconnect banner */
@@ -390,6 +445,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="result-title"  id="result-title">VICTOIRE !</div>
       <div class="result-elo"    id="result-elo"></div>
       <div class="result-reason" id="result-reason"></div>
+      <div class="result-meta" id="result-meta"></div>
+      <div class="result-summary" id="result-summary"></div>
       <div class="result-btns">
         <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">⚡ Rejouer</button>
         <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
@@ -457,6 +514,48 @@ function renderMiniAvatar(el, pseudo, avatar) {
   const avatarSrc = getRenderableMediaSrc(avatar || '');
   if (avatarSrc) el.innerHTML = `<img src="${avatarSrc}" alt="avatar">`;
   else el.textContent = (pseudo || '?')[0]?.toUpperCase?.() || '?';
+}
+
+function setCardElo(side, value) {
+  const el = document.getElementById('elo-p' + side);
+  if (!el) return;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    el.dataset.elo = String(Math.round(numeric));
+    el.textContent = `${Math.round(numeric)} ELO`;
+  } else {
+    el.dataset.elo = '';
+    el.textContent = String(value || '— ELO');
+  }
+}
+
+function getCardElo(side) {
+  const el = document.getElementById('elo-p' + side);
+  if (!el) return null;
+  const numeric = Number(el.dataset.elo);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function animateNumber(from, to, onFrame, duration = 900) {
+  const start = performance.now();
+  const delta = to - from;
+  function frame(now) {
+    const progress = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(from + delta * eased);
+    onFrame(value, progress);
+    if (progress < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function animateCardElo(side, from, to) {
+  const el = document.getElementById('elo-p' + side);
+  if (!el || !Number.isFinite(from) || !Number.isFinite(to)) return;
+  animateNumber(from, to, (value) => {
+    el.dataset.elo = String(value);
+    el.textContent = `${value} ELO`;
+  });
 }
 
 function applyLobbyPlayerVisual(side, player) {
@@ -686,9 +785,9 @@ function connectSocket(pendingMatch) {
     }
     document.getElementById('lobby-overlay').classList.add('hidden');
     document.getElementById('name-p1').textContent = data.players[1].pseudo;
-    document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
+    setCardElo(1, data.players[1].elo);
     document.getElementById('name-p2').textContent = data.players[2].pseudo;
-    document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+    setCardElo(2, data.players[2].elo);
     applyTournamentMeta(data.tournament || null);
     applyPlayerCardVisual(1, data.players[1]);
     applyPlayerCardVisual(2, data.players[2]);
@@ -860,9 +959,9 @@ function startGame(data) {
   document.getElementById('lobby-overlay').classList.add('hidden');
 
   document.getElementById('name-p1').textContent = data.players[1].pseudo;
-  document.getElementById('elo-p1').textContent  = data.players[1].elo + ' ELO';
+  setCardElo(1, data.players[1].elo);
   document.getElementById('name-p2').textContent = data.players[2].pseudo;
-  document.getElementById('elo-p2').textContent  = data.players[2].elo + ' ELO';
+  setCardElo(2, data.players[2].elo);
   applyPlayerCardVisual(1, data.players[1]);
   applyPlayerCardVisual(2, data.players[2]);
 
@@ -1069,7 +1168,7 @@ function updateTurnUI() {
 }
 
 // ── Game over ─────────────────────────────────────────────────────────────────
-function onGameOver(data) {
+function onGameOverLegacy(data) {
   gameOver = true;
   stopTurnTimer();
 
@@ -1129,7 +1228,7 @@ function onGameOver(data) {
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner
-      ? 'Adversaire d??connect??' : 'D??connexion d??tect??e';
+      ? 'Adversaire déconnecté' : 'Déconnexion détectée';
   } else if (data.reason === 'draw') {
     document.getElementById('result-reason').textContent = 'Partie nulle';
   } else {
@@ -1156,11 +1255,262 @@ function setStatus(html, thinking = false) {
   s.className   = 'status-bar' + (thinking ? ' thinking' : '');
 }
 
+function onGameOver(data) {
+  gameOver = true;
+  stopTurnTimer();
+
+  const dcBanner = document.getElementById('disconnect-banner');
+  if (dcBanner) {
+    if (dcBanner._interval) { clearInterval(dcBanner._interval); dcBanner._interval = null; }
+    dcBanner.classList.remove('show');
+  }
+
+  if (data.winCells?.length) {
+    data.winCells.forEach(([r, c]) => {
+      const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+      if (cell) cell.classList.add('winning');
+    });
+  }
+
+  for (let c = 0; c < COLS; c++) {
+    const b = document.getElementById('cb' + c);
+    if (b) b.disabled = true;
+  }
+  setStatus('');
+
+  const isWinner = data.winner === mySide;
+  const isDraw = data.reason === 'draw';
+  setTimeout(() => { if (isDraw) SFX.draw(); else if (isWinner) SFX.win(); else SFX.lose(); }, 300);
+
+  const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
+  const oppSide = mySide === 1 ? 2 : 1;
+  const oppId = data.players?.[oppSide]?.id;
+  const myDelta = myId !== undefined ? Number(data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? 0) : 0;
+  const oppDelta = oppId !== undefined ? Number(data.eloChanges?.[oppId] ?? data.eloChanges?.[String(oppId)] ?? 0) : 0;
+  const myAfter = myId !== undefined ? Number(data.eloNow?.[myId] ?? data.eloNow?.[String(myId)] ?? getCardElo(mySide)) : getCardElo(mySide);
+  const oppAfter = oppId !== undefined ? Number(data.eloNow?.[oppId] ?? data.eloNow?.[String(oppId)] ?? getCardElo(oppSide)) : getCardElo(oppSide);
+  const myBefore = Number.isFinite(myAfter) ? myAfter - myDelta : null;
+  const oppBefore = Number.isFinite(oppAfter) ? oppAfter - oppDelta : null;
+
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent = 'ÉGALITÉ';
+    titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
+  } else if (isWinner) {
+    titleEl.textContent = 'VICTOIRE';
+    titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
+  } else {
+    titleEl.textContent = 'DÉFAITE';
+    titleEl.style.background = 'linear-gradient(135deg, #8d8d99, #d7d7df)';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor = 'transparent';
+
+  const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && myDelta > 0;
+  const premiumBoostTier = vipBoostApplied ? String(data.boostInfo?.vipTier || 'vip') : null;
+
+  const eloEl = document.getElementById('result-elo');
+  eloEl.textContent = isDraw
+    ? 'La grille reste visible et la fin de partie reste lisible.'
+    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'L’adversaire')} remporte la partie.`;
+  eloEl.style.color = 'var(--text)';
+
+  const reasonEl = document.getElementById('result-reason');
+  if (data.reason === 'disconnect') {
+    reasonEl.textContent = isWinner ? 'Victoire par déconnexion adverse.' : 'Défaite après déconnexion.';
+  } else if (isDraw) {
+    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichées ci-dessous.';
+  } else if (vipBoostApplied) {
+    reasonEl.textContent = premiumBoostTier === 'vip_plus'
+      ? 'Boost VIP+ appliqué sur ton gain Elo.'
+      : premiumBoostTier === 'perso'
+        ? 'Boost Perso appliqué sur ton gain Elo.'
+        : 'Boost VIP appliqué sur ton gain Elo.';
+  } else {
+    reasonEl.textContent = isWinner ? 'Fin de partie validée, Elo mis à jour.' : 'Fin de partie validée, Elo ajusté.';
+  }
+
+  const deltaText = (delta) => `${delta >= 0 ? '+' : ''}${delta} Elo`;
+  const summaryEl = document.getElementById('result-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
+        <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
+        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : ''} · ${deltaText(myDelta)}</div>
+      </div>
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
+        <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
+        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : ''} · ${deltaText(oppDelta)}</div>
+      </div>
+    `;
+  }
+
+  if (Number.isFinite(myBefore) && Number.isFinite(myAfter)) {
+    animateNumber(myBefore, myAfter, (value) => {
+      const el = document.getElementById('result-my-elo');
+      if (el) el.textContent = String(value);
+    });
+    animateCardElo(mySide, myBefore, myAfter);
+  }
+  if (Number.isFinite(oppBefore) && Number.isFinite(oppAfter)) {
+    animateNumber(oppBefore, oppAfter, (value) => {
+      const el = document.getElementById('result-opp-elo');
+      if (el) el.textContent = String(value);
+    });
+    animateCardElo(oppSide, oppBefore, oppAfter);
+  }
+
+  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  document.getElementById('result-overlay').classList.add('show');
+  sessionStorage.removeItem('match');
+  if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
+}
+
 function quit() {
   stopTurnTimer();
   if (socket) socket.disconnect();
   sessionStorage.setItem('no_auto_queue', '1');
   location.href = '/';
+}
+
+function onGameOver(data) {
+  gameOver = true;
+  stopTurnTimer();
+
+  const dcBanner = document.getElementById('disconnect-banner');
+  if (dcBanner) {
+    if (dcBanner._interval) {
+      clearInterval(dcBanner._interval);
+      dcBanner._interval = null;
+    }
+    dcBanner.classList.remove('show');
+  }
+
+  if (data.winCells?.length) {
+    data.winCells.forEach(([r, c]) => {
+      const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+      if (cell) cell.classList.add('winning');
+    });
+  }
+
+  for (let c = 0; c < COLS; c++) {
+    const b = document.getElementById('cb' + c);
+    if (b) b.disabled = true;
+  }
+  setStatus('');
+
+  const isWinner = data.winner === mySide;
+  const isDraw = data.reason === 'draw';
+  setTimeout(() => {
+    if (isDraw) SFX.draw();
+    else if (isWinner) SFX.win();
+    else SFX.lose();
+  }, 300);
+
+  const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
+  const oppSide = mySide === 1 ? 2 : 1;
+  const oppId = data.players?.[oppSide]?.id;
+  const myDelta = myId !== undefined ? Number(data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? 0) : 0;
+  const oppDelta = oppId !== undefined ? Number(data.eloChanges?.[oppId] ?? data.eloChanges?.[String(oppId)] ?? 0) : 0;
+  const myAfter = myId !== undefined ? Number(data.eloNow?.[myId] ?? data.eloNow?.[String(myId)] ?? getCardElo(mySide)) : getCardElo(mySide);
+  const oppAfter = oppId !== undefined ? Number(data.eloNow?.[oppId] ?? data.eloNow?.[String(oppId)] ?? getCardElo(oppSide)) : getCardElo(oppSide);
+  const myBefore = Number.isFinite(myAfter) ? myAfter - myDelta : null;
+  const oppBefore = Number.isFinite(oppAfter) ? oppAfter - oppDelta : null;
+
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent = 'ÉGALITÉ';
+    titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
+  } else if (isWinner) {
+    titleEl.textContent = 'VICTOIRE';
+    titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
+  } else {
+    titleEl.textContent = 'DÉFAITE';
+    titleEl.style.background = 'linear-gradient(135deg, #8d8d99, #d7d7df)';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor = 'transparent';
+
+  const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && myDelta > 0;
+  const premiumBoostTier = vipBoostApplied ? String(data.boostInfo?.vipTier || 'vip') : null;
+
+  const eloEl = document.getElementById('result-elo');
+  eloEl.textContent = isDraw
+    ? 'Fin de partie affichée sans masquer la grille.'
+    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'L’adversaire')} remporte la partie.`;
+  eloEl.style.color = 'var(--text)';
+
+  const reasonEl = document.getElementById('result-reason');
+  if (data.reason === 'disconnect') {
+    reasonEl.textContent = isWinner ? 'Victoire par déconnexion adverse.' : 'Défaite après déconnexion.';
+  } else if (isDraw) {
+    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichées ci-dessous.';
+  } else if (vipBoostApplied) {
+    reasonEl.textContent = premiumBoostTier === 'vip_plus'
+      ? 'Boost VIP+ appliqué sur ton gain Elo.'
+      : premiumBoostTier === 'perso'
+        ? 'Boost Perso appliqué sur ton gain Elo.'
+        : 'Boost VIP appliqué sur ton gain Elo.';
+  } else {
+    reasonEl.textContent = isWinner ? 'Fin de partie validée, Elo mis à jour.' : 'Fin de partie validée, Elo ajusté.';
+  }
+
+  const deltaText = (delta) => `${delta >= 0 ? '+' : ''}${delta} Elo`;
+  const formatDuration = (seconds) => {
+    const total = Math.max(0, Number(seconds) || 0);
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return min > 0 ? `${min}m ${String(sec).padStart(2, '0')}s` : `${sec}s`;
+  };
+
+  const metaEl = document.getElementById('result-meta');
+  if (metaEl) {
+    const winnerLabel = isDraw ? 'Nul' : (data.players?.[data.winner]?.pseudo || 'Inconnu');
+    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
+    metaEl.innerHTML = `
+      <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
+      <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
+      <div class="result-meta-chip">Mon Elo<strong>${myTransition}</strong></div>
+    `;
+  }
+
+  const summaryEl = document.getElementById('result-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
+        <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
+        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : ''} · ${deltaText(myDelta)}</div>
+      </div>
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
+        <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
+        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : ''} · ${deltaText(oppDelta)}</div>
+      </div>
+    `;
+  }
+
+  if (Number.isFinite(myBefore) && Number.isFinite(myAfter)) {
+    animateNumber(myBefore, myAfter, (value) => {
+      const el = document.getElementById('result-my-elo');
+      if (el) el.textContent = String(value);
+    });
+    animateCardElo(mySide, myBefore, myAfter);
+  }
+  if (Number.isFinite(oppBefore) && Number.isFinite(oppAfter)) {
+    animateNumber(oppBefore, oppAfter, (value) => {
+      const el = document.getElementById('result-opp-elo');
+      if (el) el.textContent = String(value);
+    });
+    animateCardElo(oppSide, oppBefore, oppAfter);
+  }
+
+  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  document.getElementById('result-overlay').classList.add('show');
+  sessionStorage.removeItem('match');
+  if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
 }
 
 
@@ -1245,9 +1595,9 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       clearInterval(iv); inCountdown = false; SFX.go();
       document.getElementById('lobby-overlay').classList.add('hidden');
       document.getElementById('name-p1').textContent = myPlayer.pseudo;
-      document.getElementById('elo-p1').textContent  = (myPlayer.elo || '—') + ' ELO';
+      setCardElo(1, myPlayer.elo || '—');
       document.getElementById('name-p2').textContent = '🤖 ' + botName;
-      document.getElementById('elo-p2').textContent  = diffLabel;
+      setCardElo(2, diffLabel);
       applyPlayerCardVisual(1, savedPlayer);
       applyPlayerCardVisual(2, { pseudo: 'ðŸ¤– ' + botName, avatar: '', avatar_decoration: '', profile_banner: '' });
       const iaBotAvatar = document.getElementById('avatar-p2');
@@ -1526,7 +1876,78 @@ async function saveBotReplay(winner, duration = 0) {
     }
   } catch(e) { /* silencieux */ }
 }
+
+function iaEnd(winner, winCells) {
+  gameOver = true;
+  winCells?.forEach(([r, c]) => document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('winning'));
+  for (let c = 0; c < IA_C; c++) {
+    const b = document.getElementById('cb' + c);
+    if (b) b.disabled = true;
+  }
+  const isDraw = winner === null;
+  const isWin = winner === 1;
+  setTimeout(() => { isDraw ? SFX.draw() : isWin ? SFX.win() : SFX.lose(); }, 300);
+
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent = 'ÉGALITÉ';
+    titleEl.style.background = 'linear-gradient(135deg,var(--muted),var(--text))';
+  } else if (isWin) {
+    titleEl.textContent = 'VICTOIRE';
+    titleEl.style.background = 'linear-gradient(135deg,var(--p1),var(--p2))';
+  } else {
+    titleEl.textContent = 'DÉFAITE';
+    titleEl.style.background = 'linear-gradient(135deg,#555,#888)';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor = 'transparent';
+
+  document.getElementById('result-elo').textContent = '';
+  document.getElementById('result-summary').innerHTML = '';
+  const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }[iaDifficulty] || '';
+  document.getElementById('result-reason').textContent = isDraw
+    ? 'Partie nulle'
+    : isWin
+      ? `Tu as battu l'IA (${diffLabel}) !`
+      : `L'IA (${diffLabel}) a gagné cette fois...`;
+
+  saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
+  document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue', '1'); location.href = '/'; };
+  document.getElementById('result-overlay').classList.add('show');
+  setStatus('');
+}
+
+async function saveBotReplay(winner, duration = 0) {
+  try {
+    const p1Color = myPlayer.color || '#ff2d55';
+    const res = await fetch('/api/bot-replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        moves: iaMoves,
+        winner,
+        duration,
+        p1Color,
+        p2Color: iaBotColor,
+        botName: iaBotName,
+        difficulty: iaDifficulty,
+      })
+    });
+    if (res.ok) {
+      const { gameId, botDelta, newBotElo } = await res.json();
+      const btn = document.getElementById('btn-replay');
+      btn.style.display = '';
+      btn.href = '/replay-bot/' + gameId;
+      btn.textContent = '📽️ Replay & Analyse';
+      if (typeof botDelta === 'number') {
+        const sign = botDelta >= 0 ? '+' : '';
+        document.getElementById('result-elo').textContent = `🤖 ${iaBotName} : ${sign}${botDelta} ELO (→ ${newBotElo})`;
+        document.getElementById('result-elo').style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
+      }
+    }
+  } catch (e) {}
+}
 </script>
 </body>
 </html>
-

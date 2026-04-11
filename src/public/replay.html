@@ -457,14 +457,14 @@ function renderShell() {
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p1_pseudo}</div>
           <div class="rp-elo">${g.p1_elo_display ?? (g.p1_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DEFAITE')}</div>
+          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DÉFAITE')}</div>
         </div>
         <div class="vs-mid">VS</div>
         <div class="rp p2 ${isDraw?'draw':(p2Won?'winner':'loser')}">
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p2_pseudo}</div>
           <div class="rp-elo">${g.p2_elo_display ?? (g.p2_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DEFAITE')}</div>
+          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DÉFAITE')}</div>
         </div>
       </div>
       <div class="replay-meta">
@@ -848,7 +848,7 @@ function finishReplay() {
 
   if (isDraw) {
     SFX.draw();
-    titleEl.textContent = 'EGALITE';
+    titleEl.textContent = 'ÉGALITÉ';
     titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
   } else {
     SFX.win();
@@ -944,32 +944,32 @@ let analysisWorker  = null;
 let evalHistory     = [];
 
 const CLS_LABELS = {
-  best:       'âœ… Meilleur',
-  excellent:  'ðŸ‘ Excellent',
-  good:       'ðŸŸ¢ Bon',
-  forced:     'Force',
-  inaccuracy: 'Imprecision',
-  mistake:    'âš ï¸ Erreur',
-  blunder:    'ðŸ’€ Gaffe',
+  best: 'Meilleur',
+  excellent: 'Excellent',
+  good: 'Bon',
+  forced: 'Forcé',
+  inaccuracy: 'Imprécision',
+  mistake: 'Erreur',
+  blunder: 'Gaffe',
 };
 const CLS_COUNTS_LABEL = {
   best:'Meilleurs', excellent:'Excellents', good:'Bons',
-  forced:'Forces', inaccuracy:'Imprecisions', mistake:'Erreurs', blunder:'Gaffes',
+  forced:'Forcés', inaccuracy:'Imprécisions', mistake:'Erreurs', blunder:'Gaffes',
 };
 
 // Couleur selon % de prÃ©cision
 CLS_LABELS.best = 'Meilleur';
 CLS_LABELS.excellent = 'Excellent';
 CLS_LABELS.good = 'Bon';
-CLS_LABELS.forced = 'Force';
-CLS_LABELS.inaccuracy = 'Imprecision';
+CLS_LABELS.forced = 'Forcé';
+CLS_LABELS.inaccuracy = 'Imprécision';
 CLS_LABELS.mistake = 'Erreur';
 CLS_LABELS.blunder = 'Gaffe';
 CLS_COUNTS_LABEL.best = 'Meilleurs';
 CLS_COUNTS_LABEL.excellent = 'Excellents';
 CLS_COUNTS_LABEL.good = 'Bons';
-CLS_COUNTS_LABEL.forced = 'Forces';
-CLS_COUNTS_LABEL.inaccuracy = 'Imprecisions';
+CLS_COUNTS_LABEL.forced = 'Forcés';
+CLS_COUNTS_LABEL.inaccuracy = 'Imprécisions';
 CLS_COUNTS_LABEL.mistake = 'Erreurs';
 CLS_COUNTS_LABEL.blunder = 'Gaffes';
 
@@ -1005,14 +1005,14 @@ function startAnalysis() {
       if (moveIndex === 0) {
         // Premier coup : estimer basÃ© sur ~2.5s par coup
         const est = Math.round(2.5 * total);
-        timeStr = ` · ~${est > 60 ? Math.ceil(est/60) + ' min' : est + 's'} estimees`;
+        timeStr = ` · ~${est > 60 ? Math.ceil(est/60) + ' min' : est + 's'} estimées`;
       } else if (remaining > 0) {
         timeStr = ` · ~${remaining > 60 ? Math.ceil(remaining/60) + ' min' : remaining + 's'} restantes`;
       }
 
       document.getElementById('analyse-bar').style.width = pct + '%';
       document.getElementById('analyse-progress-text').textContent =
-        `Coup ${moveIndex + 1} / ${total} â€” ${pct}%${timeStr}`;
+        `Coup ${moveIndex + 1} / ${total} - ${pct}%${timeStr}`;
       analysisResults.push(e.data.result);
     }
     if (type === 'done') {
@@ -1042,8 +1042,8 @@ function renderAnalysis(results, accuracy) {
     best: 'Meilleur',
     excellent: 'Excellent',
     good: 'Bon',
-    forced: 'Force',
-    inaccuracy: 'Imprecision',
+    forced: 'Forcé',
+    inaccuracy: 'Imprécision',
     mistake: 'Erreur',
     blunder: 'Gaffe',
   };
@@ -1077,7 +1077,7 @@ function renderAnalysis(results, accuracy) {
   function ownerName(score) {
     if (score > 4) return g.p1_pseudo;
     if (score < -4) return g.p2_pseudo;
-    return 'Equilibre';
+    return 'Équilibre';
   }
   function ownerColor(score) {
     if (score > 4) return p1Color;
@@ -1101,7 +1101,7 @@ function renderAnalysis(results, accuracy) {
     return `
       <div class="summary-grid">
         <div class="summary-stat">
-          <div class="summary-stat-k">Swing moyen</div>
+          <div class="summary-stat-k">Impact moyen</div>
           <div class="summary-stat-v">${fmtPct(summary.averageSwing)}</div>
         </div>
         <div class="summary-stat">
@@ -1140,7 +1140,7 @@ function renderAnalysis(results, accuracy) {
     return `
       <div style="margin-top:4px">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">
-          Avantage estime apres chaque coup
+          Avantage estimé après chaque coup
         </div>
         <div id="eval-graph-wrap" style="position:relative;width:100%;height:70px;background:rgba(255,255,255,0.02);border-radius:10px;border:1px solid var(--border);overflow:visible">
           <svg id="eval-svg" viewBox="0 0 100 60" preserveAspectRatio="none" style="width:100%;height:100%;border-radius:10px;overflow:hidden">
@@ -1157,7 +1157,7 @@ function renderAnalysis(results, accuracy) {
           </svg>
           <div style="position:absolute;top:4px;left:8px;font-size:9px;color:${p1Color};font-weight:700">${g.p1_pseudo}</div>
           <div style="position:absolute;top:4px;right:8px;font-size:9px;color:${p2Color};font-weight:700">${g.p2_pseudo}</div>
-          <div style="position:absolute;bottom:4px;left:8px;font-size:9px;color:rgba(238,238,245,0.45)">50% = position egale</div>
+          <div style="position:absolute;bottom:4px;left:8px;font-size:9px;color:rgba(238,238,245,0.45)">50% = position égale</div>
           <div id="eval-tooltip" style="display:none;position:absolute;top:-52px;transform:translateX(-50%);background:#1a1a2e;border:1px solid rgba(255,255,255,0.15);border-radius:9px;padding:7px 10px;font-family:'Barlow',sans-serif;font-size:11px;line-height:1.35;white-space:nowrap;pointer-events:none;z-index:10"></div>
         </div>
       </div>`;
@@ -1168,7 +1168,7 @@ function renderAnalysis(results, accuracy) {
   panel.innerHTML = `
     <div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
-        Precision globale
+        Précision globale
       </div>
       <div class="accuracy-row">
         <div class="accuracy-card">
@@ -1203,7 +1203,7 @@ function renderAnalysis(results, accuracy) {
 
     <div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
-        Detail des coups
+        Détail des coups
       </div>
       <div class="analyse-moves" id="analyse-moves">
         ${results.map((r, i) => {
@@ -1247,7 +1247,7 @@ function renderAnalysis(results, accuracy) {
               <div class="am-metrics">
                 ${r.playedWinPct !== undefined ? `<span class="am-metric"><strong>${fmtPct(r.playedWinPct)}</strong> pour ${pseudo}</span>` : ''}
                 ${r.bestWinPct !== undefined ? `<span class="am-metric">meilleur coup: <strong>${fmtPct(r.bestWinPct)}</strong></span>` : ''}
-                ${r.swing !== undefined ? `<span class="am-metric" title="Perte de chances entre le meilleur coup et le coup joue">swing: <strong>-${fmtPct(r.swing)}</strong> de chances</span>` : ''}
+                ${r.swing !== undefined ? `<span class="am-metric" title="Perte de chances entre le meilleur coup et le coup joué">impact: <strong>-${fmtPct(r.swing)}</strong> de chances</span>` : ''}
                 <span class="am-metric">avantage: <strong style="color:${ownerColor(r.evalScore || 0)}">${ownerName(r.evalScore || 0)}</strong></span>
                 ${r.bestCol !== undefined && r.bestCol !== r.playedCol ? `<span class="am-metric">meilleur choix: <strong>col.${r.bestCol + 1}</strong></span>` : ''}
               </div>
@@ -1314,7 +1314,7 @@ function showEvalTooltip(rectEl, moveIdx) {
   const rootStyles = getComputedStyle(document.documentElement);
   const p1Color = rootStyles.getPropertyValue('--p1-color').trim() || '#ff2d55';
   const p2Color = rootStyles.getPropertyValue('--p2-color').trim() || '#ffd60a';
-  const pseudo = point.score > 4 ? gameData.p1_pseudo : point.score < -4 ? gameData.p2_pseudo : 'Equilibre';
+  const pseudo = point.score > 4 ? gameData.p1_pseudo : point.score < -4 ? gameData.p2_pseudo : 'Équilibre';
   const color = point.score > 4 ? p1Color : point.score < -4 ? p2Color : 'rgba(238,238,245,0.75)';
   const chance = Math.round((point.score + 100) / 2);
   const cp = point.cp !== undefined && point.cp !== null
@@ -1352,7 +1352,7 @@ function jumpToMove(moveIdx) {
   const txt  = document.getElementById('board-inspect-text');
   const p    = result.player === 1 ? gameData.p1_pseudo : gameData.p2_pseudo;
   const cls  = { best:'Meilleur', excellent:'Excellent', good:'Bon',
-                 forced:'Force', inaccuracy:'Imprecision', mistake:'Erreur', blunder:'Gaffe' };
+                 forced:'Forcé', inaccuracy:'Imprécision', mistake:'Erreur', blunder:'Gaffe' };
   if (txt) txt.textContent = `Coup ${moveIdx + 1} · ${p} · ${cls[result.classification] || ''}`;
   if (bar) bar.classList.add('show');
 

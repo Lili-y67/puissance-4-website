@@ -167,12 +167,8 @@ class GameManager {
 
     // Delta ELO par joueur (pas winner/loser générique)
     // Si boost détecté : ELO = 0 pour cette partie
-    const p1Delta = isSuspect ? 0 : isDraw
-      ? (state.players[1].id === winnerId ? elo.dW : elo.dL)
-      : (p1IsWinner ? elo.dW : elo.dL);
-    const p2Delta = isSuspect ? 0 : isDraw
-      ? (state.players[2].id === winnerId ? elo.dW : elo.dL)
-      : (p2IsWinner ? elo.dW : elo.dL);
+    const p1Delta = isSuspect ? 0 : (isDraw ? elo.dW : (p1IsWinner ? elo.dW : elo.dL));
+    const p2Delta = isSuspect ? 0 : (isDraw ? elo.dL : (p2IsWinner ? elo.dW : elo.dL));
 
     // Webhook log partie
     try {
@@ -219,6 +215,7 @@ class GameManager {
       type:   'game_over',
       gameId: state.id,
       reason,
+      duration,
       winner: winnerSide,
       winCells,
       eloChanges: {
