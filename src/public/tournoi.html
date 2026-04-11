@@ -5,281 +5,696 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Tournois</title>
 <link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#06070f;
-  --surface:#111422;
-  --surface-2:#171b2d;
-  --text:#f5f7ff;
-  --muted:rgba(245,247,255,.64);
-  --red:#ff2d55;
-  --cyan:#85EBFF;
-  --yellow:#ffd84d;
-  --border:rgba(255,255,255,.09);
-}
-html,body{min-height:100%}
-body{
-  overflow:hidden;
-  color:var(--text);
-  font-family:'Barlow',sans-serif;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255,45,85,.18), transparent 22%),
-    radial-gradient(circle at 82% 16%, rgba(133,235,255,.14), transparent 25%),
-    radial-gradient(circle at 50% 100%, rgba(255,216,77,.08), transparent 32%),
-    var(--bg);
-}
-.grid{
-  position:fixed;inset:0;pointer-events:none;opacity:.55;
-  background-image:
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size:44px 44px;
-}
-.orbs{position:fixed;inset:0;pointer-events:none;overflow:hidden}
-.orb{
-  position:absolute;border-radius:50%;
-  filter:blur(6px);
-  opacity:.22;
-  animation:float 12s ease-in-out infinite;
-}
-.orb.red{background:#ff2d55}
-.orb.cyan{background:#85EBFF}
-.orb.yellow{background:#ffd84d}
-.orb.one{width:180px;height:180px;left:10%;top:14%}
-.orb.two{width:120px;height:120px;right:14%;top:22%;animation-duration:15s}
-.orb.three{width:220px;height:220px;left:48%;bottom:-40px;animation-duration:18s}
-@keyframes float{
-  0%,100%{transform:translateY(0) translateX(0) scale(1)}
-  50%{transform:translateY(-18px) translateX(10px) scale(1.05)}
-}
-.page{
-  position:relative;z-index:1;min-height:100vh;
-  display:flex;flex-direction:column;
-  padding:28px 18px 32px;
-}
-.nav{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-}
-.logo{
-  color:var(--text);text-decoration:none;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:34px;font-weight:900;letter-spacing:2px;text-transform:uppercase;
-}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,.06);--text:#eeeef5;--muted:rgba(238,238,245,.45);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--blue:#68d4ff}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif}
+.bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px}
+.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px)}
+.page{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:26px 16px 56px;display:flex;flex-direction:column;gap:18px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:32px;letter-spacing:2px;color:var(--text);text-decoration:none}
 .logo span{color:var(--red)}
-.nav-actions{display:flex;gap:10px;flex-wrap:wrap}
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  padding:11px 16px;border-radius:12px;
-  border:1px solid var(--border);
-  background:rgba(255,255,255,.03);
-  color:var(--muted);text-decoration:none;
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
-  transition:.2s;
-}
-.btn:hover{color:var(--text);border-color:rgba(255,255,255,.16)}
-.wrap{
-  flex:1;display:flex;align-items:center;justify-content:center;
-}
-.card{
-  width:min(940px,100%);
-  padding:34px;
-  border-radius:32px;
-  border:1px solid var(--border);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)),
-    rgba(12,14,24,.86);
-  box-shadow:
-    0 25px 90px rgba(0,0,0,.45),
-    inset 0 1px 0 rgba(255,255,255,.04);
-  position:relative;
-  overflow:hidden;
-}
-.card::before{
-  content:"";
-  position:absolute;inset:auto -80px -80px auto;
-  width:240px;height:240px;border-radius:50%;
-  background:radial-gradient(circle, rgba(255,45,85,.28), transparent 62%);
-  filter:blur(16px);
-}
-.card::after{
-  content:"";
-  position:absolute;inset:0;
-  background:linear-gradient(90deg, rgba(133,235,255,.05), transparent 20%, transparent 80%, rgba(255,45,85,.05));
-  pointer-events:none;
-}
-.status{
-  display:inline-flex;align-items:center;gap:10px;
-  padding:9px 14px;border-radius:999px;
-  border:1px solid rgba(255,216,77,.2);
-  background:rgba(255,216,77,.08);
-  color:var(--yellow);
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
-}
-.status-dot{
-  width:10px;height:10px;border-radius:50%;
-  background:var(--yellow);
-  box-shadow:0 0 0 0 rgba(255,216,77,.5);
-  animation:pulse 1.6s infinite;
-}
-@keyframes pulse{
-  0%{box-shadow:0 0 0 0 rgba(255,216,77,.5)}
-  75%{box-shadow:0 0 0 14px rgba(255,216,77,0)}
-  100%{box-shadow:0 0 0 0 rgba(255,216,77,0)}
-}
-.hero{
-  margin-top:18px;
-  display:grid;grid-template-columns:1.15fr .85fr;gap:24px;align-items:center;
-}
-.title{
-  font-family:'Barlow Condensed',sans-serif;
-  font-size:82px;line-height:.9;font-weight:900;text-transform:uppercase;
-}
-.title span{color:var(--red)}
-.copy{
-  margin-top:18px;
-  max-width:560px;
-  color:var(--muted);
-  line-height:1.8;
-  font-size:15px;
-}
-.mini{
-  margin-top:18px;
-  display:flex;flex-wrap:wrap;gap:10px;
-}
-.chip{
-  padding:9px 12px;border-radius:12px;
-  background:var(--surface-2);
-  border:1px solid rgba(255,255,255,.05);
-  font-size:12px;color:var(--muted)
-}
-.visual{
-  min-height:300px;
-  border-radius:28px;
-  border:1px solid rgba(255,255,255,.06);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,.06), transparent 58%),
-    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)),
-    #0d1020;
-  position:relative;
-  display:flex;align-items:center;justify-content:center;
-  overflow:hidden;
-}
-.ring{
-  position:absolute;border-radius:50%;
-  border:2px solid rgba(133,235,255,.24);
-  animation:spin 10s linear infinite;
-}
-.ring.one{width:210px;height:210px}
-.ring.two{
-  width:300px;height:300px;
-  border-color:rgba(255,45,85,.18);
-  animation-direction:reverse;
-  animation-duration:14s;
-}
-@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-.wrench-wrap{
-  width:124px;height:124px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(circle, rgba(255,255,255,.06), rgba(255,255,255,.015));
-  box-shadow:0 0 30px rgba(255,45,85,.18), 0 0 70px rgba(133,235,255,.12);
-  position:relative;
-}
-.wrench-wrap::before{
-  content:"";
-  position:absolute;inset:10px;border-radius:50%;
-  border:1px solid rgba(255,255,255,.08);
-}
-.wrench{
-  font-size:72px;line-height:1;
-  filter:drop-shadow(0 0 10px rgba(255,216,77,.35));
-  animation:wrenchSpin 2.8s ease-in-out infinite;
-  transform-origin:50% 50%;
-}
-@keyframes wrenchSpin{
-  0%{transform:rotate(0deg) scale(1)}
-  15%{transform:rotate(-18deg) scale(1.02)}
-  45%{transform:rotate(140deg) scale(1.06)}
-  70%{transform:rotate(320deg) scale(1)}
-  100%{transform:rotate(360deg) scale(1)}
-}
-.footer{
-  margin-top:26px;padding-top:20px;
-  border-top:1px solid rgba(255,255,255,.08);
-  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-  color:var(--muted);font-size:13px;
-}
-@media (max-width:860px){
-  .hero{grid-template-columns:1fr}
-  .title{font-size:58px}
-  .visual{min-height:240px}
-}
-@media (max-width:560px){
-  .page{padding:18px 14px 24px}
-  .card{padding:24px}
-  .title{font-size:44px}
-  .copy{font-size:14px}
-  .footer{font-size:12px}
-}
+.nav-actions{display:flex;gap:8px;flex-wrap:wrap}
+.nav-btn{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;transition:.18s}
+.nav-btn:hover{color:var(--text);border-color:rgba(255,255,255,.14)}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:0 20px 50px rgba(0,0,0,.24)}
+.eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:4px;text-transform:uppercase;color:var(--red)}
+.title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(36px,6vw,68px);font-weight:900;line-height:.92;letter-spacing:1px;text-transform:uppercase;margin-top:8px}
+.title-sub{font-size:15px;color:var(--muted);margin-top:10px;max-width:700px}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.stat{background:var(--surface2);border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:14px}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;line-height:1}
+.stat-lbl{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.summary-card{display:flex;flex-direction:column;gap:14px;justify-content:center}
+.summary-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid rgba(48,209,88,.3);background:rgba(48,209,88,.1);color:var(--green);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.summary-badge.pending{border-color:rgba(255,214,10,.3);background:rgba(255,214,10,.1);color:var(--yellow)}
+.summary-badge.finished{border-color:rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#c9c9d4}
+.summary-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.summary-copy{font-size:14px;color:var(--muted);line-height:1.55}
+.summary-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mini{padding:12px;border-radius:14px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
+.mini-v{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800}
+.mini-l{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.toolbar-left,.toolbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{padding:9px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;transition:.18s}
+.chip.active,.chip:hover{color:var(--text);border-color:rgba(255,255,255,.16)}
+.search{min-width:260px;flex:1;max-width:360px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none}
+.search:focus{border-color:rgba(104,212,255,.35);box-shadow:0 0 0 3px rgba(104,212,255,.08)}
+.btn{padding:11px 15px;border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.18s}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.42;cursor:not-allowed;transform:none}
+.btn-main{background:linear-gradient(135deg,#ff2d55,#ff5b79);color:#fff;box-shadow:0 0 20px rgba(255,45,85,.18)}
+.btn-soft{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-blue{background:rgba(104,212,255,.14);border:1px solid rgba(104,212,255,.28);color:var(--blue)}
+.section{display:flex;flex-direction:column;gap:12px}
+.section-title{display:flex;align-items:end;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.section-title h2{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.section-title p{font-size:13px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px;transition:.18s}
+.card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-2px)}
+.card-top{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.status-pill{padding:7px 11px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.status-active{background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.28);color:var(--green)}
+.status-pending{background:rgba(255,214,10,.12);border:1px solid rgba(255,214,10,.28);color:var(--yellow)}
+.status-paused{background:rgba(104,212,255,.12);border:1px solid rgba(104,212,255,.28);color:var(--blue)}
+.status-finished{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#c8c8d2}
+.card-name{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:1px;text-transform:uppercase;line-height:.95}
+.card-ref{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:4px}
+.meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.meta-box{padding:12px;border-radius:14px;background:var(--surface2);border:1px solid rgba(255,255,255,.05)}
+.meta-box strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:900;line-height:1}
+.meta-box span{display:block;margin-top:4px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.card-copy{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.reward-row{display:flex;gap:8px;flex-wrap:wrap}
+.reward{padding:7px 10px;border-radius:999px;background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.2);color:#ffdf59;font-size:12px;font-weight:700}
+.action-row{display:flex;gap:10px;flex-wrap:wrap}
+.password{flex:1;min-width:180px;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none}
+.empty{padding:26px;border-radius:18px;border:1px dashed rgba(255,255,255,.12);text-align:center;color:var(--muted)}
+.detail-wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:14px}
+.standings{display:flex;flex-direction:column;gap:10px}
+.stand-row{display:grid;grid-template-columns:56px minmax(0,1fr) 88px 74px 74px 74px;gap:8px;align-items:center;padding:12px 14px;background:var(--surface2);border:1px solid rgba(255,255,255,.05);border-radius:14px}
+.stand-rank{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900}
+.stand-player{display:flex;align-items:center;gap:10px;min-width:0}
+.stand-avatar{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800}
+.stand-avatar img{width:100%;height:100%;object-fit:cover}
+.stand-pseudo{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stand-meta{font-size:11px;color:var(--muted)}
+.stand-num{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;text-align:center}
+.label-center{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-align:center}
+.queue-box{display:none;position:sticky;bottom:12px;z-index:4;align-self:flex-end;max-width:420px;background:rgba(13,13,28,.94);backdrop-filter:blur(8px);border:1px solid rgba(104,212,255,.24);border-radius:18px;padding:16px 16px 14px;box-shadow:0 16px 40px rgba(0,0,0,.35)}
+.queue-box.show{display:flex;flex-direction:column;gap:10px}
+.queue-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.queue-sub{font-size:13px;color:var(--muted)}
+.queue-actions{display:flex;gap:10px;flex-wrap:wrap}
+.toast{position:fixed;right:16px;bottom:16px;z-index:12;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(13,13,28,.96);color:var(--text);box-shadow:0 16px 38px rgba(0,0,0,.34);display:none;max-width:380px}
+.toast.show{display:block}
+.modal-bg{position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
+.modal-bg.show{display:flex}
+.modal{width:100%;max-width:760px;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:14px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.modal-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.field input{padding:12px 13px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);outline:none}
+.field input:focus{border-color:rgba(255,45,85,.35)}
+.full{grid-column:1/-1}
+.hidden{display:none!important}
+@media (max-width:960px){.hero,.detail-wrap,.grid{grid-template-columns:1fr}.hero-stats,.meta-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:720px){.page{padding:20px 12px 42px}.title{font-size:44px}.summary-meta,.hero-stats,.meta-grid,.form-grid{grid-template-columns:1fr}.stand-row{grid-template-columns:44px minmax(0,1fr) 68px 62px 62px 62px;padding:10px}.stand-rank,.stand-num{font-size:20px}.search{max-width:none;min-width:0;width:100%}}
 </style>
 </head>
 <body>
-<div class="grid"></div>
-<div class="orbs">
-  <div class="orb red one"></div>
-  <div class="orb cyan two"></div>
-  <div class="orb yellow three"></div>
-</div>
-
+<div class="bg-grid"></div>
+<div class="scanlines"></div>
 <div class="page">
   <div class="nav">
     <a class="logo" href="/">Puissance <span>4</span></a>
     <div class="nav-actions">
-      <a class="btn" href="/">Retour</a>
-      <a class="btn" href="/profil">Mon profil</a>
+      <a class="nav-btn" href="/">Accueil</a>
+      <a class="nav-btn" href="/profil">Profil</a>
+      <a class="nav-btn" href="/stats">Stats</a>
     </div>
   </div>
-
-  <div class="wrap">
-    <section class="card">
-      <div class="status">
-        <span class="status-dot"></span>
-        <span>Maintenance temporaire</span>
+  <div class="hero">
+    <div class="panel">
+      <div class="eyebrow">Mode competition</div>
+      <div class="title">Tournois<br>Ranked</div>
+      <div class="title-sub">Inscris-toi, attends ton appariement, puis enchaine les victoires. Les parties de tournoi continuent de compter pour l'ELO tout en alimentant un score tournoi avec bonus de serie.</div>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-val" id="hero-total">0</div><div class="stat-lbl">Tournois visibles</div></div>
+        <div class="stat"><div class="stat-val" id="hero-active">0</div><div class="stat-lbl">Actifs</div></div>
+        <div class="stat"><div class="stat-val" id="hero-joined">0</div><div class="stat-lbl">Ou tu es inscrit</div></div>
+        <div class="stat"><div class="stat-val" id="hero-coins">0</div><div class="stat-lbl">Coins top 3 visibles</div></div>
       </div>
-
-      <div class="hero">
-        <div>
-          <h1 class="title">Mode <span>Tournoi</span><br>en refonte</h1>
-          <p class="copy">
-            Le systeme de tournoi est en cours d ajustement pour revenir avec une version plus stable,
-            plus propre et plus complete. La page est volontairement fermee temporairement le temps de
-            corriger les derniers soucis de file, d appariement et d interface.
-          </p>
-          <div class="mini">
-            <div class="chip">File dediee en cours de reprise</div>
-            <div class="chip">Tournois auto en verification</div>
-            <div class="chip">Retour prochainement</div>
-          </div>
-        </div>
-
-        <div class="visual">
-          <div class="ring one"></div>
-          <div class="ring two"></div>
-          <div class="wrench-wrap">
-            <div class="wrench">🔧</div>
-          </div>
-        </div>
+    </div>
+    <div class="panel summary-card">
+      <div class="summary-badge pending" id="summary-badge">A venir</div>
+      <div class="summary-title" id="summary-title">Aucun tournoi charge</div>
+      <div class="summary-copy" id="summary-copy">La page attend la liste des tournois disponibles.</div>
+      <div class="summary-meta">
+        <div class="mini"><div class="mini-v" id="summary-time">--</div><div class="mini-l">Debut / fin</div></div>
+        <div class="mini"><div class="mini-v" id="summary-players">0</div><div class="mini-l">Participants</div></div>
+        <div class="mini"><div class="mini-v" id="summary-move">0s</div><div class="mini-l">Temps par coup</div></div>
+        <div class="mini"><div class="mini-v" id="summary-score">0</div><div class="mini-l">Mon score</div></div>
       </div>
-
-      <div class="footer">
-        <span>La page reviendra automatiquement apres stabilisation.</span>
-        <span>Merci pour la patience.</span>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="chip active" data-filter="all" onclick="setTournamentFilter('all')">Tous</button>
+        <button class="chip" data-filter="active" onclick="setTournamentFilter('active')">Actifs</button>
+        <button class="chip" data-filter="pending" onclick="setTournamentFilter('pending')">A venir</button>
+        <button class="chip" data-filter="joined" onclick="setTournamentFilter('joined')">Mes inscriptions</button>
       </div>
-    </section>
+      <div class="toolbar-right">
+        <input class="search" id="search-input" type="text" placeholder="Rechercher un tournoi..." oninput="renderTournamentPage()">
+        <button class="btn btn-blue" id="btn-create-open" onclick="openCreateModal()" disabled>Creer tournoi</button>
+        <button class="btn btn-ghost" onclick="reloadTournamentData()">Actualiser</button>
+      </div>
+    </div>
+  </div>
+  <div class="section hidden" id="detail-section">
+    <div class="section-title">
+      <div><h2 id="detail-title">Detail tournoi</h2><p id="detail-sub">Chargement...</p></div>
+      <div class="toolbar-right"><a class="nav-btn" href="/tournoi">Retour liste</a></div>
+    </div>
+    <div class="detail-wrap">
+      <div class="panel" id="detail-main"></div>
+      <div class="panel">
+        <div class="section-title" style="margin-bottom:10px"><div><h2>Classement</h2><p>Score tournoi, victoire, defaite, nuls et serie.</p></div></div>
+        <div class="standings" id="standings-wrap"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section" id="list-section">
+    <div class="section-title"><div><h2>Tournois presents</h2><p>Les tournois automatiques du site et les creations Perso apparaissent ici.</p></div></div>
+    <div class="grid" id="tournament-grid"></div>
+    <div class="empty hidden" id="empty-state">Aucun tournoi ne correspond au filtre actuel.</div>
+  </div>
+  <div class="queue-box" id="queue-box">
+    <div class="queue-title">File tournoi active</div>
+    <div class="queue-sub" id="queue-sub">En attente...</div>
+    <div class="queue-actions">
+      <button class="btn btn-blue" onclick="openCurrentTournamentDetail()">Voir tournoi</button>
+      <button class="btn btn-ghost" onclick="leaveTournamentQueue()">Quitter la file</button>
+    </div>
   </div>
 </div>
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="create-modal-bg" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="modal-title">Creer un tournoi</div><div style="font-size:13px;color:var(--muted);margin-top:4px">Reserve aux joueurs Perso et admins.</div></div>
+      <button class="btn btn-ghost" onclick="closeCreateModal()">Fermer</button>
+    </div>
+    <div class="form-grid">
+      <div class="field full"><label for="create-name">Nom</label><input id="create-name" type="text" maxlength="48" placeholder="Tournoi crystal du soir"></div>
+      <div class="field"><label for="create-duration">Temps total (minutes)</label><input id="create-duration" type="number" min="10" max="1440" value="60"></div>
+      <div class="field"><label for="create-move-time">Temps par coup (secondes)</label><input id="create-move-time" type="number" min="5" max="180" value="30"></div>
+      <div class="field full"><label for="create-password">Mot de passe</label><input id="create-password" type="text" maxlength="32" placeholder="Laisser vide pour public"></div>
+      <div class="field"><label for="create-reward-1">Recompense 1</label><input id="create-reward-1" type="number" min="0" max="1000000" value="1000"></div>
+      <div class="field"><label for="create-reward-2">Recompense 2</label><input id="create-reward-2" type="number" min="0" max="1000000" value="500"></div>
+      <div class="field full"><label for="create-reward-3">Recompense 3</label><input id="create-reward-3" type="number" min="0" max="1000000" value="250"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="closeCreateModal()">Annuler</button>
+      <button class="btn btn-main" onclick="submitCreateTournament()">Creer le tournoi</button>
+    </div>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let tournamentFilter = 'all';
+let tournamentsCache = [];
+let detailCache = null;
+let queueTournamentId = 0;
+let socket = null;
+let socketReady = false;
+let pendingTournamentQueueId = 0;
+let currentPlayer = parseStoredPlayer();
+
+const detailRef = (() => {
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  return parts[0] === 'tournoi' && parts[1] ? decodeURIComponent(parts[1]) : '';
+})();
+
+function parseStoredPlayer() {
+  try {
+    return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function getToken() {
+  return localStorage.getItem('token') || '';
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function showToast(message, isError = false) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = message;
+  el.style.borderColor = isError ? 'rgba(255,45,85,.28)' : 'rgba(104,212,255,.24)';
+  el.style.color = isError ? '#ff93a7' : 'var(--text)';
+  el.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+function readApiError(res, fallback) {
+  return res.json().then((data) => String(data?.error || fallback)).catch(() => fallback);
+}
+
+function canCreateTournament(player = currentPlayer) {
+  return Number(player?.is_perso || 0) === 1 || String(player?.role || '') === 'admin';
+}
+
+function statusLabel(status) {
+  if (status === 'active') return 'Actif';
+  if (status === 'pending') return 'Bientot';
+  if (status === 'paused') return 'Pause';
+  return 'Termine';
+}
+
+function statusClass(status) {
+  if (status === 'active') return 'status-active';
+  if (status === 'pending') return 'status-pending';
+  if (status === 'paused') return 'status-paused';
+  return 'status-finished';
+}
+
+function formatDateTime(ts) {
+  if (!ts) return '--';
+  return new Date(Number(ts)).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatCompactDuration(ms) {
+  const total = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (d > 0) return d + 'j ' + h + 'h';
+  if (h > 0) return h + 'h ' + m + 'm';
+  if (m > 0) return m + 'm';
+  return s + 's';
+}
+
+function getRelativeStatusText(tournament) {
+  const now = Date.now();
+  if (tournament.status === 'pending') return 'Commence dans ' + formatCompactDuration(Number(tournament.starts_at || 0) - now);
+  if (tournament.status === 'active') return 'Se termine dans ' + formatCompactDuration(Number(tournament.ends_at || 0) - now);
+  if (tournament.status === 'paused') return 'Pause en cours';
+  return 'Tournoi termine';
+}
+
+function getHeroFocusTournament(list) {
+  return list.find((t) => t.status === 'active') || list.find((t) => t.status === 'pending') || list[0] || null;
+}
+
+function updateHero(list) {
+  const total = list.length;
+  const active = list.filter((t) => t.status === 'active').length;
+  const joined = list.filter((t) => t.joined).length;
+  const visibleCoins = list.reduce((sum, t) => sum + Number(t.reward_1 || 0) + Number(t.reward_2 || 0) + Number(t.reward_3 || 0), 0);
+  document.getElementById('hero-total').textContent = total;
+  document.getElementById('hero-active').textContent = active;
+  document.getElementById('hero-joined').textContent = joined;
+  document.getElementById('hero-coins').textContent = visibleCoins;
+
+  const focus = detailCache?.tournament || getHeroFocusTournament(list);
+  if (!focus) return;
+  const badge = document.getElementById('summary-badge');
+  badge.className = 'summary-badge ' + (focus.status === 'active' ? '' : focus.status === 'pending' ? 'pending' : focus.status === 'paused' ? '' : 'finished');
+  badge.textContent = statusLabel(focus.status);
+  document.getElementById('summary-title').textContent = focus.name || 'Tournoi';
+  document.getElementById('summary-copy').textContent = getRelativeStatusText(focus) + ' - ' + (focus.creator_pseudo ? 'cree par ' + focus.creator_pseudo : 'tournoi du site');
+  document.getElementById('summary-time').textContent = formatDateTime(focus.starts_at).slice(11) + ' / ' + formatDateTime(focus.ends_at).slice(11);
+  document.getElementById('summary-players').textContent = Number(focus.participants || 0);
+  document.getElementById('summary-move').textContent = Number(focus.move_time_seconds || 0) + 's';
+  document.getElementById('summary-score').textContent = Number(focus.my_score || 0);
+}
+
+function setTournamentFilter(next) {
+  tournamentFilter = next;
+  document.querySelectorAll('[data-filter]').forEach((el) => el.classList.toggle('active', el.dataset.filter === next));
+  renderTournamentPage();
+}
+
+function getFilteredTournaments() {
+  const q = String(document.getElementById('search-input')?.value || '').trim().toLowerCase();
+  return tournamentsCache.filter((t) => {
+    if (tournamentFilter === 'active' && t.status !== 'active') return false;
+    if (tournamentFilter === 'pending' && t.status !== 'pending') return false;
+    if (tournamentFilter === 'joined' && !t.joined) return false;
+    if (!q) return true;
+    return String(t.name || '').toLowerCase().includes(q) || String(t.public_id || '').toLowerCase().includes(q);
+  });
+}
+
+function tournamentRewardsMarkup(t) {
+  return `<div class="reward-row"><div class="reward">#1 ${Number(t.reward_1 || 0)} coins</div><div class="reward">#2 ${Number(t.reward_2 || 0)} coins</div><div class="reward">#3 ${Number(t.reward_3 || 0)} coins</div></div>`;
+}
+
+function getJoinDisabledReason(t) {
+  if (!currentPlayer?.id || !getToken()) return 'Connecte-toi pour rejoindre.';
+  if (t.status === 'finished') return 'Tournoi termine.';
+  if (t.status === 'paused') return 'Tournoi en pause.';
+  return '';
+}
+
+function renderTournamentCard(t) {
+  const disabledReason = getJoinDisabledReason(t);
+  const disableJoin = !!disabledReason;
+  return `
+    <div class="card">
+      <div class="card-top">
+        <div style="min-width:0">
+          <div class="card-name">${escapeHtml(t.name || 'Tournoi')}</div>
+          <div class="card-ref">${escapeHtml(t.public_id || ('TRN-' + t.id))} - par ${escapeHtml(t.creator_pseudo || 'Puissance4-AI')}</div>
+        </div>
+        <div class="status-pill ${statusClass(t.status)}">${statusLabel(t.status)}</div>
+      </div>
+      <div class="meta-grid">
+        <div class="meta-box"><strong>${Number(t.participants || 0)}</strong><span>Participants</span></div>
+        <div class="meta-box"><strong>${Number(t.duration_minutes || 0)}m</strong><span>Duree</span></div>
+        <div class="meta-box"><strong>${Number(t.move_time_seconds || 0)}s</strong><span>Par coup</span></div>
+        <div class="meta-box"><strong>${Number(t.my_score || 0)}</strong><span>Mon score</span></div>
+      </div>
+      <div class="card-copy">
+        <div>${getRelativeStatusText(t)}</div>
+        <div>Debut ${formatDateTime(t.starts_at)} - fin ${formatDateTime(t.ends_at)}</div>
+        <div>${t.joined ? 'Tu es deja inscrit.' : 'Inscription ouverte.'}${t.has_password ? ' Mot de passe requis.' : ' Aucun mot de passe.'}</div>
+      </div>
+      ${tournamentRewardsMarkup(t)}
+      <div class="action-row">
+        <input id="password-${t.id}" class="password" type="text" placeholder="${t.has_password ? 'Mot de passe tournoi' : 'Aucun mot de passe'}" ${t.has_password ? '' : 'disabled'}>
+        <button class="btn btn-main" onclick="joinTournament(${Number(t.id)})" ${disableJoin ? 'disabled title="' + escapeHtml(disabledReason) + '"' : ''}>Rejoindre</button>
+        <button class="btn btn-blue" onclick="openTournamentDetail('${escapeHtml(String(t.public_id || t.id))}')">Voir</button>
+        <button class="btn btn-soft" onclick="joinTournamentQueue(${Number(t.id)})" ${(t.status !== 'active' || !t.joined || !currentPlayer?.id) ? 'disabled' : ''}>Entrer en file</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTournamentPage() {
+  updateHero(tournamentsCache);
+  const list = getFilteredTournaments();
+  const grid = document.getElementById('tournament-grid');
+  const empty = document.getElementById('empty-state');
+  if (!grid || !empty) return;
+  if (!list.length) {
+    grid.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  list.sort((a, b) => {
+    const order = { active: 0, pending: 1, paused: 2, finished: 3 };
+    const oa = order[a.status] ?? 9;
+    const ob = order[b.status] ?? 9;
+    if (oa !== ob) return oa - ob;
+    return Number(a.starts_at || 0) - Number(b.starts_at || 0);
+  });
+  grid.innerHTML = list.map(renderTournamentCard).join('');
+}
+
+function renderDetail(data) {
+  detailCache = data;
+  const { tournament, standings = [] } = data || {};
+  document.getElementById('detail-section').classList.toggle('hidden', !tournament);
+  if (!tournament) return;
+  document.getElementById('detail-title').textContent = tournament.name || 'Tournoi';
+  document.getElementById('detail-sub').textContent = (tournament.public_id || ('TRN-' + tournament.id)) + ' - ' + getRelativeStatusText(tournament);
+  document.getElementById('detail-main').innerHTML = `
+    <div class="card-top">
+      <div style="min-width:0">
+        <div class="card-name">${escapeHtml(tournament.name || 'Tournoi')}</div>
+        <div class="card-ref">${escapeHtml(tournament.public_id || ('TRN-' + tournament.id))} - ${escapeHtml(tournament.creator_pseudo || 'Puissance4-AI')}</div>
+      </div>
+      <div class="status-pill ${statusClass(tournament.status)}">${statusLabel(tournament.status)}</div>
+    </div>
+    <div class="meta-grid" style="margin-top:14px">
+      <div class="meta-box"><strong>${Number(tournament.participants || 0)}</strong><span>Participants</span></div>
+      <div class="meta-box"><strong>${Number(tournament.move_time_seconds || 0)}s</strong><span>Temps coup</span></div>
+      <div class="meta-box"><strong>${Number(tournament.my_score || 0)}</strong><span>Mon score</span></div>
+      <div class="meta-box"><strong>${Number(tournament.my_streak || 0)}</strong><span>Ma serie</span></div>
+    </div>
+    <div class="card-copy" style="margin-top:14px">
+      <div>Debut: ${formatDateTime(tournament.starts_at)}</div>
+      <div>Fin theorique: ${formatDateTime(tournament.ends_at)}</div>
+      <div>Duree: ${Number(tournament.duration_minutes || 0)} minutes</div>
+      <div>Format score: victoire = +1 et bonus de serie en cas de winstreak.</div>
+      <div>${tournament.joined ? 'Tu es inscrit a ce tournoi.' : 'Tu n es pas encore inscrit a ce tournoi.'}</div>
+    </div>
+    <div style="margin-top:14px">${tournamentRewardsMarkup(tournament)}</div>
+    <div class="action-row" style="margin-top:14px">
+      <input id="detail-password" class="password" type="text" placeholder="${tournament.has_password ? 'Mot de passe tournoi' : 'Aucun mot de passe'}" ${tournament.has_password ? '' : 'disabled'}>
+      <button class="btn btn-main" onclick="joinTournament(${Number(tournament.id)}, true)" ${!!getJoinDisabledReason(tournament) ? 'disabled' : ''}>Rejoindre</button>
+      <button class="btn btn-soft" onclick="joinTournamentQueue(${Number(tournament.id)})" ${(tournament.status !== 'active' || !tournament.joined || !currentPlayer?.id) ? 'disabled' : ''}>Entrer en file</button>
+    </div>
+  `;
+
+  const standingsWrap = document.getElementById('standings-wrap');
+  if (!standings.length) {
+    standingsWrap.innerHTML = '<div class="empty">Aucun participant classe pour le moment.</div>';
+  } else {
+    standingsWrap.innerHTML = standings.map((entry) => {
+      const avatarMarkup = entry.avatar
+        ? '<img src="' + escapeHtml(entry.avatar) + '" alt="avatar">'
+        : escapeHtml(String(entry.pseudo || '?').charAt(0).toUpperCase());
+      return `
+        <div class="stand-row">
+          <div class="stand-rank">#${Number(entry.rank || 0)}</div>
+          <div class="stand-player">
+            <div class="stand-avatar" style="border:2px solid ${escapeHtml(entry.color || '#ff2d55')}">${avatarMarkup}</div>
+            <div style="min-width:0">
+              <div class="stand-pseudo">${escapeHtml(entry.pseudo || 'Joueur')}</div>
+              <div class="stand-meta">${Number(entry.elo || 0)} ELO</div>
+            </div>
+          </div>
+          <div><div class="stand-num">${Number(entry.score || 0)}</div><div class="label-center">Score</div></div>
+          <div><div class="stand-num">${Number(entry.wins || 0)}</div><div class="label-center">Wins</div></div>
+          <div><div class="stand-num">${Number(entry.losses || 0)}</div><div class="label-center">Losses</div></div>
+          <div><div class="stand-num">${Number(entry.streak || 0)}</div><div class="label-center">Serie</div></div>
+        </div>
+      `;
+    }).join('');
+  }
+  updateHero(tournamentsCache);
+}
+
+async function reloadTournamentData() {
+  currentPlayer = parseStoredPlayer();
+  document.getElementById('btn-create-open').disabled = !canCreateTournament(currentPlayer);
+  try {
+    const token = getToken();
+    const res = await fetch('/api/tournaments' + (token ? ('?token=' + encodeURIComponent(token)) : ''));
+    if (!res.ok) throw new Error('load');
+    const data = await res.json();
+    tournamentsCache = Array.isArray(data?.tournaments) ? data.tournaments : [];
+    renderTournamentPage();
+    if (detailRef) await loadTournamentDetail(detailRef);
+  } catch (e) {
+    showToast('Impossible de charger les tournois.', true);
+  }
+}
+
+async function loadTournamentDetail(ref) {
+  if (!ref) return;
+  try {
+    const token = getToken();
+    const res = await fetch('/api/tournaments/' + encodeURIComponent(ref) + (token ? ('?token=' + encodeURIComponent(token)) : ''));
+    if (!res.ok) {
+      renderDetail(null);
+      return;
+    }
+    const data = await res.json();
+    renderDetail(data);
+  } catch (e) {
+    showToast('Impossible de charger le detail du tournoi.', true);
+  }
+}
+
+function openTournamentDetail(ref) {
+  window.location.href = '/tournoi/' + encodeURIComponent(ref);
+}
+
+function openCurrentTournamentDetail() {
+  const t = tournamentsCache.find((item) => Number(item.id) === Number(queueTournamentId));
+  if (!t) return;
+  openTournamentDetail(t.public_id || t.id);
+}
+
+async function joinTournament(id, fromDetail = false) {
+  currentPlayer = parseStoredPlayer();
+  const token = getToken();
+  if (!currentPlayer?.id || !token) {
+    showToast('Connecte-toi d abord pour rejoindre un tournoi.', true);
+    return;
+  }
+  const passwordInput = document.getElementById(fromDetail ? 'detail-password' : ('password-' + id));
+  const password = String(passwordInput?.value || '').trim();
+  try {
+    const res = await fetch('/api/tournaments/' + encodeURIComponent(id) + '/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password })
+    });
+    if (!res.ok) {
+      showToast(await readApiError(res, 'Impossible de rejoindre ce tournoi.'), true);
+      return;
+    }
+    showToast('Inscription au tournoi validee.');
+    await reloadTournamentData();
+    if (detailRef) await loadTournamentDetail(detailRef);
+  } catch (e) {
+    showToast('Erreur reseau pendant l inscription.', true);
+  }
+}
+
+function ensureSocket() {
+  if (socket) return;
+  socket = io({ transports: ['polling'] });
+  socket.on('connect', () => {
+    const player = parseStoredPlayer();
+    const token = getToken();
+    if (player?.id && token) socket.emit('identify', { playerId: player.id, token });
+  });
+  socket.on('identified', (player) => {
+    currentPlayer = player || parseStoredPlayer();
+    try { localStorage.setItem('player', JSON.stringify(currentPlayer)); } catch (e) {}
+    socketReady = true;
+    if (pendingTournamentQueueId) {
+      const playerShape = currentPlayer?.shape || 'circle';
+      const playerEmoji = currentPlayer?.token_emoji_image || '';
+      socket.emit('tournament_queue_join', {
+        tournamentId: Number(pendingTournamentQueueId),
+        shape: playerShape,
+        tokenEmojiImage: playerEmoji
+      });
+      pendingTournamentQueueId = 0;
+    }
+  });
+  socket.on('tournament_queue_joined', ({ tournamentId, position } = {}) => {
+    queueTournamentId = Number(tournamentId || 0);
+    const box = document.getElementById('queue-box');
+    const sub = document.getElementById('queue-sub');
+    if (sub) sub.textContent = 'Position #' + Number(position || 1) + ' dans la file du tournoi.';
+    if (box) box.classList.add('show');
+    showToast('File tournoi rejointe.');
+  });
+  socket.on('tournament_queue_left', () => {
+    const box = document.getElementById('queue-box');
+    if (box) box.classList.remove('show');
+    queueTournamentId = 0;
+  });
+  socket.on('match_found', (data) => {
+    try {
+      sessionStorage.setItem('match', JSON.stringify(data));
+      sessionStorage.setItem('player', JSON.stringify(currentPlayer || parseStoredPlayer()));
+    } catch (e) {}
+    window.location.href = '/game';
+  });
+  socket.on('error', ({ message } = {}) => {
+    showToast(String(message || 'Erreur tournoi.'), true);
+  });
+}
+
+function joinTournamentQueue(id) {
+  currentPlayer = parseStoredPlayer();
+  const token = getToken();
+  if (!currentPlayer?.id || !token) {
+    showToast('Connecte-toi pour entrer en file.', true);
+    return;
+  }
+  ensureSocket();
+  if (socketReady) {
+    const player = parseStoredPlayer();
+    socket.emit('tournament_queue_join', {
+      tournamentId: Number(id),
+      shape: player.shape || 'circle',
+      tokenEmojiImage: player.token_emoji_image || ''
+    });
+  } else {
+    pendingTournamentQueueId = Number(id);
+  }
+}
+
+function leaveTournamentQueue() {
+  if (!socket || !queueTournamentId) return;
+  socket.emit('tournament_queue_leave', { tournamentId: queueTournamentId });
+}
+
+function openCreateModal() {
+  if (!canCreateTournament(parseStoredPlayer())) {
+    showToast('Creation reservee aux joueurs Perso ou admins.', true);
+    return;
+  }
+  document.getElementById('create-modal-bg').classList.add('show');
+  document.getElementById('create-modal-bg').setAttribute('aria-hidden', 'false');
+}
+
+function closeCreateModal() {
+  document.getElementById('create-modal-bg').classList.remove('show');
+  document.getElementById('create-modal-bg').setAttribute('aria-hidden', 'true');
+}
+
+async function submitCreateTournament() {
+  currentPlayer = parseStoredPlayer();
+  const token = getToken();
+  if (!canCreateTournament(currentPlayer) || !token) {
+    showToast('Creation reservee aux joueurs Perso connectes.', true);
+    return;
+  }
+  const payload = {
+    token,
+    name: document.getElementById('create-name').value.trim(),
+    duration_minutes: Number(document.getElementById('create-duration').value || 60),
+    move_time_seconds: Number(document.getElementById('create-move-time').value || 30),
+    password: document.getElementById('create-password').value.trim(),
+    reward_1: Number(document.getElementById('create-reward-1').value || 0),
+    reward_2: Number(document.getElementById('create-reward-2').value || 0),
+    reward_3: Number(document.getElementById('create-reward-3').value || 0)
+  };
+  try {
+    const res = await fetch('/api/tournaments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      showToast(await readApiError(res, 'Creation impossible.'), true);
+      return;
+    }
+    const data = await res.json();
+    closeCreateModal();
+    showToast('Tournoi cree avec succes.');
+    await reloadTournamentData();
+    if (data?.tournament?.public_id) window.location.href = '/tournoi/' + encodeURIComponent(data.tournament.public_id);
+  } catch (e) {
+    showToast('Erreur reseau pendant la creation.', true);
+  }
+}
+
+document.getElementById('create-modal-bg').addEventListener('click', (event) => {
+  if (event.target === document.getElementById('create-modal-bg')) closeCreateModal();
+});
+
+setInterval(() => {
+  if (!tournamentsCache.length) return;
+  renderTournamentPage();
+  if (!detailCache?.tournament) return;
+  const fresh = tournamentsCache.find((t) => Number(t.id) === Number(detailCache.tournament.id));
+  if (!fresh) return;
+  detailCache.tournament = { ...detailCache.tournament, ...fresh };
+  renderDetail(detailCache);
+}, 1000);
+
+reloadTournamentData();
+</script>
 </body>
 </html>

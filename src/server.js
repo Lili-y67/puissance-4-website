@@ -2282,10 +2282,13 @@ app.get('/api/players/:id/tournaments', (req, res) => {
   const playerId = Number(req.params.id);
   const rows = db.prepare(`
     SELECT
-      t.id, t.name, t.status, t.ends_at, t.reward_1, t.reward_2, t.reward_3,
+      t.id, t.public_id, t.name, t.status, t.starts_at, t.ends_at, t.duration_minutes, t.move_time_seconds,
+      t.reward_1, t.reward_2, t.reward_3, p.pseudo AS creator_pseudo,
+      (SELECT COUNT(*) FROM tournament_players tp2 WHERE tp2.tournament_id = t.id) AS participants,
       tp.score, tp.wins, tp.losses, tp.draws, tp.streak
     FROM tournament_players tp
     JOIN tournaments t ON t.id = tp.tournament_id
+    JOIN players p ON p.id = t.created_by
     WHERE tp.player_id = ?
     ORDER BY
       CASE t.status WHEN 'active' THEN 0 ELSE 1 END,
@@ -2294,9 +2297,16 @@ app.get('/api/players/:id/tournaments', (req, res) => {
   res.json({
     tournaments: rows.map((row) => ({
       id: row.id,
+      public_id: row.public_id || `TRN-${row.id}`,
       name: row.name,
       status: row.status,
+      starts_at: Number(row.starts_at || 0),
       ends_at: Number(row.ends_at || 0),
+      duration_minutes: Number(row.duration_minutes || 0),
+      move_time_seconds: Number(row.move_time_seconds || 0),
+      creator_pseudo: row.creator_pseudo || '',
+      participants: Number(row.participants || 0),
+      place: Math.max(1, tQ.standings.all(Number(row.id)).findIndex(entry => Number(entry.player_id) === playerId) + 1) || null,
       score: Number(row.score || 0),
       wins: Number(row.wins || 0),
       losses: Number(row.losses || 0),
