@@ -54,6 +54,13 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .elo-val.neg{color:var(--red)}
 .elo-val.mid{color:var(--yellow)}
 .elo-lbl{font-size:11px;color:var(--muted);margin-top:2px;letter-spacing:1px}
+.rank-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rank-box{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--surface2);border:1px solid var(--border)}
+.rank-box img{width:52px;height:52px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,255,255,.08))}
+.rank-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rank-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase;line-height:1}
+.rank-range{font-size:12px;color:var(--muted)}
+.rank-levels{font-size:11px;color:var(--muted);letter-spacing:1px}
 .shop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .shop-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px}
 .shop-box strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:1px}
@@ -135,6 +142,70 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   <div class="card">
     <div class="card-header">
       <div class="card-icon green">🪙</div>
+      <div>
+        <div class="card-title">Rangs</div>
+        <div class="card-sub">Les paliers ELO du classement</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Le ladder est compose de <strong>6 rangs</strong>, chacun divise en <strong>5 niveaux</strong> de I a V.
+      Plus ton ELO monte, plus tu progresses vers le palier suivant.
+    </div>
+    <div class="rank-grid">
+      <div class="rank-box">
+        <img src="/ranks/Malachite_3.png" alt="Malachite">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#2ecc71">Malachite</div>
+          <div class="rank-range">100 a 699 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+      <div class="rank-box">
+        <img src="/ranks/Quartz_3.png" alt="Quartz">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#b0bec5">Quartz</div>
+          <div class="rank-range">700 a 1299 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+      <div class="rank-box">
+        <img src="/ranks/Ambre_3.png" alt="Ambre">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#cd7f32">Ambre</div>
+          <div class="rank-range">1300 a 1799 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+      <div class="rank-box">
+        <img src="/ranks/Jade_3.png" alt="Jade">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#1abc9c">Jade</div>
+          <div class="rank-range">1800 a 2299 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+      <div class="rank-box">
+        <img src="/ranks/Saphir_3.png" alt="Saphir">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#3498db">Saphir</div>
+          <div class="rank-range">2300 a 2799 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+      <div class="rank-box">
+        <img src="/ranks/Amethiste_3.png" alt="Amethiste">
+        <div class="rank-meta">
+          <div class="rank-name" style="color:#9b59b6">Amethiste</div>
+          <div class="rank-range">2800 a 3500 ELO</div>
+          <div class="rank-levels">Niveaux I a V</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon green">ðŸª™</div>
       <div>
         <div class="card-title">Coins</div>
         <div class="card-sub">Monnaie du site</div>
