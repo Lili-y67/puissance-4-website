@@ -96,6 +96,20 @@ body{
 .card-actions{display:flex;gap:10px;margin-top:auto}
 .preview-btn{flex:1;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s;background:rgba(255,255,255,.03);color:var(--text)}
 .preview-btn:hover{background:rgba(255,255,255,.06)}
+.config-shell{display:flex;flex-direction:column;gap:14px}
+.config-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.config-value{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:900;letter-spacing:1px;line-height:.95}
+.config-value.elo{color:var(--yellow)}
+.config-value.coins{color:var(--orange)}
+.config-slider-wrap{padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
+.config-slider{width:100%;accent-color:var(--yellow);cursor:pointer}
+.config-slider.coins{accent-color:var(--orange)}
+.config-scale{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.config-price-note{font-size:12px;color:var(--muted)}
+.config-bullets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.config-bullet{padding:12px;border-radius:14px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
+.config-bullet strong{display:block;font-size:13px}
+.config-bullet span{display:block;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
 .cta{margin-top:auto;width:100%;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s}
 .cta.vip{border-color:rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:var(--yellow)}
 .cta.vipplus{border-color:rgba(133,235,255,.22);background:rgba(133,235,255,.08);color:var(--blue)}
@@ -191,7 +205,7 @@ body{
 .status-line strong{font-family:'Barlow Condensed',sans-serif;font-size:24px}
 .note{font-size:13px;color:var(--muted);line-height:1.7}
 @media (max-width:980px){.hero-inner,.grid{grid-template-columns:1fr}.hero-title{font-size:54px}}
-@media (max-width:640px){.page{padding:20px 14px 56px}.hero{padding:24px}.hero-title{font-size:42px}.section-title{font-size:32px}.card{min-height:auto}.coins-panel{align-items:flex-start;flex-direction:column}}
+@media (max-width:640px){.page{padding:20px 14px 56px}.hero{padding:24px}.hero-title{font-size:42px}.section-title{font-size:32px}.card{min-height:auto}.coins-panel{align-items:flex-start;flex-direction:column}.config-bullets{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -429,6 +443,7 @@ let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
 let currentCategory = 'ranks';
+let customBoosterState = { elo: 0.1, coins: 1 };
 let previewDecorations = [];
 let previewProfileBanners = [];
 let previewAnimTimer = null;
@@ -444,6 +459,67 @@ function setStoredPlayer(player) {
   if (!player) return;
   try { localStorage.setItem('player', JSON.stringify(player)); } catch {}
   try { sessionStorage.setItem('player', JSON.stringify(player)); } catch {}
+}
+
+function getCustomBoosterValue(pack) {
+  return pack === 'elo_custom' ? Number(customBoosterState.elo || 0.1) : Number(customBoosterState.coins || 1);
+}
+
+function getCustomBoosterPrice(pack) {
+  if (pack === 'elo_custom') return Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
+  if (pack === 'coin_custom') return Math.round(getCustomBoosterValue(pack) * 600);
+  return Number(SHOP_PRICES[pack] || 0);
+}
+
+function getCustomInventoryQty(prefix) {
+  return Object.entries(shopInventory || {})
+    .filter(([key]) => key.startsWith(prefix))
+    .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
+}
+
+function getDynamicBoosterItem(pack) {
+  if (pack === 'elo_custom') {
+    const bonus = Number(customBoosterState.elo || 0.1);
+    const total = 1 + bonus;
+    return {
+      key: 'elo_custom',
+      type: 'booster',
+      family: 'elo',
+      theme: 'booster-elo',
+      badge: '⚡ ELO',
+      duration: `x${bonus.toFixed(1)}`,
+      title: 'Booster ELO personnalisé',
+      stat: `x${total.toFixed(2)}`,
+      statSub: `${getCustomBoosterPrice(pack)} coins pour +${bonus.toFixed(1)} ELO`,
+      meta: 'Choisis exactement la puissance de ton booster ELO. Le prix suit automatiquement le multiplicateur choisi.',
+      features: [
+        ['🎚️', 'Puissance libre', 'De +0.1 jusqu’à +1.0 sur ton gain ELO.'],
+        ['🧮', 'Prix dynamique', 'Base : +0.1 = 750 coins, puis adaptation automatique.'],
+        ['🎒', 'Inventaire', 'Chaque achat est ajouté à ton inventaire personnel.']
+      ]
+    };
+  }
+  if (pack === 'coin_custom') {
+    const multiplier = Number(customBoosterState.coins || 1);
+    return {
+      key: 'coin_custom',
+      type: 'booster',
+      family: 'coins',
+      theme: 'booster-coin',
+      badge: '🪙 COINS',
+      duration: `x${multiplier}`,
+      title: 'Booster Coins personnalisé',
+      stat: `x${multiplier}`,
+      statSub: `${getCustomBoosterPrice(pack)} coins pour x${multiplier}`,
+      meta: 'Choisis ton multiplicateur coins librement. Plus il monte, plus le prix grimpe instantanément.',
+      features: [
+        ['🪙', 'Multiplicateur libre', 'De x1 jusqu’à x10 selon le niveau voulu.'],
+        ['📈', 'Prix dynamique', 'Base : x1 = 600 coins, puis adaptation automatique.'],
+        ['🎒', 'Inventaire', 'Ajout immédiat dans ton inventaire après validation.']
+      ]
+    };
+  }
+  return null;
 }
 
 function setCoinsUi(coins, stateText) {
@@ -474,9 +550,10 @@ function getStockQty(pack) {
 }
 
 function getButtonState(pack) {
-  const price = SHOP_PRICES[pack];
+  const price = getCustomBoosterPrice(pack);
   const coins = Number(shopPlayer?.coins || 0);
-  const item = SHOP_ITEMS[pack];
+  const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
+  if (!item) return { disabled: true, note: 'Pack indisponible' };
   const owned = item.type === 'rank' ? packOwned(pack) : false;
   const stock = item.type === 'booster' ? getStockQty(pack) : null;
 
@@ -485,14 +562,19 @@ function getButtonState(pack) {
   if (item.type === 'booster' && stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (coins < price) return { disabled: true, note: `Il manque ${price - coins} coins` };
   if (item.type === 'booster') {
-    const inv = getInventoryQty(pack);
-    return { disabled: false, note: `Stock ${stock} · Inventaire ${inv}` };
+    const inv = pack === 'elo_custom'
+      ? getCustomInventoryQty('elo_custom_')
+      : pack === 'coin_custom'
+        ? getCustomInventoryQty('coin_custom_')
+        : getInventoryQty(pack);
+    const stockNote = stock === null ? 'Stock libre' : `Stock ${stock}`;
+    return { disabled: false, note: `${stockNote} · Inventaire ${inv}` };
   }
   return { disabled: false, note: `${price} coins` };
 }
 
 function getDisplayItem(pack) {
-  const item = SHOP_ITEMS[pack];
+  const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return null;
   if (pack === 'vip_1m') {
     return {
@@ -796,9 +878,77 @@ async function startBoosterPreviewAnimation(item, showcase) {
   previewAnimTimer = setTimeout(() => startBoosterPreviewAnimation(item, showcase), 1500);
 }
 
+function updateCustomBooster(type, value) {
+  if (type === 'elo') {
+    customBoosterState.elo = Math.max(0.1, Math.min(1.0, Math.round(Number(value || 0.1) * 10) / 10));
+  } else {
+    customBoosterState.coins = Math.max(1, Math.min(10, Math.round(Number(value || 1))));
+  }
+  renderShop();
+  switchShopCategory(currentCategory);
+}
+
+function renderCustomBoosterCard(pack) {
+  const item = getDisplayItem(pack);
+  const price = getCustomBoosterPrice(pack);
+  const btnState = getButtonState(pack);
+  const isElo = pack === 'elo_custom';
+  const currentValue = getCustomBoosterValue(pack);
+  const totalText = isElo ? `x${(1 + currentValue).toFixed(2)}` : `x${currentValue}`;
+  const inv = isElo ? getCustomInventoryQty('elo_custom_') : getCustomInventoryQty('coin_custom_');
+  return `
+    <article class="card ${item.theme}">
+      <div class="tier">
+        <span class="badge ${item.theme}">${item.badge}</span>
+        <div class="duration">${totalText}</div>
+      </div>
+      <h2>${item.title}</h2>
+      <div class="meta">${item.meta}</div>
+      <div class="config-shell">
+        <div class="config-topline">
+          <div>
+            <div class="config-value ${isElo ? 'elo' : 'coins'}">${isElo ? '+' + currentValue.toFixed(1) : 'x' + currentValue}</div>
+            <div class="config-price-note">${isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
+          </div>
+          <div class="price"><img src="/coin.png" alt="">${price}</div>
+        </div>
+        <div class="config-slider-wrap">
+          <input
+            class="config-slider ${isElo ? '' : 'coins'}"
+            type="range"
+            min="${isElo ? '0.1' : '1'}"
+            max="${isElo ? '1.0' : '10'}"
+            step="${isElo ? '0.1' : '1'}"
+            value="${currentValue}"
+            oninput="updateCustomBooster('${isElo ? 'elo' : 'coins'}', this.value)">
+          <div class="config-scale">
+            <span>${isElo ? '+0.1' : 'x1'}</span>
+            <span>${isElo ? 'Prix dynamique' : 'Prix dynamique'}</span>
+            <span>${isElo ? '+1.0' : 'x10'}</span>
+          </div>
+        </div>
+        <div class="config-bullets">
+          <div class="config-bullet"><strong>Base tarifaire</strong><span>${isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
+          <div class="config-bullet"><strong>Inventaire actuel</strong><span>${inv} booster(s) personnalisés déjà possédés</span></div>
+        </div>
+      </div>
+      <div class="feature-list">
+        ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
+      </div>
+      <div class="card-actions">
+        <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
+        <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+          Acheter ${item.title}
+          <small id="buy-${pack}-note">${btnState.note}</small>
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 function renderCard(pack) {
   const item = getDisplayItem(pack);
-  const price = SHOP_PRICES[pack];
+  const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
   const stock = item.type === 'booster' ? getStockQty(pack) : null;
   const inv = item.type === 'booster' ? getInventoryQty(pack) : null;
@@ -834,8 +984,8 @@ function renderCard(pack) {
 
 function renderShop() {
   document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso'].map(renderCard).join('');
-  document.getElementById('shop-elo-boosters-grid').innerHTML = ['elo_mini','elo_classic','elo_max','elo_princess'].map(renderCard).join('');
-  document.getElementById('shop-coin-boosters-grid').innerHTML = ['coin_boost','coin_boost_plus'].map(renderCard).join('');
+  document.getElementById('shop-elo-boosters-grid').innerHTML = [renderCustomBoosterCard('elo_custom')].join('');
+  document.getElementById('shop-coin-boosters-grid').innerHTML = [renderCustomBoosterCard('coin_custom')].join('');
 }
 
 function switchShopCategory(category) {
@@ -862,8 +1012,14 @@ function openPreview(pack) {
   showcase.className = `preview-showcase ${item.theme}`;
   showcase.innerHTML = renderPreviewShowcase(item);
   note.textContent = item.type === 'booster'
+    ? `Prix : ${getCustomBoosterPrice(pack)} coins · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`
+    : `Prix : ${getCustomBoosterPrice(pack)} coins · Aperçu uniquement, rien n'est sauvegardé`;
+  note.textContent = item.type === 'booster'
     ? `Prix : ${SHOP_PRICES[pack]} coins · Stock global limité`
     : `Prix : ${SHOP_PRICES[pack]} coins · Aperçu uniquement, rien n’est sauvegardé`;
+  note.textContent = item.type === 'booster'
+    ? `Prix : ${getCustomBoosterPrice(pack)} coins · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`
+    : `Prix : ${getCustomBoosterPrice(pack)} coins · Aperçu uniquement, rien n'est sauvegardé`;
   features.innerHTML = item.features.map(([emoji, t, text]) => `
     <div class="feature">
       <div class="feature-emoji">${emoji}</div>
@@ -929,8 +1085,9 @@ async function buyPack(pack) {
   const state = getButtonState(pack);
   if (state.disabled) return;
 
-  const packLabel = SHOP_ITEMS[pack]?.title || pack;
-  const price = SHOP_PRICES[pack];
+  const item = getDisplayItem(pack);
+  const packLabel = item?.title || pack;
+  const price = getCustomBoosterPrice(pack);
   if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} coins ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
@@ -942,7 +1099,15 @@ async function buyPack(pack) {
     const res = await fetch('/api/shop/buy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, pack }),
+      body: JSON.stringify({
+        token,
+        pack,
+        customMultiplier: pack === 'elo_custom'
+          ? Number(customBoosterState.elo || 0.1)
+          : pack === 'coin_custom'
+            ? Number(customBoosterState.coins || 1)
+            : undefined,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -953,7 +1118,7 @@ async function buyPack(pack) {
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, SHOP_ITEMS[pack].type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
+    setCoinsUi(shopPlayer?.coins || 0, item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
   } catch (e) {
     alert('Erreur reseau.');
   } finally {

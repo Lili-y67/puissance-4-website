@@ -831,6 +831,55 @@ function getShopStock(itemKey) {
   return Number.isFinite(value) ? Math.max(0, value) : item.defaultStock;
 }
 
+function normalizeCustomEloBonus(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const stepped = Math.round(numeric * 10) / 10;
+  if (stepped < 0.1 || stepped > 1.0) return null;
+  return Number(stepped.toFixed(1));
+}
+
+function normalizeCustomCoinMultiplier(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const stepped = Math.round(numeric);
+  if (stepped < 1 || stepped > 10) return null;
+  return stepped;
+}
+
+function buildCustomShopItem(pack, body = {}) {
+  if (pack === 'elo_custom') {
+    const bonus = normalizeCustomEloBonus(body.customMultiplier);
+    if (bonus === null) return null;
+    return {
+      key: `elo_custom_${bonus.toFixed(1).replace('.', '_')}`,
+      displayKey: 'elo_custom',
+      category: 'elo_boosters',
+      label: `Booster ELO x${(1 + bonus).toFixed(2)}`,
+      price: Math.round((bonus / 0.1) * 750),
+      boostType: 'elo',
+      multiplier: Number((1 + bonus).toFixed(2)),
+      bonus,
+      isCustom: true,
+    };
+  }
+  if (pack === 'coin_custom') {
+    const multiplier = normalizeCustomCoinMultiplier(body.customMultiplier);
+    if (multiplier === null) return null;
+    return {
+      key: `coin_custom_${String(multiplier).padStart(2, '0')}`,
+      displayKey: 'coin_custom',
+      category: 'coin_boosters',
+      label: `Booster Coins x${multiplier}`,
+      price: multiplier * 600,
+      boostType: 'coins',
+      multiplier,
+      isCustom: true,
+    };
+  }
+  return null;
+}
+
 function hashTournamentPassword(password = '') {
   return password ? crypto.createHash('sha256').update(`tournoi:${password}`).digest('hex') : '';
 }
@@ -1758,12 +1807,11 @@ app.post('/api/shop/buy', async (req, res) => {
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
 
   const pack = String(req.body?.pack || '').trim();
-  if (!SHOP_ITEMS[pack]) return res.status(400).json({ error: 'Pack invalide.' });
+  const item = SHOP_ITEMS[pack] || buildCustomShopItem(pack, req.body || {});
+  if (!item) return res.status(400).json({ error: 'Pack invalide.' });
 
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-
-  const item = SHOP_ITEMS[pack];
   const price = Number(item.price || 0);
 
   if (Number(player.coins || 0) < price) {
@@ -1805,7 +1853,11 @@ app.post('/api/shop/buy', async (req, res) => {
   } else if (pack === 'perso') {
     pQ.updatePerso.run({ is_perso: 1, id: playerId });
   } else {
-    shopItemQ.addOne.run(playerId, pack);
+    if (item.isCustom) {
+      shopItemQ.addOne.run(playerId, item.key);
+    } else {
+      shopItemQ.addOne.run(playerId, pack);
+    }
     const stockKey = SHOP_STOCK_KEYS[pack];
     if (stockKey) {
       db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
@@ -3007,11 +3059,13 @@ function getStatsOverview() {
     SELECT COALESCE(SUM(quantity), 0) AS v
     FROM player_shop_items
     WHERE item_key IN ('elo_mini', 'elo_classic', 'elo_max', 'elo_princess')
+       OR item_key LIKE 'elo_custom_%'
   `).get()?.v || 0);
   const coinBoostersOwned = Number(db.prepare(`
     SELECT COALESCE(SUM(quantity), 0) AS v
     FROM player_shop_items
     WHERE item_key IN ('coin_boost', 'coin_boost_plus')
+       OR item_key LIKE 'coin_custom_%'
   `).get()?.v || 0);
   const activeGlobalBoost = bQ.getActive.get();
   const activeCoinBoost = {

@@ -817,12 +817,13 @@ async function loadProfileShopInventory() {
 }
 
 function getProfileBoosterCounts() {
-  const elo = Number(profileShopInventory.elo_mini || 0)
-    + Number(profileShopInventory.elo_classic || 0)
-    + Number(profileShopInventory.elo_max || 0)
-    + Number(profileShopInventory.elo_princess || 0);
-  const coins = Number(profileShopInventory.coin_boost || 0)
-    + Number(profileShopInventory.coin_boost_plus || 0);
+  const entries = Object.entries(profileShopInventory || {});
+  const elo = entries
+    .filter(([key]) => key === 'elo_mini' || key === 'elo_classic' || key === 'elo_max' || key === 'elo_princess' || key.startsWith('elo_custom_'))
+    .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
+  const coins = entries
+    .filter(([key]) => key === 'coin_boost' || key === 'coin_boost_plus' || key.startsWith('coin_custom_'))
+    .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
   return { elo, coins };
 }
 
