@@ -769,6 +769,17 @@ html, body {
   background: rgba(133,235,255,0.08);
   box-shadow: 0 0 0 1px rgba(133,235,255,0.08), 0 18px 38px rgba(0,0,0,0.18);
 }
+.queue-actions-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .queue-actions-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* â”€â”€ Stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stats-strip {
@@ -1859,12 +1870,14 @@ html, body {
         </div>
       </div>
 
-      <button class="btn btn-cancel" onclick="handleLeaveQueue()">
-        &#10005; Annuler la recherche
-      </button>
-      <button class="btn btn-duel" type="button" onclick="openDuelModal()">
-        ⚔️ Envoyer un duel
-      </button>
+      <div class="queue-actions-row">
+        <button class="btn btn-cancel" onclick="handleLeaveQueue()">
+          &#10005; Annuler la recherche
+        </button>
+        <button class="btn btn-duel" type="button" onclick="openDuelModal()">
+          ⚔️ Envoyer un duel
+        </button>
+      </div>
     </div>
   </div>
 </div>

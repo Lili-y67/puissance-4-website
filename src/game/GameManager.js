@@ -32,6 +32,10 @@ class GameManager {
   }
 
   create(p1, p2, options = {}) {
+    const moveTimeSeconds = Number(options.moveTimeSeconds || 0) > 0
+      ? Number(options.moveTimeSeconds)
+      : 60;
+
     const gameId = gQ.create.run({
       p1: p1.id, p2: p2.id,
       p1_color: p1.color || '#ff2d55',
@@ -39,7 +43,7 @@ class GameManager {
       p1_shape: p1.shape || 'circle',
       p2_shape: p2.shape || 'circle',
       tournament_id: options.tournamentId || null,
-      tournament_move_time_seconds: Number(options.moveTimeSeconds || 0) || 0,
+      tournament_move_time_seconds: moveTimeSeconds,
     }).lastInsertRowid;
 
     const state = {
@@ -53,8 +57,8 @@ class GameManager {
       status:     'active',
       tournamentId: options.tournamentId || null,
       tournamentName: options.tournamentName || '',
-      turnTimeLimitMs: Number(options.moveTimeSeconds || 0) > 0 ? Number(options.moveTimeSeconds) * 1000 : 0,
-      moveTimeSeconds: Number(options.moveTimeSeconds || 0) || 0,
+      turnTimeLimitMs: moveTimeSeconds * 1000,
+      moveTimeSeconds,
     };
 
     this.games.set(gameId, state);

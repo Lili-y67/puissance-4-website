@@ -3491,8 +3491,8 @@ io.on('connection', socket => {
         moveCount: moves.length, status: 'active',
         tournamentId: gameRow.tournament_id || null,
         tournamentName: tournamentRow?.name || '',
-        moveTimeSeconds: Number(gameRow.tournament_move_time_seconds || 0) || 0,
-        turnTimeLimitMs: Number(gameRow.tournament_move_time_seconds || 0) > 0 ? Number(gameRow.tournament_move_time_seconds) * 1000 : 0,
+        moveTimeSeconds: Number(gameRow.tournament_move_time_seconds || 0) || 60,
+        turnTimeLimitMs: (Number(gameRow.tournament_move_time_seconds || 0) || 60) * 1000,
       };
       gm.games.set(gameId, state);
     }
@@ -3510,6 +3510,7 @@ io.on('connection', socket => {
       socket.emit('game_rejoined', {
         gameId,
         side,
+        moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
         tournament: state.tournamentId ? {
           id: Number(state.tournamentId),
           name: state.tournamentName || 'Tournoi',
@@ -3687,6 +3688,7 @@ function _startMatch(p1, p2, options = {}) {
 
   const base = {
     gameId: state.id,
+    moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
     tournament: options.tournamentId ? {
       id: Number(options.tournamentId),
       name: options.tournamentName || 'Tournoi',
