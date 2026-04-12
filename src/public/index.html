@@ -757,6 +757,18 @@ html, body {
   background: var(--red-dim);
   border-color: var(--red);
 }
+.btn-duel {
+  background: transparent;
+  border: 1.5px solid rgba(133,235,255,0.34);
+  color: #85EBFF;
+  font-size: 14px;
+}
+.btn-duel:hover {
+  border-color: #85EBFF;
+  color: #d9fbff;
+  background: rgba(133,235,255,0.08);
+  box-shadow: 0 0 0 1px rgba(133,235,255,0.08), 0 18px 38px rgba(0,0,0,0.18);
+}
 
 /* â”€â”€ Stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stats-strip {
@@ -929,6 +941,137 @@ html, body {
 }
 @keyframes boost-alert-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes boost-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,214,10,.35)}50%{transform:scale(.92);box-shadow:0 0 0 8px rgba(255,214,10,0)}}
+.duel-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(4,4,10,0.74);
+  backdrop-filter: blur(10px);
+}
+.duel-modal.open { display: flex; }
+.duel-dialog {
+  width: min(460px, 100%);
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.018)),
+    rgba(13,13,28,0.96);
+  box-shadow: 0 28px 80px rgba(0,0,0,0.48);
+  padding: 24px 22px 20px;
+}
+.duel-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.duel-dialog-kicker {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #85EBFF;
+}
+.duel-dialog-title {
+  margin-top: 4px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+.duel-dialog-copy {
+  margin-top: 8px;
+  color: rgba(238,238,245,0.66);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.duel-close {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+}
+.duel-search {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.duel-results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+.duel-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.duel-result:hover,
+.duel-result.active {
+  transform: translateY(-2px);
+  border-color: rgba(133,235,255,0.34);
+  background: rgba(133,235,255,0.08);
+}
+.duel-result-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.14);
+  object-fit: cover;
+  background: rgba(255,255,255,0.04);
+  display: grid;
+  place-items: center;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+}
+.duel-result-copy {
+  min-width: 0;
+  flex: 1;
+}
+.duel-result-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+.duel-result-sub {
+  margin-top: 4px;
+  color: rgba(238,238,245,0.56);
+  font-size: 12px;
+}
+.duel-empty {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,0.09);
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+}
+.duel-dialog-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.duel-dialog-actions .btn { flex: 1; min-width: 140px; }
 
 /* â”€â”€ Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .link {
@@ -1439,77 +1582,6 @@ html, body {
 <div class="tokens-bg" id="tokens-bg"></div>
 <div class="scanlines"></div>
 
-<div class="side-quick-menu" id="side-quick-menu">
-  <div class="side-quick-panel">
-    <div class="side-quick-inner">
-      <div class="side-quick-title">Accès rapides</div>
-      <div class="side-quick-links">
-        <a class="side-quick-link" href="/regles">
-          <span class="side-quick-emoji">&#128218;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Règles</span>
-            <span class="side-quick-sub">Guide de jeu</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/live">
-          <span class="side-quick-emoji">&#128308;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Live</span>
-            <span class="side-quick-sub">Parties en cours</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/leaderboard">
-          <span class="side-quick-emoji">&#127942;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Classement</span>
-            <span class="side-quick-sub">Top ELO</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/tournoi">
-          <span class="side-quick-emoji">&#127967;&#65039;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Tournois</span>
-            <span class="side-quick-sub">Events en cours</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/boutique">
-          <span class="side-quick-emoji">&#128722;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Boutique</span>
-            <span class="side-quick-sub">Offres premium</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/stats">
-          <span class="side-quick-emoji">&#128200;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Stats</span>
-            <span class="side-quick-sub">Vue globale du site</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/api-doc">
-          <span class="side-quick-emoji">&#129518;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">API</span>
-            <span class="side-quick-sub">Routes et JSON</span>
-          </span>
-        </a>
-        <a class="side-quick-link" href="/forgot-password">
-          <span class="side-quick-emoji">&#128273;</span>
-          <span class="side-quick-meta">
-            <span class="side-quick-label">Mot de passe oublié</span>
-            <span class="side-quick-sub">Récupération</span>
-          </span>
-        </a>
-      </div>
-      <div class="side-quick-footer">&copy; 2026 Puissance 4 Ranked · <a href="/cgu">Conditions d'utilisation</a></div>
-    </div>
-  </div>
-  <button class="side-quick-toggle" id="side-quick-toggle" type="button" onclick="toggleQuickMenu()" aria-label="Ouvrir le menu rapide">
-    <span class="side-quick-toggle-icon">&#129517;</span>
-    <span class="side-quick-toggle-text">Menu</span>
-  </button>
-</div>
-
 <div class="tournament-notice" id="tournament-notice">
   <div class="tournament-notice-head">
     <span class="tournament-notice-dot"></span>
@@ -1534,8 +1606,12 @@ html, body {
     <div class="dock-links">
       <a class="dock-link" href="/profil">👤 Profil</a>
       <a class="dock-link" href="/live">🔴 Live</a>
+      <a class="dock-link" href="/leaderboard">🏆 Classement</a>
+      <a class="dock-link" href="/tournoi">🏟️ Tournois</a>
       <a class="dock-link" href="/boutique">🛒 Boutique</a>
       <a class="dock-link" href="/stats">📈 Stats</a>
+      <a class="dock-link" href="/regles">📘 Règles</a>
+      <a class="dock-link" href="/api-doc">🧪 API</a>
     </div>
   </div>
   <!-- Hero -->
@@ -1786,6 +1862,9 @@ html, body {
       <button class="btn btn-cancel" onclick="handleLeaveQueue()">
         &#10005; Annuler la recherche
       </button>
+      <button class="btn btn-duel" type="button" onclick="openDuelModal()">
+        ⚔️ Envoyer un duel
+      </button>
     </div>
   </div>
 </div>
@@ -1794,6 +1873,35 @@ html, body {
   <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
   <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
   <span class="queue-volume-val" id="queue-volume-val">35%</span>
+</div>
+
+<div class="duel-modal" id="duel-modal" aria-hidden="true">
+  <div class="duel-dialog">
+    <div class="duel-dialog-head">
+      <div>
+        <div class="duel-dialog-kicker">Mode duel</div>
+        <div class="duel-dialog-title">Envoyer un défi</div>
+        <div class="duel-dialog-copy">Cherche un pseudo connecté et envoie-lui une notification instantanée. Dès qu’il accepte, la partie démarre directement.</div>
+      </div>
+      <button class="duel-close" type="button" onclick="closeDuelModal()" aria-label="Fermer">×</button>
+    </div>
+    <div class="duel-search">
+      <div class="input-wrap">
+        <span class="input-icon">⚔️</span>
+        <input class="input" id="duel-search-input" type="text" placeholder="Pseudo du joueur..." maxlength="20" autocomplete="off" spellcheck="false" oninput="onDuelSearchInput(this.value)">
+      </div>
+      <div class="duel-results" id="duel-results">
+        <div class="duel-empty">Tape au moins 3 caractères pour chercher un joueur.</div>
+      </div>
+      <div class="error-msg" id="duel-error"></div>
+    </div>
+    <div class="duel-dialog-actions">
+      <button class="btn btn-duel" type="button" onclick="closeDuelModal()">Annuler</button>
+      <button class="btn btn-play" id="duel-send-btn" type="button" onclick="sendDuelChallenge()" disabled>
+        <span>⚡</span><span>Envoyer le duel</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -1854,6 +1962,9 @@ let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 let publicTournamentNotice = null;
 let siteStatsInterval = null;
 let currentGlobalBoost = null;
+let duelSearchTimer = null;
+let duelResults = [];
+let duelSelectedId = null;
 
 function switchTab(mode) {
   authMode = mode;
@@ -2011,6 +2122,148 @@ function showError(msg) {
   const el = document.getElementById('error-msg');
   el.textContent = msg;
   setTimeout(() => { el.textContent = ''; }, 4000);
+}
+
+function showDuelError(msg) {
+  const el = document.getElementById('duel-error');
+  if (!el) return;
+  el.textContent = msg || '';
+}
+
+function getSafePlayer() {
+  return myPlayer || JSON.parse(localStorage.getItem('player') || 'null');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function closeDuelModal() {
+  const modal = document.getElementById('duel-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  duelResults = [];
+  duelSelectedId = null;
+  showDuelError('');
+  const input = document.getElementById('duel-search-input');
+  const resultsEl = document.getElementById('duel-results');
+  const sendBtn = document.getElementById('duel-send-btn');
+  if (input) input.value = '';
+  if (resultsEl) resultsEl.innerHTML = '<div class="duel-empty">Tape au moins 3 caractères pour chercher un joueur.</div>';
+  if (sendBtn) sendBtn.disabled = true;
+}
+
+function openDuelModal() {
+  const player = getSafePlayer();
+  if (!player?.id || !localStorage.getItem('token')) {
+    showError('Connecte-toi avant d envoyer un duel.');
+    return;
+  }
+  const modal = document.getElementById('duel-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  const input = document.getElementById('duel-search-input');
+  if (input) setTimeout(() => input.focus(), 40);
+}
+
+function renderDuelResults() {
+  const resultsEl = document.getElementById('duel-results');
+  const sendBtn = document.getElementById('duel-send-btn');
+  if (!resultsEl) return;
+  if (!duelResults.length) {
+    resultsEl.innerHTML = '<div class="duel-empty">Aucun joueur trouvé pour cette recherche.</div>';
+  } else {
+    resultsEl.innerHTML = duelResults.map(player => {
+      const avatar = player.avatar
+        ? `<img class="duel-result-avatar" src="${player.avatar}" alt="">`
+        : `<div class="duel-result-avatar" style="color:${player.color || '#85EBFF'};border-color:${player.color || '#85EBFF'};">${String(player.pseudo || '?').charAt(0).toUpperCase()}</div>`;
+      return `
+        <button type="button" class="duel-result ${duelSelectedId === Number(player.id) ? 'active' : ''}" onclick="selectDuelPlayer(${Number(player.id)})">
+          ${avatar}
+          <div class="duel-result-copy">
+            <div class="duel-result-name">${escapeHtml(player.pseudo)}</div>
+            <div class="duel-result-sub">${Number(player.elo || 0)} ELO · notification instantanée</div>
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+  if (sendBtn) sendBtn.disabled = !duelSelectedId;
+}
+
+function selectDuelPlayer(playerId) {
+  duelSelectedId = Number(playerId);
+  showDuelError('');
+  renderDuelResults();
+}
+
+async function onDuelSearchInput(value) {
+  clearTimeout(duelSearchTimer);
+  duelSelectedId = null;
+  showDuelError('');
+  const trimmed = String(value || '').trim();
+  const resultsEl = document.getElementById('duel-results');
+  const sendBtn = document.getElementById('duel-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  if (!resultsEl) return;
+  if (trimmed.length < 3) {
+    duelResults = [];
+    resultsEl.innerHTML = '<div class="duel-empty">Tape au moins 3 caractères pour chercher un joueur.</div>';
+    return;
+  }
+  resultsEl.innerHTML = '<div class="duel-empty">Recherche en cours...</div>';
+  duelSearchTimer = setTimeout(async () => {
+    try {
+      const me = getSafePlayer();
+      const res = await fetch(`/api/players/search?q=${encodeURIComponent(trimmed)}`, { cache: 'no-store' });
+      const data = await res.json();
+      duelResults = Array.isArray(data) ? data.filter(player => Number(player.id) !== Number(me?.id || 0)) : [];
+      renderDuelResults();
+    } catch (error) {
+      duelResults = [];
+      resultsEl.innerHTML = '<div class="duel-empty">Impossible de charger les joueurs.</div>';
+    }
+  }, 180);
+}
+
+async function sendDuelChallenge() {
+  const player = getSafePlayer();
+  const token = localStorage.getItem('token') || '';
+  if (!player?.id || !token) {
+    showDuelError('Connecte-toi avant d envoyer un duel.');
+    return;
+  }
+  if (!duelSelectedId) {
+    showDuelError('Choisis un joueur avant de valider.');
+    return;
+  }
+  const sendBtn = document.getElementById('duel-send-btn');
+  if (sendBtn) sendBtn.disabled = true;
+  showDuelError('');
+  try {
+    const res = await fetch('/api/duels/challenge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, targetId: duelSelectedId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showDuelError(data?.error || 'Impossible d envoyer le duel.');
+      if (sendBtn) sendBtn.disabled = false;
+      return;
+    }
+    closeDuelModal();
+  } catch (error) {
+    showDuelError('Erreur réseau, réessaie.');
+    if (sendBtn) sendBtn.disabled = false;
+  }
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -2306,6 +2559,9 @@ function showLoggedInView(p) {
       <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
         <span>&#9889;</span> <span>Rejoindre la partie</span>
       </button>
+      <button class="btn btn-duel" style="width:100%" type="button" onclick="openDuelModal()">
+        <span>⚔️</span> <span>Envoyer un duel</span>
+      </button>
       <button class="btn btn-robot" style="width:100%" onclick="openBotModal()">
         <span>&#129302;</span> <span>Jouer contre l'ordinateur</span>
       </button>
@@ -2423,17 +2679,14 @@ function handleLeaveQueue() {
   }, 250);
 }
 
-function toggleQuickMenu(force) {
-  const menu = document.getElementById('side-quick-menu');
-  if (!menu) return;
-  const shouldOpen = typeof force === 'boolean' ? force : !menu.classList.contains('open');
-  menu.classList.toggle('open', shouldOpen);
-}
-
 document.addEventListener('click', (e) => {
-  const menu = document.getElementById('side-quick-menu');
-  if (!menu) return;
-  if (!e.target.closest('#side-quick-menu')) toggleQuickMenu(false);
+  const modal = document.getElementById('duel-modal');
+  if (!modal?.classList.contains('open')) return;
+  if (e.target === modal) closeDuelModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeDuelModal();
 });
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•

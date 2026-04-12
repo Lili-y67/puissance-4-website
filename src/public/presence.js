@@ -36,6 +36,40 @@
     return el;
   }
 
+  function ensureDuelToast() {
+    let el = document.getElementById('global-duel-toast');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'global-duel-toast';
+    el.style.cssText = [
+      'display:none',
+      'position:fixed',
+      'right:16px',
+      'bottom:96px',
+      'z-index:99998',
+      'width:min(360px,calc(100vw - 24px))',
+      'padding:16px',
+      'border-radius:18px',
+      'background:linear-gradient(180deg,rgba(23,16,42,.96),rgba(10,8,22,.96))',
+      'border:1px solid rgba(255,45,85,.22)',
+      'box-shadow:0 18px 44px rgba(0,0,0,.42),0 0 24px rgba(255,45,85,.14)',
+      'color:#f7f3ff',
+      'font-family:Barlow,Segoe UI,Arial,sans-serif'
+    ].join(';');
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function renderDuelToast(content) {
+    const el = ensureDuelToast();
+    if (!content) {
+      el.style.display = 'none';
+      return;
+    }
+    el.innerHTML = content;
+    el.style.display = 'block';
+  }
+
   async function refreshSystemStatus() {
     try {
       const res = await fetch('/api/system-status', { cache: 'no-store' });
@@ -90,7 +124,75 @@
       }
     });
 
+    socket.on('match_found', (data) => {
+      try {
+        sessionStorage.setItem('match', JSON.stringify(data));
+        sessionStorage.setItem('player', localStorage.getItem('player') || sessionStorage.getItem('player') || '');
+      } catch (e) {}
+      window.location.href = '/game';
+    });
+
     socket.on('system_status_update', refreshSystemStatus);
+
+    socket.on('duel_invite', ({ id, sender } = {}) => {
+      if (!id || !sender) return;
+      const avatar = sender.avatar
+        ? `<img src="${sender.avatar}" alt="" style="width:52px;height:52px;border-radius:16px;object-fit:cover;border:2px solid ${sender.color || '#ff2d55'};background:rgba(255,255,255,.04)">`
+        : `<div style="width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:26px;font-weight:800;color:${sender.color || '#ff2d55'};border:2px solid ${sender.color || '#ff2d55'};background:rgba(255,255,255,.04)">${String(sender.pseudo || '?').charAt(0).toUpperCase()}</div>`;
+      renderDuelToast(`
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          ${avatar}
+          <div style="min-width:0;flex:1;">
+            <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:19px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff7b95;">Duel reçu</div>
+            <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:4px;"><strong>${sender.pseudo}</strong> te défie maintenant. ELO actuel: <strong>${Number(sender.elo || 0)}</strong>.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+              <button type="button" onclick="window.acceptDuelInvite('${id}')" style="padding:10px 14px;border:none;border-radius:12px;background:#ff2d55;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Accepter</button>
+              <button type="button" onclick="window.declineDuelInvite('${id}')" style="padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:#eeeef5;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Refuser</button>
+            </div>
+          </div>
+        </div>
+      `);
+    });
+
+    socket.on('duel_invite_sent', ({ target } = {}) => {
+      if (!target) return;
+      renderDuelToast(`
+        <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#85EBFF;">Duel envoyé</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">La notification a bien été envoyée à <strong>${target.pseudo}</strong>. On attend sa réponse.</div>
+      `);
+      setTimeout(() => renderDuelToast(null), 4500);
+    });
+
+    socket.on('duel_invite_accepted', ({ target } = {}) => {
+      renderDuelToast(`
+        <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4EF08A;">Duel accepté</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">${target?.pseudo ? `<strong>${target.pseudo}</strong> ` : ''}rejoint l’arène. Préparation de la partie...</div>
+      `);
+    });
+
+    socket.on('duel_invite_declined', () => {
+      renderDuelToast(`
+        <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ffd84d;">Duel terminé</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">Le duel a été refusé ou annulé.</div>
+      `);
+      setTimeout(() => renderDuelToast(null), 4200);
+    });
+
+    socket.on('duel_invite_expired', () => {
+      renderDuelToast(`
+        <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ffd84d;">Duel expiré</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">Le duel n’est plus disponible.</div>
+      `);
+      setTimeout(() => renderDuelToast(null), 4200);
+    });
+
+    socket.on('duel_invite_error', ({ message } = {}) => {
+      renderDuelToast(`
+        <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff7b95;">Duel impossible</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">${message || 'Le duel ne peut pas démarrer.'}</div>
+      `);
+      setTimeout(() => renderDuelToast(null), 4500);
+    });
 
     const heartbeat = setInterval(() => {
       if (socket.connected) socket.emit('presence_ping');
@@ -98,6 +200,13 @@
 
     socket.on('disconnect', () => clearInterval(heartbeat));
     window._presenceSocket = socket;
+    window.acceptDuelInvite = function (challengeId) {
+      if (window._presenceSocket?.connected) window._presenceSocket.emit('duel_accept', { challengeId });
+    };
+    window.declineDuelInvite = function (challengeId) {
+      if (window._presenceSocket?.connected) window._presenceSocket.emit('duel_decline', { challengeId });
+      renderDuelToast(null);
+    };
   }
 
   if (window.io) {
