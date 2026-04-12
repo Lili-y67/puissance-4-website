@@ -47,11 +47,13 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
 .profile-header::before{content:'';position:absolute;inset:auto -80px -90px auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,214,10,.14),transparent 68%);pointer-events:none}
+.profile-header::after{content:'';position:absolute;inset:-120px auto auto -110px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(76,110,245,.14),transparent 70%);pointer-events:none}
 .profile-banner{
   width:100%;height:240px;object-fit:cover;display:block;
   background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);
   position:relative;cursor:pointer;
 }
+.profile-banner::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.05),transparent 30%,transparent 65%,rgba(255,255,255,.04));pointer-events:none}
 .profile-banner img{width:100%;height:100%;object-fit:cover;display:block;}
 .profile-banner-overlay{
   position:absolute;inset:0;background:rgba(0,0,0,0.4);
@@ -116,6 +118,37 @@ input[type="file"]{display:none;}
 .profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;}
 .profile-since{font-size:13px;color:var(--muted);margin-top:10px;text-align:left;}
 .profile-media-note{font-size:12px;color:var(--muted);margin-top:4px;text-align:left;}
+.profile-pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.profile-pill{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);
+  font-size:12px;color:var(--text);backdrop-filter:blur(8px);
+  box-shadow:0 10px 24px rgba(0,0,0,.14);
+  animation:profile-pill-float 3.4s ease-in-out infinite;
+}
+.profile-pill:nth-child(2){animation-delay:.2s}
+.profile-pill:nth-child(3){animation-delay:.4s}
+.profile-pill:nth-child(4){animation-delay:.6s}
+.profile-pill strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase}
+@keyframes profile-pill-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.profile-marquee{
+  position:relative;overflow:hidden;border-top:1px solid rgba(255,255,255,.05);
+  border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.025);
+}
+.profile-marquee-track{
+  display:flex;gap:28px;width:max-content;padding:12px 18px;
+  animation:profile-marquee-slide 24s linear infinite;
+}
+.profile-marquee-item{
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  font-size:12px;color:var(--muted)
+}
+.profile-marquee-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:linear-gradient(135deg,var(--player-color,var(--red)),#85EBFF);
+  box-shadow:0 0 10px rgba(133,235,255,.22)
+}
+@keyframes profile-marquee-slide{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 .rank-badge{display:flex;align-items:center;gap:8px;margin-top:6px;}
 .rank-badge img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,255,255,0.2));}
 .rank-badge-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
@@ -148,6 +181,12 @@ input[type="file"]{display:none;}
 }
 .social-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
 .social-card.active{border-color:var(--accent);}
+.social-card:nth-child(1){border-color:rgba(133,235,255,.14)}
+.social-card:nth-child(2){border-color:rgba(255,214,10,.14)}
+.social-card:nth-child(3){border-color:rgba(255,45,85,.14)}
+.social-card:nth-child(1):hover{border-color:rgba(133,235,255,.34);box-shadow:0 0 24px rgba(133,235,255,.10)}
+.social-card:nth-child(2):hover{border-color:rgba(255,214,10,.32);box-shadow:0 0 24px rgba(255,214,10,.10)}
+.social-card:nth-child(3):hover{border-color:rgba(255,45,85,.30);box-shadow:0 0 24px rgba(255,45,85,.10)}
 .social-val{font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
 .social-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
@@ -354,6 +393,27 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   animation:slide-in 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both;
   box-shadow:0 18px 38px rgba(0,0,0,.18);
 }
+.card-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)}
+.discord-bubbles{display:flex;flex-wrap:wrap;gap:10px}
+.discord-bubble{
+  display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:999px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  color:var(--text);font-size:12px;line-height:1.2;box-shadow:0 10px 24px rgba(0,0,0,.12)
+}
+.discord-bubble .icon{font-size:14px;opacity:.9}
+.discord-bubble .meta{display:flex;flex-direction:column;gap:2px}
+.discord-bubble .label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.discord-bubble .value{font-size:12px;font-weight:600;color:var(--text)}
+.discord-role-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.discord-role-chip{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+  font-size:11px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:.8px;
+  text-transform:uppercase
+}
+.discord-link-panel{
+  display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)
+}
 .search-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
 .search-row{display:flex;gap:8px;}
 .search-input{
@@ -410,6 +470,11 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .btn-save-color,
   .btn-save-shape,
   .btn-follow { width: 100%; justify-content: center; }
+  .profile-pill-row { justify-content: center; }
+  .profile-pill { width: 100%; justify-content: center; }
+  .profile-marquee-track { gap: 18px; padding: 10px 14px; }
+  .discord-bubbles { flex-direction: column; }
+  .discord-bubble { border-radius: 18px; }
 }
 
 /* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -447,6 +512,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .social-row { grid-template-columns: 1fr; }
   .social-card { min-width: 0; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .profile-pill-row { justify-content: center; }
+  .profile-marquee-track { animation-duration: 18s; }
   .game-row {
     flex-wrap: wrap;
     gap: 8px;
@@ -1078,6 +1145,18 @@ function render(player, games, following, followers, followStatus, tournaments =
        </button>`
     : '';
   const boosterCounts = isOwnProfile ? getProfileBoosterCounts() : { elo: 0, coins: 0 };
+  const marqueeItems = [
+    `${player.elo} ELO`,
+    `${games.length} parties`,
+    `${wr}% de winrate`,
+    player.rank?.label || 'Classement en cours',
+    player.avg_accuracy != null ? `${player.avg_accuracy}% de precision` : 'Precision a venir',
+    player.is_vip_plus ? 'VIP+ actif' : player.is_vip ? 'VIP actif' : 'Compte standard',
+    isOwnProfile && player.coins != null ? `${player.coins} coins` : `${followers.length} abonnes`
+  ];
+  const marqueeHtml = [...marqueeItems, ...marqueeItems]
+    .map(item => `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`)
+    .join('');
 
   document.getElementById('content').innerHTML = `
     <!-- Header -->
@@ -1101,6 +1180,12 @@ function render(player, games, following, followers, followStatus, tournaments =
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
+          <div class="profile-pill-row">
+            <div class="profile-pill"><span>🏆</span><strong>${player.rank?.label || 'UNRANKED'}</strong></div>
+            <div class="profile-pill"><span>🎮</span><strong>${games.length} parties</strong></div>
+            <div class="profile-pill"><span>📈</span><strong>${wr}% WR</strong></div>
+            <div class="profile-pill"><span>✨</span><strong>${player.avg_accuracy != null ? `${player.avg_accuracy}% precision` : 'Analyse a venir'}</strong></div>
+          </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
           <!-- ELO + badge côte à côte -->
@@ -1157,6 +1242,9 @@ function render(player, games, following, followers, followStatus, tournaments =
           </label>` : ''}
           ${followBtn}
         </div>
+      </div>
+      <div class="profile-marquee">
+        <div class="profile-marquee-track">${marqueeHtml}</div>
       </div>
     </div>
 
@@ -1368,16 +1456,38 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div class="card-label">Compte Discord</div>
       ${player.discord_id
         ? `<div id="discord-info-zone">
-             <div style="display:flex;align-items:center;gap:8px;margin:10px 0 4px">
-               <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-               <span style="font-size:13px;color: var(--muted)">Chargement des infos Discord...</span>
+             <div class="discord-link-panel">
+               <div class="discord-bubbles">
+                 <div class="discord-bubble">
+                   <span class="icon">💬</span>
+                   <div class="meta">
+                     <span class="label">Etat</span>
+                     <span class="value">Chargement des infos Discord...</span>
+                   </div>
+                 </div>
+               </div>
              </div>
            </div>
            <button class="btn-save-color" id="btn-unlink" onclick="requestUnlink()" style="margin-top:12px;background:rgba(255,45,85,0.1);border-color:rgba(255,45,85,0.3);color:#ff6b81;font-size:12px">
              &#128279; Délier Discord
            </button>`
-        : `<div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
-             Lie ton Discord pour pouvoir réinitialiser ton mot de passe.
+        : `<div class="discord-link-panel" style="margin:8px 0 12px">
+             <div class="discord-bubbles">
+               <div class="discord-bubble">
+                 <span class="icon">🔐</span>
+                 <div class="meta">
+                   <span class="label">Liaison</span>
+                   <span class="value">Lie ton Discord pour gérer le reset mot de passe.</span>
+                 </div>
+               </div>
+               <div class="discord-bubble">
+                 <span class="icon">✨</span>
+                 <div class="meta">
+                   <span class="label">Bonus</span>
+                   <span class="value">Synchronisation de ton compte et de tes accès.</span>
+                 </div>
+               </div>
+             </div>
            </div>
            <button class="btn-save-color" onclick="linkDiscord()" style="background:rgba(88,101,242,0.15);border-color:rgba(88,101,242,0.4);color:#8b9cf4">
              &#128279; Lier Discord
@@ -3146,18 +3256,20 @@ async function loadDiscordInfo() {
     const nitroLabel = d.nitro_label || 'Aucun';
 
     const badgesHtml = d.badges?.length
-      ? d.badges.map(b => `<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(88,101,242,0.15);border:1px solid rgba(88,101,242,0.3);color:#8b9cf4">${b}</span>`).join('')
+      ? d.badges.map(b => `<span class="discord-role-chip" style="background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.28);color:#8b9cf4">${escapeHtml(b)}</span>`).join('')
       : '<span style="font-size:11px;color: var(--muted)">Aucun badge</span>';
 
-    const row = (icon, label, value, color) =>
-      `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <span style="font-size:14px;width:20px;text-align:center">${icon}</span>
-        <span style="font-size:11px;color: var(--muted);min-width:110px">${label}</span>
-        <span style="font-size:12px;color:${color||'rgba(238,238,245,0.8)'};font-weight:600">${value}</span>
+    const bubble = (icon, label, value, color) =>
+      `<div class="discord-bubble">
+        <span class="icon">${icon}</span>
+        <div class="meta">
+          <span class="label">${label}</span>
+          <span class="value" style="${color ? `color:${color}` : ''}">${value}</span>
+        </div>
       </div>`;
 
     const joinServerNotice = !d.on_server ? `
-      <div style="margin:0 0 14px;padding:10px 12px;border-radius:12px;background:rgba(255,214,10,0.08);border:1px solid rgba(255,214,10,0.18);display:flex;flex-direction:column;gap:8px">
+      <div style="margin:0 0 6px;padding:12px 14px;border-radius:14px;background:rgba(255,214,10,0.08);border:1px solid rgba(255,214,10,0.18);display:flex;flex-direction:column;gap:8px">
         <div style="font-size:12px;color:#ffd84d;font-weight:700;line-height:1.5">
           Rejoins le serveur pour acceder aux fonctionnalites Discord.
         </div>
@@ -3167,39 +3279,49 @@ async function loadDiscordInfo() {
       </div>` : '';
 
     zone.innerHTML = `
-      <!-- Header username -->
-      <div style="display:flex;align-items:center;gap:8px;margin:10px 0 14px">
-        <div style="width:8px;height:8px;border-radius:50%;background:#30d158;flex-shrink:0;box-shadow:0 0 6px #30d15888"></div>
-        <span style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${tag}</span>
-        ${globalName}
-        ${d.verified ? '<span title="Email vérifié" style="font-size:13px">OK</span>' : ''}
-        ${d.mfa_enabled ? '<span title="2FA activé" style="font-size:13px">2FA</span>' : ''}
-      </div>
+      <div class="discord-link-panel">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="width:8px;height:8px;border-radius:50%;background:${d.on_server ? '#30d158' : '#ff9f0a'};flex-shrink:0;box-shadow:0 0 6px ${d.on_server ? '#30d15888' : '#ff9f0a88'}"></div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--text)">${escapeHtml(tag)}</span>
+          ${globalName}
+          ${d.verified ? '<span class="discord-role-chip" style="background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.26);color:#30d158">Email verifie</span>' : ''}
+          ${d.mfa_enabled ? '<span class="discord-role-chip" style="background:rgba(133,235,255,0.12);border:1px solid rgba(133,235,255,0.24);color:#85EBFF">2FA</span>' : ''}
+          ${nitroColor ? `<span class="discord-role-chip" style="background:${nitroColor}22;border:1px solid ${nitroColor}55;color:${nitroColor}">${nitroIcon} ${escapeHtml(nitroLabel)}</span>` : ''}
+        </div>
 
-      ${joinServerNotice}
+        ${joinServerNotice}
 
-      <!-- Infos lignes -->
-      <div style="margin-bottom:12px">
-        ${row('ID', 'ID Discord',        d.id)}
-        ${row('Date', 'Compte créé le',    createdStr + ' (' + ageStr + ')')}
-        ${row('Lien', 'Lié le',            linkedStr)}
-        ${d.on_server && joinedStr ? row('Srv', 'Serveur rejoint le', joinedStr, '#2ecc71') : row('Srv', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.3)')}
-        ${d.server_nick ? row('Pseudo', 'Pseudo serveur',   d.server_nick, '#ffd60a') : ''}
-        ${d.server_roles?.length ? row('Rôles', 'Rôles sur serveur',
-          '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;">' +
-          d.server_roles.map(r => {
-            const col = r.color && r.color !== '#000000' ? r.color : '#99aab5';
-            return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:0.5px;background:${col}22;color:${col};border:1px solid ${col}55;">
-              <span style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></span>
-              ${r.name || r.id}
-            </span>`;
-          }).join('') +
-          '</div>'
-        ) : ''}
+        <div class="discord-bubbles">
+          ${bubble('🆔', 'ID Discord', escapeHtml(d.id))}
+          ${bubble('📅', 'Compte cree', `${escapeHtml(createdStr)} · ${escapeHtml(ageStr)}`)}
+          ${bubble('🔗', 'Compte lie', escapeHtml(linkedStr))}
+          ${d.on_server && joinedStr ? bubble('🛰️', 'Serveur', `Membre depuis ${escapeHtml(joinedStr)}`, '#30d158') : bubble('🛰️', 'Serveur', 'Pas membre', 'rgba(238,238,245,0.45)')}
+          ${d.server_nick ? bubble('🎭', 'Pseudo serveur', escapeHtml(d.server_nick), '#ffd60a') : ''}
+          ${boostStr ? bubble('🚀', 'Boost serveur', escapeHtml(boostStr), '#ff7edb') : ''}
+        </div>
+
+        <div>
+          <div class="card-label" style="margin-bottom:8px">Badges Discord</div>
+          <div class="discord-role-cloud">${badgesHtml}</div>
+        </div>
+
+        ${d.server_roles?.length ? `
+        <div>
+          <div class="card-label" style="margin-bottom:8px">Roles du serveur</div>
+          <div class="discord-role-cloud">
+            ${d.server_roles.map(r => {
+              const col = r.color && r.color !== '#000000' ? r.color : '#99aab5';
+              return `<span class="discord-role-chip" style="background:${col}22;color:${col};border:1px solid ${col}55">
+                <span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block;flex-shrink:0"></span>
+                ${escapeHtml(r.name || r.id)}
+              </span>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
       </div>`;
   } catch(e) {
     const zone2 = document.getElementById('discord-info-zone');
-    if (zone2) zone2.innerHTML = '<div style="font-size:12px;color: var(--muted)">Impossible de charger les infos Discord</div>';
+    if (zone2) zone2.innerHTML = '<div class="discord-link-panel"><div class="discord-bubbles"><div class="discord-bubble"><span class="icon">⚠️</span><div class="meta"><span class="label">Discord</span><span class="value">Impossible de charger les infos Discord</span></div></div></div></div>';
   }
 }
 
