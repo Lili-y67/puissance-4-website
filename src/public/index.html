@@ -49,6 +49,56 @@ html, body {
   from { background-position: 0 0; }
   to   { background-position: 48px 48px; }
 }
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(12px);
+  opacity: 0.18;
+  animation: orb-float linear infinite;
+}
+.orb.one {
+  width: 180px;
+  height: 180px;
+  left: 8%;
+  top: 12%;
+  background: radial-gradient(circle, rgba(255,45,85,0.92), transparent 70%);
+  animation-duration: 18s;
+}
+.orb.two {
+  width: 230px;
+  height: 230px;
+  right: 10%;
+  top: 26%;
+  background: radial-gradient(circle, rgba(255,214,10,0.85), transparent 72%);
+  animation-duration: 24s;
+}
+.orb.three {
+  width: 200px;
+  height: 200px;
+  left: 15%;
+  bottom: 8%;
+  background: radial-gradient(circle, rgba(76,110,245,0.82), transparent 72%);
+  animation-duration: 22s;
+}
+.orb.four {
+  width: 180px;
+  height: 180px;
+  right: 16%;
+  bottom: 4%;
+  background: radial-gradient(circle, rgba(179,107,255,0.88), transparent 70%);
+  animation-duration: 20s;
+}
+@keyframes orb-float {
+  0%,100% { transform: translate3d(0,0,0) scale(1); }
+  50% { transform: translate3d(0,-20px,0) scale(1.05); }
+}
 
 /* Falling tokens decoration */
 .tokens-bg {
@@ -106,18 +156,49 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
-  gap: 0;
+  padding: 40px 18px;
+  gap: 18px;
 }
 
 /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .hero {
+  position: relative;
+  width: min(100%, 860px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 48px;
+  gap: 10px;
+  padding: 34px 28px 28px;
+  margin-bottom: 16px;
+  border-radius: 32px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(135deg, rgba(255,45,85,0.12), rgba(76,110,245,0.08)),
+    linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01)),
+    rgba(13,13,28,0.68);
+  box-shadow: 0 28px 80px rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
   animation: hero-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: auto -80px -90px auto;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,214,10,0.15), transparent 68%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: -100px auto auto -100px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,45,85,0.14), transparent 70%);
+  pointer-events: none;
 }
 @keyframes hero-in {
   from { opacity: 0; transform: translateY(-24px); }
@@ -162,7 +243,7 @@ html, body {
   color: var(--muted);
   letter-spacing: 3px;
   text-transform: uppercase;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 .site-online-badge{
   display:inline-flex;
@@ -303,16 +384,26 @@ html, body {
 /* â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
   width: 100%;
-  max-width: 400px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 32px 28px;
+  max-width: 440px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
+    rgba(13,13,28,0.92);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 28px;
+  padding: 34px 30px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
+  box-shadow: 0 32px 90px rgba(0,0,0,0.52), inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(10px);
   animation: card-in 0.6s 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255,255,255,0.05), transparent 38%);
 }
 @keyframes card-in {
   from { opacity: 0; transform: translateY(32px) scale(0.97); }
@@ -1091,6 +1182,12 @@ html, body {
 
 <!-- Background -->
 <div class="bg-grid"></div>
+<div class="bg-orbs">
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+  <div class="orb three"></div>
+  <div class="orb four"></div>
+</div>
 <div class="tokens-bg" id="tokens-bg"></div>
 <div class="scanlines"></div>
 
