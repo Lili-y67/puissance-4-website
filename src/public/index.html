@@ -152,25 +152,104 @@ html, body {
   position: relative;
   z-index: 2;
   min-height: 100vh;
+  max-width: 1380px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+  grid-template-areas:
+    "dock dock"
+    "hero card";
+  align-items: start;
+  padding: 28px 18px 40px;
+  gap: 22px;
+}
+.home-dock {
+  grid-area: dock;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 40px 18px;
-  gap: 18px;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+  box-shadow: 0 24px 60px rgba(0,0,0,0.28);
+  backdrop-filter: blur(10px);
+}
+.dock-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dock-brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,45,85,0.14), rgba(76,110,245,0.14));
+  border: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.dock-brand-copy { display:flex; flex-direction:column; gap:2px; }
+.dock-eyebrow {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.dock-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.dock-title span { color: var(--red); }
+.dock-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dock-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+  color: var(--text);
+  text-decoration: none;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.dock-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
 }
 
 /* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .hero {
   position: relative;
-  width: min(100%, 860px);
+  grid-area: hero;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  padding: 34px 28px 28px;
-  margin-bottom: 16px;
-  border-radius: 32px;
+  padding: 36px 34px 30px;
+  border-radius: 36px;
   border: 1px solid rgba(255,255,255,0.08);
   background:
     linear-gradient(135deg, rgba(255,45,85,0.12), rgba(76,110,245,0.08)),
@@ -223,6 +302,7 @@ html, body {
   line-height: 0.88;
   text-transform: uppercase;
   position: relative;
+  align-self: flex-start;
 }
 .logo-p4  { color: var(--text); }
 .logo-num {
@@ -244,6 +324,113 @@ html, body {
   letter-spacing: 3px;
   text-transform: uppercase;
   margin-top: 2px;
+  text-align: left;
+}
+.hero-copy {
+  max-width: 760px;
+  color: rgba(238,238,245,0.68);
+  font-size: 15px;
+  line-height: 1.72;
+}
+.hero-stat-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.hero-panel-grid {
+  width: 100%;
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.hero-panel-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 122px;
+  padding: 16px 16px 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.018));
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.22);
+}
+.hero-panel-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255,255,255,0.06), transparent 42%);
+}
+.hero-panel-kicker {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.hero-panel-value {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  line-height: .92;
+}
+.hero-panel-copy {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(238,238,245,0.64);
+}
+.hero-panel-card.red .hero-panel-value { color: #ff7b95; }
+.hero-panel-card.blue .hero-panel-value { color: #85EBFF; }
+.hero-panel-card.yellow .hero-panel-value { color: #FFD84D; }
+.hero-panel-card.green .hero-panel-value { color: #4EF08A; }
+.hero-ticker {
+  width: 100%;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+}
+.hero-ticker-track {
+  display: flex;
+  gap: 26px;
+  width: max-content;
+  padding: 12px 16px;
+  animation: hero-ticker-slide 26s linear infinite;
+}
+.hero-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  color: rgba(238,238,245,0.64);
+  font-size: 12px;
+}
+.hero-ticker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red), var(--yellow));
+  box-shadow: 0 0 10px rgba(255,214,10,0.2);
+}
+@keyframes hero-ticker-slide {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.hero-board-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 .site-online-badge{
   display:inline-flex;
@@ -383,8 +570,9 @@ html, body {
 
 /* â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
+  grid-area: card;
   width: 100%;
-  max-width: 440px;
+  max-width: none;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
     rgba(13,13,28,0.92);
@@ -404,6 +592,32 @@ html, body {
   inset: 0;
   pointer-events: none;
   background: linear-gradient(140deg, rgba(255,255,255,0.05), transparent 38%);
+}
+.card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 2px;
+}
+.card-topline-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.card-topline-badge span:last-child {
+  color: var(--text);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
 }
 @keyframes card-in {
   from { opacity: 0; transform: translateY(32px) scale(0.97); }
@@ -1175,6 +1389,40 @@ html, body {
   }
 }
 
+@media (max-width: 1120px) {
+  .page {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "dock"
+      "hero"
+      "card";
+  }
+  .hero-panel-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-dock {
+    padding: 12px;
+  }
+  .dock-links {
+    width: 100%;
+    justify-content: center;
+  }
+  .dock-link {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+  .hero {
+    padding: 26px 20px 22px;
+    border-radius: 28px;
+  }
+  .hero-panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* â”€â”€ IA overlay â”€â”€ */
 </style>
 </head>
@@ -1275,6 +1523,21 @@ html, body {
 </div>
 
 <div class="page">
+  <div class="home-dock">
+    <div class="dock-brand">
+      <div class="dock-brand-logo">🎮</div>
+      <div class="dock-brand-copy">
+        <div class="dock-eyebrow">Arena Ranked</div>
+        <div class="dock-title">Puissance <span>4</span></div>
+      </div>
+    </div>
+    <div class="dock-links">
+      <a class="dock-link" href="/profil">👤 Profil</a>
+      <a class="dock-link" href="/live">🔴 Live</a>
+      <a class="dock-link" href="/boutique">🛒 Boutique</a>
+      <a class="dock-link" href="/stats">📈 Stats</a>
+    </div>
+  </div>
   <!-- Hero -->
   <div class="hero">
     <div class="logo-eyebrow">Jouez en ligne</div>
@@ -1282,27 +1545,76 @@ html, body {
       <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
     </div>
     <div class="logo-tagline">Connecte · Défie · Domine</div>
+    <div class="hero-copy">
+      Entre dans une arène compétitive pensée pour le ranked, les défis rapides, les profils premium
+      et le spectateur live. Tout est là pour lancer une partie, suivre les meilleurs joueurs et faire monter ton style en même temps que ton ELO.
+    </div>
 
-        <div class="site-online-badge" id="site-online-badge">
+    <div class="hero-stat-cluster">
+      <div class="site-online-badge" id="site-online-badge">
       <span class="site-online-dot"></span>
       <span id="site-online-count">0</span> connectés
-    </div>
-    <div class="site-games-badge" id="site-games-badge">
+      </div>
+      <div class="site-games-badge" id="site-games-badge">
       <span class="site-games-dot"></span>
       <span id="site-games-count">0</span> parties en cours
-    </div>
-    <div class="site-registered-badge" id="site-registered-badge">
+      </div>
+      <div class="site-registered-badge" id="site-registered-badge">
       <span class="site-registered-dot"></span>
       <span id="site-registered-count">0</span> inscrits
+      </div>
+    </div>
+
+    <div class="hero-panel-grid">
+      <div class="hero-panel-card red">
+        <div class="hero-panel-kicker">Parties classées</div>
+        <div class="hero-panel-value">Duels rapides</div>
+        <div class="hero-panel-copy">Lance une file en quelques secondes et retrouve un matchmaking pensé pour l’ELO.</div>
+      </div>
+      <div class="hero-panel-card blue">
+        <div class="hero-panel-kicker">Spectateur</div>
+        <div class="hero-panel-value">Live en direct</div>
+        <div class="hero-panel-copy">Observe les parties actives, les profils décorés et les performances en temps réel.</div>
+      </div>
+      <div class="hero-panel-card yellow">
+        <div class="hero-panel-kicker">Progression</div>
+        <div class="hero-panel-value">Boosts & coins</div>
+        <div class="hero-panel-copy">Accumule des coins, débloque des avantages premium et personnalise ton identité.</div>
+      </div>
+      <div class="hero-panel-card green">
+        <div class="hero-panel-kicker">Communauté</div>
+        <div class="hero-panel-value">Discord & events</div>
+        <div class="hero-panel-copy">Liaison Discord, tournois, profils suivis et ambiance compétitive toujours visible.</div>
+      </div>
     </div>
 
     <!-- Mini board decoration -->
-    <div class="board-deco" id="board-deco"></div>
+    <div class="hero-board-wrap">
+      <div class="board-deco" id="board-deco"></div>
+    </div>
+    <div class="hero-ticker">
+      <div class="hero-ticker-track">
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Mode ranked compétitif</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Connexion classique ou Discord</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Bot configurable par difficulté ou ELO</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Tournois publics et profils premium</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Boosts, boutique et suivi en direct</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Mode ranked compétitif</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Connexion classique ou Discord</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Bot configurable par difficulté ou ELO</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Tournois publics et profils premium</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Boosts, boutique et suivi en direct</span></div>
+      </div>
+    </div>
   </div>
   <!-- Card -->
   <div class="card" id="main-card">
     <!-- LOGIN VIEW -->
     <div id="view-login">
+      <div class="card-topline">
+        <div class="card-topline-badge"><span>🔥</span><span>Entrée immédiate</span></div>
+        <div class="card-topline-badge"><span>⚔️</span><span>Mode duel</span></div>
+      </div>
       <div class="card-label">Entrer dans l'arène</div>
 
       <!-- Tabs login / register -->
