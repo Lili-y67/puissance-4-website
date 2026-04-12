@@ -91,9 +91,10 @@ class GameManager {
       think_ms:    thinkMs,
     });
 
+    const lastMove = { row, col, player: playerNum };
     const winCells = state.board.checkWin(row, col, playerNum);
-    if (winCells)             return this._end(state, playerNum, winCells, 'win');
-    if (state.board.isDraw()) return this._end(state, null,       [],       'draw');
+    if (winCells)             return this._end(state, playerNum, winCells, 'win', lastMove);
+    if (state.board.isDraw()) return this._end(state, null,       [],       'draw', lastMove);
 
     state.current = state.current === 1 ? 2 : 1;
 
@@ -130,7 +131,7 @@ class GameManager {
     return null;
   }
 
-  _end(state, winnerSide, winCells, reason) {
+  _end(state, winnerSide, winCells, reason, lastMove = null) {
     state.status   = 'finished';
     const duration = Math.round((Date.now() - state.startedAt) / 1000);
     const isDraw   = reason === 'draw';
@@ -218,6 +219,8 @@ class GameManager {
       duration,
       winner: winnerSide,
       winCells,
+      lastMove,
+      grid: state.board.grid.map(line => line.slice()),
       eloChanges: {
         [state.players[1].id]: p1Delta,
         [state.players[2].id]: p2Delta,

@@ -1019,6 +1019,17 @@ function onMovePlayed(data) {
   updateTurnUI();
 }
 
+function syncBoardFromGrid(grid) {
+  if (!Array.isArray(grid)) return;
+  renderBoard();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const value = Number(grid[r]?.[c] || 0);
+      if (value === 1 || value === 2) applyToken(r, c, value);
+    }
+  }
+}
+
 // ── Emoji → pion colorisé ────────────────────────────────────────────────────
 // Dessine l'emoji en blanc sur canvas, l'utilise comme mask-image CSS
 // pour coloriser avec la couleur du joueur
@@ -1263,6 +1274,15 @@ function onGameOver(data) {
   if (dcBanner) {
     if (dcBanner._interval) { clearInterval(dcBanner._interval); dcBanner._interval = null; }
     dcBanner.classList.remove('show');
+  }
+
+  if (Array.isArray(data.grid)) {
+    syncBoardFromGrid(data.grid);
+  } else if (data.lastMove) {
+    const cell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
+    if (cell && !cell.classList.contains('p1') && !cell.classList.contains('p2')) {
+      applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);
+    }
   }
 
   if (data.winCells?.length) {
