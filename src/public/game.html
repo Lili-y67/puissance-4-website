@@ -2405,8 +2405,8 @@ function iaEnd(winner, winCells) {
     reasonEl.textContent = isDraw
       ? `Match nul contre le bot ${diffLabel}.`
       : isWin
-        ? `Tu as battu le bot ${diffLabel}.`
-        : `Le bot ${diffLabel} a pris l'avantage cette fois.`;
+        ? `Tu as battu le bot .`
+        : `Le bot a pris l'avantage cette fois.`;
   }
 
   document.querySelector('.btn-action.primary').onclick = () => {

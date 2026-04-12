@@ -26,6 +26,168 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 @keyframes floatOrb{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(0,-20px,0) scale(1.05)}}
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
 .page{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:22px;}
+.profile-shell{
+  display:grid;
+  grid-template-columns:260px minmax(0,1fr);
+  gap:20px;
+  align-items:start;
+}
+.profile-side{
+  position:sticky;
+  top:18px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.profile-side-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:16px;
+  box-shadow:0 22px 54px rgba(0,0,0,.22);
+  backdrop-filter:blur(10px);
+}
+.profile-side-label{
+  font-size:11px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:10px;
+}
+.profile-side-menu{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.profile-side-link{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:11px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.025);
+  color:var(--text);
+  text-decoration:none;
+  transition:transform .18s,border-color .18s,background .18s,box-shadow .18s;
+}
+.profile-side-link:hover{
+  transform:translateX(3px);
+  border-color:rgba(133,235,255,.28);
+  background:rgba(133,235,255,.06);
+  box-shadow:0 0 22px rgba(133,235,255,.08);
+}
+.profile-side-link.active{
+  border-color:rgba(133,235,255,.34);
+  background:linear-gradient(180deg,rgba(133,235,255,.10),rgba(133,235,255,.05));
+  box-shadow:0 0 28px rgba(133,235,255,.10);
+}
+.profile-side-link-main{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.profile-side-link-icon{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.05);
+  font-size:15px;
+  flex-shrink:0;
+}
+.profile-side-link-text{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+.profile-side-link-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  line-height:1;
+}
+.profile-side-link-sub{
+  font-size:11px;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.profile-side-link-arrow{
+  color:var(--muted);
+  font-size:13px;
+  flex-shrink:0;
+}
+.profile-side-stats{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.profile-side-stat{
+  padding:12px 10px;
+  border-radius:16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.06);
+  text-align:center;
+}
+.profile-side-stat strong{
+  display:block;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:1px;
+}
+.profile-side-stat span{
+  display:block;
+  margin-top:3px;
+  font-size:10px;
+  color:var(--muted);
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+.profile-main{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  min-width:0;
+}
+.profile-section{
+  scroll-margin-top:24px;
+}
+.profile-section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:10px;
+  padding:0 4px;
+}
+.profile-section-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  line-height:1;
+}
+.profile-section-sub{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+}
+.profile-stack{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
 
 /* Nav */
 .nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.28);}
@@ -488,6 +650,28 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 /* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 600px) {
   .page { padding: 14px 12px 36px; max-width: 100%; }
+  .profile-shell{grid-template-columns:1fr;}
+  .profile-side{
+    position:static;
+    order:-1;
+  }
+  .profile-side-card{
+    border-radius:20px;
+    padding:14px;
+  }
+  .profile-side-menu{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .profile-side-link{
+    padding:10px;
+  }
+  .profile-side-link-title{font-size:13px;}
+  .profile-side-link-sub{display:none;}
+  .profile-side-link-arrow{display:none;}
+  .profile-side-link-main{justify-content:center;}
+  .profile-side-stats{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .profile-section-title{font-size:22px;}
   .nav {
     flex-direction: column;
     align-items: stretch;
@@ -1165,10 +1349,52 @@ function render(player, games, following, followers, followStatus, tournaments =
   const marqueeHtml = [...marqueeItems, ...marqueeItems]
     .map(item => `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`)
     .join('');
+  const sectionLinks = [
+    { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
+    { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
+    ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
+    { href: '#section-discord', icon: '💬', title: 'Discord', sub: 'Liaison et serveur' },
+    { href: '#section-activity', icon: '🎮', title: 'Activite', sub: 'Parties et reseau' },
+  ];
+  const sectionMenuHtml = sectionLinks.map(link => `
+    <a class="profile-side-link" href="${link.href}" data-section-link="${link.href.slice(1)}">
+      <div class="profile-side-link-main">
+        <div class="profile-side-link-icon">${link.icon}</div>
+        <div class="profile-side-link-text">
+          <span class="profile-side-link-title">${link.title}</span>
+          <span class="profile-side-link-sub">${link.sub}</span>
+        </div>
+      </div>
+      <span class="profile-side-link-arrow">→</span>
+    </a>
+  `).join('');
 
   document.getElementById('content').innerHTML = `
-    <!-- Header -->
-    <div class="profile-header">
+    <div class="profile-shell">
+      <aside class="profile-side">
+        <div class="profile-side-card">
+          <div class="profile-side-label">Navigation</div>
+          <div class="profile-side-menu">${sectionMenuHtml}</div>
+        </div>
+        <div class="profile-side-card">
+          <div class="profile-side-label">Apercu rapide</div>
+          <div class="profile-side-stats">
+            <div class="profile-side-stat"><strong>${player.elo}</strong><span>Elo</span></div>
+            <div class="profile-side-stat"><strong>${games.length}</strong><span>Parties</span></div>
+            <div class="profile-side-stat"><strong>${wr}%</strong><span>WR</span></div>
+            <div class="profile-side-stat"><strong>${followers.length}</strong><span>Fans</span></div>
+          </div>
+        </div>
+      </aside>
+      <main class="profile-main">
+    <section class="profile-section" id="section-overview">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title">Profil</div>
+          <div class="profile-section-sub">Identite, rang, elo et acces rapides.</div>
+        </div>
+      </div>
+      <div class="profile-header">
       <!-- Bannière -->
       <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la bannière"' : ''}>
         ${bannerSrc ? '<img src="' + bannerSrc + '" alt="bannière">' : ''}
@@ -1255,8 +1481,15 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="profile-marquee-track">${marqueeHtml}</div>
       </div>
     </div>
+    </section>
 
-    <!-- Compteurs sociaux -->
+    <section class="profile-section" id="section-social">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Social & Stats</div>
+        <div class="profile-section-sub">Ta presence, tes chiffres et tes performances recentes.</div>
+      </div>
+    </div>
     <div class="social-row">
       <div class="social-card" onclick="switchTab('following')">
         <div class="social-val">${following.length}</div>
@@ -1292,8 +1525,16 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
       <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
     </div>
+    </section>
 
     ${tournaments.length ? `
+    <section class="profile-section" id="section-tournaments">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Tournois</div>
+        <div class="profile-section-sub">Tes performances dans les events et les sessions classees.</div>
+      </div>
+    </div>
     <div class="color-card" id="tournament-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Tournois</span>
@@ -1316,10 +1557,19 @@ function render(player, games, following, followers, followStatus, tournaments =
           </a>
         `).join('')}
       </div>
-    </div>` : ''}
+    </div>
+    </section>` : ''}
 
     <!-- Changement de couleur (propre profil uniquement) -->
     ${isOwnProfile ? `
+    <section class="profile-section" id="section-custom">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Personnalisation</div>
+        <div class="profile-section-sub">Pseudo, couleurs, pion, decor et medias premium.</div>
+      </div>
+    </div>
+    <div class="profile-stack">
     <div class="color-card" id="pseudo-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Pseudo du profil</span>
@@ -1458,8 +1708,17 @@ function render(player, games, following, followers, followStatus, tournaments =
       </button>
     </div>
     ` : ''}
+    </div>
+    </section>
 
     <!-- Carte liaison Discord -->
+    <section class="profile-section" id="section-discord">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Discord</div>
+        <div class="profile-section-sub">Connexion du compte, roles serveur et securite.</div>
+      </div>
+    </div>
     <div class="color-card" style="margin-top:0" id="discord-card">
       <div class="card-label">Compte Discord</div>
       ${player.discord_id
@@ -1502,6 +1761,7 @@ function render(player, games, following, followers, followStatus, tournaments =
            </button>`
       }
     </div>
+    </section>
 
     <!-- Modal déliaison Discord -->
     <div id="unlink-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
@@ -1518,7 +1778,51 @@ function render(player, games, following, followers, followStatus, tournaments =
         </div>
       </div>
     </div>
-    ` : ''}
+    ` : `
+    <section class="profile-section" id="section-discord">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title">Discord</div>
+          <div class="profile-section-sub">Connexion du compte, roles serveur et securite.</div>
+        </div>
+      </div>
+      <div class="color-card" style="margin-top:0" id="discord-card">
+        <div class="card-label">Compte Discord</div>
+        ${player.discord_id
+          ? `<div id="discord-info-zone">
+               <div class="discord-link-panel">
+                 <div class="discord-bubbles">
+                   <div class="discord-bubble">
+                     <span class="icon">💬</span>
+                     <div class="meta">
+                       <span class="label">Etat</span>
+                       <span class="value">Chargement des infos Discord...</span>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>`
+          : `<div class="discord-link-panel" style="margin:8px 0 12px">
+               <div class="discord-bubbles">
+                 <div class="discord-bubble">
+                   <span class="icon">🔐</span>
+                   <div class="meta">
+                     <span class="label">Liaison</span>
+                     <span class="value">Lie ton Discord pour gérer le reset mot de passe.</span>
+                   </div>
+                 </div>
+                 <div class="discord-bubble">
+                   <span class="icon">✨</span>
+                   <div class="meta">
+                     <span class="label">Bonus</span>
+                     <span class="value">Synchronisation de ton compte et de tes accès.</span>
+                   </div>
+                 </div>
+               </div>
+             </div>`
+        }
+      </div>
+    </section>`}
 
     <!-- Popup simulateur ELO -->
     <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
@@ -1551,6 +1855,13 @@ function render(player, games, following, followers, followStatus, tournaments =
     </div>
 
     <!-- Tabs -->
+    <section class="profile-section" id="section-activity">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Activite</div>
+        <div class="profile-section-sub">Parties recentes, suivis et abonnes du profil.</div>
+      </div>
+    </div>
     <div class="tabs-row">
       <button class="tab active" id="tab-history"   onclick="switchTab('history')">Parties</button>
       <button class="tab"        id="tab-following"  onclick="switchTab('following')">Suivis</button>
@@ -1572,6 +1883,9 @@ function render(player, games, following, followers, followStatus, tournaments =
     <div class="tab-panel" id="panel-followers">
       ${renderPlayers(followers, 'Aucun abonné pour l\'instant.')}
     </div>
+    </section>
+    </main>
+    </div>
   `;
 
   setTimeout(() => { const f = document.getElementById('wr-fill'); if(f) f.style.width = wr+'%'; }, 100);
@@ -1587,6 +1901,7 @@ function render(player, games, following, followers, followStatus, tournaments =
   }
   // Initialiser la pagination des parties et le toggle auto-rejoin
   initGames(games, player);
+  initProfileSectionMenu();
   initAutoRejoinToggle();
   initVipBoostUI();
 }
@@ -1598,6 +1913,37 @@ function switchTab(name) {
     const panel = document.getElementById('panel-' + t);
     if (panel) { panel.classList.toggle('show', t === name); }
   });
+}
+
+function initProfileSectionMenu() {
+  const links = Array.from(document.querySelectorAll('[data-section-link]'));
+  const sections = links.map(link => document.getElementById(link.dataset.sectionLink)).filter(Boolean);
+  if (!links.length || !sections.length) return;
+
+  const setActive = (id) => {
+    links.forEach(link => {
+      link.classList.toggle('active', link.dataset.sectionLink === id);
+    });
+  };
+
+  links.forEach(link => {
+    link.addEventListener('click', () => setActive(link.dataset.sectionLink));
+  });
+
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter(entry => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible?.target?.id) setActive(visible.target.id);
+    }, {
+      rootMargin: '-18% 0px -58% 0px',
+      threshold: [0.2, 0.45, 0.7]
+    });
+    sections.forEach(section => observer.observe(section));
+  }
+
+  setActive(sections[0].id);
 }
 
 // â”€â”€ Follow / Unfollow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
