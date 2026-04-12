@@ -187,7 +187,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .status-bar {
   width: 100%;
   max-width: 760px;
-  min-height: 22px;
+  height: 40px;
   padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.05);
@@ -195,6 +195,11 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   font-size: 13px;
   color: var(--muted);
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+  overflow: hidden;
 }
 .game-id-badge { font-size: 10px; letter-spacing: 1px; color: var(--muted); font-family: monospace; padding: 2px 8px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; cursor: default; }
 .disconnect-banner { display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 999; background: rgba(255,159,10,0.95); color: #000; text-align: center; padding: 10px 16px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 800; letter-spacing: 1px; }
@@ -378,7 +383,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .vs-sm   { font-size: 13px; }
   .turn-lbl { font-size: 8px; letter-spacing: 0.5px; }
   .game-id-badge { display: none; }
-  .status-bar { font-size: 11px; }
+  .status-bar { height: 36px; font-size: 11px; }
 
   /* Board */
   .board { gap: 3px; padding: 6px; border-radius: 12px; }
@@ -554,14 +559,40 @@ let turnTimerInterval = null;
 let turnDeadline = 0;
 
 function getRenderableMediaSrc(src) {
-  return typeof src === 'string' ? src : '';
+  return typeof src === 'string' ? src.trim() : '';
+}
+
+function getStoredPlayerVisual() {
+  try {
+    return JSON.parse(localStorage.getItem('player') || '{}');
+  } catch (e) {
+    return {};
+  }
+}
+
+function getResolvedPlayerVisual(player) {
+  const safePlayer = player || {};
+  const stored = getStoredPlayerVisual();
+  const sameId = Number.isFinite(Number(safePlayer.id)) && Number.isFinite(Number(stored.id)) && Number(safePlayer.id) === Number(stored.id);
+  const samePseudo = !!safePlayer.pseudo && !!stored.pseudo && String(safePlayer.pseudo) === String(stored.pseudo);
+  if (!sameId && !samePseudo) return safePlayer;
+  return {
+    ...safePlayer,
+    avatar: safePlayer.avatar || stored.avatar || '',
+    avatar_decoration: safePlayer.avatar_decoration || stored.avatar_decoration || '',
+    profile_banner: safePlayer.profile_banner || stored.profile_banner || '',
+  };
 }
 
 function renderMiniAvatar(el, pseudo, avatar) {
   if (!el) return;
+  const initial = (pseudo || '?')[0]?.toUpperCase?.() || '?';
   const avatarSrc = getRenderableMediaSrc(avatar || '');
-  if (avatarSrc) el.innerHTML = `<img src="${avatarSrc}" alt="avatar">`;
-  else el.textContent = (pseudo || '?')[0]?.toUpperCase?.() || '?';
+  if (avatarSrc) {
+    el.innerHTML = `<img src="${avatarSrc}" alt="avatar" referrerpolicy="no-referrer" onerror="this.remove(); this.parentElement.textContent='${initial}'">`;
+  } else {
+    el.textContent = initial;
+  }
 }
 
 function setCardElo(side, value) {
@@ -622,23 +653,25 @@ function animateDeltaText(el, delta, suffix = ' ELO', duration = 950) {
 }
 
 function applyLobbyPlayerVisual(side, player) {
+  const visualPlayer = getResolvedPlayerVisual(player);
   const avatarWrap = document.getElementById('law' + side);
   const avatar = document.getElementById('lav' + side);
   const deco = document.getElementById('ldeco' + side);
-  const decoSrc = getRenderableMediaSrc(player?.avatar_decoration || '');
+  const decoSrc = getRenderableMediaSrc(visualPlayer?.avatar_decoration || '');
   if (deco) deco.innerHTML = decoSrc ? `<img src="${decoSrc}" alt="">` : '';
   avatarWrap?.classList.toggle('has-decoration', !!decoSrc);
-  renderMiniAvatar(avatar, player?.pseudo, player?.avatar);
+  renderMiniAvatar(avatar, visualPlayer?.pseudo, visualPlayer?.avatar);
 }
 
 function applyPlayerCardVisual(side, player) {
+  const visualPlayer = getResolvedPlayerVisual(player);
   const avatarWrap = document.getElementById('pwrap' + side);
   const avatar = document.getElementById('avatar-p' + side);
   const deco = document.getElementById('deco-p' + side);
-  const decoSrc = getRenderableMediaSrc(player?.avatar_decoration || '');
+  const decoSrc = getRenderableMediaSrc(visualPlayer?.avatar_decoration || '');
   if (deco) deco.innerHTML = decoSrc ? `<img src="${decoSrc}" alt="">` : '';
   avatarWrap?.classList.toggle('has-decoration', !!decoSrc);
-  renderMiniAvatar(avatar, player?.pseudo, player?.avatar);
+  renderMiniAvatar(avatar, visualPlayer?.pseudo, visualPlayer?.avatar);
 }
 
 function applyTournamentMeta(meta, moveTimeSeconds = 0) {
@@ -1316,7 +1349,7 @@ function onGameOverLegacy(data) {
 
 function setStatus(html, thinking = false) {
   const s = document.getElementById('status');
-  s.innerHTML   = html;
+  s.innerHTML   = html || '&nbsp;';
   s.className   = 'status-bar' + (thinking ? ' thinking' : '');
 }
 
@@ -1795,7 +1828,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
     p2EmojiImage = '';
   }
 
-  const savedPlayer = JSON.parse(localStorage.getItem('player') || '{}');
+  const savedPlayer = getResolvedPlayerVisual(myPlayer || getStoredPlayerVisual());
   const rawShape = savedPlayer.shape || 'circle';
   if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;
@@ -2189,6 +2222,115 @@ async function saveBotReplay(winner, duration = 0) {
         const sign = botDelta >= 0 ? '+' : '';
         document.getElementById('result-elo').textContent = `🤖 ${iaBotName} : ${sign}${botDelta} ELO (→ ${newBotElo})`;
         document.getElementById('result-elo').style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
+      }
+    }
+  } catch (e) {}
+}
+
+function iaEnd(winner, winCells) {
+  gameOver = true;
+  stopTurnTimer();
+  winCells?.forEach(([r, c]) => {
+    document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('winning');
+  });
+  for (let c = 0; c < IA_C; c++) {
+    const button = document.getElementById('cb' + c);
+    if (button) button.disabled = true;
+  }
+
+  const isDraw = winner === null;
+  const isWin = winner === 1;
+  setTimeout(() => { isDraw ? SFX.draw() : isWin ? SFX.win() : SFX.lose(); }, 300);
+
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent = 'EGALITE';
+    titleEl.style.background = 'linear-gradient(135deg,var(--muted),var(--text))';
+  } else if (isWin) {
+    titleEl.textContent = 'VICTOIRE';
+    titleEl.style.background = 'linear-gradient(135deg,var(--p1),var(--p2))';
+  } else {
+    titleEl.textContent = 'DEFAITE';
+    titleEl.style.background = 'linear-gradient(135deg,#555,#888)';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor = 'transparent';
+
+  const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }[iaDifficulty] || 'Bot';
+  const eloEl = document.getElementById('result-elo');
+  const summaryEl = document.getElementById('result-summary');
+  const reasonEl = document.getElementById('result-reason');
+  if (eloEl) {
+    eloEl.textContent = '';
+    eloEl.style.color = isWin ? '#30d158' : isDraw ? 'var(--text)' : 'var(--red)';
+  }
+  if (summaryEl) summaryEl.innerHTML = '';
+  if (reasonEl) {
+    reasonEl.textContent = isDraw
+      ? `Match nul contre le bot ${diffLabel}.`
+      : isWin
+        ? `Tu as battu le bot ${diffLabel}.`
+        : `Le bot ${diffLabel} a pris l'avantage cette fois.`;
+  }
+
+  document.querySelector('.btn-action.primary').onclick = () => {
+    sessionStorage.setItem('no_auto_queue', '1');
+    location.href = '/';
+  };
+  document.getElementById('result-overlay').classList.add('show');
+  setStatus('');
+
+  saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
+}
+
+async function saveBotReplay(winner, duration = 0) {
+  try {
+    const p1Color = myPlayer.color || '#ff2d55';
+    const response = await fetch('/api/bot-replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: localStorage.getItem('token'),
+        moves: iaMoves,
+        winner,
+        duration,
+        p1Color,
+        p2Color: iaBotColor,
+        botName: iaBotName,
+        difficulty: iaDifficulty,
+      })
+    });
+    if (!response.ok) return;
+
+    const { gameId, botDelta, newBotElo } = await response.json();
+    const btn = document.getElementById('btn-replay');
+    if (btn && gameId) {
+      btn.style.display = '';
+      btn.href = '/replay-bot/' + gameId;
+      btn.textContent = 'Replay & Analyse';
+    }
+
+    if (typeof botDelta === 'number') {
+      const eloEl = document.getElementById('result-elo');
+      if (eloEl) {
+        eloEl.style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
+        setTimeout(() => {
+          animateDeltaText(eloEl, botDelta, ' ELO BOT', 1200);
+        }, 220);
+      }
+      const summaryEl = document.getElementById('result-summary');
+      if (summaryEl) {
+        const currentBotElo = Number.isFinite(Number(newBotElo)) ? Number(newBotElo) - Number(botDelta) : null;
+        const beforeText = Number.isFinite(currentBotElo) ? `${currentBotElo}` : '...';
+        const afterText = Number.isFinite(Number(newBotElo)) ? `${Number(newBotElo)}` : '...';
+        const sign = botDelta >= 0 ? '+' : '';
+        summaryEl.innerHTML = `
+          <div class="result-player-box">
+            <div class="result-player-name">MODE BOT</div>
+            <div class="result-player-elo">${beforeText} -> ${afterText}</div>
+            <div class="result-player-delta"><strong>${sign}${botDelta} ELO BOT</strong></div>
+          </div>
+        `;
       }
     }
   } catch (e) {}
