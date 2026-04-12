@@ -331,6 +331,10 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   margin-left: 6px;
 }
 .result-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.result-summary.single {
+  grid-template-columns: minmax(260px, 420px);
+  justify-content: center;
+}
 .result-player-box {
   background: rgba(255,255,255,0.03);
   border: 1px solid var(--border);
@@ -339,12 +343,82 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   display: flex;
   flex-direction: column;
   gap: 4px;
+  text-align: center;
+  align-items: center;
+}
+.result-player-box.bot-only {
+  background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+  box-shadow: 0 18px 40px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.05);
+  animation: result-bot-fade 0.45s ease;
+  min-width: 320px;
+  padding: 18px 18px 16px;
 }
 .result-player-name { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 800; letter-spacing: 1px; }
 .result-player-elo { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; line-height: 1; }
+.result-player-elo.bot-elo {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.result-player-elo.bot-elo.bot-total {
+  display: block;
+  text-align: center;
+  font-size: 44px;
+  letter-spacing: 1px;
+  line-height: 1;
+  margin-top: 2px;
+}
+.result-player-elo.bot-elo.bot-total.is-positive {
+  color: #30d158;
+  text-shadow: 0 0 18px rgba(48,209,88,0.24);
+}
+.result-player-elo.bot-elo.bot-total.is-negative {
+  color: var(--red);
+  text-shadow: 0 0 18px rgba(255,45,85,0.24);
+}
+.result-player-elo.bot-elo.bot-total.is-neutral {
+  color: var(--text);
+  text-shadow: 0 0 14px rgba(255,255,255,0.12);
+}
+.result-player-before,
+.result-player-after {
+  min-width: 74px;
+}
+.result-player-transition {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+.result-player-arrow {
+  color: var(--muted);
+  opacity: 0.8;
+}
 .result-player-delta { font-size: 12px; color: var(--muted); }
 .result-player-delta strong { color: var(--text); font-weight: 800; }
+.result-player-delta.centered {
+  text-align: center;
+}
+.result-player-delta .delta-value {
+  display: inline-block;
+  min-width: 42px;
+  text-align: center;
+}
+.result-player-delta.bot-delta strong {
+  font-size: 18px;
+  letter-spacing: 1px;
+}
 .result-btns { display: flex; gap: 10px; margin-top: 4px; justify-content: center; }
+@keyframes result-bot-fade {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 .btn-action {
   font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700;
   letter-spacing: 2px; text-transform: uppercase; padding: 12px 24px; border-radius: 10px;
@@ -650,6 +724,64 @@ function animateDeltaText(el, delta, suffix = ' ELO', duration = 950) {
     const sign = value >= 0 ? '+' : '';
     el.textContent = `${sign}${value}${suffix}`;
   }, duration);
+}
+
+function animateBotSummary(before, after, delta) {
+  const beforeEl = document.getElementById('bot-elo-before');
+  const afterEl = document.getElementById('bot-elo-after');
+  const totalEl = document.getElementById('bot-elo-total');
+  const deltaEl = document.getElementById('bot-elo-delta');
+  if (!beforeEl || !afterEl || !totalEl || !deltaEl) return;
+
+  const safeBefore = Number.isFinite(Number(before)) ? Number(before) : 0;
+  const safeAfter = Number.isFinite(Number(after)) ? Number(after) : safeBefore;
+  const safeDelta = Number.isFinite(Number(delta)) ? Number(delta) : safeAfter - safeBefore;
+  const sign = safeDelta >= 0 ? '+' : '';
+
+  totalEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
+  totalEl.classList.add(safeDelta > 0 ? 'is-positive' : safeDelta < 0 ? 'is-negative' : 'is-neutral');
+
+  beforeEl.textContent = String(safeBefore);
+  afterEl.textContent = String(safeBefore);
+  totalEl.textContent = String(safeBefore);
+  deltaEl.textContent = `${sign}0`;
+
+  animateNumber(safeBefore, safeAfter, (value) => {
+    afterEl.textContent = String(value);
+    totalEl.textContent = String(value);
+  }, 1200);
+  animateNumber(0, safeDelta, (value) => {
+    const currentSign = value >= 0 ? '+' : '';
+    deltaEl.textContent = `${currentSign}${value}`;
+  }, 1200);
+}
+
+function animateResultPlayerSummary(prefix, before, after, delta) {
+  const beforeEl = document.getElementById(`${prefix}-elo-before`);
+  const afterEl = document.getElementById(`${prefix}-elo-after`);
+  const mainEl = document.getElementById(`${prefix}-elo-main`);
+  const deltaEl = document.getElementById(`${prefix}-elo-delta`);
+  if (!beforeEl || !afterEl || !mainEl || !deltaEl) return;
+
+  const safeBefore = Number.isFinite(Number(before)) ? Number(before) : 0;
+  const safeAfter = Number.isFinite(Number(after)) ? Number(after) : safeBefore;
+  const safeDelta = Number.isFinite(Number(delta)) ? Number(delta) : safeAfter - safeBefore;
+
+  mainEl.classList.remove('is-positive', 'is-negative', 'is-neutral');
+  mainEl.classList.add(safeDelta > 0 ? 'is-positive' : safeDelta < 0 ? 'is-negative' : 'is-neutral');
+
+  beforeEl.textContent = String(safeBefore);
+  afterEl.textContent = String(safeBefore);
+  mainEl.textContent = String(safeBefore);
+  deltaEl.textContent = `${safeDelta >= 0 ? '+' : ''}0`;
+
+  animateNumber(safeBefore, safeAfter, (value) => {
+    mainEl.textContent = String(value);
+    afterEl.textContent = String(value);
+  }, 1200);
+  animateNumber(0, safeDelta, (value) => {
+    deltaEl.textContent = `${value >= 0 ? '+' : ''}${value}`;
+  }, 1200);
 }
 
 function applyLobbyPlayerVisual(side, player) {
@@ -1763,29 +1895,33 @@ function onGameOver(data) {
     summaryEl.innerHTML = `
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
-        <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
-        <div class="result-player-delta"><strong>${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : '--'}</strong> · ${deltaText(myDelta)}</div>
+        <div class="result-player-elo" id="result-my-elo-main">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
+        <div class="result-player-elo bot-elo">
+          <span class="result-player-before" id="result-my-elo-before">${Number.isFinite(myBefore) ? myBefore : '--'}</span>
+          <span class="result-player-arrow">→</span>
+          <span class="result-player-after" id="result-my-elo-after">${Number.isFinite(myBefore) ? myBefore : '--'}</span>
+        </div>
+        <div class="result-player-delta"><strong><span class="delta-value" id="result-my-elo-delta">${myDelta >= 0 ? '+' : ''}0</span> ELO</strong></div>
       </div>
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
-        <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
-        <div class="result-player-delta"><strong>${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : '--'}</strong> · ${deltaText(oppDelta)}</div>
+        <div class="result-player-elo" id="result-opp-elo-main">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
+        <div class="result-player-elo bot-elo">
+          <span class="result-player-before" id="result-opp-elo-before">${Number.isFinite(oppBefore) ? oppBefore : '--'}</span>
+          <span class="result-player-arrow">→</span>
+          <span class="result-player-after" id="result-opp-elo-after">${Number.isFinite(oppBefore) ? oppBefore : '--'}</span>
+        </div>
+        <div class="result-player-delta"><strong><span class="delta-value" id="result-opp-elo-delta">${oppDelta >= 0 ? '+' : ''}0</span> ELO</strong></div>
       </div>
     `;
   }
 
   if (Number.isFinite(myBefore) && Number.isFinite(myAfter)) {
-    animateNumber(myBefore, myAfter, (value) => {
-      const el = document.getElementById('result-my-elo');
-      if (el) el.textContent = String(value);
-    }, 1200);
+    animateResultPlayerSummary('result-my', myBefore, myAfter, myDelta);
     animateCardElo(mySide, myBefore, myAfter);
   }
   if (Number.isFinite(oppBefore) && Number.isFinite(oppAfter)) {
-    animateNumber(oppBefore, oppAfter, (value) => {
-      const el = document.getElementById('result-opp-elo');
-      if (el) el.textContent = String(value);
-    }, 1200);
+    animateResultPlayerSummary('result-opp', oppBefore, oppAfter, oppDelta);
     animateCardElo(oppSide, oppBefore, oppAfter);
   }
 
@@ -2313,24 +2449,29 @@ async function saveBotReplay(winner, duration = 0) {
     if (typeof botDelta === 'number') {
       const eloEl = document.getElementById('result-elo');
       if (eloEl) {
-        eloEl.style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
-        setTimeout(() => {
-          animateDeltaText(eloEl, botDelta, ' ELO BOT', 1200);
-        }, 220);
+        eloEl.textContent = '';
       }
       const summaryEl = document.getElementById('result-summary');
       if (summaryEl) {
         const currentBotElo = Number.isFinite(Number(newBotElo)) ? Number(newBotElo) - Number(botDelta) : null;
-        const beforeText = Number.isFinite(currentBotElo) ? `${currentBotElo}` : '...';
-        const afterText = Number.isFinite(Number(newBotElo)) ? `${Number(newBotElo)}` : '...';
-        const sign = botDelta >= 0 ? '+' : '';
+        const beforeValue = Number.isFinite(currentBotElo) ? Number(currentBotElo) : 0;
+        const afterValue = Number.isFinite(Number(newBotElo)) ? Number(newBotElo) : beforeValue;
+        summaryEl.className = 'result-summary single';
         summaryEl.innerHTML = `
-          <div class="result-player-box">
+          <div class="result-player-box bot-only">
             <div class="result-player-name">MODE BOT</div>
-            <div class="result-player-elo">${beforeText} -> ${afterText}</div>
-            <div class="result-player-delta"><strong>${sign}${botDelta} ELO BOT</strong></div>
+            <div class="result-player-elo bot-elo bot-total" id="bot-elo-total">${beforeValue}</div>
+            <div class="result-player-transition">
+              <span class="result-player-before" id="bot-elo-before">${beforeValue}</span>
+              <span class="result-player-arrow">→</span>
+              <span class="result-player-after" id="bot-elo-after">${beforeValue}</span>
+            </div>
+            <div class="result-player-delta bot-delta centered"><strong><span id="bot-elo-delta">+0</span> ELO BOT</strong></div>
           </div>
         `;
+        setTimeout(() => {
+          animateBotSummary(beforeValue, afterValue, botDelta);
+        }, 180);
       }
     }
   } catch (e) {}
