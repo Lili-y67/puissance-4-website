@@ -1910,6 +1910,9 @@ html, body {
     </div>
     <div class="duel-dialog-actions">
       <button class="btn btn-duel" type="button" onclick="closeDuelModal()">Annuler</button>
+      <button class="btn btn-ghost" type="button" onclick="createDuelLink()">
+        <span>🔗</span><span>Créer un lien</span>
+      </button>
       <button class="btn btn-play" id="duel-send-btn" type="button" onclick="sendDuelChallenge()" disabled>
         <span>⚡</span><span>Envoyer le duel</span>
       </button>
@@ -2276,6 +2279,32 @@ async function sendDuelChallenge() {
   } catch (error) {
     showDuelError('Erreur réseau, réessaie.');
     if (sendBtn) sendBtn.disabled = false;
+  }
+}
+
+async function createDuelLink() {
+  const player = getSafePlayer();
+  const token = localStorage.getItem('token') || '';
+  if (!player?.id || !token) {
+    showDuelError('Connecte-toi avant de générer un lien de duel.');
+    return;
+  }
+  showDuelError('');
+  try {
+    const res = await fetch('/api/duels/link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.challenge?.shareUrl) {
+      showDuelError(data?.error || 'Impossible de générer le lien de duel.');
+      return;
+    }
+    await navigator.clipboard.writeText(data.challenge.shareUrl);
+    showDuelError('Lien de duel copié. Tu peux l’envoyer directement.');
+  } catch (error) {
+    showDuelError('Erreur réseau, réessaie.');
   }
 }
 

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - Duel</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#06060e;color:#eeeef5;font-family:'Barlow',sans-serif;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:48px 48px;opacity:.4;pointer-events:none}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.panel{width:min(680px,100%);padding:26px;border-radius:28px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,rgba(18,18,40,.95),rgba(8,8,22,.96));box-shadow:0 28px 72px rgba(0,0,0,.42)}
+.topline{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}
+.brand{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.brand span{color:#ff2d55;text-shadow:0 0 16px rgba(255,45,85,.35)}
+.back{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#eeeef5;text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.hero{display:grid;grid-template-columns:84px 1fr;gap:18px;align-items:center;padding:18px;border-radius:22px;background:linear-gradient(135deg,rgba(255,45,85,.12),rgba(133,235,255,.08));border:1px solid rgba(255,255,255,.07)}
+.avatar{width:84px;height:84px;border-radius:24px;display:grid;place-items:center;overflow:hidden;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.04);font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.kicker{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#ff7b95}
+.title{font-family:'Barlow Condensed',sans-serif;font-size:46px;font-weight:900;line-height:.95;letter-spacing:1px;text-transform:uppercase}
+.copy{margin-top:10px;font-size:15px;line-height:1.6;color:rgba(238,238,245,.76)}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.chip{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.chip strong{color:#fff;margin-left:6px}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-width:190px;padding:14px 20px;border-radius:16px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,#ff2d55,#ff6f91);color:#fff;box-shadow:0 16px 36px rgba(255,45,85,.24)}
+.btn-primary:hover{transform:translateY(-1px);filter:brightness(1.04)}
+.btn-secondary{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#eeeef5}
+.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;filter:none}
+.state{margin-top:16px;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-size:14px;line-height:1.6;color:rgba(238,238,245,.78)}
+.state.ok{border-color:rgba(78,240,138,.25);background:rgba(78,240,138,.08);color:#dcffe9}
+.state.warn{border-color:rgba(255,216,77,.24);background:rgba(255,216,77,.08);color:#fff8d2}
+.state.err{border-color:rgba(255,123,149,.24);background:rgba(255,123,149,.08);color:#ffe2ea}
+.meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}
+.meta-card{padding:14px;border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)}
+.meta-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(238,238,245,.5)}
+.meta-value{margin-top:6px;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800}
+@media (max-width:640px){
+  .panel{padding:20px;border-radius:22px}
+  .hero{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .title{font-size:34px}
+  .actions{flex-direction:column}
+  .btn{width:100%}
+  .meta{grid-template-columns:1fr}
+  .topline{flex-direction:column;align-items:flex-start}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="panel">
+    <div class="topline">
+      <div class="brand">Puissance <span>4</span></div>
+      <a class="back" href="/">Retour accueil</a>
+    </div>
+    <div class="hero">
+      <div class="avatar" id="duel-avatar">?</div>
+      <div>
+        <div class="kicker">Duel par lien</div>
+        <div class="title" id="duel-title">Chargement</div>
+        <div class="copy" id="duel-copy">On récupère les informations du défi et on te propose de l’accepter directement si tu es connecté.</div>
+      </div>
+    </div>
+    <div class="chips" id="duel-chips"></div>
+    <div class="actions">
+      <button class="btn btn-primary" id="accept-btn" type="button" onclick="acceptDuel()" disabled>Valider le duel</button>
+      <button class="btn btn-secondary" id="copy-btn" type="button" onclick="copyCurrentLink()">Copier le lien</button>
+    </div>
+    <div class="state warn" id="duel-state">Lecture du duel en cours...</div>
+    <div class="meta">
+      <div class="meta-card">
+        <div class="meta-label">Mode</div>
+        <div class="meta-value" id="duel-mode">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Statut</div>
+        <div class="meta-value" id="duel-status">—</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-label">Créé</div>
+        <div class="meta-value" id="duel-created">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/presence.js" defer></script>
+<script>
+let duelData = null;
+
+function formatDate(ts) {
+  const d = new Date(Number(ts || Date.now()));
+  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function setState(message, tone = 'warn') {
+  const el = document.getElementById('duel-state');
+  if (!el) return;
+  el.className = 'state ' + tone;
+  el.textContent = message;
+}
+
+function renderDuel(challenge) {
+  duelData = challenge;
+  const sender = challenge?.sender || null;
+  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+  const isLogged = !!(me && me.id);
+  const isSender = Number(me?.id || 0) === Number(sender?.id || 0);
+  const pending = challenge?.status === 'pending';
+  const canAccept = pending && isLogged && !isSender;
+
+  document.getElementById('duel-title').textContent = sender ? `${sender.pseudo} t’invite à jouer` : 'Lien de duel';
+  document.getElementById('duel-copy').textContent = challenge?.mode === 'link'
+    ? 'Le premier joueur connecté qui accepte le lien lance immédiatement la partie.'
+    : 'Ce duel est réservé à un joueur précis et démarre dès validation.';
+  document.getElementById('duel-mode').textContent = challenge?.mode === 'link' ? 'Lien' : 'Direct';
+  document.getElementById('duel-status').textContent = (challenge?.status || 'inconnu').toUpperCase();
+  document.getElementById('duel-created').textContent = formatDate(challenge?.createdAt);
+
+  const avatar = document.getElementById('duel-avatar');
+  if (sender?.avatar) avatar.innerHTML = `<img src="${sender.avatar}" alt="">`;
+  else avatar.textContent = String(sender?.pseudo || '?').charAt(0).toUpperCase();
+
+  const chips = document.getElementById('duel-chips');
+  chips.innerHTML = '';
+  const entries = [
+    ['Créateur', sender?.pseudo || 'Inconnu'],
+    ['ELO', Number(sender?.elo || 0)],
+    ['Lien', challenge?.id || '—'],
+  ];
+  entries.forEach(([label, value]) => {
+    const div = document.createElement('div');
+    div.className = 'chip';
+    div.innerHTML = `${label}<strong>${value}</strong>`;
+    chips.appendChild(div);
+  });
+
+  const acceptBtn = document.getElementById('accept-btn');
+  acceptBtn.disabled = !canAccept;
+  if (!pending) {
+    setState('Ce duel n’est plus en attente.', 'err');
+  } else if (!isLogged) {
+    setState('Connecte-toi d’abord sur le site puis reviens ici pour valider le duel.', 'warn');
+  } else if (isSender) {
+    setState('Lien prêt. Tu peux maintenant le partager. Dès qu’un joueur valide, la partie démarre.', 'ok');
+  } else {
+    setState('Tu es connecté. Clique sur "Valider le duel" pour lancer la partie.', 'ok');
+  }
+}
+
+async function loadDuel() {
+  const duelId = location.pathname.split('/').filter(Boolean).pop();
+  try {
+    const res = await fetch('/api/duels/' + encodeURIComponent(duelId), { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.challenge) {
+      setState(data?.error || 'Duel introuvable.', 'err');
+      document.getElementById('accept-btn').disabled = true;
+      return;
+    }
+    renderDuel(data.challenge);
+  } catch (error) {
+    setState('Impossible de charger le duel.', 'err');
+  }
+}
+
+async function acceptDuel() {
+  const token = localStorage.getItem('token') || '';
+  const duelId = location.pathname.split('/').filter(Boolean).pop();
+  if (!token) {
+    setState('Connexion requise avant validation du duel.', 'warn');
+    return;
+  }
+  const btn = document.getElementById('accept-btn');
+  btn.disabled = true;
+  setState('Validation du duel en cours...', 'warn');
+  try {
+    const res = await fetch('/api/duels/' + encodeURIComponent(duelId) + '/accept', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setState(data?.error || 'Impossible de valider le duel.', 'err');
+      btn.disabled = false;
+      return;
+    }
+    setState('Duel validé. Préparation de la partie...', 'ok');
+  } catch (error) {
+    setState('Erreur réseau pendant la validation.', 'err');
+    btn.disabled = false;
+  }
+}
+
+async function copyCurrentLink() {
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    setState('Lien copié dans le presse-papiers.', 'ok');
+  } catch (error) {
+    setState('Impossible de copier le lien automatiquement.', 'warn');
+  }
+}
+
+loadDuel();
+</script>
+</body>
+</html>

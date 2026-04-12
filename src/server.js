@@ -87,6 +87,112 @@ function clearPlayerQueues(playerId) {
   }
 }
 
+function scheduleDuelExpiration(challengeId, ttlMs = 90_000) {
+  setTimeout(() => {
+    const pending = duelChallenges.get(challengeId);
+    if (!pending || pending.status !== 'pending') return;
+    pending.status = 'expired';
+    duelChallenges.set(challengeId, pending);
+    if (pending.senderId) {
+      getOnlineSocketsForPlayer(pending.senderId).forEach(socket => socket.emit('duel_invite_expired', { id: challengeId }));
+    }
+    if (pending.targetId) {
+      getOnlineSocketsForPlayer(pending.targetId).forEach(socket => socket.emit('duel_invite_expired', { id: challengeId }));
+    }
+  }, ttlMs);
+}
+
+function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs = 90_000 }) {
+  const challengeId = crypto.randomUUID();
+  const challenge = {
+    id: challengeId,
+    status: 'pending',
+    senderId: Number(senderId),
+    targetId: targetId ? Number(targetId) : null,
+    mode,
+    createdAt: Date.now(),
+  };
+  duelChallenges.set(challengeId, challenge);
+  scheduleDuelExpiration(challengeId, ttlMs);
+  return challenge;
+}
+
+function serializeDuelChallenge(req, challenge, sender, target = null) {
+  return {
+    id: challenge.id,
+    mode: challenge.mode || 'direct',
+    status: challenge.status,
+    createdAt: Number(challenge.createdAt || Date.now()),
+    shareUrl: `${req.protocol}://${req.get('host')}/duel/${challenge.id}`,
+    sender: sender ? {
+      id: sender.id,
+      pseudo: sender.pseudo,
+      elo: Number(sender.elo || 0),
+      color: sender.color || '#ff2d55',
+      avatar: sender.avatar || '',
+    } : null,
+    target: target ? {
+      id: target.id,
+      pseudo: target.pseudo,
+      elo: Number(target.elo || 0),
+      color: target.color || '#85EBFF',
+      avatar: target.avatar || '',
+    } : null,
+  };
+}
+
+function acceptDuelChallenge(challenge, accepterId) {
+  const sender = pQ.getById.get(Number(challenge.senderId || 0));
+  const target = pQ.getById.get(Number(accepterId || challenge.targetId || 0));
+  if (!sender || sender.deleted || !target || target.deleted) {
+    challenge.status = 'expired';
+    duelChallenges.set(challenge.id, challenge);
+    return { error: 'Un des deux joueurs est introuvable.' };
+  }
+  if (sender.id === target.id) {
+    return { error: 'Tu ne peux pas accepter ton propre duel.' };
+  }
+  if (challenge.mode !== 'link' && Number(challenge.targetId || 0) !== Number(target.id)) {
+    return { error: 'Tu ne peux pas accepter ce duel.' };
+  }
+  if (playerIsAlreadyPlaying(sender.id) || playerIsAlreadyPlaying(target.id)) {
+    challenge.status = 'expired';
+    duelChallenges.set(challenge.id, challenge);
+    return { error: 'Un des deux joueurs est deja en partie.' };
+  }
+
+  const senderSocket = pickDuelSocket(sender.id);
+  const targetSocket = pickDuelSocket(target.id);
+  if (!senderSocket || !targetSocket) {
+    challenge.status = 'expired';
+    duelChallenges.set(challenge.id, challenge);
+    return { error: 'Le duel ne peut pas demarrer car un joueur n est plus connecte.' };
+  }
+
+  const p1 = buildPlayableSocketPayload(sender);
+  const p2 = buildPlayableSocketPayload(target);
+  p1.socketId = senderSocket.id;
+  p2.socketId = targetSocket.id;
+
+  clearPlayerQueues(sender.id);
+  clearPlayerQueues(target.id);
+  challenge.status = 'accepted';
+  challenge.targetId = target.id;
+  duelChallenges.set(challenge.id, challenge);
+
+  getOnlineSocketsForPlayer(sender.id).forEach(s => s.emit('duel_invite_accepted', {
+    id: challenge.id,
+    target: { id: target.id, pseudo: target.pseudo, elo: Number(target.elo || 0), color: target.color || '#85EBFF', avatar: target.avatar || '' },
+  }));
+  getOnlineSocketsForPlayer(target.id).forEach(s => s.emit('duel_invite_accepted', {
+    id: challenge.id,
+    target: { id: sender.id, pseudo: sender.pseudo, elo: Number(sender.elo || 0), color: sender.color || '#ff2d55', avatar: sender.avatar || '' },
+  }));
+
+  _startMatch(p1, p2, { duel: true });
+  return { ok: true, sender, target };
+}
+
 gm._onAfkEnd = (result) => {
   if (!result) return;
   io.to('game:' + result.gameId).emit('game_over', result);
@@ -1666,6 +1772,7 @@ app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/le
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
+app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
 app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
 app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/stats.html')));
@@ -2357,20 +2464,12 @@ app.post('/api/duels/challenge', (req, res) => {
       return res.status(400).json({ error: 'Un duel est déjà en attente pour ce joueur.' });
     }
 
-    const challengeId = crypto.randomUUID();
-    const payload = {
-      id: challengeId,
-      status: 'pending',
-      senderId,
-      targetId,
-      createdAt: Date.now(),
-    };
-    duelChallenges.set(challengeId, payload);
+    const payload = createDuelChallenge({ senderId, targetId, mode: 'direct', ttlMs: 90_000 });
 
     const freshSender = sanitize(sender);
     targetSockets.forEach(socket => {
       socket.emit('duel_invite', {
-        id: challengeId,
+        id: payload.id,
         sender: {
           id: freshSender.id,
           pseudo: freshSender.pseudo,
@@ -2381,18 +2480,9 @@ app.post('/api/duels/challenge', (req, res) => {
       });
     });
 
-    setTimeout(() => {
-      const pending = duelChallenges.get(challengeId);
-      if (!pending || pending.status !== 'pending') return;
-      pending.status = 'expired';
-      duelChallenges.set(challengeId, pending);
-      getOnlineSocketsForPlayer(senderId).forEach(socket => socket.emit('duel_invite_expired', { id: challengeId }));
-      getOnlineSocketsForPlayer(targetId).forEach(socket => socket.emit('duel_invite_expired', { id: challengeId }));
-    }, 90_000);
-
     getOnlineSocketsForPlayer(senderId).forEach(socket => {
       socket.emit('duel_invite_sent', {
-        id: challengeId,
+        id: payload.id,
         target: {
           id: target.id,
           pseudo: target.pseudo,
@@ -2405,17 +2495,71 @@ app.post('/api/duels/challenge', (req, res) => {
 
     res.json({
       ok: true,
-      challenge: {
-        id: challengeId,
-        target: {
-          id: target.id,
-          pseudo: target.pseudo,
-        },
-      },
+      challenge: serializeDuelChallenge(req, payload, sender, target),
     });
   } catch (error) {
     console.error('[DUEL] challenge:', error.message);
     res.status(500).json({ error: 'Impossible d envoyer le duel.' });
+  }
+});
+
+app.post('/api/duels/link', (req, res) => {
+  try {
+    const token = String(req.body?.token || '');
+    const senderId = validateSession(token);
+    if (!senderId) return res.status(401).json({ error: 'Session invalide.' });
+
+    const sender = pQ.getById.get(senderId);
+    if (!sender || sender.deleted) return res.status(404).json({ error: 'Ton profil est introuvable.' });
+    if (playerIsAlreadyPlaying(senderId)) return res.status(400).json({ error: 'Tu es deja en partie.' });
+
+    const duplicate = [...duelChallenges.values()].find(challenge =>
+      challenge.status === 'pending' &&
+      challenge.mode === 'link' &&
+      challenge.senderId === senderId &&
+      Date.now() - Number(challenge.createdAt || 0) < 15 * 60_000
+    );
+    const challenge = duplicate || createDuelChallenge({ senderId, mode: 'link', ttlMs: 15 * 60_000 });
+    res.json({ ok: true, challenge: serializeDuelChallenge(req, challenge, sender) });
+  } catch (error) {
+    console.error('[DUEL] link:', error.message);
+    res.status(500).json({ error: 'Impossible de generer le lien de duel.' });
+  }
+});
+
+app.get('/api/duels/:id', (req, res) => {
+  const challenge = duelChallenges.get(String(req.params.id || ''));
+  if (!challenge) return res.status(404).json({ error: 'Duel introuvable.' });
+  const sender = pQ.getById.get(Number(challenge.senderId || 0));
+  const target = challenge.targetId ? pQ.getById.get(Number(challenge.targetId || 0)) : null;
+  if (!sender || sender.deleted) return res.status(404).json({ error: 'Duel introuvable.' });
+  res.json({
+    ok: true,
+    challenge: serializeDuelChallenge(req, challenge, sender, target),
+  });
+});
+
+app.post('/api/duels/:id/accept', (req, res) => {
+  try {
+    const token = String(req.body?.token || '');
+    const accepterId = validateSession(token);
+    if (!accepterId) return res.status(401).json({ error: 'Session invalide.' });
+
+    const challenge = duelChallenges.get(String(req.params.id || ''));
+    if (!challenge || challenge.status !== 'pending') {
+      return res.status(404).json({ error: 'Ce duel n est plus disponible.' });
+    }
+
+    const accepted = acceptDuelChallenge(challenge, accepterId);
+    if (accepted.error) return res.status(400).json({ error: accepted.error });
+
+    res.json({
+      ok: true,
+      challenge: serializeDuelChallenge(req, challenge, accepted.sender, accepted.target),
+    });
+  } catch (error) {
+    console.error('[DUEL] accept:', error.message);
+    res.status(500).json({ error: 'Impossible d accepter ce duel.' });
   }
 });
 
@@ -3312,50 +3456,10 @@ io.on('connection', socket => {
     if (!challenge || challenge.status !== 'pending') {
       return socket.emit('duel_invite_error', { message: 'Ce duel n est plus disponible.' });
     }
-    if (Number(challenge.targetId) !== Number(socket.playerId)) {
-      return socket.emit('duel_invite_error', { message: 'Tu ne peux pas accepter ce duel.' });
+    const accepted = acceptDuelChallenge(challenge, Number(socket.playerId));
+    if (accepted.error) {
+      return socket.emit('duel_invite_error', { message: accepted.error });
     }
-
-    const sender = pQ.getById.get(Number(challenge.senderId));
-    const target = pQ.getById.get(Number(challenge.targetId));
-    if (!sender || !target) {
-      duelChallenges.delete(challenge.id);
-      return socket.emit('duel_invite_error', { message: 'Un des deux joueurs est introuvable.' });
-    }
-
-    if (playerIsAlreadyPlaying(sender.id) || playerIsAlreadyPlaying(target.id)) {
-      duelChallenges.delete(challenge.id);
-      return socket.emit('duel_invite_error', { message: 'Un des deux joueurs est deja en partie.' });
-    }
-
-    const senderSocket = pickDuelSocket(sender.id);
-    const targetSocket = pickDuelSocket(target.id);
-    if (!senderSocket || !targetSocket) {
-      duelChallenges.delete(challenge.id);
-      return socket.emit('duel_invite_error', { message: 'Le duel ne peut pas demarrer car un joueur n est plus connecte.' });
-    }
-
-    clearPlayerQueues(sender.id);
-    clearPlayerQueues(target.id);
-
-    const p1 = buildPlayableSocketPayload(sender);
-    const p2 = buildPlayableSocketPayload(target);
-    p1.socketId = senderSocket.id;
-    p2.socketId = targetSocket.id;
-
-    challenge.status = 'accepted';
-    duelChallenges.set(challenge.id, challenge);
-
-    getOnlineSocketsForPlayer(sender.id).forEach(s => s.emit('duel_invite_accepted', {
-      id: challenge.id,
-      target: { id: target.id, pseudo: target.pseudo },
-    }));
-    getOnlineSocketsForPlayer(target.id).forEach(s => s.emit('duel_invite_accepted', {
-      id: challenge.id,
-      target: { id: sender.id, pseudo: sender.pseudo },
-    }));
-
-    _startMatch(p1, p2, { duel: true });
   });
 
   socket.on('duel_decline', ({ challengeId } = {}) => {

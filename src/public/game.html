@@ -207,19 +207,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
 
 /* ── Board ── */
-.board-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 760px;
-  padding: 18px;
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background:
-    radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 42%),
-    linear-gradient(180deg, rgba(19,19,42,0.96), rgba(8,8,22,0.96));
-  box-shadow: 0 32px 72px rgba(0,0,0,0.36);
-}
-.col-buttons { display: flex; gap: 6px; margin-bottom: 4px; }
+.board-wrap { position: relative; }
+.col-buttons { display: flex; gap: 6px; margin: 0 auto 4px; width: fit-content; }
 .col-btn {
   width: calc((min(98vw, 520px) - 20px - 6px*6) / 7); height: 26px; border: none; background: transparent; cursor: pointer;
   border-radius: 6px; transition: all 0.15s; position: relative;
@@ -242,7 +231,6 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   grid-template-columns: repeat(7, var(--cell-size));
   grid-template-rows: repeat(6, var(--cell-size));
   gap: 6px;
-  margin: 0 auto;
 }
 .cell {
   border-radius: 50%;
@@ -393,7 +381,6 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .status-bar { font-size: 11px; }
 
   /* Board */
-  .board-wrap { padding: 12px 10px; border-radius: 18px; }
   .board { gap: 3px; padding: 6px; border-radius: 12px; }
   .col-btn { height: 18px; }
   .col-btn::after { font-size: 8px; }
@@ -580,7 +567,6 @@ function renderMiniAvatar(el, pseudo, avatar) {
 function setCardElo(side, value) {
   const el = document.getElementById('elo-p' + side);
   if (!el) return;
-  const badge = { textContent: '', classList: { add() {} } };
   const numeric = Number(value);
   if (Number.isFinite(numeric)) {
     el.dataset.elo = String(Math.round(numeric));
@@ -1616,6 +1602,166 @@ function onGameOver(data) {
 // ═══════════════════════════════════════════════════════════════════
 //  MODE IA — Partie locale, pas de socket, pas de classement
 // ═══════════════════════════════════════════════════════════════════
+function setCardElo(side, value) {
+  const el = document.getElementById('elo-p' + side);
+  if (!el) return;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    const rounded = Math.round(numeric);
+    el.dataset.elo = String(rounded);
+    el.textContent = `${rounded} ELO`;
+    return;
+  }
+  el.dataset.elo = '';
+  el.textContent = String(value || '— ELO');
+}
+
+function getCardElo(side) {
+  const el = document.getElementById('elo-p' + side);
+  if (!el) return null;
+  const numeric = Number(el.dataset.elo);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function onGameOver(data) {
+  gameOver = true;
+  stopTurnTimer();
+
+  const dcBanner = document.getElementById('disconnect-banner');
+  if (dcBanner) {
+    if (dcBanner._interval) {
+      clearInterval(dcBanner._interval);
+      dcBanner._interval = null;
+    }
+    dcBanner.classList.remove('show');
+  }
+
+  if (data.winCells?.length) {
+    data.winCells.forEach(([r, c]) => {
+      const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+      if (cell) cell.classList.add('winning');
+    });
+  }
+
+  for (let c = 0; c < COLS; c++) {
+    const b = document.getElementById('cb' + c);
+    if (b) b.disabled = true;
+  }
+  setStatus('');
+
+  const isWinner = data.winner === mySide;
+  const isDraw = data.reason === 'draw';
+  setTimeout(() => {
+    if (isDraw) SFX.draw();
+    else if (isWinner) SFX.win();
+    else SFX.lose();
+  }, 300);
+
+  const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
+  const oppSide = mySide === 1 ? 2 : 1;
+  const oppId = data.players?.[oppSide]?.id;
+  const myDelta = myId !== undefined ? Number(data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? 0) : 0;
+  const oppDelta = oppId !== undefined ? Number(data.eloChanges?.[oppId] ?? data.eloChanges?.[String(oppId)] ?? 0) : 0;
+  const myAfter = myId !== undefined ? Number(data.eloNow?.[myId] ?? data.eloNow?.[String(myId)] ?? getCardElo(mySide)) : getCardElo(mySide);
+  const oppAfter = oppId !== undefined ? Number(data.eloNow?.[oppId] ?? data.eloNow?.[String(oppId)] ?? getCardElo(oppSide)) : getCardElo(oppSide);
+  const myBefore = Number.isFinite(myAfter) ? myAfter - myDelta : null;
+  const oppBefore = Number.isFinite(oppAfter) ? oppAfter - oppDelta : null;
+  const winnerLabelText = data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'L adversaire');
+
+  const titleEl = document.getElementById('result-title');
+  if (isDraw) {
+    titleEl.textContent = 'EGALITE';
+    titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
+  } else if (isWinner) {
+    titleEl.textContent = 'VICTOIRE';
+    titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
+  } else {
+    titleEl.textContent = 'DEFAITE';
+    titleEl.style.background = 'linear-gradient(135deg, #8d8d99, #d7d7df)';
+  }
+  titleEl.style.webkitBackgroundClip = 'text';
+  titleEl.style.webkitTextFillColor = 'transparent';
+
+  const vipBoostApplied = Number(data.boostInfo?.vipAppliedTo) === Number(myId) && myDelta > 0;
+  const premiumBoostTier = vipBoostApplied ? String(data.boostInfo?.vipTier || 'vip') : null;
+  const eloEl = document.getElementById('result-elo');
+  eloEl.textContent = '0 ELO';
+  eloEl.style.color = vipBoostApplied
+    ? (premiumBoostTier === 'vip_plus' ? '#85EBFF' : premiumBoostTier === 'perso' ? '#ff7a45' : 'var(--yellow)')
+    : (myDelta >= 0 ? '#30d158' : 'var(--red)');
+  animateDeltaText(eloEl, myDelta, ' ELO', 1200);
+
+  const reasonEl = document.getElementById('result-reason');
+  if (data.reason === 'disconnect') {
+    reasonEl.textContent = isWinner ? 'Victoire par deconnexion adverse.' : 'Defaite apres deconnexion.';
+  } else if (isDraw) {
+    reasonEl.textContent = 'Partie nulle. Les ELO restent visibles et animes juste dessous.';
+  } else if (vipBoostApplied) {
+    reasonEl.textContent = premiumBoostTier === 'vip_plus'
+      ? 'Boost VIP+ applique sur ton gain Elo.'
+      : premiumBoostTier === 'perso'
+        ? 'Boost Perso applique sur ton gain Elo.'
+        : 'Boost VIP applique sur ton gain Elo.';
+  } else {
+    reasonEl.textContent = `${winnerLabelText} remporte la partie, Elo ajuste en direct.`;
+  }
+
+  const deltaText = (delta) => `${delta >= 0 ? '+' : ''}${delta} Elo`;
+  const formatDuration = (seconds) => {
+    const total = Math.max(0, Number(seconds) || 0);
+    const min = Math.floor(total / 60);
+    const sec = total % 60;
+    return min > 0 ? `${min}m ${String(sec).padStart(2, '0')}s` : `${sec}s`;
+  };
+
+  const metaEl = document.getElementById('result-meta');
+  if (metaEl) {
+    const winnerLabel = isDraw ? 'Nul' : winnerLabelText;
+    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
+    metaEl.innerHTML = `
+      <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
+      <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
+      <div class="result-meta-chip">Mon Elo<strong>${myTransition}</strong></div>
+    `;
+  }
+
+  const summaryEl = document.getElementById('result-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
+        <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
+        <div class="result-player-delta"><strong>${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : '--'}</strong> · ${deltaText(myDelta)}</div>
+      </div>
+      <div class="result-player-box">
+        <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
+        <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
+        <div class="result-player-delta"><strong>${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : '--'}</strong> · ${deltaText(oppDelta)}</div>
+      </div>
+    `;
+  }
+
+  if (Number.isFinite(myBefore) && Number.isFinite(myAfter)) {
+    animateNumber(myBefore, myAfter, (value) => {
+      const el = document.getElementById('result-my-elo');
+      if (el) el.textContent = String(value);
+    }, 1200);
+    animateCardElo(mySide, myBefore, myAfter);
+  }
+  if (Number.isFinite(oppBefore) && Number.isFinite(oppAfter)) {
+    animateNumber(oppBefore, oppAfter, (value) => {
+      const el = document.getElementById('result-opp-elo');
+      if (el) el.textContent = String(value);
+    }, 1200);
+    animateCardElo(oppSide, oppBefore, oppAfter);
+  }
+
+  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  document.getElementById('result-overlay').classList.add('show');
+  sessionStorage.removeItem('match');
+  if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
+}
+
 let iaMode = false;
 let iaGrid = [];
 let iaDifficulty = 'hard';
