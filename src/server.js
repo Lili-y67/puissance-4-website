@@ -14,6 +14,7 @@ const ipToPlayers  = new Map();
 const playerToIp   = new Map(); 
 const onlineSockets = new Map();
 const visitorSockets = new Map();
+let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -80,6 +81,15 @@ function getPresenceCounts() {
     visitors,
     totalPresent: onlinePlayers + visitors,
   };
+}
+
+function broadcastPresenceCounts(force = false) {
+  const counts = getPresenceCounts();
+  const signature = `${counts.onlinePlayers}:${counts.visitors}:${counts.totalPresent}`;
+  if (!force && signature === lastPresenceSignature) return counts;
+  lastPresenceSignature = signature;
+  io.emit('presence_counts', counts);
+  return counts;
 }
 
 function parseSqliteDateMs(value) {
@@ -3575,6 +3585,7 @@ app.get('/api/stats/weekly', (_, res) => {
 });
 
 io.on('connection', socket => {
+  socket.emit('presence_counts', getPresenceCounts());
 
   socket.on('join_live', () => {
     socket.join('live');
@@ -3582,7 +3593,11 @@ io.on('connection', socket => {
 
   socket.on('visitor_presence', ({ visitorId } = {}) => {
     if (socket.playerId) return;
+    const before = `${getPresenceCounts().onlinePlayers}:${getPresenceCounts().visitors}`;
     registerVisitorSocket(socket, visitorId);
+    const afterCounts = getPresenceCounts();
+    const after = `${afterCounts.onlinePlayers}:${afterCounts.visitors}`;
+    if (before !== after) broadcastPresenceCounts();
   });
 
   socket.on('identify', ({ playerId, token }) => {
@@ -3608,6 +3623,7 @@ io.on('connection', socket => {
     onlineSockets.get(socket.playerId).add(socket.id);
     rQ.updateLastSeen.run(Date.now(), socket.playerId);
     socket.emit('identified', sanitize(player));
+    broadcastPresenceCounts();
   });
 
   // Heartbeat de prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsence (pages hors jeu)
@@ -3805,6 +3821,7 @@ io.on('connection', socket => {
   socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
+    const before = `${getPresenceCounts().onlinePlayers}:${getPresenceCounts().visitors}`;
     unregisterVisitorSocket(socket);
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
@@ -3815,6 +3832,9 @@ io.on('connection', socket => {
         if (socks.size === 0) onlineSockets.delete(socket.playerId);
       }
     }
+    const afterCounts = getPresenceCounts();
+    const after = `${afterCounts.onlinePlayers}:${afterCounts.visitors}`;
+    if (before !== after) broadcastPresenceCounts();
     // Nettoyer la map IP si plus de socket actif pour ce joueur
     if (socket.playerId && socket.clientIp) {
       const sameIpSockets = [...io.sockets.sockets.values()]

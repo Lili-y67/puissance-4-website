@@ -2694,31 +2694,34 @@ async function refreshSiteStats() {
     const res = await fetch('/api/site-stats', { cache: 'no-store' });
     if (!res.ok) return;
     const data = await res.json();
-    const onlineBadge = document.getElementById('site-online-badge');
-    const onlineCount = document.getElementById('site-online-count');
-    const gamesBadge = document.getElementById('site-games-badge');
-    const gamesCount = document.getElementById('site-games-count');
-    const visitorBadge = document.getElementById('site-visitor-badge');
-    const visitorCount = document.getElementById('site-visitor-count');
-    const registeredBadge = document.getElementById('site-registered-badge');
-    const registeredCount = document.getElementById('site-registered-count');
-    if (onlineBadge && onlineCount) {
-      onlineCount.textContent = String(Math.max(0, Number(data.onlinePlayers ?? data.online) || 0));
-    }
-    if (gamesBadge && gamesCount) {
-      const activeGames = Math.max(0, Number(data.activeGames) || 0);
-      gamesCount.textContent = String(activeGames);
-    }
-    if (visitorBadge && visitorCount) {
-      visitorCount.textContent = String(Math.max(0, Number(data.visitors) || 0));
-    }
-    if (registeredBadge && registeredCount) {
-      registeredCount.textContent = String(Math.max(0, Number(data.registeredPlayers) || 0));
-    }
+    applySitePresenceCounts(data);
+    applySiteStatsSnapshot(data);
     currentGlobalBoost = data.boost && data.boost.active ? data.boost : null;
     renderQueueBoostAlert(currentGlobalBoost);
     renderPublicTournamentNotice(data.publicTournament || null);
   } catch (_) {}
+}
+
+function applySitePresenceCounts(data = {}) {
+  const onlineCount = document.getElementById('site-online-count');
+  const visitorCount = document.getElementById('site-visitor-count');
+  if (onlineCount) {
+    onlineCount.textContent = String(Math.max(0, Number(data.onlinePlayers ?? data.online) || 0));
+  }
+  if (visitorCount) {
+    visitorCount.textContent = String(Math.max(0, Number(data.visitors) || 0));
+  }
+}
+
+function applySiteStatsSnapshot(data = {}) {
+  const gamesCount = document.getElementById('site-games-count');
+  const registeredCount = document.getElementById('site-registered-count');
+  if (gamesCount) {
+    gamesCount.textContent = String(Math.max(0, Number(data.activeGames) || 0));
+  }
+  if (registeredCount) {
+    registeredCount.textContent = String(Math.max(0, Number(data.registeredPlayers) || 0));
+  }
 }
 
 function renderQueueBoostAlert(boost) {
@@ -2750,6 +2753,10 @@ function stopSiteStatsPolling() {
   clearInterval(siteStatsInterval);
   siteStatsInterval = null;
 }
+
+window.addEventListener('p4:presence-counts', (event) => {
+  applySitePresenceCounts(event.detail || {});
+});
 
 function showLoggedInView(p) {
   // Masquer le formulaire login, montrer un Ã©cran "prÃªt Ã  jouer"

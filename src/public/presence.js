@@ -135,6 +135,12 @@
       }
     });
 
+    socket.on('presence_counts', (counts = {}) => {
+      try {
+        window.dispatchEvent(new CustomEvent('p4:presence-counts', { detail: counts }));
+      } catch (e) {}
+    });
+
     socket.on('identified', () => {
       if (typeof window._reloadStatus === 'function') {
         setTimeout(window._reloadStatus, 100);

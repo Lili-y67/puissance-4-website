@@ -734,10 +734,10 @@ body{
 
   <div class="footer">
     <div class="footer-note" id="updatedAt">Mise a jour: -</div>
-    <div class="footer-note">Les statistiques sont rechargees toutes les 30 secondes.</div>
+    <div class="footer-note">Les statistiques se rafraichissent en live pour la presence, et toutes les 15 secondes pour le reste.</div>
   </div>
 </div>
-
+<script src="/socket.io/socket.io.js"></script>
 <script>
 const numberFormat = new Intl.NumberFormat('fr-FR');
 
@@ -870,6 +870,33 @@ function populate(data, weekly) {
   document.querySelectorAll('.loading-sheen').forEach(el => el.classList.remove('loading-sheen'));
 }
 
+function applyLivePresenceCounts(data = {}) {
+  setText('onlinePlayers', data.onlinePlayers ?? data.online ?? 0);
+  setText('visitorCount', data.visitors || 0);
+  const totalPresent = Math.max(Number(data.totalPresent || ((data.onlinePlayers || data.online || 0) + (data.visitors || 0))) || 0, 0);
+  const onlinePlayers = Math.max(Number(data.onlinePlayers ?? data.online) || 0, 0);
+  const heroData = {
+    onlinePlayers,
+    visitors: Math.max(Number(data.visitors) || 0, 0),
+    queuePlayers: Number(document.getElementById('queuePlayers')?.textContent || 0),
+    globalBoostActive: false,
+    globalBoostMultiplier: 1,
+    coinBoostActive: false,
+    coinBoostMultiplier: 1,
+    totalPresent
+  };
+  const currentHeroBadges = document.getElementById('hero-badges');
+  if (currentHeroBadges) {
+    const onlineBadge = currentHeroBadges.querySelector('.hero-badge.green span:last-child');
+    const visitorBadge = currentHeroBadges.querySelector('.hero-badge.pink span:last-child');
+    if (onlineBadge) onlineBadge.textContent = `${heroData.onlinePlayers} joueurs en ligne`;
+    if (visitorBadge) visitorBadge.textContent = `${heroData.visitors} visiteurs`;
+  }
+  const onlineRatio = ratio(heroData.onlinePlayers, Math.max(totalPresent, 1));
+  document.getElementById('online-ratio-label').textContent = `${onlineRatio}%`;
+  setFill('online-ratio-fill', onlineRatio);
+}
+
 async function loadStats() {
   try {
     const [overviewRes, weeklyRes] = await Promise.all([
@@ -887,6 +914,44 @@ async function loadStats() {
 
 loadStats();
 setInterval(loadStats, 15000);
+
+(function initPresenceLive() {
+  if (!window.io) return;
+  const socket = window.io('/', {
+    transports: ['polling'],
+    reconnection: true,
+    reconnectionDelay: 3000,
+    reconnectionAttempts: 20,
+  });
+  const visitorStorageKey = 'p4_visitor_id';
+  function getVisitorId() {
+    try {
+      let value = localStorage.getItem(visitorStorageKey);
+      if (value) return value;
+      value = (window.crypto && typeof window.crypto.randomUUID === 'function')
+        ? window.crypto.randomUUID()
+        : `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(visitorStorageKey, value);
+      return value;
+    } catch (e) {
+      return `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  }
+  const token = localStorage.getItem('token');
+  let playerId = null;
+  try {
+    const raw = localStorage.getItem('player') || sessionStorage.getItem('player');
+    playerId = raw ? JSON.parse(raw).id : null;
+  } catch (e) {
+    playerId = null;
+  }
+  const visitorId = getVisitorId();
+  socket.on('connect', () => {
+    if (token && playerId) socket.emit('identify', { playerId, token });
+    else socket.emit('visitor_presence', { visitorId });
+  });
+  socket.on('presence_counts', (counts = {}) => applyLivePresenceCounts(counts));
+})();
 </script>
 </body>
 </html>
