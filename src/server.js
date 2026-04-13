@@ -3480,7 +3480,7 @@ function getWeeklyStats() {
   const now = Date.now();
   const currentWeekStart = getWeekStartMs(now);
   const buckets = [];
-  for (let i = 3; i >= 0; i -= 1) {
+  for (let i = 1; i >= 0; i -= 1) {
     const startMs = currentWeekStart - (i * 7 * 24 * 60 * 60 * 1000);
     const endMs = startMs + (7 * 24 * 60 * 60 * 1000);
     const key = formatShortFrenchDate(startMs);

@@ -641,7 +641,7 @@ body{
           <h2 class="panel-title">Activite du serveur</h2>
           <div class="panel-copy">Volume, cadence de jeu, file d attente et sessions contre le bot.</div>
         </div>
-        <div class="panel-chip"><span>&#9201;</span><span>Cycle 30s</span></div>
+        <div class="panel-chip"><span>&#9201;</span><span>Cycle 15s</span></div>
       </div>
       <div class="metrics">
         <div class="metric"><div class="top"><span class="name">Total parties</span><span class="emoji">&#127918;</span></div><div class="num" id="totalGames">-</div><div class="hint">Toutes parties confondues.</div></div>
@@ -675,16 +675,16 @@ body{
       <div class="panel-head">
         <div>
           <h2 class="panel-title">Rythme hebdomadaire</h2>
-          <div class="panel-copy">Evolution sur les quatre dernieres semaines: inscriptions, parties et joueurs actifs.</div>
+          <div class="panel-copy">Evolution sur les deux dernieres semaines: inscriptions, parties et joueurs actifs.</div>
         </div>
-        <div class="panel-chip"><span>&#128198;</span><span>4 semaines</span></div>
+        <div class="panel-chip"><span>&#128198;</span><span>2 semaines</span></div>
       </div>
       <div class="weekly-kpis">
         <div class="metric"><div class="top"><span class="name">Semaine courante</span><span class="emoji">&#127918;</span></div><div class="num" id="weeklyGames">-</div><div class="hint">Parties creees cette semaine.</div></div>
         <div class="metric"><div class="top"><span class="name">Inscriptions semaine</span><span class="emoji">&#10024;</span></div><div class="num" id="weeklyRegistrations">-</div><div class="hint">Nouveaux comptes cette semaine.</div></div>
         <div class="metric"><div class="top"><span class="name">Joueurs actifs</span><span class="emoji">&#128101;</span></div><div class="num" id="weeklyActivePlayers">-</div><div class="hint">Joueurs uniques vus en partie.</div></div>
         <div class="metric"><div class="top"><span class="name">Moyenne / jour</span><span class="emoji">&#128200;</span></div><div class="num" id="weeklyGamesPerDay">-</div><div class="hint">Cadence moyenne de parties quotidiennes.</div></div>
-        <div class="metric"><div class="top"><span class="name">Moyenne joueurs / semaine</span><span class="emoji">&#127919;</span></div><div class="num" id="averageWeeklyActivePlayers">-</div><div class="hint">Moyenne des joueurs actifs sur 4 semaines.</div></div>
+        <div class="metric"><div class="top"><span class="name">Moyenne joueurs / semaine</span><span class="emoji">&#127919;</span></div><div class="num" id="averageWeeklyActivePlayers">-</div><div class="hint">Moyenne des joueurs actifs sur 2 semaines.</div></div>
         <div class="metric"><div class="top"><span class="name">Pic de parties</span><span class="emoji">&#128293;</span></div><div class="num" id="peakGamesWeekValue">-</div><div class="hint" id="peakGamesWeekLabel">Meilleure semaine parties.</div></div>
         <div class="metric"><div class="top"><span class="name">Pic d inscriptions</span><span class="emoji">&#127881;</span></div><div class="num" id="peakRegistrationsWeekValue">-</div><div class="hint" id="peakRegistrationsWeekLabel">Meilleure semaine inscriptions.</div></div>
       </div>
@@ -886,7 +886,7 @@ async function loadStats() {
 }
 
 loadStats();
-setInterval(loadStats, 30000);
+setInterval(loadStats, 15000);
 </script>
 </body>
 </html>

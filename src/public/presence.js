@@ -218,7 +218,7 @@
       } else {
         socket.emit('visitor_presence', { visitorId });
       }
-    }, 25000);
+    }, 15000);
 
     socket.on('disconnect', () => clearInterval(heartbeat));
     window._presenceSocket = socket;
