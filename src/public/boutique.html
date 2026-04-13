@@ -69,16 +69,11 @@ body{
 .category-tab{padding:10px 16px;border-radius:999px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.03);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .category-tab.active{background:rgba(255,45,85,.14);border-color:rgba(255,45,85,.32);color:#fff}
 .subsection-label{margin:4px 0 2px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
-<<<<<<< HEAD
 .boosters-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
 .booster-column{display:flex;flex-direction:column;gap:10px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .card{position:relative;overflow:hidden;min-height:470px;padding:22px;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 58px rgba(0,0,0,.30);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.14);box-shadow:0 36px 82px rgba(0,0,0,.38)}
-=======
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.card{position:relative;overflow:hidden;min-height:470px;padding:22px;border-radius:26px;background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;box-shadow:0 22px 44px rgba(0,0,0,.26)}
->>>>>>> parent of b23b155 (Fix 3.2.0 -> Fix fin de game et api)
 .card::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(145deg, rgba(255,255,255,.04), transparent 35%)}
 .card>*{position:relative;z-index:1}
 .card.vip{border-color:rgba(255,214,10,.26)}
@@ -222,8 +217,58 @@ body{
 .status-line span{font-size:13px;color:var(--muted)}
 .status-line strong{font-family:'Barlow Condensed',sans-serif;font-size:24px}
 .note{font-size:13px;color:var(--muted);line-height:1.7}
-@media (max-width:980px){.hero-inner,.grid{grid-template-columns:1fr}.hero-title{font-size:54px}}
-@media (max-width:640px){.page{padding:20px 14px 56px}.hero{padding:24px}.hero-title{font-size:42px}.section-title{font-size:32px}.card{min-height:auto}.coins-panel{align-items:flex-start;flex-direction:column}.config-bullets{grid-template-columns:1fr}}
+@media (max-width:980px){
+  .hero-inner,.grid,.boosters-row{grid-template-columns:1fr}
+  .hero-title{font-size:54px}
+}
+@media (max-width:760px){
+  .nav{padding:12px 14px}
+  .nav-actions{width:100%}
+  .nav-actions .btn{flex:1 1 140px}
+  .hero{padding:26px 20px;border-radius:28px}
+  .hero-copy{font-size:14px;line-height:1.65}
+  .hero-pills{gap:8px}
+  .hero-side{padding:18px}
+  .category-tabs{width:100%}
+  .category-tab{flex:1 1 140px;text-align:center}
+  .panel{padding:20px;border-radius:24px}
+  .preview-demo-row,
+  .preview-demo-gain{grid-template-columns:1fr}
+  .preview-demo-arrow{transform:none;justify-self:center}
+  .preview-demo-col.right,
+  .preview-demo-gain-block.right{text-align:left;align-items:flex-start}
+}
+@media (max-width:640px){
+  .page{padding:20px 14px 56px}
+  .hero{padding:22px 16px}
+  .hero-title{font-size:42px}
+  .section-title{font-size:32px}
+  .card{min-height:auto;padding:18px 16px;border-radius:22px}
+  .coins-panel{align-items:flex-start;flex-direction:column}
+  .coins-left{width:100%}
+  .coin-badge{width:100%;justify-content:center}
+  .hero-side-item{align-items:flex-start;flex-direction:column}
+  .config-bullets{grid-template-columns:1fr}
+  .card-actions{flex-direction:column}
+  .card-actions .cta,
+  .preview-btn{width:100%}
+}
+@media (max-width:460px){
+  .page{padding:16px 10px 48px}
+  .logo{font-size:26px}
+  .btn{width:100%}
+  .hero-title{font-size:34px}
+  .hero-kicker{font-size:11px;letter-spacing:3px}
+  .section-title{font-size:26px}
+  .section-sub,.hero-copy,.note{font-size:13px}
+  .pill{width:100%;justify-content:center}
+  .category-tabs{gap:8px}
+  .category-tab{width:100%}
+  .coins-value{font-size:32px}
+  .duration,.config-value{font-size:42px}
+  .price,.stat-line-left strong{font-size:30px}
+  .preview-modal{padding:18px 14px;border-radius:20px}
+}
 </style>
 </head>
 <body>
