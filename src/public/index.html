@@ -1579,12 +1579,17 @@ html, body {
     gap: 10px;
   }
   .dock-links{
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+  }
+  .dock-link{
+    width: 100%;
   }
   .hero {
     width: 100%;
     margin-bottom: 28px;
     gap: 6px;
+    padding: 18px 14px 18px;
+    border-radius: 20px;
   }
   .logo-eyebrow {
     font-size: 10px;
@@ -1606,8 +1611,10 @@ html, body {
   }
   .site-online-badge,
   .site-games-badge,
+  .site-visitor-badge,
   .site-registered-badge {
-    max-width: 92vw;
+    width: 100%;
+    max-width: 100%;
     justify-content: center;
     text-align: center;
     padding: 7px 10px;
@@ -1626,6 +1633,38 @@ html, body {
   .card {
     max-width: 100%;
     padding: 16px 12px;
+  }
+  .hero-panel-card{
+    padding: 12px;
+  }
+  .hero-panel-value{
+    font-size: 22px;
+  }
+  .hero-panel-copy{
+    font-size: 11px;
+  }
+  .hero-ticker-track{
+    padding: 10px;
+    gap: 14px;
+  }
+  .hero-ticker-item{
+    font-size: 10px;
+  }
+  .stats-strip{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+  }
+  .stat-item{
+    min-width: 0;
+    padding: 10px 6px;
+  }
+  .stat-val{
+    font-size: 18px;
+  }
+  .stat-key{
+    font-size: 9px;
+    letter-spacing: 1px;
   }
   .card-topline-badge{
     min-height: 40px;
@@ -1738,6 +1777,38 @@ html, body {
   }
   .queue-actions-row .btn{
     width: 100%;
+  }
+  .dock-brand,
+  .dock-brand-copy{
+    width: 100%;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
+  }
+  .hero {
+    align-items: stretch;
+  }
+  .logo,
+  .logo-tagline,
+  .logo-eyebrow{
+    width: 100%;
+    text-align: center;
+    align-self: center;
+  }
+  .hero-copy{
+    text-align: center;
+  }
+  .hero-stat-cluster{
+    width: 100%;
+    justify-content: center;
+  }
+  .site-online-badge,
+  .site-games-badge,
+  .site-visitor-badge,
+  .site-registered-badge{
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
 }
 

@@ -8,51 +8,194 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,0.06);--text:#eeeef5;--muted:rgba(238,238,245,0.38);--red:#ff2d55;--green:#30d158;--yellow:#ffd60a;--orange:#ff9f0a;--blue:#4c6ef5}
-html,body{min-height:100%;background:var(--bg); background-attachment: fixed;color:var(--text);font-family:'Barlow',sans-serif}
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px}
-.scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
-.page{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+:root{
+  --bg:#06060e;
+  --surface:#0f1020;
+  --surface2:#17192f;
+  --surface3:#1e2240;
+  --border:rgba(255,255,255,0.08);
+  --border-strong:rgba(255,255,255,0.12);
+  --text:#f4f5ff;
+  --muted:rgba(244,245,255,0.54);
+  --red:#ff2d55;
+  --green:#30d158;
+  --yellow:#ffd60a;
+  --orange:#ff9f0a;
+  --blue:#85a7ff;
+  --cyan:#85EBFF;
+  --shadow:0 28px 70px rgba(0,0,0,0.34);
+}
+html,body{
+  min-height:100%;
+  background:
+    radial-gradient(circle at 10% 12%, rgba(255,45,85,.12), transparent 22%),
+    radial-gradient(circle at 86% 18%, rgba(133,235,255,.10), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(255,214,10,.07), transparent 28%),
+    var(--bg);
+  background-attachment: fixed;
+  color:var(--text);
+  font-family:'Barlow',sans-serif;
+}
+.bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:48px 48px;
+  opacity:.8;
+}
+.scanlines{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px)
+}
+.page{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:30px 18px 72px}
 
 /* Login */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;z-index:2}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:100%;max-width:380px}
-.logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-align:center;margin-bottom:24px;color:var(--text)}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;z-index:2;padding:18px}
+.login-card{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.018)), var(--surface);
+  border:1px solid var(--border);
+  border-radius:28px;
+  padding:42px 34px;
+  width:100%;
+  max-width:420px;
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(10px)
+}
+.logo{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:3px;text-transform:uppercase;text-align:center;margin-bottom:24px;color:var(--text)}
 .logo span{color:var(--red)}
 h2{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:20px}
-input[type=password],input[type=text]{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;transition:border-color 0.2s;margin-bottom:12px}
-input:focus{border-color:rgba(255,255,255,0.2)}
-.btn{width:100%;padding:13px;border-radius:10px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;transition:opacity 0.2s}
-.btn-red{background:var(--red);color:#fff}.btn-red:hover{opacity:0.85}
-.btn-sm{padding:6px 12px;font-size:12px;font-weight:700;letter-spacing:1px;border-radius:7px;border:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;white-space:nowrap;transition:opacity 0.2s}
-.btn-sm:hover{opacity:0.8}
-.error-msg{background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.3);color:var(--red);border-radius:8px;padding:10px;font-size:13px;text-align:center;margin-bottom:12px}
+input[type=password],input[type=text]{
+  width:100%;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 14px;
+  color:var(--text);
+  font-size:15px;
+  font-family:'Barlow',sans-serif;
+  outline:none;
+  transition:border-color .2s, box-shadow .2s, background .2s;
+  margin-bottom:12px
+}
+input:focus{
+  border-color:rgba(133,235,255,.38);
+  box-shadow:0 0 0 4px rgba(133,235,255,.08);
+  background:rgba(255,255,255,.05)
+}
+.btn{
+  width:100%;
+  padding:14px;
+  border-radius:14px;
+  border:none;
+  cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease
+}
+.btn:hover{transform:translateY(-1px)}
+.btn-red{background:linear-gradient(135deg, #ff2d55, #ff4d73);color:#fff;box-shadow:0 16px 34px rgba(255,45,85,.22)}
+.btn-red:hover{opacity:0.92}
+.btn-sm{
+  padding:8px 13px;
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:1px;
+  border-radius:10px;
+  border:none;
+  cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;
+  white-space:nowrap;
+  transition:transform .16s ease, opacity .16s ease, box-shadow .16s ease
+}
+.btn-sm:hover{opacity:0.92;transform:translateY(-1px)}
+.error-msg{
+  background:rgba(255,45,85,0.1);
+  border:1px solid rgba(255,45,85,0.3);
+  color:var(--red);
+  border-radius:12px;
+  padding:12px;
+  font-size:13px;
+  text-align:center;
+  margin-bottom:12px
+}
 
 /* Panel */
 #panel{display:none}
-.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:10px}
-.nav-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
+.nav{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:24px;
+  flex-wrap:wrap;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:24px;
+  border:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.016));
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(10px)
+}
+.nav-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
 .nav-title span{color:var(--red)}
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
-.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900}
-.stat-lbl{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018)), var(--surface);
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:18px 16px;
+  text-align:center;
+  box-shadow:0 18px 42px rgba(0,0,0,.24)
+}
+.stat-card::before{
+  content:'';
+  position:absolute;
+  inset:auto -18px -28px auto;
+  width:90px;height:90px;border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.10), transparent 70%)
+}
+.stat-val{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;line-height:.92}
+.stat-lbl{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:6px}
 
 /* Search */
 .search-wrap{margin-bottom:16px}
-.search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 16px;color:var(--text);font-size:14px;font-family:'Barlow',sans-serif;outline:none}
-.search-input:focus{border-color:rgba(255,255,255,0.15)}
+.search-input{
+  width:100%;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:11px 16px;
+  color:var(--text);
+  font-size:14px;
+  font-family:'Barlow',sans-serif;
+  outline:none;
+  transition:border-color .2s, box-shadow .2s, background .2s
+}
+.search-input:focus{
+  border-color:rgba(133,235,255,.32);
+  box-shadow:0 0 0 4px rgba(133,235,255,.08);
+  background:rgba(255,255,255,.05)
+}
 
 /* Table */
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.table-wrap{
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)), var(--surface);
+  border:1px solid var(--border);
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:var(--shadow)
+}
 table{width:100%;border-collapse:collapse}
-thead tr{background:var(--surface2);border-bottom:1px solid var(--border)}
-th{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:12px 14px;text-align:left}
-td{padding:11px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+thead tr{background:rgba(255,255,255,.035);border-bottom:1px solid var(--border)}
+th{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:14px 16px;text-align:left}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,0.02)}
+tr:hover td{background:rgba(255,255,255,0.03)}
 
-.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase}
 .badge-user{background:rgba(255,255,255,0.06);color:var(--muted)}
 .badge-vip{background:rgba(255,214,10,0.14);color:var(--yellow);border:1px solid rgba(255,214,10,0.3)}
 .badge-moderator{background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3)}
@@ -65,9 +208,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 .actions{display:flex;gap:6px;flex-wrap:wrap}
 
 /* Modal */
-.modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;width:100%;max-width:380px}
-.modal h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+.modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(3,4,10,0.76);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.018)), var(--surface);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:28px;
+  width:100%;
+  max-width:430px;
+  box-shadow:0 30px 90px rgba(0,0,0,.45)
+}
+.modal h3{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px}
 .modal-btns{display:flex;gap:8px;margin-top:16px}
 
 /* Mobile */
@@ -167,13 +318,14 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   padding: 10px;
 }
 .mobile-card {
-  background: var(--surface2);
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.016)), var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 18px;
+  padding: 14px;
   display: flex;
   align-items: center;
   gap: 12px;
+  box-shadow:0 16px 36px rgba(0,0,0,.22);
 }
 .mobile-card-info { flex: 1; min-width: 0; }
 .mobile-card-pseudo {
@@ -186,9 +338,41 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 }
 .mobile-card-elo {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 20px; font-weight: 900; color: var(--yellow);
+  font-size: 24px; font-weight: 900; color: var(--yellow);
   flex-shrink: 0;
 }
+.admin-section-title{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:2px;
+  text-transform:uppercase
+}
+.admin-section-copy{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px
+}
+.pill-tabs{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.pill-tab{
+  padding:9px 14px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.04);
+  color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease
+}
+.pill-tab:hover{transform:translateY(-1px);border-color:var(--border-strong)}
+.admin-stack{display:flex;flex-direction:column;gap:20px}
 </style>
 </head>
 <body>
@@ -219,22 +403,23 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 
   <div class="stats-row" id="stats-row"></div>
 
-  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+  <div class="admin-stack">
+  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Boosts</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Gestion du boost ELO global, du boost coins et suivi des boosts VIP actifs.</div>
+        <div class="admin-section-title">Boosts</div>
+        <div class="admin-section-copy">Gestion du boost ELO global, du boost coins et suivi des boosts VIP actifs.</div>
       </div>
       <div id="boost-status" style="font-size:13px;color:var(--muted);"></div>
     </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:14px;">
-      <button id="boost-tab-global" onclick="switchBoostTab('global')"
-        style="padding:8px 14px;border-radius:8px;border:none;background:var(--yellow);color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+    <div class="pill-tabs" style="margin-bottom:14px;">
+      <button id="boost-tab-global" class="pill-tab" onclick="switchBoostTab('global')"
+        style="background:var(--yellow);color:#000;border-color:rgba(255,214,10,.36);">
         GLOBAL
       </button>
-      <button id="boost-tab-vip" onclick="switchBoostTab('vip')"
-        style="padding:8px 14px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+      <button id="boost-tab-vip" class="pill-tab" onclick="switchBoostTab('vip')"
+        style="background:rgba(255,255,255,0.05);color:var(--muted);">
         VIP ACTIFS
       </button>
     </div>
@@ -283,11 +468,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 
-  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Alerte serveur</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Active ce panneau juste avant un redeploiement ou un reset Railway pour prevenir les joueurs.</div>
+        <div class="admin-section-title">Alerte serveur</div>
+        <div class="admin-section-copy">Active ce panneau juste avant un redeploiement ou un reset Railway pour prevenir les joueurs.</div>
       </div>
       <div id="system-status-preview" style="font-size:13px;color:var(--muted);"></div>
     </div>
@@ -303,11 +488,11 @@ tr:hover td{background:rgba(255,255,255,0.02)}
     </div>
   </div>
 
-  <div class="table-wrap" style="padding:16px 18px;margin-bottom:20px;">
+  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;">Sauvegarde bases</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px;">Télécharge la base SQLite principale et ses fichiers WAL / SHM séparément.</div>
+        <div class="admin-section-title">Sauvegarde bases</div>
+        <div class="admin-section-copy">Télécharge la base SQLite principale et ses fichiers WAL / SHM séparément.</div>
       </div>
       <div id="backup-status-preview" style="font-size:13px;color:var(--muted);"></div>
     </div>
@@ -315,17 +500,17 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
 
   <!-- Onglets Joueurs / Parties -->
-  <div style="display:flex;gap:6px;margin-bottom:14px;">
-    <button id="tab-players-btn" onclick="switchAdminTab('players')"
-      style="padding:8px 16px;border-radius:8px;border:none;background:var(--red);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+  <div class="pill-tabs" style="margin-bottom:14px;">
+    <button id="tab-players-btn" class="pill-tab" onclick="switchAdminTab('players')"
+      style="background:var(--red);color:#fff;border-color:rgba(255,45,85,.34);">
       Joueurs
     </button>
-    <button id="tab-games-btn" onclick="switchAdminTab('games')"
-      style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+    <button id="tab-games-btn" class="pill-tab" onclick="switchAdminTab('games')"
+      style="background:rgba(255,255,255,0.05);color:var(--muted);">
       Parties
     </button>
-    <button id="tab-tournaments-btn" onclick="switchAdminTab('tournaments')"
-      style="padding:8px 16px;border-radius:8px;border:none;background:rgba(255,255,255,0.05);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;">
+    <button id="tab-tournaments-btn" class="pill-tab" onclick="switchAdminTab('tournaments')"
+      style="background:rgba(255,255,255,0.05);color:var(--muted);">
       Tournois
     </button>
   </div>
@@ -379,6 +564,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   </div>
   <div class="mobile-list" id="mobile-list"></div>
   </div><!-- /admin-players-section -->
+  </div>
 </div>
 
 <script>
