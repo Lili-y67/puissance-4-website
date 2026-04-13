@@ -121,6 +121,9 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   .spec-player.right .spec-player-info{text-align:left}
   .live-board{gap:8px;padding:12px}
   .analysis-grid{grid-template-columns:repeat(2,1fr)}
+  .spec-top{flex-direction:column;align-items:stretch}
+  .spec-top > *{width:100%}
+  .back-btn{justify-content:center}
 }
 @media (max-width:480px){
   .page{padding:16px 10px 34px}
@@ -133,12 +136,15 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   .spec-top{align-items:stretch}
   .back-btn{justify-content:center;width:100%}
   .spec-title{font-size:28px}
+  .spec-sub{line-height:1.5}
   .spec-avatar{width:46px;height:46px;font-size:20px}
   .spec-pseudo{font-size:18px}
+  .spec-player{padding:10px 12px;border-radius:14px}
   .live-board{gap:6px;padding:10px;border-radius:18px}
   .meta-pill{width:100%;text-align:center}
   .analysis-grid{grid-template-columns:1fr}
   .analysis-stat-value{font-size:26px}
+  .card-footer{flex-direction:column;align-items:flex-start;gap:6px}
 }
 </style>
 </head>

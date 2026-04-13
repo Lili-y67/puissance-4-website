@@ -106,8 +106,56 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .field input:focus{border-color:rgba(255,45,85,.35)}
 .full{grid-column:1/-1}
 .hidden{display:none!important}
-@media (max-width:960px){.hero,.detail-wrap,.grid{grid-template-columns:1fr}.hero-stats,.meta-grid{grid-template-columns:repeat(2,1fr)}}
-@media (max-width:720px){.page{padding:20px 12px 42px}.title{font-size:44px}.summary-meta,.hero-stats,.meta-grid,.form-grid{grid-template-columns:1fr}.stand-row{grid-template-columns:44px minmax(0,1fr) 68px 62px 62px 62px;padding:10px}.stand-rank,.stand-num{font-size:20px}.search{max-width:none;min-width:0;width:100%}}
+@media (max-width:960px){
+  .hero,.detail-wrap,.grid{grid-template-columns:1fr}
+  .hero-stats,.meta-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:720px){
+  .page{padding:20px 12px 42px}
+  .nav{align-items:stretch}
+  .logo{text-align:center;width:100%}
+  .nav-actions{width:100%;justify-content:center}
+  .nav-btn{flex:1 1 140px;text-align:center}
+  .title{font-size:44px}
+  .toolbar,
+  .toolbar-left,
+  .toolbar-right{flex-direction:column;align-items:stretch}
+  .toolbar-left > *,
+  .toolbar-right > *{width:100%}
+  .summary-meta,.hero-stats,.meta-grid,.form-grid{grid-template-columns:1fr}
+  .card-top,
+  .section-title{flex-direction:column;align-items:flex-start}
+  .action-row{flex-direction:column}
+  .action-row > *{width:100%}
+  .password,
+  .search{max-width:none;min-width:0;width:100%}
+  .stand-row{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    padding:12px;
+    gap:10px;
+  }
+  .stand-rank,
+  .stand-player{grid-column:1 / -1}
+  .stand-rank,.stand-num{font-size:20px}
+  .stand-num,
+  .label-center{text-align:left}
+  .queue-box{
+    position:fixed;
+    left:12px;
+    right:12px;
+    bottom:12px;
+    max-width:none;
+    align-self:auto;
+  }
+}
+@media (max-width:460px){
+  .page{padding:16px 10px 96px}
+  .panel,.card,.modal{padding:16px}
+  .title{font-size:36px}
+  .summary-title,.modal-title,.card-name{font-size:24px}
+  .queue-actions{flex-direction:column}
+  .queue-actions > *{width:100%}
+}
 </style>
 </head>
 <body>

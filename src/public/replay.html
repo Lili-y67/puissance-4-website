@@ -227,6 +227,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   .cell .token{inset:3px}
   .accuracy-row{flex-direction:column}
   .analyse-moves{max-height:none}
+  .end-btns{width:100%;flex-direction:column}
+  .end-btns > *{width:100%;justify-content:center}
 }
 @media (max-width: 480px){
   .page{padding:12px 8px 24px}
@@ -238,8 +240,10 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   .analyse-move{padding:10px}
   .am-head{gap:6px}
   .am-metrics{gap:4px}
-  .end-btns{width:100%}
-  .btn-action{width:100%;justify-content:center}
+  .analyse-move{flex-wrap:wrap}
+  .am-num{width:auto}
+  .eval-score{min-width:0;width:100%;text-align:left}
+  .board-inspect-bar{align-items:flex-start;flex-direction:column}
 }
 
 </style>
