@@ -13,6 +13,7 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, Act
 const ipToPlayers  = new Map(); 
 const playerToIp   = new Map(); 
 const onlineSockets = new Map();
+const visitorSockets = new Map();
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
 
@@ -39,6 +40,68 @@ function getTournamentQueue(tournamentId) {
 
 function getOnlineSocketIds(playerId) {
   return [...(onlineSockets.get(Number(playerId)) || new Set())];
+}
+
+function registerVisitorSocket(socket, visitorIdRaw) {
+  const visitorId = String(visitorIdRaw || '').trim().slice(0, 80);
+  if (!visitorId) return;
+  if (socket.visitorId === visitorId) return;
+  unregisterVisitorSocket(socket);
+  socket.visitorId = visitorId;
+  if (!visitorSockets.has(visitorId)) visitorSockets.set(visitorId, new Set());
+  visitorSockets.get(visitorId).add(socket.id);
+}
+
+function unregisterVisitorSocket(socket) {
+  if (!socket?.visitorId) return;
+  const sockets = visitorSockets.get(socket.visitorId);
+  if (sockets) {
+    sockets.delete(socket.id);
+    if (sockets.size === 0) visitorSockets.delete(socket.visitorId);
+  }
+  socket.visitorId = null;
+}
+
+function getVisitorCount() {
+  for (const [visitorId, socketIds] of visitorSockets.entries()) {
+    for (const socketId of [...socketIds]) {
+      if (!io.sockets.sockets.has(socketId)) socketIds.delete(socketId);
+    }
+    if (socketIds.size === 0) visitorSockets.delete(visitorId);
+  }
+  return visitorSockets.size;
+}
+
+function getPresenceCounts() {
+  const onlinePlayers = Number(onlineSockets.size || 0);
+  const visitors = Number(getVisitorCount() || 0);
+  return {
+    onlinePlayers,
+    visitors,
+    totalPresent: onlinePlayers + visitors,
+  };
+}
+
+function parseSqliteDateMs(value) {
+  if (!value) return 0;
+  const raw = String(value).trim();
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const withZone = /Z$|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}Z`;
+  const parsed = Date.parse(withZone);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getWeekStartMs(inputMs) {
+  const d = new Date(inputMs);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.getTime();
+}
+
+function formatShortFrenchDate(inputMs) {
+  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short' }).format(new Date(inputMs));
 }
 
 function getOnlineSocketsForPlayer(playerId) {
@@ -3296,13 +3359,17 @@ app.get('/api/leaderboard/wins', (_, res) => {
   res.json(q.all().map(sanitize));
 });
 app.get('/api/site-stats', (_, res) => {
+  const presence = getPresenceCounts();
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
   const registeredPlayers = db.prepare(`SELECT COUNT(*) as c FROM players`).get()?.c || 0;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get();
   res.json({
-    online: onlineSockets.size,
+    online: presence.onlinePlayers,
+    onlinePlayers: presence.onlinePlayers,
+    visitors: presence.visitors,
+    totalPresent: presence.totalPresent,
     registeredPlayers,
     queue: mm?.queue?.length || 0,
     activeGames,
@@ -3322,6 +3389,7 @@ app.get('/api/site-stats', (_, res) => {
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Socket.io AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 function getStatsOverview() {
+  const presence = getPresenceCounts();
   const registeredPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
   const activeGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'active'`).get()?.c || 0);
   const finishedGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'finished'`).get()?.c || 0);
@@ -3372,7 +3440,9 @@ function getStatsOverview() {
     : 0;
 
   return {
-    onlinePlayers: Number(onlineSockets.size || 0),
+    onlinePlayers: presence.onlinePlayers,
+    visitors: presence.visitors,
+    totalPresent: presence.totalPresent,
     queuePlayers: Number(mm?.q?.length || mm?.queue?.length || 0),
     activeGames,
     finishedGames,
@@ -3406,6 +3476,86 @@ function getStatsOverview() {
   };
 }
 
+function getWeeklyStats() {
+  const now = Date.now();
+  const currentWeekStart = getWeekStartMs(now);
+  const buckets = [];
+  for (let i = 3; i >= 0; i -= 1) {
+    const startMs = currentWeekStart - (i * 7 * 24 * 60 * 60 * 1000);
+    const endMs = startMs + (7 * 24 * 60 * 60 * 1000);
+    const key = formatShortFrenchDate(startMs);
+    buckets.push({
+      key,
+      startMs,
+      endMs,
+      label: `Semaine du ${key}`,
+      registrations: 0,
+      games: 0,
+      finishedGames: 0,
+      activePlayersSet: new Set(),
+    });
+  }
+
+  const firstBucketStartMs = buckets[0]?.startMs || currentWeekStart;
+  const players = db.prepare(`
+    SELECT created_at
+    FROM players
+    WHERE deleted = 0 AND id != ?
+      AND created_at >= datetime(?, 'unixepoch')
+  `).all(BOT_PLAYER_ID, Math.floor(firstBucketStartMs / 1000));
+
+  const games = db.prepare(`
+    SELECT created_at, status, player1_id, player2_id
+    FROM games
+    WHERE created_at >= datetime(?, 'unixepoch')
+  `).all(Math.floor(firstBucketStartMs / 1000));
+
+  for (const row of players) {
+    const createdAtMs = parseSqliteDateMs(row.created_at);
+    const bucket = buckets.find(entry => createdAtMs >= entry.startMs && createdAtMs < entry.endMs);
+    if (bucket) bucket.registrations += 1;
+  }
+
+  for (const row of games) {
+    const createdAtMs = parseSqliteDateMs(row.created_at);
+    const bucket = buckets.find(entry => createdAtMs >= entry.startMs && createdAtMs < entry.endMs);
+    if (!bucket) continue;
+    bucket.games += 1;
+    if (row.status === 'finished') bucket.finishedGames += 1;
+    if (Number(row.player1_id || 0) !== BOT_PLAYER_ID) bucket.activePlayersSet.add(Number(row.player1_id || 0));
+    if (Number(row.player2_id || 0) !== BOT_PLAYER_ID) bucket.activePlayersSet.add(Number(row.player2_id || 0));
+  }
+
+  const series = buckets.map(bucket => ({
+    label: bucket.label,
+    shortLabel: bucket.key,
+    registrations: bucket.registrations,
+    games: bucket.games,
+    finishedGames: bucket.finishedGames,
+    activePlayers: bucket.activePlayersSet.size,
+    averageGamesPerDay: Math.round((bucket.games / 7) * 10) / 10,
+  }));
+
+  const latest = series[series.length - 1] || {
+    registrations: 0,
+    games: 0,
+    finishedGames: 0,
+    activePlayers: 0,
+    averageGamesPerDay: 0,
+  };
+
+  return {
+    currentWeek: latest,
+    peakGamesWeek: series.reduce((best, week) => week.games > best.games ? week : best, series[0] || latest),
+    peakRegistrationsWeek: series.reduce((best, week) => week.registrations > best.registrations ? week : best, series[0] || latest),
+    averageWeeklyActivePlayers: series.length
+      ? Math.round(series.reduce((sum, week) => sum + Number(week.activePlayers || 0), 0) / series.length)
+      : 0,
+    series,
+    updatedAt: Date.now(),
+  };
+}
+
 app.get('/api/stats/overview', (_, res) => {
   try {
     res.json(getStatsOverview());
@@ -3415,10 +3565,24 @@ app.get('/api/stats/overview', (_, res) => {
   }
 });
 
+app.get('/api/stats/weekly', (_, res) => {
+  try {
+    res.json(getWeeklyStats());
+  } catch (error) {
+    console.error('[STATS] weekly:', error.message);
+    res.status(500).json({ error: 'Impossible de charger les statistiques hebdomadaires.' });
+  }
+});
+
 io.on('connection', socket => {
 
   socket.on('join_live', () => {
     socket.join('live');
+  });
+
+  socket.on('visitor_presence', ({ visitorId } = {}) => {
+    if (socket.playerId) return;
+    registerVisitorSocket(socket, visitorId);
   });
 
   socket.on('identify', ({ playerId, token }) => {
@@ -3435,6 +3599,7 @@ io.on('connection', socket => {
     const clientIp = (socket.handshake.headers['x-forwarded-for'] || '').split(',')[0].trim()
                    || socket.handshake.address;
     socket.clientIp = clientIp;
+    unregisterVisitorSocket(socket);
     playerToIp.set(socket.playerId, clientIp);
     if (!ipToPlayers.has(clientIp)) ipToPlayers.set(clientIp, new Set());
     ipToPlayers.get(clientIp).add(socket.playerId);
@@ -3640,6 +3805,7 @@ io.on('connection', socket => {
   socket.on('game_not_found', () => { });
 
   socket.on('disconnect', () => {
+    unregisterVisitorSocket(socket);
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
       rQ.updateLastSeen.run(Date.now(), socket.playerId);

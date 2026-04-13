@@ -510,6 +510,32 @@ html, body {
   box-shadow:0 0 0 4px rgba(133,235,255,0.12);
   animation:badge-pulse-blue 1.95s ease-in-out infinite;
 }
+.site-visitor-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(255,45,85,0.12);
+  border:1px solid rgba(255,45,85,0.24);
+  color:#ff7b95;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 3.5s ease-in-out infinite;
+}
+.site-visitor-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#ff7b95;
+  box-shadow:0 0 0 4px rgba(255,45,85,0.12);
+  animation:badge-pulse-pink 2s ease-in-out infinite;
+}
 .tournament-notice{
   position:fixed;
   left:18px;
@@ -546,6 +572,10 @@ html, body {
 @keyframes badge-pulse-blue{
   0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(133,235,255,0.12);}
   50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(133,235,255,0.08),0 0 14px rgba(133,235,255,0.24);}
+}
+@keyframes badge-pulse-pink{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(255,45,85,0.12);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(255,45,85,0.08),0 0 14px rgba(255,45,85,0.24);}
 }
 
 /* â”€â”€ Board decoration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -1774,11 +1804,15 @@ html, body {
     <div class="hero-stat-cluster">
       <div class="site-online-badge" id="site-online-badge">
       <span class="site-online-dot"></span>
-      <span id="site-online-count">0</span> connectés
+      <span id="site-online-count">0</span> joueurs en ligne
       </div>
       <div class="site-games-badge" id="site-games-badge">
       <span class="site-games-dot"></span>
       <span id="site-games-count">0</span> parties en cours
+      </div>
+      <div class="site-visitor-badge" id="site-visitor-badge">
+      <span class="site-visitor-dot"></span>
+      <span id="site-visitor-count">0</span> visiteurs
       </div>
       <div class="site-registered-badge" id="site-registered-badge">
       <span class="site-registered-dot"></span>
@@ -2664,14 +2698,19 @@ async function refreshSiteStats() {
     const onlineCount = document.getElementById('site-online-count');
     const gamesBadge = document.getElementById('site-games-badge');
     const gamesCount = document.getElementById('site-games-count');
+    const visitorBadge = document.getElementById('site-visitor-badge');
+    const visitorCount = document.getElementById('site-visitor-count');
     const registeredBadge = document.getElementById('site-registered-badge');
     const registeredCount = document.getElementById('site-registered-count');
     if (onlineBadge && onlineCount) {
-      onlineCount.textContent = String(Math.max(0, Number(data.online) || 0));
+      onlineCount.textContent = String(Math.max(0, Number(data.onlinePlayers ?? data.online) || 0));
     }
     if (gamesBadge && gamesCount) {
       const activeGames = Math.max(0, Number(data.activeGames) || 0);
       gamesCount.textContent = String(activeGames);
+    }
+    if (visitorBadge && visitorCount) {
+      visitorCount.textContent = String(Math.max(0, Number(data.visitors) || 0));
     }
     if (registeredBadge && registeredCount) {
       registeredCount.textContent = String(Math.max(0, Number(data.registeredPlayers) || 0));

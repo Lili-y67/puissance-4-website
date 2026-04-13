@@ -5,6 +5,21 @@
 (function () {
   const token = localStorage.getItem('token');
   const playerRaw = localStorage.getItem('player') || sessionStorage.getItem('player');
+  const visitorStorageKey = 'p4_visitor_id';
+
+  function getVisitorId() {
+    try {
+      let value = localStorage.getItem(visitorStorageKey);
+      if (value) return value;
+      value = (window.crypto && typeof window.crypto.randomUUID === 'function')
+        ? window.crypto.randomUUID()
+        : `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(visitorStorageKey, value);
+      return value;
+    } catch (e) {
+      return `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+  }
 
   function ensureSystemBanner() {
     let el = document.getElementById('global-system-status');
@@ -96,15 +111,13 @@
   refreshSystemStatus();
   setInterval(refreshSystemStatus, 10000);
 
-  if (!token || !playerRaw) return;
-
   let playerId;
   try {
-    playerId = JSON.parse(playerRaw).id;
+    playerId = playerRaw ? JSON.parse(playerRaw).id : null;
   } catch (e) {
-    return;
+    playerId = null;
   }
-  if (!playerId) return;
+  const visitorId = getVisitorId();
 
   function initSocket() {
     const socket = window.io('/', {
@@ -115,7 +128,11 @@
     });
 
     socket.on('connect', () => {
-      socket.emit('identify', { playerId, token });
+      if (token && playerId) {
+        socket.emit('identify', { playerId, token });
+      } else {
+        socket.emit('visitor_presence', { visitorId });
+      }
     });
 
     socket.on('identified', () => {
@@ -195,7 +212,12 @@
     });
 
     const heartbeat = setInterval(() => {
-      if (socket.connected) socket.emit('presence_ping');
+      if (!socket.connected) return;
+      if (token && playerId) {
+        socket.emit('presence_ping');
+      } else {
+        socket.emit('visitor_presence', { visitorId });
+      }
     }, 25000);
 
     socket.on('disconnect', () => clearInterval(heartbeat));

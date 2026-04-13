@@ -246,7 +246,7 @@ body{
 }
 .section-grid{
   display:grid;
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:16px;
   margin:18px 0;
 }
@@ -424,6 +424,61 @@ body{
 .progress-fill.cyan{background:linear-gradient(90deg, rgba(113,221,255,.65), #71ddff)}
 .progress-fill.green{background:linear-gradient(90deg, rgba(48,209,88,.7), #30d158)}
 .progress-fill.orange{background:linear-gradient(90deg, rgba(255,159,10,.7), #ff9f0a)}
+.weekly-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+}
+.week-strip{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  margin-top:14px;
+}
+.week-card{
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.06);
+  background:var(--surface-2);
+  padding:16px;
+}
+.week-label{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.week-sub{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+}
+.week-stats{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+.week-stat{
+  border-radius:14px;
+  padding:10px 12px;
+  background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.05);
+}
+.week-stat strong{
+  display:block;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:28px;
+  line-height:.92;
+}
+.week-stat span{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
 .footer{
   display:flex;
   align-items:center;
@@ -460,14 +515,14 @@ body{
 }
 @media (max-width:900px){
   .hero-grid{grid-template-columns:1fr}
-  .metrics,.progress-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .metrics,.progress-grid,.weekly-kpis,.week-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:640px){
   .page{padding:18px 12px 40px}
   .brand{font-size:34px}
   .hero{padding:20px}
   .hero-copy h1{font-size:42px}
-  .section-grid,.metrics,.progress-grid{grid-template-columns:1fr}
+  .section-grid,.metrics,.progress-grid,.weekly-kpis,.week-strip,.week-stats{grid-template-columns:1fr}
   .summary-value{font-size:44px}
   .panel-title{font-size:28px}
 }
@@ -504,7 +559,8 @@ body{
           economie des coins, premium actif et etat global des boosts. La page se met a jour automatiquement.
         </p>
         <div class="hero-badges" id="hero-badges">
-          <span class="hero-badge green"><span>&#128994;</span><span>Chargement online</span></span>
+          <span class="hero-badge green"><span>&#128994;</span><span>Chargement joueurs</span></span>
+          <span class="hero-badge pink"><span>&#127800;</span><span>Chargement visiteurs</span></span>
           <span class="hero-badge cyan"><span>&#128250;</span><span>Lecture live</span></span>
           <span class="hero-badge orange"><span>&#9889;</span><span>Boosts surveilles</span></span>
           <span class="hero-badge pink"><span>&#128200;</span><span>Meta du site</span></span>
@@ -529,7 +585,7 @@ body{
         </div>
         <div class="hero-bars">
           <div class="hero-bar">
-            <div class="hero-bar-head"><span>Activite online</span><strong id="online-ratio-label">0%</strong></div>
+            <div class="hero-bar-head"><span>Joueurs parmi les presents</span><strong id="online-ratio-label">0%</strong></div>
             <div class="hero-track"><div class="hero-fill" id="online-ratio-fill" style="width:0%"></div></div>
           </div>
           <div class="hero-bar">
@@ -554,9 +610,15 @@ body{
     </article>
     <article class="summary-card loading-sheen">
       <div class="summary-icon">&#128994;</div>
-      <div class="summary-label">En ligne</div>
+      <div class="summary-label">Joueurs en ligne</div>
       <div class="summary-value" id="onlinePlayers">-</div>
-      <div class="summary-sub">Presence detectee en temps reel.</div>
+      <div class="summary-sub">Comptes identifies presents maintenant.</div>
+    </article>
+    <article class="summary-card loading-sheen">
+      <div class="summary-icon">&#127800;</div>
+      <div class="summary-label">Visiteurs</div>
+      <div class="summary-value" id="visitorCount">-</div>
+      <div class="summary-sub">Presences non connectees sur le site.</div>
     </article>
     <article class="summary-card loading-sheen">
       <div class="summary-icon">&#127922;</div>
@@ -606,6 +668,28 @@ body{
         <div class="metric"><div class="top"><span class="name">Meilleure precision</span><span class="emoji">&#11088;</span></div><div class="num" id="bestAccuracy">-</div><div class="hint">Le meilleur pic detecte.</div></div>
         <div class="metric"><div class="top"><span class="name">Joueurs suspects</span><span class="emoji">&#9888;</span></div><div class="num" id="suspiciousPlayers">-</div><div class="hint">Profils marques en alerte.</div></div>
         <div class="metric"><div class="top"><span class="name">Parties suspectes</span><span class="emoji">&#128680;</span></div><div class="num" id="suspiciousGames">-</div><div class="hint">Historique des matchs signales.</div></div>
+      </div>
+    </article>
+
+    <article class="panel wide">
+      <div class="panel-head">
+        <div>
+          <h2 class="panel-title">Rythme hebdomadaire</h2>
+          <div class="panel-copy">Evolution sur les quatre dernieres semaines: inscriptions, parties et joueurs actifs.</div>
+        </div>
+        <div class="panel-chip"><span>&#128198;</span><span>4 semaines</span></div>
+      </div>
+      <div class="weekly-kpis">
+        <div class="metric"><div class="top"><span class="name">Semaine courante</span><span class="emoji">&#127918;</span></div><div class="num" id="weeklyGames">-</div><div class="hint">Parties creees cette semaine.</div></div>
+        <div class="metric"><div class="top"><span class="name">Inscriptions semaine</span><span class="emoji">&#10024;</span></div><div class="num" id="weeklyRegistrations">-</div><div class="hint">Nouveaux comptes cette semaine.</div></div>
+        <div class="metric"><div class="top"><span class="name">Joueurs actifs</span><span class="emoji">&#128101;</span></div><div class="num" id="weeklyActivePlayers">-</div><div class="hint">Joueurs uniques vus en partie.</div></div>
+        <div class="metric"><div class="top"><span class="name">Moyenne / jour</span><span class="emoji">&#128200;</span></div><div class="num" id="weeklyGamesPerDay">-</div><div class="hint">Cadence moyenne de parties quotidiennes.</div></div>
+        <div class="metric"><div class="top"><span class="name">Moyenne joueurs / semaine</span><span class="emoji">&#127919;</span></div><div class="num" id="averageWeeklyActivePlayers">-</div><div class="hint">Moyenne des joueurs actifs sur 4 semaines.</div></div>
+        <div class="metric"><div class="top"><span class="name">Pic de parties</span><span class="emoji">&#128293;</span></div><div class="num" id="peakGamesWeekValue">-</div><div class="hint" id="peakGamesWeekLabel">Meilleure semaine parties.</div></div>
+        <div class="metric"><div class="top"><span class="name">Pic d inscriptions</span><span class="emoji">&#127881;</span></div><div class="num" id="peakRegistrationsWeekValue">-</div><div class="hint" id="peakRegistrationsWeekLabel">Meilleure semaine inscriptions.</div></div>
+      </div>
+      <div class="week-strip" id="weekly-strip">
+        <div class="week-card loading-sheen"><div class="week-label">Chargement</div><div class="week-sub">Lecture des semaines...</div></div>
       </div>
     </article>
 
@@ -682,7 +766,8 @@ function ratio(part, total) {
 function renderHeroBadges(data) {
   const root = document.getElementById('hero-badges');
   const items = [
-    { cls: 'green', icon: '&#128994;', text: `${data.onlinePlayers} en ligne` },
+    { cls: 'green', icon: '&#128994;', text: `${data.onlinePlayers} joueurs en ligne` },
+    { cls: 'pink', icon: '&#127800;', text: `${data.visitors || 0} visiteurs` },
     { cls: 'cyan', icon: '&#128257;', text: `${data.queuePlayers} en file` },
     { cls: data.globalBoostActive ? 'orange' : 'cyan', icon: '&#9889;', text: data.globalBoostActive ? `Boost elo x${data.globalBoostMultiplier}` : 'Aucun boost elo global' },
     { cls: data.coinBoostActive ? 'orange' : 'pink', icon: '&#128176;', text: data.coinBoostActive ? `Boost coins x${data.coinBoostMultiplier}` : 'Aucun boost coins global' }
@@ -694,6 +779,7 @@ function renderTicker(data) {
   const root = document.getElementById('ticker-track');
   const lines = [
     `&#128101; ${numberFormat.format(data.registeredPlayers)} joueurs inscrits`,
+    `&#127800; ${numberFormat.format(data.visitors || 0)} visiteurs presents`,
     `&#127922; ${numberFormat.format(data.totalGames)} parties lancees`,
     `&#129504; ${numberFormat.format(data.analysedGames)} parties analysees`,
     `&#128176; ${numberFormat.format(data.totalCoins)} coins en circulation`,
@@ -704,7 +790,7 @@ function renderTicker(data) {
 }
 
 function applyRatios(data) {
-  const onlineRatio = ratio(data.onlinePlayers, data.registeredPlayers || 1);
+  const onlineRatio = ratio(data.onlinePlayers, Math.max(data.totalPresent || (data.onlinePlayers + (data.visitors || 0)), 1));
   const gameRatio = ratio(data.activeGames, Math.max(data.totalGames, 1));
   const analysisRatio = ratio(data.analysedGames, Math.max(data.finishedGames, 1));
   document.getElementById('online-ratio-label').textContent = `${onlineRatio}%`;
@@ -719,9 +805,39 @@ function applyRatios(data) {
   setFill('coin-fill', ratio(data.coinBoostersOwned, Math.max(data.coinBoostersOwned, 20)));
 }
 
-function populate(data) {
+function renderWeekly(weekly) {
+  setText('weeklyGames', weekly?.currentWeek?.games || 0);
+  setText('weeklyRegistrations', weekly?.currentWeek?.registrations || 0);
+  setText('weeklyActivePlayers', weekly?.currentWeek?.activePlayers || 0);
+  setText('weeklyGamesPerDay', weekly?.currentWeek?.averageGamesPerDay || 0);
+  setText('averageWeeklyActivePlayers', weekly?.averageWeeklyActivePlayers || 0);
+  setText('peakGamesWeekValue', weekly?.peakGamesWeek?.games || 0);
+  setText('peakRegistrationsWeekValue', weekly?.peakRegistrationsWeek?.registrations || 0);
+  const peakGamesWeekLabel = document.getElementById('peakGamesWeekLabel');
+  const peakRegistrationsWeekLabel = document.getElementById('peakRegistrationsWeekLabel');
+  if (peakGamesWeekLabel) peakGamesWeekLabel.textContent = weekly?.peakGamesWeek?.label || 'Meilleure semaine parties.';
+  if (peakRegistrationsWeekLabel) peakRegistrationsWeekLabel.textContent = weekly?.peakRegistrationsWeek?.label || 'Meilleure semaine inscriptions.';
+  const strip = document.getElementById('weekly-strip');
+  if (!strip) return;
+  const series = Array.isArray(weekly?.series) ? weekly.series : [];
+  strip.innerHTML = series.map(week => `
+    <div class="week-card">
+      <div class="week-label">${week.shortLabel}</div>
+      <div class="week-sub">${week.label}</div>
+      <div class="week-stats">
+        <div class="week-stat"><strong>${numberFormat.format(week.games || 0)}</strong><span>Parties</span></div>
+        <div class="week-stat"><strong>${numberFormat.format(week.registrations || 0)}</strong><span>Inscriptions</span></div>
+        <div class="week-stat"><strong>${numberFormat.format(week.activePlayers || 0)}</strong><span>Joueurs actifs</span></div>
+        <div class="week-stat"><strong>${numberFormat.format(week.finishedGames || 0)}</strong><span>Terminees</span></div>
+      </div>
+    </div>
+  `).join('') || `<div class="week-card"><div class="week-label">Aucune donnee</div><div class="week-sub">Les semaines s'afficheront ici.</div></div>`;
+}
+
+function populate(data, weekly) {
   setText('registeredPlayers', data.registeredPlayers);
   setText('onlinePlayers', data.onlinePlayers);
+  setText('visitorCount', data.visitors || 0);
   setText('activeGames', data.activeGames);
   setText('finishedGames', data.finishedGames);
   setText('totalGames', data.totalGames);
@@ -750,15 +866,20 @@ function populate(data) {
   renderHeroBadges(data);
   renderTicker(data);
   applyRatios(data);
+  renderWeekly(weekly);
   document.querySelectorAll('.loading-sheen').forEach(el => el.classList.remove('loading-sheen'));
 }
 
 async function loadStats() {
   try {
-    const res = await fetch('/api/stats/overview', { cache: 'no-store' });
-    if (!res.ok) throw new Error('stats');
-    const data = await res.json();
-    populate(data);
+    const [overviewRes, weeklyRes] = await Promise.all([
+      fetch('/api/stats/overview', { cache: 'no-store' }),
+      fetch('/api/stats/weekly', { cache: 'no-store' })
+    ]);
+    if (!overviewRes.ok) throw new Error('stats');
+    const data = await overviewRes.json();
+    const weekly = weeklyRes.ok ? await weeklyRes.json() : { currentWeek: {}, series: [] };
+    populate(data, weekly);
   } catch (error) {
     document.getElementById('updatedAt').textContent = 'Mise a jour: erreur de chargement';
   }
