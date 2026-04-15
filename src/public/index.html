@@ -32,6 +32,8 @@ html, body {
   color: var(--text);
   font-family: 'Barlow', sans-serif;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* â”€â”€ Animated background grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -152,16 +154,19 @@ html, body {
   position: relative;
   z-index: 2;
   min-height: 100vh;
-  max-width: 1380px;
+  width: min(100%, 1380px);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 420px);
   grid-template-areas:
     "dock dock"
     "hero card";
   align-items: start;
-  padding: 28px 18px 40px;
-  gap: 22px;
+  padding: clamp(14px, 2vw, 28px) clamp(10px, 1.6vw, 18px) clamp(28px, 4vw, 40px);
+  gap: clamp(14px, 2vw, 22px);
+}
+.page > * {
+  min-width: 0;
 }
 .home-dock {
   grid-area: dock;
@@ -170,8 +175,8 @@ html, body {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 14px 16px;
-  border-radius: 24px;
+  padding: clamp(12px, 1.5vw, 16px);
+  border-radius: clamp(18px, 2.2vw, 24px);
   border: 1px solid rgba(255,255,255,0.08);
   background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
   box-shadow: 0 24px 60px rgba(0,0,0,0.28);
@@ -183,27 +188,27 @@ html, body {
   gap: 12px;
 }
 .dock-brand-logo {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: clamp(42px, 4vw, 48px);
+  height: clamp(42px, 4vw, 48px);
+  border-radius: clamp(14px, 1.6vw, 16px);
   background: linear-gradient(135deg, rgba(255,45,85,0.14), rgba(76,110,245,0.14));
   border: 1px solid rgba(255,255,255,0.08);
   display: grid;
   place-items: center;
-  font-size: 22px;
+  font-size: clamp(20px, 2vw, 22px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
 }
 .dock-brand-copy { display:flex; flex-direction:column; gap:2px; }
 .dock-eyebrow {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
-  letter-spacing: 3px;
+  font-size: clamp(10px, 1vw, 11px);
+  letter-spacing: clamp(2px, .25vw, 3px);
   text-transform: uppercase;
   color: var(--red);
 }
 .dock-title {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 24px;
+  font-size: clamp(20px, 2.5vw, 24px);
   font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -219,17 +224,17 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 14px;
+  min-height: clamp(42px, 4vw, 44px);
+  padding: 0 clamp(12px, 1.2vw, 14px);
+  border-radius: clamp(12px, 1.6vw, 14px);
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.035);
   color: var(--text);
   text-decoration: none;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: clamp(12px, 1vw, 13px);
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: clamp(.7px, .1vw, 1px);
   text-transform: uppercase;
   transition: transform .18s ease, border-color .18s ease, background .18s ease;
 }
@@ -247,9 +252,9 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-  padding: 36px 34px 30px;
-  border-radius: 36px;
+  gap: clamp(8px, 1.2vw, 10px);
+  padding: clamp(22px, 3vw, 36px) clamp(16px, 3vw, 34px) clamp(20px, 2.4vw, 30px);
+  border-radius: clamp(22px, 3vw, 36px);
   border: 1px solid rgba(255,255,255,0.08);
   background:
     linear-gradient(135deg, rgba(255,45,85,0.12), rgba(76,110,245,0.08)),
@@ -286,9 +291,9 @@ html, body {
 
 .logo-eyebrow {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: clamp(10px, .9vw, 11px);
   font-weight: 700;
-  letter-spacing: 6px;
+  letter-spacing: clamp(3px, .45vw, 6px);
   text-transform: uppercase;
   color: var(--red);
   opacity: 0.8;
@@ -318,10 +323,10 @@ html, body {
 }
 
 .logo-tagline {
-  font-size: 13px;
+  font-size: clamp(11px, 1vw, 13px);
   font-weight: 300;
   color: var(--muted);
-  letter-spacing: 3px;
+  letter-spacing: clamp(1.6px, .2vw, 3px);
   text-transform: uppercase;
   margin-top: 2px;
   text-align: left;
@@ -329,8 +334,8 @@ html, body {
 .hero-copy {
   max-width: 760px;
   color: rgba(238,238,245,0.68);
-  font-size: 15px;
-  line-height: 1.72;
+  font-size: clamp(13px, 1.15vw, 15px);
+  line-height: clamp(1.56, 1.9vw, 1.72);
 }
 .hero-stat-cluster {
   display: flex;
@@ -342,15 +347,15 @@ html, body {
   width: 100%;
   margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: clamp(10px, 1.4vw, 14px);
 }
 .hero-panel-card {
   position: relative;
   overflow: hidden;
-  min-height: 122px;
-  padding: 16px 16px 14px;
-  border-radius: 22px;
+  min-height: clamp(106px, 14vw, 122px);
+  padding: clamp(14px, 1.6vw, 16px) clamp(14px, 1.6vw, 16px) clamp(12px, 1.4vw, 14px);
+  border-radius: clamp(18px, 2vw, 22px);
   background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.018));
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 18px 42px rgba(0,0,0,0.22);
@@ -365,8 +370,8 @@ html, body {
 .hero-panel-kicker {
   position: relative;
   z-index: 1;
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-size: clamp(10px, .9vw, 11px);
+  letter-spacing: clamp(1.4px, .18vw, 2px);
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -375,7 +380,7 @@ html, body {
   z-index: 1;
   margin-top: 8px;
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 34px;
+  font-size: clamp(24px, 2.8vw, 34px);
   font-weight: 900;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -385,7 +390,7 @@ html, body {
   position: relative;
   z-index: 1;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: clamp(11px, .95vw, 12px);
   line-height: 1.55;
   color: rgba(238,238,245,0.64);
 }
@@ -397,15 +402,15 @@ html, body {
   width: 100%;
   margin-top: 16px;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: clamp(14px, 1.8vw, 18px);
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.03);
 }
 .hero-ticker-track {
   display: flex;
-  gap: 26px;
+  gap: clamp(14px, 2vw, 26px);
   width: max-content;
-  padding: 12px 16px;
+  padding: clamp(10px, 1.2vw, 12px) clamp(12px, 1.5vw, 16px);
   animation: hero-ticker-slide 26s linear infinite;
 }
 .hero-ticker-item {
@@ -414,7 +419,7 @@ html, body {
   gap: 8px;
   white-space: nowrap;
   color: rgba(238,238,245,0.64);
-  font-size: 12px;
+  font-size: clamp(11px, .95vw, 12px);
 }
 .hero-ticker-dot {
   width: 7px;
@@ -580,15 +585,16 @@ html, body {
 
 /* â”€â”€ Board decoration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .board-deco {
+  --board-cell: clamp(24px, 2vw, 28px);
   display: grid;
-  grid-template-columns: repeat(7, 28px);
-  grid-template-rows: repeat(3, 28px);
-  gap: 5px;
+  grid-template-columns: repeat(7, var(--board-cell));
+  grid-template-rows: repeat(3, var(--board-cell));
+  gap: clamp(4px, .45vw, 5px);
   margin: 20px 0 0;
   opacity: 0.4;
 }
 .board-deco-cell {
-  width: 28px; height: 28px;
+  width: var(--board-cell); height: var(--board-cell);
   border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.05), rgba(19,19,42,0.95));
   border: 1px solid rgba(255,255,255,0.12);
@@ -600,6 +606,7 @@ html, body {
 
 /* â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .card {
+  position: relative;
   grid-area: card;
   width: 100%;
   max-width: none;
@@ -607,8 +614,8 @@ html, body {
     linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
     rgba(13,13,28,0.92);
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 28px;
-  padding: 34px 30px;
+  border-radius: clamp(20px, 2.2vw, 28px);
+  padding: clamp(20px, 2.8vw, 34px) clamp(14px, 2.4vw, 30px);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -634,19 +641,19 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: clamp(8px, 1vw, 9px) clamp(10px, 1.2vw, 12px);
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.035);
-  font-size: 11px;
-  letter-spacing: 2px;
+  font-size: clamp(10px, .9vw, 11px);
+  letter-spacing: clamp(1.4px, .18vw, 2px);
   text-transform: uppercase;
   color: var(--muted);
 }
 .card-topline-badge span:last-child {
   color: var(--text);
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 13px;
+  font-size: clamp(12px, 1vw, 13px);
   font-weight: 800;
 }
 @keyframes card-in {
@@ -656,9 +663,9 @@ html, body {
 
 .card-label {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 11px;
+  font-size: clamp(10px, .9vw, 11px);
   font-weight: 700;
-  letter-spacing: 4px;
+  letter-spacing: clamp(2px, .3vw, 4px);
   text-transform: uppercase;
   color: var(--muted);
   text-align: center;
@@ -688,11 +695,11 @@ html, body {
   width: 100%;
   background: var(--surface2);
   border: 1.5px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 16px 14px 42px;
+  border-radius: clamp(12px, 1.4vw, 14px);
+  padding: clamp(12px, 1.3vw, 14px) clamp(14px, 1.3vw, 16px) clamp(12px, 1.3vw, 14px) 42px;
   color: var(--text);
   font-family: 'Barlow', sans-serif;
-  font-size: 15px;
+  font-size: clamp(14px, 1.05vw, 15px);
   font-weight: 500;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -725,12 +732,12 @@ html, body {
 /* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn {
   font-family: 'Barlow Condensed', sans-serif;
-  font-size: 17px;
+  font-size: clamp(14px, 1.25vw, 17px);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: clamp(1.2px, .18vw, 2px);
   text-transform: uppercase;
-  padding: 14px 24px;
-  border-radius: 12px;
+  padding: clamp(12px, 1.4vw, 14px) clamp(16px, 2vw, 24px);
+  border-radius: clamp(12px, 1.4vw, 14px);
   border: none;
   cursor: pointer;
   transition: all 0.18s;
@@ -1733,17 +1740,74 @@ html, body {
     width: 100%;
   }
 }
+@media (max-width: 380px) {
+  .page{
+    padding: 12px 8px 84px;
+    gap: 12px;
+  }
+  .home-dock{
+    padding: 10px;
+    border-radius: 14px;
+  }
+  .dock-title{
+    font-size: 18px;
+  }
+  .logo{
+    font-size: clamp(34px, 15vw, 48px);
+  }
+  .logo-tagline,
+  .logo-eyebrow{
+    letter-spacing: 1.4px;
+  }
+  .hero{
+    padding: 16px 12px 16px;
+    border-radius: 18px;
+  }
+  .hero-copy{
+    font-size: 11px;
+    line-height: 1.45;
+  }
+  .hero-panel-value{
+    font-size: 20px;
+  }
+  .card{
+    padding: 14px 10px;
+    border-radius: 14px;
+  }
+  .card-topline-badge{
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .auth-tab{
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+  .input{
+    font-size: 13px;
+    padding: 11px 12px 11px 36px;
+  }
+  .btn{
+    padding: 12px;
+    font-size: 13px;
+  }
+  .duel-dialog{
+    width: min(100%, 100vw - 12px);
+    padding: 16px 12px;
+  }
+  .duel-result{
+    padding: 10px;
+    border-radius: 14px;
+  }
+}
 
-@media (max-width: 1120px) {
+@media (max-width: 1180px) {
   .page {
     grid-template-columns: 1fr;
     grid-template-areas:
       "dock"
       "hero"
       "card";
-  }
-  .hero-panel-grid {
-    grid-template-columns: 1fr 1fr;
   }
 }
 
