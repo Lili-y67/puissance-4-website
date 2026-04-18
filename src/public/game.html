@@ -249,6 +249,18 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
     0 0 0 1px rgba(255,255,255,0.08);
   position: relative; overflow: hidden; transition: box-shadow 0.15s;
 }
+.cell::after {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 0 solid transparent;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 3;
+}
 .cell:hover {
   box-shadow:
     inset 0 3px 10px rgba(0,0,0,0.7),
@@ -284,6 +296,16 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
     inset 0 0 0 2px rgba(255,255,255,0.22),
     0 0 0 2px rgba(255,255,255,0.16),
     0 0 24px rgba(255,255,255,0.1);
+}
+.cell.winning::after {
+  opacity: 1;
+  border-width: 3px;
+  border-color: rgba(255,255,255,0.75);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.22),
+    0 0 18px rgba(255,255,255,0.22),
+    inset 0 0 12px rgba(255,255,255,0.08);
+  transform: scale(1.02);
 }
 .cell.winning .token { animation: win-pulse 0.7s ease-in-out infinite alternate; }
 @keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.1); filter: brightness(1.3); } }
