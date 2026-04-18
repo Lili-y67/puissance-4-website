@@ -2519,15 +2519,23 @@ async function ensureFriendlyDuelAuth() {
   if (existingToken && existingPlayer?.id) {
     return { token: existingToken, player: existingPlayer };
   }
+  const guestToken = sessionStorage.getItem('duel_guest_token') || '';
+  let guestPlayer = null;
+  try {
+    guestPlayer = JSON.parse(sessionStorage.getItem('duel_guest_player') || 'null');
+  } catch (e) {
+    guestPlayer = null;
+  }
+  if (guestToken && guestPlayer?.id) {
+    return { token: guestToken, player: guestPlayer };
+  }
   const res = await fetch('/api/auth/guest', { method: 'POST' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data?.token || !data?.player?.id) {
     throw new Error(data?.error || 'Impossible de creer une session invite.');
   }
-  myPlayer = data.player;
-  localStorage.setItem('token', data.token);
-  localStorage.setItem('player', JSON.stringify(data.player));
-  sessionStorage.setItem('player', JSON.stringify(data.player));
+  sessionStorage.setItem('duel_guest_token', data.token);
+  sessionStorage.setItem('duel_guest_player', JSON.stringify(data.player));
   if (typeof window.refreshPresenceIdentity === 'function') {
     window.refreshPresenceIdentity();
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -2551,11 +2559,17 @@ function getSafePlayer() {
   return myPlayer || JSON.parse(localStorage.getItem('player') || 'null');
 }
 
+function clearFriendlyDuelGuestAuth() {
+  try { sessionStorage.removeItem('duel_guest_token'); } catch (e) {}
+  try { sessionStorage.removeItem('duel_guest_player'); } catch (e) {}
+}
+
 function clearStoredAuth() {
   myPlayer = null;
   try { localStorage.removeItem('token'); } catch (e) {}
   try { localStorage.removeItem('player'); } catch (e) {}
   try { sessionStorage.removeItem('player'); } catch (e) {}
+  clearFriendlyDuelGuestAuth();
 }
 
 function isInvalidSessionMessage(message) {
@@ -2691,7 +2705,7 @@ async function sendDuelChallenge() {
     });
     let data = await res.json().catch(() => ({}));
     if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
-      clearStoredAuth();
+      clearFriendlyDuelGuestAuth();
       const auth = await ensureFriendlyDuelAuth();
       player = auth.player;
       token = auth.token;
@@ -2740,7 +2754,7 @@ async function createDuelLink() {
     });
     let data = await res.json().catch(() => ({}));
     if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
-      clearStoredAuth();
+      clearFriendlyDuelGuestAuth();
       const auth = await ensureFriendlyDuelAuth();
       player = auth.player;
       token = auth.token;

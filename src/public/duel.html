@@ -93,9 +93,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 let duelData = null;
 
 function clearStoredAuth() {
+  try { sessionStorage.removeItem('duel_guest_token'); } catch (e) {}
+  try { sessionStorage.removeItem('duel_guest_player'); } catch (e) {}
+}
+
+function clearFullAuth() {
   try { localStorage.removeItem('token'); } catch (e) {}
   try { localStorage.removeItem('player'); } catch (e) {}
   try { sessionStorage.removeItem('player'); } catch (e) {}
+  clearStoredAuth();
 }
 
 function isInvalidSessionMessage(message) {
@@ -125,10 +131,10 @@ function setState(message, tone = 'warn') {
 }
 
 function getStoredAuth() {
-  const token = localStorage.getItem('token') || '';
+  const token = localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || '';
   let player = null;
   try {
-    player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+    player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('duel_guest_player') || sessionStorage.getItem('player') || 'null');
   } catch (e) {
     player = null;
   }
@@ -225,9 +231,8 @@ async function acceptDuel() {
         setState(guestData?.error || 'Impossible de preparer le mode invite.', 'err');
         return;
       }
-      localStorage.setItem('token', guestData.token);
-      localStorage.setItem('player', JSON.stringify(guestData.player));
-      sessionStorage.setItem('player', JSON.stringify(guestData.player));
+      sessionStorage.setItem('duel_guest_token', guestData.token);
+      sessionStorage.setItem('duel_guest_player', JSON.stringify(guestData.player));
       token = guestData.token;
       if (typeof window.refreshPresenceIdentity === 'function') {
         window.refreshPresenceIdentity();
@@ -261,9 +266,8 @@ async function acceptDuel() {
         btn.disabled = false;
         return;
       }
-      localStorage.setItem('token', guestData.token);
-      localStorage.setItem('player', JSON.stringify(guestData.player));
-      sessionStorage.setItem('player', JSON.stringify(guestData.player));
+      sessionStorage.setItem('duel_guest_token', guestData.token);
+      sessionStorage.setItem('duel_guest_player', JSON.stringify(guestData.player));
       token = guestData.token;
       if (typeof window.refreshPresenceIdentity === 'function') {
         window.refreshPresenceIdentity();
