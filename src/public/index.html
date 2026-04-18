@@ -2528,7 +2528,10 @@ async function ensureFriendlyDuelAuth() {
   localStorage.setItem('token', data.token);
   localStorage.setItem('player', JSON.stringify(data.player));
   sessionStorage.setItem('player', JSON.stringify(data.player));
-  if (window._presenceSocket?.connected) {
+  if (typeof window.refreshPresenceIdentity === 'function') {
+    window.refreshPresenceIdentity();
+    await new Promise(resolve => setTimeout(resolve, 250));
+  } else if (window._presenceSocket?.connected) {
     window._presenceSocket.emit('identify', { playerId: data.player.id, token: data.token });
     await new Promise(resolve => setTimeout(resolve, 250));
   }
@@ -2546,6 +2549,17 @@ function redirectAfterAuthOrQueue() {
 
 function getSafePlayer() {
   return myPlayer || JSON.parse(localStorage.getItem('player') || 'null');
+}
+
+function clearStoredAuth() {
+  myPlayer = null;
+  try { localStorage.removeItem('token'); } catch (e) {}
+  try { localStorage.removeItem('player'); } catch (e) {}
+  try { sessionStorage.removeItem('player'); } catch (e) {}
+}
+
+function isInvalidSessionMessage(message) {
+  return /session/i.test(String(message || '')) && /invalide|invite invalide/i.test(String(message || ''));
 }
 
 function escapeHtml(value) {
@@ -2670,12 +2684,24 @@ async function sendDuelChallenge() {
   if (sendBtn) sendBtn.disabled = true;
   showDuelError('');
   try {
-    const res = await fetch('/api/duels/challenge', {
+    let res = await fetch('/api/duels/challenge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, targetId: duelSelectedId, gameType: duelGameType }),
     });
-    const data = await res.json().catch(() => ({}));
+    let data = await res.json().catch(() => ({}));
+    if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
+      clearStoredAuth();
+      const auth = await ensureFriendlyDuelAuth();
+      player = auth.player;
+      token = auth.token;
+      res = await fetch('/api/duels/challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, targetId: duelSelectedId, gameType: duelGameType }),
+      });
+      data = await res.json().catch(() => ({}));
+    }
     if (!res.ok) {
       showDuelError(data?.error || 'Impossible d envoyer le duel.');
       if (sendBtn) sendBtn.disabled = false;
@@ -2707,12 +2733,24 @@ async function createDuelLink() {
   }
   showDuelError('');
   try {
-    const res = await fetch('/api/duels/link', {
+    let res = await fetch('/api/duels/link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, gameType: duelGameType }),
     });
-    const data = await res.json().catch(() => ({}));
+    let data = await res.json().catch(() => ({}));
+    if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
+      clearStoredAuth();
+      const auth = await ensureFriendlyDuelAuth();
+      player = auth.player;
+      token = auth.token;
+      res = await fetch('/api/duels/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, gameType: duelGameType }),
+      });
+      data = await res.json().catch(() => ({}));
+    }
     if (!res.ok || !data?.challenge?.shareUrl) {
       showDuelError(data?.error || 'Impossible de générer le lien de duel.');
       return;

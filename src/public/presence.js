@@ -3,9 +3,23 @@
  * Inclus sur toutes les pages (sauf game.html)
  */
 (function () {
-  const token = localStorage.getItem('token');
-  const playerRaw = localStorage.getItem('player') || sessionStorage.getItem('player');
   const visitorStorageKey = 'p4_visitor_id';
+
+  function getStoredAuth() {
+    const token = localStorage.getItem('token') || '';
+    const playerRaw = localStorage.getItem('player') || sessionStorage.getItem('player') || '';
+    let player = null;
+    try {
+      player = playerRaw ? JSON.parse(playerRaw) : null;
+    } catch (e) {
+      player = null;
+    }
+    return {
+      token,
+      player,
+      playerId: Number(player?.id || 0) || null,
+    };
+  }
 
   function getVisitorId() {
     try {
@@ -111,12 +125,6 @@
   refreshSystemStatus();
   setInterval(refreshSystemStatus, 10000);
 
-  let playerId;
-  try {
-    playerId = playerRaw ? JSON.parse(playerRaw).id : null;
-  } catch (e) {
-    playerId = null;
-  }
   const visitorId = getVisitorId();
 
   function initSocket() {
@@ -127,12 +135,17 @@
       reconnectionAttempts: 20,
     });
 
-    socket.on('connect', () => {
-      if (token && playerId) {
-        socket.emit('identify', { playerId, token });
+    function identifyFromStorage() {
+      const auth = getStoredAuth();
+      if (auth.token && auth.playerId) {
+        socket.emit('identify', { playerId: auth.playerId, token: auth.token });
       } else {
         socket.emit('visitor_presence', { visitorId });
       }
+    }
+
+    socket.on('connect', () => {
+      identifyFromStorage();
     });
 
     socket.on('presence_counts', (counts = {}) => {
@@ -219,7 +232,8 @@
 
     const heartbeat = setInterval(() => {
       if (!socket.connected) return;
-      if (token && playerId) {
+      const auth = getStoredAuth();
+      if (auth.token && auth.playerId) {
         socket.emit('presence_ping');
       } else {
         socket.emit('visitor_presence', { visitorId });
@@ -228,6 +242,10 @@
 
     socket.on('disconnect', () => clearInterval(heartbeat));
     window._presenceSocket = socket;
+    window.refreshPresenceIdentity = function () {
+      if (!window._presenceSocket?.connected) return;
+      identifyFromStorage();
+    };
     window.acceptDuelInvite = function (challengeId) {
       if (window._presenceSocket?.connected) window._presenceSocket.emit('duel_accept', { challengeId });
     };
