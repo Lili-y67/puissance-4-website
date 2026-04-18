@@ -502,6 +502,9 @@ const QUEUE_MUSIC_THEMES = {
   lounge: 'Lounge',
   aventure: 'Aventure',
   dark: 'Dark',
+  country: 'Country',
+  rock: 'Rock',
+  dj: 'DJ',
 };
 const QUEUE_MUSIC_CATALOG = [
   { file: 'Mesmerizing Galaxy Loop.mp3', theme: 'cyber' },
@@ -539,6 +542,24 @@ const QUEUE_MUSIC_CATALOG = [
   { file: 'Gloom Horizon.mp3', theme: 'dark' },
   { file: 'Ghost Processional.mp3', theme: 'dark' },
   { file: 'Chase Pulse.mp3', theme: 'dark' },
+
+  { file: 'B-Roll.mp3', theme: 'country' },
+  { file: 'Cloud Dancer.mp3', theme: 'country' },
+  { file: 'Musique Chambre.mp3', theme: 'country' },
+  { file: 'Serenade D\'Amor.mp3', theme: 'country' },
+  { file: 'Water Prelude.mp3', theme: 'country' },
+
+  { file: 'Back on Track.mp3', theme: 'rock' },
+  { file: 'Heroic Age.mp3', theme: 'rock' },
+  { file: 'New Hero in Town.mp3', theme: 'rock' },
+  { file: 'Strength of the Titans.mp3', theme: 'rock' },
+  { file: 'Take a Chance.mp3', theme: 'rock' },
+
+  { file: 'Brain Dance.mp3', theme: 'dj' },
+  { file: 'Equatorial Complex.mp3', theme: 'dj' },
+  { file: 'Galactic Rap.mp3', theme: 'dj' },
+  { file: 'Neon Laser Horizon.mp3', theme: 'dj' },
+  { file: 'Vibing Over Venus.mp3', theme: 'dj' },
 ];
 
 function getAvatarDecorationPaths() {
