@@ -1072,6 +1072,8 @@ let avatarDecorationLibrary = [];
 let profileBannerLibrary = [];
 let queueMusicLibrary = [];
 let queueMusicThemes = [];
+let queueMusicPreviewAudio = null;
+let queueMusicPreviewTimer = null;
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1740,6 +1742,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <select id="queue-music-theme-select" class="search-input" style="max-width:220px;margin:0" onchange="renderQueueMusicPicker(currentPlayer)"></select>
         <select id="queue-music-select" class="search-input" style="max-width:420px;margin:0" onchange="previewQueueMusicChoice(this.value)"></select>
+        <button class="avatar-decoration-btn" id="queue-music-preview-btn" type="button" onclick="toggleQueueMusicPreview()">Play 15s</button>
         <button class="avatar-decoration-btn" id="queue-music-save-btn" type="button" onclick="saveQueueMusicChoice()">Appliquer la musique</button>
       </div>
     </div>
@@ -2361,22 +2364,6 @@ function drawImageEditor() {
   }
   ctx.fill('evenodd');
   ctx.restore();
-
-  if (IMAGE_EDITOR.mode === 'banner') {
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cropLeft + 0.5, cropTop + 0.5, IMAGE_EDITOR.cropWidth - 1, IMAGE_EDITOR.cropHeight - 1);
-  } else if (IMAGE_EDITOR.mode === 'avatar' || IMAGE_EDITOR.mode === 'decoration') {
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(cropLeft + IMAGE_EDITOR.cropWidth / 2, cropTop + IMAGE_EDITOR.cropHeight / 2, IMAGE_EDITOR.cropWidth / 2, 0, Math.PI * 2);
-    ctx.stroke();
-  } else {
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cropLeft + 0.5, cropTop + 0.5, IMAGE_EDITOR.cropWidth - 1, IMAGE_EDITOR.cropHeight - 1);
-  }
 
   if (frame) frame.className = 'image-editor-frame ' + IMAGE_EDITOR.mode;
   syncImageEditorZoomLabel();
@@ -3472,6 +3459,8 @@ function renderQueueMusicPicker(player = currentPlayer) {
     ? `Musique active : ${formatQueueMusicLabel(entries.find(entry => entry.src === currentValue) || currentValue)}`
     : `Aucune musique perso active. ${entries.length} pistes courtes sont disponibles dans ${queueMusicThemes.length || 0} thèmes.`;
   btn.disabled = false;
+  const previewBtn = document.getElementById('queue-music-preview-btn');
+  if (previewBtn) previewBtn.disabled = !String(select.value || '');
 }
 
 function previewQueueMusicChoice(value) {
@@ -3480,6 +3469,44 @@ function previewQueueMusicChoice(value) {
   meta.textContent = value
     ? `Sélection : ${formatQueueMusicLabel(value)}`
     : 'Sélection : musique par défaut du site.';
+  stopQueueMusicPreview();
+  const previewBtn = document.getElementById('queue-music-preview-btn');
+  if (previewBtn) previewBtn.disabled = !value;
+}
+
+function stopQueueMusicPreview() {
+  if (queueMusicPreviewTimer) {
+    clearTimeout(queueMusicPreviewTimer);
+    queueMusicPreviewTimer = null;
+  }
+  if (queueMusicPreviewAudio) {
+    queueMusicPreviewAudio.pause();
+    queueMusicPreviewAudio.currentTime = 0;
+    queueMusicPreviewAudio = null;
+  }
+  const previewBtn = document.getElementById('queue-music-preview-btn');
+  if (previewBtn) previewBtn.textContent = 'Play 15s';
+}
+
+function toggleQueueMusicPreview() {
+  const select = document.getElementById('queue-music-select');
+  const value = String(select?.value || '');
+  if (!value) return;
+  const previewBtn = document.getElementById('queue-music-preview-btn');
+  if (queueMusicPreviewAudio) {
+    stopQueueMusicPreview();
+    return;
+  }
+  queueMusicPreviewAudio = new Audio(value);
+  queueMusicPreviewAudio.volume = 0.55;
+  queueMusicPreviewAudio.currentTime = 0;
+  queueMusicPreviewAudio.play().catch(() => {
+    stopQueueMusicPreview();
+  });
+  queueMusicPreviewTimer = setTimeout(() => {
+    stopQueueMusicPreview();
+  }, 15000);
+  if (previewBtn) previewBtn.textContent = 'Stop';
 }
 
 async function saveQueueMusicChoice() {

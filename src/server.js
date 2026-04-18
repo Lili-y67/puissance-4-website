@@ -32,6 +32,9 @@ const mm = new Matchmaking();
 const gm = new GameManager();
 const tournamentQueues = new Map();
 const duelChallenges = new Map();
+const anonymousSessions = new Map();
+const anonymousPlayers = new Map();
+let nextAnonymousPlayerId = -1;
 
 function getTournamentQueue(tournamentId) {
   const id = Number(tournamentId);
@@ -118,6 +121,26 @@ function getOnlineSocketsForPlayer(playerId) {
   return getOnlineSocketIds(playerId)
     .map(socketId => io.sockets.sockets.get(socketId))
     .filter(Boolean);
+}
+
+function isAnonymousPlayerId(playerId) {
+  return Number(playerId) < 0;
+}
+
+function getPlayerRecord(playerId) {
+  const id = Number(playerId || 0);
+  if (!id) return null;
+  if (isAnonymousPlayerId(id)) return anonymousPlayers.get(id) || null;
+  return pQ.getById.get(id) || null;
+}
+
+function purgeExpiredAnonymousSessions() {
+  const now = Date.now();
+  for (const [token, session] of anonymousSessions.entries()) {
+    if (Number(session?.expires || 0) > now) continue;
+    anonymousSessions.delete(token);
+    if (session?.playerId) anonymousPlayers.delete(Number(session.playerId));
+  }
 }
 
 function playerIsAlreadyPlaying(playerId) {
@@ -223,8 +246,8 @@ function serializeDuelChallenge(req, challenge, sender, target = null) {
 }
 
 function acceptDuelChallenge(challenge, accepterId) {
-  const sender = pQ.getById.get(Number(challenge.senderId || 0));
-  const target = pQ.getById.get(Number(accepterId || challenge.targetId || 0));
+  const sender = getPlayerRecord(Number(challenge.senderId || 0));
+  const target = getPlayerRecord(Number(accepterId || challenge.targetId || 0));
   if (!sender || sender.deleted || !target || target.deleted) {
     challenge.status = 'expired';
     duelChallenges.set(challenge.id, challenge);
@@ -270,7 +293,13 @@ function acceptDuelChallenge(challenge, accepterId) {
     target: { id: sender.id, pseudo: sender.pseudo, elo: Number(sender.elo || 0), color: sender.color || '#ff2d55', avatar: sender.avatar || '' },
   }));
 
-  _startMatch(p1, p2, { duel: true, gameType: challenge.gameType || 'ranked' });
+  const anonymousFriendlyMatch = String(challenge.gameType || 'ranked') === 'friendly'
+    && (isAnonymousPlayerId(sender.id) || isAnonymousPlayerId(target.id));
+  _startMatch(p1, p2, {
+    duel: true,
+    gameType: challenge.gameType || 'ranked',
+    persist: !anonymousFriendlyMatch,
+  });
   return { ok: true, sender, target };
 }
 
@@ -386,17 +415,48 @@ function generateGuestPseudo() {
   let pseudo = '';
   do {
     pseudo = `Invite-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-  } while (pQ.getByPseudo.get(pseudo));
+  } while (pQ.getByPseudo.get(pseudo) || [...anonymousPlayers.values()].some(player => player.pseudo === pseudo));
   return pseudo;
 }
 
+function createAnonymousGuestSession() {
+  const player = {
+    id: nextAnonymousPlayerId--,
+    pseudo: generateGuestPseudo(),
+    password: '',
+    elo: 0,
+    wins: 0,
+    losses: 0,
+    draws: 0,
+    color: '#ff7eb6',
+    color_secondary: '',
+    avatar: '',
+    banner: '',
+    role: 'user',
+    shape: 'circle',
+    avatar_decoration: '',
+    token_emoji_image: '',
+    profile_banner: '',
+    queue_music: '',
+    deleted: 0,
+    is_guest: 1,
+    is_vip: 0,
+    is_vip_plus: 0,
+    is_perso: 0,
+    is_anonymous: 1,
+    created_at: new Date().toISOString(),
+  };
+  const token = genToken();
+  anonymousPlayers.set(player.id, player);
+  anonymousSessions.set(token, {
+    playerId: player.id,
+    expires: Date.now() + 6 * 60 * 60 * 1000,
+  });
+  return { token, player: sanitize(player) };
+}
+
 function createGuestPlayerSession() {
-  const pseudo = generateGuestPseudo();
-  const row = pQ.register.get({ pseudo, password: '' });
-  pQ.updateGuest.run({ is_guest: 1, id: row.id });
-  const fresh = pQ.getById.get(row.id);
-  const token = createSession(fresh.id);
-  return { token, player: sanitize(fresh) };
+  return createAnonymousGuestSession();
 }
 
 app.post('/api/auth/guest', (req, res) => {
@@ -411,6 +471,16 @@ app.post('/api/auth/guest', (req, res) => {
 
 function validateSession(token) {
   if (!token) return null;
+  purgeExpiredAnonymousSessions();
+  const anonSession = anonymousSessions.get(token);
+  if (anonSession) {
+    if (Date.now() > anonSession.expires) {
+      anonymousSessions.delete(token);
+      anonymousPlayers.delete(Number(anonSession.playerId));
+      return null;
+    }
+    return Number(anonSession.playerId);
+  }
   const row = sQ.get.get(token);
   if (!row) return null;
   if (Date.now() > row.expires) { sQ.del.run(token); return null; }
@@ -881,7 +951,7 @@ app.patch('/api/admin/players/:id/shop-item', (req, res) => {
 
 // Changer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle
 app.patch('/api/admin/players/:id/role', async (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rôles.' });
   const { role } = req.body;
   const vipDuration = String(req.body?.vipDuration || '').trim();
   if (!['user','vip','vipplus','perso','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Role invalide.' });
@@ -2657,7 +2727,7 @@ app.post('/api/duels/challenge', (req, res) => {
     if (!targetId) return res.status(400).json({ error: 'Joueur cible introuvable.' });
     if (targetId === senderId) return res.status(400).json({ error: 'Tu ne peux pas te défier toi-même.' });
 
-    const sender = pQ.getById.get(senderId);
+    const sender = getPlayerRecord(senderId);
     const target = pQ.getById.get(targetId);
     if (!sender || sender.deleted) return res.status(404).json({ error: 'Ton profil est introuvable.' });
     if (!target || target.deleted) return res.status(404).json({ error: 'Joueur cible introuvable.' });
@@ -2725,7 +2795,7 @@ app.post('/api/duels/link', (req, res) => {
     const senderId = validateSession(token);
     if (!senderId) return res.status(401).json({ error: gameType === 'friendly' ? 'Session invite invalide.' : 'Session invalide.' });
 
-    const sender = pQ.getById.get(senderId);
+    const sender = getPlayerRecord(senderId);
     if (!sender || sender.deleted) return res.status(404).json({ error: 'Ton profil est introuvable.' });
     if (playerIsAlreadyPlaying(senderId)) return res.status(400).json({ error: 'Tu es deja en partie.' });
 
@@ -2764,8 +2834,8 @@ app.post('/api/duels/:id/guest-session', (req, res) => {
 app.get('/api/duels/:id', (req, res) => {
   const challenge = duelChallenges.get(String(req.params.id || ''));
   if (!challenge) return res.status(404).json({ error: 'Duel introuvable.' });
-  const sender = pQ.getById.get(Number(challenge.senderId || 0));
-  const target = challenge.targetId ? pQ.getById.get(Number(challenge.targetId || 0)) : null;
+  const sender = getPlayerRecord(Number(challenge.senderId || 0));
+  const target = challenge.targetId ? getPlayerRecord(Number(challenge.targetId || 0)) : null;
   if (!sender || sender.deleted) return res.status(404).json({ error: 'Duel introuvable.' });
   res.json({
     ok: true,
@@ -3767,7 +3837,7 @@ io.on('connection', socket => {
     if (!validId || validId !== Number(playerId)) {
       return socket.emit('error', { message: 'Session invalide. Reconnecte-toi.' });
     }
-    const player = pQ.getById.get(Number(playerId));
+    const player = getPlayerRecord(Number(playerId));
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
     socket.playerId   = Number(playerId);
     socket.playerData = sanitize(player);
@@ -3782,14 +3852,14 @@ io.on('connection', socket => {
     // Marquer en ligne
     if (!onlineSockets.has(socket.playerId)) onlineSockets.set(socket.playerId, new Set());
     onlineSockets.get(socket.playerId).add(socket.id);
-    rQ.updateLastSeen.run(Date.now(), socket.playerId);
+    if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
     socket.emit('identified', sanitize(player));
     broadcastPresenceCounts();
   });
 
   // Heartbeat de prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsence (pages hors jeu)
   socket.on('presence_ping', () => {
-    if (socket.playerId) rQ.updateLastSeen.run(Date.now(), socket.playerId);
+    if (socket.playerId && !isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
   });
 
   socket.on('duel_accept', ({ challengeId } = {}) => {
@@ -3986,7 +4056,7 @@ io.on('connection', socket => {
     unregisterVisitorSocket(socket);
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
-      rQ.updateLastSeen.run(Date.now(), socket.playerId);
+      if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
       const socks = onlineSockets.get(socket.playerId);
       if (socks) {
         socks.delete(socket.id);

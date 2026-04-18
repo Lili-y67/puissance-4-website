@@ -1527,6 +1527,20 @@ function onGameOver(data) {
     dcBanner.classList.remove('show');
   }
 
+  if (data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
+    const finalCell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
+    if (finalCell && !finalCell.classList.contains('p1') && !finalCell.classList.contains('p2')) {
+      applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);
+    }
+  }
+
+  if (data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
+    const finalCell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
+    if (finalCell && !finalCell.classList.contains('p1') && !finalCell.classList.contains('p2')) {
+      applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);
+    }
+  }
+
   if (data.winCells?.length) {
     data.winCells.forEach(([r, c]) => {
       const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
@@ -1634,7 +1648,16 @@ function onGameOver(data) {
     animateCardElo(oppSide, oppBefore, oppAfter);
   }
 
-  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  const replayBtn = document.getElementById('btn-replay');
+  if (replayBtn) {
+    if (data.allowReplay === false || Number(data.gameId) <= 0) {
+      replayBtn.style.display = 'none';
+      replayBtn.removeAttribute('href');
+    } else {
+      replayBtn.style.display = '';
+      replayBtn.href = '/replay/' + data.gameId;
+    }
+  }
   document.getElementById('result-overlay').classList.add('show');
   sessionStorage.removeItem('match');
   if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
@@ -1658,6 +1681,13 @@ function onGameOver(data) {
       dcBanner._interval = null;
     }
     dcBanner.classList.remove('show');
+  }
+
+  if (data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
+    const finalCell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
+    if (finalCell && !finalCell.classList.contains('p1') && !finalCell.classList.contains('p2')) {
+      applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);
+    }
   }
 
   if (data.winCells?.length) {
@@ -1789,7 +1819,16 @@ function onGameOver(data) {
     animateCardElo(oppSide, oppBefore, oppAfter);
   }
 
-  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  const replayBtn = document.getElementById('btn-replay');
+  if (replayBtn) {
+    if (data.allowReplay === false || Number(data.gameId) <= 0) {
+      replayBtn.style.display = 'none';
+      replayBtn.removeAttribute('href');
+    } else {
+      replayBtn.style.display = '';
+      replayBtn.href = '/replay/' + data.gameId;
+    }
+  }
   document.getElementById('result-overlay').classList.add('show');
   sessionStorage.removeItem('match');
   if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
@@ -1831,6 +1870,13 @@ function onGameOver(data) {
       dcBanner._interval = null;
     }
     dcBanner.classList.remove('show');
+  }
+
+  if (data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
+    const finalCell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
+    if (finalCell && !finalCell.classList.contains('p1') && !finalCell.classList.contains('p2')) {
+      applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);
+    }
   }
 
   if (data.winCells?.length) {
@@ -1957,7 +2003,16 @@ function onGameOver(data) {
     animateCardElo(oppSide, oppBefore, oppAfter);
   }
 
-  document.getElementById('btn-replay').href = '/replay/' + data.gameId;
+  const replayBtn = document.getElementById('btn-replay');
+  if (replayBtn) {
+    if (data.allowReplay === false || Number(data.gameId) <= 0) {
+      replayBtn.style.display = 'none';
+      replayBtn.removeAttribute('href');
+    } else {
+      replayBtn.style.display = '';
+      replayBtn.href = '/replay/' + data.gameId;
+    }
+  }
   document.getElementById('result-overlay').classList.add('show');
   sessionStorage.removeItem('match');
   if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);

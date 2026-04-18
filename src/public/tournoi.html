@@ -677,6 +677,11 @@ function leaveTournamentQueue() {
   socket.emit('tournament_queue_leave', { tournamentId: queueTournamentId });
 }
 
+function pauseTournamentQueueSilently() {
+  if (!socket || !queueTournamentId) return;
+  socket.emit('tournament_queue_leave', { tournamentId: queueTournamentId });
+}
+
 function openCreateModal() {
   if (!canCreateTournament(parseStoredPlayer())) {
     showToast('Creation reservee aux joueurs Perso ou admins.', true);
@@ -741,6 +746,12 @@ setInterval(() => {
   detailCache.tournament = { ...detailCache.tournament, ...fresh };
   renderDetail(detailCache);
 }, 1000);
+
+window.addEventListener('pagehide', pauseTournamentQueueSilently);
+window.addEventListener('beforeunload', pauseTournamentQueueSilently);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') pauseTournamentQueueSilently();
+});
 
 reloadTournamentData();
 </script>
