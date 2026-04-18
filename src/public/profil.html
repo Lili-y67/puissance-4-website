@@ -1070,6 +1070,7 @@ let uploadChooserTarget = null;
 const GIF_URL_CACHE = new Map();
 let avatarDecorationLibrary = [];
 let profileBannerLibrary = [];
+let queueMusicLibrary = [];
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1117,6 +1118,16 @@ async function loadProfileBannerLibrary() {
   }
 }
 
+async function loadQueueMusicLibrary() {
+  try {
+    const res = await fetch('/api/musics');
+    const data = await res.json();
+    queueMusicLibrary = Array.isArray(data?.musics) ? data.musics : [];
+  } catch {
+    queueMusicLibrary = [];
+  }
+}
+
 async function loadProfileShopInventory() {
   const token = localStorage.getItem('token');
   if (!token || !isOwnProfile) {
@@ -1147,7 +1158,7 @@ function getVipMediaRemainingMs() {
   if (String(currentPlayer?.role || '') === 'admin') return 0;
   const lastChanged = Number(currentPlayer?.vip_media_changed_at || 0);
   if (!lastChanged) return 0;
-  const cooldown = Number(currentPlayer?.is_vip_plus) === 1 ? (12 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
+  const cooldown = (Number(currentPlayer?.is_vip_plus) === 1 || Number(currentPlayer?.is_perso) === 1) ? (12 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
   const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
@@ -1161,11 +1172,11 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
 }
 
 function isVipPlus(player = currentPlayer) {
-  return Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isVip(player = currentPlayer) {
-  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isPerso(player = currentPlayer) {
@@ -1177,8 +1188,8 @@ function canUseGradient(player = currentPlayer) {
 }
 
 function getPremiumTier(player = currentPlayer) {
-  if (isVipPlus(player)) return 'vip_plus';
   if (isPerso(player)) return 'perso';
+  if (isVipPlus(player)) return 'vip_plus';
   if (Number(player?.is_vip) === 1) return 'vip';
   return null;
 }
@@ -1264,6 +1275,7 @@ function formatRemainingTime(ms) {
 async function load() {
   await loadAvatarDecorationLibrary();
   await loadProfileBannerLibrary();
+  await loadQueueMusicLibrary();
   await loadProfileShopInventory();
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
@@ -1311,6 +1323,7 @@ async function load() {
     pendingAvatarDecoration = null;
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache);
+    renderQueueMusicPicker(freshPlayer);
 
     // Charger le statut en ligne (tous les profils)
     // Exposer pour que presence.js rappelle aprÃ¨s identified
@@ -1710,6 +1723,21 @@ function render(player, games, following, followers, followStatus, tournaments =
         Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)"> lili_crystal_</strong>
       </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Choisir une décoration</button>
+    </div>
+    <div class="avatar-decoration-card" id="queue-music-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Musique d'attente</span>
+      </div>
+      <div class="avatar-decoration-row">
+        <div class="avatar-decoration-preview" style="border-radius:22px;width:92px;height:92px">
+          <div class="base" style="width:64px;height:64px;border-radius:18px;background:rgba(133,235,255,0.08);color:#85EBFF">♪</div>
+        </div>
+        <div class="avatar-decoration-meta" id="queue-music-meta">Choisis une musique de file d'attente depuis la bibliothèque Perso. Le nom affiché reprend celui du fichier.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select id="queue-music-select" class="search-input" style="max-width:420px;margin:0" onchange="previewQueueMusicChoice(this.value)"></select>
+        <button class="avatar-decoration-btn" id="queue-music-save-btn" type="button" onclick="saveQueueMusicChoice()">Appliquer la musique</button>
+      </div>
     </div>
     <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
       <div class="avatar-decoration-modal">
@@ -2543,7 +2571,7 @@ async function uploadAvatarDecorationData(imageData, me) {
 function renderAvatarDecorationGallery(player = currentPlayer) {
   const gallery = document.getElementById('avatar-decoration-gallery');
   if (!gallery) return;
-  const canEdit = Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  const canEdit = isVipPlus(player);
   const currentValue = String(player?.avatar_decoration || '');
   const selectedValue = pendingAvatarDecoration === null ? currentValue : String(pendingAvatarDecoration || '');
   const cards = [
@@ -2659,7 +2687,7 @@ function handleTokenEmojiUpload(input) {
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const isAdminTier = String(me?.role || '') === 'admin';
-  if (!me.is_vip_plus && !isAdminTier) {
+  if (!isVipPlus(me) && !isAdminTier) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -2686,7 +2714,7 @@ function handleAvatarDecorationUpload(input) {
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const isAdminTier = String(me?.role || '') === 'admin';
-  if (!me.is_vip_plus && !isAdminTier) {
+  if (!isVipPlus(me) && !isAdminTier) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -3319,7 +3347,7 @@ function refreshTokenEmojiPreview() {
 
 function openTokenEmojiPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!me?.is_vip_plus && String(me?.role || '') !== 'admin') return;
+  if (!isVipPlus(me)) return;
   if (getVipMediaRemainingMs() > 0) return;
   PROFIL_SFX.click();
   document.getElementById('token-emoji-input')?.click();
@@ -3338,7 +3366,7 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
     : String(pendingAvatarDecoration || '');
   const src = getRenderableMediaSrc(effectiveDecoration);
   const remaining = getAvatarDecorationRemainingMs(player);
-  const isVipPlusTier = Number(player?.is_vip_plus) === 1 || String(player?.role || '') === 'admin';
+  const isVipPlusTier = isVipPlus(player);
   const hasPendingChange = pendingAvatarDecoration !== null && String(pendingAvatarDecoration || '') !== String(player?.avatar_decoration || '');
   if (overlay) overlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
   if (headerOverlay) headerOverlay.innerHTML = src ? `<img src="${src}" alt="décoration avatar">` : '';
@@ -3384,6 +3412,73 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
           : 'Choisis une autre décoration pour appliquer un changement';
   }
   renderAvatarDecorationGallery(player);
+}
+
+function formatQueueMusicLabel(src) {
+  if (!src) return 'Aucune musique personnalisée';
+  const file = String(src).split('/').pop() || src;
+  return decodeURIComponent(file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
+}
+
+function renderQueueMusicPicker(player = currentPlayer) {
+  const card = document.getElementById('queue-music-card');
+  const select = document.getElementById('queue-music-select');
+  const meta = document.getElementById('queue-music-meta');
+  const btn = document.getElementById('queue-music-save-btn');
+  if (!card || !select || !meta || !btn) return;
+  const canEdit = isPerso(player) || String(player?.role || '') === 'admin';
+  const currentValue = String(player?.queue_music || '');
+  card.style.display = canEdit ? 'flex' : 'none';
+  if (!canEdit) return;
+  const options = [`<option value="">Musique par défaut du site</option>`]
+    .concat(queueMusicLibrary.map(src => `<option value="${src}" ${src === currentValue ? 'selected' : ''}>${escapeHtml(formatQueueMusicLabel(src))}</option>`));
+  select.innerHTML = options.join('');
+  meta.textContent = currentValue
+    ? `Musique active : ${formatQueueMusicLabel(currentValue)}`
+    : 'Aucune musique perso active. La musique par défaut du site sera utilisée.';
+  btn.disabled = false;
+}
+
+function previewQueueMusicChoice(value) {
+  const meta = document.getElementById('queue-music-meta');
+  if (!meta) return;
+  meta.textContent = value
+    ? `Sélection : ${formatQueueMusicLabel(value)}`
+    : 'Sélection : musique par défaut du site.';
+}
+
+async function saveQueueMusicChoice() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token') || '';
+  const select = document.getElementById('queue-music-select');
+  const btn = document.getElementById('queue-music-save-btn');
+  if (!me?.id || !token || !select || !btn) return;
+  const nextMusic = String(select.value || '');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/players/' + me.id + '/queue-music', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, music: nextMusic }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      PROFIL_SFX.error();
+      alert(data?.error || 'Erreur musique.');
+      btn.disabled = false;
+      return;
+    }
+    PROFIL_SFX.upload();
+    me.queue_music = String(data?.queue_music || nextMusic || '');
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) currentPlayer.queue_music = me.queue_music;
+    renderQueueMusicPicker(currentPlayer);
+  } catch (e) {
+    PROFIL_SFX.error();
+    alert('Erreur réseau.');
+    btn.disabled = false;
+  }
 }
 
 function openAvatarDecorationPicker() {

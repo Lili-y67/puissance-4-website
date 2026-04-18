@@ -348,12 +348,12 @@ function getPremiumBoostConfig(player) {
 function isVipPlayer(player) {
   if (!player) return false;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
-  if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1) return false;
-  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1;
+  if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1 && Number(player.is_perso) !== 1) return false;
+  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isAdminPlayer(player);
 }
 
 function isVipPlusPlayer(player) {
-  return !!player && Number(player.is_vip_plus) === 1;
+  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isAdminPlayer(player));
 }
 
 let canvasFontsRegistered = false;
@@ -424,6 +424,7 @@ const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
+const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'musics');
 
 function getAvatarDecorationPaths() {
   try {
@@ -441,6 +442,17 @@ function getProfileBannerPaths() {
     return fs.readdirSync(PROFILE_BANNERS_DIR, { withFileTypes: true })
       .filter(entry => entry.isFile() && /\.(png|jpe?g|webp|gif)$/i.test(entry.name))
       .map(entry => `/banners/${entry.name}`)
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
+
+function getQueueMusicPaths() {
+  try {
+    return fs.readdirSync(QUEUE_MUSICS_DIR, { withFileTypes: true })
+      .filter(entry => entry.isFile() && /\.(mp3|ogg|wav|m4a)$/i.test(entry.name))
+      .map(entry => `/musics/${entry.name}`)
       .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   } catch {
     return [];
@@ -1894,6 +1906,10 @@ app.get('/api/profile-banners', (_, res) => {
   res.json({ banners: getProfileBannerPaths() });
 });
 
+app.get('/api/musics', (_, res) => {
+  res.json({ musics: getQueueMusicPaths() });
+});
+
 app.get('/api/tournaments', (req, res) => {
   finalizeExpiredTournaments();
   const token = String(req.headers['x-session-token'] || req.query.token || '');
@@ -2292,6 +2308,7 @@ function sanitize(p) {
       avatar_decoration: '',
       token_emoji_image: '',
       profile_banner: '',
+      queue_music: '',
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -2520,6 +2537,23 @@ app.patch('/api/players/:id/profile-banner', (req, res) => {
   pQ.updateProfileBanner.run({ image: nextBanner, id });
   pQ.updateProfileBannerChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true });
+});
+
+app.patch('/api/players/:id/queue-music', (req, res) => {
+  const { music, token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Reserve au grade Perso.' });
+  }
+  const nextMusic = String(music || '').trim();
+  const allowed = getQueueMusicPaths();
+  if (nextMusic && !allowed.includes(nextMusic)) {
+    return res.status(400).json({ error: 'Musique invalide.' });
+  }
+  pQ.updateQueueMusic.run({ music: nextMusic, id });
+  res.json({ ok: true, queue_music: nextMusic });
 });
 
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs

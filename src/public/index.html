@@ -2845,6 +2845,25 @@ const QueueMusic = (() => {
     if (!audio) audio = document.getElementById('queue-music');
     return audio;
   }
+  function getPlayerQueueMusic() {
+    try {
+      const player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+      return String(player?.queue_music || '').trim();
+    } catch {
+      return '';
+    }
+  }
+  function syncSource() {
+    const a = get();
+    if (!a) return;
+    const customMusic = getPlayerQueueMusic();
+    const nextSrc = customMusic || '/sounds/puissance4-song.mp3';
+    const currentSrc = a.getAttribute('src') || '';
+    if (currentSrc !== nextSrc) {
+      a.setAttribute('src', nextSrc);
+      a.load();
+    }
+  }
   function syncUI() {
     const slider = document.getElementById('queue-volume-slider');
     const valueEl = document.getElementById('queue-volume-val');
@@ -2858,6 +2877,7 @@ const QueueMusic = (() => {
     start() {
       const a = get();
       if (!a) return;
+      syncSource();
       const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
       if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
       a.volume = volume;
@@ -2890,6 +2910,7 @@ const QueueMusic = (() => {
       syncUI();
     },
     syncUI,
+    syncSource,
   };
 })();
 
