@@ -424,7 +424,7 @@ const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
-const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'musics');
+const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
 
 function getAvatarDecorationPaths() {
   try {
@@ -452,7 +452,7 @@ function getQueueMusicPaths() {
   try {
     return fs.readdirSync(QUEUE_MUSICS_DIR, { withFileTypes: true })
       .filter(entry => entry.isFile() && /\.(mp3|ogg|wav|m4a)$/i.test(entry.name))
-      .map(entry => `/musics/${entry.name}`)
+      .map(entry => `/sounds/${entry.name}`)
       .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   } catch {
     return [];
