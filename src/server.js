@@ -175,15 +175,20 @@ function scheduleDuelExpiration(challengeId, ttlMs = 90_000) {
   }, ttlMs);
 }
 
-function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs = 90_000 }) {
+function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs = 90_000, gameType = 'ranked' }) {
   const challengeId = crypto.randomUUID();
+  const safeGameType = String(gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
+  const createdAt = Date.now();
   const challenge = {
     id: challengeId,
     status: 'pending',
     senderId: Number(senderId),
     targetId: targetId ? Number(targetId) : null,
     mode,
-    createdAt: Date.now(),
+    gameType: safeGameType,
+    requireLogin: safeGameType !== 'friendly',
+    createdAt,
+    expiresAt: createdAt + Number(ttlMs || 0),
   };
   duelChallenges.set(challengeId, challenge);
   scheduleDuelExpiration(challengeId, ttlMs);
@@ -194,8 +199,11 @@ function serializeDuelChallenge(req, challenge, sender, target = null) {
   return {
     id: challenge.id,
     mode: challenge.mode || 'direct',
+    gameType: String(challenge.gameType || 'ranked'),
+    requireLogin: Number(challenge.requireLogin ? 1 : 0) === 1,
     status: challenge.status,
     createdAt: Number(challenge.createdAt || Date.now()),
+    expiresAt: Number(challenge.expiresAt || challenge.createdAt || Date.now()),
     shareUrl: `${req.protocol}://${req.get('host')}/duel/${challenge.id}`,
     sender: sender ? {
       id: sender.id,
@@ -262,7 +270,7 @@ function acceptDuelChallenge(challenge, accepterId) {
     target: { id: sender.id, pseudo: sender.pseudo, elo: Number(sender.elo || 0), color: sender.color || '#ff2d55', avatar: sender.avatar || '' },
   }));
 
-  _startMatch(p1, p2, { duel: true });
+  _startMatch(p1, p2, { duel: true, gameType: challenge.gameType || 'ranked' });
   return { ok: true, sender, target };
 }
 
@@ -373,6 +381,34 @@ function createSession(playerId) {
   sQ.set.run(token, playerId, expires);
   return token;
 }
+
+function generateGuestPseudo() {
+  let pseudo = '';
+  do {
+    pseudo = `Invite-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  } while (pQ.getByPseudo.get(pseudo));
+  return pseudo;
+}
+
+function createGuestPlayerSession() {
+  const pseudo = generateGuestPseudo();
+  const row = pQ.register.get({ pseudo, password: '' });
+  pQ.updateGuest.run({ is_guest: 1, id: row.id });
+  const fresh = pQ.getById.get(row.id);
+  const token = createSession(fresh.id);
+  return { token, player: sanitize(fresh) };
+}
+
+app.post('/api/auth/guest', (req, res) => {
+  try {
+    const guestAuth = createGuestPlayerSession();
+    res.json({ ok: true, ...guestAuth });
+  } catch (error) {
+    console.error('[AUTH] guest:', error.message);
+    res.status(500).json({ error: 'Impossible de creer la session invite.' });
+  }
+});
+
 function validateSession(token) {
   if (!token) return null;
   const row = sQ.get.get(token);
@@ -1846,6 +1882,7 @@ app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/bo
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
+app.get('/duel-auth/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/duel-auth.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
 app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
 app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/stats.html')));
@@ -2497,6 +2534,7 @@ app.get('/api/players/search', (req, res) => {
       FROM players
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
+        AND is_guest = 0
       ORDER BY elo DESC LIMIT 8
     `).all(q.replace(/%/g, '') + '%');
     res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '' })));
@@ -2509,8 +2547,9 @@ app.get('/api/players/search', (req, res) => {
 app.post('/api/duels/challenge', (req, res) => {
   try {
     const token = String(req.body?.token || '');
+    const gameType = String(req.body?.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
     const senderId = validateSession(token);
-    if (!senderId) return res.status(401).json({ error: 'Session invalide.' });
+    if (!senderId) return res.status(401).json({ error: gameType === 'friendly' ? 'Session invite invalide.' : 'Session invalide.' });
 
     const targetId = Number(req.body?.targetId || 0);
     if (!targetId) return res.status(400).json({ error: 'Joueur cible introuvable.' });
@@ -2531,13 +2570,14 @@ app.post('/api/duels/challenge', (req, res) => {
       challenge.status === 'pending' &&
       challenge.senderId === senderId &&
       challenge.targetId === targetId &&
+      String(challenge.gameType || 'ranked') === gameType &&
       Date.now() - Number(challenge.createdAt || 0) < 60_000
     );
     if (duplicate) {
       return res.status(400).json({ error: 'Un duel est déjà en attente pour ce joueur.' });
     }
 
-    const payload = createDuelChallenge({ senderId, targetId, mode: 'direct', ttlMs: 90_000 });
+    const payload = createDuelChallenge({ senderId, targetId, mode: 'direct', ttlMs: 90_000, gameType });
 
     const freshSender = sanitize(sender);
     targetSockets.forEach(socket => {
@@ -2578,9 +2618,10 @@ app.post('/api/duels/challenge', (req, res) => {
 
 app.post('/api/duels/link', (req, res) => {
   try {
+    const gameType = String(req.body?.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
     const token = String(req.body?.token || '');
     const senderId = validateSession(token);
-    if (!senderId) return res.status(401).json({ error: 'Session invalide.' });
+    if (!senderId) return res.status(401).json({ error: gameType === 'friendly' ? 'Session invite invalide.' : 'Session invalide.' });
 
     const sender = pQ.getById.get(senderId);
     if (!sender || sender.deleted) return res.status(404).json({ error: 'Ton profil est introuvable.' });
@@ -2589,14 +2630,32 @@ app.post('/api/duels/link', (req, res) => {
     const duplicate = [...duelChallenges.values()].find(challenge =>
       challenge.status === 'pending' &&
       challenge.mode === 'link' &&
+      String(challenge.gameType || 'ranked') === gameType &&
       challenge.senderId === senderId &&
       Date.now() - Number(challenge.createdAt || 0) < 15 * 60_000
     );
-    const challenge = duplicate || createDuelChallenge({ senderId, mode: 'link', ttlMs: 15 * 60_000 });
+    const challenge = duplicate || createDuelChallenge({ senderId, mode: 'link', ttlMs: 15 * 60_000, gameType });
     res.json({ ok: true, challenge: serializeDuelChallenge(req, challenge, sender) });
   } catch (error) {
     console.error('[DUEL] link:', error.message);
     res.status(500).json({ error: 'Impossible de generer le lien de duel.' });
+  }
+});
+
+app.post('/api/duels/:id/guest-session', (req, res) => {
+  try {
+    const challenge = duelChallenges.get(String(req.params.id || ''));
+    if (!challenge || challenge.status !== 'pending') {
+      return res.status(404).json({ error: 'Ce duel n est plus disponible.' });
+    }
+    if (String(challenge.gameType || 'ranked') !== 'friendly') {
+      return res.status(400).json({ error: 'Seuls les duels amicaux acceptent le mode invite.' });
+    }
+    const guestAuth = createGuestPlayerSession();
+    res.json({ ok: true, ...guestAuth });
+  } catch (error) {
+    console.error('[DUEL] guest-session:', error.message);
+    res.status(500).json({ error: 'Impossible de preparer le mode invite.' });
   }
 });
 
@@ -3365,13 +3424,13 @@ app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
 app.get('/api/leaderboard/wins', (_, res) => {
-  const q = db.prepare('SELECT * FROM players ORDER BY wins DESC LIMIT 10');
+  const q = db.prepare('SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 ORDER BY wins DESC LIMIT 10');
   res.json(q.all().map(sanitize));
 });
 app.get('/api/site-stats', (_, res) => {
   const presence = getPresenceCounts();
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
-  const registeredPlayers = db.prepare(`SELECT COUNT(*) as c FROM players`).get()?.c || 0;
+  const registeredPlayers = db.prepare(`SELECT COUNT(*) as c FROM players WHERE is_guest = 0`).get()?.c || 0;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get();
@@ -3400,20 +3459,20 @@ app.get('/api/site-stats', (_, res) => {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Socket.io AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 function getStatsOverview() {
   const presence = getPresenceCounts();
-  const registeredPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
+  const registeredPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
   const activeGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'active'`).get()?.c || 0);
   const finishedGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'finished'`).get()?.c || 0);
   const totalGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games`).get()?.c || 0);
   const totalMoves = Number(db.prepare(`SELECT COALESCE(SUM(move_count), 0) AS v FROM games`).get()?.v || 0);
-  const averageElo = Number(db.prepare(`SELECT ROUND(AVG(elo), 0) AS v FROM players WHERE deleted = 0 AND id != ?`).get(BOT_PLAYER_ID)?.v || 0);
+  const averageElo = Number(db.prepare(`SELECT ROUND(AVG(elo), 0) AS v FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.v || 0);
   const averageDuration = Number(db.prepare(`SELECT ROUND(AVG(duration), 0) AS v FROM games WHERE status = 'finished' AND duration > 0`).get()?.v || 0);
   const averageMoves = Number(db.prepare(`SELECT ROUND(AVG(move_count), 0) AS v FROM games WHERE status = 'finished' AND move_count > 0`).get()?.v || 0);
   const follows = Number(db.prepare(`SELECT COUNT(*) AS c FROM follows`).get()?.c || 0);
   const tournaments = Number(db.prepare(`SELECT COUNT(*) AS c FROM tournaments`).get()?.c || 0);
-  const totalCoins = Number(db.prepare(`SELECT COALESCE(SUM(coins), 0) AS v FROM players WHERE deleted = 0 AND id != ?`).get(BOT_PLAYER_ID)?.v || 0);
-  const vipCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_vip = 1 AND is_vip_plus = 0`).get()?.c || 0);
-  const vipPlusCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_vip_plus = 1`).get()?.c || 0);
-  const persoCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_perso = 1`).get()?.c || 0);
+  const totalCoins = Number(db.prepare(`SELECT COALESCE(SUM(coins), 0) AS v FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.v || 0);
+  const vipCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_vip = 1 AND is_vip_plus = 0`).get()?.c || 0);
+  const vipPlusCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_vip_plus = 1`).get()?.c || 0);
+  const persoCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_perso = 1`).get()?.c || 0);
   const shopPurchases = Number(db.prepare(`SELECT COALESCE(SUM(quantity), 0) AS v FROM player_shop_items`).get()?.v || 0);
   const eloBoostersOwned = Number(db.prepare(`
     SELECT COALESCE(SUM(quantity), 0) AS v
@@ -3433,7 +3492,7 @@ function getStatsOverview() {
     expiresAt: Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0),
   };
   const activeVipBoosts = Number(db.prepare(`SELECT COUNT(*) AS c FROM vip_boosts WHERE expires_at > ?`).get(Date.now())?.c || 0);
-  const suspiciousPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND suspicious = 1`).get()?.c || 0);
+  const suspiciousPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND suspicious = 1`).get()?.c || 0);
   const suspiciousGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE suspicious = 1`).get()?.c || 0);
   const botGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE player1_id = ? OR player2_id = ?`).get(BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
   const accuracyRows = db.prepare(`
@@ -3510,7 +3569,7 @@ function getWeeklyStats() {
   const players = db.prepare(`
     SELECT created_at
     FROM players
-    WHERE deleted = 0 AND id != ?
+    WHERE deleted = 0 AND is_guest = 0 AND id != ?
       AND created_at >= datetime(?, 'unixepoch')
   `).all(BOT_PLAYER_ID, Math.floor(firstBucketStartMs / 1000));
 
@@ -3978,6 +4037,7 @@ function _startMatch(p1, p2, options = {}) {
 
   const base = {
     gameId: state.id,
+    gameType: String(state.gameType || options.gameType || 'ranked'),
     moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
     tournament: options.tournamentId ? {
       id: Number(options.tournamentId),

@@ -121,8 +121,10 @@ try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`)
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
 // Table boost VIP individuel
 db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -208,6 +210,7 @@ const pQ = {
   updateProfileBanner: db.prepare(`UPDATE players SET profile_banner = @image WHERE id = @id`),
   updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
   updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
+  updateGuest:    db.prepare(`UPDATE players SET is_guest = @is_guest WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
@@ -219,12 +222,12 @@ const pQ = {
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
   loss:         db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
   draw:         db.prepare(`UPDATE players SET draws  = draws  + 1 WHERE id = ?`),
-  leaderboard:  db.prepare(`SELECT * FROM players WHERE deleted = 0 ORDER BY elo DESC LIMIT 10`),
+  leaderboard:  db.prepare(`SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 ORDER BY elo DESC LIMIT 10`),
 };
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const gQ = {
-  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape, tournament_id, tournament_move_time_seconds) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape, @tournament_id, @tournament_move_time_seconds)`),
+  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape, tournament_id, tournament_move_time_seconds, game_type) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape, @tournament_id, @tournament_move_time_seconds, @game_type)`),
   getById: db.prepare(`
     SELECT g.*,
       p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
@@ -351,17 +354,20 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const player2 = pQ.getById.get(game.player2_id);
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
-  const eloCalc = calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
+  const isFriendly = String(game?.game_type || 'ranked') === 'friendly';
+  const eloCalc = isFriendly
+    ? { dW: 0, dL: 0, globalMultiplier: 1, vipApplied: false, vipAppliedTo: null, vipMultiplier: 1, vipTier: null }
+    : calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
   const dW = eloCalc.dW;
   const dL = eloCalc.dL;
-  const vipApplied = isDraw ? false : !!vipQ.getActive.get(winnerId, Date.now());
+  const vipApplied = !isFriendly && !isDraw ? !!vipQ.getActive.get(winnerId, Date.now()) : false;
   const vipAppliedTo = vipApplied ? winnerId : null;
-  const globalMultiplier = eloCalc.globalMultiplier ?? (bQ.getActive.get()?.multiplier ?? 1);
+  const globalMultiplier = isFriendly ? 1 : (eloCalc.globalMultiplier ?? (bQ.getActive.get()?.multiplier ?? 1));
   const activeBoost = vipApplied ? vipQ.getActive.get(winnerId, Date.now()) : null;
   const vipMultiplier = vipApplied ? Number(activeBoost?.multiplier || 1) : 1;
   const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;
-  const p1Delta = isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
-  const p2Delta = isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
+  const p1Delta = isFriendly || isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
+  const p2Delta = isFriendly || isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
   const coinBoost = (() => {
     try {
       const multiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
@@ -371,10 +377,10 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
       return 1;
     }
   })();
-  const p1Coins = isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
-  const p2Coins = isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p1Coins = isFriendly || isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p2Coins = isFriendly || isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
 
-  if (!isSuspect) {
+  if (!isFriendly && !isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
     pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
     pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });

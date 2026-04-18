@@ -1053,6 +1053,40 @@ html, body {
   flex-direction: column;
   gap: 10px;
 }
+.duel-type-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.duel-type-btn {
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  color: rgba(238,238,245,0.72);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: .18s ease;
+}
+.duel-type-btn strong {
+  display: block;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.duel-type-btn span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.duel-type-btn.active {
+  border-color: rgba(255,45,85,0.34);
+  background: linear-gradient(180deg, rgba(255,45,85,0.12), rgba(255,255,255,0.03));
+  box-shadow: 0 0 0 1px rgba(255,45,85,0.1), 0 18px 38px rgba(0,0,0,0.18);
+}
 .duel-results {
   display: flex;
   flex-direction: column;
@@ -1739,6 +1773,9 @@ html, body {
   .duel-dialog-actions .btn{
     width: 100%;
   }
+  .duel-type-row{
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 380px) {
   .page{
@@ -2202,6 +2239,16 @@ html, body {
       <button class="duel-close" type="button" onclick="closeDuelModal()" aria-label="Fermer">×</button>
     </div>
     <div class="duel-search">
+      <div class="duel-type-row">
+        <button class="duel-type-btn active" id="duel-type-ranked" type="button" onclick="selectDuelType('ranked')">
+          <strong>Ranked</strong>
+          <span>Classee, compte requis, ELO applique.</span>
+        </button>
+        <button class="duel-type-btn" id="duel-type-friendly" type="button" onclick="selectDuelType('friendly')">
+          <strong>Amical</strong>
+          <span>Invite accepte, sans ELO, lien valable 15 min.</span>
+        </button>
+      </div>
       <div class="input-wrap">
         <span class="input-icon">⚔️</span>
         <input class="input" id="duel-search-input" type="text" placeholder="Pseudo du joueur..." maxlength="20" autocomplete="off" spellcheck="false" oninput="onDuelSearchInput(this.value)">
@@ -2284,6 +2331,7 @@ let currentGlobalBoost = null;
 let duelSearchTimer = null;
 let duelResults = [];
 let duelSelectedId = null;
+let duelGameType = 'ranked';
 
 function switchTab(mode) {
   authMode = mode;
@@ -2381,7 +2429,7 @@ async function handleAuth() {
     if (token) localStorage.setItem('token', token);
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
-    connectAndQueue();
+    redirectAfterAuthOrQueue();
   } catch {
     showError('Erreur réseau, réessaie.');
     btn.disabled = false;
@@ -2427,7 +2475,7 @@ function tryCompleteDiscordAuth() {
     localStorage.setItem('player', JSON.stringify(payload.player));
     sessionStorage.setItem('player', JSON.stringify(payload.player));
     history.replaceState(null, '', location.pathname + location.search);
-    connectAndQueue();
+    redirectAfterAuthOrQueue();
     return true;
   } catch (e) {
     console.error('[discord-auth]', e);
@@ -2447,6 +2495,53 @@ function showDuelError(msg) {
   const el = document.getElementById('duel-error');
   if (!el) return;
   el.textContent = msg || '';
+}
+
+function selectDuelType(type) {
+  duelGameType = type === 'friendly' ? 'friendly' : 'ranked';
+  document.getElementById('duel-type-ranked')?.classList.toggle('active', duelGameType === 'ranked');
+  document.getElementById('duel-type-friendly')?.classList.toggle('active', duelGameType === 'friendly');
+}
+
+function consumePostAuthRedirect() {
+  try {
+    const value = sessionStorage.getItem('p4_after_login') || '';
+    if (value) sessionStorage.removeItem('p4_after_login');
+    return value;
+  } catch (e) {
+    return '';
+  }
+}
+
+async function ensureFriendlyDuelAuth() {
+  const existingToken = localStorage.getItem('token') || '';
+  const existingPlayer = getSafePlayer();
+  if (existingToken && existingPlayer?.id) {
+    return { token: existingToken, player: existingPlayer };
+  }
+  const res = await fetch('/api/auth/guest', { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.token || !data?.player?.id) {
+    throw new Error(data?.error || 'Impossible de creer une session invite.');
+  }
+  myPlayer = data.player;
+  localStorage.setItem('token', data.token);
+  localStorage.setItem('player', JSON.stringify(data.player));
+  sessionStorage.setItem('player', JSON.stringify(data.player));
+  if (window._presenceSocket?.connected) {
+    window._presenceSocket.emit('identify', { playerId: data.player.id, token: data.token });
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  return { token: data.token, player: data.player };
+}
+
+function redirectAfterAuthOrQueue() {
+  const redirect = consumePostAuthRedirect();
+  if (redirect) {
+    window.location.href = redirect;
+    return;
+  }
+  connectAndQueue();
 }
 
 function getSafePlayer() {
@@ -2469,6 +2564,8 @@ function closeDuelModal() {
   modal.setAttribute('aria-hidden', 'true');
   duelResults = [];
   duelSelectedId = null;
+  duelGameType = 'ranked';
+  selectDuelType('ranked');
   showDuelError('');
   const input = document.getElementById('duel-search-input');
   const resultsEl = document.getElementById('duel-results');
@@ -2479,15 +2576,11 @@ function closeDuelModal() {
 }
 
 function openDuelModal() {
-  const player = getSafePlayer();
-  if (!player?.id || !localStorage.getItem('token')) {
-    showError('Connecte-toi avant d envoyer un duel.');
-    return;
-  }
   const modal = document.getElementById('duel-modal');
   if (!modal) return;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
+  selectDuelType(duelGameType);
   const input = document.getElementById('duel-search-input');
   if (input) setTimeout(() => input.focus(), 40);
 }
@@ -2553,10 +2646,20 @@ async function onDuelSearchInput(value) {
 }
 
 async function sendDuelChallenge() {
-  const player = getSafePlayer();
-  const token = localStorage.getItem('token') || '';
+  let player = getSafePlayer();
+  let token = localStorage.getItem('token') || '';
+  if ((!player?.id || !token) && duelGameType === 'friendly') {
+    try {
+      const auth = await ensureFriendlyDuelAuth();
+      player = auth.player;
+      token = auth.token;
+    } catch (error) {
+      showDuelError(error.message || 'Impossible de preparer le duel amical.');
+      return;
+    }
+  }
   if (!player?.id || !token) {
-    showDuelError('Connecte-toi avant d envoyer un duel.');
+    showDuelError('Connecte-toi avant d envoyer un duel ranked.');
     return;
   }
   if (!duelSelectedId) {
@@ -2570,7 +2673,7 @@ async function sendDuelChallenge() {
     const res = await fetch('/api/duels/challenge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, targetId: duelSelectedId }),
+      body: JSON.stringify({ token, targetId: duelSelectedId, gameType: duelGameType }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -2586,10 +2689,20 @@ async function sendDuelChallenge() {
 }
 
 async function createDuelLink() {
-  const player = getSafePlayer();
-  const token = localStorage.getItem('token') || '';
+  let player = getSafePlayer();
+  let token = localStorage.getItem('token') || '';
+  if ((!player?.id || !token) && duelGameType === 'friendly') {
+    try {
+      const auth = await ensureFriendlyDuelAuth();
+      player = auth.player;
+      token = auth.token;
+    } catch (error) {
+      showDuelError(error.message || 'Impossible de preparer le lien amical.');
+      return;
+    }
+  }
   if (!player?.id || !token) {
-    showDuelError('Connecte-toi avant de générer un lien de duel.');
+    showDuelError('Connecte-toi avant de générer un lien ranked.');
     return;
   }
   showDuelError('');
@@ -2597,7 +2710,7 @@ async function createDuelLink() {
     const res = await fetch('/api/duels/link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({ token, gameType: duelGameType }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.challenge?.shareUrl) {
@@ -2605,7 +2718,7 @@ async function createDuelLink() {
       return;
     }
     await navigator.clipboard.writeText(data.challenge.shareUrl);
-    showDuelError('Lien de duel copié. Tu peux l’envoyer directement.');
+    showDuelError(`Lien de duel ${duelGameType === 'friendly' ? 'amical' : 'ranked'} copié. Tu peux l envoyer directement.`);
   } catch (error) {
     showDuelError('Erreur réseau, réessaie.');
   }

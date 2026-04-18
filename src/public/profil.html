@@ -2080,6 +2080,8 @@ function renderGameRow(g, me) {
     const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
+    const typeLabel = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
+    const typeBadge = `<div title="Type de partie" style="font-size:10px;letter-spacing:1px;background:${typeLabel === 'Amical' ? 'rgba(133,235,255,0.12)' : 'rgba(255,216,77,0.12)'};border:1px solid ${typeLabel === 'Amical' ? 'rgba(133,235,255,0.28)' : 'rgba(255,216,77,0.24)'};color:${typeLabel === 'Amical' ? '#85EBFF' : '#FFD84D'};padding:2px 7px;border-radius:5px;white-space:nowrap;">${typeLabel}</div>`;
     const date      = g.finished_at
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '-';
@@ -2090,6 +2092,7 @@ function renderGameRow(g, me) {
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
         <div class="game-elo-change ${eloClass}">${g.suspicious ? '±0 ELO' : eloStr}</div>
+        ${typeBadge}
         <div>${g.move_count} coups · ${g.duration}s</div>
         <div>${date}</div>
         ${suspBadge}

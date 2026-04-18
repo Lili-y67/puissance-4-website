@@ -44,6 +44,7 @@ class GameManager {
       p2_shape: p2.shape || 'circle',
       tournament_id: options.tournamentId || null,
       tournament_move_time_seconds: moveTimeSeconds,
+      game_type: String(options.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked',
     }).lastInsertRowid;
 
     const state = {
@@ -57,6 +58,7 @@ class GameManager {
       status:     'active',
       tournamentId: options.tournamentId || null,
       tournamentName: options.tournamentName || '',
+      gameType: String(options.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked',
       turnTimeLimitMs: moveTimeSeconds * 1000,
       moveTimeSeconds,
     };
@@ -218,6 +220,7 @@ class GameManager {
     const payload = {
       type:   'game_over',
       gameId: state.id,
+      gameType: String(state.gameType || 'ranked'),
       reason,
       duration,
       winner: winnerSide,

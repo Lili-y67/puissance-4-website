@@ -449,6 +449,7 @@ function renderShell() {
   const p1Won = g.winner_id === g.player1_id;
   const p2Won = g.winner_id === g.player2_id;
   const isDraw = g.winner_id === null;
+  const gameType = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
 
   const date = g.finished_at
     ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
@@ -472,6 +473,7 @@ function renderShell() {
         </div>
       </div>
       <div class="replay-meta">
+        <div class="rmeta">Type <strong>${gameType}</strong></div>
         <div class="rmeta">Date <strong>${date}</strong></div>
         <div class="rmeta">Coups <strong>${g.move_count} coups</strong></div>
         <div class="rmeta">Temps <strong>${g.duration}s</strong></div>

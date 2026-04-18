@@ -73,7 +73,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="state warn" id="duel-state">Lecture du duel en cours...</div>
     <div class="meta">
       <div class="meta-card">
-        <div class="meta-label">Mode</div>
+        <div class="meta-label">Type</div>
         <div class="meta-value" id="duel-mode">—</div>
       </div>
       <div class="meta-card">
@@ -81,7 +81,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         <div class="meta-value" id="duel-status">—</div>
       </div>
       <div class="meta-card">
-        <div class="meta-label">Créé</div>
+        <div class="meta-label">Expire</div>
         <div class="meta-value" id="duel-created">—</div>
       </div>
     </div>
@@ -97,6 +97,16 @@ function formatDate(ts) {
   return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function formatCountdown(ts) {
+  const remaining = Math.max(0, Number(ts || 0) - Date.now());
+  if (!remaining) return 'Expire';
+  const totalMinutes = Math.ceil(remaining / 60000);
+  if (totalMinutes < 60) return `${totalMinutes} min`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h${minutes ? String(minutes).padStart(2, '0') : ''}`;
+}
+
 function setState(message, tone = 'warn') {
   const el = document.getElementById('duel-state');
   if (!el) return;
@@ -104,22 +114,36 @@ function setState(message, tone = 'warn') {
   el.textContent = message;
 }
 
+function getStoredAuth() {
+  const token = localStorage.getItem('token') || '';
+  let player = null;
+  try {
+    player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+  } catch (e) {
+    player = null;
+  }
+  return { token, player };
+}
+
 function renderDuel(challenge) {
   duelData = challenge;
   const sender = challenge?.sender || null;
-  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+  const { player: me } = getStoredAuth();
   const isLogged = !!(me && me.id);
   const isSender = Number(me?.id || 0) === Number(sender?.id || 0);
   const pending = challenge?.status === 'pending';
-  const canAccept = pending && isLogged && !isSender;
+  const isFriendly = String(challenge?.gameType || 'ranked') === 'friendly';
+  const canAccept = pending && (isFriendly || isLogged) && !isSender;
 
-  document.getElementById('duel-title').textContent = sender ? `${sender.pseudo} t’invite à jouer` : 'Lien de duel';
+  document.getElementById('duel-title').textContent = sender ? `${sender.pseudo} t invite a jouer` : 'Lien de duel';
   document.getElementById('duel-copy').textContent = challenge?.mode === 'link'
-    ? 'Le premier joueur connecté qui accepte le lien lance immédiatement la partie.'
-    : 'Ce duel est réservé à un joueur précis et démarre dès validation.';
-  document.getElementById('duel-mode').textContent = challenge?.mode === 'link' ? 'Lien' : 'Direct';
+    ? (isFriendly
+      ? 'Le premier joueur qui accepte ce lien rejoint une partie amicale sans ELO.'
+      : 'Le premier joueur connecte qui accepte ce lien rejoint une partie ranked.')
+    : 'Ce duel est reserve a un joueur precis et demarre des validation.';
+  document.getElementById('duel-mode').textContent = isFriendly ? 'Amical' : 'Ranked';
   document.getElementById('duel-status').textContent = (challenge?.status || 'inconnu').toUpperCase();
-  document.getElementById('duel-created').textContent = formatDate(challenge?.createdAt);
+  document.getElementById('duel-created').textContent = formatCountdown(challenge?.expiresAt);
 
   const avatar = document.getElementById('duel-avatar');
   if (sender?.avatar) avatar.innerHTML = `<img src="${sender.avatar}" alt="">`;
@@ -128,9 +152,10 @@ function renderDuel(challenge) {
   const chips = document.getElementById('duel-chips');
   chips.innerHTML = '';
   const entries = [
-    ['Créateur', sender?.pseudo || 'Inconnu'],
+    ['Createur', sender?.pseudo || 'Inconnu'],
     ['ELO', Number(sender?.elo || 0)],
-    ['Lien', challenge?.id || '—'],
+    ['Type', isFriendly ? 'Amical' : 'Ranked'],
+    ['Lien', challenge?.id || '-'],
   ];
   entries.forEach(([label, value]) => {
     const div = document.createElement('div');
@@ -141,14 +166,19 @@ function renderDuel(challenge) {
 
   const acceptBtn = document.getElementById('accept-btn');
   acceptBtn.disabled = !canAccept;
+  acceptBtn.textContent = isFriendly && !isLogged
+    ? 'Jouer en invite'
+    : (!isLogged ? 'Se connecter' : 'Valider le duel');
   if (!pending) {
-    setState('Ce duel n’est plus en attente.', 'err');
-  } else if (!isLogged) {
-    setState('Connecte-toi d’abord sur le site puis reviens ici pour valider le duel.', 'warn');
+    setState('Ce duel n est plus en attente.', 'err');
+  } else if (!isLogged && !isFriendly) {
+    setState('Ce duel ranked demande une connexion. Passe par la page de connexion temporaire puis reviens ici.', 'warn');
+  } else if (!isLogged && isFriendly) {
+    setState('Ce duel amical accepte les invites. Clique pour rejoindre sans compte.', 'ok');
   } else if (isSender) {
-    setState('Lien prêt. Tu peux maintenant le partager. Dès qu’un joueur valide, la partie démarre.', 'ok');
+    setState('Lien pret. Tu peux maintenant le partager. Des qu un joueur valide, la partie demarre.', 'ok');
   } else {
-    setState('Tu es connecté. Clique sur "Valider le duel" pour lancer la partie.', 'ok');
+    setState(`Tu es connecte. Clique sur "${acceptBtn.textContent}" pour lancer la partie.`, 'ok');
   }
 }
 
@@ -169,11 +199,34 @@ async function loadDuel() {
 }
 
 async function acceptDuel() {
-  const token = localStorage.getItem('token') || '';
   const duelId = location.pathname.split('/').filter(Boolean).pop();
-  if (!token) {
-    setState('Connexion requise avant validation du duel.', 'warn');
+  let { token } = getStoredAuth();
+  const isFriendly = String(duelData?.gameType || 'ranked') === 'friendly';
+  if (!token && !isFriendly) {
+    location.href = '/duel-auth/' + encodeURIComponent(duelId);
     return;
+  }
+  if (!token && isFriendly) {
+    setState('Preparation du mode invite...', 'warn');
+    try {
+      const guestRes = await fetch('/api/duels/' + encodeURIComponent(duelId) + '/guest-session', { method: 'POST' });
+      const guestData = await guestRes.json().catch(() => ({}));
+      if (!guestRes.ok || !guestData?.token || !guestData?.player?.id) {
+        setState(guestData?.error || 'Impossible de preparer le mode invite.', 'err');
+        return;
+      }
+      localStorage.setItem('token', guestData.token);
+      localStorage.setItem('player', JSON.stringify(guestData.player));
+      sessionStorage.setItem('player', JSON.stringify(guestData.player));
+      token = guestData.token;
+      if (window._presenceSocket?.connected) {
+        window._presenceSocket.emit('identify', { playerId: guestData.player.id, token: guestData.token });
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+    } catch (error) {
+      setState('Erreur reseau pendant la preparation invite.', 'err');
+      return;
+    }
   }
   const btn = document.getElementById('accept-btn');
   btn.disabled = true;
@@ -190,9 +243,9 @@ async function acceptDuel() {
       btn.disabled = false;
       return;
     }
-    setState('Duel validé. Préparation de la partie...', 'ok');
+    setState('Duel valide. Preparation de la partie...', 'ok');
   } catch (error) {
-    setState('Erreur réseau pendant la validation.', 'err');
+    setState('Erreur reseau pendant la validation.', 'err');
     btn.disabled = false;
   }
 }
