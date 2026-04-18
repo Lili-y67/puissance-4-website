@@ -425,6 +425,51 @@ const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
+const QUEUE_MUSIC_THEMES = {
+  cyber: 'Cyber',
+  zen: 'Zen',
+  mystique: 'Mystique',
+  lounge: 'Lounge',
+  aventure: 'Aventure',
+  dark: 'Dark',
+};
+const QUEUE_MUSIC_CATALOG = [
+  { file: 'Mesmerizing Galaxy Loop.mp3', theme: 'cyber' },
+  { file: 'Voxel Revolution.mp3', theme: 'cyber' },
+  { file: 'Blippy Trance.mp3', theme: 'cyber' },
+  { file: 'Envision.mp3', theme: 'cyber' },
+  { file: 'Rollin at 5 - electronic.mp3', theme: 'cyber' },
+
+  { file: 'Easy Lemon 60 second.mp3', theme: 'zen' },
+  { file: 'Senbazuru.mp3', theme: 'zen' },
+  { file: 'Water Lily.mp3', theme: 'zen' },
+  { file: 'Clear Waters.mp3', theme: 'zen' },
+  { file: 'Midsummer Sky.mp3', theme: 'zen' },
+
+  { file: 'Guzheng City.mp3', theme: 'mystique' },
+  { file: 'Ancient Rite.mp3', theme: 'mystique' },
+  { file: 'Industrial Music Box.mp3', theme: 'mystique' },
+  { file: 'Fairytale Waltz.mp3', theme: 'mystique' },
+  { file: 'Adventure Meme.mp3', theme: 'mystique' },
+
+  { file: 'Back on Track.mp3', theme: 'lounge' },
+  { file: 'B-Roll.mp3', theme: 'lounge' },
+  { file: 'Off to Osaka.mp3', theme: 'lounge' },
+  { file: 'No Frills Salsa - Alternate.mp3', theme: 'lounge' },
+  { file: 'Vibe Ace.mp3', theme: 'lounge' },
+
+  { file: 'Strength of the Titans.mp3', theme: 'aventure' },
+  { file: 'New Hero in Town.mp3', theme: 'aventure' },
+  { file: 'Our Story Begins.mp3', theme: 'aventure' },
+  { file: 'Heroic Age.mp3', theme: 'aventure' },
+  { file: 'Take a Chance.mp3', theme: 'aventure' },
+
+  { file: 'Mystery Sting.mp3', theme: 'dark' },
+  { file: 'Not As It Seems.mp3', theme: 'dark' },
+  { file: 'Gloom Horizon.mp3', theme: 'dark' },
+  { file: 'Ghost Processional.mp3', theme: 'dark' },
+  { file: 'Chase Pulse.mp3', theme: 'dark' },
+];
 
 function getAvatarDecorationPaths() {
   try {
@@ -450,10 +495,27 @@ function getProfileBannerPaths() {
 
 function getQueueMusicPaths() {
   try {
-    return fs.readdirSync(QUEUE_MUSICS_DIR, { withFileTypes: true })
-      .filter(entry => entry.isFile() && /\.(mp3|ogg|wav|m4a)$/i.test(entry.name))
-      .map(entry => `/sounds/${entry.name}`)
-      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+    const presentFiles = new Set(
+      fs.readdirSync(QUEUE_MUSICS_DIR, { withFileTypes: true })
+        .filter(entry => entry.isFile() && /\.(mp3|ogg|wav|m4a)$/i.test(entry.name))
+        .map(entry => entry.name)
+    );
+    return QUEUE_MUSIC_CATALOG
+      .filter(entry => presentFiles.has(entry.file))
+      .map(entry => {
+        const src = `/sounds/${entry.file}`;
+        const label = entry.file
+          .replace(/\.[^.]+$/, '')
+          .replace(/[_-]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return {
+          src,
+          label,
+          theme: entry.theme,
+          themeLabel: QUEUE_MUSIC_THEMES[entry.theme] || 'Autre',
+        };
+      });
   } catch {
     return [];
   }
@@ -606,7 +668,7 @@ function discordConfig() {
 app.delete('/api/players/:id', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
 
   // Anonymiser le pseudo dans les parties (garder l'historique)
   const pseudo = `Joueur_${id}`;
@@ -654,7 +716,7 @@ app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.ht
 app.get('/api/admin/password', async (req, res) => {
   const token = req.headers['x-token'];
   const playerId = validateSession(token);
-  if (!playerId) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!playerId) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(playerId);
   if (!player?.discord_id) return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux administrateurs.' });
   let role = player.role;
@@ -745,13 +807,13 @@ app.post('/api/admin/login', async (req, res) => {
 // Route pour rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle de la session courante
 app.get('/api/admin/me', (req, res) => {
   const s = getAdminSession(req);
-  if (!s) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!s) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   res.json({ role: s.role, playerId: s.playerId });
 });
 
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const players = db.prepare(`SELECT id, pseudo, elo, coins, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
@@ -851,7 +913,7 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
     WH.wlogAdminAction('Perso accorde', target.pseudo, req.params.id, [['Perso avant', oldPerso ? 'oui' : 'non', true], ['Perso apres', 'oui', true]]);
     pQ.updatePerso.run({ is_perso: 1, id: targetId });
   } else {
-    WH.wlogAdminAction('RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
+    WH.wlogAdminAction('Rôle changé', target.pseudo, req.params.id, [['Ancien', oldRole, true], ['Nouveau', role, true]]);
     pQ.updateRole.run({ role, id: targetId });
   }
 
@@ -870,15 +932,15 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
     } catch(e) {}
     // DM de notification
     try { await sendDM(target.discord_id, [
-      'AAaAa AaaAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAAAAAaAAasAAAAaAAAasAA...AAAaAAasAA **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Changement de rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle**',
+      '**Puissance 4 Changement de rôle**',
       '',
       `Bonjour **${target.pseudo}** !`,
       '',
       role === 'vip'
         ? 'Le statut **VIP** vient de tAAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtre attribuAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.'
         : role === 'vipplus'
-          ? 'Le statut **VIP+** vient de t etre attribue.'
-        : `Ton rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle a AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA modifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA : **${oldRole}** AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA **${role}**`,
+          ? "Le statut **VIP+** vient de t'être attribue."
+        : `Ton rôle a été modifié en : **${oldRole}** devient à présent **${role}**`,
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
   }
@@ -971,28 +1033,28 @@ app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
   try {
     const target = pQ.getById.get(Number(req.params.id));
     const oldPseudo = target?.pseudo || '?';
-    WH.wlogAdminAction('Pseudo changAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', oldPseudo, req.params.id, [['Nouveau', pseudo.trim(), true]]);
+    WH.wlogAdminAction('Pseudo changé', oldPseudo, req.params.id, [['Nouveau', pseudo.trim(), true]]);
     pQ.updatePseudo.run({ pseudo: pseudo.trim(), id: Number(req.params.id) });
 
     // Notif DM + renommage sur le serveur Discord
     if (target?.discord_id) {
       try { await renameOnServer(target.discord_id, pseudo.trim()); } catch(e) {}
       try { await sendDM(target.discord_id, [
-        'AAaAa AaaAAaAAasAAAAaAAAasAAAAAAAAAaAAAAaAaA"AAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA **Puissance 4 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Changement de pseudo**',
+        '**Puissance 4 Changement de pseudo**',
         '',
         `Bonjour !`,
         '',
-        `Ton pseudo a AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA modifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA par un administrateur : **${oldPseudo}** AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA **${pseudo.trim()}**`,
-        '_Si tu n\'as pas demandAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA ce changement, contacte un administrateur._',
+        `Ton pseudo a été modifié par un administrateur par un administrateur : **${oldPseudo}** a été changé en : **${pseudo.trim()}**`,
+        '_Si tu n\'as pas demandé ce changement, contacte un administrateur._',
       ].join('\n')); } catch(e) {}
     }
     res.json({ ok: true });
-  } catch(e) { res.status(400).json({ error: 'Pseudo dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  pris.' }); }
+  } catch(e) { res.status(400).json({ error: 'Ce pseudo est déjà utilisé' }); }
 });
 
 // Reset ELO
 app.patch('/api/admin/players/:id/elo', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const { elo } = req.body;
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
@@ -1002,7 +1064,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
 
 // Mute temporaire (interdit de jouer)
 app.patch('/api/admin/players/:id/mute', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const hours = Number(req.body?.hours);
   const minutes = Number(req.body?.minutes);
   const durationMinutes = Number.isFinite(minutes)
@@ -1027,7 +1089,7 @@ app.patch('/api/admin/players/:id/ban', (req, res) => {
 
 // Reset suspicious
 app.patch('/api/admin/players/:id/suspicious', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
   res.json({ ok: true });
 });
@@ -1907,7 +1969,13 @@ app.get('/api/profile-banners', (_, res) => {
 });
 
 app.get('/api/musics', (_, res) => {
-  res.json({ musics: getQueueMusicPaths() });
+  const musics = getQueueMusicPaths();
+  const themes = Object.entries(QUEUE_MUSIC_THEMES).map(([id, label]) => ({
+    id,
+    label,
+    count: musics.filter(entry => entry.theme === id).length,
+  })).filter(theme => theme.count > 0);
+  res.json({ musics, themes });
 });
 
 app.get('/api/tournaments', (req, res) => {
@@ -2333,7 +2401,7 @@ function sanitize(p) {
 app.delete('/api/players/:id', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
 
   // Anonymiser le pseudo (les parties gardent le pseudo au moment du jeu via les colonnes p1_pseudo etc.)
   // puis supprimer le joueur AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA les FK ON DELETE CASCADE nettoient sessions/reset_codes
@@ -2365,7 +2433,7 @@ app.patch('/api/players/:id/shape', (req, res) => {
   const base = shape?.split(':')[0];
   const allowed = ['circle','triangle','diamond','star','heart','emoji','emoji_image'];
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(Number(req.params.id));
   if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
     return res.status(403).json({ error: 'L emoji perso est reserve au VIP.' });
@@ -2384,7 +2452,7 @@ app.patch('/api/players/:id/color', (req, res) => {
   if (Number(req.params.id) === BOT_PLAYER_ID) return res.status(403).json({ error: 'Bot non modifiable.' });
   const { color, colorSecondary = '', token } = req.body;
   if (!color || !/^#[0-9a-fA-F]{6}$/.test(color)) return res.status(400).json({ error: 'Couleur invalide.' });
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(Number(req.params.id));
   const normalizedSecondary = String(colorSecondary || '').trim();
   if (normalizedSecondary && !/^#[0-9a-fA-F]{6}$/.test(normalizedSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
@@ -2421,7 +2489,7 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
 
 app.patch('/api/players/:id/banner', (req, res) => {
   const { banner, token } = req.body;
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(banner);
@@ -2447,7 +2515,7 @@ app.patch('/api/players/:id/banner', (req, res) => {
 
 app.patch('/api/players/:id/avatar', (req, res) => {
   const { avatar, token } = req.body;
-  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   if (!avatar || !avatar.startsWith('data:image/'))
     return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
@@ -2548,7 +2616,7 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
     return res.status(403).json({ error: 'Reserve au grade Perso.' });
   }
   const nextMusic = String(music || '').trim();
-  const allowed = getQueueMusicPaths();
+  const allowed = getQueueMusicPaths().map(entry => entry.src);
   if (nextMusic && !allowed.includes(nextMusic)) {
     return res.status(400).json({ error: 'Musique invalide.' });
   }
@@ -3159,7 +3227,7 @@ app.post('/api/bot-replay', (req, res) => {
 app.post('/api/players/:id/refresh-discord', async (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(id);
   if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
   try {
@@ -3209,7 +3277,7 @@ app.get('/api/bot-id', (_, res) => {
 app.post('/api/players/:id/vip-boost', (req, res) => {
   const { token } = req.body;
   const id = Number(req.params.id);
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
 
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
@@ -3262,7 +3330,7 @@ app.get('/api/players/:id/vip-boost', (req, res) => {
 
 // Liste des boosts VIP actifs (admin/modo)
 app.get('/api/admin/vip-boosts', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const now = Date.now();
   const boosts = vipQ.listActive.all(now);
   res.json(boosts.map(b => ({
@@ -3330,7 +3398,7 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
 
 // Route pour rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer les parties rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcentes (admin)
 app.get('/api/admin/games', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
@@ -3358,7 +3426,7 @@ app.get('/api/admin/games', (req, res) => {
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Boost ELO global AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 app.get('/api/admin/boost', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorisAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const active = bQ.getActive.get();
   res.json({ active: !!(active), multiplier: active?.multiplier ?? 1 });
 });

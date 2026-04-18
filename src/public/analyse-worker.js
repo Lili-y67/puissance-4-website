@@ -329,17 +329,17 @@ function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, av
 
   switch(cls) {
     case 'best':
-      return ['Coup parfait.', "L'IA aurait jouA pareil.", 'Exactement le bon choix.'][moveIndex % 3];
+      return ['Coup parfait.', "L'IA aurait joué pareil.", 'Exactement le bon choix.'][moveIndex % 3];
     case 'excellent':
-      return ['TrAs bon coup, quasi optimal.', 'Solide a" pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
+      return ['Très bon coup, quasi optimal.', 'Solide a" pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
     case 'good':
-      return ['Bon coup, lAgAre amAlioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
+      return ['Bon coup, légère amélioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
     case 'inaccuracy':
-      return `LAgAre imprAcision, tu perds environ ${swing}% de chances.${hint}`;
+      return `Légère imprécision, tu perds environ ${swing}% de chances.${hint}`;
     case 'mistake':
-      return turn <= 4 ? `Erreur en ouverture a" difficile A  rattraper.${hint}` : `Erreur nette, tu perds environ ${swing}% de chances.${hint}`;
+      return turn <= 4 ? `Erreur en ouverture a" difficile à  rattraper.${hint}` : `Erreur nette, tu perds environ ${swing}% de chances.${hint}`;
     case 'blunder':
-      return turn <= 3 ? `Gaffe dAs l'ouverture !${hint}` : `Gaffe dAcisive, tu abandonnes environ ${swing}% de chances.${hint}`;
+      return turn <= 3 ? `Gaffe dès l'ouverture !${hint}` : `Gaffe décisive, tu abandonnes environ ${swing}% de chances.${hint}`;
     default:
       return '';
   }

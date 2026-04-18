@@ -1071,6 +1071,7 @@ const GIF_URL_CACHE = new Map();
 let avatarDecorationLibrary = [];
 let profileBannerLibrary = [];
 let queueMusicLibrary = [];
+let queueMusicThemes = [];
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1123,8 +1124,10 @@ async function loadQueueMusicLibrary() {
     const res = await fetch('/api/musics');
     const data = await res.json();
     queueMusicLibrary = Array.isArray(data?.musics) ? data.musics : [];
+    queueMusicThemes = Array.isArray(data?.themes) ? data.themes : [];
   } catch {
     queueMusicLibrary = [];
+    queueMusicThemes = [];
   }
 }
 
@@ -1732,9 +1735,10 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="avatar-decoration-preview" style="border-radius:22px;width:92px;height:92px">
           <div class="base" style="width:64px;height:64px;border-radius:18px;background:rgba(133,235,255,0.08);color:#85EBFF">♪</div>
         </div>
-        <div class="avatar-decoration-meta" id="queue-music-meta">Choisis une musique de file d'attente depuis la bibliothèque Perso. Le nom affiché reprend celui du fichier.</div>
+        <div class="avatar-decoration-meta" id="queue-music-meta">Choisis une musique de file d'attente depuis une bibliothèque triée par thèmes. Les pistes sont volontairement courtes pour garder une ambiance fluide.</div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select id="queue-music-theme-select" class="search-input" style="max-width:220px;margin:0" onchange="renderQueueMusicPicker(currentPlayer)"></select>
         <select id="queue-music-select" class="search-input" style="max-width:420px;margin:0" onchange="previewQueueMusicChoice(this.value)"></select>
         <button class="avatar-decoration-btn" id="queue-music-save-btn" type="button" onclick="saveQueueMusicChoice()">Appliquer la musique</button>
       </div>
@@ -3416,26 +3420,57 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
 
 function formatQueueMusicLabel(src) {
   if (!src) return 'Aucune musique personnalisée';
+  if (typeof src === 'object' && src !== null) return String(src.label || src.src || '');
   const file = String(src).split('/').pop() || src;
   return decodeURIComponent(file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
+}
+
+function normalizeQueueMusicEntry(entry) {
+  if (!entry) return null;
+  if (typeof entry === 'string') {
+    return {
+      src: entry,
+      label: formatQueueMusicLabel(entry),
+      theme: 'autre',
+      themeLabel: 'Autre',
+    };
+  }
+  return {
+    src: String(entry.src || ''),
+    label: String(entry.label || formatQueueMusicLabel(entry.src || '')),
+    theme: String(entry.theme || 'autre'),
+    themeLabel: String(entry.themeLabel || 'Autre'),
+  };
 }
 
 function renderQueueMusicPicker(player = currentPlayer) {
   const card = document.getElementById('queue-music-card');
   const select = document.getElementById('queue-music-select');
+  const themeSelect = document.getElementById('queue-music-theme-select');
   const meta = document.getElementById('queue-music-meta');
   const btn = document.getElementById('queue-music-save-btn');
-  if (!card || !select || !meta || !btn) return;
+  if (!card || !select || !themeSelect || !meta || !btn) return;
   const canEdit = isPerso(player) || String(player?.role || '') === 'admin';
   const currentValue = String(player?.queue_music || '');
   card.style.display = canEdit ? 'flex' : 'none';
   if (!canEdit) return;
+  const entries = queueMusicLibrary
+    .map(normalizeQueueMusicEntry)
+    .filter(Boolean);
+  const themeOptions = [`<option value="all">Tous les thèmes</option>`]
+    .concat(queueMusicThemes.map(theme => `<option value="${escapeHtml(theme.id)}">${escapeHtml(theme.label)} (${Number(theme.count || 0)})</option>`));
+  const previousTheme = String(themeSelect.value || 'all');
+  themeSelect.innerHTML = themeOptions.join('');
+  themeSelect.value = queueMusicThemes.some(theme => theme.id === previousTheme) ? previousTheme : 'all';
+  const filteredEntries = themeSelect.value === 'all'
+    ? entries
+    : entries.filter(entry => entry.theme === themeSelect.value);
   const options = [`<option value="">Musique par défaut du site</option>`]
-    .concat(queueMusicLibrary.map(src => `<option value="${src}" ${src === currentValue ? 'selected' : ''}>${escapeHtml(formatQueueMusicLabel(src))}</option>`));
+    .concat(filteredEntries.map(entry => `<option value="${entry.src}" ${entry.src === currentValue ? 'selected' : ''}>${escapeHtml(entry.themeLabel)} • ${escapeHtml(entry.label)}</option>`));
   select.innerHTML = options.join('');
   meta.textContent = currentValue
-    ? `Musique active : ${formatQueueMusicLabel(currentValue)}`
-    : 'Aucune musique perso active. La musique par défaut du site sera utilisée.';
+    ? `Musique active : ${formatQueueMusicLabel(entries.find(entry => entry.src === currentValue) || currentValue)}`
+    : `Aucune musique perso active. ${entries.length} pistes courtes sont disponibles dans ${queueMusicThemes.length || 0} thèmes.`;
   btn.disabled = false;
 }
 
