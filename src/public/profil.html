@@ -3452,12 +3452,12 @@ function renderQueueMusicPicker(player = currentPlayer) {
   const filteredEntries = themeSelect.value === 'all'
     ? entries
     : entries.filter(entry => entry.theme === themeSelect.value);
-  const options = [`<option value="">Musique par défaut du site</option>`]
+  const options = [`<option value="">Musique par défaut du site • Musique Chambre</option>`]
     .concat(filteredEntries.map(entry => `<option value="${entry.src}" ${entry.src === currentValue ? 'selected' : ''}>${escapeHtml(entry.themeLabel)} • ${escapeHtml(entry.label)}</option>`));
   select.innerHTML = options.join('');
   meta.textContent = currentValue
     ? `Musique active : ${formatQueueMusicLabel(entries.find(entry => entry.src === currentValue) || currentValue)}`
-    : `Aucune musique perso active. ${entries.length} pistes courtes sont disponibles dans ${queueMusicThemes.length || 0} thèmes.`;
+    : `Musique active : Musique Chambre. ${entries.length} pistes courtes sont disponibles dans ${queueMusicThemes.length || 0} thèmes.`;
   btn.disabled = false;
   const previewBtn = document.getElementById('queue-music-preview-btn');
   if (previewBtn) previewBtn.disabled = !String(select.value || '');
@@ -3468,7 +3468,7 @@ function previewQueueMusicChoice(value) {
   if (!meta) return;
   meta.textContent = value
     ? `Sélection : ${formatQueueMusicLabel(value)}`
-    : 'Sélection : musique par défaut du site.';
+    : 'Sélection : musique par défaut du site (Musique Chambre).';
   stopQueueMusicPreview();
   const previewBtn = document.getElementById('queue-music-preview-btn');
   if (previewBtn) previewBtn.disabled = !value;

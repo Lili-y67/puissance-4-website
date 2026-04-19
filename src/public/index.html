@@ -2891,8 +2891,12 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
 
 // â”€â”€ Musique d'attente Queue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const QueueMusic = (() => {
+  const DEFAULT_QUEUE_MUSIC = '/sounds/Musique Chambre.mp3';
   let audio = null;
   let volume = 0.35;
+  function canUseCustomQueueMusic(player) {
+    return !!(player && (Number(player.is_perso || 0) === 1 || String(player.role || '') === 'admin'));
+  }
   function get() {
     if (!audio) audio = document.getElementById('queue-music');
     return audio;
@@ -2900,7 +2904,9 @@ const QueueMusic = (() => {
   function getPlayerQueueMusic() {
     try {
       const player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
-      return String(player?.queue_music || '').trim();
+      if (!canUseCustomQueueMusic(player)) return '';
+      const music = String(player?.queue_music || '').trim();
+      return /^\/sounds\/.+\.(mp3|ogg|wav|m4a)$/i.test(music) ? music : '';
     } catch {
       return '';
     }
@@ -2909,7 +2915,7 @@ const QueueMusic = (() => {
     const a = get();
     if (!a) return;
     const customMusic = getPlayerQueueMusic();
-    const nextSrc = customMusic || '/sounds/puissance4-song.mp3';
+    const nextSrc = customMusic || DEFAULT_QUEUE_MUSIC;
     const currentSrc = a.getAttribute('src') || '';
     if (currentSrc !== nextSrc) {
       a.setAttribute('src', nextSrc);

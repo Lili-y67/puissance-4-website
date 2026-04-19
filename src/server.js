@@ -495,16 +495,19 @@ const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
+const DEFAULT_QUEUE_MUSIC_FILE = 'Musique Chambre.mp3';
+const DEFAULT_QUEUE_MUSIC_SRC = `/sounds/${DEFAULT_QUEUE_MUSIC_FILE}`;
+const QUEUE_MUSIC_THEME_ORDER = ['cyber', 'dj', 'rock', 'country', 'zen', 'mystique', 'lounge', 'aventure', 'dark'];
 const QUEUE_MUSIC_THEMES = {
   cyber: 'Cyber',
+  dj: 'DJ',
+  rock: 'Rock',
+  country: 'Country',
   zen: 'Zen',
   mystique: 'Mystique',
   lounge: 'Lounge',
   aventure: 'Aventure',
   dark: 'Dark',
-  country: 'Country',
-  rock: 'Rock',
-  dj: 'DJ',
 };
 const QUEUE_MUSIC_CATALOG = [
   { file: 'Mesmerizing Galaxy Loop.mp3', theme: 'cyber' },
@@ -513,11 +516,30 @@ const QUEUE_MUSIC_CATALOG = [
   { file: 'Envision.mp3', theme: 'cyber' },
   { file: 'Rollin at 5 - electronic.mp3', theme: 'cyber' },
 
+  { file: 'Brain Dance.mp3', theme: 'dj' },
+  { file: 'Galactic Rap.mp3', theme: 'dj' },
+  { file: 'Neon Laser Horizon.mp3', theme: 'dj' },
+  { file: 'Vibing Over Venus.mp3', theme: 'dj' },
+  { file: 'Space Jazz.mp3', theme: 'dj' },
+
+  { file: 'Heroic Age.mp3', theme: 'rock' },
+  { file: 'New Hero in Town.mp3', theme: 'rock' },
+  { file: 'Strength of the Titans.mp3', theme: 'rock' },
+  { file: 'Journey To Ascend.mp3', theme: 'rock' },
+  { file: 'Take a Chance.mp3', theme: 'rock' },
+
+  { file: 'Back on Track.mp3', theme: 'country' },
+  { file: 'Cloud Dancer.mp3', theme: 'country' },
+  { file: 'Musique Chambre.mp3', theme: 'country' },
+  { file: 'Serenade D\'Amor.mp3', theme: 'country' },
+  { file: 'Water Prelude.mp3', theme: 'country' },
+
   { file: 'Easy Lemon 60 second.mp3', theme: 'zen' },
   { file: 'Senbazuru.mp3', theme: 'zen' },
   { file: 'Water Lily.mp3', theme: 'zen' },
   { file: 'Clear Waters.mp3', theme: 'zen' },
   { file: 'Midsummer Sky.mp3', theme: 'zen' },
+  { file: 'That Zen Moment.mp3', theme: 'zen' },
 
   { file: 'Guzheng City.mp3', theme: 'mystique' },
   { file: 'Ancient Rite.mp3', theme: 'mystique' },
@@ -525,42 +547,24 @@ const QUEUE_MUSIC_CATALOG = [
   { file: 'Fairytale Waltz.mp3', theme: 'mystique' },
   { file: 'Adventure Meme.mp3', theme: 'mystique' },
 
-  { file: 'Back on Track.mp3', theme: 'lounge' },
   { file: 'B-Roll.mp3', theme: 'lounge' },
   { file: 'Off to Osaka.mp3', theme: 'lounge' },
   { file: 'No Frills Salsa - Alternate.mp3', theme: 'lounge' },
   { file: 'Vibe Ace.mp3', theme: 'lounge' },
-
-  { file: 'Strength of the Titans.mp3', theme: 'aventure' },
-  { file: 'New Hero in Town.mp3', theme: 'aventure' },
   { file: 'Our Story Begins.mp3', theme: 'aventure' },
-  { file: 'Heroic Age.mp3', theme: 'aventure' },
-  { file: 'Take a Chance.mp3', theme: 'aventure' },
 
   { file: 'Mystery Sting.mp3', theme: 'dark' },
   { file: 'Not As It Seems.mp3', theme: 'dark' },
   { file: 'Gloom Horizon.mp3', theme: 'dark' },
   { file: 'Ghost Processional.mp3', theme: 'dark' },
   { file: 'Chase Pulse.mp3', theme: 'dark' },
-
-  { file: 'B-Roll.mp3', theme: 'country' },
-  { file: 'Cloud Dancer.mp3', theme: 'country' },
-  { file: 'Musique Chambre.mp3', theme: 'country' },
-  { file: 'Serenade D\'Amor.mp3', theme: 'country' },
-  { file: 'Water Prelude.mp3', theme: 'country' },
-
-  { file: 'Back on Track.mp3', theme: 'rock' },
-  { file: 'Heroic Age.mp3', theme: 'rock' },
-  { file: 'New Hero in Town.mp3', theme: 'rock' },
-  { file: 'Strength of the Titans.mp3', theme: 'rock' },
-  { file: 'Take a Chance.mp3', theme: 'rock' },
-
-  { file: 'Brain Dance.mp3', theme: 'dj' },
-  { file: 'Equatorial Complex.mp3', theme: 'dj' },
-  { file: 'Galactic Rap.mp3', theme: 'dj' },
-  { file: 'Neon Laser Horizon.mp3', theme: 'dj' },
-  { file: 'Vibing Over Venus.mp3', theme: 'dj' },
+  { file: 'Equatorial Complex.mp3', theme: 'dark' },
 ];
+
+function getQueueMusicThemeSortIndex(themeId) {
+  const index = QUEUE_MUSIC_THEME_ORDER.indexOf(String(themeId || ''));
+  return index === -1 ? QUEUE_MUSIC_THEME_ORDER.length : index;
+}
 
 function getAvatarDecorationPaths() {
   try {
@@ -606,6 +610,11 @@ function getQueueMusicPaths() {
           theme: entry.theme,
           themeLabel: QUEUE_MUSIC_THEMES[entry.theme] || 'Autre',
         };
+      })
+      .sort((a, b) => {
+        const themeDiff = getQueueMusicThemeSortIndex(a.theme) - getQueueMusicThemeSortIndex(b.theme);
+        if (themeDiff !== 0) return themeDiff;
+        return a.label.localeCompare(b.label, 'fr', { sensitivity: 'base' });
       });
   } catch {
     return [];
@@ -2061,11 +2070,14 @@ app.get('/api/profile-banners', (_, res) => {
 
 app.get('/api/musics', (_, res) => {
   const musics = getQueueMusicPaths();
-  const themes = Object.entries(QUEUE_MUSIC_THEMES).map(([id, label]) => ({
-    id,
-    label,
-    count: musics.filter(entry => entry.theme === id).length,
-  })).filter(theme => theme.count > 0);
+  const themes = Object.entries(QUEUE_MUSIC_THEMES)
+    .map(([id, label]) => ({
+      id,
+      label,
+      count: musics.filter(entry => entry.theme === id).length,
+    }))
+    .filter(theme => theme.count > 0)
+    .sort((a, b) => getQueueMusicThemeSortIndex(a.id) - getQueueMusicThemeSortIndex(b.id));
   res.json({ musics, themes });
 });
 
@@ -2478,8 +2490,10 @@ function sanitize(p) {
       vip_expires_at: null,
     };
   }
+  const canUseQueueMusic = isPersoPlayer(rest) || isAdminPlayer(rest);
   return {
     ...rest,
+    queue_music: canUseQueueMusic ? String(rest.queue_music || '') : '',
     is_vip: isVipPlayer(rest) ? 1 : 0,
     is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
     is_perso: isPersoPlayer(rest) ? 1 : 0,
