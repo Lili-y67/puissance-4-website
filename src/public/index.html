@@ -987,6 +987,42 @@ html, body {
   color:rgba(238,238,245,0.82);
   line-height:1.35;
 }
+.boost-alert-author{
+  margin-bottom:7px;
+}
+.boost-alert-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.boost-alert-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  border:1px solid transparent;
+  box-shadow:0 8px 20px rgba(0,0,0,.18);
+}
+.boost-alert-tag.elo{
+  background:linear-gradient(180deg,rgba(255,214,10,.18),rgba(255,184,0,.12));
+  border-color:rgba(255,214,10,.34);
+  color:#ffe57a;
+}
+.boost-alert-tag.coins{
+  background:linear-gradient(180deg,rgba(255,159,10,.18),rgba(255,111,0,.12));
+  border-color:rgba(255,159,10,.34);
+  color:#ffbf66;
+}
+.boost-alert-tag-emoji{
+  font-size:13px;
+  line-height:1;
+}
 @keyframes boost-alert-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes boost-pulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,214,10,.35)}50%{transform:scale(.92);box-shadow:0 0 0 8px rgba(255,214,10,0)}}
 .duel-modal {
@@ -3060,20 +3096,22 @@ function renderQueueBoostAlert(boost, coinBoost) {
   const loggedText = document.getElementById('logged-boost-alert-text');
   const parts = [];
   if (boost && Number(boost.multiplier) > 1) {
-    parts.push(`ELO x${Number(boost.multiplier).toFixed(1)}`);
+    parts.push(`<span class="boost-alert-tag elo">ELO x${escapeHtml(Number(boost.multiplier).toFixed(1))}</span>`);
   }
   if (coinBoost && Number(coinBoost.multiplier) > 1) {
-    parts.push(`Coins x${Math.round(Number(coinBoost.multiplier))}`);
+    parts.push(`<span class="boost-alert-tag coins"><span class="boost-alert-tag-emoji">🪙</span>Coins x${escapeHtml(String(Math.round(Number(coinBoost.multiplier))))}</span>`);
   }
   const appliedBy = String(boost?.appliedBy || coinBoost?.appliedBy || 'Puissance4-Booster').trim();
-  const message = parts.length ? `${appliedBy} booste le jeu : ${parts.join(' • ')}.` : '';
+  const message = parts.length
+    ? `<div class="boost-alert-author">${escapeHtml(appliedBy)} booste le jeu :</div><div class="boost-alert-tags">${parts.join('')}</div>`
+    : '';
 
   if (queueBox && queueText) {
-    queueText.textContent = message;
+    queueText.innerHTML = message;
     queueBox.classList.toggle('show', !!message);
   }
   if (loggedBox && loggedText) {
-    loggedText.textContent = message;
+    loggedText.innerHTML = message;
     loggedBox.classList.toggle('show', !!message);
   }
 }
