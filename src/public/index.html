@@ -2328,6 +2328,7 @@ let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 let publicTournamentNotice = null;
 let siteStatsInterval = null;
 let currentGlobalBoost = null;
+let currentCoinBoost = null;
 let duelSearchTimer = null;
 let duelResults = [];
 let duelSelectedId = null;
@@ -3024,7 +3025,8 @@ async function refreshSiteStats() {
     applySitePresenceCounts(data);
     applySiteStatsSnapshot(data);
     currentGlobalBoost = data.boost && data.boost.active ? data.boost : null;
-    renderQueueBoostAlert(currentGlobalBoost);
+    currentCoinBoost = data.coinBoost && data.coinBoost.active ? data.coinBoost : null;
+    renderQueueBoostAlert(currentGlobalBoost, currentCoinBoost);
     renderPublicTournamentNotice(data.publicTournament || null);
   } catch (_) {}
 }
@@ -3051,14 +3053,20 @@ function applySiteStatsSnapshot(data = {}) {
   }
 }
 
-function renderQueueBoostAlert(boost) {
+function renderQueueBoostAlert(boost, coinBoost) {
   const queueBox = document.getElementById('queue-boost-alert');
   const queueText = document.getElementById('queue-boost-alert-text');
   const loggedBox = document.getElementById('logged-boost-alert');
   const loggedText = document.getElementById('logged-boost-alert-text');
-  const message = boost && Number(boost.multiplier) > 1
-    ? `${boost.appliedBy || 'Quelqu un'} a booste le jeu en x${Number(boost.multiplier).toFixed(1)}.`
-    : '';
+  const parts = [];
+  if (boost && Number(boost.multiplier) > 1) {
+    parts.push(`ELO x${Number(boost.multiplier).toFixed(1)}`);
+  }
+  if (coinBoost && Number(coinBoost.multiplier) > 1) {
+    parts.push(`Coins x${Math.round(Number(coinBoost.multiplier))}`);
+  }
+  const appliedBy = String(boost?.appliedBy || coinBoost?.appliedBy || 'Puissance4-Booster').trim();
+  const message = parts.length ? `${appliedBy} booste le jeu : ${parts.join(' • ')}.` : '';
 
   if (queueBox && queueText) {
     queueText.textContent = message;
@@ -3167,7 +3175,7 @@ function showQueueView(position) {
     document.getElementById('stat-wins').textContent  = myPlayer.wins;
     document.getElementById('stat-games').textContent = myPlayer.wins + myPlayer.losses + myPlayer.draws;
     document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
-    renderQueueBoostAlert(currentGlobalBoost);
+    renderQueueBoostAlert(currentGlobalBoost, currentCoinBoost);
 
     // Avatar dans la queue
     const avatarWrap = document.getElementById('queue-avatar-wrap');

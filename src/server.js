@@ -86,6 +86,14 @@ function getPresenceCounts() {
   };
 }
 
+function getBoostDisplayName(rawName) {
+  const name = String(rawName || '').trim();
+  if (!name) return 'Puissance4-Booster';
+  if (/^admin$/i.test(name)) return 'Puissance4-Booster';
+  if (/^puissance4-booster$/i.test(name)) return 'Puissance4-Booster';
+  return name;
+}
+
 function broadcastPresenceCounts(force = false) {
   const counts = getPresenceCounts();
   const signature = `${counts.onlinePlayers}:${counts.visitors}:${counts.totalPresent}`;
@@ -3541,9 +3549,7 @@ app.post('/api/admin/boost', (req, res) => {
   if (isNaN(m) || m < 1 || m > 2) return res.status(400).json({ error: 'Entre 1.0 et 2.0.' });
   bQ.deactivateAll.run();
   if (m > 1) {
-    const session = getAdminSession(req);
-    const admin   = session?.playerId ? pQ.getById.get(session.playerId) : null;
-    bQ.create.run({ multiplier: m, applied_by: admin?.pseudo || 'Admin' });
+    bQ.create.run({ multiplier: m, applied_by: 'Puissance4-Booster' });
   }
   res.json({ ok: true, multiplier: m });
 });
@@ -3575,11 +3581,13 @@ app.post('/api/admin/coin-boost', (req, res) => {
   if (multiplier === 1 || durationMinutes === 0) {
     db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', '1') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
     db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', '0') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+    db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', '') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
     return res.json({ ok: true, multiplier: 1, expiresAt: null });
   }
   const expiresAt = Date.now() + durationMinutes * 60 * 1000;
   db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
   db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(expiresAt));
+  db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', 'Puissance4-Booster') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
   res.json({ ok: true, multiplier, expiresAt });
 });
 
@@ -3641,6 +3649,11 @@ app.get('/api/site-stats', (_, res) => {
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get();
+  const now = Date.now();
+  const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
+  const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0);
+  const coinBoostAppliedByRaw = String(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_applied_by'`).get()?.value || '');
+  const coinBoostActive = coinBoostExpiresAt > now && coinBoostMultiplier > 1;
   res.json({
     online: presence.onlinePlayers,
     onlinePlayers: presence.onlinePlayers,
@@ -3654,11 +3667,22 @@ app.get('/api/site-stats', (_, res) => {
     boost: activeBoost ? {
       active: true,
       multiplier: Number(activeBoost.multiplier || 1),
-      appliedBy: activeBoost.applied_by || 'Admin',
+      appliedBy: getBoostDisplayName(activeBoost.applied_by),
     } : {
       active: false,
       multiplier: 1,
       appliedBy: '',
+    },
+    coinBoost: coinBoostActive ? {
+      active: true,
+      multiplier: coinBoostMultiplier,
+      appliedBy: getBoostDisplayName(coinBoostAppliedByRaw),
+      expiresAt: coinBoostExpiresAt,
+    } : {
+      active: false,
+      multiplier: 1,
+      appliedBy: '',
+      expiresAt: null,
     },
   });
 });
