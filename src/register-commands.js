@@ -2,8 +2,10 @@ require('dotenv').config();
 const { REST, Routes } = require('discord.js');
 
 const DISCORD_GUILD = process.env.DISCORD_GUILD_ID || '1477078197530263582';
-const clientId = process.env.DISCORD_CLIENT_ID || '1477252548090921060';
-const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
+const FALLBACK_CLIENT_ID = '1477252548090921060';
+const FALLBACK_BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.Gl02_s.bClKZTtSy14A4URoh2iqAqKShY9nQqw069kYtY';
+const clientId = process.env.DISCORD_CLIENT_ID || FALLBACK_CLIENT_ID;
+const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || FALLBACK_BOT_TOKEN;
 
 const commands = [
   {
