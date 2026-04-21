@@ -419,6 +419,8 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   return {
     dW: p1Delta,
     dL: p2Delta,
+    player1Delta: p1Delta,
+    player2Delta: p2Delta,
     vipApplied,
     vipAppliedTo,
     globalMultiplier,

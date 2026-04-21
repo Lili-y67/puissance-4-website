@@ -183,8 +183,9 @@ class GameManager {
           loserEloNow: Number((winnerSide ? state.players[winnerSide === 1 ? 2 : 1] : state.players[2])?.elo || 0),
         };
 
-    const p1Delta = isSuspect ? 0 : (isDraw ? elo.dW : (p1IsWinner ? elo.dW : elo.dL));
-    const p2Delta = isSuspect ? 0 : (isDraw ? elo.dL : (p2IsWinner ? elo.dW : elo.dL));
+    // finishGame returns deltas by board side, not generic winner/loser deltas.
+    const p1Delta = isSuspect ? 0 : Number(elo.player1Delta ?? elo.dW ?? 0);
+    const p2Delta = isSuspect ? 0 : Number(elo.player2Delta ?? elo.dL ?? 0);
 
     try {
       if (!state.persisted) throw new Error('transient-game');

@@ -2902,7 +2902,7 @@ app.post('/api/duels/link', security.routeGuard('duel'), (req, res) => {
   }
 });
 
-app.post('/api/duels/:id/guest-session', (req, res) => {
+app.post('/api/duels/:id/guest-session', security.routeGuard('duel'), (req, res) => {
   try {
     const challenge = duelChallenges.get(String(req.params.id || ''));
     if (!challenge || challenge.status !== 'pending') {
@@ -2931,7 +2931,7 @@ app.get('/api/duels/:id', (req, res) => {
   });
 });
 
-app.post('/api/duels/:id/accept', (req, res) => {
+app.post('/api/duels/:id/accept', security.routeGuard('duel'), (req, res) => {
   try {
     const token = String(req.body?.token || '');
     const accepterId = validateSession(token);

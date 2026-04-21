@@ -6,8 +6,11 @@
   const visitorStorageKey = 'p4_visitor_id';
 
   function getStoredAuth() {
-    const token = localStorage.getItem('token') || '';
-    const playerRaw = localStorage.getItem('player') || sessionStorage.getItem('player') || '';
+    const token = localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || '';
+    const playerRaw = localStorage.getItem('player')
+      || sessionStorage.getItem('duel_guest_player')
+      || sessionStorage.getItem('player')
+      || '';
     let player = null;
     try {
       player = playerRaw ? JSON.parse(playerRaw) : null;
