@@ -1683,7 +1683,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <span class="save-confirm" id="perso-role-confirm">✓ Enregistré !</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="perso-role-text-input" class="search-input" style="max-width:140px;margin:0" type="text" maxlength="6" placeholder="LILI" value="${String(player.custom_role_text || '').replace(/"/g, '&quot;')}">
+        <input id="perso-role-text-input" class="search-input" style="max-width:140px;margin:0" type="text" maxlength="8" placeholder="LILI" value="${String(player.custom_role_text || '').replace(/"/g, '&quot;')}">
         <input id="perso-role-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="✨" value="${String(player.custom_role_emoji || '').replace(/"/g, '&quot;')}">
         <div class="color-picker-inline" style="min-width:132px">
           <input type="color" id="perso-role-color-input" value="${player.custom_role_color || '#FF7A45'}">
@@ -1692,7 +1692,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
         <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
       </div>
-      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 6 caractères.</div>
+      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 8 caractères.</div>
     </div>` : ''}
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -4072,7 +4072,7 @@ async function saveProfileCustomRole() {
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
   const btn = document.getElementById('btn-save-perso-role');
-  const text = String(textInput?.value || '').trim().slice(0, 6);
+  const text = String(textInput?.value || '').trim().slice(0, 8);
   const emoji = [...String(emojiInput?.value || '').trim()][0] || '';
   const color = String(colorInput?.value || '#FF7A45').toUpperCase();
   PROFIL_SFX.click();

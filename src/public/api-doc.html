@@ -87,6 +87,7 @@ ul{padding-left:18px}
         <a href="#duels">Duels <span>&rarr;</span></a>
         <a href="#tournaments">Tournois <span>&rarr;</span></a>
         <a href="#discord">Discord <span>&rarr;</span></a>
+        <a href="#discord-commands">Commandes bot <span>&rarr;</span></a>
         <a href="#admin">Admin <span>&rarr;</span></a>
         <a href="#socketio">Socket.IO <span>&rarr;</span></a>
       </div>
@@ -103,6 +104,7 @@ ul{padding-left:18px}
         <a href="#duels">Duels</a>
         <a href="#tournaments">Tournois</a>
         <a href="#discord">Discord</a>
+        <a href="#discord-commands">Commandes bot</a>
         <a href="#admin">Administration</a>
         <a href="#system">Syst&egrave;me</a>
         <a href="#socketio">WebSockets</a>
@@ -251,10 +253,28 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/request</span></div><p>Demande un code de d&eacute;liaison Discord.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/confirm</span></div><p>Confirme la d&eacute;liaison avec le code re&ccedil;u.</p></article>
       </div></section>
+      <section class="section" id="discord-commands"><div class="section-head"><div><h2>Commandes Bot Discord</h2><p>Commandes slash align&eacute;es avec l&rsquo;API officielle du site. Le bot ne renvoie jamais d&rsquo;IP ni de donn&eacute;es r&eacute;seau priv&eacute;es.</p></div><div class="legend"><span class="chip socket">Slash</span><span class="chip get">Public</span><span class="chip delete">Admin</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/api</span></div><p>Ouvre la documentation API officielle : endpoints HTTP, Socket.IO, erreurs et exemples.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/profil pseudo</span></div><p>Miroir Discord de <code>GET /api/players/by-pseudo/:pseudo</code> et <code>GET /api/players/:id</code>. Retourne rang, ELO, coins, badges, stats, follow et dernier match.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/classement</span></div><p>Top ELO rapide, compatible avec <code>GET /api/leaderboard</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/leaderboard type</span></div><p>Classement officiel par <code>elo</code> ou <code>victoires</code>, reli&eacute; &agrave; <code>/api/leaderboard</code> et <code>/api/leaderboard/wins</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/stats</span></div><p>Vue Discord des stats globales : pr&eacute;sence, parties, comptes, coins et boosts. Reli&eacute; &agrave; <code>/api/stats/overview</code> et <code>/api/site-stats</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/systeme</span></div><p>Lit <code>GET /api/system-status</code> et affiche maintenance, message serveur et pr&eacute;sence.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/boosts</span></div><p>Affiche boost ELO global, boost coins global et nombre de boosts premium individuels actifs.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/cosmetiques type</span></div><p>Liste rapide des biblioth&egrave;ques <code>/api/decorations</code>, <code>/api/profile-banners</code> ou <code>/api/musics</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/replay id</span></div><p>R&eacute;sum&eacute; d&rsquo;une partie officielle avec joueurs, deltas ELO, vainqueur, dur&eacute;e et lien vers <code>/replay/:id</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">Public</span><span class="route">/duel-lien type</span></div><p>G&eacute;n&egrave;re un lien de duel <code>ranked</code> ou <code>friendly</code> valable 15 minutes. Cette commande utilise la m&ecirc;me logique que <code>POST /api/duels/link</code> et demande un compte Discord li&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/live</span></div><p>Affiche les parties actives, reli&eacute; &agrave; <code>GET /api/live</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/boutique</span></div><p>Lien vers la boutique coins / boosters.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournois</span></div><p>Liste les tournois officiels, reli&eacute; &agrave; <code>GET /api/tournaments</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournoi id</span></div><p>D&eacute;tail d&rsquo;un tournoi et top actuel, reli&eacute; &agrave; <code>GET /api/tournaments/:id</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin action password ...</span></div><p>Commandes staff prot&eacute;g&eacute;es par mot de passe admin + r&ocirc;le Discord. Actions disponibles : <code>stats</code>, <code>player</code>, <code>mute</code>, <code>unmute</code>, <code>ban</code>, <code>unban</code>, <code>coins</code>, <code>elo</code>, <code>give-item</code>, <code>boost-elo</code>, <code>boost-coins</code>, <code>tournoi-finish</code>, <code>tournoi-pause</code>, <code>tournoi-resume</code>, <code>tournoi-delete</code>, <code>backups</code>, <code>maintenance-on</code>, <code>maintenance-off</code>, <code>reload</code>.</p><div class="note">Les actions sensibles demandent le r&ocirc;le Admin Discord. Les actions de lecture/mod&eacute;ration simples acceptent Admin ou Modo selon le cas.</div></article>
+      </div></section>
       <section class="section" id="admin"><div class="section-head"><div><h2>Administration</h2><p>Panel admin, joueurs, coins, boosters, boosts globaux, games et tournois.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/login</span></div><p>Connexion admin / mod&eacute;ration. Erreurs typiques : mot de passe invalide, droits insuffisants.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/players</span></div><p>Liste enrichie des joueurs pour le panel admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/me</span></div><p>Retourne l&rsquo;&eacute;tat de la session admin courante.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/security</span></div><p>Retourne l&rsquo;&eacute;tat de la protection anti-raid : compteurs actifs, inscriptions r&eacute;centes et derniers &eacute;v&eacute;nements anonymis&eacute;s.</p><div class="note">Les IP ne sont jamais expos&eacute;es : le backend stocke uniquement des empreintes hash&eacute;es.</div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/password</span></div><p>Retourne le mot de passe du panel admin pour les comptes autoris&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/coins</span></div><p>Ajoute des coins &agrave; un joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/shop-item</span></div><p>Ajoute des boosters ELO / coins &agrave; l&rsquo;inventaire d&rsquo;un joueur.</p><div class="subgrid"><pre><code>await fetch('/api/admin/players/2/shop-item', {
