@@ -2045,10 +2045,19 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
     iaBotColor = botInfo.color || botColor;
     p2Shape    = botInfo.shape || 'circle';
     p2EmojiImage = botInfo.token_emoji_image || '';
+    window.__iaBotVisual = {
+      pseudo: botName,
+      avatar: botInfo.avatar || '/bot-avatar.svg',
+      avatar_decoration: botInfo.avatar_decoration || '',
+      profile_banner: botInfo.profile_banner || '',
+      color: iaBotColor,
+      color_secondary: botInfo.color_secondary || ''
+    };
   } catch(e) {
     iaBotColor = botColor;
     p2Shape    = 'circle';
     p2EmojiImage = '';
+    window.__iaBotVisual = { pseudo: botName, avatar: '/bot-avatar.svg', avatar_decoration: '', profile_banner: '', color: iaBotColor, color_secondary: '' };
   }
 
   const savedPlayer = getResolvedPlayerVisual(myPlayer || getStoredPlayerVisual());
@@ -2064,7 +2073,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   }
 
   const playerColor = myPlayer.color || '#ff2d55';
-  applyColors(playerColor, botColor, savedPlayer.color_secondary || '', '');
+  applyColors(playerColor, iaBotColor, savedPlayer.color_secondary || '', '');
 
   const diffLabel = { easy:'🟢 Facile', medium:'🟡 Moyen', hard:'🔴 Difficile' }[difficulty] || '';
 
@@ -2078,9 +2087,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   document.getElementById('lelo1').textContent = (myPlayer.elo || '—') + ' ELO';
   document.getElementById('lelo2').textContent = diffLabel;
   applyLobbyPlayerVisual(1, savedPlayer);
-  applyLobbyPlayerVisual(2, { pseudo: botName, avatar: '', avatar_decoration: '', profile_banner: '' });
-  const iaLobbyBotAvatar = document.getElementById('lav2');
-  if (iaLobbyBotAvatar) iaLobbyBotAvatar.textContent = 'B';
+  applyLobbyPlayerVisual(2, window.__iaBotVisual);
   const badge = document.createElement('div');
   badge.className = 'lobby-you'; badge.textContent = 'TOI';
   document.getElementById('lp1').appendChild(badge);
@@ -2100,9 +2107,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       document.getElementById('name-p2').textContent = '🤖 ' + botName;
       setCardElo(2, diffLabel);
       applyPlayerCardVisual(1, savedPlayer);
-      applyPlayerCardVisual(2, { pseudo: 'ðŸ¤– ' + botName, avatar: '', avatar_decoration: '', profile_banner: '' });
-      const iaBotAvatar = document.getElementById('avatar-p2');
-      if (iaBotAvatar) iaBotAvatar.textContent = 'B';
+      applyPlayerCardVisual(2, { ...window.__iaBotVisual, pseudo: botName });
       renderBoard();
       const boardEl = document.getElementById('board');
       boardEl.classList.add('locked');
