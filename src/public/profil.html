@@ -281,6 +281,8 @@ input[type="file"]{display:none;}
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
 .profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;}
+.vip-tier-badge{font-size:11px;padding:2px 8px 2px 5px;border-radius:6px;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;text-transform:uppercase;box-shadow:0 0 16px var(--vip-glow, rgba(255,214,10,.22)), inset 0 0 10px rgba(255,255,255,.04);}
+.vip-tier-badge img{width:17px;height:17px;object-fit:contain;display:block;filter:drop-shadow(0 0 5px var(--vip-glow, rgba(255,214,10,.55)));}
 .profile-since{font-size:13px;color:var(--muted);margin-top:10px;text-align:left;}
 .profile-media-note{font-size:12px;color:var(--muted);margin-top:4px;text-align:left;}
 .profile-pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
@@ -362,6 +364,9 @@ input[type="file"]{display:none;}
 .stat-card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;gap:6px;transition:all 0.2s;box-shadow:0 16px 34px rgba(0,0,0,.18);position:relative;overflow:hidden;}
 .stat-card::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(145deg,rgba(255,255,255,.05),transparent 42%)}
 .stat-card:hover{border-color:rgba(255,255,255,0.12);transform:translateY(-2px);}
+.stat-icon-img{width:54px;height:44px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 0 12px rgba(255,255,255,.18));position:relative;z-index:1;}
+.stat-card.wins .stat-icon-img{filter:drop-shadow(0 0 16px rgba(255,214,10,.28));}
+.stat-card.losses .stat-icon-img{filter:drop-shadow(0 0 16px rgba(180,90,255,.24));}
 .stat-val{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;}
 .stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
 .stat-card.wins     .stat-val{color:var(--green);}
@@ -390,6 +395,7 @@ input[type="file"]{display:none;}
 .game-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;text-decoration:none;color:var(--text);transition:all 0.2s;}
 .game-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
 .game-result{width:32px;height:32px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.game-result img{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(255,255,255,.16));}
 .game-result.win{background:var(--green-dim);}
 .game-result.loss{background:var(--red-dim);}
 .game-result.draw{background:var(--surface2);}
@@ -420,6 +426,9 @@ input[type="file"]{display:none;}
 .player-mini-info{flex:1;min-width:0;}
 .player-mini-pseudo{font-weight:600;font-size:14px;}
 .player-mini-stats{font-size:11px;color:var(--muted);margin-top:1px;}
+.mini-result-stats{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mini-result-chip{display:inline-flex;align-items:center;gap:3px;}
+.mini-result-chip img{width:15px;height:15px;object-fit:contain;filter:drop-shadow(0 0 5px rgba(255,255,255,.14));}
 .player-mini-elo{font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow);flex-shrink:0;}
 
 /* Badges wins streak */
@@ -1205,6 +1214,38 @@ function getVipAccent(player = currentPlayer) {
     : { color: '#ffd60a', bg: 'rgba(255,214,10,0.14)', border: 'rgba(255,214,10,0.32)', label: 'VIP' };
 }
 
+const VIP_BADGE_TIERS = [
+  { minMs: 36 * 30 * 24 * 60 * 60 * 1000, src: '/badges/vip-star-3y.png', glow: 'rgba(47,128,255,.55)', title: 'VIP 3 ans' },
+  { minMs: 12 * 30 * 24 * 60 * 60 * 1000, src: '/badges/vip-star-1y.png', glow: 'rgba(67,214,92,.50)', title: 'VIP 1 an' },
+  { minMs: 6 * 30 * 24 * 60 * 60 * 1000, src: '/badges/vip-star-6m.png', glow: 'rgba(255,77,170,.50)', title: 'VIP 6 mois' },
+  { minMs: 3 * 30 * 24 * 60 * 60 * 1000, src: '/badges/vip-star-3m.png', glow: 'rgba(255,216,77,.55)', title: 'VIP 3 mois' },
+  { minMs: 0, src: '/badges/vip-star-1m.png', glow: 'rgba(255,77,109,.50)', title: 'VIP 1 mois' },
+];
+
+function getVipBadgeTier(player = currentPlayer) {
+  if (isVipPlus(player) || isPerso(player) || String(player?.role || '') === 'admin') return VIP_BADGE_TIERS[0];
+  const expiresAt = Number(player?.vip_expires_at || 0);
+  const remaining = expiresAt ? Math.max(0, expiresAt - Date.now()) : 0;
+  return VIP_BADGE_TIERS.find(tier => remaining >= tier.minMs) || VIP_BADGE_TIERS[VIP_BADGE_TIERS.length - 1];
+}
+
+function renderVipBadge(player = currentPlayer) {
+  if (!isVip(player)) return '';
+  const accent = getVipAccent(player);
+  const tier = getVipBadgeTier(player);
+  return `<span class="vip-tier-badge" style="background:${accent.bg};color:${accent.color};border:1px solid ${accent.border};--vip-glow:${tier.glow}" title="${escapeHtml(tier.title)}">
+    <img src="${tier.src}" alt="${escapeHtml(tier.title)}">${accent.label}
+  </span>`;
+}
+
+function renderResultMiniStats(wins = 0, losses = 0, wr = 0) {
+  return `<span class="mini-result-stats">
+    <span class="mini-result-chip"><img src="/badges/stat-victory.png" alt="Victoires">${Number(wins || 0)}</span>
+    <span class="mini-result-chip"><img src="/badges/stat-defeat.png" alt="Défaites">${Number(losses || 0)}</span>
+    <span>${Number(wr || 0)}% WR</span>
+  </span>`;
+}
+
 function getPersoAccent() {
   return { color: '#ff7a45', bg: 'rgba(255,122,69,0.14)', border: 'rgba(255,122,69,0.36)', label: 'PERSO' };
 }
@@ -1463,7 +1504,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="profile-info">
           <div class="profile-pseudo">${player.pseudo}</div>
           <div class="profile-badges">
-            ${(player.is_vip || player.is_vip_plus) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getVipAccent(player).bg};color:${getVipAccent(player).color};border:1px solid ${getVipAccent(player).border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#11088; ${getVipAccent(player).label}</span>` : ''}
+            ${renderVipBadge(player)}
             ${player.is_perso && !hasCustomPersoRole(player) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
@@ -1565,8 +1606,8 @@ function render(player, games, following, followers, followStatus, tournaments =
 
     <!-- Stats -->
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
-      <div class="stat-card wins"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card losses"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
+      <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.png" alt="Victoires"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
+      <div class="stat-card losses"><img class="stat-icon-img" src="/badges/stat-defeat.png" alt="Défaites"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
       <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
       ${player.avg_accuracy != null ? `
       <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
@@ -2111,7 +2152,7 @@ function renderGameRow(g, me) {
     const won       = g.winner_id === me.id;
     const isDraw    = g.winner_id === null;
     const rc        = isDraw ? 'draw' : (won ? 'win' : 'loss');
-    const ri        = isDraw ? '=' : (won ? 'V' : 'D');
+    const ri        = isDraw ? '=' : (won ? '<img src="/badges/stat-victory.png" alt="Victoire">' : '<img src="/badges/stat-defeat.png" alt="Défaite">');
     const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
@@ -2157,7 +2198,7 @@ function renderPlayers(players, emptyMsg) {
         <div class="player-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
         <div class="player-mini-info">
           <div class="player-mini-pseudo">${p.pseudo}</div>
-          <div class="player-mini-stats">${p.wins||0}V · ${p.losses||0}D · ${wr}% WR</div>
+          <div class="player-mini-stats">${renderResultMiniStats(p.wins, p.losses, wr)}</div>
         </div>
         <div class="player-mini-elo">${p.elo}</div>
       </div>
@@ -3062,7 +3103,7 @@ async function searchPlayer() {
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').textContent = player.pseudo;
-    document.getElementById('sr-stats').textContent  = `${player.wins||0}V · ${player.losses||0}D · ${wr}% WR`;
+    document.getElementById('sr-stats').innerHTML    = renderResultMiniStats(player.wins, player.losses, wr);
     document.getElementById('sr-elo').textContent    = player.elo;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
     result.classList.add('show');

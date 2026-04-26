@@ -670,7 +670,7 @@ setInterval(() => {
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
 const BOT_PSEUDO = 'Puissance4-AI';
-const BOT_AVATAR = 'https://i.pinimg.com/736x/71/c2/0a/71c20a784a800f78a2e7e0463a17b039.jpg';
+const BOT_AVATAR = '/bot-avatar.svg';
 const BOT_BANNER = 'https://i.pinimg.com/1200x/0b/10/ae/0b10aed237a4092f5b6ebf89bccdffbb.jpg';
 const _BOT_COLORS = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#5e5ce6'];
 const _BOT_SHAPES = ['circle','diamond','triangle','star','heart'];
