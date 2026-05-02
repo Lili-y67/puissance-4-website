@@ -987,6 +987,17 @@ html, body {
   color:rgba(238,238,245,0.82);
   line-height:1.35;
 }
+.queue-avatar-shell{position:relative;width:56px;height:56px;flex-shrink:0}
+.queue-avatar-deco{position:absolute;inset:-10px;z-index:3;pointer-events:none;display:none}
+.queue-avatar-deco img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.18))}
+.queue-avatar-shell.has-decoration .queue-avatar-deco{display:block}
+.queue-avatar-core{
+  position:relative;z-index:1;width:56px;height:56px;border-radius:50%;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;
+  border:2px solid var(--red);background:var(--red-dim);color:var(--red);
+}
+.queue-avatar-core img{width:100%;height:100%;object-fit:cover;display:block}
 .boost-alert-author{
   margin-bottom:7px;
 }
@@ -1640,6 +1651,9 @@ html, body {
   #bot-modal > div { padding: 22px 16px; }
   .queue-volume { right: 10px; bottom: 10px; padding: 9px 10px; }
   .queue-volume-slider { width: 92px; }
+  .queue-avatar-shell{width:48px;height:48px}
+  .queue-avatar-deco{inset:-8px}
+  .queue-avatar-core{width:48px;height:48px;font-size:20px}
   .tournament-notice { left: 10px; bottom: 10px; width: min(330px, calc(100vw - 20px)); padding: 12px; }
   .side-quick-menu { right: 10px; top: auto; bottom: 14px; transform: none; align-items: flex-end; }
   .side-quick-toggle { width: 50px; height: 50px; border-radius: 14px; }
@@ -2221,12 +2235,10 @@ html, body {
 
       <!-- Avatar joueur dans la queue -->
       <div id="queue-avatar-wrap" style="display:none;flex-direction:column;align-items:center;gap:6px;margin-top:4px">
-        <div id="queue-avatar" style="
-          width:56px;height:56px;border-radius:50%;overflow:hidden;
-          display:flex;align-items:center;justify-content:center;
-          font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;
-          border:2px solid var(--red);background:var(--red-dim);color:var(--red);
-        "></div>
+        <div class="queue-avatar-shell" id="queue-avatar-shell">
+          <div class="queue-avatar-deco" id="queue-avatar-deco"></div>
+          <div class="queue-avatar-core" id="queue-avatar"></div>
+        </div>
         <div id="queue-pseudo" style="font-size:13px;font-weight:600;letter-spacing:1px;"></div>
       </div>
 
@@ -2550,13 +2562,13 @@ function consumePostAuthRedirect() {
   }
 }
 
-async function ensureFriendlyDuelAuth() {
+async function ensureFriendlyDuelAuth(forceGuest = false) {
   const existingToken = localStorage.getItem('token') || '';
   const existingPlayer = getSafePlayer();
-  if (existingToken && existingPlayer?.id) {
+  if (!forceGuest && existingToken && existingPlayer?.id) {
     return { token: existingToken, player: existingPlayer };
   }
-  const guestToken = sessionStorage.getItem('duel_guest_token') || '';
+  const guestToken = forceGuest ? '' : (sessionStorage.getItem('duel_guest_token') || '');
   let guestPlayer = null;
   try {
     guestPlayer = JSON.parse(sessionStorage.getItem('duel_guest_player') || 'null');
@@ -2742,8 +2754,8 @@ async function sendDuelChallenge() {
     });
     let data = await res.json().catch(() => ({}));
     if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
-      clearFriendlyDuelGuestAuth();
-      const auth = await ensureFriendlyDuelAuth();
+      clearStoredAuth();
+      const auth = await ensureFriendlyDuelAuth(true);
       player = auth.player;
       token = auth.token;
       res = await fetch('/api/duels/challenge', {
@@ -2791,8 +2803,8 @@ async function createDuelLink() {
     });
     let data = await res.json().catch(() => ({}));
     if (!res.ok && duelGameType === 'friendly' && isInvalidSessionMessage(data?.error)) {
-      clearFriendlyDuelGuestAuth();
-      const auth = await ensureFriendlyDuelAuth();
+      clearStoredAuth();
+      const auth = await ensureFriendlyDuelAuth(true);
       player = auth.player;
       token = auth.token;
       res = await fetch('/api/duels/link', {
@@ -3217,6 +3229,8 @@ function showQueueView(position) {
 
     // Avatar dans la queue
     const avatarWrap = document.getElementById('queue-avatar-wrap');
+    const avatarShell = document.getElementById('queue-avatar-shell');
+    const avatarDeco = document.getElementById('queue-avatar-deco');
     const avatarEl   = document.getElementById('queue-avatar');
     const pseudoEl   = document.getElementById('queue-pseudo');
     if (avatarWrap && avatarEl) {
@@ -3225,9 +3239,14 @@ function showQueueView(position) {
       avatarEl.style.background  = color + '22';
       avatarEl.style.color       = color;
       if (myPlayer.avatar) {
-        avatarEl.innerHTML = `<img src="${myPlayer.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+        avatarEl.innerHTML = `<img src="${myPlayer.avatar}" alt="">`;
       } else {
         avatarEl.textContent = myPlayer.pseudo[0].toUpperCase();
+      }
+      const deco = String(myPlayer.avatar_decoration || '').trim();
+      if (avatarShell && avatarDeco) {
+        avatarShell.classList.toggle('has-decoration', !!deco);
+        avatarDeco.innerHTML = deco ? `<img src="${deco}" alt="">` : '';
       }
       if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
       avatarWrap.style.display = 'flex';

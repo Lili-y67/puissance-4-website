@@ -1869,7 +1869,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         linked_at: new Date().toISOString(),
       };
 
-      let targetPlayer = findPlayerByDiscordIdentity(discordUser);
+      let targetPlayer = findPlayerByDiscordIdentity(discordUser) || findReusableDiscordPseudoPlayer(discordUser);
       if (!targetPlayer) {
         const wantedPseudo = getUniquePseudo(discordUser.global_name || discordUser.username || `Discord${discordUser.id.slice(-4)}`);
         const created = pQ.register.get({
@@ -1890,7 +1890,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         targetPlayer = pQ.getById.get(targetPlayer.id);
       }
 
-      rQ.setDiscord.run(discordUser.id, JSON.stringify(discordInfo), targetPlayer.id);
+      claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
       const linkedPlayer = pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       const token = createSession(linkedPlayer.id);
@@ -1954,7 +1954,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       };
 
       // Liaison depuis le profil AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA lier + envoyer DM de confirmation
-      rQ.setDiscord.run(discordUser.id, JSON.stringify(discordInfo), playerId);
+      claimDiscordIdentity(discordUser.id, discordInfo, playerId);
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
       try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
       const { botToken } = discordConfig();
@@ -2456,7 +2456,7 @@ function getUniquePseudo(basePseudo) {
 function findPlayerByDiscordIdentity(discordUser) {
   const discordId = String(discordUser?.id || '').trim();
   if (!discordId) return null;
-  const direct = db.prepare(`SELECT * FROM players WHERE discord_id = ? AND deleted = 0`).get(discordId);
+  const direct = db.prepare(`SELECT * FROM players WHERE discord_id = ? AND deleted = 0 ORDER BY id ASC LIMIT 1`).get(discordId);
   if (direct) return direct;
   const candidates = db.prepare(`
     SELECT *
@@ -2474,6 +2474,27 @@ function findPlayerByDiscordIdentity(discordUser) {
       return false;
     }
   }) || null;
+}
+
+function claimDiscordIdentity(discordId, discordInfo, playerId) {
+  const id = Number(playerId || 0);
+  const did = String(discordId || '').trim();
+  if (!id || !did) return;
+  db.prepare(`
+    UPDATE players
+    SET discord_id = NULL, discord_info = NULL
+    WHERE discord_id = ? AND id != ?
+  `).run(did, id);
+  rQ.setDiscord.run(did, JSON.stringify(discordInfo || {}), id);
+}
+
+function findReusableDiscordPseudoPlayer(discordUser) {
+  const base = normalizePseudoCandidate(discordUser?.global_name || discordUser?.username || '');
+  if (!base) return null;
+  const player = pQ.getByPseudo.get(base);
+  if (!player || player.deleted || player.discord_id) return null;
+  // On ne reprend automatiquement que les comptes sans mot de passe réel.
+  return player.password ? null : player;
 }
 
 // Inscription

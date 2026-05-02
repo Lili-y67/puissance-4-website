@@ -257,7 +257,7 @@ async function acceptDuel() {
     });
     let data = await res.json().catch(() => ({}));
     if (!res.ok && isFriendly && isInvalidSessionMessage(data?.error)) {
-      clearStoredAuth();
+      clearFullAuth();
       setState('Session invitee expiree, on en prepare une nouvelle...', 'warn');
       const guestRes = await fetch('/api/duels/' + encodeURIComponent(duelId) + '/guest-session', { method: 'POST' });
       const guestData = await guestRes.json().catch(() => ({}));
