@@ -7,6 +7,7 @@
  *
  * Optional:
  *   P4_API_URL=https://puissance-4-website-production.up.railway.app P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_CHALLENGE_BOT_ID=7 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally simple:
  * - pings the site so the bot appears online
@@ -18,6 +19,7 @@
 const API_URL = (process.env.P4_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
 const BOT_TOKEN = process.env.P4_BOT_TOKEN || process.env.BOT_TOKEN || '';
 const LOOP_MS = Number(process.env.P4_LOOP_MS || 1200);
+const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
 
 if (!BOT_TOKEN) {
   console.error('Missing token. Run with: P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js');
@@ -156,6 +158,15 @@ function chooseMove(game) {
 async function main() {
   const me = await api('/api/bot/me');
   console.log(`[P4 Bot] Connected as ${me.bot.pseudo} (${me.bot.elo} ELO) on ${API_URL}`);
+
+  if (CHALLENGE_BOT_ID > 0) {
+    try {
+      const challenge = await api(`/api/bot/challenge/${CHALLENGE_BOT_ID}`, { method: 'POST' });
+      console.log(`[P4 Bot] Challenged bot #${CHALLENGE_BOT_ID}, game ${challenge.game?.gameId || '?'}`);
+    } catch (error) {
+      console.error(`[P4 Bot] Challenge failed: ${error.message}`);
+    }
+  }
 
   let lastGameId = null;
   while (true) {

@@ -30,6 +30,12 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .headline-sub{font-size:13px;color:var(--muted);margin-top:4px}
 .headline-sub strong{color:var(--text)}
 .status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(76,110,245,0.12);border:1px solid rgba(76,110,245,0.22);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.headline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bot-match-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(133,235,255,.1);border:1px solid rgba(133,235,255,.28);color:#85EBFF;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.bot-match-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.48);background:rgba(133,235,255,.16)}
+.bot-match-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.bot-chip{display:inline-flex;align-items:center;gap:4px;margin-left:5px;padding:2px 6px;border-radius:999px;background:rgba(133,235,255,.08);border:1px solid rgba(133,235,255,.2);color:#85EBFF;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:900;letter-spacing:1px;text-transform:uppercase;vertical-align:middle}
+.game-kind{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.18);color:#ffd60a;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .view{display:none}
 .view.show{display:block}
 .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
@@ -110,6 +116,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   .logo{text-align:center;width:100%}
   .live-badge{align-self:center}
   .headline{align-items:flex-start;margin-bottom:16px}
+  .headline-actions{width:100%}
+  .headline-actions>*{flex:1;justify-content:center}
   .headline-title{font-size:30px;line-height:.95}
   .headline-sub{line-height:1.45}
   .games-grid{grid-template-columns:1fr}
@@ -164,7 +172,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
       <div class="headline-title" id="headline-title">Parties en direct</div>
       <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
     </div>
-    <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
+    <div class="headline-actions">
+      <button class="bot-match-btn" id="bot-match-btn" type="button" onclick="startPreconfiguredBotMatch()">🤖 Lancer bots</button>
+      <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
+    </div>
   </div>
 
   <div class="view show" id="list-view">
@@ -467,7 +478,7 @@ function renderList(games) {
     cp1.className = 'card-player';
     const i1 = document.createElement('div');
     i1.className = 'p-info';
-    i1.innerHTML = `<div class="p-pseudo">${p1.pseudo}</div><div class="p-elo">${p1.elo} ELO</div>`;
+    i1.innerHTML = `<div class="p-pseudo">${p1.pseudo}${p1.is_bot ? '<span class="bot-chip">BOT</span>' : ''}</div><div class="p-elo">${p1.elo} ELO</div>`;
     cp1.append(mkAvatar(p1), i1);
 
     const sep = document.createElement('div');
@@ -478,7 +489,7 @@ function renderList(games) {
     cp2.className = 'card-player p2';
     const i2 = document.createElement('div');
     i2.className = 'p-info';
-    i2.innerHTML = `<div class="p-pseudo">${p2.pseudo}</div><div class="p-elo">${p2.elo} ELO</div>`;
+    i2.innerHTML = `<div class="p-pseudo">${p2.pseudo}${p2.is_bot ? '<span class="bot-chip">BOT</span>' : ''}</div><div class="p-elo">${p2.elo} ELO</div>`;
     cp2.append(mkAvatar(p2), i2);
 
     row.append(cp1, sep, cp2);
@@ -498,7 +509,7 @@ function renderList(games) {
 
     const footer = document.createElement('div');
     footer.className = 'card-footer';
-    footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''}</div>`;
+    footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''}</div>${game.botMatch ? '<div class="game-kind">Bot vs Bot</div>' : ''}`;
     const turn = document.createElement('div');
     turn.className = 'turn-wrap';
     const pip = document.createElement('div');
@@ -521,6 +532,22 @@ function renderList(games) {
   prevIds = newIds;
 }
 
+async function startPreconfiguredBotMatch() {
+  const btn = document.getElementById('bot-match-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creation...'; }
+  try {
+    const res = await fetch('/api/bots/preconfigured/match', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de lancer un match bot.');
+    await refresh();
+    if (data.game?.gameId) goToSpec(data.game.gameId);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Lancer bots'; }
+  }
+}
+
 function renderSpec(game) {
   const p1 = game.players[1], p2 = game.players[2];
   document.getElementById('spec-title').textContent = `Partie #${game.id}`;
@@ -534,7 +561,7 @@ function renderSpec(game) {
   left.className = 'spec-player';
   const leftInfo = document.createElement('div');
   leftInfo.className = 'spec-player-info';
-  leftInfo.innerHTML = `<div class="spec-pseudo">${p1.pseudo}</div><div class="spec-elo">${p1.elo} ELO</div>`;
+  leftInfo.innerHTML = `<div class="spec-pseudo">${p1.pseudo}${p1.is_bot ? '<span class="bot-chip">BOT</span>' : ''}</div><div class="spec-elo">${p1.elo} ELO</div>`;
   left.append(mkAvatar(p1, true), leftInfo);
 
   const center = document.createElement('div');
@@ -548,7 +575,7 @@ function renderSpec(game) {
   right.className = 'spec-player right';
   const rightInfo = document.createElement('div');
   rightInfo.className = 'spec-player-info';
-  rightInfo.innerHTML = `<div class="spec-pseudo">${p2.pseudo}</div><div class="spec-elo">${p2.elo} ELO</div>`;
+  rightInfo.innerHTML = `<div class="spec-pseudo">${p2.pseudo}${p2.is_bot ? '<span class="bot-chip">BOT</span>' : ''}</div><div class="spec-elo">${p2.elo} ELO</div>`;
   right.append(rightInfo, mkAvatar(p2, true));
 
   players.append(left, center, right);

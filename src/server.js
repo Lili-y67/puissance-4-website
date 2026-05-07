@@ -790,6 +790,15 @@ function findActiveBotGame(playerId) {
   return null;
 }
 
+function findActiveGameByPlayer(playerId) {
+  const id = Number(playerId);
+  for (const state of gm.games.values()) {
+    if (state.status !== 'active') continue;
+    if (Number(state.players?.[1]?.id) === id || Number(state.players?.[2]?.id) === id) return state;
+  }
+  return null;
+}
+
 function serializeBotGameState(state, playerId) {
   if (!state) return null;
   const side = Number(state.players[1].id) === Number(playerId) ? 1 : 2;
@@ -848,7 +857,11 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
     if (!builtinBotIds.has(Number(player?.id))) return;
     const col = chooseBuiltinBotMove(state, side);
     if (col === null) return;
-    gm.playMove(player.socketId, col);
+    const result = gm.playMove(player.socketId, col);
+    if (result?.gameId) {
+      io.to('game:' + result.gameId).emit(result.type === 'game_over' ? 'game_over' : 'move_played', result);
+    }
+    io.to('live').emit('live_update');
     scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
   }, delayMs);
 }
@@ -857,7 +870,26 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked') {
   const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
+  io.to('live').emit('live_update');
   scheduleBuiltinBotTurn(state.id, 500);
+  return state;
+}
+
+function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
+  const challengerIsBot = Number(challenger?.is_bot || 0) === 1;
+  const p1 = challengerIsBot
+    ? buildBotGamePayload(challenger, botSocketId(challenger.id))
+    : buildPlayableSocketPayload(challenger);
+  p1.socketId = challengerIsBot ? botSocketId(challenger.id) : `bot-challenge:${Number(challenger.id)}:${crypto.randomUUID()}`;
+
+  const p2 = buildBotGamePayload(targetBot, botSocketId(targetBot.id));
+  if (String(p1.color || '').toLowerCase() === String(p2.color || '').toLowerCase()) {
+    p2.color = ['#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a'].find(c => c.toLowerCase() !== String(p1.color || '').toLowerCase()) || '#ffd60a';
+  }
+
+  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
+  io.to('live').emit('live_update');
+  if (builtinBotIds.has(Number(p1.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
 
@@ -2559,13 +2591,15 @@ app.get('/api/live', (_, res) => {
         // Si les deux joueurs ont la mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme couleur, forcer p2 en jaune
         if (c1.toLowerCase() === c2.toLowerCase()) c2 = '#ffd60a';
         return {
-          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle', token_emoji_image: state.players[1].token_emoji_image || '', avatar_decoration: state.players[1].avatar_decoration || '', profile_banner: state.players[1].profile_banner || '', color_secondary: state.players[1].color_secondary || '' },
-          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', avatar_decoration: state.players[2].avatar_decoration || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '' },
+          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle', token_emoji_image: state.players[1].token_emoji_image || '', avatar_decoration: state.players[1].avatar_decoration || '', profile_banner: state.players[1].profile_banner || '', color_secondary: state.players[1].color_secondary || '', is_bot: Number(state.players[1].is_bot || 0) },
+          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', avatar_decoration: state.players[2].avatar_decoration || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '', is_bot: Number(state.players[2].is_bot || 0) },
         };
       })(),
       grid:    state.board.grid,
       current: state.current,
       moves:   state.moveCount,
+      gameType: state.gameType || 'ranked',
+      botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
     };
     if (state.status === 'finished') {
       entry.result   = state.result   || null;  // { winner, eloChanges }
@@ -2782,7 +2816,7 @@ app.get('/api/players', (req, res) => {
       online,
       botOnline: runtime?.online || false,
       botStatus: runtime?.status || (Number(p.is_bot) === 1 ? 'offline' : null),
-      playing: playerIsAlreadyPlaying(p.id),
+      playing: playerIsAlreadyPlaying(p.id) || !!findActiveGameByPlayer(p.id),
       inQueue: playerIsInAnyQueue(p.id),
     };
   }).filter(p => !onlineOnly || p.online).slice(0, limit);
@@ -2882,6 +2916,24 @@ app.post('/api/bot/move', (req, res) => {
   res.json({ ok: true, result, game: serializeBotGameState(gm.games.get(state.id), bot.id) });
 });
 
+app.post('/api/bot/challenge/:id', (req, res) => {
+  const challenger = getBotFromRequest(req);
+  if (!challenger) return res.status(401).json({ error: 'Token bot invalide.' });
+  const targetId = Number(req.params.id);
+  const target = pQ.getById.get(targetId);
+  if (!target || target.deleted || Number(target.is_bot || 0) !== 1 || Number(target.bot_enabled || 0) !== 1) {
+    return res.status(404).json({ error: 'Bot introuvable.' });
+  }
+  if (Number(target.id) === Number(challenger.id)) return res.status(409).json({ error: 'Un bot ne peut pas se defier lui-meme.' });
+  if (findActiveGameByPlayer(challenger.id)) return res.status(409).json({ error: 'Ton bot est deja en partie.' });
+  if (findActiveGameByPlayer(target.id)) return res.status(409).json({ error: 'Le bot cible est deja en partie.' });
+  const runtime = publicBotRuntime(target.id);
+  if (!runtime.online) return res.status(409).json({ error: 'Le bot cible est hors ligne.' });
+  botRuntime.set(Number(challenger.id), { status: 'playing', lastSeen: Date.now() });
+  const state = createChallengeVsBotGame(challenger, target, 'ranked');
+  res.json({ ok: true, game: serializeBotGameState(state, challenger.id), target: sanitize(target) });
+});
+
 app.get('/api/bots/preconfigured', (req, res) => {
   const bots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(Boolean)
     .map(bot => ({ ...sanitize(bot), rank: getRank(Number(bot.elo || 0)), runtime: publicBotRuntime(bot.id), activeGame: serializeBotGameState(findActiveBotGame(bot.id), bot.id) }));
@@ -2896,6 +2948,26 @@ app.post('/api/bots/preconfigured/match', (req, res) => {
   const shuffled = pool.sort(() => Math.random() - 0.5);
   const state = createBotVsBotGame(shuffled[0], shuffled[1], 'ranked');
   res.json({ ok: true, game: serializeBotGameState(state, shuffled[0].id) });
+});
+
+app.post('/api/bots/:id/challenge', (req, res) => {
+  const token = String(req.body?.token || req.headers['x-session-token'] || req.headers['x-token'] || '');
+  const challengerId = validateSession(token);
+  if (!challengerId || isAnonymousPlayerId(challengerId)) return res.status(403).json({ error: 'Connecte-toi pour defier un bot.' });
+  const challenger = pQ.getById.get(challengerId);
+  if (!challenger || challenger.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const target = pQ.getById.get(Number(req.params.id));
+  if (!target || target.deleted || Number(target.is_bot || 0) !== 1 || Number(target.bot_enabled || 0) !== 1) {
+    return res.status(404).json({ error: 'Bot introuvable.' });
+  }
+  if (Number(target.id) === Number(challenger.id)) return res.status(409).json({ error: 'Tu ne peux pas defier ton propre bot.' });
+  if (findActiveGameByPlayer(challenger.id)) return res.status(409).json({ error: 'Tu es deja en partie.' });
+  if (findActiveGameByPlayer(target.id)) return res.status(409).json({ error: 'Ce bot est deja en partie.' });
+  const runtime = publicBotRuntime(target.id);
+  if (!runtime.online) return res.status(409).json({ error: 'Ce bot est hors ligne.' });
+  clearPlayerQueues(challenger.id);
+  const state = createChallengeVsBotGame(challenger, target, 'ranked');
+  res.json({ ok: true, gameId: state.id, gameUrl: `/game/${state.id}`, game: serializeBotGameState(state, challenger.id), target: sanitize(target) });
 });
 
 // Fermeture de compte
@@ -4409,6 +4481,10 @@ io.on('connection', socket => {
     if (result.error) return socket.emit('error', { message: result.error });
     if (result.type === 'move')      io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'game_over') io.to('game:' + result.gameId).emit('game_over',   result);
+    const activeState = result.gameId ? gm.games.get(result.gameId) : null;
+    if (result.type === 'move' && activeState && builtinBotIds.has(Number(activeState.players?.[activeState.current]?.id))) {
+      scheduleBuiltinBotTurn(result.gameId, 500);
+    }
     // Notifier les spectateurs live
     io.to('live').emit('live_update');
   });
@@ -4474,6 +4550,7 @@ io.on('connection', socket => {
                : state.players[2].id === socket.playerId ? 2 : null;
 
     if (side) {
+      if (state.players[side].socketId) gm.socketToGame.delete(state.players[side].socketId);
       state.players[side].socketId = socket.id;
       state.players[side].disconnectedAt = null;
       gm.socketToGame.set(socket.id, gameId);

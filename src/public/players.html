@@ -28,6 +28,7 @@ h1{font:900 clamp(38px,7vw,76px) "Barlow Condensed";line-height:.9;text-transfor
 .avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;overflow:hidden;border:2px solid var(--line,#fff);background:rgba(255,255,255,.05);font:900 22px "Barlow Condensed"}.avatar img{width:100%;height:100%;object-fit:cover}
 .main{min-width:0}.name{display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;color:var(--muted);font-size:12px}.badge{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;padding:3px 8px;font:900 10px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.badge.vip{color:var(--yellow);border-color:rgba(255,214,10,.3);background:rgba(255,214,10,.08)}.badge.admin{color:var(--red);border-color:rgba(255,45,85,.3);background:rgba(255,45,85,.08)}.badge.bot{color:var(--cyan);border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.08)}
 .right{text-align:right}.elo{font:900 28px "Barlow Condensed";color:var(--yellow);line-height:1}.rank{font:900 11px "Barlow Condensed";letter-spacing:1.4px;color:var(--muted);text-transform:uppercase}.presence{position:absolute;left:51px;bottom:12px;width:14px;height:14px;border-radius:50%;border:3px solid var(--surface);background:#737383}.presence.on{background:var(--green);box-shadow:0 0 14px rgba(48,209,88,.5)}.presence.bot{background:var(--cyan);box-shadow:0 0 14px rgba(133,235,255,.45)}
+.challenge-btn{margin-top:9px;border:1px solid rgba(255,214,10,.32);background:rgba(255,214,10,.1);color:var(--yellow);border-radius:12px;padding:8px 12px;font:900 12px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:transform .16s,border-color .16s,background .16s}.challenge-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.7);background:rgba(255,214,10,.18)}.challenge-btn:disabled{cursor:not-allowed;opacity:.55;transform:none}
 .empty{text-align:center;color:var(--muted);padding:42px;border:1px dashed var(--border);border-radius:22px;background:rgba(255,255,255,.025)}
 @media(max-width:820px){.hero{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.page{width:min(100% - 16px,640px);padding-top:16px}.player{grid-template-columns:auto 1fr}.right{grid-column:2;text-align:left}.links{width:100%}.links a{flex:1;text-align:center}}
 @media(max-width:460px){.stats{grid-template-columns:1fr}.card{padding:17px;border-radius:20px}.player{gap:10px;padding:12px}.avatar{width:46px;height:46px}.presence{left:43px}.elo{font-size:23px}}
@@ -59,7 +60,7 @@ h1{font:900 clamp(38px,7vw,76px) "Barlow Condensed";line-height:.9;text-transfor
     <aside class="card botbox">
       <h2>API Bot</h2>
       <p>Un compte non lie Discord peut etre transforme en bot. Le programme externe ping, rejoint la file bot, lit la grille, puis envoie ses coups.</p>
-      <div class="endpoint">POST /api/players/:id/convert-bot<br>Authorization: Bearer p4bot_xxx<br>POST /api/bot/queue/join<br>GET /api/bot/game<br>POST /api/bot/move</div>
+      <div class="endpoint">POST /api/players/:id/convert-bot<br>Authorization: Bearer p4bot_xxx<br>POST /api/bot/queue/join<br>GET /api/bot/game<br>POST /api/bot/move<br>POST /api/bot/challenge/:id</div>
       <a class="download" href="/downloads/p4-bot-client.js" download>Telecharger le client Node</a>
     </aside>
   </section>
@@ -86,13 +87,20 @@ const search = document.getElementById('search');
 
 function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function initials(p){return esc(String(p||'?').trim().slice(0,1).toUpperCase() || '?');}
+function getStoredPlayer(){
+  try {
+    return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+  } catch (_) {
+    return null;
+  }
+}
 function badgeHtml(p){
   const out = [];
-  if (Number(p.is_bot)) out.push('<span class="badge bot">🤖 Bot</span>');
-  if (String(p.role) === 'admin') out.push('<span class="badge admin">⚡ Admin</span>');
-  if (Number(p.is_perso)) out.push('<span class="badge vip">💎 Perso</span>');
-  else if (Number(p.is_vip_plus)) out.push('<span class="badge vip">💠 VIP+</span>');
-  else if (Number(p.is_vip)) out.push('<span class="badge vip">⭐ VIP</span>');
+  if (Number(p.is_bot)) out.push('<span class="badge bot">&#129302; Bot</span>');
+  if (String(p.role) === 'admin') out.push('<span class="badge admin">&#9889; Admin</span>');
+  if (Number(p.is_perso)) out.push('<span class="badge vip">&#128142; Perso</span>');
+  else if (Number(p.is_vip_plus)) out.push('<span class="badge vip">&#128160; VIP+</span>');
+  else if (Number(p.is_vip)) out.push('<span class="badge vip">&#11088; VIP</span>');
   if (p.custom_role_text) out.push(`<span class="badge" style="color:${esc(p.custom_role_color||'#fff')}">${esc(p.custom_role_emoji||'')} ${esc(p.custom_role_text)}</span>`);
   return out.join('');
 }
@@ -108,6 +116,8 @@ function render(players, counts){
     const avatar = p.avatar ? `<img src="${esc(p.avatar)}" alt="">` : initials(p.pseudo);
     const state = p.playing ? 'En partie' : p.inQueue ? 'En file' : p.online ? 'En ligne' : Number(p.is_bot) ? (p.botStatus || 'Offline') : 'Hors ligne';
     const presenceClass = p.online ? (Number(p.is_bot) ? 'on bot' : 'on') : '';
+    const isBot = Number(p.is_bot) === 1;
+    const canChallenge = isBot && !p.playing && (p.online || p.botOnline);
     return `<a class="player" href="/profil?id=${Number(p.id)}" style="--line:${esc(p.color||'#ff2d55')}">
       <div class="avatar">${avatar}</div>
       <span class="presence ${presenceClass}"></span>
@@ -115,10 +125,39 @@ function render(players, counts){
         <div class="name">${esc(p.pseudo)} ${badgeHtml(p)}</div>
         <div class="meta"><span>${state}</span><span>${Number(p.wins||0)}V</span><span>${Number(p.losses||0)}D</span><span>${Number(p.draws||0)}N</span></div>
         ${p.bot_description ? `<div class="meta">${esc(p.bot_description)}</div>` : ''}
+        ${isBot ? `<button class="challenge-btn" type="button" ${canChallenge ? '' : 'disabled'} onclick="challengeBot(event, ${Number(p.id)})">${canChallenge ? 'Defier ce bot' : 'Bot indisponible'}</button>` : ''}
       </div>
       <div class="right"><div class="elo">${Number(p.elo||0)}</div><div class="rank">${esc(p.rank?.name || p.rank || 'Rank')}</div></div>
     </a>`;
   }).join('');
+}
+async function challengeBot(event, botId){
+  event.preventDefault();
+  event.stopPropagation();
+  const me = getStoredPlayer();
+  if (!me?.token) {
+    alert('Connecte-toi pour defier un bot en ranked.');
+    location.href = '/';
+    return;
+  }
+  const btn = event.currentTarget;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Creation...';
+  try {
+    const res = await fetch(`/api/bots/${Number(botId)}/challenge`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': me.token },
+      body: JSON.stringify({ token: me.token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Impossible de defier ce bot.');
+    location.href = data.gameUrl || `/game/${data.gameId}`;
+  } catch (err) {
+    alert(err.message || 'Erreur duel bot.');
+    btn.disabled = false;
+    btn.textContent = old;
+  }
 }
 async function load(){
   const params = new URLSearchParams({ type: currentType, limit: '80' });
