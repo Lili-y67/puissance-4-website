@@ -50,7 +50,7 @@ const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
 const BOT_ARENA_INTERVAL_MS = Math.max(10_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 25_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2));
 const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(30_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 3 * 60_000));
-const BOT_ARENA_REST_MS = Math.max(30_000, Number(process.env.BOT_ARENA_REST_MS || 2 * 60_000));
+const BOT_ARENA_REST_MS = Math.max(15_000, Number(process.env.BOT_ARENA_REST_MS || 15_000));
 const BOT_SEARCH_TIME_MS = Math.max(80, Number(process.env.BOT_SEARCH_TIME_MS || 520));
 const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 let nextAnonymousPlayerId = -1;
@@ -1033,6 +1033,19 @@ function scoreWindowGrid(values, player) {
   return 0;
 }
 
+function randomMatchColor(exclude = []) {
+  const palette = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#85ebff', '#ff7eb6', '#2dc5c1', '#ff453a'];
+  const blocked = new Set(exclude.filter(Boolean).map(c => String(c).toLowerCase()));
+  const available = palette.filter(c => !blocked.has(c.toLowerCase()));
+  const pool = available.length ? available : palette;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function assignDistinctMatchColors(p1, p2) {
+  p1.color = randomMatchColor();
+  p2.color = randomMatchColor([p1.color]);
+}
+
 function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
   setTimeout(() => {
     const state = gm.games.get(gameId);
@@ -1060,6 +1073,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
 function createBotVsBotGame(botA, botB, gameType = 'ranked') {
   const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
+  assignDistinctMatchColors(p1, p2);
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
   io.to('live').emit('live_update');
   scheduleBuiltinBotTurn(state.id, 500);
@@ -1074,9 +1088,7 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
   p1.socketId = challengerIsBot ? botSocketId(challenger.id) : `bot-challenge:${Number(challenger.id)}:${crypto.randomUUID()}`;
 
   const p2 = buildBotGamePayload(targetBot, botSocketId(targetBot.id));
-  if (String(p1.color || '').toLowerCase() === String(p2.color || '').toLowerCase()) {
-    p2.color = ['#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a'].find(c => c.toLowerCase() !== String(p1.color || '').toLowerCase()) || '#ffd60a';
-  }
+  assignDistinctMatchColors(p1, p2);
 
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
   io.to('live').emit('live_update');
