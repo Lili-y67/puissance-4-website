@@ -3843,17 +3843,29 @@ function linkDiscord() {
 // â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let lastBotToken = '';
 
+function getStoredSessionToken() {
+  const direct = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  if (direct) return direct;
+  try {
+    const player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+    return player.token || '';
+  } catch (_) {
+    return '';
+  }
+}
+
 async function convertProfileToBot() {
   const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  const token = getStoredSessionToken();
   const btn = document.getElementById('btn-convert-bot');
-  if (!me.id || !me.token) return alert('Connecte-toi avant de basculer en mode bot.');
+  if (!me.id || !token) return alert('Connecte-toi avant de basculer en mode bot.');
   if (!confirm('Passer ce compte en mode bot ? Le token sera affiche une seule fois et ne pourra pas etre regenere.')) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Creation du token...'; }
   try {
     const res = await fetch(`/api/players/${me.id}/convert-bot`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-session-token': me.token },
-      body: JSON.stringify({ token: me.token, skill: currentPlayer?.elo || me.elo || 1000 }),
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, skill: currentPlayer?.elo || me.elo || 1000 }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de basculer en mode bot.');

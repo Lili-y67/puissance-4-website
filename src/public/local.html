@@ -96,6 +96,7 @@ let current = 1;
 let ended = false;
 let history = [];
 let scores = { 1: 0, 2: 0, draw: 0 };
+let nextStarter = 1;
 
 const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
@@ -114,7 +115,7 @@ function playerColor(player) {
 function initGrid() {
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
-  current = 1;
+  current = nextStarter;
   ended = false;
 }
 
@@ -163,6 +164,7 @@ function playColumn(col) {
   if (win.length) {
     ended = true;
     scores[current]++;
+    nextStarter = current;
     renderBoard(win);
     updateScores();
     updateStatus(`${playerName(current)} gagne !`, 'Victoire locale');
@@ -216,6 +218,7 @@ function newRound() {
 
 function resetAll() {
   scores = { 1: 0, 2: 0, draw: 0 };
+  nextStarter = 1;
   updateScores();
   newRound();
 }
