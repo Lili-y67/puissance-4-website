@@ -1357,7 +1357,8 @@ async function load() {
       return;
     }
     if (!profileRes.ok) throw new Error();
-    const { player, games, following, followers } = await profileRes.json();
+    const { player, games, games_total, following, followers } = await profileRes.json();
+    const totalGames = Number(games_total ?? player.games_total ?? (games || []).length);
     const tournamentData = tournamentsRes.ok ? await tournamentsRes.json() : { tournaments: [] };
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
     const freshPlayer = (isOwnProfile && player.discord_id)
@@ -1371,7 +1372,7 @@ async function load() {
     currentTournamentsCache = tournamentData.tournaments || [];
     pendingAvatarDecoration = null;
 
-    render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache);
+    render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
     renderQueueMusicPicker(freshPlayer);
 
     // Charger le statut en ligne (tous les profils)
@@ -1396,9 +1397,10 @@ async function load() {
   }
 }
 
-function render(player, games, following, followers, followStatus, tournaments = []) {
+function render(player, games, following, followers, followStatus, tournaments = [], gamesTotalOverride = null) {
   const total = player.wins + player.losses + player.draws;
   const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
+  const gamesTotal = Number(gamesTotalOverride ?? player.games_total ?? games.length);
   const avatarSrc = getRenderableMediaSrc(player.avatar);
   const avatarDecorationSrc = getRenderableMediaSrc(player.avatar_decoration);
   const bannerSrc = getRenderableMediaSrc(player.banner);
@@ -1441,7 +1443,7 @@ function render(player, games, following, followers, followStatus, tournaments =
   const boosterCounts = isOwnProfile ? getProfileBoosterCounts() : { elo: 0, coins: 0 };
   const marqueeItems = [
     `${player.elo} ELO`,
-    `${games.length} parties`,
+    `${gamesTotal} parties`,
     `${wr}% de winrate`,
     player.rank?.label || 'Classement en cours',
     player.avg_accuracy != null ? `${player.avg_accuracy}% de precision` : 'Precision a venir',
@@ -1483,7 +1485,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="profile-side-label">Apercu rapide</div>
           <div class="profile-side-stats">
             <div class="profile-side-stat"><strong>${player.elo}</strong><span>Elo</span></div>
-            <div class="profile-side-stat"><strong>${games.length}</strong><span>Parties</span></div>
+            <div class="profile-side-stat"><strong>${gamesTotal}</strong><span>Parties</span></div>
             <div class="profile-side-stat"><strong>${wr}%</strong><span>WR</span></div>
             <div class="profile-side-stat"><strong>${followers.length}</strong><span>Fans</span></div>
           </div>
@@ -1519,7 +1521,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
           <div class="profile-pill-row">
             <div class="profile-pill"><span>🏆</span><strong>${player.rank?.label || 'UNRANKED'}</strong></div>
-            <div class="profile-pill"><span>🎮</span><strong>${games.length} parties</strong></div>
+            <div class="profile-pill"><span>🎮</span><strong>${gamesTotal} parties</strong></div>
             <div class="profile-pill"><span>📈</span><strong>${wr}% WR</strong></div>
             <div class="profile-pill"><span>✨</span><strong>${player.avg_accuracy != null ? `${player.avg_accuracy}% precision` : 'Analyse a venir'}</strong></div>
           </div>
@@ -1603,7 +1605,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="social-lbl">Abonnés</div>
       </div>
       <div class="social-card" onclick="switchTab('history')">
-        <div class="social-val">${games.length}</div>
+        <div class="social-val">${gamesTotal}</div>
         <div class="social-lbl">Parties</div>
       </div>
     </div>

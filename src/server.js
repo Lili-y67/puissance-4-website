@@ -45,10 +45,14 @@ const botApiQueue = [];
 const botRuntime = new Map();
 const builtinBotIds = new Set();
 const botArenaPairs = new Map();
+const botArenaRestUntil = new Map();
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
 const BOT_ARENA_INTERVAL_MS = Math.max(10_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 25_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2));
 const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(30_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 3 * 60_000));
+const BOT_ARENA_REST_MS = Math.max(30_000, Number(process.env.BOT_ARENA_REST_MS || 2 * 60_000));
+const BOT_SEARCH_TIME_MS = Math.max(80, Number(process.env.BOT_SEARCH_TIME_MS || 520));
+const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 let nextAnonymousPlayerId = -1;
 
 function getTournamentQueue(tournamentId) {
@@ -739,11 +743,12 @@ let BOT_PLAYER_ID;
 }
 
 const PRECONFIGURED_BOTS = [
-  { pseudo: 'P4-Bot-Nova', elo: 820, color: '#85EBFF', shape: 'circle', description: 'Robot debutant, parfait pour tester les ouvertures.' },
-  { pseudo: 'P4-Bot-Orion', elo: 1120, color: '#ffd60a', shape: 'diamond', description: 'Robot equilibre avec une bonne priorite au centre.' },
-  { pseudo: 'P4-Bot-Vega', elo: 1450, color: '#ff2d55', shape: 'star', description: 'Robot tactique qui cherche les menaces immediates.' },
-  { pseudo: 'P4-Bot-Zenith', elo: 1780, color: '#bf5af2', shape: 'heart', description: 'Robot solide, plus proche d une force avancee.' },
+  { pseudo: 'P4-Bot-Nova', elo: 820, color: '#85EBFF', shape: 'circle', depth: 7, description: 'Robot competitif profondeur 7, parfait pour tester les ouvertures.' },
+  { pseudo: 'P4-Bot-Orion', elo: 1120, color: '#ffd60a', shape: 'diamond', depth: 8, description: 'Robot competitif profondeur 8 avec une bonne priorite au centre.' },
+  { pseudo: 'P4-Bot-Vega', elo: 1450, color: '#ff2d55', shape: 'star', depth: 9, description: 'Robot tactique profondeur 9 qui cherche les menaces immediates.' },
+  { pseudo: 'P4-Bot-Zenith', elo: 1780, color: '#bf5af2', shape: 'heart', depth: 11, description: 'Robot avance profondeur 11, solide en defense comme en attaque.' },
 ];
+const BOT_DEPTH_BY_PSEUDO = new Map(PRECONFIGURED_BOTS.map(bot => [bot.pseudo, bot.depth]));
 
 function ensurePreconfiguredBots() {
   db.prepare(`UPDATE players SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ? WHERE id = ?`)
@@ -825,32 +830,207 @@ function serializeBotGameState(state, playerId) {
 }
 
 function chooseBuiltinBotMove(state, side) {
-  const cols = state.board.getValidCols();
-  if (!cols.length) return null;
   const player = Number(side);
   const opponent = player === 1 ? 2 : 1;
-  const skill = Number(state.players[player]?.botSkill || state.players[player]?.elo || 1000);
-  const tacticalChance = Math.max(0.25, Math.min(0.96, (skill - 600) / 1400));
+  const cols = getOrderedValidCols(state.board.grid);
+  if (!cols.length) return null;
 
-  function winningMove(forPlayer) {
+  const depth = getBuiltinBotSearchDepth(state, player);
+  const deadline = Date.now() + getBuiltinBotTimeBudget(state, player);
+  const transposition = new Map();
+  let bestCol = cols[0];
+  let bestScore = -Infinity;
+  let completedDepth = 0;
+
+  for (const immediate of cols) {
+    const board = cloneGrid(state.board.grid);
+    const row = dropGrid(board, immediate, player);
+    if (row >= 0 && checkWinGrid(board, row, immediate, player)) return immediate;
+  }
+  for (const block of cols) {
+    const board = cloneGrid(state.board.grid);
+    const row = dropGrid(board, block, opponent);
+    if (row >= 0 && checkWinGrid(board, row, block, opponent)) return block;
+  }
+
+  for (let currentDepth = 1; currentDepth <= depth; currentDepth++) {
+    if (Date.now() > deadline) break;
+    let localBestCol = bestCol;
+    let localBestScore = -Infinity;
+    let completed = true;
     for (const col of cols) {
-      const clone = state.board.clone();
-      const row = clone.drop(col, forPlayer);
-      if (row !== null && clone.checkWin(row, col, forPlayer)) return col;
+      if (Date.now() > deadline) {
+        completed = false;
+        break;
+      }
+      const board = cloneGrid(state.board.grid);
+      const row = dropGrid(board, col, player);
+      if (row < 0) continue;
+      let score;
+      if (checkWinGrid(board, row, col, player)) {
+        score = 1_000_000 + currentDepth;
+      } else {
+        score = -negamaxBot(board, currentDepth - 1, opponent, player, -Infinity, Infinity, deadline, transposition, 1);
+      }
+      score += centerTieBreak(col);
+      if (score > localBestScore) {
+        localBestScore = score;
+        localBestCol = col;
+      }
     }
-    return null;
+    if (!completed) break;
+    completedDepth = currentDepth;
+    bestScore = localBestScore;
+    bestCol = localBestCol;
   }
 
-  if (Math.random() < tacticalChance) {
-    const win = winningMove(player);
-    if (win !== null) return win;
-    const block = winningMove(opponent);
-    if (block !== null) return block;
-  }
+  state.lastBotSearch = {
+    player: state.players[player]?.pseudo || 'Bot',
+    depthTarget: depth,
+    depthCompleted: completedDepth,
+    score: Math.round(bestScore),
+  };
+  return bestCol;
+}
 
-  const centerOrder = [3, 2, 4, 1, 5, 0, 6].filter(c => cols.includes(c));
-  if (Math.random() < tacticalChance && centerOrder.length) return centerOrder[0];
-  return cols[Math.floor(Math.random() * cols.length)];
+function getBuiltinBotSearchDepth(state, side) {
+  const player = state.players[side] || {};
+  const other = state.players[side === 1 ? 2 : 1] || {};
+  let target = BOT_DEPTH_BY_PSEUDO.get(player.pseudo) || 8;
+  if (Number(player.id) === Number(BOT_PLAYER_ID)) {
+    target = Number(other.is_bot || 0) === 1 ? 13 : 7;
+  }
+  return Math.max(3, Math.min(BOT_MAX_SEARCH_DEPTH, target));
+}
+
+function getBuiltinBotTimeBudget(state, side) {
+  const depth = getBuiltinBotSearchDepth(state, side);
+  if (depth >= 12) return Math.max(BOT_SEARCH_TIME_MS, 850);
+  if (depth >= 10) return Math.max(BOT_SEARCH_TIME_MS, 620);
+  return Math.min(Math.max(BOT_SEARCH_TIME_MS, 220), 520);
+}
+
+function cloneGrid(grid) {
+  return grid.map(row => row.slice());
+}
+
+function getOrderedValidCols(grid) {
+  return [3, 2, 4, 1, 5, 0, 6].filter(col => grid[0]?.[col] === 0);
+}
+
+function dropGrid(grid, col, player) {
+  for (let row = 5; row >= 0; row--) {
+    if (grid[row][col] === 0) {
+      grid[row][col] = player;
+      return row;
+    }
+  }
+  return -1;
+}
+
+function undoDropGrid(grid, row, col) {
+  if (row >= 0) grid[row][col] = 0;
+}
+
+function checkWinGrid(grid, row, col, player) {
+  const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+  for (const [dr, dc] of dirs) {
+    let count = 1;
+    for (const sign of [1, -1]) {
+      for (let step = 1; step < 4; step++) {
+        const r = row + dr * step * sign;
+        const c = col + dc * step * sign;
+        if (r < 0 || r >= 6 || c < 0 || c >= 7 || grid[r][c] !== player) break;
+        count++;
+      }
+    }
+    if (count >= 4) return true;
+  }
+  return false;
+}
+
+function centerTieBreak(col) {
+  return [3, 2, 4, 1, 5, 0, 6].indexOf(col) * -0.01;
+}
+
+function gridKey(grid, player, depth) {
+  return `${player}|${depth}|${grid.map(row => row.join('')).join('')}`;
+}
+
+function negamaxBot(grid, depth, turn, maximizer, alpha, beta, deadline, transposition, ply) {
+  if (Date.now() > deadline) return evaluateGrid(grid, turn);
+  const validCols = getOrderedValidCols(grid);
+  if (depth <= 0 || !validCols.length) return evaluateGrid(grid, turn);
+
+  const key = gridKey(grid, turn, depth);
+  const cached = transposition.get(key);
+  if (cached !== undefined) return cached;
+
+  let best = -Infinity;
+  let exact = true;
+  for (const col of validCols) {
+    const row = dropGrid(grid, col, turn);
+    if (row < 0) continue;
+    let score;
+    if (checkWinGrid(grid, row, col, turn)) {
+      score = 1_000_000 - ply;
+    } else {
+      const nextTurn = turn === 1 ? 2 : 1;
+      score = -negamaxBot(grid, depth - 1, nextTurn, maximizer, -beta, -alpha, deadline, transposition, ply + 1);
+    }
+    undoDropGrid(grid, row, col);
+    if (score > best) best = score;
+    if (score > alpha) alpha = score;
+    if (alpha >= beta) {
+      exact = false;
+      break;
+    }
+    if (Date.now() > deadline) {
+      exact = false;
+      break;
+    }
+  }
+  if (exact) transposition.set(key, best);
+  return best;
+}
+
+function evaluateGrid(grid, player) {
+  const opponent = player === 1 ? 2 : 1;
+  let score = 0;
+
+  const centerCount = grid.reduce((count, row) => count + (row[3] === player ? 1 : 0), 0);
+  const opponentCenter = grid.reduce((count, row) => count + (row[3] === opponent ? 1 : 0), 0);
+  score += (centerCount - opponentCenter) * 34;
+
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 4; c++) score += scoreWindowGrid([grid[r][c], grid[r][c + 1], grid[r][c + 2], grid[r][c + 3]], player);
+  }
+  for (let c = 0; c < 7; c++) {
+    for (let r = 0; r < 3; r++) score += scoreWindowGrid([grid[r][c], grid[r + 1][c], grid[r + 2][c], grid[r + 3][c]], player);
+  }
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 4; c++) score += scoreWindowGrid([grid[r][c], grid[r + 1][c + 1], grid[r + 2][c + 2], grid[r + 3][c + 3]], player);
+  }
+  for (let r = 3; r < 6; r++) {
+    for (let c = 0; c < 4; c++) score += scoreWindowGrid([grid[r][c], grid[r - 1][c + 1], grid[r - 2][c + 2], grid[r - 3][c + 3]], player);
+  }
+  return score;
+}
+
+function scoreWindowGrid(values, player) {
+  const opponent = player === 1 ? 2 : 1;
+  const mine = values.filter(v => v === player).length;
+  const theirs = values.filter(v => v === opponent).length;
+  const empty = values.filter(v => v === 0).length;
+  if (mine === 4) return 100_000;
+  if (theirs === 4) return -120_000;
+  if (mine === 3 && empty === 1) return 920;
+  if (mine === 2 && empty === 2) return 85;
+  if (mine === 1 && empty === 3) return 8;
+  if (theirs === 3 && empty === 1) return -1_120;
+  if (theirs === 2 && empty === 2) return -105;
+  if (theirs === 1 && empty === 3) return -10;
+  return 0;
 }
 
 function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
@@ -865,6 +1045,12 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
     const result = gm.playMove(player.socketId, col);
     if (result?.gameId) {
       io.to('game:' + result.gameId).emit(result.type === 'game_over' ? 'game_over' : 'move_played', result);
+      if (result.type === 'game_over') {
+        const now = Date.now();
+        for (const sideId of [state.players?.[1]?.id, state.players?.[2]?.id]) {
+          if (builtinBotIds.has(Number(sideId))) botArenaRestUntil.set(Number(sideId), now + BOT_ARENA_REST_MS);
+        }
+      }
     }
     io.to('live').emit('live_update');
     scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
@@ -918,7 +1104,11 @@ function pickBackgroundBotPair() {
   const now = Date.now();
   const freeBots = [...builtinBotIds]
     .map(id => pQ.getById.get(id))
-    .filter(bot => bot && !bot.deleted && Number(bot.bot_enabled || 0) === 1 && !findActiveGameByPlayer(bot.id))
+    .filter(bot => bot
+      && !bot.deleted
+      && Number(bot.bot_enabled || 0) === 1
+      && !findActiveGameByPlayer(bot.id)
+      && Number(botArenaRestUntil.get(Number(bot.id)) || 0) <= now)
     .sort(() => Math.random() - 0.5);
   if (freeBots.length < 2) return null;
 
@@ -953,6 +1143,8 @@ function runBackgroundBotMatchmaking(reason = 'loop') {
       if (!pair) return;
       const [botA, botB, key] = pair;
       botArenaPairs.set(key, Date.now());
+      botArenaRestUntil.set(Number(botA.id), Date.now() + BOT_ARENA_REST_MS);
+      botArenaRestUntil.set(Number(botB.id), Date.now() + BOT_ARENA_REST_MS);
       botRuntime.set(Number(botA.id), { status: 'arena', lastSeen: Date.now() });
       botRuntime.set(Number(botB.id), { status: 'arena', lastSeen: Date.now() });
       const state = createBotVsBotGame(botA, botB, 'ranked');
@@ -3470,6 +3662,19 @@ app.get('/api/players/:id', (req, res) => {
         ORDER BY g.finished_at DESC LIMIT 25
       `).all(player.id, player.id)
     : gQ.getForPlayer.all(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID);
+  const gamesTotal = player.id === BOT_PLAYER_ID
+    ? Number(db.prepare(`
+        SELECT COUNT(*) AS c
+        FROM games
+        WHERE (player1_id = ? OR player2_id = ?) AND status = 'finished'
+      `).get(player.id, player.id)?.c || 0)
+    : Number(db.prepare(`
+        SELECT COUNT(*) AS c
+        FROM games
+        WHERE (player1_id = ? OR player2_id = ?)
+          AND player1_id != ? AND player2_id != ?
+          AND status = 'finished'
+      `).get(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
 
@@ -3490,7 +3695,7 @@ app.get('/api/players/:id', (req, res) => {
   }
 
   const p = sanitize(player);
-  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0 }, games, following, followers });
+  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal }, games, games_total: gamesTotal, following, followers });
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {
