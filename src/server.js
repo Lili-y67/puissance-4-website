@@ -44,6 +44,11 @@ const anonymousPlayers = new Map();
 const botApiQueue = [];
 const botRuntime = new Map();
 const builtinBotIds = new Set();
+const botArenaPairs = new Map();
+const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
+const BOT_ARENA_INTERVAL_MS = Math.max(10_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 25_000));
+const BOT_ARENA_MAX_ACTIVE = Math.max(0, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2));
+const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(30_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 3 * 60_000));
 let nextAnonymousPlayerId = -1;
 
 function getTournamentQueue(tournamentId) {
@@ -894,6 +899,75 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Archivage automatique des parties > 14 jours AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
+function botArenaPairKey(a, b) {
+  return [Number(a), Number(b)].sort((x, y) => x - y).join(':');
+}
+
+function countActiveBuiltinBotGames() {
+  let count = 0;
+  for (const state of gm.games.values()) {
+    if (!state || state.status !== 'active') continue;
+    const p1 = Number(state.players?.[1]?.id || 0);
+    const p2 = Number(state.players?.[2]?.id || 0);
+    if (builtinBotIds.has(p1) && builtinBotIds.has(p2)) count++;
+  }
+  return count;
+}
+
+function pickBackgroundBotPair() {
+  const now = Date.now();
+  const freeBots = [...builtinBotIds]
+    .map(id => pQ.getById.get(id))
+    .filter(bot => bot && !bot.deleted && Number(bot.bot_enabled || 0) === 1 && !findActiveGameByPlayer(bot.id))
+    .sort(() => Math.random() - 0.5);
+  if (freeBots.length < 2) return null;
+
+  let best = null;
+  let bestScore = Infinity;
+  for (let i = 0; i < freeBots.length; i++) {
+    for (let j = i + 1; j < freeBots.length; j++) {
+      const a = freeBots[i];
+      const b = freeBots[j];
+      const key = botArenaPairKey(a.id, b.id);
+      const lastPlayed = Number(botArenaPairs.get(key) || 0);
+      if (now - lastPlayed < BOT_ARENA_PAIR_COOLDOWN_MS && freeBots.length > 2) continue;
+      const eloDistance = Math.abs(Number(a.elo || 1000) - Number(b.elo || 1000));
+      const freshnessPenalty = lastPlayed ? Math.max(0, BOT_ARENA_PAIR_COOLDOWN_MS - (now - lastPlayed)) / 1000 : 0;
+      const score = eloDistance + freshnessPenalty + Math.random() * 40;
+      if (score < bestScore) {
+        bestScore = score;
+        best = [a, b, key];
+      }
+    }
+  }
+  return best;
+}
+
+function runBackgroundBotMatchmaking(reason = 'loop') {
+  if (!BOT_ARENA_ENABLED || BOT_ARENA_MAX_ACTIVE <= 0) return;
+  try {
+    const active = countActiveBuiltinBotGames();
+    if (active >= BOT_ARENA_MAX_ACTIVE) return;
+    for (let slot = active; slot < BOT_ARENA_MAX_ACTIVE; slot++) {
+      const pair = pickBackgroundBotPair();
+      if (!pair) return;
+      const [botA, botB, key] = pair;
+      botArenaPairs.set(key, Date.now());
+      botRuntime.set(Number(botA.id), { status: 'arena', lastSeen: Date.now() });
+      botRuntime.set(Number(botB.id), { status: 'arena', lastSeen: Date.now() });
+      const state = createBotVsBotGame(botA, botB, 'ranked');
+      console.log(`[BOT-ARENA] ${reason}: ${botA.pseudo} vs ${botB.pseudo} game=${state.id}`);
+    }
+  } catch (error) {
+    console.error('[BOT-ARENA]', error.message);
+  }
+}
+
+if (BOT_ARENA_ENABLED) {
+  setTimeout(() => runBackgroundBotMatchmaking('startup'), 8_000);
+  setInterval(() => runBackgroundBotMatchmaking('interval'), BOT_ARENA_INTERVAL_MS);
+}
+
 function archiveOldGames() {
   const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const result = db.prepare(`
