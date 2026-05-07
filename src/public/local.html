@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - 1v1 local</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#15152d;--border:rgba(255,255,255,.08);--text:#f1f1f7;--muted:rgba(241,241,247,.52);--red:#ff2d55;--yellow:#ffd60a;--blue:#85ebff;--green:#30d158}
+body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(255,45,85,.18),transparent 30%),radial-gradient(circle at 82% 18%,rgba(255,214,10,.14),transparent 28%),linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px),var(--bg);background-size:auto,auto,48px 48px,48px 48px;color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
+.page{width:min(1180px,calc(100% - 24px));margin:0 auto;padding:22px 0 42px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{text-decoration:none;color:var(--text);font:900 30px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase}.brand span{color:var(--red)}
+.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.nav button{border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);text-decoration:none;border-radius:13px;padding:10px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;cursor:pointer}
+.hero{display:grid;grid-template-columns:.9fr 1.1fr;gap:18px;align-items:start}
+.panel{border:1px solid var(--border);border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 28px 80px rgba(0,0,0,.32);overflow:hidden}
+.intro{padding:26px}.eyebrow{font:900 12px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
+h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.accent{color:var(--yellow);text-shadow:0 0 24px rgba(255,214,10,.28)}
+.sub{color:var(--muted);line-height:1.55;max-width:520px}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
+.setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto;gap:10px}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.color{width:52px;height:44px;border:none;border-radius:12px;background:transparent;cursor:pointer}
+.score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;vertical-align:-2px;box-shadow:0 0 18px currentColor}
+.actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
+.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece);box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece);animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}
+@keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}
+.footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}}
+@media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr}.color{width:100%}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <a class="brand" href="/">Puissance <span>4</span></a>
+    <nav class="nav">
+      <a href="/">Accueil</a>
+      <a href="/regles">Regles</a>
+      <button type="button" onclick="resetAll()">Reset scores</button>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <aside class="panel intro">
+      <div class="eyebrow">Mode canapé</div>
+      <h1>1v1 <span class="accent">Local</span></h1>
+      <p class="sub">Aucun compte, aucun ELO, aucune base de données. Deux personnes sur le même écran, chacun son tour, parfait pour jouer en IRL vite fait.</p>
+      <div class="chips">
+        <div class="chip">Hors ligne côté compte</div>
+        <div class="chip">Même écran</div>
+        <div class="chip">Score local</div>
+      </div>
+      <div class="setup">
+        <div class="player-box">
+          <label>Joueur 1</label>
+          <div class="row"><input class="input" id="p1-name" value="Joueur 1" maxlength="16"><input class="color" id="p1-color" type="color" value="#ff2d55"></div>
+        </div>
+        <div class="player-box">
+          <label>Joueur 2</label>
+          <div class="row"><input class="input" id="p2-name" value="Joueur 2" maxlength="16"><input class="color" id="p2-color" type="color" value="#ffd60a"></div>
+        </div>
+      </div>
+      <div class="score">
+        <div class="score-card"><b id="score-p1">0</b><span>Joueur 1</span></div>
+        <div class="score-card"><b id="score-draw">0</b><span>Nuls</span></div>
+        <div class="score-card"><b id="score-p2">0</b><span>Joueur 2</span></div>
+      </div>
+    </aside>
+
+    <section class="panel game">
+      <div class="status">
+        <div class="turn">
+          <small id="status-label">Tour actuel</small>
+          <strong id="status-text"><span class="token-dot"></span>Joueur 1</strong>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" id="undo-btn" onclick="undoMove()">Annuler</button>
+          <button class="btn primary" type="button" onclick="newRound()">Nouvelle manche</button>
+        </div>
+      </div>
+      <div class="board-shell">
+        <div class="board" id="board" aria-label="Grille Puissance 4 local"></div>
+      </div>
+      <div class="footer-note">Astuce : clique n'importe quelle case d'une colonne pour poser le pion.</div>
+    </section>
+  </section>
+</main>
+<script>
+const ROWS = 6;
+const COLS = 7;
+let grid = [];
+let current = 1;
+let ended = false;
+let history = [];
+let scores = { 1: 0, 2: 0, draw: 0 };
+
+const boardEl = document.getElementById('board');
+const statusText = document.getElementById('status-text');
+const statusLabel = document.getElementById('status-label');
+const undoBtn = document.getElementById('undo-btn');
+
+function playerName(player) {
+  const raw = document.getElementById(`p${player}-name`).value.trim();
+  return raw || `Joueur ${player}`;
+}
+
+function playerColor(player) {
+  return document.getElementById(`p${player}-color`).value || (player === 1 ? '#ff2d55' : '#ffd60a');
+}
+
+function initGrid() {
+  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  history = [];
+  current = 1;
+  ended = false;
+}
+
+function renderBoard(winCells = []) {
+  const winSet = new Set(winCells.map(([r, c]) => `${r}:${c}`));
+  boardEl.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const value = grid[r][c];
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = `cell${value ? ' filled' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}`;
+      cell.style.setProperty('--piece', value ? playerColor(value) : 'transparent');
+      cell.setAttribute('aria-label', `Colonne ${c + 1}`);
+      cell.addEventListener('click', () => playColumn(c));
+      boardEl.appendChild(cell);
+    }
+  }
+  undoBtn.disabled = ended || history.length === 0;
+}
+
+function updateStatus(text = null, label = 'Tour actuel') {
+  const color = playerColor(current);
+  statusLabel.textContent = label;
+  statusText.innerHTML = `<span class="token-dot" style="color:${color};background:${color}"></span>${escapeHtml(text || playerName(current))}`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
+function lowestRow(col) {
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (grid[r][col] === 0) return r;
+  }
+  return -1;
+}
+
+function playColumn(col) {
+  if (ended) return;
+  const row = lowestRow(col);
+  if (row < 0) return;
+  grid[row][col] = current;
+  history.push({ row, col, player: current });
+  const win = checkWin(row, col, current);
+  if (win.length) {
+    ended = true;
+    scores[current]++;
+    renderBoard(win);
+    updateScores();
+    updateStatus(`${playerName(current)} gagne !`, 'Victoire locale');
+    return;
+  }
+  if (grid[0].every(Boolean)) {
+    ended = true;
+    scores.draw++;
+    renderBoard();
+    updateScores();
+    updateStatus('Match nul', 'Fin de manche');
+    return;
+  }
+  current = current === 1 ? 2 : 1;
+  renderBoard();
+  updateStatus();
+}
+
+function checkWin(row, col, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr, dc] of dirs) {
+    const cells = [[row, col]];
+    for (const sign of [1, -1]) {
+      for (let step = 1; step < 4; step++) {
+        const r = row + dr * step * sign;
+        const c = col + dc * step * sign;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || grid[r][c] !== player) break;
+        if (sign === 1) cells.push([r, c]);
+        else cells.unshift([r, c]);
+      }
+    }
+    if (cells.length >= 4) return cells.slice(0, 4);
+  }
+  return [];
+}
+
+function undoMove() {
+  if (ended || !history.length) return;
+  const last = history.pop();
+  grid[last.row][last.col] = 0;
+  current = last.player;
+  renderBoard();
+  updateStatus();
+}
+
+function newRound() {
+  initGrid();
+  renderBoard();
+  updateStatus();
+}
+
+function resetAll() {
+  scores = { 1: 0, 2: 0, draw: 0 };
+  updateScores();
+  newRound();
+}
+
+function updateScores() {
+  document.getElementById('score-p1').textContent = scores[1];
+  document.getElementById('score-p2').textContent = scores[2];
+  document.getElementById('score-draw').textContent = scores.draw;
+}
+
+['p1-name','p2-name','p1-color','p2-color'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    renderBoard();
+    updateStatus(ended ? statusText.textContent : null, ended ? statusLabel.textContent : 'Tour actuel');
+  });
+});
+
+newRound();
+</script>
+</body>
+</html>

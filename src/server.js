@@ -1186,6 +1186,7 @@ app.get('/api/system-status', (_, res) => {
 app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
 app.get('/game/bot',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+app.get('/local',      (_, res) => res.sendFile(path.join(__dirname, 'public/local.html')));
 app.get('/spec/:id', (req, res) => {
   const gameId = Number(req.params.id);
   const state = gm.games.get(gameId);
@@ -1846,12 +1847,28 @@ function getParisDateParts(date = new Date()) {
 }
 
 function getParisTimestampFor(dayOffset, hour, minute = 0, second = 0) {
-  const now = new Date();
-  const paris = getParisDateParts(now);
-  const utcGuess = new Date(Date.UTC(paris.year, paris.month - 1, paris.day + dayOffset, hour, minute, second));
-  const corrected = new Date(utcGuess.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
-  const offset = corrected.getTime() - utcGuess.getTime();
-  return utcGuess.getTime() - offset;
+  const paris = getParisDateParts(new Date());
+  const targetDay = new Date(Date.UTC(paris.year, paris.month - 1, paris.day + dayOffset, hour, minute, second));
+  const target = {
+    year: targetDay.getUTCFullYear(),
+    month: targetDay.getUTCMonth() + 1,
+    day: targetDay.getUTCDate(),
+    hour,
+    minute,
+    second,
+  };
+  const desiredAsUTC = Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute, target.second);
+  let guess = desiredAsUTC;
+
+  // Convertit une heure murale Europe/Paris vers UTC sans dependre de la timezone du serveur.
+  for (let i = 0; i < 4; i++) {
+    const actual = getParisDateParts(new Date(guess));
+    const actualAsUTC = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute, actual.second);
+    const delta = desiredAsUTC - actualAsUTC;
+    if (delta === 0) break;
+    guess += delta;
+  }
+  return guess;
 }
 
 function getAutoTournamentName(hour) {
@@ -2548,11 +2565,13 @@ app.get('/replay/:id',     (_, res) => res.sendFile(path.join(__dirname, 'public
 app.get('/replay-bot/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
+app.get('/local',      (_, res) => res.sendFile(path.join(__dirname, 'public/local.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
 app.get('/players',     (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
 app.get('/bots',        (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
 app.get('/analyse',     (_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
+app.get('/analyse.html',(_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));

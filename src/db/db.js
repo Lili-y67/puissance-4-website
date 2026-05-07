@@ -268,7 +268,7 @@ const gQ = {
       elo_p1=@elo_p1, elo_p2=@elo_p2,
       p1_color=@p1_color, p2_color=@p2_color,
       p1_shape=@p1_shape, p2_shape=@p2_shape,
-      finished_at=datetime('now')
+      finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id=@id
   `),
   getForPlayer: db.prepare(`
