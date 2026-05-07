@@ -137,6 +137,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 }
 .cell.seq-played { outline: 3px solid rgba(255,255,255,0.5); outline-offset: -3px; }
 .cell.play-focus .token{animation:inspect-pop 0.5s cubic-bezier(0.22,1,0.36,1);}
+.cell.seq-current{animation:seq-cell-pulse .72s ease-in-out infinite alternate;}
+.cell.seq-current::before{content:'';position:absolute;inset:-2px;border-radius:inherit;border:2px solid rgba(48,209,88,.75);box-shadow:0 0 18px rgba(48,209,88,.45);z-index:4;pointer-events:none;}
 .cell.seq-opt-0  { background: rgba(48,209,88,0.45) !important; box-shadow: inset 0 0 12px rgba(48,209,88,0.6); }
 .cell.seq-opt-1  { background: rgba(48,209,88,0.30) !important; }
 .cell.seq-opt-2  { background: rgba(48,209,88,0.20) !important; }
@@ -146,6 +148,10 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   0%{transform:scale(0.86);filter:brightness(0.95);}
   55%{transform:scale(1.18);filter:brightness(1.18);}
   100%{transform:scale(1);filter:brightness(1);}
+}
+@keyframes seq-cell-pulse{
+  from{filter:brightness(1);transform:scale(1);}
+  to{filter:brightness(1.25);transform:scale(1.035);}
 }
 /* Badge info au-dessus du plateau quand on inspecte un coup */
 .board-inspect-bar {
@@ -158,6 +164,11 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .analyse-btn{width:100%;padding:12px;border-radius:12px;background:rgba(76,110,245,0.1);border:1px solid rgba(76,110,245,0.25);color:#8b9cf4;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
 .analyse-btn:hover{background:rgba(76,110,245,0.2);border-color:rgba(76,110,245,0.45);}
 .analyse-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.analyse-controls{display:none;width:100%;grid-template-columns:1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;}
+.analyse-controls.show{display:grid;}
+.analyse-depth-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+.analyse-depth-select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+.analyse-mini-note{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.35;}
 
 .analyse-progress-wrap{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:none;}
 .analyse-progress-wrap.show{display:block;}
@@ -203,6 +214,9 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .eval-score.neg{color:#ff2d55;}
 .eval-score.neu{color:var(--muted);}
 .am-comment{font-size:11px;color:var(--muted);line-height:1.45;}
+.variant-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.variant-chip{padding:5px 8px;border-radius:999px;background:rgba(133,235,255,.06);border:1px solid rgba(133,235,255,.14);font-size:10px;color:rgba(238,238,245,.72);}
+.variant-chip strong{color:#85ebff;}
 
 /* Couleurs des classifications */
 .cls-best      {background:rgba(48,209,88,0.15);color:#30d158;border:1px solid rgba(48,209,88,0.3);}
@@ -223,6 +237,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   .vs-mid{font-size:18px}
   .replay-meta{justify-content:flex-start;gap:8px 14px}
   .progress-wrap,.think-box,.end-card,.analyse-panel{padding:14px 12px}
+  .analyse-controls{grid-template-columns:1fr}
   .board{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));width:min(100vw - 20px,560px);aspect-ratio:7/6;gap:5px;padding:8px}
   .cell .token{inset:3px}
   .accuracy-row{flex-direction:column}
@@ -330,6 +345,7 @@ async function loadExistingAnalysis() {
     // Restaurer les donnÃ©es
     analysisResults = analysis.results || [];
     evalHistory     = analysis.evalHistory || [];
+    analysisMeta     = analysis.meta || {};
     // Afficher le panel dÃ¨s que le DOM est prÃªt (aprÃ¨s renderShell)
     setTimeout(() => {
       renderAnalysis(analysisResults, analysis.accuracy);
@@ -525,9 +541,21 @@ function renderShell() {
     </div>
 
     <!-- Bouton lancer l'analyse -->
-    <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" style="display:none">
-      Analyser la partie
-    </button>
+    <div class="analyse-controls" id="analyse-controls">
+      <div>
+        <div class="analyse-depth-label">Puissance de calcul</div>
+        <select class="analyse-depth-select" id="analyse-depth">
+          <option value="8">Rapide - profondeur 8</option>
+          <option value="10" selected>Standard - profondeur 10</option>
+          <option value="12">Forte - profondeur 12</option>
+          <option value="14">Max - profondeur 14</option>
+        </select>
+        <div class="analyse-mini-note">Plus la profondeur est haute, plus l'analyse est fiable, mais plus elle prend du temps.</div>
+      </div>
+      <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" style="display:none">
+        Analyser la partie
+      </button>
+    </div>
 
     <!-- Barre de progression analyse -->
     <div class="analyse-progress-wrap" id="analyse-progress">
@@ -870,7 +898,11 @@ function finishReplay() {
     document.getElementById('end-card').classList.add('show');
     // N'afficher le bouton que si l'analyse n'a pas encore ete faite
     const btn = document.getElementById('analyse-btn');
-    if (btn && analysisResults.length === 0) btn.style.display = 'flex';
+    const controls = document.getElementById('analyse-controls');
+    if (btn && controls && analysisResults.length === 0) {
+      btn.style.display = 'flex';
+      controls.classList.add('show');
+    }
   }, 600);
 }
 
@@ -945,6 +977,8 @@ const SFX = (() => {
 let analysisResults = [];
 let analysisWorker  = null;
 let evalHistory     = [];
+let analysisMeta     = {};
+let seqAnimationTimer = null;
 
 const CLS_LABELS = {
   best: 'Meilleur',
@@ -985,13 +1019,22 @@ function accColor(pct) {
 
 function startAnalysis() {
   const btn      = document.getElementById('analyse-btn');
+  const controls = document.getElementById('analyse-controls');
   const progWrap = document.getElementById('analyse-progress');
+  const depthSel = document.getElementById('analyse-depth');
+  const depth    = Math.max(1, Math.min(14, Number(depthSel?.value || 10)));
+  const variantCount = 3;
   btn.style.display = 'none';
+  controls?.classList.remove('show');
   progWrap.classList.add('show');
+  document.getElementById('analyse-progress-text').textContent = `Preparation profondeur ${depth}...`;
+  document.getElementById('analyse-bar').style.width = '0%';
   analysisResults = [];
   evalHistory     = [];
+  analysisMeta     = { depth, variantCount };
 
   const moveCols = moves.map(m => m.col ?? m.column ?? m);
+  if (analysisWorker) analysisWorker.terminate();
   analysisWorker = new Worker('/analyse-worker.js');
   const _analyseStart = Date.now();
 
@@ -1021,17 +1064,18 @@ function startAnalysis() {
     if (type === 'done') {
       evalHistory = e.data.evalHistory || [];
       progWrap.classList.remove('show');
+      analysisMeta = e.data.meta || { depth, variantCount };
       renderAnalysis(analysisResults, e.data.accuracy);
       analysisWorker.terminate();
       const gameId = getGameId();
       fetch(`/api/games/${gameId}/analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ results: analysisResults, evalHistory, accuracy: e.data.accuracy }),
+        body: JSON.stringify({ results: analysisResults, evalHistory, accuracy: e.data.accuracy, meta: analysisMeta }),
       }).catch(() => {});
     }
   };
-  analysisWorker.postMessage({ moves: moveCols });
+  analysisWorker.postMessage({ moves: moveCols, depth, variantCount });
 }
 
 function renderAnalysis(results, accuracy) {
@@ -1168,10 +1212,11 @@ function renderAnalysis(results, accuracy) {
 
   const c1 = counts(1);
   const c2 = counts(2);
+  const depthInfo = analysisMeta?.depth ? `<span style="color:#85ebff">Profondeur ${analysisMeta.depth}</span>` : '';
   panel.innerHTML = `
     <div>
       <div style="font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px">
-        Précision globale
+        Précision globale ${depthInfo ? `- ${depthInfo}` : ''}
       </div>
       <div class="accuracy-row">
         <div class="accuracy-card">
@@ -1235,6 +1280,15 @@ function renderAnalysis(results, accuracy) {
                  ${r.optimalSeq.map((c, idx) => `<span style="color:#30d158;font-weight:700">col.${c + 1}</span>${idx < r.optimalSeq.length - 1 ? ' <span style="color:var(--muted)">></span> ' : ''}`).join('')}
                </div>`
             : '';
+          const variantsHtml = Array.isArray(r.variants) && r.variants.length
+            ? `<div class="variant-row">
+                ${r.variants.slice(0, 3).map((v, idx) => {
+                  const win = Number.isFinite(Number(v.winPct)) ? `${Math.round(Number(v.winPct))}%` : '--';
+                  const ev = v.eval || '';
+                  return `<span class="variant-chip"><strong>#${idx + 1}</strong> col.${Number(v.col) + 1}${ev ? ` · ${ev}` : ''} · ${win}</span>`;
+                }).join('')}
+              </div>`
+            : '';
           const evalScore = fmtCp(r.evalCP);
           const evalCls = (r.evalScore || 0) > 4 ? 'pos' : (r.evalScore || 0) < -4 ? 'neg' : 'neu';
           return `<div class="analyse-move" id="am-${i}" onclick="jumpToMove(${r.moveIndex})">
@@ -1254,6 +1308,7 @@ function renderAnalysis(results, accuracy) {
                 <span class="am-metric">avantage: <strong style="color:${ownerColor(r.evalScore || 0)}">${ownerName(r.evalScore || 0)}</strong></span>
                 ${r.bestCol !== undefined && r.bestCol !== r.playedCol ? `<span class="am-metric">meilleur choix: <strong>col.${r.bestCol + 1}</strong></span>` : ''}
               </div>
+              ${variantsHtml}
               ${seqHtml}
               ${r.comment ? `<div class="am-comment">${r.comment}</div>` : ''}
             </div>
@@ -1409,6 +1464,7 @@ function showOptimalSeq(seq, afterMoveIdx) {
   // Afficher chaque coup de la sÃ©quence
   let sb = simBoard.map(r => [...r]);
   let player = (afterMoveIdx % 2 === 0) ? 1 : 2;
+  const seqCells = [];
   seq.forEach((col, i) => {
     for (let r = ROWS - 1; r >= 0; r--) {
       if (sb[r][col] === 0) {
@@ -1417,6 +1473,7 @@ function showOptimalSeq(seq, afterMoveIdx) {
           c.classList.add('seq-opt-' + Math.min(i, 4));
           c.setAttribute('data-seq-num', i + 1);
           c.classList.add('seq-highlight');
+          seqCells.push(c);
         }
         sb[r][col] = player;
         break;
@@ -1424,6 +1481,28 @@ function showOptimalSeq(seq, afterMoveIdx) {
     }
     player = player === 1 ? 2 : 1;
   });
+  animateSeqCells(seqCells);
+}
+
+function stopSeqAnimation() {
+  if (seqAnimationTimer) {
+    clearInterval(seqAnimationTimer);
+    seqAnimationTimer = null;
+  }
+  document.querySelectorAll('.seq-current').forEach(c => c.classList.remove('seq-current'));
+}
+
+function animateSeqCells(cells) {
+  stopSeqAnimation();
+  if (!cells.length) return;
+  let idx = 0;
+  const tick = () => {
+    cells.forEach(c => c.classList.remove('seq-current'));
+    cells[idx % cells.length]?.classList.add('seq-current');
+    idx++;
+  };
+  tick();
+  seqAnimationTimer = setInterval(tick, 620);
 }
 
 function getTopRow(col) {
@@ -1434,8 +1513,9 @@ function getTopRow(col) {
 }
 
 function clearSeqHighlights() {
-  document.querySelectorAll('.seq-highlight, .seq-played, .play-focus').forEach(c => {
-    c.classList.remove('seq-highlight','seq-played','play-focus','seq-opt-0','seq-opt-1','seq-opt-2','seq-opt-3','seq-opt-4');
+  stopSeqAnimation();
+  document.querySelectorAll('.seq-highlight, .seq-played, .play-focus, .seq-current').forEach(c => {
+    c.classList.remove('seq-highlight','seq-played','play-focus','seq-current','seq-opt-0','seq-opt-1','seq-opt-2','seq-opt-3','seq-opt-4');
     c.removeAttribute('data-seq-num');
   });
 }

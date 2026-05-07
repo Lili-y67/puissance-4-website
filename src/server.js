@@ -41,6 +41,9 @@ const tournamentQueues = new Map();
 const duelChallenges = new Map();
 const anonymousSessions = new Map();
 const anonymousPlayers = new Map();
+const botApiQueue = [];
+const botRuntime = new Map();
+const builtinBotIds = new Set();
 let nextAnonymousPlayerId = -1;
 
 function getTournamentQueue(tournamentId) {
@@ -504,6 +507,47 @@ function validateSession(token) {
   return row.player_id;
 }
 
+function hashBotToken(token) {
+  return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function makeBotToken() {
+  return 'p4bot_' + crypto.randomBytes(24).toString('hex');
+}
+
+function botSocketId(playerId) {
+  return `botapi:${Number(playerId)}`;
+}
+
+function getBotTokenFromReq(req) {
+  const auth = String(req.headers.authorization || '');
+  if (/^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '').trim();
+  return String(req.headers['x-bot-token'] || req.query.botToken || '').trim();
+}
+
+function getBotFromRequest(req) {
+  const token = getBotTokenFromReq(req);
+  if (!token) return null;
+  const tokenHash = hashBotToken(token);
+  return db.prepare(`
+    SELECT * FROM players
+    WHERE bot_token_hash = ? AND is_bot = 1 AND bot_enabled = 1 AND deleted = 0
+    LIMIT 1
+  `).get(tokenHash) || null;
+}
+
+function publicBotRuntime(playerId) {
+  if (builtinBotIds.has(Number(playerId))) {
+    return { online: true, status: findActiveBotGame(playerId) ? 'playing' : 'ready', lastSeen: Date.now() };
+  }
+  const live = botRuntime.get(Number(playerId));
+  return {
+    online: !!live && Date.now() - Number(live.lastSeen || 0) < 45_000,
+    status: live?.status || 'offline',
+    lastSeen: Number(live?.lastSeen || 0),
+  };
+}
+
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -687,6 +731,134 @@ let BOT_PLAYER_ID;
     BOT_PLAYER_ID = r.lastInsertRowid;
   }
   console.log(`[Bot] Puissance4-AI id=${BOT_PLAYER_ID}`);
+}
+
+const PRECONFIGURED_BOTS = [
+  { pseudo: 'P4-Bot-Nova', elo: 820, color: '#85EBFF', shape: 'circle', description: 'Robot debutant, parfait pour tester les ouvertures.' },
+  { pseudo: 'P4-Bot-Orion', elo: 1120, color: '#ffd60a', shape: 'diamond', description: 'Robot equilibre avec une bonne priorite au centre.' },
+  { pseudo: 'P4-Bot-Vega', elo: 1450, color: '#ff2d55', shape: 'star', description: 'Robot tactique qui cherche les menaces immediates.' },
+  { pseudo: 'P4-Bot-Zenith', elo: 1780, color: '#bf5af2', shape: 'heart', description: 'Robot solide, plus proche d une force avancee.' },
+];
+
+function ensurePreconfiguredBots() {
+  db.prepare(`UPDATE players SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ? WHERE id = ?`)
+    .run(1200, 'Bot officiel du site.', BOT_PLAYER_ID);
+  builtinBotIds.add(Number(BOT_PLAYER_ID));
+
+  for (const bot of PRECONFIGURED_BOTS) {
+    const existing = pQ.getByPseudo.get(bot.pseudo);
+    if (existing) {
+      db.prepare(`
+        UPDATE players
+        SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?, elo = ?, color = ?, shape = ?, avatar = COALESCE(NULLIF(avatar,''), ?), deleted = 0
+        WHERE id = ?
+      `).run(bot.elo, bot.description, bot.elo, bot.color, bot.shape, BOT_AVATAR, existing.id);
+      builtinBotIds.add(Number(existing.id));
+      continue;
+    }
+    const inserted = db.prepare(`
+      INSERT INTO players (pseudo, password, elo, color, shape, avatar, is_bot, bot_enabled, bot_skill, bot_description, deleted)
+      VALUES (?, '', ?, ?, ?, ?, 1, 1, ?, ?, 0)
+    `).run(bot.pseudo, bot.elo, bot.color, bot.shape, BOT_AVATAR, bot.elo, bot.description);
+    builtinBotIds.add(Number(inserted.lastInsertRowid));
+  }
+}
+
+ensurePreconfiguredBots();
+
+function buildBotGamePayload(player, socketId = null) {
+  const clean = sanitize(player);
+  return {
+    ...clean,
+    socketId: socketId || botSocketId(clean.id),
+    color: clean.color || '#ff2d55',
+    shape: clean.shape || 'circle',
+    token_emoji_image: clean.token_emoji_image || '',
+    avatar_decoration: clean.avatar_decoration || '',
+    profile_banner: clean.profile_banner || '',
+    color_secondary: clean.color_secondary || '',
+    botSkill: Number(clean.bot_skill || clean.elo || 1000),
+  };
+}
+
+function findActiveBotGame(playerId) {
+  const id = Number(playerId);
+  for (const state of gm.games.values()) {
+    if (state.status !== 'active') continue;
+    if (Number(state.players?.[1]?.id) === id || Number(state.players?.[2]?.id) === id) return state;
+  }
+  return null;
+}
+
+function serializeBotGameState(state, playerId) {
+  if (!state) return null;
+  const side = Number(state.players[1].id) === Number(playerId) ? 1 : 2;
+  return {
+    gameId: state.id,
+    gameType: state.gameType || 'ranked',
+    side,
+    current: state.current,
+    isMyTurn: side === state.current,
+    board: state.board.grid,
+    legalMoves: state.board.getValidCols(),
+    moveCount: state.moveCount,
+    moveTimeSeconds: state.moveTimeSeconds || 60,
+    players: {
+      1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, bot: !!state.players[1].is_bot },
+      2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, bot: !!state.players[2].is_bot },
+    },
+  };
+}
+
+function chooseBuiltinBotMove(state, side) {
+  const cols = state.board.getValidCols();
+  if (!cols.length) return null;
+  const player = Number(side);
+  const opponent = player === 1 ? 2 : 1;
+  const skill = Number(state.players[player]?.botSkill || state.players[player]?.elo || 1000);
+  const tacticalChance = Math.max(0.25, Math.min(0.96, (skill - 600) / 1400));
+
+  function winningMove(forPlayer) {
+    for (const col of cols) {
+      const clone = state.board.clone();
+      const row = clone.drop(col, forPlayer);
+      if (row !== null && clone.checkWin(row, col, forPlayer)) return col;
+    }
+    return null;
+  }
+
+  if (Math.random() < tacticalChance) {
+    const win = winningMove(player);
+    if (win !== null) return win;
+    const block = winningMove(opponent);
+    if (block !== null) return block;
+  }
+
+  const centerOrder = [3, 2, 4, 1, 5, 0, 6].filter(c => cols.includes(c));
+  if (Math.random() < tacticalChance && centerOrder.length) return centerOrder[0];
+  return cols[Math.floor(Math.random() * cols.length)];
+}
+
+function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
+  setTimeout(() => {
+    const state = gm.games.get(gameId);
+    if (!state || state.status !== 'active') return;
+    const side = state.current;
+    const player = state.players[side];
+    if (!builtinBotIds.has(Number(player?.id))) return;
+    const col = chooseBuiltinBotMove(state, side);
+    if (col === null) return;
+    gm.playMove(player.socketId, col);
+    scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
+  }, delayMs);
+}
+
+function createBotVsBotGame(botA, botB, gameType = 'ranked') {
+  const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
+  const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
+  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
+  scheduleBuiltinBotTurn(state.id, 500);
+  return state;
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Archivage automatique des parties > 14 jours AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -2079,7 +2251,10 @@ app.get('/replay-bot/:id', (_, res) => res.sendFile(path.join(__dirname, 'public
 app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
+app.get('/players',     (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
+app.get('/bots',        (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
+app.get('/analyse',     (_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
@@ -2547,7 +2722,7 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
 
 // Ne jamais renvoyer le hash du mot de passe au client
 function sanitize(p) {
-  const { password, ...rest } = p;
+  const { password, bot_token_hash, ...rest } = p;
   // Masquer les infos perso si compte supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
   if (rest.deleted) {
     return {
@@ -2580,6 +2755,149 @@ function sanitize(p) {
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Players API AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
+app.get('/api/players', (req, res) => {
+  const type = String(req.query.type || 'all').toLowerCase();
+  const q = String(req.query.q || '').trim().toLowerCase();
+  const onlineOnly = String(req.query.online || '') === '1';
+  const limit = Math.max(1, Math.min(100, Number(req.query.limit || 60)));
+  let rows = db.prepare(`
+    SELECT id, pseudo, elo, wins, losses, draws, color, color_secondary, shape, avatar,
+           avatar_decoration, profile_banner, role, is_vip, is_vip_plus, is_perso,
+           custom_role_text, custom_role_color, custom_role_emoji,
+           is_bot, bot_skill, bot_description, bot_enabled, bot_last_seen, last_seen
+    FROM players
+    WHERE deleted = 0 AND is_guest = 0
+    ORDER BY elo DESC, wins DESC
+    LIMIT ?
+  `).all(limit * 2);
+  if (type === 'bots') rows = rows.filter(p => Number(p.is_bot) === 1);
+  if (type === 'humans') rows = rows.filter(p => Number(p.is_bot) !== 1);
+  if (q) rows = rows.filter(p => String(p.pseudo || '').toLowerCase().includes(q));
+  const mapped = rows.map(p => {
+    const runtime = Number(p.is_bot) === 1 ? publicBotRuntime(p.id) : null;
+    const online = Number(p.is_bot) === 1 ? runtime.online : onlineSockets.has(Number(p.id));
+    return {
+      ...sanitize(p),
+      rank: getRank(Number(p.elo || 0)),
+      online,
+      botOnline: runtime?.online || false,
+      botStatus: runtime?.status || (Number(p.is_bot) === 1 ? 'offline' : null),
+      playing: playerIsAlreadyPlaying(p.id),
+      inQueue: playerIsInAnyQueue(p.id),
+    };
+  }).filter(p => !onlineOnly || p.online).slice(0, limit);
+  res.json({ players: mapped, counts: { total: mapped.length, online: mapped.filter(p => p.online).length, bots: mapped.filter(p => Number(p.is_bot) === 1).length, humans: mapped.filter(p => Number(p.is_bot) !== 1).length } });
+});
+
+app.post('/api/players/:id/convert-bot', (req, res) => {
+  const id = Number(req.params.id);
+  const token = String(req.body?.token || req.headers['x-session-token'] || req.headers['x-token'] || '');
+  if (!id || validateSession(token) !== id) return res.status(403).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(id);
+  if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (player.discord_id) return res.status(409).json({ error: 'Un compte lie Discord ne peut pas devenir un bot.' });
+  if (Number(player.is_bot) === 1) return res.status(409).json({ error: 'Ce compte est deja en mode bot. Le token ne peut pas etre regenere.' });
+  const botToken = makeBotToken();
+  const skill = Math.max(100, Math.min(3000, Number(req.body?.skill || player.elo || 1000)));
+  const description = String(req.body?.description || 'Bot cree par un joueur.').trim().slice(0, 180);
+  db.prepare(`
+    UPDATE players
+    SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?,
+        bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0
+    WHERE id = ?
+  `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), id);
+  res.json({ ok: true, player: sanitize(pQ.getById.get(id)), botToken, note: 'Token affiche une seule fois. Garde-le secret : il ne pourra pas etre regenere.' });
+});
+
+app.post('/api/bot/token/rotate', (req, res) => {
+  res.status(410).json({ error: 'Les tokens bot ne peuvent pas etre regeneres. Cree un nouveau compte bot si le token est perdu.' });
+});
+
+app.get('/api/bot/me', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  res.json({ bot: { ...sanitize(bot), runtime: publicBotRuntime(bot.id), activeGame: serializeBotGameState(findActiveBotGame(bot.id), bot.id) } });
+});
+
+app.post('/api/bot/ping', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  const status = String(req.body?.status || 'idle').slice(0, 40);
+  botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
+  db.prepare(`UPDATE players SET bot_last_seen = ? WHERE id = ?`).run(Date.now(), bot.id);
+  res.json({ ok: true, bot: sanitize(pQ.getById.get(bot.id)), runtime: publicBotRuntime(bot.id) });
+});
+
+app.post('/api/bot/queue/join', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  botRuntime.set(Number(bot.id), { status: 'queue', lastSeen: Date.now() });
+  const active = findActiveBotGame(bot.id);
+  if (active) return res.json({ ok: true, status: 'playing', game: serializeBotGameState(active, bot.id) });
+  const ownId = Number(bot.id);
+  const opponentId = botApiQueue.find(id => id !== ownId && !findActiveBotGame(id));
+  if (opponentId) {
+    const idx = botApiQueue.indexOf(opponentId);
+    if (idx >= 0) botApiQueue.splice(idx, 1);
+    const state = createBotVsBotGame(bot, pQ.getById.get(opponentId), 'ranked');
+    return res.json({ ok: true, status: 'matched', game: serializeBotGameState(state, bot.id) });
+  }
+  if (req.body?.allowBuiltin !== false) {
+    const candidates = [...builtinBotIds].filter(id => id !== ownId && !findActiveBotGame(id)).map(id => pQ.getById.get(id)).filter(Boolean)
+      .sort((a, b) => Math.abs(Number(a.elo || 1000) - Number(bot.elo || 1000)) - Math.abs(Number(b.elo || 1000) - Number(bot.elo || 1000)));
+    if (candidates[0]) {
+      const state = createBotVsBotGame(bot, candidates[0], 'ranked');
+      return res.json({ ok: true, status: 'matched_builtin', game: serializeBotGameState(state, bot.id) });
+    }
+  }
+  if (!botApiQueue.includes(ownId)) botApiQueue.push(ownId);
+  res.json({ ok: true, status: 'queued', position: botApiQueue.indexOf(ownId) + 1 });
+});
+
+app.post('/api/bot/queue/leave', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  const idx = botApiQueue.indexOf(Number(bot.id));
+  if (idx >= 0) botApiQueue.splice(idx, 1);
+  botRuntime.set(Number(bot.id), { status: 'idle', lastSeen: Date.now() });
+  res.json({ ok: true });
+});
+
+app.get('/api/bot/game', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  res.json({ game: serializeBotGameState(findActiveBotGame(bot.id), bot.id) });
+});
+
+app.post('/api/bot/move', (req, res) => {
+  const bot = getBotFromRequest(req);
+  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  const state = findActiveBotGame(bot.id);
+  if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
+  const side = Number(state.players[1].id) === Number(bot.id) ? 1 : 2;
+  if (state.current !== side) return res.status(409).json({ error: 'Pas ton tour.', game: serializeBotGameState(state, bot.id) });
+  const result = gm.playMove(state.players[side].socketId, Number(req.body?.col));
+  if (result?.error) return res.status(400).json({ error: result.error, game: serializeBotGameState(state, bot.id) });
+  scheduleBuiltinBotTurn(state.id);
+  res.json({ ok: true, result, game: serializeBotGameState(gm.games.get(state.id), bot.id) });
+});
+
+app.get('/api/bots/preconfigured', (req, res) => {
+  const bots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(Boolean)
+    .map(bot => ({ ...sanitize(bot), rank: getRank(Number(bot.elo || 0)), runtime: publicBotRuntime(bot.id), activeGame: serializeBotGameState(findActiveBotGame(bot.id), bot.id) }));
+  res.json({ bots });
+});
+
+app.post('/api/bots/preconfigured/match', (req, res) => {
+  const bots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(Boolean);
+  if (bots.length < 2) return res.status(409).json({ error: 'Pas assez de bots disponibles.' });
+  const free = bots.filter(bot => !findActiveBotGame(bot.id));
+  const pool = free.length >= 2 ? free : bots;
+  const shuffled = pool.sort(() => Math.random() - 0.5);
+  const state = createBotVsBotGame(shuffled[0], shuffled[1], 'ranked');
+  res.json({ ok: true, game: serializeBotGameState(state, shuffled[0].id) });
+});
+
 // Fermeture de compte
 app.delete('/api/players/:id', (req, res) => {
   const { token } = req.body;

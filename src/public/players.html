@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - Joueurs & Bots</title>
+<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#14142c;--border:rgba(255,255,255,.08);--text:#eeeef5;--muted:rgba(238,238,245,.52);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--cyan:#85ebff;--purple:#b657ff}
+body{min-height:100vh;background:radial-gradient(circle at 20% 10%,rgba(255,45,85,.18),transparent 28%),radial-gradient(circle at 80% 18%,rgba(133,235,255,.12),transparent 28%),linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px),var(--bg);background-size:auto,auto,48px 48px,48px 48px;color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
+.page{width:min(1180px,calc(100% - 24px));margin:0 auto;padding:26px 0 54px;position:relative}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:26px;flex-wrap:wrap}
+.logo{font:900 30px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--text);text-decoration:none}.logo span{color:var(--red)}
+.links{display:flex;gap:8px;flex-wrap:wrap}.links a{font:900 13px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;color:var(--text);border:1px solid var(--border);background:rgba(255,255,255,.045);border-radius:12px;padding:10px 14px}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-bottom:20px}
+.card{border:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border-radius:26px;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.28);overflow:hidden}
+.eyebrow{font:900 12px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:10px}
+h1{font:900 clamp(38px,7vw,76px) "Barlow Condensed";line-height:.9;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.grad{background:linear-gradient(135deg,#fff,var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--muted);line-height:1.55;max-width:720px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.stat{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.04);padding:14px}.stat b{display:block;font:900 30px "Barlow Condensed";color:var(--yellow)}.stat span{font:800 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.botbox h2{font:900 28px "Barlow Condensed";text-transform:uppercase;margin-bottom:8px}.botbox p{color:var(--muted);line-height:1.5;font-size:14px}.endpoint{margin-top:12px;padding:10px 12px;border-radius:14px;border:1px solid rgba(133,235,255,.18);background:rgba(133,235,255,.055);font-family:Consolas,monospace;color:var(--cyan);font-size:12px;overflow:auto}.download{display:inline-flex;margin-top:12px;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#061018;background:linear-gradient(135deg,var(--cyan),#fff);border-radius:14px;padding:11px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;box-shadow:0 12px 26px rgba(133,235,255,.16)}
+.toolbar{display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:14px}.search{width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:16px;padding:14px 16px;font:700 15px Barlow}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{border:1px solid var(--border);background:rgba(255,255,255,.045);color:var(--muted);border-radius:14px;padding:12px 15px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer}.tab.active{background:var(--red);border-color:var(--red);color:white;box-shadow:0 10px 24px rgba(255,45,85,.22)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.player{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;text-decoration:none;color:var(--text);border:1px solid var(--border);background:rgba(13,13,28,.9);border-radius:20px;padding:14px;transition:transform .18s,border-color .18s,background .18s;overflow:hidden}
+.player:hover{transform:translateY(-2px);border-color:rgba(133,235,255,.35);background:var(--surface2)}
+.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;overflow:hidden;border:2px solid var(--line,#fff);background:rgba(255,255,255,.05);font:900 22px "Barlow Condensed"}.avatar img{width:100%;height:100%;object-fit:cover}
+.main{min-width:0}.name{display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px;color:var(--muted);font-size:12px}.badge{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:999px;padding:3px 8px;font:900 10px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.badge.vip{color:var(--yellow);border-color:rgba(255,214,10,.3);background:rgba(255,214,10,.08)}.badge.admin{color:var(--red);border-color:rgba(255,45,85,.3);background:rgba(255,45,85,.08)}.badge.bot{color:var(--cyan);border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.08)}
+.right{text-align:right}.elo{font:900 28px "Barlow Condensed";color:var(--yellow);line-height:1}.rank{font:900 11px "Barlow Condensed";letter-spacing:1.4px;color:var(--muted);text-transform:uppercase}.presence{position:absolute;left:51px;bottom:12px;width:14px;height:14px;border-radius:50%;border:3px solid var(--surface);background:#737383}.presence.on{background:var(--green);box-shadow:0 0 14px rgba(48,209,88,.5)}.presence.bot{background:var(--cyan);box-shadow:0 0 14px rgba(133,235,255,.45)}
+.empty{text-align:center;color:var(--muted);padding:42px;border:1px dashed var(--border);border-radius:22px;background:rgba(255,255,255,.025)}
+@media(max-width:820px){.hero{grid-template-columns:1fr}.toolbar{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.page{width:min(100% - 16px,640px);padding-top:16px}.player{grid-template-columns:auto 1fr}.right{grid-column:2;text-align:left}.links{width:100%}.links a{flex:1;text-align:center}}
+@media(max-width:460px){.stats{grid-template-columns:1fr}.card{padding:17px;border-radius:20px}.player{gap:10px;padding:12px}.avatar{width:46px;height:46px}.presence{left:43px}.elo{font-size:23px}}
+</style>
+</head>
+<body>
+<main class="page">
+  <nav class="nav">
+    <a class="logo" href="/">Puissance <span>4</span></a>
+    <div class="links">
+      <a href="/">Accueil</a>
+      <a href="/leaderboard">Classement</a>
+      <a href="/live">Live</a>
+      <a href="/stats">Stats</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="card">
+      <div class="eyebrow">Annuaire officiel</div>
+      <h1>Joueurs <span class="grad">& Bots</span></h1>
+      <p class="sub">Retrouve les comptes existants, les robots disponibles, leur ELO, leur statut en ligne et leur profil. Les bots peuvent tourner depuis un programme externe avec un token API, un peu comme les comptes bot Lichess.</p>
+      <div class="stats">
+        <div class="stat"><b id="st-total">--</b><span>Affiches</span></div>
+        <div class="stat"><b id="st-online">--</b><span>En ligne</span></div>
+        <div class="stat"><b id="st-bots">--</b><span>Bots</span></div>
+      </div>
+    </div>
+    <aside class="card botbox">
+      <h2>API Bot</h2>
+      <p>Un compte non lie Discord peut etre transforme en bot. Le programme externe ping, rejoint la file bot, lit la grille, puis envoie ses coups.</p>
+      <div class="endpoint">POST /api/players/:id/convert-bot<br>Authorization: Bearer p4bot_xxx<br>POST /api/bot/queue/join<br>GET /api/bot/game<br>POST /api/bot/move</div>
+      <a class="download" href="/downloads/p4-bot-client.js" download>Telecharger le client Node</a>
+    </aside>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <input class="search" id="search" placeholder="Rechercher un joueur ou un bot..." autocomplete="off">
+      <div class="tabs">
+        <button class="tab active" data-type="all">Tous</button>
+        <button class="tab" data-type="humans">Joueurs</button>
+        <button class="tab" data-type="bots">Bots</button>
+        <button class="tab" data-online="1">Online</button>
+      </div>
+    </div>
+    <div class="grid" id="players"></div>
+  </section>
+</main>
+<script>
+let currentType = location.pathname.includes('/bots') ? 'bots' : 'all';
+let onlineOnly = false;
+let timer = null;
+const list = document.getElementById('players');
+const search = document.getElementById('search');
+
+function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function initials(p){return esc(String(p||'?').trim().slice(0,1).toUpperCase() || '?');}
+function badgeHtml(p){
+  const out = [];
+  if (Number(p.is_bot)) out.push('<span class="badge bot">🤖 Bot</span>');
+  if (String(p.role) === 'admin') out.push('<span class="badge admin">⚡ Admin</span>');
+  if (Number(p.is_perso)) out.push('<span class="badge vip">💎 Perso</span>');
+  else if (Number(p.is_vip_plus)) out.push('<span class="badge vip">💠 VIP+</span>');
+  else if (Number(p.is_vip)) out.push('<span class="badge vip">⭐ VIP</span>');
+  if (p.custom_role_text) out.push(`<span class="badge" style="color:${esc(p.custom_role_color||'#fff')}">${esc(p.custom_role_emoji||'')} ${esc(p.custom_role_text)}</span>`);
+  return out.join('');
+}
+function render(players, counts){
+  document.getElementById('st-total').textContent = counts.total ?? players.length;
+  document.getElementById('st-online').textContent = counts.online ?? players.filter(p=>p.online).length;
+  document.getElementById('st-bots').textContent = counts.bots ?? players.filter(p=>Number(p.is_bot)).length;
+  if (!players.length) {
+    list.innerHTML = '<div class="empty">Aucun joueur trouve.</div>';
+    return;
+  }
+  list.innerHTML = players.map(p => {
+    const avatar = p.avatar ? `<img src="${esc(p.avatar)}" alt="">` : initials(p.pseudo);
+    const state = p.playing ? 'En partie' : p.inQueue ? 'En file' : p.online ? 'En ligne' : Number(p.is_bot) ? (p.botStatus || 'Offline') : 'Hors ligne';
+    const presenceClass = p.online ? (Number(p.is_bot) ? 'on bot' : 'on') : '';
+    return `<a class="player" href="/profil?id=${Number(p.id)}" style="--line:${esc(p.color||'#ff2d55')}">
+      <div class="avatar">${avatar}</div>
+      <span class="presence ${presenceClass}"></span>
+      <div class="main">
+        <div class="name">${esc(p.pseudo)} ${badgeHtml(p)}</div>
+        <div class="meta"><span>${state}</span><span>${Number(p.wins||0)}V</span><span>${Number(p.losses||0)}D</span><span>${Number(p.draws||0)}N</span></div>
+        ${p.bot_description ? `<div class="meta">${esc(p.bot_description)}</div>` : ''}
+      </div>
+      <div class="right"><div class="elo">${Number(p.elo||0)}</div><div class="rank">${esc(p.rank?.name || p.rank || 'Rank')}</div></div>
+    </a>`;
+  }).join('');
+}
+async function load(){
+  const params = new URLSearchParams({ type: currentType, limit: '80' });
+  if (onlineOnly) params.set('online','1');
+  if (search.value.trim()) params.set('q', search.value.trim());
+  const res = await fetch('/api/players?' + params);
+  const data = await res.json();
+  render(data.players || [], data.counts || {});
+}
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    onlineOnly = btn.dataset.online === '1';
+    currentType = btn.dataset.type || 'all';
+    load();
+  });
+});
+search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 180); });
+document.querySelector(`.tab[data-type="${currentType}"]`)?.classList.add('active');
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

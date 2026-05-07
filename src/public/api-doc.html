@@ -87,6 +87,7 @@ ul{padding-left:18px}
         <a href="#duels">Duels <span>&rarr;</span></a>
         <a href="#tournaments">Tournois <span>&rarr;</span></a>
         <a href="#discord">Discord <span>&rarr;</span></a>
+        <a href="#bot-api">Bot API <span>&rarr;</span></a>
         <a href="#discord-commands">Commandes bot <span>&rarr;</span></a>
         <a href="#admin">Admin <span>&rarr;</span></a>
         <a href="#socketio">Socket.IO <span>&rarr;</span></a>
@@ -104,6 +105,7 @@ ul{padding-left:18px}
         <a href="#duels">Duels</a>
         <a href="#tournaments">Tournois</a>
         <a href="#discord">Discord</a>
+        <a href="#bot-api">Bot API</a>
         <a href="#discord-commands">Commandes bot</a>
         <a href="#admin">Administration</a>
         <a href="#system">Syst&egrave;me</a>
@@ -156,7 +158,9 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
   "color": "#ff2d55",
   "color_secondary": "#85EBFF"
 }</code></pre><pre><code>const player = await fetch('/api/players/2').then(r => r.json());</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players?type=all|humans|bots&amp;online=1&amp;q=...</span></div><p>Annuaire public des joueurs et bots : ELO, badges, rang, statut online, file et partie active. Utilis&eacute; par <code>/players</code> et <code>/bots</code>.</p><div class="subgrid"><pre><code>curl "http://localhost:8080/api/players?type=bots"</code></pre><pre><code>const bots = await fetch('/api/players?type=bots').then(r => r.json());</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/search?q=...</span></div><p>Recherche des joueurs par pseudo. Utilis&eacute; par le profil et l&rsquo;autocomplete.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/convert-bot</span></div><p>Transforme un compte non li&eacute; Discord en compte bot API. Session joueur obligatoire. Retourne un token <code>p4bot_...</code> affich&eacute; une seule fois : il doit etre copi&eacute; imm&eacute;diatement et ne peut pas etre r&eacute;g&eacute;n&eacute;r&eacute;.</p><div class="meta"><div class="box"><div class="label">Erreur</div><div class="value">403 session invalide, 409 compte li&eacute; Discord ou d&eacute;j&agrave; bot</div></div><div class="box"><div class="label">Curl</div><div class="value"><code>curl -X POST -H "x-session-token: TOKEN" -H "Content-Type: application/json" -d "{\"token\":\"TOKEN\"}" /api/players/2/convert-bot</code></div></div></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/by-pseudo/:pseudo</span></div><p>Lookup direct par pseudo exact.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/pseudo</span></div><p>Change le pseudo c&ocirc;t&eacute; joueur.</p><div class="meta"><div class="box"><div class="label">R&egrave;gles</div><div class="value">3 &agrave; 16 caract&egrave;res, unique, 1 fois / 30 jours</div></div><div class="box"><div class="label">Erreurs</div><div class="value">session invalide, pseudo pris, cooldown actif, format invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/players/2/pseudo', {
   method: 'PATCH',
@@ -252,6 +256,19 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/refresh-discord</span></div><p>Resynchronise le profil et les r&ocirc;les Discord du joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/request</span></div><p>Demande un code de d&eacute;liaison Discord.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/discord/unlink/confirm</span></div><p>Confirme la d&eacute;liaison avec le code re&ccedil;u.</p></article>
+      </div></section>
+      <section class="section" id="bot-api"><div class="section-head"><div><h2>Bot API</h2><p>API HTTP pour comptes robots. Les tokens sont secrets et doivent etre envoy&eacute;s en <code>Authorization: Bearer p4bot_xxx</code>.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip post">POST</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/downloads/p4-bot-client.js</span></div><p>Client Node.js officiel d'exemple : ping, file robot, lecture de grille et coup automatique.</p><div class="subgrid"><pre><code>curl -O http://localhost:8080/downloads/p4-bot-client.js
+P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/downloads/p4-bot-client.js" download>T&eacute;l&eacute;charger le bot client JS</a></code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot/me</span></div><p>Retourne le bot authentifi&eacute;, son runtime et sa partie active si elle existe.</p><div class="subgrid"><pre><code>curl -H "Authorization: Bearer p4bot_xxx" http://localhost:8080/api/bot/me</code></pre><pre><code>{ "bot": { "pseudo": "MonBot", "activeGame": null } }</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot/ping</span></div><p>Marque le bot comme en ligne. A appeler toutes les 15-30 secondes depuis le programme local.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot/queue/join</span></div><p>Entre en file robot. Si un robot est disponible, une partie ranked bot-vs-bot est cr&eacute;&eacute;e. Peut matcher un bot pr&eacute;configur&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot/queue/leave</span></div><p>Quitte la file robot.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot/game</span></div><p>Retourne la grille, le camp du bot, les colonnes l&eacute;gales, le joueur au trait et les deux joueurs.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot/move</span></div><p>Joue un coup pour le bot authentifi&eacute;.</p><div class="subgrid"><pre><code>curl -X POST -H "Authorization: Bearer p4bot_xxx" -H "Content-Type: application/json" -d "{\"col\":3}" http://localhost:8080/api/bot/move</code></pre><pre><code>{ "ok": true, "game": { "isMyTurn": false } }</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot/token/rotate</span></div><p>Endpoint ferm&eacute; volontairement : les tokens bot ne peuvent pas etre r&eacute;g&eacute;n&eacute;r&eacute;s pour garder une logique stricte de secret affich&eacute; une seule fois.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bots/preconfigured</span></div><p>Liste les robots pr&eacute;configur&eacute;s du site avec leur force de jeu et leur &eacute;tat.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bots/preconfigured/match</span></div><p>Lance une partie automatique entre deux robots pr&eacute;configur&eacute;s libres.</p></article>
       </div></section>
       <section class="section" id="discord-commands"><div class="section-head"><div><h2>Commandes Bot Discord</h2><p>Commandes slash align&eacute;es avec l&rsquo;API officielle du site. Le bot ne renvoie jamais d&rsquo;IP ni de donn&eacute;es r&eacute;seau priv&eacute;es.</p></div><div class="legend"><span class="chip socket">Slash</span><span class="chip get">Public</span><span class="chip delete">Admin</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/api</span></div><p>Ouvre la documentation API officielle : endpoints HTTP, Socket.IO, erreurs et exemples.</p></article>

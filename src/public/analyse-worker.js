@@ -4,9 +4,11 @@
  */
 
 const ROWS = 6, COLS = 7;
-const DEPTH     = 10;
-const SEQ_DEPTH = 8;
+const DEFAULT_DEPTH = 10;
+const DEFAULT_SEQ_DEPTH = 8;
 const WIN_SCORE = 100000;
+let ACTIVE_DEPTH = DEFAULT_DEPTH;
+let ACTIVE_SEQ_DEPTH = DEFAULT_SEQ_DEPTH;
 
 //  Plateau 
 function makeBoard()   { return Array.from({ length: ROWS }, () => new Int8Array(COLS)); }
@@ -129,26 +131,51 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
   }
 }
 
-function bestMove(board, player) {
+function evalForMove(board, col, player, depth = ACTIVE_DEPTH) {
+  const isP1 = player === 1;
+  drop(board, col, player);
+  if (checkWin(board, player)) {
+    undrop(board, col);
+    return isP1 ? WIN_SCORE : -WIN_SCORE;
+  }
+  const score = minimax(board, Math.max(0, depth - 1), -Infinity, Infinity, !isP1);
+  undrop(board, col);
+  return score;
+}
+
+function scoreFromPlayerPerspective(absScore, player) {
+  return player === 1 ? absScore : -absScore;
+}
+
+function scoreToDisplayEval(absScore) {
+  if (absScore >= 99000) return '+mat';
+  if (absScore <= -99000) return '-mat';
+  const cp = toCentipawns(absScore);
+  return `${cp > 0 ? '+' : cp < 0 ? '-' : ''}${Math.abs(cp).toFixed(1)}`;
+}
+
+function bestMove(board, player, depth = ACTIVE_DEPTH, variantCount = 3) {
   const cols = validCols(board);
   if (!cols.length) return null;
   const isP1 = player === 1;
   let bestCol = cols[0], bestScore = isP1 ? -Infinity : Infinity;
   const colScores = {};
   for (const col of cols) {
-    drop(board, col, player);
-    if (checkWin(board, player)) {
-      undrop(board, col);
-      colScores[col] = isP1 ? WIN_SCORE : -WIN_SCORE;
-      bestCol = col; bestScore = colScores[col];
-      continue;
-    }
-    const score = minimax(board, DEPTH-1, -Infinity, Infinity, !isP1);
-    undrop(board, col);
+    const score = evalForMove(board, col, player, depth);
     colScores[col] = score;
     if (isP1 ? score > bestScore : score < bestScore) { bestScore = score; bestCol = col; }
   }
-  return { col: bestCol, score: bestScore, colScores };
+  const variants = Object.entries(colScores)
+    .map(([col, score]) => ({
+      col: Number(col),
+      score,
+      eval: scoreToDisplayEval(score),
+      playerScore: scoreFromPlayerPerspective(score, player),
+      winPct: player === 1 ? scoreToWinPct(score) : 100 - scoreToWinPct(score),
+    }))
+    .sort((a, b) => b.playerScore - a.playerScore)
+    .slice(0, Math.max(1, variantCount || 3));
+  return { col: bestCol, score: bestScore, colScores, variants };
 }
 
 function getOptimalSequence(board, startPlayer, maxMoves) {
@@ -162,7 +189,7 @@ function getOptimalSequence(board, startPlayer, maxMoves) {
     for (const col of cols) {
       drop(b, col, player);
       if (checkWin(b, player)) { undrop(b, col); bestCol = col; break; }
-      const score = minimax(b, SEQ_DEPTH-1, -Infinity, Infinity, !isP1);
+      const score = minimax(b, ACTIVE_SEQ_DEPTH-1, -Infinity, Infinity, !isP1);
       undrop(b, col);
       if (isP1 ? score > bestScore : score < bestScore) { bestScore = score; bestCol = col; }
     }
@@ -317,15 +344,15 @@ function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, avai
 
 function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
   const turn = Math.floor(moveIndex / 2) + 1;
-  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol+1} Atait meilleure.` : '';
+  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol + 1} etait meilleure.` : '';
 
-  if (cls === 'forced') return `Seul coup disponible a" coup jouA automatiquement.`;
+  if (cls === 'forced') return `Seul coup disponible, coup joue automatiquement.`;
   if (context.type === 'win_available' && cls === 'blunder')
-    return `Victoire en main A  la col.${context.col+1} a" mais ratA ! Gaffe dAcisive.`;
+    return `Victoire en main a la col.${context.col + 1}, mais ratee. Gaffe decisive.`;
   if (context.type === 'must_block' && context.count > 1 && cls === 'blunder')
-    return `Double menace adverse impossible A  bloquer a" position perdue.`;
+    return `Double menace adverse impossible a bloquer, position perdue.`;
   if (context.type === 'must_block' && cls === 'blunder')
-    return `Blocage obligatoire ignorA a" l'adversaire gagne maintenant.${hint}`;
+    return `Blocage obligatoire ignore, l'adversaire gagne maintenant.${hint}`;
 
   switch(cls) {
     case 'best':
@@ -346,8 +373,70 @@ function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, av
 }
 
 //  Analyse principale 
+function analyzePosition(boardInput, player, depth = DEFAULT_DEPTH, variantCount = 3) {
+  ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
+  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  const board = boardInput.map(row => Int8Array.from(row));
+  const analysis = bestMove(board, player, ACTIVE_DEPTH, variantCount);
+  const currentScore = evaluate(board);
+  return {
+    player,
+    depth: ACTIVE_DEPTH,
+    current: {
+      score: currentScore,
+      eval: scoreToDisplayEval(currentScore),
+      bar: toBar(currentScore),
+      p1WinPct: scoreToWinPct(currentScore),
+      p2WinPct: 100 - scoreToWinPct(currentScore),
+    },
+    bestCol: analysis?.col ?? null,
+    variants: analysis?.variants || [],
+  };
+}
+
+// Version nettoyee pour eviter les anciens textes mal encodes dans le rendu replay.
+function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
+  const turn = Math.floor(moveIndex / 2) + 1;
+  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol + 1} etait meilleure.` : '';
+
+  if (cls === 'forced') return 'Seul coup disponible, coup joue automatiquement.';
+  if (context.type === 'win_available' && cls === 'blunder') {
+    return `Victoire en main a la col.${context.col + 1}, mais ratee. Gaffe decisive.`;
+  }
+  if (context.type === 'must_block' && context.count > 1 && cls === 'blunder') {
+    return 'Double menace adverse impossible a bloquer, position perdue.';
+  }
+  if (context.type === 'must_block' && cls === 'blunder') {
+    return `Blocage obligatoire ignore, l'adversaire gagne maintenant.${hint}`;
+  }
+
+  switch (cls) {
+    case 'best':
+      return ['Coup parfait.', "L'IA aurait joue pareil.", 'Exactement le bon choix.'][moveIndex % 3];
+    case 'excellent':
+      return ['Tres bon coup, quasi optimal.', 'Solide, pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
+    case 'good':
+      return ['Bon coup, legere amelioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
+    case 'inaccuracy':
+      return `Legere imprecision, tu perds environ ${swing}% de chances.${hint}`;
+    case 'mistake':
+      return turn <= 4 ? `Erreur en ouverture, difficile a rattraper.${hint}` : `Erreur nette, tu perds environ ${swing}% de chances.${hint}`;
+    case 'blunder':
+      return turn <= 3 ? `Gaffe des l'ouverture !${hint}` : `Gaffe decisive, tu abandonnes environ ${swing}% de chances.${hint}`;
+    default:
+      return '';
+  }
+}
+
+//  Analyse principale 
 self.onmessage = function(e) {
-  const { moves } = e.data;
+  const { moves, depth = DEFAULT_DEPTH, variantCount = 3, mode, board: boardInput, player: positionPlayer } = e.data;
+  ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
+  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  if (mode === 'position') {
+    self.postMessage({ type: 'position', analysis: analyzePosition(boardInput || makeBoard(), Number(positionPlayer || 1), ACTIVE_DEPTH, variantCount) });
+    return;
+  }
   const board = makeBoard();
   const results = [], evalHistory = [];
   let p1Scores = [], p2Scores = [];
@@ -357,7 +446,7 @@ self.onmessage = function(e) {
     const playedCol = moves[i];
     const boardBefore = cloneBoard(board);
     const cols = validCols(board);
-    const analysis = bestMove(boardBefore, player);
+    const analysis = bestMove(boardBefore, player, ACTIVE_DEPTH, variantCount);
     const context  = getPositionContext(boardBefore, player);
 
     let result;
@@ -373,7 +462,7 @@ self.onmessage = function(e) {
             drop(board, playedCol, player);
             const s = checkWin(board, player)
               ? (player === 1 ? 100000 : -100000)
-              : minimax(board, DEPTH-2, -Infinity, Infinity, player !== 1);
+              : minimax(board, Math.max(0, ACTIVE_DEPTH-2), -Infinity, Infinity, player !== 1);
             undrop(board, playedCol);
             return s;
           })();
@@ -420,7 +509,7 @@ self.onmessage = function(e) {
 
       result = { moveIndex:i, player, playedCol, bestCol, bestScore, playedScore,
         classification, forced, loss, accScore, evalScore:evalBar, evalCP, optimalSeq, comment, context,
-        bestWinPct, playedWinPct, swing };
+        bestWinPct, playedWinPct, swing, variants: analysis.variants || [], depth: ACTIVE_DEPTH };
 
       if (player === 1) p1Scores.push({ classification, loss, accScore });
       else              p2Scores.push({ classification, loss, accScore });
@@ -440,6 +529,7 @@ self.onmessage = function(e) {
 
   self.postMessage({
     type: 'done', results, evalHistory,
-    accuracy: { p1: calcAccuracy(p1Scores), p2: calcAccuracy(p2Scores) }
+    accuracy: { p1: calcAccuracy(p1Scores), p2: calcAccuracy(p2Scores) },
+    meta: { depth: ACTIVE_DEPTH, variantCount }
   });
 };

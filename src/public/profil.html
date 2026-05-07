@@ -593,6 +593,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:16px;
   background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)
 }
+.bot-token-box{margin-top:14px;padding:14px;border-radius:16px;border:1px solid rgba(133,235,255,.24);background:rgba(133,235,255,.06);display:none}
+.bot-token-box.show{display:block;animation:slide-in .25s cubic-bezier(.22,1,.36,1) both}
+.bot-token-value{margin:10px 0;padding:12px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);color:#85EBFF;font-family:Consolas,monospace;font-size:12px;word-break:break-all}
 .search-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
 .search-row{display:flex;gap:8px;}
 .search-input{
@@ -1452,6 +1455,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
     ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
+    ...(isOwnProfile ? [{ href: '#section-bot', icon: '🤖', title: 'Mode bot', sub: 'API et token' }] : []),
     { href: '#section-discord', icon: '💬', title: 'Discord', sub: 'Liaison et serveur' },
     { href: '#section-activity', icon: '🎮', title: 'Activite', sub: 'Parties et reseau' },
   ];
@@ -1824,6 +1828,59 @@ function render(player, games, following, followers, followStatus, tournaments =
       </button>
     </div>
     ` : ''}
+    </div>
+    </section>
+
+    <section class="profile-section" id="section-bot">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Mode bot</div>
+        <div class="profile-section-sub">Transforme ce compte en robot API pour jouer depuis un programme Node.js.</div>
+      </div>
+    </div>
+    <div class="color-card" style="margin-top:0;border-color:${player.is_bot ? 'rgba(133,235,255,0.28)' : player.discord_id ? 'rgba(255,45,85,0.22)' : 'rgba(133,235,255,0.18)'}">
+      <div class="card-label">Compte robot</div>
+      <div class="discord-link-panel">
+        <div class="discord-bubbles">
+          <div class="discord-bubble">
+            <span class="icon">🤖</span>
+            <div class="meta">
+              <span class="label">Etat</span>
+              <span class="value">${player.is_bot ? 'Mode bot actif' : player.discord_id ? 'Impossible : Discord lie' : 'Disponible'}</span>
+            </div>
+          </div>
+          <div class="discord-bubble">
+            <span class="icon">🔑</span>
+            <div class="meta">
+              <span class="label">Token</span>
+              <span class="value">${player.is_bot ? `cree · ...${escapeHtml(player.bot_token_preview || '????')}` : 'affiche une seule fois'}</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.55">
+          ${player.is_bot
+            ? 'Ce compte est deja un bot. Si le token a ete perdu, il ne peut pas etre regenere : il faut creer un nouveau compte bot.'
+            : player.discord_id
+              ? 'Un compte lie Discord ne peut pas devenir un bot. Cree un compte separe non lie pour faire tourner ton programme.'
+              : 'Au clic, le site renvoie un token secret une seule fois. Copie-le immediatement et garde-le dans une variable P4_BOT_TOKEN.'}
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn-save-color" id="btn-convert-bot" onclick="convertProfileToBot()" ${player.is_bot || player.discord_id ? 'disabled' : ''}
+            style="background:${player.is_bot || player.discord_id ? 'rgba(255,255,255,0.04)' : 'rgba(133,235,255,0.12)'};border-color:${player.is_bot || player.discord_id ? 'rgba(255,255,255,0.08)' : 'rgba(133,235,255,0.35)'};color:${player.is_bot || player.discord_id ? 'rgba(238,238,245,0.36)' : '#85EBFF'}">
+            ${player.is_bot ? 'Mode bot deja actif' : 'Basculer en mode bot'}
+          </button>
+          <a class="btn-save-color" href="/downloads/p4-bot-client.js" download style="text-decoration:none;text-align:center;background:rgba(255,214,10,0.08);border-color:rgba(255,214,10,0.25);color:#ffd60a">Telecharger client Node</a>
+        </div>
+        <div class="bot-token-box" id="bot-token-box">
+          <div style="font-size:12px;color:#85EBFF;font-weight:800;text-transform:uppercase;letter-spacing:1px">Token cree - copie-le maintenant</div>
+          <div class="bot-token-value" id="bot-token-value"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-save-color" onclick="copyBotToken()" style="background:rgba(48,209,88,0.1);border-color:rgba(48,209,88,0.3);color:#30d158">Copier le token</button>
+            <button class="btn-save-color" onclick="copyBotCurl()" style="background:rgba(133,235,255,0.08);border-color:rgba(133,235,255,0.28);color:#85EBFF">Copier la requete curl</button>
+          </div>
+          <div style="font-size:11px;color:#ffd60a;margin-top:10px">Important : ce token ne pourra pas etre regenere ni relu plus tard.</div>
+        </div>
+      </div>
     </div>
     </section>
 
@@ -3782,6 +3839,62 @@ function linkDiscord() {
 }
 
 // â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+let lastBotToken = '';
+
+async function convertProfileToBot() {
+  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  const btn = document.getElementById('btn-convert-bot');
+  if (!me.id || !me.token) return alert('Connecte-toi avant de basculer en mode bot.');
+  if (!confirm('Passer ce compte en mode bot ? Le token sera affiche une seule fois et ne pourra pas etre regenere.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Creation du token...'; }
+  try {
+    const res = await fetch(`/api/players/${me.id}/convert-bot`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': me.token },
+      body: JSON.stringify({ token: me.token, skill: currentPlayer?.elo || me.elo || 1000 }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de basculer en mode bot.');
+    lastBotToken = data.botToken || '';
+    syncStoredPlayerPatch({ is_bot: 1, bot_token_preview: lastBotToken.slice(-8) });
+    if (currentPlayer) {
+      currentPlayer.is_bot = 1;
+      currentPlayer.bot_token_preview = lastBotToken.slice(-8);
+    }
+    const box = document.getElementById('bot-token-box');
+    const val = document.getElementById('bot-token-value');
+    if (val) val.textContent = lastBotToken;
+    if (box) box.classList.add('show');
+    if (btn) btn.textContent = 'Mode bot actif';
+    PROFIL_SFX.success();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Basculer en mode bot'; }
+    alert(e.message);
+  }
+}
+
+async function copyTextToClipboard(text) {
+  if (!text) return;
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  const input = document.createElement('textarea');
+  input.value = text;
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand('copy');
+  input.remove();
+}
+
+async function copyBotToken() {
+  await copyTextToClipboard(lastBotToken || document.getElementById('bot-token-value')?.textContent || '');
+  alert('Token copie. Garde-le en securite.');
+}
+
+async function copyBotCurl() {
+  const token = lastBotToken || document.getElementById('bot-token-value')?.textContent || 'p4bot_xxx';
+  await copyTextToClipboard(`curl -H "Authorization: Bearer ${token}" "${location.origin}/api/bot/me"`);
+  alert('Requete curl copiee.');
+}
+
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };
 const NITRO_ICONS  = { 0: '', 1: 'Nitro', 2: 'Nitro', 3: 'Boost' };
 

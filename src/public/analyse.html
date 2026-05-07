@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyse Live - Puissance 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;700;900&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060711;
+  --card:#101024;
+  --card2:#171731;
+  --border:rgba(255,255,255,.1);
+  --text:#f4f4fb;
+  --muted:rgba(244,244,251,.58);
+  --red:#ff3b63;
+  --yellow:#ffe15c;
+  --cyan:#85ebff;
+  --green:#31e873;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:Barlow,system-ui,sans-serif;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255,59,99,.18), transparent 28%),
+    radial-gradient(circle at 82% 14%, rgba(133,235,255,.13), transparent 24%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px),
+    var(--bg);
+  background-size:auto,auto,54px 54px,54px 54px,auto;
+}
+.page{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:28px 0 48px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:14px}
+.logo{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(255,59,99,.22),rgba(133,235,255,.12));border:1px solid var(--border);box-shadow:0 12px 36px rgba(255,59,99,.12)}
+h1{font-family:"Barlow Condensed",sans-serif;font-size:clamp(34px,7vw,76px);line-height:.85;margin:0;text-transform:uppercase;letter-spacing:-1px}
+.accent{color:var(--red);text-shadow:0 0 20px rgba(255,59,99,.38)}
+.nav{display:flex;gap:10px;flex-wrap:wrap}
+.nav a,.btn{
+  color:var(--text);text-decoration:none;border:1px solid var(--border);background:rgba(255,255,255,.045);
+  border-radius:14px;padding:12px 16px;font-family:"Barlow Condensed",sans-serif;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;
+}
+.layout{display:grid;grid-template-columns:minmax(330px,560px) 1fr;gap:22px;align-items:start}
+.panel{
+  background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025));
+  border:1px solid var(--border);border-radius:26px;padding:20px;box-shadow:0 24px 70px rgba(0,0,0,.28);
+}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;background:rgba(19,19,45,.75);border:1px solid var(--border);border-radius:24px;padding:14px}
+.cell{
+  aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.09);
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.08),rgba(5,5,17,.94) 58%);
+  box-shadow:inset 0 8px 18px rgba(0,0,0,.5);cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;
+}
+.cell:hover{transform:translateY(-2px);border-color:rgba(133,235,255,.44)}
+.cell.p1{background:radial-gradient(circle at 35% 28%,#ff91a8,var(--red) 62%);box-shadow:0 0 22px rgba(255,59,99,.34), inset 0 -10px 18px rgba(0,0,0,.18)}
+.cell.p2{background:radial-gradient(circle at 35% 28%,#fff6a5,var(--yellow) 62%);box-shadow:0 0 22px rgba(255,225,92,.28), inset 0 -10px 18px rgba(0,0,0,.16)}
+.cell.win{outline:3px solid var(--green);box-shadow:0 0 30px rgba(49,232,115,.42), inset 0 0 16px rgba(255,255,255,.12)}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.btn{cursor:pointer;text-align:center}
+.btn.primary{background:linear-gradient(135deg,var(--red),#ff6b86);border-color:rgba(255,59,99,.5)}
+.btn.cyan{background:rgba(133,235,255,.08);border-color:rgba(133,235,255,.32);color:var(--cyan)}
+.field{display:grid;gap:7px;margin-bottom:14px}
+label{font-family:"Barlow Condensed",sans-serif;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-size:13px}
+select{
+  width:100%;padding:13px 14px;border-radius:14px;border:1px solid var(--border);
+  background:#15152d;color:var(--text);font:800 16px "Barlow Condensed",sans-serif;letter-spacing:1px;text-transform:uppercase;
+}
+.eval-card{display:grid;gap:14px}
+.turn{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.035)}
+.turn strong{font-family:"Barlow Condensed",sans-serif;font-size:26px;text-transform:uppercase}
+.dot{width:18px;height:18px;border-radius:50%;display:inline-block;margin-right:8px;vertical-align:-2px}
+.dot.p1{background:var(--red);box-shadow:0 0 16px rgba(255,59,99,.55)}
+.dot.p2{background:var(--yellow);box-shadow:0 0 16px rgba(255,225,92,.42)}
+.score{font-family:"Barlow Condensed",sans-serif;font-size:56px;font-weight:900;line-height:.9}
+.score.pos{color:var(--red)}.score.neg{color:var(--yellow)}.score.neu{color:var(--text)}
+.bar{height:18px;border-radius:999px;overflow:hidden;border:1px solid var(--border);background:rgba(255,255,255,.06);display:flex}
+.bar-p1{background:linear-gradient(90deg,var(--red),#ff7b97);transition:width .35s}
+.bar-p2{background:linear-gradient(90deg,#fff092,var(--yellow));transition:width .35s}
+.variants{display:grid;gap:10px}
+.variant{
+  display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px;border-radius:16px;
+  background:rgba(255,255,255,.045);border:1px solid var(--border);
+}
+.variant b{color:var(--cyan)}
+.history{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.pill{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.055);border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.note{color:var(--muted);line-height:1.55;margin:10px 0 0}
+@media(max-width:850px){
+  .top{align-items:flex-start;flex-direction:column}
+  .layout{grid-template-columns:1fr}
+  .page{width:min(100% - 18px,620px);padding-top:16px}
+  .board{gap:7px;padding:10px;border-radius:20px}
+  .tools{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">🎮</div>
+      <div>
+        <div style="font:900 12px 'Barlow Condensed';letter-spacing:4px;color:var(--red);text-transform:uppercase">Laboratoire</div>
+        <h1>Analyse <span class="accent">Live</span></h1>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="/">Accueil</a>
+      <a href="/replay">Replay</a>
+      <a href="/regles">Regles</a>
+    </nav>
+  </header>
+
+  <section class="layout">
+    <div class="panel">
+      <div id="board" class="board" aria-label="Plateau d'analyse"></div>
+      <div class="tools">
+        <button class="btn cyan" onclick="undoMove()">Annuler le coup</button>
+        <button class="btn primary" onclick="resetBoard()">Reset grille</button>
+      </div>
+      <div class="history" id="history"></div>
+    </div>
+
+    <aside class="panel eval-card">
+      <div class="field">
+        <label for="depth">Puissance de calcul</label>
+        <select id="depth" onchange="requestAnalysis()">
+          <option value="8">Rapide - profondeur 8</option>
+          <option value="10" selected>Standard - profondeur 10</option>
+          <option value="12">Forte - profondeur 12</option>
+          <option value="14">Max - profondeur 14</option>
+        </select>
+      </div>
+      <div class="turn">
+        <strong id="turn-label"><span class="dot p1"></span>Rouge joue</strong>
+        <span id="status" style="color:var(--muted);font-weight:800">Pret</span>
+      </div>
+      <div>
+        <div style="font-family:'Barlow Condensed';letter-spacing:2px;color:var(--muted);text-transform:uppercase">Evaluation</div>
+        <div class="score neu" id="score">0.0</div>
+        <div class="bar" title="Rouge a gauche, Jaune a droite">
+          <div class="bar-p1" id="bar-p1" style="width:50%"></div>
+          <div class="bar-p2" id="bar-p2" style="width:50%"></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'Barlow Condensed';letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px">3 variantes</div>
+        <div class="variants" id="variants"></div>
+      </div>
+      <p class="note">Clique dans une colonne pour jouer. L'analyse recalcule apres chaque coup avec la profondeur choisie.</p>
+    </aside>
+  </section>
+</main>
+
+<script>
+const ROWS = 6;
+const COLS = 7;
+let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let turn = 1;
+let moves = [];
+let winner = 0;
+let worker = null;
+
+function renderBoard() {
+  const el = document.getElementById('board');
+  el.innerHTML = '';
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('button');
+      cell.className = 'cell' + (board[r][c] ? ` p${board[r][c]}` : '');
+      cell.type = 'button';
+      cell.onclick = () => playColumn(c);
+      cell.setAttribute('aria-label', `Colonne ${c + 1}`);
+      el.appendChild(cell);
+    }
+  }
+  markWin();
+  renderMeta();
+}
+
+function renderMeta() {
+  const turnLabel = document.getElementById('turn-label');
+  if (winner) {
+    turnLabel.innerHTML = `<span class="dot p${winner}"></span>${winner === 1 ? 'Rouge' : 'Jaune'} gagne`;
+  } else if (isFull()) {
+    turnLabel.textContent = 'Egalite';
+  } else {
+    turnLabel.innerHTML = `<span class="dot p${turn}"></span>${turn === 1 ? 'Rouge' : 'Jaune'} joue`;
+  }
+  document.getElementById('history').innerHTML = moves.length
+    ? moves.map((m, i) => `<span class="pill">#${i + 1} col.${m.col + 1}</span>`).join('')
+    : '<span class="pill">Aucun coup joue</span>';
+}
+
+function playColumn(col) {
+  if (winner) return;
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (!board[r][col]) {
+      board[r][col] = turn;
+      moves.push({ row: r, col, player: turn });
+      winner = checkWin(r, col, turn) ? turn : 0;
+      turn = turn === 1 ? 2 : 1;
+      renderBoard();
+      requestAnalysis();
+      return;
+    }
+  }
+}
+
+function undoMove() {
+  const last = moves.pop();
+  if (!last) return;
+  board[last.row][last.col] = 0;
+  turn = last.player;
+  winner = 0;
+  renderBoard();
+  requestAnalysis();
+}
+
+function resetBoard() {
+  board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  moves = [];
+  turn = 1;
+  winner = 0;
+  renderBoard();
+  requestAnalysis();
+}
+
+function checkWin(row, col, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  return dirs.some(([dr, dc]) => {
+    let count = 1;
+    for (const sign of [1, -1]) {
+      for (let step = 1; step < 4; step++) {
+        const r = row + dr * step * sign;
+        const c = col + dc * step * sign;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== player) break;
+        count++;
+      }
+    }
+    return count >= 4;
+  });
+}
+
+function winningLine() {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const player = board[r][c];
+      if (!player) continue;
+      for (const [dr, dc] of dirs) {
+        const line = [[r, c]];
+        for (let step = 1; step < 4; step++) {
+          const nr = r + dr * step;
+          const nc = c + dc * step;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS || board[nr][nc] !== player) break;
+          line.push([nr, nc]);
+        }
+        if (line.length >= 4) return line.slice(0, 4);
+      }
+    }
+  }
+  return [];
+}
+
+function markWin() {
+  const line = winningLine();
+  if (!line.length) return;
+  const cells = document.querySelectorAll('.cell');
+  line.forEach(([r, c]) => cells[r * COLS + c]?.classList.add('win'));
+}
+
+function isFull() {
+  return board[0].every(Boolean);
+}
+
+function requestAnalysis() {
+  if (winner || isFull()) {
+    document.getElementById('status').textContent = winner ? 'Termine' : 'Egalite';
+    return;
+  }
+  if (worker) worker.terminate();
+  worker = new Worker('/analyse-worker.js');
+  const depth = Number(document.getElementById('depth').value || 10);
+  document.getElementById('status').textContent = 'Calcul...';
+  worker.onmessage = (event) => {
+    if (event.data?.type !== 'position') return;
+    renderAnalysis(event.data.analysis);
+    worker.terminate();
+    worker = null;
+  };
+  worker.postMessage({ mode: 'position', board, player: turn, depth, variantCount: 3 });
+}
+
+function renderAnalysis(analysis) {
+  document.getElementById('status').textContent = `Profondeur ${analysis.depth}`;
+  const score = analysis.current?.eval || '0.0';
+  const scoreEl = document.getElementById('score');
+  scoreEl.textContent = score;
+  scoreEl.className = 'score ' + (score.startsWith('+') ? 'pos' : score.startsWith('-') ? 'neg' : 'neu');
+  const p1 = Math.max(0, Math.min(100, Number(analysis.current?.p1WinPct || 50)));
+  document.getElementById('bar-p1').style.width = `${p1}%`;
+  document.getElementById('bar-p2').style.width = `${100 - p1}%`;
+  document.getElementById('variants').innerHTML = (analysis.variants || []).slice(0, 3).map((v, i) => `
+    <div class="variant">
+      <b>#${i + 1}</b>
+      <span>Colonne ${Number(v.col) + 1}</span>
+      <strong>${v.eval || '0.0'} · ${Math.round(Number(v.winPct || 0))}%</strong>
+    </div>
+  `).join('') || '<div class="variant"><b>-</b><span>Aucune variante</span><strong>--</strong></div>';
+}
+
+renderBoard();
+requestAnalysis();
+</script>
+</body>
+</html>
