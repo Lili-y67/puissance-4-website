@@ -94,6 +94,12 @@ function getStoredPlayer(){
     return null;
   }
 }
+function getStoredSessionToken() {
+  const direct = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  if (direct) return direct;
+  const player = getStoredPlayer();
+  return player?.token || '';
+}
 function badgeHtml(p){
   const out = [];
   if (Number(p.is_bot)) out.push('<span class="badge bot">&#129302; Bot</span>');
@@ -134,8 +140,8 @@ function render(players, counts){
 async function challengeBot(event, botId){
   event.preventDefault();
   event.stopPropagation();
-  const me = getStoredPlayer();
-  if (!me?.token) {
+  const token = getStoredSessionToken();
+  if (!token) {
     alert('Connecte-toi pour defier un bot en ranked.');
     location.href = '/';
     return;
@@ -147,8 +153,8 @@ async function challengeBot(event, botId){
   try {
     const res = await fetch(`/api/bots/${Number(botId)}/challenge`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-session-token': me.token },
-      body: JSON.stringify({ token: me.token }),
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'Impossible de defier ce bot.');
