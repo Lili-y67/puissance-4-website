@@ -210,6 +210,7 @@ class GameManager {
     } catch (e) {}
 
     state.finishedAt = Date.now();
+    state.winCells = Array.isArray(winCells) ? winCells : [];
     state.result = {
       winner: winnerSide,
       reason,

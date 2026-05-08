@@ -2897,6 +2897,7 @@ app.get('/api/live', (_, res) => {
       moves:   state.moveCount,
       gameType: state.gameType || 'ranked',
       botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
+      winCells: Array.isArray(state.winCells) ? state.winCells : [],
     };
     if (state.status === 'finished') {
       entry.result   = state.result   || null;  // { winner, eloChanges }
@@ -4419,7 +4420,7 @@ app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
 app.get('/api/leaderboard/wins', (_, res) => {
-  const q = db.prepare('SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 ORDER BY wins DESC LIMIT 10');
+  const q = db.prepare('SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0 ORDER BY wins DESC LIMIT 10');
   res.json(q.all().map(sanitize));
 });
 app.get('/api/site-stats', (_, res) => {
@@ -5567,7 +5568,7 @@ function startBot() {
         return interaction.editReply({ embeds: [botProfileEmbed(player)], components: [botLinkRow(player)] });
       }
       if (interaction.commandName === 'classement') {
-        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id != ? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
+        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
         const lines = players.map((p, i) => `#${i + 1} **${p.pseudo}** - ${botFmt(p.elo)} ELO - ${botRankText(p.elo)}`);
         return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#ffd60a').setTitle('Classement Puissance 4').setURL(`${BOT_API}/leaderboard`).setDescription(lines.join('\n') || 'Aucun joueur classe.')] });
       }
@@ -5584,8 +5585,8 @@ function startBot() {
       if (interaction.commandName === 'leaderboard') {
         const type = interaction.options.getString('type') || 'elo';
         const players = type === 'wins'
-          ? db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND id != ? ORDER BY wins DESC, elo DESC LIMIT 10`).all(BOT_PLAYER_ID)
-          : db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND id != ? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
+          ? db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY wins DESC, elo DESC LIMIT 10`).all()
+          : db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
         const lines = players.map((p, i) => `#${i + 1} **${p.pseudo}** - ${type === 'wins' ? `${p.wins || 0} victoires` : `${botFmt(p.elo)} ELO`}`);
         return interaction.editReply({ embeds: [new EmbedBuilder().setColor(type === 'wins' ? '#30d158' : '#ffd60a').setTitle(type === 'wins' ? 'Classement victoires' : 'Classement ELO').setURL(`${BOT_API}/leaderboard`).setDescription(lines.join('\n') || 'Aucun joueur classe.')] });
       }
@@ -6216,7 +6217,7 @@ function startBot() {
         return interaction.editReply({ embeds: [profileEmbed], components: [...menuRows, buttonRow] });
       }
       if (interaction.commandName === 'classement') {
-        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND id!=? ORDER BY elo DESC LIMIT 10`).all(BOT_PLAYER_ID);
+        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
         if (!players.length) return interaction.editReply({ content: 'Aucun joueur.' });
         const medals = ['🥇', '🥈', '🥉'];
         const lines  = players.map((p,i) => {

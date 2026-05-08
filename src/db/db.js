@@ -231,7 +231,7 @@ const pQ = {
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
   loss:         db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
   draw:         db.prepare(`UPDATE players SET draws  = draws  + 1 WHERE id = ?`),
-  leaderboard:  db.prepare(`SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 ORDER BY elo DESC LIMIT 10`),
+  leaderboard:  db.prepare(`SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0 ORDER BY elo DESC LIMIT 10`),
 };
 
 // ── Games ─────────────────────────────────────────────────────────────────────

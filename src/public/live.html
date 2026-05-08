@@ -41,6 +41,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 .game-card{background:linear-gradient(180deg,rgba(18,18,38,.96),rgba(12,12,28,.96));border:1px solid var(--border);border-radius:18px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;animation:card-in .35s cubic-bezier(.22,1,.36,1) both}
 .game-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-2px);box-shadow:0 16px 36px rgba(0,0,0,.4)}
+.game-card.finished{border-color:rgba(255,214,10,.35);box-shadow:0 0 0 1px rgba(255,214,10,.08),0 18px 42px rgba(255,214,10,.08)}
 @keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .card-players{display:flex;align-items:center;gap:8px}
 .card-player{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
@@ -56,11 +57,14 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .vs-sep{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:var(--muted)}
 .mini-board{background:var(--grid);border-radius:12px;padding:6px;border:1px solid var(--border);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;aspect-ratio:7/6}
 .mini-cell{border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.94));box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03)}
+.mini-cell.win-cell,.live-cell.win-cell{box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 2px rgba(255,214,10,.95),0 0 20px rgba(255,214,10,.42);animation:win-glow 1s ease-in-out infinite alternate}
+@keyframes win-glow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
 .card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border)}
 .moves-label{font-size:10px;color:var(--muted)}
 .turn-wrap{display:flex;align-items:center;gap:6px}
 .turn-pip{width:7px;height:7px;border-radius:50%}
 .turn-name{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.winner-label{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--yellow)}
 .empty-state{text-align:center;padding:88px 20px;color:var(--muted);border:1px dashed rgba(255,255,255,.08);border-radius:20px;background:rgba(255,255,255,.015)}
 .empty-icon{font-size:44px;margin-bottom:12px}
 .empty-title{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;letter-spacing:2px;color:var(--text);margin-bottom:6px}
@@ -173,7 +177,6 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
       <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
     </div>
     <div class="headline-actions">
-      <button class="bot-match-btn" id="bot-match-btn" type="button" onclick="startPreconfiguredBotMatch()">🤖 Lancer bots</button>
       <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
     </div>
   </div>
@@ -451,9 +454,14 @@ function evaluatePosition(game) {
   return { p1Share, p2Share, p1Precision, p2Precision, threats1, threats2, note };
 }
 
+function isWinCell(game, row, col) {
+  return Array.isArray(game?.winCells) && game.winCells.some(cell => Number(cell?.[0]) === row && Number(cell?.[1]) === col);
+}
+
 function renderList(games) {
   const container = document.getElementById('games-grid');
-  document.getElementById('count').textContent = games.length;
+  const activeCount = games.filter(g => g.status === 'active').length;
+  document.getElementById('count').textContent = activeCount;
   if (!games.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
     prevIds = new Set();
@@ -467,7 +475,7 @@ function renderList(games) {
     const existing = container.querySelector(`.game-card[data-id="${game.id}"]`);
     const p1 = game.players[1], p2 = game.players[2];
     const card = document.createElement('div');
-    card.className = 'game-card';
+    card.className = 'game-card' + (game.status === 'finished' ? ' finished' : '');
     card.dataset.id = game.id;
     card.onclick = () => goToSpec(game.id);
 
@@ -500,9 +508,14 @@ function renderList(games) {
       for (let c = 0; c < 7; c++) {
         const cell = document.createElement('div');
         cell.className = 'mini-cell';
+        if (isWinCell(game, r, c)) cell.classList.add('win-cell');
         const val = game.grid?.[r]?.[c] ?? 0;
         if (val === 1) applyTokenStyle(cell, p1);
         if (val === 2) applyTokenStyle(cell, p2);
+        if (isWinCell(game, r, c)) {
+          cell.classList.add('win-cell');
+          cell.style.boxShadow = 'inset 0 2px 6px rgba(0,0,0,.55), 0 0 0 2px rgba(255,214,10,.95), 0 0 20px rgba(255,214,10,.42)';
+        }
         board.appendChild(cell);
       }
     }
@@ -510,17 +523,25 @@ function renderList(games) {
     const footer = document.createElement('div');
     footer.className = 'card-footer';
     footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''}</div>${game.botMatch ? '<div class="game-kind">Bot vs Bot</div>' : ''}`;
-    const turn = document.createElement('div');
-    turn.className = 'turn-wrap';
-    const pip = document.createElement('div');
-    pip.className = 'turn-pip';
-    pip.style.background = game.players[game.current].color;
-    const name = document.createElement('div');
-    name.className = 'turn-name';
-    name.style.color = game.players[game.current].color;
-    name.textContent = game.players[game.current].pseudo;
-    turn.append(pip, name);
-    footer.appendChild(turn);
+    if (game.status === 'finished') {
+      const winner = game.result?.winner ? game.players[game.result.winner] : null;
+      const label = document.createElement('div');
+      label.className = 'winner-label';
+      label.textContent = winner ? `Victoire ${winner.pseudo}` : 'Partie terminee';
+      footer.appendChild(label);
+    } else {
+      const turn = document.createElement('div');
+      turn.className = 'turn-wrap';
+      const pip = document.createElement('div');
+      pip.className = 'turn-pip';
+      pip.style.background = game.players[game.current].color;
+      const name = document.createElement('div');
+      name.className = 'turn-name';
+      name.style.color = game.players[game.current].color;
+      name.textContent = game.players[game.current].pseudo;
+      turn.append(pip, name);
+      footer.appendChild(turn);
+    }
 
     card.append(row, board, footer);
     if (prevIds.has(game.id)) card.style.animation = 'none';
@@ -550,11 +571,17 @@ async function startPreconfiguredBotMatch() {
 
 function renderSpec(game) {
   const p1 = game.players[1], p2 = game.players[2];
+  const finished = game.status === 'finished';
+  const winner = finished && game.result?.winner ? game.players[game.result.winner] : null;
   document.getElementById('spec-title').textContent = `Partie #${game.id}`;
   document.getElementById('spec-sub').textContent = `${game.moves} coups joues · tour de ${game.players[game.current].pseudo}`;
 
+  document.getElementById('spec-sub').textContent = finished
+    ? `${game.moves} coups joues - ${winner ? `victoire de ${winner.pseudo}` : 'partie terminee'}`
+    : `${game.moves} coups joues - tour de ${game.players[game.current].pseudo}`;
+
   const players = document.getElementById('spec-players');
-  const turn = game.players[game.current];
+  const turn = winner || game.players[game.current];
   players.innerHTML = '';
 
   const left = document.createElement('div');
@@ -569,7 +596,7 @@ function renderSpec(game) {
   center.style.background = turn.color + '16';
   center.style.border = `1px solid ${turn.color}44`;
   center.style.color = turn.color;
-  center.innerHTML = `<span class="dot" style="background:${turn.color}"></span>Tour actuel`;
+  center.innerHTML = `<span class="dot" style="background:${turn.color}"></span>${finished ? 'Victoire' : 'Tour actuel'}`;
 
   const right = document.createElement('div');
   right.className = 'spec-player right';
@@ -586,6 +613,7 @@ function renderSpec(game) {
     for (let c = 0; c < 7; c++) {
       const cell = document.createElement('div');
       cell.className = 'live-cell';
+      if (isWinCell(game, r, c)) cell.classList.add('win-cell');
       const val = game.grid?.[r]?.[c] ?? 0;
       if (val === 1 || val === 2) {
         const token = document.createElement('div');
@@ -602,7 +630,7 @@ function renderSpec(game) {
   meta.innerHTML = `
     <div class="meta-pill">Partie <strong>#${game.id}</strong></div>
     <div class="meta-pill">Coups <strong>${game.moves}</strong></div>
-    <div class="meta-pill">Statut <strong>ACTIVE</strong></div>
+    <div class="meta-pill">Statut <strong>${finished ? 'TERMINEE' : 'ACTIVE'}</strong></div>
   `;
 
   const analysis = evaluatePosition(game);
@@ -622,11 +650,10 @@ function renderSpec(game) {
 async function refresh() {
   try {
     const games = await fetch('/api/live', { cache: 'no-store' }).then(r => r.json());
-    const activeGames = games.filter(g => g.status === 'active');
-    renderList(activeGames);
+    renderList(games);
 
     if (selectedGameId) {
-      const selected = activeGames.find(g => Number(g.id) === Number(selectedGameId));
+      const selected = games.find(g => Number(g.id) === Number(selectedGameId));
       if (selected) {
         document.getElementById('spec-view').classList.add('show');
         document.getElementById('list-view').classList.remove('show');

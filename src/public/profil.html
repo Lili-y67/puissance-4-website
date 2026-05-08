@@ -367,6 +367,7 @@ input[type="file"]{display:none;}
 .stat-icon-img{width:54px;height:44px;object-fit:contain;display:block;margin:0 auto 2px;filter:drop-shadow(0 0 12px rgba(255,255,255,.18));position:relative;z-index:1;}
 .stat-card.wins .stat-icon-img{filter:drop-shadow(0 0 16px rgba(255,214,10,.28));}
 .stat-card.losses .stat-icon-img{filter:drop-shadow(0 0 16px rgba(180,90,255,.24));}
+.stat-card.draws .stat-icon-img{filter:drop-shadow(0 0 16px rgba(255,214,10,.22));}
 .stat-val{font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;}
 .stat-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
 .stat-card.wins     .stat-val{color:var(--green);}
@@ -1241,10 +1242,11 @@ function renderVipBadge(player = currentPlayer) {
   </span>`;
 }
 
-function renderResultMiniStats(wins = 0, losses = 0, wr = 0) {
+function renderResultMiniStats(wins = 0, losses = 0, draws = 0, wr = 0) {
   return `<span class="mini-result-stats">
     <span class="mini-result-chip"><img src="/badges/stat-victory.png" alt="Victoires">${Number(wins || 0)}</span>
     <span class="mini-result-chip"><img src="/badges/stat-defeat.png" alt="Défaites">${Number(losses || 0)}</span>
+    <span class="mini-result-chip"><img src="/badges/stat-draw.webp" alt="Nuls">${Number(draws || 0)}</span>
     <span>${Number(wr || 0)}% WR</span>
   </span>`;
 }
@@ -1614,7 +1616,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
       <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.png" alt="Victoires"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
       <div class="stat-card losses"><img class="stat-icon-img" src="/badges/stat-defeat.png" alt="Défaites"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
-      <div class="stat-card draws"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
+      <div class="stat-card draws"><img class="stat-icon-img" src="/badges/stat-draw.webp" alt="Nuls"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
       ${player.avg_accuracy != null ? `
       <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
         <div class="stat-val">${player.avg_accuracy}%</div>
@@ -2211,7 +2213,7 @@ function renderGameRow(g, me) {
     const won       = g.winner_id === me.id;
     const isDraw    = g.winner_id === null;
     const rc        = isDraw ? 'draw' : (won ? 'win' : 'loss');
-    const ri        = isDraw ? '=' : (won ? '<img src="/badges/stat-victory.png" alt="Victoire">' : '<img src="/badges/stat-defeat.png" alt="Défaite">');
+    const ri        = isDraw ? '<img src="/badges/stat-draw.webp" alt="Nulle">' : (won ? '<img src="/badges/stat-victory.png" alt="Victoire">' : '<img src="/badges/stat-defeat.png" alt="Défaite">');
     const eloChange = isP1 ? g.elo_p1 : g.elo_p2;
     const eloClass  = isDraw ? 'neu' : (eloChange >= 0 ? 'pos' : 'neg');
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
@@ -2257,7 +2259,7 @@ function renderPlayers(players, emptyMsg) {
         <div class="player-mini-avatar" style="background:${color}22;border:2px solid ${color}">${avatarHtml}</div>
         <div class="player-mini-info">
           <div class="player-mini-pseudo">${p.pseudo}</div>
-          <div class="player-mini-stats">${renderResultMiniStats(p.wins, p.losses, wr)}</div>
+          <div class="player-mini-stats">${renderResultMiniStats(p.wins, p.losses, p.draws, wr)}</div>
         </div>
         <div class="player-mini-elo">${p.elo}</div>
       </div>
@@ -3162,7 +3164,7 @@ async function searchPlayer() {
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').textContent = player.pseudo;
-    document.getElementById('sr-stats').innerHTML    = renderResultMiniStats(player.wins, player.losses, wr);
+    document.getElementById('sr-stats').innerHTML    = renderResultMiniStats(player.wins, player.losses, player.draws, wr);
     document.getElementById('sr-elo').textContent    = player.elo;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
     result.classList.add('show');
