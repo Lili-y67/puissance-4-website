@@ -343,6 +343,9 @@ gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
   } catch (e) {
     console.error('[TOURNOI] result hook:', e.message);
   }
+  setTimeout(() => {
+    try { io.to('live').emit('live_update'); } catch (_) {}
+  }, 6500);
 };
 
 function getClientIp(req) {
