@@ -1726,6 +1726,10 @@ const SHOP_ITEMS = Object.freeze({
   vip_1y: { key: 'vip_1y', category: 'ranks', label: 'VIP 1 an', price: 1000 },
   vip_plus: { key: 'vip_plus', category: 'ranks', label: 'VIP+', price: 5000 },
   perso: { key: 'perso', category: 'ranks', label: 'Perso', price: 15000 },
+  elo_reset: { key: 'elo_reset', category: 'services', label: 'Reset ELO', price: 2500 },
+  offer_starter: { key: 'offer_starter', category: 'offers', label: 'Starter Boost', price: 1200, defaultStock: 10, grants: [{ type: 'item', key: 'elo_classic', qty: 1 }, { type: 'item', key: 'coin_custom_02', qty: 1 }, { type: 'coins', amount: 250 }] },
+  offer_comeback: { key: 'offer_comeback', category: 'offers', label: 'Pack Comeback', price: 3500, defaultStock: 5, grants: [{ type: 'elo_reset' }, { type: 'item', key: 'elo_custom_0_2', qty: 1 }] },
+  offer_vip_discovery: { key: 'offer_vip_discovery', category: 'offers', label: 'VIP Decouverte', price: 6000, defaultStock: 3, grants: [{ type: 'vip_days', days: 30 }, { type: 'item', key: 'elo_classic', qty: 1 }, { type: 'item', key: 'coin_custom_02', qty: 1 }] },
   elo_mini: { key: 'elo_mini', category: 'elo_boosters', label: 'Mini Boost', price: 250, boostType: 'elo', multiplier: 1.05, defaultStock: 10 },
   elo_classic: { key: 'elo_classic', category: 'elo_boosters', label: 'Classic Boost', price: 750, boostType: 'elo', multiplier: 1.10, defaultStock: 5 },
   elo_max: { key: 'elo_max', category: 'elo_boosters', label: 'Max Boost', price: 2500, boostType: 'elo', multiplier: 1.25, defaultStock: 3 },
@@ -1822,6 +1826,30 @@ function buildCustomShopItem(pack, body = {}) {
     };
   }
   return null;
+}
+
+function applyShopGrant(playerId, grant, context = {}) {
+  const type = String(grant?.type || '');
+  if (type === 'item') {
+    shopItemQ.addQty.run({ player_id: playerId, item_key: String(grant.key || ''), quantity: Math.max(1, Number(grant.qty || 1)) });
+    return;
+  }
+  if (type === 'coins') {
+    pQ.addCoins.run({ delta: Number(grant.amount || 0), id: playerId });
+    return;
+  }
+  if (type === 'elo_reset') {
+    pQ.setElo.run({ elo: 1000, id: playerId });
+    return;
+  }
+  if (type === 'vip_days') {
+    const now = context.now || Date.now();
+    const player = context.player || pQ.getById.get(playerId);
+    if (Number(player?.is_vip_plus || 0) === 1) return;
+    const baseExpiry = Number(player?.vip_expires_at || 0) > now ? Number(player.vip_expires_at) : now;
+    pQ.updateVip.run({ is_vip: 1, id: playerId });
+    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + Math.max(1, Number(grant.days || 30)) * 24 * 60 * 60 * 1000, id: playerId });
+  }
 }
 
 function hashTournamentPassword(password = '') {
@@ -2803,7 +2831,7 @@ app.post('/api/shop/buy', async (req, res) => {
   if (pack === 'perso' && Number(player.is_perso || 0) === 1) {
     return res.status(400).json({ error: 'Pack Perso deja actif.' });
   }
-  if (pack !== 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
+  if ((pack === 'vip_1m' || pack === 'vip_1y') && Number(player.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: 'VIP+ est deja actif a vie.' });
   }
   if (Number.isFinite(item.defaultStock) && getShopStock(pack) <= 0) {
@@ -2832,16 +2860,20 @@ app.post('/api/shop/buy', async (req, res) => {
     pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
   } else if (pack === 'perso') {
     pQ.updatePerso.run({ is_perso: 1, id: playerId });
+  } else if (pack === 'elo_reset') {
+    pQ.setElo.run({ elo: 1000, id: playerId });
+  } else if (Array.isArray(item.grants)) {
+    for (const grant of item.grants) applyShopGrant(playerId, grant, { now, player });
   } else {
     if (item.isCustom) {
       shopItemQ.addOne.run(playerId, item.key);
     } else {
       shopItemQ.addOne.run(playerId, pack);
     }
-    const stockKey = SHOP_STOCK_KEYS[pack];
-    if (stockKey) {
-      db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
-    }
+  }
+  const stockKey = SHOP_STOCK_KEYS[pack];
+  if (stockKey) {
+    db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
   }
 
   const fresh = pQ.getById.get(playerId);

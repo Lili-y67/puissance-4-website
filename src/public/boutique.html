@@ -326,6 +326,7 @@ body{
         <div class="hero-side-title">Rappel rapide</div>
         <div class="hero-side-list">
           <div class="hero-side-item"><div><strong>Rangs</strong><span>Activation directe</span></div><strong style="color:var(--yellow)">Premium</strong></div>
+          <div class="hero-side-item"><div><strong>Offres limitees</strong><span>Bundles avec stock global</span></div><strong style="color:var(--red)">Event</strong></div>
           <div class="hero-side-item"><div><strong>Boosters ELO</strong><span>Mini, Classic, Max, Princess</span></div><strong style="color:var(--yellow)">Stock</strong></div>
           <div class="hero-side-item"><div><strong>Boosters Coins</strong><span>Coin Boost et Coin Boost +</span></div><strong style="color:var(--orange)">Stock</strong></div>
         </div>
@@ -341,12 +342,14 @@ body{
       </div>
       <div class="category-tabs">
         <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
+        <button type="button" class="category-tab" id="tab-offers" onclick="switchShopCategory('offers')">Offres limitees</button>
         <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
       </div>
     </div>
   </section>
 
   <section id="shop-ranks-section" class="grid"></section>
+  <section id="shop-offers-section" class="grid" style="display:none"></section>
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
     <div class="boosters-row">
@@ -504,6 +507,46 @@ const SHOP_ITEMS = {
       ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
     ]
   },
+  elo_reset: {
+    key: 'elo_reset', type: 'service', theme: 'booster-elo', badge: '♻ RESET', duration: 'Instantane', title: 'Reset ELO',
+    stat: '1000', statSub: 'ELO apres achat',
+    meta: 'Remets ton classement a 1000 ELO immediatement. Pratique pour repartir proprement.',
+    features: [
+      ['♻', 'Effet instantane', 'Ton ELO est remis a 1000 des l achat valide.'],
+      ['🪙', 'Prix fixe', 'Coute 2500 coins.'],
+      ['⚠', 'Stats conservees', 'Les victoires, defaites et historiques ne sont pas supprimes.']
+    ]
+  },
+  offer_starter: {
+    key: 'offer_starter', type: 'bundle', theme: 'booster-coin', badge: '🔥 Offre', duration: 'Stock 10', title: 'Starter Boost',
+    stat: '3 bonus', statSub: 'ELO + Coins + bonus',
+    meta: 'Pack rapide pour lancer une session avec un booster ELO, un booster coins et un petit retour de coins.',
+    features: [
+      ['⚡', '1 Classic Boost', 'Ajoute un booster ELO x1.10 dans ton inventaire.'],
+      ['🪙', '1 Coin x2', 'Ajoute un booster Coins x2 personnalise.'],
+      ['🎁', '250 coins bonus', 'Une partie du prix revient directement dans ton solde.']
+    ]
+  },
+  offer_comeback: {
+    key: 'offer_comeback', type: 'bundle', theme: 'booster-elo', badge: '♻ Offre', duration: 'Stock 5', title: 'Pack Comeback',
+    stat: 'Reset + boost', statSub: 'Repartir proprement',
+    meta: 'Remets ton ELO a 1000 et garde un booster ELO +0.2 pour ta prochaine session ranked.',
+    features: [
+      ['♻', 'Reset ELO inclus', 'Ton ELO est remis a 1000 immediatement.'],
+      ['⚡', 'Booster +0.2', 'Ajoute un booster ELO x1.20 dans ton inventaire.'],
+      ['🧭', 'Comeback propre', 'Ideal si tu veux recommencer sans supprimer ton profil.']
+    ]
+  },
+  offer_vip_discovery: {
+    key: 'offer_vip_discovery', type: 'bundle', theme: 'vip', badge: '⭐ Offre', duration: 'Stock 3', title: 'VIP Decouverte',
+    stat: 'VIP + boosts', statSub: '30 jours + inventaire',
+    meta: 'Un pack premium court avec VIP 1 mois et deux boosters pour tester la boutique a fond.',
+    features: [
+      ['⭐', 'VIP 1 mois', 'Ajoute ou prolonge ton VIP de 30 jours.'],
+      ['⚡', '1 Classic Boost', 'Ajoute un booster ELO x1.10.'],
+      ['🪙', '1 Coin x2', 'Ajoute un booster Coins x2 personnalise.']
+    ]
+  },
   elo_mini: {
     key: 'elo_mini', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '⚡ ELO', duration: 'x0.05', title: 'Mini Boost',
     stat: '250', statSub: 'coins pour +0.05 ELO',
@@ -547,6 +590,8 @@ Object.keys(SHOP_ITEMS).forEach((key) => {
 
 const SHOP_PRICES = {
   vip_1m: 100, vip_1y: 1000, vip_plus: 5000, perso: 15000,
+  elo_reset: 2500,
+  offer_starter: 1200, offer_comeback: 3500, offer_vip_discovery: 6000,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
 };
@@ -667,12 +712,13 @@ function getButtonState(pack) {
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
   const owned = item.type === 'rank' ? packOwned(pack) : false;
-  const stock = item.type === 'booster' ? getStockQty(pack) : null;
+  const stock = Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
 
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
-  if (item.type === 'booster' && stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
+  if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (coins < price) return { disabled: true, note: `Il manque ${price - coins} coins` };
+  if (item.type === 'bundle') return { disabled: false, note: `${stock === null ? 'Offre active' : `Stock ${stock}`} - Offre limitee` };
   if (item.type === 'booster') {
     const inv = pack === 'elo_custom'
       ? getCustomInventoryQty('elo_custom_')
@@ -1062,8 +1108,11 @@ function renderCard(pack) {
   const item = getDisplayItem(pack);
   const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
-  const stock = item.type === 'booster' ? getStockQty(pack) : null;
+  const stock = Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
   const inv = item.type === 'booster' ? getInventoryQty(pack) : null;
+  const bundleStockHtml = item.type === 'bundle'
+    ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) - offre limitee.</span></div></div>`
+    : '';
   return `
     <article class="card ${item.theme}">
       <div class="tier">
@@ -1095,7 +1144,8 @@ function renderCard(pack) {
 }
 
 function renderShop() {
-  document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso'].map(renderCard).join('');
+  document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-offers-section').innerHTML = ['offer_starter','offer_comeback','offer_vip_discovery'].map(renderCard).join('');
   document.getElementById('shop-elo-boosters-grid').innerHTML = [renderCustomBoosterCard('elo_custom')].join('');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [renderCustomBoosterCard('coin_custom')].join('');
 }
@@ -1103,8 +1153,10 @@ function renderShop() {
 function switchShopCategory(category) {
   currentCategory = category;
   document.getElementById('tab-ranks').classList.toggle('active', category === 'ranks');
+  document.getElementById('tab-offers').classList.toggle('active', category === 'offers');
   document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
   document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
+  document.getElementById('shop-offers-section').style.display = category === 'offers' ? 'grid' : 'none';
   document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
 }
 

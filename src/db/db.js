@@ -228,6 +228,7 @@ const pQ = {
   updateCoins:  db.prepare(`UPDATE players SET coins = @coins WHERE id = @id`),
   addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
+  setElo:       db.prepare(`UPDATE players SET elo = @elo WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
   loss:         db.prepare(`UPDATE players SET losses = losses + 1 WHERE id = ?`),
   draw:         db.prepare(`UPDATE players SET draws  = draws  + 1 WHERE id = ?`),
@@ -375,8 +376,13 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const activeBoost = vipApplied ? vipQ.getActive.get(winnerId, Date.now()) : null;
   const vipMultiplier = vipApplied ? Number(activeBoost?.multiplier || 1) : 1;
   const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;
-  const p1Delta = isFriendly || isSuspect ? 0 : (game.player1_id === winnerId ? dW : dL);
-  const p2Delta = isFriendly || isSuspect ? 0 : (game.player2_id === winnerId ? dW : dL);
+  const p1IsBot = Number(player1?.is_bot || 0) === 1;
+  const p2IsBot = Number(player2?.is_bot || 0) === 1;
+  const botVsHuman = p1IsBot !== p2IsBot;
+  const rawP1Delta = game.player1_id === winnerId ? dW : dL;
+  const rawP2Delta = game.player2_id === winnerId ? dW : dL;
+  const p1Delta = isFriendly || isSuspect || (botVsHuman && !p1IsBot) ? 0 : rawP1Delta;
+  const p2Delta = isFriendly || isSuspect || (botVsHuman && !p2IsBot) ? 0 : rawP2Delta;
   const coinBoost = (() => {
     try {
       const multiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
