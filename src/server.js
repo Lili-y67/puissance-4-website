@@ -4298,8 +4298,8 @@ app.get('/api/admin/games', (req, res) => {
   const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
 
   const where  = search
-    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished'`
-    : `WHERE g.status='finished'`;
+    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished' AND COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`
+    : `WHERE g.status='finished' AND COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`;
   const params = search ? [search, search, limit, offset] : [limit, offset];
 
   const games = db.prepare(`

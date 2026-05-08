@@ -1064,7 +1064,6 @@ async function fetchAdminGames(offset) {
 
 function renderAdminGames(games, offset) {
   const tbody = document.getElementById('games-body');
-  const botPseudo = 'Puissance4-AI';
   if (!games.length && offset === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvée</td></tr>';
     document.getElementById('games-pagination-admin').innerHTML = '';
@@ -1072,7 +1071,6 @@ function renderAdminGames(games, offset) {
   }
 
   tbody.innerHTML = games.map(g => {
-    const isBotGame = g.p1_pseudo === botPseudo || g.p2_pseudo === botPseudo;
     const isP1Win  = g.winner_id === g.player1_id;
     const isP2Win  = g.winner_id === g.player2_id;
     const isDraw   = g.winner_id === null;
@@ -1083,13 +1081,12 @@ function renderAdminGames(games, offset) {
     const canRevert= !g.reverted && g.elo_before_p1 != null;
     const revertedBadge = g.reverted ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)">REVERT</span> ' : '';
     const suspBadge= g.suspicious ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,214,10,0.1);color:#ffd60a;">Suspect</span> ' : '';
-    const botOnlyBadge = isBotGame ? '<span style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(76,110,245,0.14);color:#8b9cf4;border:1px solid rgba(76,110,245,0.28);white-space:nowrap;">ELO bot uniquement</span>' : '';
     return `<tr>
       <td style="color:var(--muted);font-size:11px">${revertedBadge}${suspBadge}#${g.id}</td>
       <td><strong>${g.p1_pseudo}</strong></td>
       <td><strong>${g.p2_pseudo}</strong></td>
       <td style="font-size:12px">${res}</td>
-      <td style="font-size:11px;color:var(--muted)">${d1} / ${d2}${botOnlyBadge ? `<div style="margin-top:4px">${botOnlyBadge}</div>` : ''}</td>
+      <td style="font-size:11px;color:var(--muted)">${d1} / ${d2}</td>
       <td>${g.move_count || 0}</td>
       <td style="font-size:11px;color:var(--muted)">${date}</td>
       <td style="display:flex;gap:4px;">
