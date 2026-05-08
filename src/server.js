@@ -4462,6 +4462,25 @@ app.get('/api/admin/backups/:key', (req, res) => {
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
+app.get('/api/leaderboard/bots', (_, res) => {
+  const bots = db.prepare(`
+    SELECT * FROM players
+    WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1
+    ORDER BY elo DESC, wins DESC
+    LIMIT 25
+  `).all();
+  res.json(bots.map(p => {
+    const s = sanitize(p);
+    const runtime = publicBotRuntime(s.id);
+    return {
+      ...s,
+      rank: getRank(s.elo),
+      botOnline: !!runtime.online,
+      botStatus: runtime.status || (runtime.online ? 'online' : 'offline'),
+      botDepth: runtime.depth || s.bot_skill || 0,
+    };
+  }));
+});
 app.get('/api/leaderboard/wins', (_, res) => {
   const q = db.prepare('SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0 ORDER BY wins DESC LIMIT 10');
   res.json(q.all().map(sanitize));
