@@ -4593,7 +4593,9 @@ app.get('/api/leaderboard/wins', (_, res) => {
 app.get('/api/site-stats', (_, res) => {
   const presence = getPresenceCounts();
   const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
-  const registeredPlayers = db.prepare(`SELECT COUNT(*) as c FROM players WHERE is_guest = 0`).get()?.c || 0;
+  const registeredHumans = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0`).get()?.c || 0);
+  const registeredBots = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1`).get()?.c || 0);
+  const registeredPlayers = registeredHumans + registeredBots;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get();
@@ -4608,6 +4610,8 @@ app.get('/api/site-stats', (_, res) => {
     visitors: presence.visitors,
     totalPresent: presence.totalPresent,
     registeredPlayers,
+    registeredHumans,
+    registeredBots,
     queue: mm?.queue?.length || 0,
     activeGames,
     publicTournament,

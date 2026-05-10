@@ -515,6 +515,32 @@ html, body {
   box-shadow:0 0 0 4px rgba(133,235,255,0.12);
   animation:badge-pulse-blue 1.95s ease-in-out infinite;
 }
+.site-bots-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(179,107,255,0.12);
+  border:1px solid rgba(179,107,255,0.28);
+  color:#b36bff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 3.25s ease-in-out infinite;
+}
+.site-bots-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#b36bff;
+  box-shadow:0 0 0 4px rgba(179,107,255,0.12);
+  animation:badge-pulse-violet 2.05s ease-in-out infinite;
+}
 .site-visitor-badge{
   display:inline-flex;
   align-items:center;
@@ -581,6 +607,10 @@ html, body {
 @keyframes badge-pulse-pink{
   0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(255,45,85,0.12);}
   50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(255,45,85,0.08),0 0 14px rgba(255,45,85,0.24);}
+}
+@keyframes badge-pulse-violet{
+  0%,100%{transform:scale(1);box-shadow:0 0 0 4px rgba(179,107,255,0.12);}
+  50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(179,107,255,0.08),0 0 14px rgba(179,107,255,0.24);}
 }
 
 /* â”€â”€ Board decoration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -2041,7 +2071,11 @@ html, body {
       </div>
       <div class="site-registered-badge" id="site-registered-badge">
       <span class="site-registered-dot"></span>
-      <span id="site-registered-count">0</span> inscrits
+      <span id="site-registered-count">0</span> joueurs inscrits
+      </div>
+      <div class="site-bots-badge" id="site-bots-badge">
+      <span class="site-bots-dot"></span>
+      <span id="site-bots-count">0</span> bots inscrits
       </div>
     </div>
 
@@ -3100,11 +3134,16 @@ function applySitePresenceCounts(data = {}) {
 function applySiteStatsSnapshot(data = {}) {
   const gamesCount = document.getElementById('site-games-count');
   const registeredCount = document.getElementById('site-registered-count');
+  const botsCount = document.getElementById('site-bots-count');
   if (gamesCount) {
     gamesCount.textContent = String(Math.max(0, Number(data.activeGames) || 0));
   }
   if (registeredCount) {
-    registeredCount.textContent = String(Math.max(0, Number(data.registeredPlayers) || 0));
+    const humans = data.registeredHumans ?? data.registeredPlayers ?? 0;
+    registeredCount.textContent = String(Math.max(0, Number(humans) || 0));
+  }
+  if (botsCount) {
+    botsCount.textContent = String(Math.max(0, Number(data.registeredBots) || 0));
   }
 }
 
