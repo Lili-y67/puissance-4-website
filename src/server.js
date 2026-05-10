@@ -1395,11 +1395,11 @@ function isModo(req) {
 }
 
 function findAdminLoginPlayer(adminIdentity, playerToken) {
-  const playerId = validateSession(playerToken);
-  if (playerId) return pQ.getById.get(playerId);
-
   const raw = String(adminIdentity || '').trim();
-  if (!raw) return null;
+  if (!raw) {
+    const playerId = validateSession(playerToken);
+    return playerId ? pQ.getById.get(playerId) : null;
+  }
   const identity = raw.replace(/^@+/, '').trim();
   const byDiscordId = /^\d{15,25}$/.test(identity)
     ? db.prepare(`SELECT * FROM players WHERE discord_id = ? AND deleted = 0 ORDER BY id ASC LIMIT 1`).get(identity)
