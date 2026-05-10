@@ -1340,8 +1340,9 @@ app.get('/api/admin/password', async (req, res) => {
 });
 
 // Auth admin
-// Sessions admin en mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmoire
-const adminSessions = new Map(); // token AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA { playerId, role }
+// Sessions admin en memoire
+const adminSessions = new Map(); // token -> { playerId, role }
+const adminLoginCodes = new Map(); // requestId -> { playerId, role, code, expiresAt, attempts }
 
 function revokeAdminSessionsForPlayer(playerId) {
   for (const [token, session] of adminSessions.entries()) {
@@ -1380,15 +1381,18 @@ function isModo(req) {
   return s && (s.role === 'admin' || s.role === 'moderator');
 }
 
-app.post('/api/admin/login', async (req, res) => {
-  const { password, playerToken } = req.body;
-  if (password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+async function resolveAdminLoginContext(password, playerToken) {
+  if (password !== ADMIN_PASSWORD) {
+    return { status: 403, error: 'Mot de passe incorrect.' };
+  }
 
   const playerId = validateSession(playerToken);
-  if (!playerId) return res.status(403).json({ error: 'Session joueur invalide.' });
+  if (!playerId) return { status: 403, error: 'Session joueur invalide.' };
 
   const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord requis pour accAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAder au panel.' });
+  if (!player?.discord_id) {
+    return { status: 403, error: 'Compte Discord requis pour acceder au panel.' };
+  }
 
   let role = player.role;
   try {
@@ -1401,14 +1405,67 @@ app.post('/api/admin/login', async (req, res) => {
   } catch(e) {}
 
   if (!['admin', 'moderator'].includes(role)) {
-    return res.status(403).json({ error: 'Ton rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord ne permet pas l\'accAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs au panel.' });
+    return { status: 403, error: "Ton role Discord ne permet pas l'acces au panel." };
   }
 
-  const token = require('crypto').randomBytes(32).toString('hex');
-  adminSessions.set(token, { playerId, role });
-  setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
-  WH.wlogAdminLogin();
-  res.json({ token, role });
+  return { playerId, player, role };
+}
+
+app.post('/api/admin/login', async (req, res) => {
+  const { password, playerToken, requestId, code } = req.body || {};
+  const ctx = await resolveAdminLoginContext(password, playerToken);
+  if (ctx.error) return res.status(ctx.status || 403).json({ error: ctx.error });
+
+  if (requestId) {
+    const challenge = adminLoginCodes.get(String(requestId));
+    if (!challenge) return res.status(403).json({ error: 'Code Discord expire ou invalide.' });
+    if (Date.now() > challenge.expiresAt) {
+      adminLoginCodes.delete(String(requestId));
+      return res.status(403).json({ error: 'Code Discord expire. Relance la connexion.' });
+    }
+    if (challenge.playerId !== ctx.playerId) {
+      adminLoginCodes.delete(String(requestId));
+      return res.status(403).json({ error: 'Code Discord invalide pour cette session.' });
+    }
+    if (String(code || '').trim() !== challenge.code) {
+      challenge.attempts += 1;
+      if (challenge.attempts >= 5) adminLoginCodes.delete(String(requestId));
+      return res.status(403).json({ error: 'Code Discord incorrect.' });
+    }
+    adminLoginCodes.delete(String(requestId));
+
+    const token = require('crypto').randomBytes(32).toString('hex');
+    adminSessions.set(token, { playerId: ctx.playerId, role: ctx.role });
+    setTimeout(() => adminSessions.delete(token), 4 * 60 * 60 * 1000); // 4h
+    WH.wlogAdminLogin();
+    return res.json({ token, role: ctx.role });
+  }
+
+  const crypto = require('crypto');
+  const requestToken = crypto.randomBytes(16).toString('hex');
+  const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  adminLoginCodes.set(requestToken, {
+    playerId: ctx.playerId,
+    role: ctx.role,
+    code: challengeCode,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0,
+  });
+  setTimeout(() => adminLoginCodes.delete(requestToken), 10 * 60 * 1000);
+
+  try {
+    await sendDM(ctx.player.discord_id, [
+      '🔐 Puissance 4 — Code admin',
+      '',
+      `Ton code de connexion admin est : ${challengeCode}`,
+      'Il expire dans 10 minutes. Ne le partage avec personne.',
+    ].join('\n'));
+  } catch (e) {
+    adminLoginCodes.delete(requestToken);
+    return res.status(500).json({ error: "Impossible d'envoyer le code Discord. Verifie que le bot peut t'envoyer un DM." });
+  }
+
+  res.json({ requiresCode: true, requestId: requestToken, role: ctx.role });
 });
 
 // Route pour rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle de la session courante
@@ -2085,19 +2142,20 @@ const applyTournamentResult = db.transaction((gameId, player1Id, player2Id, winn
 // Envoyer un DM Discord via le bot
 async function sendDM(discordId, text) {
   const { botToken } = discordConfig();
-  if (!botToken) return;
+  if (!botToken) throw new Error('Discord bot token manquant.');
   const dmRes  = await fetch('https://discord.com/api/v10/users/@me/channels', {
     method: 'POST',
     headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
     body: JSON.stringify({ recipient_id: discordId }),
   });
   const dm = await dmRes.json();
-  if (!dm.id) return;
-  await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+  if (!dm.id) throw new Error('Salon DM Discord indisponible.');
+  const messageRes = await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
     method: 'POST',
     headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
     body: JSON.stringify({ content: text }),
   });
+  if (!messageRes.ok) throw new Error('Envoi du DM Discord impossible.');
 }
 
 // Renommer un membre sur le serveur Discord

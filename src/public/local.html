@@ -24,9 +24,9 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
 .game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;vertical-align:-2px;box-shadow:0 0 18px currentColor}
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
-.board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
 .cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece);box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece);animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}
-@keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}
+@keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
 .footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
 @media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}}
 @media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr}.color{width:100%}}
@@ -84,7 +84,7 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
       <div class="board-shell">
         <div class="board" id="board" aria-label="Grille Puissance 4 local"></div>
       </div>
-      <div class="footer-note">Astuce : clique n'importe quelle case d'une colonne pour poser le pion.</div>
+      <div class="footer-note" id="phone-note">Astuce : clique n'importe quelle case d'une colonne pour poser le pion.</div>
     </section>
   </section>
 </main>
@@ -102,6 +102,8 @@ const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
 const statusLabel = document.getElementById('status-label');
 const undoBtn = document.getElementById('undo-btn');
+const phoneNote = document.getElementById('phone-note');
+const mobileTurnView = window.matchMedia('(max-width: 860px)');
 
 function playerName(player) {
   const raw = document.getElementById(`p${player}-name`).value.trim();
@@ -119,11 +121,24 @@ function initGrid() {
   ended = false;
 }
 
+function shouldFlipBoard() {
+  return mobileTurnView.matches && current === 2 && !ended;
+}
+
 function renderBoard(winCells = []) {
   const winSet = new Set(winCells.map(([r, c]) => `${r}:${c}`));
   boardEl.innerHTML = '';
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  const flipped = shouldFlipBoard();
+  boardEl.classList.toggle('mobile-flipped', flipped);
+  if (phoneNote) {
+    phoneNote.textContent = flipped
+      ? "Vue retournee pour le joueur 2 : la grille est dans son sens."
+      : "Astuce : clique n'importe quelle case d'une colonne pour poser le pion.";
+  }
+  const rows = Array.from({ length: ROWS }, (_, i) => flipped ? ROWS - 1 - i : i);
+  const cols = Array.from({ length: COLS }, (_, i) => flipped ? COLS - 1 - i : i);
+  for (const r of rows) {
+    for (const c of cols) {
       const value = grid[r][c];
       const cell = document.createElement('button');
       cell.type = 'button';
@@ -234,6 +249,11 @@ function updateScores() {
     renderBoard();
     updateStatus(ended ? statusText.textContent : null, ended ? statusLabel.textContent : 'Tour actuel');
   });
+});
+
+mobileTurnView.addEventListener?.('change', () => {
+  renderBoard();
+  updateStatus();
 });
 
 newRound();
