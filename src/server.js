@@ -3286,7 +3286,15 @@ app.post('/api/players/:id/convert-bot', (req, res) => {
         bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0
     WHERE id = ?
   `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), id);
-  res.json({ ok: true, player: sanitize(pQ.getById.get(id)), botToken, note: 'Token affiche une seule fois. Garde-le secret : il ne pourra pas etre regenere.' });
+  const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
+  const activationCurl = `curl.exe -k -X POST -H "Authorization: Bearer ${botToken}" "${baseUrl}/api/bot/ping?status=seeking"`;
+  res.json({
+    ok: true,
+    player: sanitize(pQ.getById.get(id)),
+    botToken,
+    activationCurl,
+    note: 'Token affiche une seule fois. Garde-le secret : il ne pourra pas etre regenere.',
+  });
 });
 
 app.post('/api/bot/token/rotate', (req, res) => {
@@ -3302,7 +3310,7 @@ app.get('/api/bot/me', (req, res) => {
 app.post('/api/bot/ping', (req, res) => {
   const bot = getBotFromRequest(req);
   if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
-  const status = String(req.body?.status || 'idle').slice(0, 40);
+  const status = String(req.body?.status || req.query?.status || 'idle').slice(0, 40);
   botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
   db.prepare(`UPDATE players SET bot_last_seen = ? WHERE id = ?`).run(Date.now(), bot.id);
   res.json({ ok: true, bot: sanitize(pQ.getById.get(bot.id)), runtime: publicBotRuntime(bot.id) });

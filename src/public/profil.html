@@ -1880,7 +1880,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="bot-token-value" id="bot-token-value"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <button class="btn-save-color" onclick="copyBotToken()" style="background:rgba(48,209,88,0.1);border-color:rgba(48,209,88,0.3);color:#30d158">Copier le token</button>
-            <button class="btn-save-color" onclick="copyBotCurl()" style="background:rgba(133,235,255,0.08);border-color:rgba(133,235,255,0.28);color:#85EBFF">Copier la requete curl</button>
+            <button class="btn-save-color" onclick="copyBotCurl()" style="background:rgba(133,235,255,0.08);border-color:rgba(133,235,255,0.28);color:#85EBFF">Copier l'activation curl</button>
           </div>
           <div style="font-size:11px;color:#ffd60a;margin-top:10px">Important : ce token ne pourra pas etre regenere ni relu plus tard.</div>
         </div>
@@ -3844,6 +3844,7 @@ function linkDiscord() {
 
 // â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let lastBotToken = '';
+let lastBotActivationCurl = '';
 
 function getStoredSessionToken() {
   const direct = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
@@ -3872,6 +3873,7 @@ async function convertProfileToBot() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de basculer en mode bot.');
     lastBotToken = data.botToken || '';
+    lastBotActivationCurl = data.activationCurl || '';
     syncStoredPlayerPatch({ is_bot: 1, bot_token_preview: lastBotToken.slice(-8) });
     if (currentPlayer) {
       currentPlayer.is_bot = 1;
@@ -3907,8 +3909,9 @@ async function copyBotToken() {
 
 async function copyBotCurl() {
   const token = lastBotToken || document.getElementById('bot-token-value')?.textContent || 'p4bot_xxx';
-  await copyTextToClipboard(`curl -H "Authorization: Bearer ${token}" "${location.origin}/api/bot/me"`);
-  alert('Requete curl copiee.');
+  const command = lastBotActivationCurl || `curl.exe -k -X POST -H "Authorization: Bearer ${token}" "${location.origin}/api/bot/ping?status=seeking"`;
+  await copyTextToClipboard(command);
+  alert('Requete curl d activation copiee.');
 }
 
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };

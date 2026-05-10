@@ -7,17 +7,17 @@
  *
  * Optional:
  *   P4_API_URL=http://localhost:8080 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy node p4-bot-client.js
  *   P4_CHALLENGE_BOT_ID=7 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_DEPTH=10 P4_THINK_MS=6500 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_MAX_CONCURRENT_GAMES=2 P4_MAX_TABLE=250000 P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy node p4-bot-client.js
+ *   P4_DEPTH=12 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_MAX_TABLE=350000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally safe but competitive:
  * - pings the site so the bot appears online
  * - joins the bot queue
  * - polls the current game
  * - plays legal moves with alpha-beta + iterative deepening
+ * - prints lichess-bot style engine blocks per game id
  * - respects API rate limits with backoff on HTTP 429
  */
 
@@ -33,11 +33,11 @@ const BOT_TOKENS = String(process.env.P4_BOT_TOKENS || process.env.P4_BOT_TOKEN 
   .filter(Boolean);
 const LOOP_MS = Math.max(750, Number(process.env.P4_LOOP_MS || 1200));
 const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
-const MAX_DEPTH = Math.max(1, Math.min(13, Number(process.env.P4_DEPTH || 9)));
-const THINK_MS = Math.max(400, Math.min(45000, Number(process.env.P4_THINK_MS || 4500)));
+const MAX_DEPTH = Math.max(1, Math.min(15, Number(process.env.P4_DEPTH || 11)));
+const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS || 12000)));
 const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
-const MAX_CONCURRENT_GAMES = Math.max(1, Math.min(2, Number(process.env.P4_MAX_CONCURRENT_GAMES || 2)));
-const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 250000));
+const MAX_CONCURRENT_GAMES = 1;
+const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 350000));
 const LOG_SEARCH = process.env.P4_LOG_SEARCH !== '0';
 
 if (!BOT_TOKENS.length) {
@@ -68,10 +68,57 @@ function formatPv(pv) {
   return Array.isArray(pv) && pv.length ? pv.map(col => `c${col + 1}`).join(' -> ') : '-';
 }
 
+function formatSignedCp(cp) {
+  const value = Number(cp || 0);
+  if (Math.abs(value) >= 100000) return value > 0 ? '+M' : '-M';
+  return `${value >= 0 ? '+' : ''}${(value / 100).toFixed(2)}`;
+}
+
+function formatBoard(board) {
+  return board.map(row => row.map(v => (v === 0 ? '.' : v === 1 ? 'X' : 'O')).join(' ')).join('\n');
+}
+
+function gameLabel(game) {
+  return `Game ${game?.gameId ?? '?'}`;
+}
+
+function moveNumber(game) {
+  return Array.isArray(game?.moves) ? game.moves.length + 1 : '?';
+}
+
 function scoreToCentipawns(score) {
   if (!Number.isFinite(score)) return 0;
   if (Math.abs(score) >= 900_000) return score > 0 ? 100000 : -100000;
   return Math.max(-5000, Math.min(5000, Math.round(score)));
+}
+
+function renderEngineReport(game, col, stats) {
+  const elapsed = Math.max(1, Number(stats.elapsedMs || 1));
+  const nodes = Number(stats.nodes || 0);
+  const nps = Math.round(nodes / (elapsed / 1000));
+  const cp = stats.centipawns ?? scoreToCentipawns(stats.score || 0);
+  const lines = [
+    '',
+    '============================================================',
+    `[${gameLabel(game)}] Engine analysis`,
+    '------------------------------------------------------------',
+    `Coup              : c${Number(col) + 1} (${moveNumber(game)})`,
+    `Source            : Engine${stats.tactical ? ` / ${stats.tactical}` : ''}`,
+    `Evaluation        : ${formatSignedCp(cp)} (${cp} cp)`,
+    `Depth             : ${stats.depth || 0}/${MAX_DEPTH}${stats.timeout ? ' timeout' : ''}`,
+    `Nodes             : ${nodes.toLocaleString('fr-FR')}`,
+    `Nodes/seconde     : ${nps.toLocaleString('fr-FR')}`,
+    `Prunes            : ${Number(stats.prunes || 0).toLocaleString('fr-FR')}`,
+    `Cache hits        : ${Number(stats.cacheHits || 0).toLocaleString('fr-FR')}`,
+    `Table             : ${Number(stats.tableSize || 0).toLocaleString('fr-FR')} / ${MAX_TABLE.toLocaleString('fr-FR')}`,
+    `Temps calcul      : ${elapsed} ms`,
+    `CP -> Futurs coups: ${formatPv(stats.pv)}`,
+    '------------------------------------------------------------',
+    formatBoard(game.board),
+    '============================================================',
+    '',
+  ];
+  console.log(lines.join('\n'));
 }
 
 async function api(path, options = {}, token = BOT_TOKENS[0]) {
@@ -207,6 +254,16 @@ function scoreWindow(values, me) {
   return 0;
 }
 
+function countThreats(board, player) {
+  let threats = 0;
+  for (const col of legalMoves(board)) {
+    const row = drop(board, col, player);
+    if (row >= 0 && checkWin(board, row, col, player)) threats++;
+    undoDrop(board, row, col);
+  }
+  return threats;
+}
+
 function evaluate(board, me) {
   let score = 0;
   const opp = me === 1 ? 2 : 1;
@@ -214,6 +271,11 @@ function evaluate(board, me) {
   const oppCenter = board.map(row => row[3]).filter(v => v === opp).length;
   score += center * 14;
   score -= oppCenter * 12;
+
+  const myThreats = countThreats(board, me);
+  const oppThreats = countThreats(board, opp);
+  score += myThreats * 180;
+  score -= oppThreats * 220;
 
   // Slight preference for lower stable pieces.
   for (let r = 0; r < 6; r++) {
@@ -241,6 +303,15 @@ function evaluate(board, me) {
 function orderedMoves(board, moves = legalMoves(board)) {
   const centerOrder = [3, 2, 4, 1, 5, 0, 6];
   return centerOrder.filter(col => moves.includes(col));
+}
+
+function moveAllowsImmediateLoss(board, col, me) {
+  const opp = me === 1 ? 2 : 1;
+  const row = drop(board, col, me);
+  if (row < 0) return true;
+  const loses = legalMoves(board).some(nextCol => isWinningMove(board, nextCol, opp));
+  undoDrop(board, row, col);
+  return loses;
 }
 
 function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, stats) {
@@ -316,9 +387,11 @@ function chooseMove(game) {
     }
   }
 
-  const moveOrder = orderedMoves(board, moves);
+  const safeMoves = moves.filter(col => !moveAllowsImmediateLoss(board, col, me));
+  const moveOrder = orderedMoves(board, safeMoves.length ? safeMoves : moves);
   let best = moveOrder[0] ?? moves[0];
   let bestScore = -Infinity;
+  const depthReports = [];
   for (let depth = 1; depth <= MAX_DEPTH; depth++) {
     let depthBest = best;
     let depthBestScore = -Infinity;
@@ -344,8 +417,9 @@ function chooseMove(game) {
       stats.centipawns = scoreToCentipawns(bestScore);
       stats.pv = principalVariation(board, best, me, Math.min(8, depth + 1));
       stats.tableSize = table.size;
+      depthReports.push({ depth, best, cp: stats.centipawns, pv: [...stats.pv], nodes: stats.nodes, prunes: stats.prunes, cacheHits: stats.cacheHits });
       if (LOG_SEARCH) {
-        log(`depth ${depth}/${MAX_DEPTH} best col.${best + 1} cp=${stats.centipawns} pv=${formatPv(stats.pv)} nodes=${stats.nodes} prunes=${stats.prunes} cache=${stats.cacheHits} table=${table.size}`);
+        log(`[${gameLabel(game)}] info depth ${depth}/${MAX_DEPTH} cp ${formatSignedCp(stats.centipawns)} nodes ${stats.nodes} pv ${formatPv(stats.pv)}`);
       }
     }
     if (table.size > MAX_TABLE) {
@@ -359,6 +433,7 @@ function chooseMove(game) {
   }
   stats.elapsedMs = Date.now() - start;
   stats.tableSize = table.size;
+  stats.depthReports = depthReports;
   table.clear();
   return { col: best, stats };
 }
@@ -424,7 +499,8 @@ async function runBotWorker(token, workerIndex) {
         body: JSON.stringify({ col }),
       }, token);
       const s = choice.stats || {};
-      workerLog(`Played col.${col + 1} depth=${s.depth || '-'} cp=${s.centipawns ?? scoreToCentipawns(s.score || 0)} pv=${formatPv(s.pv)} nodes=${s.nodes || 0} prunes=${s.prunes || 0} cache=${s.cacheHits || 0} table=${s.tableSize || 0} time=${s.elapsedMs || 0}ms${s.tactical ? ` tactical=${s.tactical}` : ''}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
+      renderEngineReport(game, col, s);
+      workerLog(`[${gameLabel(game)}] Played c${col + 1}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
       if (result.result?.type === 'game_over') {
         const winner = result.result?.winner ? `side ${result.result.winner}` : 'draw';
         workerLog(`Game ${game.gameId} ended: ${winner}. Clearing local search memory and seeking next game.`);
@@ -447,10 +523,10 @@ async function runBotWorker(token, workerIndex) {
 
 async function main() {
   const activeTokens = BOT_TOKENS.slice(0, MAX_CONCURRENT_GAMES);
-  if (BOT_TOKENS.length < MAX_CONCURRENT_GAMES) {
-    warn(`Only ${BOT_TOKENS.length} token(s) provided. One bot account can only play one active game, so concurrency will be ${BOT_TOKENS.length}/${MAX_CONCURRENT_GAMES}.`);
+  if (BOT_TOKENS.length > 1) {
+    warn(`Several tokens provided, but this client is configured for one simultaneous game. Using only the first token.`);
   }
-  log(`Starting pool with ${activeTokens.length} worker(s). Give several tokens with P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy for 2 simultaneous games.`);
+  log(`Starting single-game worker. depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, maxTable=${MAX_TABLE}.`);
   await Promise.all(activeTokens.map((token, index) => runBotWorker(token, index)));
 }
 
