@@ -125,6 +125,19 @@ function startDiscordBot(ctx) {
     return { flags: MessageFlags.IsComponentsV2, components: [container] };
   }
 
+  function ephemeralMessage(payload) {
+    return { ...payload, flags: Number(payload.flags || 0) | MessageFlags.Ephemeral };
+  }
+
+  async function replyError(interaction, title, subtitle = '') {
+    const payload = ephemeralMessage(containerMessage({ color: 0xff3b30, title, subtitle }));
+    if (interaction.deferred || interaction.replied) {
+      await interaction.deleteReply().catch(() => {});
+      return interaction.followUp(payload).catch(() => interaction.editReply(payload).catch(() => {}));
+    }
+    return interaction.reply(payload).catch(() => {});
+  }
+
   function roleBadges(player) {
     const badges = [];
     if (Number(player?.is_perso) === 1) badges.push('PERSO');
@@ -148,7 +161,7 @@ function startDiscordBot(ctx) {
   function playerByPseudo(pseudo) {
     const q = String(pseudo || '').trim();
     if (!q) return null;
-    return ctx.db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(q);
+    return ctx.db.prepare(`SELECT * FROM players WHERE pseudo=? COLLATE NOCASE AND deleted=0`).get(q);
   }
 
   function playerByDiscord(discordId) {
@@ -159,24 +172,52 @@ function startDiscordBot(ctx) {
 
   function playerAccuracy(playerId) {
     const row = ctx.db.prepare(`
-      SELECT
-        AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS a1,
-        AVG(CASE WHEN player2_id=? AND p2_accuracy IS NOT NULL THEN p2_accuracy END) AS a2
-      FROM games
-      WHERE status='finished' AND (player1_id=? OR player2_id=?)
-    `).get(playerId, playerId, playerId, playerId);
-    const vals = [row?.a1, row?.a2].filter(v => v != null);
-    return vals.length ? `${Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)}%` : '--';
+      SELECT AVG(accuracy) AS accuracy
+      FROM (
+        SELECT accuracy FROM (
+          SELECT games.p1_accuracy AS accuracy
+          FROM games
+          WHERE games.status='finished' AND games.player1_id=? AND games.p1_accuracy IS NOT NULL
+          ORDER BY games.id DESC
+          LIMIT 200
+        )
+        UNION ALL
+        SELECT accuracy FROM (
+          SELECT games.p2_accuracy AS accuracy
+          FROM games
+          WHERE games.status='finished' AND games.player2_id=? AND games.p2_accuracy IS NOT NULL
+          ORDER BY games.id DESC
+          LIMIT 200
+        )
+      )
+    `).get(playerId, playerId);
+    return row?.accuracy != null ? `${Math.round(Number(row.accuracy))}%` : '--';
   }
 
   function latestGames(playerId) {
     return ctx.db.prepare(`
-      SELECT id, player1_id, player2_id, winner_id, move_count, duration, elo_p1, elo_p2,
-             p1.pseudo AS p1_pseudo, p2.pseudo AS p2_pseudo, finished_at
-      FROM games
+      WITH recent AS (
+        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player1_id=?
+        UNION
+        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player2_id=?
+        ORDER BY game_id DESC
+        LIMIT 25
+      )
+      SELECT games.id AS id,
+             games.player1_id AS player1_id,
+             games.player2_id AS player2_id,
+             games.winner_id AS winner_id,
+             games.move_count AS move_count,
+             games.duration AS duration,
+             games.elo_p1 AS elo_p1,
+             games.elo_p2 AS elo_p2,
+             p1.pseudo AS p1_pseudo,
+             p2.pseudo AS p2_pseudo,
+             games.finished_at AS finished_at
+      FROM recent
+      JOIN games ON games.id = recent.game_id
       JOIN players p1 ON p1.id = games.player1_id
       JOIN players p2 ON p2.id = games.player2_id
-      WHERE games.status='finished' AND (player1_id=? OR player2_id=?)
       ORDER BY games.id DESC
       LIMIT 25
     `).all(playerId, playerId);
@@ -544,7 +585,7 @@ function startDiscordBot(ctx) {
     }
     if (['tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete'].includes(action)) {
       const tournament = ctx.findTournamentByRef(resourceId);
-      if (!tournament) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Tournoi introuvable', subtitle: String(resourceId || '-') }));
+      if (!tournament) return replyError(interaction, 'Tournoi introuvable', String(resourceId || '-'));
       if (action === 'tournoi-finish') {
         ctx.finalizeTournament(tournament.id, Date.now());
         ctx.clearTournamentQueue(tournament.id);
@@ -563,7 +604,7 @@ function startDiscordBot(ctx) {
     }
 
     const target = playerByPseudo(pseudo);
-    if (!target) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Joueur introuvable', subtitle: pseudo || 'Aucun pseudo fourni.' }));
+    if (!target) return replyError(interaction, 'Joueur introuvable', pseudo || 'Aucun pseudo fourni.');
     if (action === 'player') return interaction.editReply(profilePayload(target));
     if (action === 'mute') {
       const minutes = Math.max(1, Math.min(1440, Math.ceil(Number(value || 60))));
@@ -598,7 +639,7 @@ function startDiscordBot(ctx) {
     }
     if (action === 'give-item') {
       const item = ctx.SHOP_ITEMS[itemKey];
-      if (!item) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Item invalide', subtitle: itemKey || '-' }));
+      if (!item) return replyError(interaction, 'Item invalide', itemKey || '-');
       const quantity = Math.max(1, Math.min(99, Math.trunc(Number(value || 1))));
       ctx.shopItemQ.addQty.run({ player_id: target.id, item_key: item.key, quantity });
       ctx.WH.wlogAdminAction('Item boutique Discord', target.pseudo, target.id, [['Item', item.label, true], ['Quantite', quantity, true]]);
@@ -642,23 +683,26 @@ function startDiscordBot(ctx) {
     try {
       if (interaction.isAutocomplete()) return autocomplete(interaction);
       if (interaction.isStringSelectMenu() && interaction.customId.startsWith('p4_profile_games:')) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const value = interaction.values?.[0] || '';
-        if (!value.startsWith('game:')) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Selection invalide' }));
+        if (!value.startsWith('game:')) return replyError(interaction, 'Selection invalide');
         const payload = replayPayload(Number(value.slice(5)));
-        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Partie introuvable' }));
+        if (!payload) return replyError(interaction, 'Partie introuvable');
+        return interaction.editReply(payload);
       }
       if (!interaction.isChatInputCommand()) return;
       const admin = interaction.commandName === 'admin';
-      await interaction.deferReply({ ephemeral: admin });
+      await interaction.deferReply(admin ? { flags: MessageFlags.Ephemeral } : {});
 
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));
-        return interaction.editReply(player ? profilePayload(player) : containerMessage({ color: 0xff3b30, title: 'Joueur introuvable' }));
+        if (!player) return replyError(interaction, 'Joueur introuvable');
+        return interaction.editReply(profilePayload(player));
       }
       if (interaction.commandName === 'moi') {
         const player = playerByDiscord(interaction.user.id);
-        return interaction.editReply(player ? profilePayload(player) : containerMessage({ color: 0xff3b30, title: 'Compte non lie', subtitle: `Lie ton compte depuis ${api}/profil` }));
+        if (!player) return replyError(interaction, 'Compte non lie', `Lie ton compte depuis ${api}/profil`);
+        return interaction.editReply(profilePayload(player));
       }
       if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
       if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
@@ -672,11 +716,12 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'bots') return interaction.editReply(botsPayload());
       if (interaction.commandName === 'replay') {
         const payload = replayPayload(interaction.options.getInteger('id', true));
-        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Partie introuvable' }));
+        if (!payload) return replyError(interaction, 'Partie introuvable');
+        return interaction.editReply(payload);
       }
       if (interaction.commandName === 'duel-lien') {
         const player = playerByDiscord(interaction.user.id);
-        if (!player) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Compte non lie', subtitle: 'Ton compte Discord doit etre lie pour creer un duel ranked.' }));
+        if (!player) return replyError(interaction, 'Compte non lie', 'Ton compte Discord doit etre lie pour creer un duel ranked.');
         const gameType = interaction.options.getString('type', true) === 'friendly' ? 'friendly' : 'ranked';
         const challenge = ctx.createDuelChallenge({ senderId: player.id, mode: 'link', ttlMs: 15 * 60 * 1000, gameType });
         const url = `${api}/duel/${challenge.id}`;
@@ -691,15 +736,14 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'tournois') return interaction.editReply(tournamentsPayload());
       if (interaction.commandName === 'tournoi') {
         const payload = tournamentPayload(interaction.options.getString('id', true));
-        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Tournoi introuvable' }));
+        if (!payload) return replyError(interaction, 'Tournoi introuvable');
+        return interaction.editReply(payload);
       }
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
       if (interaction.commandName === 'admin') return handleAdmin(interaction);
     } catch (error) {
       console.error('[BOT ERROR]', error);
-      const payload = containerMessage({ color: 0xff3b30, title: 'Erreur bot Discord', subtitle: truncate(error.message || 'Erreur inconnue', 300) });
-      if (interaction.deferred || interaction.replied) return interaction.editReply(payload).catch(() => {});
-      return interaction.reply({ ...payload, ephemeral: true }).catch(() => {});
+      return replyError(interaction, 'Erreur bot Discord', truncate(error.message || 'Erreur inconnue', 300));
     }
   });
 

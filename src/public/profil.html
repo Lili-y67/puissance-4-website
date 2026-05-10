@@ -236,15 +236,18 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* Cercle statut autour de l'avatar */
 .avatar-ring{position:absolute;inset:-4px;z-index:2;border-radius:50%;border:3px solid transparent;pointer-events:none;transition:border-color 0.4s,box-shadow 0.4s;}
 .avatar-ring.online{border-color:#30d158;box-shadow:0 0 10px rgba(48,209,88,0.5);}
+.avatar-ring.bot-online{border-color:#85EBFF;box-shadow:0 0 12px rgba(133,235,255,0.5);}
 .avatar-ring.offline{border-color:#636366;box-shadow:none;}
 /* Badges statut */
 .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-top:5px;}
 .status-badge.online{background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.3);color:#30d158;}
+.status-badge.bot-online{background:rgba(133,235,255,0.12);border:1px solid rgba(133,235,255,0.32);color:#85EBFF;}
 .status-badge.live{background:rgba(255,45,85,0.12);border:1px solid rgba(255,45,85,0.3);color:#ff4d6d;cursor:pointer;transition:transform .15s,background .15s,border-color .15s;}
 .status-badge.live:hover{transform:translateY(-1px);background:rgba(255,45,85,0.18);border-color:rgba(255,45,85,0.42);}
 .status-badge.offline{background:rgba(99,99,102,0.15);border:1px solid rgba(99,99,102,0.3);color:#8e8e93;}
 .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
 .status-dot.online{background:#30d158;animation:pulse-online 1.5s ease-in-out infinite;}
+.status-dot.bot-online{background:#85EBFF;animation:pulse-online 1.5s ease-in-out infinite;}
 .status-dot.live{background:#ff4d6d;animation:pulse-online 1.15s ease-in-out infinite;}
 .status-dot.offline{background:#636366;}
 .status-lastseen{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
@@ -3703,17 +3706,26 @@ async function loadStatus(playerId) {
     if (!ring || !wrap) return;
 
     if (data.online) {
-      ring.className = 'avatar-ring online';
-      wrap.innerHTML = `<div class="status-badge online">
-        <div class="status-dot online"></div>
-        En ligne
-      </div>`;
+      if (data.is_bot) {
+        const botStatus = data.botStatus === 'playing' ? 'en partie' : data.botStatus === 'queue' ? 'en file' : 'pret';
+        ring.className = 'avatar-ring bot-online';
+        wrap.innerHTML = `<div class="status-badge bot-online">
+          <div class="status-dot bot-online"></div>
+          Bot en ligne · ${botStatus}
+        </div>`;
+      } else {
+        ring.className = 'avatar-ring online';
+        wrap.innerHTML = `<div class="status-badge online">
+          <div class="status-dot online"></div>
+          En ligne
+        </div>`;
+      }
     } else {
       ring.className = 'avatar-ring offline';
-      const lastSeenStr = formatLastSeen(data.last_seen);
+      const lastSeenStr = formatLastSeen(data.is_bot ? data.bot_last_seen : data.last_seen);
       wrap.innerHTML = `<div class="status-badge offline">
         <div class="status-dot offline"></div>
-        Hors ligne
+        ${data.is_bot ? 'Bot hors ligne' : 'Hors ligne'}
       </div>
       <div class="status-lastseen">${lastSeenStr}</div>`;
     }

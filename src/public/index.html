@@ -541,6 +541,32 @@ html, body {
   box-shadow:0 0 0 4px rgba(179,107,255,0.12);
   animation:badge-pulse-violet 2.05s ease-in-out infinite;
 }
+.site-bots-online-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(133,235,255,0.12);
+  border:1px solid rgba(133,235,255,0.3);
+  color:#85EBFF;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 3s ease-in-out infinite;
+}
+.site-bots-online-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#85EBFF;
+  box-shadow:0 0 0 4px rgba(133,235,255,0.12);
+  animation:badge-pulse-blue 1.85s ease-in-out infinite;
+}
 .site-visitor-badge{
   display:inline-flex;
   align-items:center;
@@ -2061,6 +2087,10 @@ html, body {
       <span class="site-online-dot"></span>
       <span id="site-online-count">0</span> joueurs en ligne
       </div>
+      <div class="site-bots-online-badge" id="site-bots-online-badge">
+      <span class="site-bots-online-dot"></span>
+      <span id="site-bots-online-count">0</span> bots en ligne
+      </div>
       <div class="site-games-badge" id="site-games-badge">
       <span class="site-games-dot"></span>
       <span id="site-games-count">0</span> parties en cours
@@ -3122,9 +3152,13 @@ async function refreshSiteStats() {
 
 function applySitePresenceCounts(data = {}) {
   const onlineCount = document.getElementById('site-online-count');
+  const onlineBotsCount = document.getElementById('site-bots-online-count');
   const visitorCount = document.getElementById('site-visitor-count');
   if (onlineCount) {
     onlineCount.textContent = String(Math.max(0, Number(data.onlinePlayers ?? data.online) || 0));
+  }
+  if (onlineBotsCount) {
+    onlineBotsCount.textContent = String(Math.max(0, Number(data.onlineBots) || 0));
   }
   if (visitorCount) {
     visitorCount.textContent = String(Math.max(0, Number(data.visitors) || 0));

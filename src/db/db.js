@@ -86,6 +86,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_games_p1       ON games(player1_id);
   CREATE INDEX IF NOT EXISTS idx_games_p2       ON games(player2_id);
   CREATE INDEX IF NOT EXISTS idx_players_pseudo ON players(pseudo);
+  CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id);
+  CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
+  CREATE INDEX IF NOT EXISTS idx_games_finished_p1_id ON games(status, player1_id, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_games_finished_p2_id ON games(status, player2_id, id DESC);
 `);
 
 // Migration : ajouter colonnes si absentes (pour DBs existantes)

@@ -98,11 +98,13 @@ function getVisitorCount() {
 
 function getPresenceCounts() {
   const onlinePlayers = Number(onlineSockets.size || 0);
+  const onlineBots = getOnlineBotCount();
   const visitors = Number(getVisitorCount() || 0);
   return {
     onlinePlayers,
+    onlineBots,
     visitors,
-    totalPresent: onlinePlayers + visitors,
+    totalPresent: onlinePlayers + onlineBots + visitors,
   };
 }
 
@@ -116,7 +118,7 @@ function getBoostDisplayName(rawName) {
 
 function broadcastPresenceCounts(force = false) {
   const counts = getPresenceCounts();
-  const signature = `${counts.onlinePlayers}:${counts.visitors}:${counts.totalPresent}`;
+  const signature = `${counts.onlinePlayers}:${counts.onlineBots}:${counts.visitors}:${counts.totalPresent}`;
   if (!force && signature === lastPresenceSignature) return counts;
   lastPresenceSignature = signature;
   io.emit('presence_counts', counts);
@@ -559,6 +561,11 @@ function publicBotRuntime(playerId) {
     status: live?.status || 'offline',
     lastSeen: Number(live?.lastSeen || 0),
   };
+}
+
+function getOnlineBotCount() {
+  const rows = db.prepare(`SELECT id FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1 AND bot_enabled = 1`).all();
+  return rows.reduce((count, row) => count + (publicBotRuntime(row.id).online ? 1 : 0), 0);
 }
 
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -3314,6 +3321,7 @@ app.post('/api/bot/ping', (req, res) => {
   const status = String(req.body?.status || req.query?.status || 'idle').slice(0, 40);
   botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
   db.prepare(`UPDATE players SET bot_last_seen = ? WHERE id = ?`).run(Date.now(), bot.id);
+  broadcastPresenceCounts();
   res.json({ ok: true, bot: sanitize(pQ.getById.get(bot.id)), runtime: publicBotRuntime(bot.id) });
 });
 
@@ -3321,6 +3329,7 @@ app.post('/api/bot/queue/join', (req, res) => {
   const bot = getBotFromRequest(req);
   if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
   botRuntime.set(Number(bot.id), { status: 'queue', lastSeen: Date.now() });
+  broadcastPresenceCounts();
   const active = findActiveBotGame(bot.id);
   if (active) return res.json({ ok: true, status: 'playing', game: serializeBotGameState(active, bot.id) });
   const ownId = Number(bot.id);
@@ -3349,6 +3358,7 @@ app.post('/api/bot/queue/leave', (req, res) => {
   const idx = botApiQueue.indexOf(Number(bot.id));
   if (idx >= 0) botApiQueue.splice(idx, 1);
   botRuntime.set(Number(bot.id), { status: 'idle', lastSeen: Date.now() });
+  broadcastPresenceCounts();
   res.json({ ok: true });
 });
 
@@ -3996,10 +4006,15 @@ app.get('/api/players/:id/status', (req, res) => {
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Introuvable' });
 
-  const isOnline = onlineSockets.has(id) && onlineSockets.get(id).size > 0;
+  const isBot = Number(player.is_bot || 0) === 1;
+  const runtime = isBot ? publicBotRuntime(id) : null;
+  const isOnline = isBot ? !!runtime.online : onlineSockets.has(id) && onlineSockets.get(id).size > 0;
   res.json({
     online:    isOnline,
+    is_bot:    isBot,
+    botStatus: runtime?.status || null,
     last_seen: player.last_seen || null,
+    bot_last_seen: runtime?.lastSeen || Number(player.bot_last_seen || 0) || null,
   });
 });
 
@@ -4616,6 +4631,7 @@ app.get('/api/site-stats', (_, res) => {
   res.json({
     online: presence.onlinePlayers,
     onlinePlayers: presence.onlinePlayers,
+    onlineBots: presence.onlineBots,
     visitors: presence.visitors,
     totalPresent: presence.totalPresent,
     registeredPlayers,
@@ -4702,6 +4718,7 @@ function getStatsOverview() {
 
   return {
     onlinePlayers: presence.onlinePlayers,
+    onlineBots: presence.onlineBots,
     visitors: presence.visitors,
     totalPresent: presence.totalPresent,
     queuePlayers: Number(mm?.q?.length || mm?.queue?.length || 0),
