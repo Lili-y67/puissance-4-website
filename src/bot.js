@@ -1,1 +1,1 @@
-console.log('Le bot Discord autonome a ete retire. Le statut Discord est gere uniquement par src/server.js.');
+console.log('Le bot Discord est gere par src/discord-bot.js et lance depuis src/server.js.');

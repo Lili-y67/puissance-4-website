@@ -1,0 +1,713 @@
+const {
+  Client,
+  GatewayIntentBits,
+  ActivityType,
+  REST,
+  Routes,
+  ButtonBuilder,
+  ButtonStyle,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  MessageFlags,
+} = require('discord.js');
+
+const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
+const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
+
+function buildDiscordCommandDefinitions(shopItems = {}) {
+  const itemChoices = Object.values(shopItems || {})
+    .map(item => ({ name: String(item.label || item.key).slice(0, 100), value: item.key }))
+    .slice(0, 25);
+
+  return [
+    { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
+    { name: 'moi', description: 'Afficher ton profil lie Discord' },
+    { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
+    { name: 'stats', description: 'Afficher les statistiques du site' },
+    { name: 'systeme', description: 'Afficher l etat public du serveur' },
+    { name: 'live', description: 'Afficher les parties en direct' },
+    { name: 'boutique', description: 'Afficher la boutique Puissance 4' },
+    { name: 'api', description: 'Afficher la documentation API officielle du site' },
+    { name: 'boosts', description: 'Afficher les boosts ELO et Coins actifs' },
+    { name: 'cosmetiques', description: 'Lister les collections de cosmetiques', options: [{ type: 3, name: 'type', description: 'Collection', required: true, choices: [{ name: 'Decorations', value: 'decorations' }, { name: 'Bannieres', value: 'banners' }, { name: 'Musiques', value: 'musics' }] }] },
+    { name: 'replay', description: 'Afficher le resume d une partie', options: [{ type: 4, name: 'id', description: 'ID de partie', required: true }] },
+    { name: 'duel-lien', description: 'Generer un lien de duel 15 minutes', options: [{ type: 3, name: 'type', description: 'Type de duel', required: true, choices: [{ name: 'Ranked', value: 'ranked' }, { name: 'Amical', value: 'friendly' }] }] },
+    { name: 'tournois', description: 'Lister les tournois officiels' },
+    { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne', required: true }] },
+    { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
+    { name: 'bots', description: 'Afficher les bots API et preconfigures' },
+    { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
+    {
+      name: 'admin',
+      description: 'Commandes staff Puissance 4',
+      options: [
+        {
+          type: 3,
+          name: 'action',
+          description: 'Action a executer',
+          required: true,
+          choices: [
+            { name: 'Stats serveur', value: 'stats' },
+            { name: 'Profil joueur', value: 'player' },
+            { name: 'Mute joueur', value: 'mute' },
+            { name: 'Unmute joueur', value: 'unmute' },
+            { name: 'Ban joueur', value: 'ban' },
+            { name: 'Unban joueur', value: 'unban' },
+            { name: 'Donner coins', value: 'coins' },
+            { name: 'Modifier ELO', value: 'elo' },
+            { name: 'Boost ELO global', value: 'boost-elo' },
+            { name: 'Boost Coins global', value: 'boost-coins' },
+            { name: 'Donner item', value: 'give-item' },
+            { name: 'Tournoi terminer', value: 'tournoi-finish' },
+            { name: 'Tournoi pause', value: 'tournoi-pause' },
+            { name: 'Tournoi reprendre', value: 'tournoi-resume' },
+            { name: 'Tournoi supprimer', value: 'tournoi-delete' },
+            { name: 'Backups disponibles', value: 'backups' },
+            { name: 'Maintenance ON', value: 'maintenance-on' },
+            { name: 'Maintenance OFF', value: 'maintenance-off' },
+            { name: 'Reload commandes', value: 'reload' },
+          ],
+        },
+        { type: 3, name: 'password', description: 'Mot de passe admin', required: true },
+        { type: 3, name: 'pseudo', description: 'Joueur cible si besoin', required: false, autocomplete: true },
+        { type: 3, name: 'id', description: 'ID tournoi, partie ou ressource', required: false },
+        { type: 3, name: 'item', description: 'Item boutique', required: false, choices: itemChoices },
+        { type: 10, name: 'valeur', description: 'Nombre, minutes, ELO, coins ou multiplicateur', required: false },
+        { type: 3, name: 'raison', description: 'Raison ou duree minutes', required: false },
+      ],
+    },
+  ];
+}
+
+function startDiscordBot(ctx) {
+  const { botToken } = ctx.discordConfig();
+  if (!botToken) {
+    console.log('[BOT] Token manquant - bot Discord desactive');
+    return null;
+  }
+
+  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+  const api = String(process.env.BASE_URL || DEFAULT_API).replace(/\/+$/, '');
+  const fmt = value => Number(value || 0).toLocaleString('fr-FR');
+  const truncate = (value, max = 100) => String(value == null ? '' : value).slice(0, max);
+  const code = value => `\`${String(value == null ? '-' : value).replace(/`/g, '')}\``;
+  const playerUrl = player => `${api}/profil?id=${player.id}`;
+  const rankOf = elo => ctx.getRank(Number(elo || 0)) || { label: 'Non classe', color: '#8b9cf4' };
+
+  function rowButtons(buttons) {
+    const row = new ActionRowBuilder();
+    row.addComponents(buttons.slice(0, 5));
+    return row;
+  }
+
+  function linkButton(label, url, emoji) {
+    const btn = new ButtonBuilder().setLabel(label).setStyle(ButtonStyle.Link).setURL(url);
+    if (emoji) btn.setEmoji(emoji);
+    return btn;
+  }
+
+  function containerMessage({ color = 0xff2d55, title, subtitle = '', sections = [], buttons = [], rows = [] }) {
+    const container = new ContainerBuilder().setAccentColor(color);
+    const header = [`## ${title}`, subtitle].filter(Boolean).join('\n');
+    container.addTextDisplayComponents(new TextDisplayBuilder().setContent(header));
+    if (sections.length) container.addSeparatorComponents(new SeparatorBuilder());
+    for (const section of sections) {
+      const content = Array.isArray(section) ? section.filter(Boolean).join('\n') : String(section || '');
+      if (content) container.addTextDisplayComponents(new TextDisplayBuilder().setContent(content.slice(0, 4000)));
+    }
+    if (buttons.length || rows.length) container.addSeparatorComponents(new SeparatorBuilder());
+    if (buttons.length) container.addActionRowComponents(rowButtons(buttons));
+    for (const row of rows) container.addActionRowComponents(row);
+    return { flags: MessageFlags.IsComponentsV2, components: [container] };
+  }
+
+  function roleBadges(player) {
+    const badges = [];
+    if (Number(player?.is_perso) === 1) badges.push('PERSO');
+    if (Number(player?.is_vip_plus) === 1) badges.push('VIP+');
+    else if (Number(player?.is_vip) === 1) badges.push('VIP');
+    if (player?.role === 'admin') badges.push('ADMIN');
+    else if (player?.role === 'moderator') badges.push('MODO');
+    if (Number(player?.is_bot) === 1) badges.push('BOT');
+    return badges.join(' / ') || 'JOUEUR';
+  }
+
+  function totalGames(player) {
+    return Number(player?.wins || 0) + Number(player?.losses || 0) + Number(player?.draws || 0);
+  }
+
+  function winRate(player) {
+    const total = totalGames(player);
+    return total ? `${Math.round((Number(player?.wins || 0) / total) * 100)}%` : '--';
+  }
+
+  function playerByPseudo(pseudo) {
+    const q = String(pseudo || '').trim();
+    if (!q) return null;
+    return ctx.db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(q);
+  }
+
+  function playerByDiscord(discordId) {
+    const id = String(discordId || '').trim();
+    if (!id) return null;
+    return ctx.db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
+  }
+
+  function playerAccuracy(playerId) {
+    const row = ctx.db.prepare(`
+      SELECT
+        AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS a1,
+        AVG(CASE WHEN player2_id=? AND p2_accuracy IS NOT NULL THEN p2_accuracy END) AS a2
+      FROM games
+      WHERE status='finished' AND (player1_id=? OR player2_id=?)
+    `).get(playerId, playerId, playerId, playerId);
+    const vals = [row?.a1, row?.a2].filter(v => v != null);
+    return vals.length ? `${Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)}%` : '--';
+  }
+
+  function latestGames(playerId) {
+    return ctx.db.prepare(`
+      SELECT id, player1_id, player2_id, winner_id, move_count, duration, elo_p1, elo_p2,
+             p1.pseudo AS p1_pseudo, p2.pseudo AS p2_pseudo, finished_at
+      FROM games
+      JOIN players p1 ON p1.id = games.player1_id
+      JOIN players p2 ON p2.id = games.player2_id
+      WHERE games.status='finished' AND (player1_id=? OR player2_id=?)
+      ORDER BY games.id DESC
+      LIMIT 25
+    `).all(playerId, playerId);
+  }
+
+  function profileRows(player, games) {
+    if (!games.length) {
+      const empty = new StringSelectMenuBuilder()
+        .setCustomId(`p4_profile_games:${player.id}`)
+        .setPlaceholder('Aucune partie recente')
+        .setDisabled(true)
+        .addOptions(new StringSelectMenuOptionBuilder().setLabel('Aucune partie').setDescription('Ce joueur n a pas encore de partie.').setValue('none'));
+      return [new ActionRowBuilder().addComponents(empty)];
+    }
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId(`p4_profile_games:${player.id}`)
+      .setPlaceholder('Voir une partie recente')
+      .addOptions(games.slice(0, 25).map(game => {
+        const isP1 = Number(game.player1_id) === Number(player.id);
+        const opponent = isP1 ? game.p2_pseudo : game.p1_pseudo;
+        const delta = isP1 ? Number(game.elo_p1 || 0) : Number(game.elo_p2 || 0);
+        const result = game.winner_id == null ? 'NUL' : Number(game.winner_id) === Number(player.id) ? 'WIN' : 'LOSE';
+        return new StringSelectMenuOptionBuilder()
+          .setLabel(`${result} vs ${opponent} / ${delta >= 0 ? '+' : ''}${delta} ELO`.slice(0, 100))
+          .setDescription(`#${game.id} / ${game.move_count || 0} coups / ${game.duration || 0}s`.slice(0, 100))
+          .setValue(`game:${game.id}`);
+      }));
+    return [new ActionRowBuilder().addComponents(menu)];
+  }
+
+  function profilePayload(player) {
+    const rank = rankOf(player.elo);
+    const games = latestGames(player.id);
+    const follows = ctx.db.prepare(
+      'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
+    ).get(player.id, player.id);
+    const last = games[0];
+    const lastLine = last
+      ? `Derniere partie: ${code(`#${last.id}`)} / ${last.move_count || 0} coups / ${last.duration || 0}s`
+      : 'Derniere partie: aucune partie recente';
+    return containerMessage({
+      color: parseInt(String(player.color || '#ff2d55').replace('#', ''), 16) || 0xff2d55,
+      title: `${player.pseudo} - ${fmt(player.elo)} ELO`,
+      subtitle: `Rang: **${rank.label}** | Badges: **${roleBadges(player)}** | Coins: **${fmt(player.coins || 0)}**`,
+      sections: [
+        `### Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
+        `### Social et profil\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${lastLine}`,
+      ],
+      buttons: [
+        linkButton('Voir profil', playerUrl(player), '👤'),
+        linkButton('Boutique', `${api}/boutique`, '🛒'),
+        linkButton('Live', `${api}/live`, '🔴'),
+      ],
+      rows: profileRows(player, games),
+    });
+  }
+
+  function statsPayload() {
+    const registeredHumans = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 AND id != ?`).get(ctx.BOT_PLAYER_ID)?.c || 0);
+    const registeredBots = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=1`).get()?.c || 0);
+    const games = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='finished'`).get()?.c || 0);
+    const activeGames = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
+    const coins = Number(ctx.db.prepare(`SELECT COALESCE(SUM(coins),0) AS c FROM players WHERE deleted=0`).get()?.c || 0);
+    const presence = ctx.getPresenceCounts();
+    return containerMessage({
+      color: 0x85ebff,
+      title: 'Centre statistiques Puissance 4',
+      subtitle: `${presence.totalPresent || 0} presents maintenant | ${activeGames} parties live`,
+      sections: [
+        `### Population\nJoueurs inscrits: **${fmt(registeredHumans)}**\nBots inscrits: **${fmt(registeredBots)}**\nVisiteurs: **${fmt(presence.visitors || 0)}**`,
+        `### Activite\nParties terminees: **${fmt(games)}**\nParties en cours: **${fmt(activeGames)}**\nCoins en circulation: **${fmt(coins)}**`,
+      ],
+      buttons: [linkButton('Ouvrir stats', `${api}/stats`, '📈'), linkButton('Classement', `${api}/leaderboard`, '🏆')],
+    });
+  }
+
+  function systemPayload() {
+    const presence = ctx.getPresenceCounts();
+    const activeGames = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
+    const queueCount = Number(ctx.mm?.queue?.length || ctx.mm?.q?.length || 0);
+    const status = typeof ctx.readSystemStatus === 'function' ? ctx.readSystemStatus() : null;
+    return containerMessage({
+      color: status?.restarting ? 0xff9f0a : 0x30d158,
+      title: status?.restarting ? 'Maintenance signalee' : 'Systeme operationnel',
+      subtitle: status?.message || 'Aucune alerte serveur active.',
+      sections: [
+        `### Temps reel\nPresents: **${presence.totalPresent || 0}** | Visiteurs: **${presence.visitors || 0}**\nFile: **${queueCount}** | Parties actives: **${activeGames}**`,
+        '### Securite\nLes webhooks Discord ne publient aucune IP ni donnee reseau privee.',
+      ],
+      buttons: [linkButton('Stats', `${api}/stats`, '📈'), linkButton('Live', `${api}/live`, '🔴')],
+    });
+  }
+
+  function boostsPayload() {
+    const eloBoost = ctx.bQ.getActive.get();
+    const coinMultiplier = Number(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
+    const coinExpiresAt = Number(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
+    const coinBy = ctx.getBoostDisplayName(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_applied_by'`).get()?.value || '');
+    const coinActive = coinMultiplier > 1 && coinExpiresAt > Date.now();
+    const vipBoosts = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM vip_boosts WHERE expires_at > ?`).get(Date.now())?.c || 0);
+    return containerMessage({
+      color: 0xffd60a,
+      title: 'Boosts actifs',
+      subtitle: 'ELO, Coins et boosts VIP',
+      sections: [
+        `### Boost ELO global\n${eloBoost ? `x${eloBoost.multiplier} par **${ctx.getBoostDisplayName(eloBoost.applied_by)}**` : 'Aucun boost actif'}`,
+        `### Boost Coins global\n${coinActive ? `x${coinMultiplier} par **${coinBy}** / expire dans ${Math.ceil((coinExpiresAt - Date.now()) / 60000)} min` : 'Aucun boost actif'}`,
+        `### VIP\nBoosts VIP actifs: **${vipBoosts}**`,
+      ],
+      buttons: [linkButton('Boutique boosts', `${api}/boutique`, '⚡')],
+    });
+  }
+
+  function livePayload() {
+    const active = [...(ctx.gm.games || new Map()).values()].filter(game => game.status === 'active');
+    const lines = active.slice(0, 10).map(game => {
+      const p1 = game.players?.[1];
+      const p2 = game.players?.[2];
+      if (!p1 || !p2) return null;
+      const current = game.current === 1 ? p1.pseudo : p2.pseudo;
+      return `${code(`#${game.id || '?'}`)} **${p1.pseudo}** vs **${p2.pseudo}** | tour: **${current}** | coups: **${game.moveCount || game.moves?.length || 0}**`;
+    }).filter(Boolean);
+    return containerMessage({
+      color: 0xff2d55,
+      title: `${active.length} partie${active.length > 1 ? 's' : ''} en direct`,
+      subtitle: active.length ? 'Spectateur live disponible.' : 'Aucune partie active pour le moment.',
+      sections: [lines.join('\n') || 'Le live est calme. La prochaine partie apparaitra ici.'],
+      buttons: [linkButton('Voir le live', `${api}/live`, '🔴')],
+    });
+  }
+
+  function leaderboardPayload(type = 'humans') {
+    const bots = type === 'bots';
+    const rows = ctx.db.prepare(`
+      SELECT * FROM players
+      WHERE deleted=0 AND is_guest=0 AND is_bot=?
+      ORDER BY elo DESC, wins DESC
+      LIMIT 10
+    `).all(bots ? 1 : 0);
+    const medals = ['🥇', '🥈', '🥉'];
+    const lines = rows.map((p, i) => {
+      const rank = rankOf(p.elo);
+      return `${medals[i] || `#${i + 1}`} **${p.pseudo}** - ${fmt(p.elo)} ELO - ${rank.label} - ${p.wins || 0}V/${p.losses || 0}D`;
+    });
+    return containerMessage({
+      color: bots ? 0x85ebff : 0xffd60a,
+      title: bots ? 'Classement des bots' : 'Classement des membres',
+      subtitle: 'Top 10 officiel',
+      sections: [lines.join('\n') || 'Aucun joueur classe.'],
+      buttons: [linkButton('Page classement', `${api}/leaderboard`, '🏆')],
+    });
+  }
+
+  function replayPayload(id) {
+    const game = ctx.gQ.getById.get(Number(id));
+    if (!game) return null;
+    const winner = game.winner_id == null ? 'Partie nulle' : `Victoire ${game.winner_id === game.player1_id ? game.p1_pseudo : game.p2_pseudo}`;
+    return containerMessage({
+      color: game.winner_id == null ? 0xffd60a : 0x30d158,
+      title: `Replay #${game.id}`,
+      subtitle: winner,
+      sections: [
+        `### Match\n**${game.p1_pseudo}** (${game.p1_elo || 0}) vs **${game.p2_pseudo}** (${game.p2_elo || 0})`,
+        `### Details\nCoups: **${game.move_count || 0}** | Duree: **${game.duration || 0}s**\nELO: **${game.elo_p1 >= 0 ? '+' : ''}${game.elo_p1 || 0}** / **${game.elo_p2 >= 0 ? '+' : ''}${game.elo_p2 || 0}**`,
+      ],
+      buttons: [linkButton('Voir replay', `${api}/replay/${game.id}`, '🎬')],
+    });
+  }
+
+  function shopPayload() {
+    return containerMessage({
+      color: 0xff9f0a,
+      title: 'Boutique Puissance 4',
+      subtitle: 'Rangs, boosters, cosmetiques et reset ELO avec les coins.',
+      sections: [
+        '### Rangs\nVIP 1 mois, VIP 1 an, VIP+, Perso.',
+        '### Boosters\nBoost ELO personnalise, boost coins, packs limites et reset ELO.',
+        '### Cosmetiques\nAvatar GIF, bannieres, decorations, musiques de queue et emojis selon le role.',
+      ],
+      buttons: [linkButton('Ouvrir boutique', `${api}/boutique`, '🛒')],
+    });
+  }
+
+  function apiPayload() {
+    return containerMessage({
+      color: 0x85ebff,
+      title: 'API officielle',
+      subtitle: 'HTTP, Bot API, duels, boutique, stats et Socket.IO.',
+      sections: [
+        '### Bot API\nCreation de bots, token affiche une seule fois, ping, file, game state et coups.',
+        '### Site API\nProfils, classements, boutique, tournois, live, stats et endpoints admin.',
+      ],
+      buttons: [linkButton('Documentation API', `${api}/api-doc`, '🧪'), linkButton('Client bot JS', `${api}/downloads/p4-bot-client.js`, '🤖')],
+    });
+  }
+
+  function tournamentsPayload() {
+    const rows = ctx.tQ.listAll.all().slice(0, 8);
+    const lines = rows.map(t => {
+      const status = String(t.status || '').toUpperCase();
+      const starts = Number(t.starts_at || 0) > Date.now() ? `debut <t:${Math.floor(Number(t.starts_at) / 1000)}:R>` : status;
+      return `${code(t.public_id || t.id)} **${t.name}** | ${starts} | ${t.duration_minutes || 60}m | ${t.move_time_seconds || 30}s/coup`;
+    });
+    return containerMessage({
+      color: 0x30d158,
+      title: 'Tournois officiels',
+      subtitle: 'Publics automatiques et tournois Perso.',
+      sections: [lines.join('\n') || 'Aucun tournoi programme.'],
+      buttons: [linkButton('Page tournois', `${api}/tournoi`, '🏟️')],
+    });
+  }
+
+  function tournamentPayload(ref) {
+    const tournament = ctx.findTournamentByRef(String(ref || ''));
+    if (!tournament) return null;
+    const standings = ctx.tQ.standings.all(tournament.id).slice(0, 5);
+    const lines = standings.map((entry, index) => `${index + 1}. **${entry.pseudo}** - ${entry.score || 0} pts (${entry.wins || 0}V)`);
+    return containerMessage({
+      color: 0x30d158,
+      title: tournament.name,
+      subtitle: `${code(tournament.public_id || tournament.id)} | ${String(tournament.status || '').toUpperCase()}`,
+      sections: [
+        `### Configuration\nDuree: **${tournament.duration_minutes || 60}m** | Par coup: **${tournament.move_time_seconds || 30}s**\nRewards: **${tournament.reward_1 || 0} / ${tournament.reward_2 || 0} / ${tournament.reward_3 || 0} coins**`,
+        `### Classement\n${lines.join('\n') || 'Aucun participant classe.'}`,
+      ],
+      buttons: [linkButton('Ouvrir tournoi', `${api}/tournoi/${tournament.public_id || tournament.id}`, '🏟️')],
+    });
+  }
+
+  function cosmeticsPayload(type) {
+    const meta = {
+      decorations: ['Decorations avatar', 'Collection dans /decorations, reservee VIP+ ou Perso selon droits.'],
+      banners: ['Bannieres pseudo', 'Collection dans /banner, visible dans les recherches et previews.'],
+      musics: ['Musiques de queue', 'Collection dans /sounds, selectionnable par les Perso.'],
+    }[type] || ['Cosmetiques', 'Collection inconnue.'];
+    return containerMessage({
+      color: 0xbf5af2,
+      title: meta[0],
+      subtitle: meta[1],
+      sections: ['Les fichiers sont detectes automatiquement par le site quand ils sont ajoutes dans le bon dossier.'],
+      buttons: [linkButton('Modifier profil', `${api}/profil`, '🎨')],
+    });
+  }
+
+  function botsPayload() {
+    const rows = ctx.db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=1 ORDER BY elo DESC LIMIT 10`).all();
+    const lines = rows.map((botPlayer, i) => {
+      const runtime = Number(botPlayer.bot_last_seen || 0) > Date.now() - 45000 ? 'online' : 'offline';
+      return `${i + 1}. **${botPlayer.pseudo}** - ${fmt(botPlayer.elo)} ELO - ${runtime}`;
+    });
+    return containerMessage({
+      color: 0x85ebff,
+      title: 'Bots Puissance 4',
+      subtitle: 'Bots API et robots preconfigures.',
+      sections: [lines.join('\n') || 'Aucun bot inscrit.'],
+      buttons: [linkButton('Annuaire bots', `${api}/players?type=bots`, '🤖'), linkButton('API bots', `${api}/api-doc#bot-api`, '🧪')],
+    });
+  }
+
+  function helpPayload() {
+    return containerMessage({
+      color: 0x8b9cf4,
+      title: 'Centre de commandes',
+      subtitle: 'Puissance 4 Ranked sur Discord',
+      sections: [
+        '### Joueurs\n`/profil`, `/moi`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
+        '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
+        '### Staff\n`/admin` avec mot de passe + verification du role Discord.',
+      ],
+      buttons: [linkButton('Ouvrir le site', api, '🎮'), linkButton('Doc API', `${api}/api-doc`, '🧪')],
+    });
+  }
+
+  async function registerCommands() {
+    const rest = new REST({ version: '10' }).setToken(botToken);
+    const route = ctx.DISCORD_GUILD
+      ? Routes.applicationGuildCommands(bot.user.id, ctx.DISCORD_GUILD)
+      : Routes.applicationCommands(bot.user.id);
+    await rest.put(route, { body: buildDiscordCommandDefinitions(ctx.SHOP_ITEMS) });
+  }
+
+  async function autocomplete(interaction) {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name !== 'pseudo') return interaction.respond([]);
+    const query = String(focused.value || '').replace(/[%_]/g, '').trim();
+    const rows = ctx.db.prepare(`
+      SELECT pseudo, elo, is_bot
+      FROM players
+      WHERE deleted=0 AND is_guest=0 AND LOWER(pseudo) LIKE LOWER(?)
+      ORDER BY is_bot ASC, elo DESC
+      LIMIT 25
+    `).all(`%${query}%`);
+    return interaction.respond(rows.map(p => ({ name: `${p.is_bot ? '[BOT] ' : ''}${p.pseudo} - ${fmt(p.elo)} ELO`.slice(0, 100), value: p.pseudo })));
+  }
+
+  async function requireStaff(interaction, password, minimum = 'moderator') {
+    if (String(password || '') !== String(ctx.ADMIN_PASSWORD || '')) {
+      await interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Acces refuse',
+        subtitle: 'Mot de passe admin invalide.',
+      }));
+      return null;
+    }
+    const role = await ctx.getDiscordRole(interaction.user.id, botToken).catch(() => 'user');
+    if ((STAFF_ORDER[role] || 0) < (STAFF_ORDER[minimum] || 1)) {
+      await interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Acces refuse',
+        subtitle: 'Role Discord insuffisant pour cette commande.',
+      }));
+      return null;
+    }
+    return role;
+  }
+
+  async function handleAdmin(interaction) {
+    const action = interaction.options.getString('action', true);
+    const password = interaction.options.getString('password', true);
+    const pseudo = interaction.options.getString('pseudo');
+    const value = interaction.options.getNumber('valeur');
+    const reason = interaction.options.getString('raison') || '';
+    const resourceId = interaction.options.getString('id');
+    const itemKey = interaction.options.getString('item');
+    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
+    const role = await requireStaff(interaction, password, adminOnly.includes(action) ? 'admin' : 'moderator');
+    if (!role) return;
+
+    if (action === 'reload') {
+      await registerCommands();
+      return interaction.editReply(containerMessage({ color: 0x30d158, title: 'Commandes rechargees', subtitle: `Role confirme: ${role}` }));
+    }
+    if (action === 'stats') return interaction.editReply(statsPayload());
+    if (action === 'backups') {
+      return interaction.editReply(containerMessage({
+        color: 0xff9f0a,
+        title: 'Backups disponibles',
+        subtitle: 'Telechargement depuis le panel admin uniquement.',
+        sections: ['`main` - p4.db\n`wal` - p4.db-wal\n`shm` - p4.db-shm'],
+        buttons: [linkButton('Panel admin', `${api}/admin`, '🛡️')],
+      }));
+    }
+    if (action === 'maintenance-on' || action === 'maintenance-off') {
+      const status = ctx.writeSystemStatus({ restarting: action === 'maintenance-on', message: action === 'maintenance-on' ? (reason || 'Maintenance ou redeploiement en cours.') : '' });
+      ctx.io.emit('system_status_update', status);
+      ctx.WH.wlogSystem(action === 'maintenance-on' ? 'maintenance' : 'normal', status.message);
+      return interaction.editReply(containerMessage({ color: action === 'maintenance-on' ? 0xff9f0a : 0x30d158, title: action === 'maintenance-on' ? 'Maintenance activee' : 'Maintenance desactivee', subtitle: status.message || 'Etat normal.' }));
+    }
+    if (action === 'boost-elo') {
+      const multiplier = Math.max(1, Math.min(10, Number(value || 1)));
+      const expiresAt = multiplier > 1 ? Date.now() + 60 * 60 * 1000 : Date.now();
+      ctx.bQ.setGlobal.run(multiplier, expiresAt, 'Puissance4-Booster', Date.now());
+      ctx.WH.wlogBoost('elo', multiplier, 'Puissance4-Booster', multiplier > 1 ? '60 min' : 'desactive');
+      return interaction.editReply(boostsPayload());
+    }
+    if (action === 'boost-coins') {
+      const multiplier = Math.max(1, Math.min(10, Number(value || 1)));
+      const minutes = Math.max(1, Math.min(1440, Math.ceil(Number(reason || 60))));
+      const expiresAt = multiplier > 1 ? Date.now() + minutes * 60 * 1000 : 0;
+      ctx.db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
+      ctx.db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(expiresAt));
+      ctx.db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', 'Puissance4-Booster') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+      ctx.WH.wlogBoost('coins', multiplier, 'Puissance4-Booster', expiresAt ? `${minutes} min` : 'desactive');
+      return interaction.editReply(boostsPayload());
+    }
+    if (['tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete'].includes(action)) {
+      const tournament = ctx.findTournamentByRef(resourceId);
+      if (!tournament) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Tournoi introuvable', subtitle: String(resourceId || '-') }));
+      if (action === 'tournoi-finish') {
+        ctx.finalizeTournament(tournament.id, Date.now());
+        ctx.clearTournamentQueue(tournament.id);
+      } else if (action === 'tournoi-pause') {
+        ctx.tQ.markPaused.run({ id: tournament.id, paused_at: Date.now() });
+        ctx.clearTournamentQueue(tournament.id);
+      } else if (action === 'tournoi-resume') {
+        const delta = Number(tournament.paused_at || 0) > 0 ? Date.now() - Number(tournament.paused_at || 0) : 0;
+        ctx.tQ.resumePaused.run({ id: tournament.id, ends_at: Number(tournament.ends_at || 0) + delta });
+      } else if (action === 'tournoi-delete') {
+        ctx.db.prepare(`DELETE FROM tournaments WHERE id=?`).run(tournament.id);
+        ctx.tournamentQueues.delete(Number(tournament.id));
+      }
+      ctx.WH.wlogTournament(tournament.name, tournament.public_id || tournament.id, action);
+      return interaction.editReply(tournamentPayload(tournament.public_id || tournament.id) || tournamentsPayload());
+    }
+
+    const target = playerByPseudo(pseudo);
+    if (!target) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Joueur introuvable', subtitle: pseudo || 'Aucun pseudo fourni.' }));
+    if (action === 'player') return interaction.editReply(profilePayload(target));
+    if (action === 'mute') {
+      const minutes = Math.max(1, Math.min(1440, Math.ceil(Number(value || 60))));
+      ctx.pQ.setMute.run({ until: Date.now() + minutes * 60000, id: target.id });
+      ctx.WH.wlogMute(target.pseudo, target.id, minutes / 60);
+      return interaction.editReply(containerMessage({ color: 0xff9f0a, title: 'Joueur mute', subtitle: `${target.pseudo} pendant ${minutes} min.` }));
+    }
+    if (action === 'unmute') {
+      ctx.pQ.setMute.run({ until: 0, id: target.id });
+      ctx.WH.wlogMute(target.pseudo, target.id, 0);
+      return interaction.editReply(containerMessage({ color: 0x30d158, title: 'Mute leve', subtitle: target.pseudo }));
+    }
+    if (action === 'ban' || action === 'unban') {
+      const banned = action === 'ban' ? 1 : 0;
+      ctx.pQ.setBanned.run({ banned, id: target.id });
+      ctx.WH.wlogBan(target.pseudo, target.id, banned);
+      return interaction.editReply(containerMessage({ color: banned ? 0xff3b30 : 0x30d158, title: banned ? 'Joueur banni' : 'Joueur debanni', subtitle: target.pseudo }));
+    }
+    if (action === 'coins') {
+      const delta = Math.trunc(Number(value || 0));
+      const nextCoins = Math.max(0, Number(target.coins || 0) + delta);
+      ctx.pQ.updateCoins.run({ coins: nextCoins, id: target.id });
+      ctx.WH.wlogCoins(target.pseudo, target.id, delta, reason || 'Commande Discord admin');
+      return interaction.editReply(containerMessage({ color: 0xff9f0a, title: 'Coins modifies', subtitle: `${target.pseudo}: ${fmt(nextCoins)} coins (${delta >= 0 ? '+' : ''}${delta})` }));
+    }
+    if (action === 'elo') {
+      const delta = Math.trunc(Number(value || 0));
+      const nextElo = Math.max(0, Number(target.elo || 0) + delta);
+      ctx.pQ.setElo.run({ elo: nextElo, id: target.id });
+      ctx.WH.wlogAdminAction('ELO Discord', target.pseudo, target.id, [['Delta', delta, true], ['Nouveau', nextElo, true]]);
+      return interaction.editReply(containerMessage({ color: 0xffd60a, title: 'ELO modifie', subtitle: `${target.pseudo}: ${nextElo} ELO (${delta >= 0 ? '+' : ''}${delta})` }));
+    }
+    if (action === 'give-item') {
+      const item = ctx.SHOP_ITEMS[itemKey];
+      if (!item) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Item invalide', subtitle: itemKey || '-' }));
+      const quantity = Math.max(1, Math.min(99, Math.trunc(Number(value || 1))));
+      ctx.shopItemQ.addQty.run({ player_id: target.id, item_key: item.key, quantity });
+      ctx.WH.wlogAdminAction('Item boutique Discord', target.pseudo, target.id, [['Item', item.label, true], ['Quantite', quantity, true]]);
+      return interaction.editReply(containerMessage({ color: 0xbf5af2, title: 'Item donne', subtitle: `${target.pseudo} recoit ${quantity} x ${item.label}` }));
+    }
+    return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Action inconnue', subtitle: action }));
+  }
+
+  function updateStatus() {
+    try {
+      const presence = ctx.getPresenceCounts();
+      const activeGames = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
+      const queueCount = Number(ctx.mm?.queue?.length || ctx.mm?.q?.length || 0);
+      const registered = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(ctx.BOT_PLAYER_ID)?.c || 0);
+      const bots = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=1`).get()?.c || 0);
+      const statuses = [
+        { text: `${presence.totalPresent || 0} presents`, type: ActivityType.Watching },
+        { text: `${activeGames} parties live`, type: ActivityType.Watching },
+        { text: `${queueCount} en file`, type: ActivityType.Competing },
+        { text: `${registered} comptes`, type: ActivityType.Watching },
+        { text: `${bots} bots API`, type: ActivityType.Watching },
+      ];
+      const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
+      bot.user.setActivity(status.text, { type: status.type });
+    } catch (_) {}
+  }
+
+  bot.once('clientReady', async () => {
+    console.log(`[BOT] Bot connecte : ${bot.user.tag}`);
+    try {
+      await registerCommands();
+      console.log('[BOT] Commandes slash enregistrees depuis discord-bot.js');
+    } catch (error) {
+      console.error('[BOT] Register commands:', error.message);
+    }
+    updateStatus();
+    setInterval(updateStatus, 10000);
+  });
+
+  bot.on('interactionCreate', async interaction => {
+    try {
+      if (interaction.isAutocomplete()) return autocomplete(interaction);
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('p4_profile_games:')) {
+        await interaction.deferReply({ ephemeral: true });
+        const value = interaction.values?.[0] || '';
+        if (!value.startsWith('game:')) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Selection invalide' }));
+        const payload = replayPayload(Number(value.slice(5)));
+        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Partie introuvable' }));
+      }
+      if (!interaction.isChatInputCommand()) return;
+      const admin = interaction.commandName === 'admin';
+      await interaction.deferReply({ ephemeral: admin });
+
+      if (interaction.commandName === 'profil') {
+        const player = playerByPseudo(interaction.options.getString('pseudo', true));
+        return interaction.editReply(player ? profilePayload(player) : containerMessage({ color: 0xff3b30, title: 'Joueur introuvable' }));
+      }
+      if (interaction.commandName === 'moi') {
+        const player = playerByDiscord(interaction.user.id);
+        return interaction.editReply(player ? profilePayload(player) : containerMessage({ color: 0xff3b30, title: 'Compte non lie', subtitle: `Lie ton compte depuis ${api}/profil` }));
+      }
+      if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
+      if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
+      if (interaction.commandName === 'stats') return interaction.editReply(statsPayload());
+      if (interaction.commandName === 'systeme') return interaction.editReply(systemPayload());
+      if (interaction.commandName === 'live') return interaction.editReply(livePayload());
+      if (interaction.commandName === 'boutique') return interaction.editReply(shopPayload());
+      if (interaction.commandName === 'api') return interaction.editReply(apiPayload());
+      if (interaction.commandName === 'boosts') return interaction.editReply(boostsPayload());
+      if (interaction.commandName === 'cosmetiques') return interaction.editReply(cosmeticsPayload(interaction.options.getString('type', true)));
+      if (interaction.commandName === 'bots') return interaction.editReply(botsPayload());
+      if (interaction.commandName === 'replay') {
+        const payload = replayPayload(interaction.options.getInteger('id', true));
+        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Partie introuvable' }));
+      }
+      if (interaction.commandName === 'duel-lien') {
+        const player = playerByDiscord(interaction.user.id);
+        if (!player) return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Compte non lie', subtitle: 'Ton compte Discord doit etre lie pour creer un duel ranked.' }));
+        const gameType = interaction.options.getString('type', true) === 'friendly' ? 'friendly' : 'ranked';
+        const challenge = ctx.createDuelChallenge({ senderId: player.id, mode: 'link', ttlMs: 15 * 60 * 1000, gameType });
+        const url = `${api}/duel/${challenge.id}`;
+        ctx.WH.wlogDuel(player.pseudo, 'Lien public', gameType);
+        return interaction.editReply(containerMessage({
+          color: gameType === 'friendly' ? 0x85ebff : 0xffd60a,
+          title: 'Lien de duel cree',
+          subtitle: `${gameType === 'friendly' ? 'Amical' : 'Ranked'} | expire dans 15 minutes`,
+          buttons: [linkButton('Ouvrir le duel', url, '⚔️')],
+        }));
+      }
+      if (interaction.commandName === 'tournois') return interaction.editReply(tournamentsPayload());
+      if (interaction.commandName === 'tournoi') {
+        const payload = tournamentPayload(interaction.options.getString('id', true));
+        return interaction.editReply(payload || containerMessage({ color: 0xff3b30, title: 'Tournoi introuvable' }));
+      }
+      if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
+      if (interaction.commandName === 'admin') return handleAdmin(interaction);
+    } catch (error) {
+      console.error('[BOT ERROR]', error);
+      const payload = containerMessage({ color: 0xff3b30, title: 'Erreur bot Discord', subtitle: truncate(error.message || 'Erreur inconnue', 300) });
+      if (interaction.deferred || interaction.replied) return interaction.editReply(payload).catch(() => {});
+      return interaction.reply({ ...payload, ephemeral: true }).catch(() => {});
+    }
+  });
+
+  bot.login(botToken).catch(error => console.error('[BOT] Login failed:', error.message));
+  return bot;
+}
+
+module.exports = {
+  buildDiscordCommandDefinitions,
+  startDiscordBot,
+};

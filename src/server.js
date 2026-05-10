@@ -9,6 +9,7 @@ const crypto     = require('crypto');
 const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
 const { getRank } = require('./rank');
 const { createSecurity } = require('./security');
+const { startDiscordBot } = require('./discord-bot');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const ipToPlayers  = new Map(); 
@@ -5270,10 +5271,42 @@ app.use((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+function buildDiscordBotContext() {
+  return {
+    db,
+    pQ,
+    gQ,
+    mQ,
+    bQ,
+    tQ,
+    shopItemQ,
+    SHOP_ITEMS,
+    getRank,
+    getPresenceCounts,
+    getBoostDisplayName,
+    gm,
+    mm,
+    BOT_PLAYER_ID,
+    DISCORD_GUILD,
+    ADMIN_PASSWORD,
+    discordConfig,
+    getDiscordRole,
+    createDuelChallenge,
+    readSystemStatus,
+    writeSystemStatus,
+    findTournamentByRef,
+    finalizeTournament,
+    clearTournamentQueue,
+    tournamentQueues,
+    io,
+    WH,
+  };
+}
+
 initDb().then(() => {
   server.listen(PORT, () => {
     console.log(`[HTTP] http://localhost:${PORT}`);
-    startBot();
+    startDiscordBot(buildDiscordBotContext());
   });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });
 
