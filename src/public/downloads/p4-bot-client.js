@@ -6,39 +6,88 @@
  *   P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * Optional:
- *   P4_API_URL=https://puissance-4-website-production.up.railway.app P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_API_URL=http://localhost:8080 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy node p4-bot-client.js
  *   P4_CHALLENGE_BOT_ID=7 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_DEPTH=10 P4_THINK_MS=6500 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_MAX_CONCURRENT_GAMES=2 P4_MAX_TABLE=250000 P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy node p4-bot-client.js
  *
- * This example is intentionally simple:
+ * This example is intentionally safe but competitive:
  * - pings the site so the bot appears online
  * - joins the bot queue
  * - polls the current game
- * - plays legal moves with a small tactical AI
+ * - plays legal moves with alpha-beta + iterative deepening
+ * - respects API rate limits with backoff on HTTP 429
  */
 
-const API_URL = (process.env.P4_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
-const BOT_TOKEN = process.env.P4_BOT_TOKEN || process.env.BOT_TOKEN || '';
-const LOOP_MS = Number(process.env.P4_LOOP_MS || 1200);
-const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
+if (process.env.P4_INSECURE_TLS === '1') {
+  // Useful only if the local machine refuses Railway's certificate chain.
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
 
-if (!BOT_TOKEN) {
+const API_URL = (process.env.P4_API_URL || 'https://puissance-4-website-production.up.railway.app').replace(/\/+$/, '');
+const BOT_TOKENS = String(process.env.P4_BOT_TOKENS || process.env.P4_BOT_TOKEN || process.env.BOT_TOKEN || '')
+  .split(/[,\s]+/)
+  .map(token => token.trim())
+  .filter(Boolean);
+const LOOP_MS = Math.max(750, Number(process.env.P4_LOOP_MS || 1200));
+const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
+const MAX_DEPTH = Math.max(1, Math.min(13, Number(process.env.P4_DEPTH || 9)));
+const THINK_MS = Math.max(400, Math.min(45000, Number(process.env.P4_THINK_MS || 4500)));
+const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
+const MAX_CONCURRENT_GAMES = Math.max(1, Math.min(2, Number(process.env.P4_MAX_CONCURRENT_GAMES || 2)));
+const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 250000));
+const LOG_SEARCH = process.env.P4_LOG_SEARCH !== '0';
+
+if (!BOT_TOKENS.length) {
   console.error('Missing token. Run with: P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js');
   process.exit(1);
 }
 
-const headers = {
-  Authorization: `Bearer ${BOT_TOKEN}`,
-  'Content-Type': 'application/json',
-};
+let lastRequestAt = 0;
+let rateLimitUntil = 0;
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function api(path, options = {}) {
+function nowIso() {
+  return new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+}
+
+function log(message, ...args) {
+  console.log(`[${nowIso()}] [P4 Bot] ${message}`, ...args);
+}
+
+function warn(message, ...args) {
+  console.warn(`[${nowIso()}] [P4 Bot] ${message}`, ...args);
+}
+
+function formatPv(pv) {
+  return Array.isArray(pv) && pv.length ? pv.map(col => `c${col + 1}`).join(' -> ') : '-';
+}
+
+function scoreToCentipawns(score) {
+  if (!Number.isFinite(score)) return 0;
+  if (Math.abs(score) >= 900_000) return score > 0 ? 100000 : -100000;
+  return Math.max(-5000, Math.min(5000, Math.round(score)));
+}
+
+async function api(path, options = {}, token = BOT_TOKENS[0]) {
+  const now = Date.now();
+  const waitForRateLimit = Math.max(0, rateLimitUntil - now);
+  const waitForGap = Math.max(0, REQUEST_GAP_MS - (now - lastRequestAt));
+  if (waitForRateLimit || waitForGap) await sleep(Math.max(waitForRateLimit, waitForGap));
+  lastRequestAt = Date.now();
+
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
-    headers: { ...headers, ...(options.headers || {}) },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
   });
   const text = await res.text();
   let data = null;
@@ -47,6 +96,12 @@ async function api(path, options = {}) {
     const err = new Error(data?.error || `HTTP ${res.status}`);
     err.status = res.status;
     err.data = data;
+    if (res.status === 429) {
+      const retryAfter = Number(res.headers.get('retry-after') || 0);
+      const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.max(2500, LOOP_MS * 2);
+      rateLimitUntil = Date.now() + waitMs;
+      err.retryAfterMs = waitMs;
+    }
     throw err;
   }
   return data;
@@ -60,6 +115,44 @@ function cloneBoard(board) {
   return board.map(row => [...row]);
 }
 
+function boardKey(board, player, depth) {
+  return `${player}|${depth}|${board.map(row => row.join('')).join('')}`;
+}
+
+function principalVariation(board, firstCol, me, maxPlies = 6) {
+  if (firstCol == null) return [];
+  const copy = cloneBoard(board);
+  const pv = [];
+  let player = me;
+  let col = firstCol;
+  for (let ply = 0; ply < maxPlies && col != null; ply++) {
+    const row = drop(copy, col, player);
+    if (row < 0) break;
+    pv.push(col);
+    if (checkWin(copy, row, col, player)) break;
+    player = player === 1 ? 2 : 1;
+    const moves = orderedMoves(copy);
+    if (!moves.length) break;
+    let best = moves[0];
+    let bestScore = player === me ? -Infinity : Infinity;
+    for (const nextCol of moves) {
+      const nextRow = drop(copy, nextCol, player);
+      if (nextRow < 0) continue;
+      const won = checkWin(copy, nextRow, nextCol, player);
+      const score = won
+        ? (player === me ? 1_000_000 : -1_000_000)
+        : evaluate(copy, me);
+      undoDrop(copy, nextRow, nextCol);
+      if ((player === me && score > bestScore) || (player !== me && score < bestScore)) {
+        bestScore = score;
+        best = nextCol;
+      }
+    }
+    col = best;
+  }
+  return pv;
+}
+
 function drop(board, col, player) {
   for (let row = board.length - 1; row >= 0; row--) {
     if (board[row][col] === 0) {
@@ -68,6 +161,10 @@ function drop(board, col, player) {
     }
   }
   return -1;
+}
+
+function undoDrop(board, row, col) {
+  if (row >= 0) board[row][col] = 0;
 }
 
 function checkWin(board, row, col, player) {
@@ -92,24 +189,39 @@ function isWinningMove(board, col, player) {
   return row >= 0 && checkWin(copy, row, col, player);
 }
 
+function isFull(board) {
+  return board[0].every(Boolean);
+}
+
 function scoreWindow(values, me) {
   const opp = me === 1 ? 2 : 1;
   const mine = values.filter(v => v === me).length;
   const theirs = values.filter(v => v === opp).length;
   const empty = values.filter(v => v === 0).length;
-  if (mine === 4) return 100000;
-  if (theirs === 4) return -100000;
-  if (mine === 3 && empty === 1) return 80;
-  if (mine === 2 && empty === 2) return 18;
-  if (theirs === 3 && empty === 1) return -95;
-  if (theirs === 2 && empty === 2) return -16;
+  if (mine === 4) return 1_000_000;
+  if (theirs === 4) return -1_000_000;
+  if (mine === 3 && empty === 1) return 120;
+  if (mine === 2 && empty === 2) return 24;
+  if (theirs === 3 && empty === 1) return -145;
+  if (theirs === 2 && empty === 2) return -28;
   return 0;
 }
 
 function evaluate(board, me) {
   let score = 0;
+  const opp = me === 1 ? 2 : 1;
   const center = board.map(row => row[3]).filter(v => v === me).length;
-  score += center * 7;
+  const oppCenter = board.map(row => row[3]).filter(v => v === opp).length;
+  score += center * 14;
+  score -= oppCenter * 12;
+
+  // Slight preference for lower stable pieces.
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 7; c++) {
+      if (board[r][c] === me) score += (6 - r) * 2;
+      else if (board[r][c] === opp) score -= (6 - r) * 2;
+    }
+  }
 
   for (let r = 0; r < 6; r++) {
     for (let c = 0; c < 4; c++) score += scoreWindow([board[r][c], board[r][c + 1], board[r][c + 2], board[r][c + 3]], me);
@@ -126,45 +238,145 @@ function evaluate(board, me) {
   return score;
 }
 
+function orderedMoves(board, moves = legalMoves(board)) {
+  const centerOrder = [3, 2, 4, 1, 5, 0, 6];
+  return centerOrder.filter(col => moves.includes(col));
+}
+
+function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, stats) {
+  stats.nodes++;
+  if (Date.now() >= deadline) {
+    stats.timeout = true;
+    return evaluate(board, me);
+  }
+
+  const moves = orderedMoves(board);
+  if (depth <= 0 || !moves.length || isFull(board)) return evaluate(board, me);
+
+  const key = boardKey(board, currentPlayer, depth);
+  const cached = table.get(key);
+  if (cached !== undefined) {
+    stats.cacheHits++;
+    return cached;
+  }
+
+  const maximizing = currentPlayer === me;
+  const nextPlayer = currentPlayer === 1 ? 2 : 1;
+  let bestScore = maximizing ? -Infinity : Infinity;
+
+  for (const col of moves) {
+    const row = drop(board, col, currentPlayer);
+    if (row < 0) continue;
+    const won = checkWin(board, row, col, currentPlayer);
+    let score;
+    if (won) {
+      score = (currentPlayer === me ? 1_000_000 : -1_000_000) + (currentPlayer === me ? depth : -depth);
+    } else {
+      score = minimax(board, depth - 1, alpha, beta, nextPlayer, me, deadline, table, stats);
+    }
+    undoDrop(board, row, col);
+
+    if (maximizing) {
+      if (score > bestScore) bestScore = score;
+      alpha = Math.max(alpha, bestScore);
+    } else {
+      if (score < bestScore) bestScore = score;
+      beta = Math.min(beta, bestScore);
+    }
+    if (beta <= alpha) {
+      stats.prunes++;
+      break;
+    }
+    if (stats.timeout) break;
+  }
+
+  if (table.size < MAX_TABLE) table.set(key, bestScore);
+  return bestScore;
+}
+
 function chooseMove(game) {
   const board = game.board;
   const me = Number(game.side);
   const opp = me === 1 ? 2 : 1;
   const moves = game.legalMoves?.length ? game.legalMoves : legalMoves(board);
-  if (!moves.length) return null;
+  const start = Date.now();
+  const deadline = start + THINK_MS;
+  const table = new Map();
+  const stats = { nodes: 0, prunes: 0, cacheHits: 0, timeout: false, depth: 0, score: 0, pv: [], tableSize: 0 };
+  if (!moves.length) return { col: null, stats };
 
   for (const col of moves) {
-    if (isWinningMove(board, col, me)) return col;
-  }
-  for (const col of moves) {
-    if (isWinningMove(board, col, opp)) return col;
-  }
-
-  const centerOrder = [3, 2, 4, 1, 5, 0, 6].filter(col => moves.includes(col));
-  let best = centerOrder[0] ?? moves[0];
-  let bestScore = -Infinity;
-  for (const col of centerOrder) {
-    const copy = cloneBoard(board);
-    drop(copy, col, me);
-    const score = evaluate(copy, me) + (Math.random() * 4);
-    if (score > bestScore) {
-      bestScore = score;
-      best = col;
+    if (isWinningMove(board, col, me)) {
+      return { col, stats: { ...stats, tactical: 'win-now', score: 1_000_000, centipawns: 100000, pv: [col], elapsedMs: Date.now() - start } };
     }
   }
-  return best;
+  for (const col of moves) {
+    if (isWinningMove(board, col, opp)) {
+      return { col, stats: { ...stats, tactical: 'block-now', score: 0, centipawns: 0, pv: [col], elapsedMs: Date.now() - start } };
+    }
+  }
+
+  const moveOrder = orderedMoves(board, moves);
+  let best = moveOrder[0] ?? moves[0];
+  let bestScore = -Infinity;
+  for (let depth = 1; depth <= MAX_DEPTH; depth++) {
+    let depthBest = best;
+    let depthBestScore = -Infinity;
+    for (const col of moveOrder) {
+      const row = drop(board, col, me);
+      if (row < 0) continue;
+      const won = checkWin(board, row, col, me);
+      const score = won
+        ? 1_000_000 + depth
+        : minimax(board, depth - 1, -Infinity, Infinity, opp, me, deadline, table, stats);
+      undoDrop(board, row, col);
+      if (score > depthBestScore) {
+        depthBestScore = score;
+        depthBest = col;
+      }
+      if (stats.timeout) break;
+    }
+    if (!stats.timeout) {
+      best = depthBest;
+      bestScore = depthBestScore;
+      stats.depth = depth;
+      stats.score = bestScore;
+      stats.centipawns = scoreToCentipawns(bestScore);
+      stats.pv = principalVariation(board, best, me, Math.min(8, depth + 1));
+      stats.tableSize = table.size;
+      if (LOG_SEARCH) {
+        log(`depth ${depth}/${MAX_DEPTH} best col.${best + 1} cp=${stats.centipawns} pv=${formatPv(stats.pv)} nodes=${stats.nodes} prunes=${stats.prunes} cache=${stats.cacheHits} table=${table.size}`);
+      }
+    }
+    if (table.size > MAX_TABLE) {
+      warn(`transposition table limit reached (${table.size}/${MAX_TABLE}), stopping search to protect RAM`);
+      break;
+    }
+    if (stats.timeout) {
+      warn(`search timeout after ${Date.now() - start}ms, using depth ${stats.depth || 1} result`);
+      break;
+    }
+  }
+  stats.elapsedMs = Date.now() - start;
+  stats.tableSize = table.size;
+  table.clear();
+  return { col: best, stats };
 }
 
-async function main() {
-  const me = await api('/api/bot/me');
-  console.log(`[P4 Bot] Connected as ${me.bot.pseudo} (${me.bot.elo} ELO) on ${API_URL}`);
+async function runBotWorker(token, workerIndex) {
+  const tag = `Bot#${workerIndex + 1}`;
+  const workerLog = (message, ...args) => log(`[${tag}] ${message}`, ...args);
+  const workerWarn = (message, ...args) => warn(`[${tag}] ${message}`, ...args);
+  const me = await api('/api/bot/me', {}, token);
+  workerLog(`Connected as ${me.bot.pseudo} (${me.bot.elo} ELO) on ${API_URL}`);
+  workerLog(`Config depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, loopMs=${LOOP_MS}, requestGapMs=${REQUEST_GAP_MS}, maxConcurrent=${MAX_CONCURRENT_GAMES}, maxTable=${MAX_TABLE}`);
 
-  if (CHALLENGE_BOT_ID > 0) {
+  if (CHALLENGE_BOT_ID > 0 && workerIndex === 0) {
     try {
-      const challenge = await api(`/api/bot/challenge/${CHALLENGE_BOT_ID}`, { method: 'POST' });
-      console.log(`[P4 Bot] Challenged bot #${CHALLENGE_BOT_ID}, game ${challenge.game?.gameId || '?'}`);
+      const challenge = await api(`/api/bot/challenge/${CHALLENGE_BOT_ID}`, { method: 'POST' }, token);
+      workerLog(`Challenged bot #${CHALLENGE_BOT_ID}, game ${challenge.game?.gameId || '?'}`);
     } catch (error) {
-      console.error(`[P4 Bot] Challenge failed: ${error.message}`);
+      workerWarn(`Challenge failed: ${error.message}`);
     }
   }
 
@@ -174,17 +386,17 @@ async function main() {
       await api('/api/bot/ping', {
         method: 'POST',
         body: JSON.stringify({ status: lastGameId ? 'playing' : 'seeking' }),
-      });
+      }, token);
 
-      let game = (await api('/api/bot/game')).game;
+      let game = (await api('/api/bot/game', {}, token)).game;
       if (!game) {
         const queue = await api('/api/bot/queue/join', {
           method: 'POST',
           body: JSON.stringify({ allowBuiltin: true }),
-        });
+        }, token);
         game = queue.game || null;
         if (!game) {
-          console.log(`[P4 Bot] Queue: ${queue.status}${queue.position ? ` #${queue.position}` : ''}`);
+          workerLog(`Queue: ${queue.status}${queue.position ? ` #${queue.position}` : ''}`);
           await sleep(LOOP_MS);
           continue;
         }
@@ -192,7 +404,7 @@ async function main() {
 
       if (game.gameId !== lastGameId) {
         lastGameId = game.gameId;
-        console.log(`[P4 Bot] Game ${game.gameId} started as side ${game.side}: ${game.players[1].pseudo} vs ${game.players[2].pseudo}`);
+        workerLog(`Game ${game.gameId} started as side ${game.side}: ${game.players[1].pseudo} (${game.players[1].elo}) vs ${game.players[2].pseudo} (${game.players[2].elo})`);
       }
 
       if (!game.isMyTurn) {
@@ -200,7 +412,8 @@ async function main() {
         continue;
       }
 
-      const col = chooseMove(game);
+      const choice = chooseMove(game);
+      const col = choice.col;
       if (col === null) {
         await sleep(LOOP_MS);
         continue;
@@ -209,15 +422,36 @@ async function main() {
       const result = await api('/api/bot/move', {
         method: 'POST',
         body: JSON.stringify({ col }),
-      });
-      console.log(`[P4 Bot] Played col.${col + 1}`, result.result?.type === 'game_over' ? '- game over' : '');
-      if (result.result?.type === 'game_over') lastGameId = null;
+      }, token);
+      const s = choice.stats || {};
+      workerLog(`Played col.${col + 1} depth=${s.depth || '-'} cp=${s.centipawns ?? scoreToCentipawns(s.score || 0)} pv=${formatPv(s.pv)} nodes=${s.nodes || 0} prunes=${s.prunes || 0} cache=${s.cacheHits || 0} table=${s.tableSize || 0} time=${s.elapsedMs || 0}ms${s.tactical ? ` tactical=${s.tactical}` : ''}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
+      if (result.result?.type === 'game_over') {
+        const winner = result.result?.winner ? `side ${result.result.winner}` : 'draw';
+        workerLog(`Game ${game.gameId} ended: ${winner}. Clearing local search memory and seeking next game.`);
+        lastGameId = null;
+      }
     } catch (error) {
       if (error.status === 404) lastGameId = null;
-      console.error('[P4 Bot]', error.message);
-      await sleep(Math.max(LOOP_MS, 2500));
+      if (error.status === 429) {
+        workerWarn(`Rate limited, sleeping ${error.retryAfterMs || 2500}ms`);
+        await sleep(error.retryAfterMs || 2500);
+      } else if (error.status === 409 && error.data?.game) {
+        await sleep(Math.max(LOOP_MS, 1500));
+      } else {
+        workerWarn(error.message);
+        await sleep(Math.max(LOOP_MS, 2500));
+      }
     }
   }
+}
+
+async function main() {
+  const activeTokens = BOT_TOKENS.slice(0, MAX_CONCURRENT_GAMES);
+  if (BOT_TOKENS.length < MAX_CONCURRENT_GAMES) {
+    warn(`Only ${BOT_TOKENS.length} token(s) provided. One bot account can only play one active game, so concurrency will be ${BOT_TOKENS.length}/${MAX_CONCURRENT_GAMES}.`);
+  }
+  log(`Starting pool with ${activeTokens.length} worker(s). Give several tokens with P4_BOT_TOKENS=p4bot_xxx,p4bot_yyy for 2 simultaneous games.`);
+  await Promise.all(activeTokens.map((token, index) => runBotWorker(token, index)));
 }
 
 main().catch(error => {
