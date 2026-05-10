@@ -478,6 +478,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       <span>Admin Audit</span>
     </div>
     <div id="login-error" class="error-msg" style="display:none"></div>
+    <input type="text" id="discord-input" placeholder="Pseudo staff ou ID Discord..." autocomplete="username" onkeydown="if(event.key==='Enter')login()">
     <input type="password" id="pwd-input" placeholder="Mot de passe admin..." onkeydown="if(event.key==='Enter')login()">
     <div id="code-step" class="code-step">
       <div class="code-copy">Un code a 6 chiffres sera envoye en message prive Discord au compte lie. Il expire apres 10 minutes.</div>
@@ -727,6 +728,7 @@ function resetAdminLogin() {
   adminLoginRequestId = null;
   document.getElementById('code-step')?.classList.remove('is-visible');
   document.getElementById('code-input').value = '';
+  document.getElementById('discord-input').disabled = false;
   document.getElementById('pwd-input').disabled = false;
   document.getElementById('login-btn').textContent = 'Recevoir le code Discord';
   document.getElementById('reset-login-btn').style.display = 'none';
@@ -734,14 +736,17 @@ function resetAdminLogin() {
 }
 
 async function login() {
+  const adminIdentity = document.getElementById('discord-input').value.trim();
   const pwd = document.getElementById('pwd-input').value;
   const code = document.getElementById('code-input')?.value.trim() || '';
   const loginBtn = document.getElementById('login-btn');
+  if (!adminIdentity) return setLoginError('Entre ton pseudo staff ou ton ID Discord.');
   loginBtn.disabled = true;
   loginBtn.textContent = adminLoginRequestId ? 'Verification...' : 'Envoi du code...';
-  // Passer le token joueur pour détecter le rôle (moderator vs admin)
+  // Le token joueur reste accepte si la personne est deja connectee, mais l'A2F admin
+  // fonctionne aussi sans login site grace au pseudo/ID Discord.
   const playerToken = localStorage.getItem('token') || null;
-  const body = { password: pwd, playerToken };
+  const body = { password: pwd, playerToken, adminIdentity };
   if (adminLoginRequestId) {
     if (!/^\d{6}$/.test(code)) {
       loginBtn.disabled = false;
@@ -761,6 +766,7 @@ async function login() {
     if (data.requiresCode && data.requestId) {
       adminLoginRequestId = data.requestId;
       document.getElementById('code-step')?.classList.add('is-visible');
+      document.getElementById('discord-input').disabled = true;
       document.getElementById('pwd-input').disabled = true;
       document.getElementById('reset-login-btn').style.display = 'block';
       document.getElementById('login-error').style.display = 'none';

@@ -728,6 +728,7 @@ try { sQ.purge.run(Date.now()); } catch(e) {}
 const BOT_PSEUDO = 'Puissance4-AI';
 const BOT_AVATAR = '/bot-avatar.svg';
 const BOT_BANNER = 'https://i.pinimg.com/1200x/0b/10/ae/0b10aed237a4092f5b6ebf89bccdffbb.jpg';
+const BOT_START_ELO = 1200;
 const _BOT_COLORS = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#5e5ce6'];
 const _BOT_SHAPES = ['circle','diamond','triangle','star','heart'];
 let BOT_PLAYER_ID;
@@ -739,41 +740,53 @@ let BOT_PLAYER_ID;
   } else {
     const bc = _BOT_COLORS[Math.floor(Math.random() * _BOT_COLORS.length)];
     const bs = _BOT_SHAPES[Math.floor(Math.random() * _BOT_SHAPES.length)];
-    const r  = db.prepare(`INSERT INTO players (pseudo, password, elo, wins, losses, draws, color, shape, avatar, banner, deleted) VALUES (?,''  ,1200,0,0,0,?,?,?,?,0)`).run(BOT_PSEUDO, bc, bs, BOT_AVATAR, BOT_BANNER);
+    const r  = db.prepare(`INSERT INTO players (pseudo, password, elo, wins, losses, draws, color, shape, avatar, banner, deleted) VALUES (?, '', ?, 0, 0, 0, ?, ?, ?, ?, 0)`).run(BOT_PSEUDO, BOT_START_ELO, bc, bs, BOT_AVATAR, BOT_BANNER);
     BOT_PLAYER_ID = r.lastInsertRowid;
   }
   console.log(`[Bot] Puissance4-AI id=${BOT_PLAYER_ID}`);
 }
 
 const PRECONFIGURED_BOTS = [
-  { pseudo: 'P4-Bot-Nova', elo: 820, color: '#85EBFF', shape: 'circle', depth: 7, description: 'Robot competitif profondeur 7, parfait pour tester les ouvertures.' },
-  { pseudo: 'P4-Bot-Orion', elo: 1120, color: '#ffd60a', shape: 'diamond', depth: 8, description: 'Robot competitif profondeur 8 avec une bonne priorite au centre.' },
-  { pseudo: 'P4-Bot-Vega', elo: 1450, color: '#ff2d55', shape: 'star', depth: 9, description: 'Robot tactique profondeur 9 qui cherche les menaces immediates.' },
-  { pseudo: 'P4-Bot-Zenith', elo: 1780, color: '#bf5af2', shape: 'heart', depth: 11, description: 'Robot avance profondeur 11, solide en defense comme en attaque.' },
+  { pseudo: 'P4-Bot-Nova', elo: BOT_START_ELO, skill: 820, color: '#85EBFF', shape: 'circle', depth: 7, description: 'Robot competitif profondeur 7, parfait pour tester les ouvertures.' },
+  { pseudo: 'P4-Bot-Orion', elo: BOT_START_ELO, skill: 1120, color: '#ffd60a', shape: 'diamond', depth: 8, description: 'Robot competitif profondeur 8 avec une bonne priorite au centre.' },
+  { pseudo: 'P4-Bot-Vega', elo: BOT_START_ELO, skill: 1450, color: '#ff2d55', shape: 'star', depth: 9, description: 'Robot tactique profondeur 9 qui cherche les menaces immediates.' },
+  { pseudo: 'P4-Bot-Zenith', elo: BOT_START_ELO, skill: 1780, color: '#bf5af2', shape: 'heart', depth: 11, description: 'Robot avance profondeur 11, solide en defense comme en attaque.' },
 ];
 const BOT_DEPTH_BY_PSEUDO = new Map(PRECONFIGURED_BOTS.map(bot => [bot.pseudo, bot.depth]));
 
 function ensurePreconfiguredBots() {
   db.prepare(`UPDATE players SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ? WHERE id = ?`)
-    .run(1200, 'Bot officiel du site.', BOT_PLAYER_ID);
+    .run(BOT_START_ELO, 'Bot officiel du site.', BOT_PLAYER_ID);
   builtinBotIds.add(Number(BOT_PLAYER_ID));
+
+  const seededKey = 'builtin_bots_start_elo_1200';
+  const shouldSeedStartElo = !db.prepare(`SELECT value FROM config WHERE key = ?`).get(seededKey);
+  if (shouldSeedStartElo) {
+    db.prepare(`UPDATE players SET elo = ? WHERE id = ?`).run(BOT_START_ELO, BOT_PLAYER_ID);
+  }
 
   for (const bot of PRECONFIGURED_BOTS) {
     const existing = pQ.getByPseudo.get(bot.pseudo);
     if (existing) {
       db.prepare(`
         UPDATE players
-        SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?, elo = ?, color = ?, shape = ?, avatar = COALESCE(NULLIF(avatar,''), ?), deleted = 0
+        SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?, color = ?, shape = ?, avatar = COALESCE(NULLIF(avatar,''), ?), deleted = 0
         WHERE id = ?
-      `).run(bot.elo, bot.description, bot.elo, bot.color, bot.shape, BOT_AVATAR, existing.id);
+      `).run(bot.skill, bot.description, bot.color, bot.shape, BOT_AVATAR, existing.id);
+      if (shouldSeedStartElo) {
+        db.prepare(`UPDATE players SET elo = ? WHERE id = ?`).run(BOT_START_ELO, existing.id);
+      }
       builtinBotIds.add(Number(existing.id));
       continue;
     }
     const inserted = db.prepare(`
       INSERT INTO players (pseudo, password, elo, color, shape, avatar, is_bot, bot_enabled, bot_skill, bot_description, deleted)
       VALUES (?, '', ?, ?, ?, ?, 1, 1, ?, ?, 0)
-    `).run(bot.pseudo, bot.elo, bot.color, bot.shape, BOT_AVATAR, bot.elo, bot.description);
+    `).run(bot.pseudo, bot.elo, bot.color, bot.shape, BOT_AVATAR, bot.skill, bot.description);
     builtinBotIds.add(Number(inserted.lastInsertRowid));
+  }
+  if (shouldSeedStartElo) {
+    db.prepare(`INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)`).run(seededKey, String(Date.now()));
   }
 }
 
@@ -1381,15 +1394,49 @@ function isModo(req) {
   return s && (s.role === 'admin' || s.role === 'moderator');
 }
 
-async function resolveAdminLoginContext(password, playerToken) {
+function findAdminLoginPlayer(adminIdentity, playerToken) {
+  const playerId = validateSession(playerToken);
+  if (playerId) return pQ.getById.get(playerId);
+
+  const raw = String(adminIdentity || '').trim();
+  if (!raw) return null;
+  const identity = raw.replace(/^@+/, '').trim();
+  const byDiscordId = /^\d{15,25}$/.test(identity)
+    ? db.prepare(`SELECT * FROM players WHERE discord_id = ? AND deleted = 0 ORDER BY id ASC LIMIT 1`).get(identity)
+    : null;
+  if (byDiscordId) return byDiscordId;
+
+  const byPseudo = db.prepare(`SELECT * FROM players WHERE lower(pseudo) = lower(?) AND deleted = 0 ORDER BY id ASC LIMIT 1`).get(identity);
+  if (byPseudo) return byPseudo;
+
+  const linked = db.prepare(`
+    SELECT *
+    FROM players
+    WHERE discord_id IS NOT NULL
+      AND discord_id != ''
+      AND discord_info IS NOT NULL
+      AND discord_info != ''
+      AND deleted = 0
+  `).all();
+  return linked.find(player => {
+    try {
+      const info = JSON.parse(player.discord_info || '{}');
+      return [info.username, info.global_name, info.display_name]
+        .filter(Boolean)
+        .some(name => String(name).toLowerCase() === identity.toLowerCase());
+    } catch {
+      return false;
+    }
+  }) || null;
+}
+
+async function resolveAdminLoginContext(password, playerToken, adminIdentity) {
   if (password !== ADMIN_PASSWORD) {
     return { status: 403, error: 'Mot de passe incorrect.' };
   }
 
-  const playerId = validateSession(playerToken);
-  if (!playerId) return { status: 403, error: 'Session joueur invalide.' };
-
-  const player = pQ.getById.get(playerId);
+  const player = findAdminLoginPlayer(adminIdentity, playerToken);
+  if (!player) return { status: 403, error: 'Compte staff introuvable. Entre ton pseudo ou ton ID Discord.' };
   if (!player?.discord_id) {
     return { status: 403, error: 'Compte Discord requis pour acceder au panel.' };
   }
@@ -1408,12 +1455,12 @@ async function resolveAdminLoginContext(password, playerToken) {
     return { status: 403, error: "Ton role Discord ne permet pas l'acces au panel." };
   }
 
-  return { playerId, player, role };
+  return { playerId: player.id, player, role };
 }
 
 app.post('/api/admin/login', async (req, res) => {
-  const { password, playerToken, requestId, code } = req.body || {};
-  const ctx = await resolveAdminLoginContext(password, playerToken);
+  const { password, playerToken, adminIdentity, requestId, code } = req.body || {};
+  const ctx = await resolveAdminLoginContext(password, playerToken, adminIdentity);
   if (ctx.error) return res.status(ctx.status || 403).json({ error: ctx.error });
 
   if (requestId) {
