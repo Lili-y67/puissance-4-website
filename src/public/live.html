@@ -56,7 +56,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .card-player.p2 .p-info{text-align:right}
 .vs-sep{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:2px;color:var(--muted)}
 .mini-board{background:var(--grid);border-radius:12px;padding:6px;border:1px solid var(--border);display:grid;grid-template-columns:repeat(7,1fr);gap:3px;aspect-ratio:7/6}
-.mini-cell{border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.94));box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03)}
+.mini-cell{position:relative;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.94));box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.03);overflow:hidden}
 .mini-cell.win-cell,.live-cell.win-cell{box-shadow:inset 0 2px 6px rgba(0,0,0,.55),0 0 0 2px rgba(255,214,10,.95),0 0 20px rgba(255,214,10,.42);animation:win-glow 1s ease-in-out infinite alternate}
 @keyframes win-glow{from{filter:brightness(1)}to{filter:brightness(1.35)}}
 .card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:4px;border-top:1px solid var(--border)}
@@ -93,6 +93,9 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .live-board{width:min(100%,760px);margin:0 auto;background:#0a0a18;border-radius:26px;padding:18px;display:grid;grid-template-columns:repeat(7,1fr);gap:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 40px rgba(0,0,0,.35)}
 .live-cell{position:relative;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.96));box-shadow:inset 0 3px 10px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.03);overflow:hidden}
 .live-token{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:68%;font-weight:900}
+.mini-token{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900}
+.token-emoji{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;line-height:1;transform:translateY(-1%);filter:drop-shadow(0 0 8px rgba(0,0,0,.5))}
+.token-emoji-img{display:block;object-fit:contain;filter:drop-shadow(0 0 8px rgba(0,0,0,.35))}
 .spec-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
 .meta-pill{padding:9px 12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .meta-pill strong{color:var(--text)}
@@ -275,6 +278,12 @@ function tokenFill(color, secondary) {
   return `radial-gradient(circle at 35% 30%, ${color}cc, ${color})`;
 }
 
+function tokenGlow(color, secondary, large = false) {
+  const size = large ? 18 : 9;
+  const second = secondary || color;
+  return `inset 0 2px 7px rgba(255,255,255,0.08), inset 0 -5px 14px rgba(0,0,0,.38), 0 0 ${size}px ${color}66, 0 0 ${Math.round(size * 1.45)}px ${second}3d`;
+}
+
 function applyTokenStyle(el, player, large = false) {
   const color = player?.color || '#ff2d55';
   const secondary = player?.color_secondary || '';
@@ -291,22 +300,24 @@ function applyTokenStyle(el, player, large = false) {
   el.style.justifyContent = 'center';
   if (shape === 'emoji' && emoji) {
     el.style.borderRadius = '50%';
-    el.style.background = secondary ? `linear-gradient(135deg, ${color}33 0%, ${secondary}33 100%)` : color + '22';
-    el.style.fontSize = large ? '74%' : '65%';
+    el.style.background = secondary ? tokenFill(color, secondary) : `radial-gradient(circle at 35% 30%, ${color}55, ${color}18 68%, rgba(7,7,26,.9))`;
+    el.style.boxShadow = tokenGlow(color, secondary, large);
+    el.style.fontSize = large ? '112%' : '98%';
+    el.style.textShadow = `0 0 ${large ? 18 : 8}px ${color}, 0 2px 8px rgba(0,0,0,.6)`;
+    el.classList.add('token-emoji');
     el.textContent = emoji;
     return;
   }
   if (shape === 'emoji_image' && emojiImage) {
     el.style.borderRadius = '50%';
-    el.style.background = secondary ? `linear-gradient(135deg, ${color}33 0%, ${secondary}33 100%)` : color + '18';
-    el.style.boxShadow = `inset 0 1px 4px rgba(255,255,255,0.06), 0 0 ${large ? 16 : 7}px ${color}44`;
+    el.style.background = secondary ? tokenFill(color, secondary) : `radial-gradient(circle at 35% 30%, ${color}44, ${color}12 70%, rgba(7,7,26,.92))`;
+    el.style.boxShadow = tokenGlow(color, secondary, large);
     const img = document.createElement('img');
     img.src = emojiImage;
     img.alt = '';
-    img.style.width = large ? '78%' : '74%';
-    img.style.height = large ? '78%' : '74%';
-    img.style.objectFit = 'contain';
-    img.style.filter = 'drop-shadow(0 0 8px rgba(0,0,0,.28))';
+    img.className = 'token-emoji-img';
+    img.style.width = large ? '96%' : '90%';
+    img.style.height = large ? '96%' : '90%';
     el.appendChild(img);
     return;
   }
@@ -314,7 +325,7 @@ function applyTokenStyle(el, player, large = false) {
   el.style.borderRadius = clip.borderRadius;
   if (clip.clipPath) el.style.clipPath = clip.clipPath;
   el.style.background = tokenFill(color, secondary);
-  el.style.boxShadow = `inset 0 1px 4px rgba(255,255,255,0.06), 0 0 ${large ? 16 : 7}px ${color}44`;
+  el.style.boxShadow = tokenGlow(color, secondary, large);
 }
 
 function mkAvatar(player, large = false) {
@@ -510,8 +521,12 @@ function renderList(games) {
         cell.className = 'mini-cell';
         if (isWinCell(game, r, c)) cell.classList.add('win-cell');
         const val = game.grid?.[r]?.[c] ?? 0;
-        if (val === 1) applyTokenStyle(cell, p1);
-        if (val === 2) applyTokenStyle(cell, p2);
+        if (val === 1 || val === 2) {
+          const token = document.createElement('div');
+          token.className = 'mini-token';
+          applyTokenStyle(token, val === 1 ? p1 : p2, false);
+          cell.appendChild(token);
+        }
         if (isWinCell(game, r, c)) {
           cell.classList.add('win-cell');
           cell.style.boxShadow = 'inset 0 2px 6px rgba(0,0,0,.55), 0 0 0 2px rgba(255,214,10,.95), 0 0 20px rgba(255,214,10,.42)';

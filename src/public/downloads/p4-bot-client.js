@@ -9,7 +9,7 @@
  *   P4_API_URL=http://localhost:8080 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_CHALLENGE_BOT_ID=7 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_DEPTH=12 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_DEPTH=10 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_MAX_TABLE=350000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally safe but competitive:
@@ -33,12 +33,13 @@ const BOT_TOKENS = String(process.env.P4_BOT_TOKENS || process.env.P4_BOT_TOKEN 
   .filter(Boolean);
 const LOOP_MS = Math.max(750, Number(process.env.P4_LOOP_MS || 1200));
 const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
-const MAX_DEPTH = Math.max(1, Math.min(15, Number(process.env.P4_DEPTH || 11)));
-const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS || 12000)));
+const MAX_DEPTH = Math.max(1, Math.min(15, Number(process.env.P4_DEPTH || 12)));
+const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS || 45000)));
 const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
 const MAX_CONCURRENT_GAMES = 1;
 const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 350000));
 const LOG_SEARCH = process.env.P4_LOG_SEARCH !== '0';
+const USE_COLOR = process.env.P4_COLOR !== '0' && process.stdout.isTTY;
 
 if (!BOT_TOKENS.length) {
   console.error('Missing token. Run with: P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js');
@@ -74,6 +75,24 @@ function formatSignedCp(cp) {
   return `${value >= 0 ? '+' : ''}${(value / 100).toFixed(2)}`;
 }
 
+function color(text, code) {
+  return USE_COLOR ? `\x1b[${code}m${text}\x1b[0m` : text;
+}
+
+function colorEval(cp) {
+  const value = Number(cp || 0);
+  const formatted = formatSignedCp(value);
+  if (value > 25) return color(formatted, '92;1');
+  if (value < -25) return color(formatted, '91;1');
+  return color(formatted, '93;1');
+}
+
+function boardAfterMove(board, col, side) {
+  const copy = cloneBoard(board);
+  drop(copy, col, side);
+  return copy;
+}
+
 function formatBoard(board) {
   return board.map(row => row.map(v => (v === 0 ? '.' : v === 1 ? 'X' : 'O')).join(' ')).join('\n');
 }
@@ -92,7 +111,7 @@ function scoreToCentipawns(score) {
   return Math.max(-5000, Math.min(5000, Math.round(score)));
 }
 
-function renderEngineReport(game, col, stats) {
+function renderEngineReport(game, col, stats, shownBoard = game.board) {
   const elapsed = Math.max(1, Number(stats.elapsedMs || 1));
   const nodes = Number(stats.nodes || 0);
   const nps = Math.round(nodes / (elapsed / 1000));
@@ -100,12 +119,12 @@ function renderEngineReport(game, col, stats) {
   const lines = [
     '',
     '============================================================',
-    `[${gameLabel(game)}] Engine analysis`,
+    color(`[${gameLabel(game)}] Engine analysis`, '96;1'),
     '------------------------------------------------------------',
-    `Coup              : c${Number(col) + 1} (${moveNumber(game)})`,
-    `Source            : Engine${stats.tactical ? ` / ${stats.tactical}` : ''}`,
-    `Evaluation        : ${formatSignedCp(cp)} (${cp} cp)`,
-    `Depth             : ${stats.depth || 0}/${MAX_DEPTH}${stats.timeout ? ' timeout' : ''}`,
+    `${color('Coup', '97;1')}              : c${Number(col) + 1} (${moveNumber(game)})`,
+    `${color('Source', '97;1')}            : Engine${stats.tactical ? ` / ${stats.tactical}` : ''}`,
+    `${color('Evaluation', '97;1')}        : ${colorEval(cp)} (${cp} cp)`,
+    `${color('Depth', '97;1')}             : ${stats.depth || 0}/${MAX_DEPTH}${stats.timeout ? ` ${color('timeout', '91;1')}` : ''}`,
     `Nodes             : ${nodes.toLocaleString('fr-FR')}`,
     `Nodes/seconde     : ${nps.toLocaleString('fr-FR')}`,
     `Prunes            : ${Number(stats.prunes || 0).toLocaleString('fr-FR')}`,
@@ -114,7 +133,7 @@ function renderEngineReport(game, col, stats) {
     `Temps calcul      : ${elapsed} ms`,
     `CP -> Futurs coups: ${formatPv(stats.pv)}`,
     '------------------------------------------------------------',
-    formatBoard(game.board),
+    formatBoard(shownBoard),
     '============================================================',
     '',
   ];
@@ -499,7 +518,7 @@ async function runBotWorker(token, workerIndex) {
         body: JSON.stringify({ col }),
       }, token);
       const s = choice.stats || {};
-      renderEngineReport(game, col, s);
+      renderEngineReport(game, col, s, boardAfterMove(game.board, col, Number(game.side)));
       workerLog(`[${gameLabel(game)}] Played c${col + 1}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
       if (result.result?.type === 'game_over') {
         const winner = result.result?.winner ? `side ${result.result.winner}` : 'draw';
