@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - API Docs</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -22,6 +22,7 @@ body{background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px)
 h1,h2{font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:2px}
 h1{font-size:clamp(42px,7vw,78px);line-height:.92}
 h1 span{color:var(--red)}
+.hero-logo{width:72px;height:72px;border-radius:20px;object-fit:cover;border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 48px rgba(0,0,0,.34),0 0 28px rgba(133,235,255,.16);margin-bottom:12px}
 .hero p,.section-head p,.endpoint p,.foot,ul{color:var(--muted);line-height:1.65}
 .hero-grid,.meta,.subgrid{display:grid;gap:12px}
 .hero-grid,.meta{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -64,6 +65,7 @@ ul{padding-left:18px}
   <section class="hero">
     <div class="card">
       <div class="eyebrow">Documentation Complete</div>
+      <img class="hero-logo" src="/assets/site-logo.png" alt="Puissance 4">
       <h1>Puissance <span>4</span> API</h1>
       <p>Référence HTTP + Socket.IO du projet. Cette page décrit les routes disponibles, les erreurs probables, les headers attendus, des exemples JSON et des exemples <code>fetch</code> directement réutilisables.</p>
       <div class="hero-actions">

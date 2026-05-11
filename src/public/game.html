@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 — Partie</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,7 +56,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   box-shadow: 0 18px 48px rgba(0,0,0,0.3);
   backdrop-filter: blur(12px);
 }
-.logo-sm { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
+.logo-sm { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; display:inline-flex; align-items:center; gap:10px; }
+.logo-sm::before{content:"";width:40px;height:40px;border-radius:12px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
 .logo-sm span { color: var(--p1); text-shadow: 0 0 20px var(--p1-glow); }
 .btn-quit {
   font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700;

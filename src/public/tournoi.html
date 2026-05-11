@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Tournois</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -14,7 +14,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px)}
 .page{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:26px 16px 56px;display:flex;flex-direction:column;gap:18px}
 .nav{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:32px;letter-spacing:2px;color:var(--text);text-decoration:none}
+.logo{font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:32px;letter-spacing:2px;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:10px}
+.logo::before{content:"";width:42px;height:42px;border-radius:13px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
 .logo span{color:var(--red)}
 .nav-actions{display:flex;gap:8px;flex-wrap:wrap}
 .nav-btn{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--muted);text-decoration:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;transition:.18s}

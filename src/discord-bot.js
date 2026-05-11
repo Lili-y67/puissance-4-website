@@ -97,6 +97,7 @@ function startDiscordBot(ctx) {
   const code = value => `\`${String(value == null ? '-' : value).replace(/`/g, '')}\``;
   const playerUrl = player => `${api}/profil?id=${player.id}`;
   const rankOf = elo => ctx.getRank(Number(elo || 0)) || { label: 'Non classe', color: '#8b9cf4' };
+  const discordEmojiCache = new Map();
 
   function rowButtons(buttons) {
     const row = new ActionRowBuilder();
@@ -122,7 +123,7 @@ function startDiscordBot(ctx) {
     if (buttons.length || rows.length) container.addSeparatorComponents(new SeparatorBuilder());
     if (buttons.length) container.addActionRowComponents(rowButtons(buttons));
     for (const row of rows) container.addActionRowComponents(row);
-    return { flags: MessageFlags.IsComponentsV2, components: [container] };
+    return { flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral, components: [container] };
   }
 
   function ephemeralMessage(payload) {
@@ -138,14 +139,59 @@ function startDiscordBot(ctx) {
     return interaction.reply(payload).catch(() => {});
   }
 
+  function normalizeEmojiName(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .toLowerCase();
+  }
+
+  function findGuildEmoji(candidates = []) {
+    for (const candidate of candidates) {
+      const key = normalizeEmojiName(candidate);
+      if (discordEmojiCache.has(key)) return discordEmojiCache.get(key);
+    }
+    return '';
+  }
+
+  function rankEmoji(rank) {
+    const label = String(rank?.label || '');
+    const base = label.split(/\s+/)[0] || label;
+    const tierRaw = label.split(/\s+/)[1] || '';
+    const romanToNumber = { I: '1', II: '2', III: '3', IV: '4', V: '5' };
+    const tier = romanToNumber[tierRaw.toUpperCase()] || tierRaw;
+    return findGuildEmoji([
+      label,
+      label.replace(/\s+/g, '_'),
+      `${base}_${tier}`,
+      `${base}${tier}`,
+      base,
+    ]);
+  }
+
+  function badgeEmoji(name, fallback = '') {
+    const map = {
+      PERSO: ['Perso', 'Badge_Perso', 'Role_Perso'],
+      'VIP+': ['VIPPlus', 'VIP_Plus', 'VIP+', 'Badge_VIPPlus'],
+      VIP: ['VIP', 'Badge_VIP'],
+      ADMIN: ['Admin', 'Administrateur', 'Badge_Admin'],
+      MODO: ['Modo', 'Moderateur', 'Badge_Modo'],
+      BOT: ['Bot', 'Robot', 'Badge_Bot'],
+    };
+    return findGuildEmoji(map[name] || [name]) || fallback;
+  }
+
   function roleBadges(player) {
     const badges = [];
-    if (Number(player?.is_perso) === 1) badges.push('PERSO');
-    if (Number(player?.is_vip_plus) === 1) badges.push('VIP+');
-    else if (Number(player?.is_vip) === 1) badges.push('VIP');
-    if (player?.role === 'admin') badges.push('ADMIN');
-    else if (player?.role === 'moderator') badges.push('MODO');
-    if (Number(player?.is_bot) === 1) badges.push('BOT');
+    const push = (name, fallback) => badges.push(`${badgeEmoji(name, fallback)} **${name}**`.trim());
+    if (Number(player?.is_perso) === 1) push('PERSO', '✨');
+    if (Number(player?.is_vip_plus) === 1) push('VIP+', '💎');
+    else if (Number(player?.is_vip) === 1) push('VIP', '⭐');
+    if (player?.role === 'admin') push('ADMIN', '⚡');
+    else if (player?.role === 'moderator') push('MODO', '🛡️');
+    if (Number(player?.is_bot) === 1) push('BOT', '🤖');
     return badges.join(' / ') || 'JOUEUR';
   }
 
@@ -250,6 +296,7 @@ function startDiscordBot(ctx) {
 
   function profilePayload(player) {
     const rank = rankOf(player.elo);
+    const rankIcon = rankEmoji(rank);
     const games = latestGames(player.id);
     const follows = ctx.db.prepare(
       'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
@@ -260,8 +307,8 @@ function startDiscordBot(ctx) {
       : 'Derniere partie: aucune partie recente';
     return containerMessage({
       color: parseInt(String(player.color || '#ff2d55').replace('#', ''), 16) || 0xff2d55,
-      title: `${player.pseudo} - ${fmt(player.elo)} ELO`,
-      subtitle: `Rang: **${rank.label}** | Badges: **${roleBadges(player)}** | Coins: **${fmt(player.coins || 0)}**`,
+      title: `${rankIcon ? `${rankIcon} ` : ''}${player.pseudo} - ${fmt(player.elo)} ELO`,
+      subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)} | Coins: **${fmt(player.coins || 0)}**`,
       sections: [
         `### Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
         `### Social et profil\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${lastLine}`,
@@ -371,6 +418,80 @@ function startDiscordBot(ctx) {
     });
   }
 
+  function hexToRgb(hex) {
+    const normalized = String(hex || '').trim().replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+    return [
+      parseInt(normalized.slice(0, 2), 16),
+      parseInt(normalized.slice(2, 4), 16),
+      parseInt(normalized.slice(4, 6), 16),
+    ];
+  }
+
+  function tokenEmojiFromColor(color, fallback) {
+    const rgb = hexToRgb(color);
+    if (!rgb) return fallback;
+    const palette = [
+      { emoji: '🔴', rgb: [255, 45, 85] },
+      { emoji: '🟠', rgb: [255, 159, 10] },
+      { emoji: '🟡', rgb: [255, 214, 10] },
+      { emoji: '🟢', rgb: [48, 209, 88] },
+      { emoji: '🔵', rgb: [47, 128, 255] },
+      { emoji: '🟣', rgb: [191, 90, 242] },
+      { emoji: '⚪', rgb: [235, 245, 255] },
+      { emoji: '⚫', rgb: [35, 35, 45] },
+    ];
+    let best = palette[0];
+    let bestDistance = Infinity;
+    for (const item of palette) {
+      const distance = Math.hypot(rgb[0] - item.rgb[0], rgb[1] - item.rgb[1], rgb[2] - item.rgb[2]);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = item;
+      }
+    }
+    return best.emoji || fallback;
+  }
+
+  function boardFromMoves(game, moves) {
+    const board = Array.from({ length: 6 }, () => Array(7).fill(0));
+    for (const [index, move] of moves.entries()) {
+      const col = Number(move.col);
+      if (!Number.isInteger(col) || col < 0 || col > 6) continue;
+      let row = Number(move.row);
+      const playerId = Number(move.player_id);
+      const side = playerId === Number(game.player1_id) ? 1 : playerId === Number(game.player2_id) ? 2 : (index % 2) + 1;
+      if (!Number.isInteger(row) || row < 0 || row > 5 || board[row][col] !== 0) {
+        row = -1;
+        for (let r = 5; r >= 0; r--) {
+          if (board[r][col] === 0) {
+            row = r;
+            break;
+          }
+        }
+      }
+      if (row >= 0 && board[row][col] === 0) board[row][col] = side;
+    }
+    return board;
+  }
+
+  function replayGridSection(game) {
+    const moves = ctx.mQ.getByGame.all(Number(game.id));
+    const p1Emoji = tokenEmojiFromColor(game.p1_color, '🔴');
+    const p2Emoji = tokenEmojiFromColor(game.p2_color, '🟡');
+    const emptyEmoji = '⚫';
+    const board = boardFromMoves(game, moves);
+    const grid = board
+      .map(row => row.map(cell => (cell === 1 ? p1Emoji : cell === 2 ? p2Emoji : emptyEmoji)).join(''))
+      .join('\n');
+    return [
+      '### Plateau final',
+      `${p1Emoji} **${game.p1_pseudo}**  vs  ${p2Emoji} **${game.p2_pseudo}**`,
+      grid,
+      '1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣',
+    ].join('\n');
+  }
+
   function replayPayload(id) {
     const game = ctx.gQ.getById.get(Number(id));
     if (!game) return null;
@@ -381,9 +502,14 @@ function startDiscordBot(ctx) {
       subtitle: winner,
       sections: [
         `### Match\n**${game.p1_pseudo}** (${game.p1_elo || 0}) vs **${game.p2_pseudo}** (${game.p2_elo || 0})`,
+        replayGridSection(game),
         `### Details\nCoups: **${game.move_count || 0}** | Duree: **${game.duration || 0}s**\nELO: **${game.elo_p1 >= 0 ? '+' : ''}${game.elo_p1 || 0}** / **${game.elo_p2 >= 0 ? '+' : ''}${game.elo_p2 || 0}**`,
       ],
-      buttons: [linkButton('Voir replay', `${api}/replay/${game.id}`, '🎬')],
+      buttons: [
+        linkButton('Voir replay', `${api}/replay/${game.id}`, '🎬'),
+        linkButton('Profil J1', playerUrl({ id: game.player1_id }), '👤'),
+        linkButton('Profil J2', playerUrl({ id: game.player2_id }), '👤'),
+      ],
     });
   }
 
@@ -667,9 +793,26 @@ function startDiscordBot(ctx) {
     } catch (_) {}
   }
 
+  async function loadGuildEmojis() {
+    discordEmojiCache.clear();
+    if (!ctx.DISCORD_GUILD) return;
+    try {
+      const guild = await bot.guilds.fetch(ctx.DISCORD_GUILD);
+      const emojis = await guild.emojis.fetch();
+      emojis.forEach(emoji => {
+        const rendered = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+        discordEmojiCache.set(normalizeEmojiName(emoji.name), rendered);
+      });
+      console.log(`[BOT] ${discordEmojiCache.size} emojis serveur charges`);
+    } catch (error) {
+      console.warn('[BOT] Emojis serveur indisponibles:', error.message);
+    }
+  }
+
   bot.once('clientReady', async () => {
     console.log(`[BOT] Bot connecte : ${bot.user.tag}`);
     try {
+      await loadGuildEmojis();
       await registerCommands();
       console.log('[BOT] Commandes slash enregistrees depuis discord-bot.js');
     } catch (error) {
@@ -691,8 +834,7 @@ function startDiscordBot(ctx) {
         return interaction.editReply(payload);
       }
       if (!interaction.isChatInputCommand()) return;
-      const admin = interaction.commandName === 'admin';
-      await interaction.deferReply(admin ? { flags: MessageFlags.Ephemeral } : {});
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));

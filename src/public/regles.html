@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Regles</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,.06);--text:#eeeef5;--muted:rgba(238,238,245,.38);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--orange:#ff9f0a;--blue:#4c6ef5;--grid:#1a1a3a;--cell:#0d0d22}
@@ -14,7 +14,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px)}
 .page{position:relative;z-index:2;max-width:620px;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:20px}
 .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.logo-sm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text)}
+.logo-sm{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text);display:inline-flex;align-items:center;gap:10px}
+.logo-sm::before{content:"";width:40px;height:40px;border-radius:12px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
 .logo-sm span{color:var(--red)}
 .btn-back{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);text-decoration:none}
 .hero{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}

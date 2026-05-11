@@ -734,7 +734,7 @@ setInterval(() => {
 try { sQ.purge.run(Date.now()); } catch(e) {}
 
 const BOT_PSEUDO = 'Puissance4-AI';
-const BOT_AVATAR = '/bot-avatar.svg';
+const BOT_AVATAR = '/assets/bot-logo.png';
 const BOT_BANNER = 'https://i.pinimg.com/1200x/0b/10/ae/0b10aed237a4092f5b6ebf89bccdffbb.jpg';
 const BOT_START_ELO = 1200;
 const _BOT_COLORS = ['#ffd60a','#30d158','#0a84ff','#ff9f0a','#bf5af2','#00c7be','#ff375f','#5e5ce6'];
@@ -778,7 +778,7 @@ function ensurePreconfiguredBots() {
     if (existing) {
       db.prepare(`
         UPDATE players
-        SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?, color = ?, shape = ?, avatar = COALESCE(NULLIF(avatar,''), ?), deleted = 0
+        SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?, color = ?, shape = ?, avatar = ?, deleted = 0
         WHERE id = ?
       `).run(bot.skill, bot.description, bot.color, bot.shape, BOT_AVATAR, existing.id);
       if (shouldSeedStartElo) {

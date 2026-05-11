@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4</title>
-<link rel="icon" type="image/png" href="https://i.imgur.com/gjrLtaU.png">
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* â”€â”€ Reset & Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -197,7 +197,9 @@ html, body {
   place-items: center;
   font-size: clamp(20px, 2vw, 22px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
 }
+.dock-brand-logo img{width:100%;height:100%;object-fit:cover;display:block}
 .dock-brand-copy { display:flex; flex-direction:column; gap:2px; }
 .dock-eyebrow {
   font-family: 'Barlow Condensed', sans-serif;
@@ -314,6 +316,16 @@ html, body {
   color: var(--red);
   text-shadow: 0 0 40px var(--red-glow), 0 0 80px var(--red-glow);
   animation: flicker 6s ease-in-out infinite;
+}
+.hero-logo-img{
+  width:min(420px,92vw);
+  aspect-ratio:16/9;
+  border-radius:28px;
+  object-fit:cover;
+  display:block;
+  margin:0 0 18px;
+  border:1px solid rgba(255,255,255,.11);
+  box-shadow:0 26px 80px rgba(0,0,0,.42),0 0 34px rgba(133,235,255,.18);
 }
 @keyframes flicker {
   0%,96%,100% { opacity: 1; }
@@ -2050,7 +2062,7 @@ html, body {
 <div class="page">
   <div class="home-dock">
     <div class="dock-brand">
-      <div class="dock-brand-logo">🎮</div>
+      <div class="dock-brand-logo"><img src="/assets/site-logo.png" alt="Puissance 4"></div>
       <div class="dock-brand-copy">
         <div class="dock-eyebrow">Arena Ranked</div>
         <div class="dock-title">Puissance <span>4</span></div>
@@ -2073,6 +2085,7 @@ html, body {
   <!-- Hero -->
   <div class="hero">
     <div class="logo-eyebrow">Jouez en ligne</div>
+    <img class="hero-logo-img" src="/assets/site-logo.png" alt="Puissance 4">
     <div class="logo">
       <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
     </div>
