@@ -11,6 +11,7 @@
  *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_DEPTH=10 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_MAX_TABLE=350000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_THREADS=4 P4_DEPTH=12 P4_THINK_MS=45000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally safe but competitive:
  * - pings the site so the bot appears online
@@ -20,6 +21,9 @@
  * - prints lichess-bot style engine blocks per game id
  * - respects API rate limits with backoff on HTTP 429
  */
+
+const os = require('node:os');
+const { Worker, isMainThread, parentPort, workerData } = require('node:worker_threads');
 
 if (process.env.P4_INSECURE_TLS === '1') {
   // Useful only if the local machine refuses Railway's certificate chain.
@@ -38,10 +42,14 @@ const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS |
 const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
 const MAX_CONCURRENT_GAMES = 1;
 const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 350000));
+const SEARCH_THREADS = Math.max(1, Math.min(
+  Math.max(1, os.cpus().length - 1),
+  Number(process.env.P4_THREADS || 3)
+));
 const LOG_SEARCH = process.env.P4_LOG_SEARCH !== '0';
 const USE_COLOR = process.env.P4_COLOR !== '0' && process.stdout.isTTY;
 
-if (!BOT_TOKENS.length) {
+if (isMainThread && !BOT_TOKENS.length) {
   console.error('Missing token. Run with: P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js');
   process.exit(1);
 }
@@ -384,7 +392,59 @@ function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, 
   return bestScore;
 }
 
-function chooseMove(game) {
+function searchRootMove(task) {
+  const start = Date.now();
+  const board = cloneBoard(task.board);
+  const me = Number(task.me);
+  const opp = me === 1 ? 2 : 1;
+  const col = Number(task.col);
+  const depth = Number(task.depth || 1);
+  const deadline = Number(task.deadline || Date.now() + THINK_MS);
+  const table = new Map();
+  const stats = { nodes: 0, prunes: 0, cacheHits: 0, timeout: false, depth, score: 0, pv: [], tableSize: 0 };
+  const row = drop(board, col, me);
+  let score = -Infinity;
+  if (row >= 0) {
+    score = checkWin(board, row, col, me)
+      ? 1_000_000 + depth
+      : minimax(board, depth - 1, -Infinity, Infinity, opp, me, deadline, table, stats);
+    undoDrop(board, row, col);
+  }
+  stats.score = score;
+  stats.centipawns = scoreToCentipawns(score);
+  stats.pv = principalVariation(task.board, col, me, Math.min(8, depth + 1));
+  stats.tableSize = table.size;
+  stats.elapsedMs = Date.now() - start;
+  table.clear();
+  return { col, score, stats };
+}
+
+function runRootWorker(task) {
+  return new Promise(resolve => {
+    const worker = new Worker(__filename, { workerData: { type: 'search-root', task } });
+    worker.once('message', resolve);
+    worker.once('error', error => resolve({ col: task.col, score: -Infinity, stats: { timeout: true, error: error.message, nodes: 0 } }));
+    worker.once('exit', code => {
+      if (code !== 0) resolve({ col: task.col, score: -Infinity, stats: { timeout: true, nodes: 0 } });
+    });
+  });
+}
+
+async function evaluateRootMoves(board, moveOrder, me, depth, deadline) {
+  const tasks = moveOrder.map(col => ({ board, col, me, depth, deadline }));
+  if (SEARCH_THREADS <= 1 || tasks.length <= 1 || depth < 7) {
+    return tasks.map(searchRootMove);
+  }
+  const results = [];
+  for (let i = 0; i < tasks.length; i += SEARCH_THREADS) {
+    const chunk = tasks.slice(i, i + SEARCH_THREADS);
+    results.push(...await Promise.all(chunk.map(runRootWorker)));
+    if (Date.now() >= deadline) break;
+  }
+  return results;
+}
+
+async function chooseMove(game) {
   const board = game.board;
   const me = Number(game.side);
   const opp = me === 1 ? 2 : 1;
@@ -412,21 +472,20 @@ function chooseMove(game) {
   let bestScore = -Infinity;
   const depthReports = [];
   for (let depth = 1; depth <= MAX_DEPTH; depth++) {
+    const results = await evaluateRootMoves(board, moveOrder, me, depth, deadline);
     let depthBest = best;
     let depthBestScore = -Infinity;
-    for (const col of moveOrder) {
-      const row = drop(board, col, me);
-      if (row < 0) continue;
-      const won = checkWin(board, row, col, me);
-      const score = won
-        ? 1_000_000 + depth
-        : minimax(board, depth - 1, -Infinity, Infinity, opp, me, deadline, table, stats);
-      undoDrop(board, row, col);
-      if (score > depthBestScore) {
-        depthBestScore = score;
-        depthBest = col;
+    for (const result of results) {
+      const s = result.stats || {};
+      stats.nodes += Number(s.nodes || 0);
+      stats.prunes += Number(s.prunes || 0);
+      stats.cacheHits += Number(s.cacheHits || 0);
+      stats.timeout = stats.timeout || !!s.timeout;
+      stats.tableSize = Math.max(stats.tableSize, Number(s.tableSize || 0));
+      if (Number(result.score) > depthBestScore) {
+        depthBestScore = Number(result.score);
+        depthBest = Number(result.col);
       }
-      if (stats.timeout) break;
     }
     if (!stats.timeout) {
       best = depthBest;
@@ -441,8 +500,8 @@ function chooseMove(game) {
         log(`[${gameLabel(game)}] info depth ${depth}/${MAX_DEPTH} cp ${formatSignedCp(stats.centipawns)} nodes ${stats.nodes} pv ${formatPv(stats.pv)}`);
       }
     }
-    if (table.size > MAX_TABLE) {
-      warn(`transposition table limit reached (${table.size}/${MAX_TABLE}), stopping search to protect RAM`);
+    if (stats.tableSize > MAX_TABLE) {
+      warn(`transposition table limit reached (${stats.tableSize}/${MAX_TABLE}), stopping search to protect RAM`);
       break;
     }
     if (stats.timeout) {
@@ -451,7 +510,7 @@ function chooseMove(game) {
     }
   }
   stats.elapsedMs = Date.now() - start;
-  stats.tableSize = table.size;
+  stats.tableSize = stats.tableSize || table.size;
   stats.depthReports = depthReports;
   table.clear();
   return { col: best, stats };
@@ -463,7 +522,7 @@ async function runBotWorker(token, workerIndex) {
   const workerWarn = (message, ...args) => warn(`[${tag}] ${message}`, ...args);
   const me = await api('/api/bot/me', {}, token);
   workerLog(`Connected as ${me.bot.pseudo} (${me.bot.elo} ELO) on ${API_URL}`);
-  workerLog(`Config depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, loopMs=${LOOP_MS}, requestGapMs=${REQUEST_GAP_MS}, maxConcurrent=${MAX_CONCURRENT_GAMES}, maxTable=${MAX_TABLE}`);
+  workerLog(`Config depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, threads=${SEARCH_THREADS}, loopMs=${LOOP_MS}, requestGapMs=${REQUEST_GAP_MS}, maxConcurrent=${MAX_CONCURRENT_GAMES}, maxTable=${MAX_TABLE}`);
 
   if (CHALLENGE_BOT_ID > 0 && workerIndex === 0) {
     try {
@@ -506,7 +565,7 @@ async function runBotWorker(token, workerIndex) {
         continue;
       }
 
-      const choice = chooseMove(game);
+      const choice = await chooseMove(game);
       const col = choice.col;
       if (col === null) {
         await sleep(LOOP_MS);
@@ -545,11 +604,19 @@ async function main() {
   if (BOT_TOKENS.length > 1) {
     warn(`Several tokens provided, but this client is configured for one simultaneous game. Using only the first token.`);
   }
-  log(`Starting single-game worker. depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, maxTable=${MAX_TABLE}.`);
+  log(`Starting single-game worker. depth=${MAX_DEPTH}, thinkMs=${THINK_MS}, threads=${SEARCH_THREADS}, maxTable=${MAX_TABLE}.`);
   await Promise.all(activeTokens.map((token, index) => runBotWorker(token, index)));
 }
 
-main().catch(error => {
-  console.error('[P4 Bot] Fatal:', error);
-  process.exit(1);
-});
+if (!isMainThread) {
+  try {
+    parentPort.postMessage(searchRootMove(workerData.task));
+  } catch (error) {
+    parentPort.postMessage({ col: workerData?.task?.col, score: -Infinity, stats: { timeout: true, error: error.message, nodes: 0 } });
+  }
+} else {
+  main().catch(error => {
+    console.error('[P4 Bot] Fatal:', error);
+    process.exit(1);
+  });
+}

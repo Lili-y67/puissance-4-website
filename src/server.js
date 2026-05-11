@@ -108,6 +108,13 @@ function getPresenceCounts() {
   };
 }
 
+function getActiveGameCount() {
+  if (gm?.games instanceof Map) {
+    return [...gm.games.values()].filter(game => game?.status === 'active').length;
+  }
+  return Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'active'`).get()?.c || 0);
+}
+
 function getBoostDisplayName(rawName) {
   const name = String(rawName || '').trim();
   if (!name) return 'Puissance4-Booster';
@@ -132,6 +139,87 @@ function parseSqliteDateMs(value) {
   const withZone = /Z$|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}Z`;
   const parsed = Date.parse(withZone);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildPlayerEloHistory(playerId, daysRaw = 7) {
+  const id = Number(playerId || 0);
+  const days = [1, 7, 15].includes(Number(daysRaw)) ? Number(daysRaw) : 7;
+  const player = pQ.getById.get(id);
+  if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return null;
+
+  const now = Date.now();
+  const start = now - days * 24 * 60 * 60 * 1000;
+  const rows = db.prepare(`
+    SELECT id, player1_id, player2_id, winner_id, elo_p1, elo_p2, finished_at, move_count
+    FROM games
+    WHERE (player1_id = ? OR player2_id = ?)
+      AND status = 'finished'
+      AND finished_at IS NOT NULL
+    ORDER BY finished_at ASC, id ASC
+  `).all(id, id);
+
+  const games = rows
+    .map(game => ({ ...game, finishedMs: parseSqliteDateMs(game.finished_at) }))
+    .filter(game => game.finishedMs >= start && game.finishedMs <= now);
+  const deltas = games.map(game => Number(game.player1_id) === id ? Number(game.elo_p1 || 0) : Number(game.elo_p2 || 0));
+  const currentElo = Number(player.elo || 0);
+  let running = currentElo - deltas.reduce((sum, delta) => sum + delta, 0);
+  const points = [{
+    t: start,
+    elo: running,
+    delta: 0,
+    gameId: null,
+    result: 'start',
+    label: 'Debut',
+  }];
+
+  games.forEach((game, index) => {
+    const delta = deltas[index];
+    running += delta;
+    points.push({
+      t: game.finishedMs,
+      elo: running,
+      delta,
+      gameId: game.id,
+      moveCount: game.move_count || 0,
+      result: game.winner_id == null ? 'draw' : Number(game.winner_id) === id ? 'win' : 'loss',
+      label: `Partie #${game.id}`,
+    });
+  });
+
+  if (!points.length || points[points.length - 1].t < now) {
+    points.push({
+      t: now,
+      elo: currentElo,
+      delta: 0,
+      gameId: null,
+      result: 'now',
+      label: 'Maintenant',
+    });
+  }
+
+  const eloValues = points.map(point => Number(point.elo || 0));
+  return {
+    player: {
+      id: player.id,
+      pseudo: player.pseudo,
+      color: player.color || '#ff2d55',
+      elo: currentElo,
+      rank: getRank(currentElo),
+    },
+    days,
+    points,
+    stats: {
+      startTime: start,
+      endTime: now,
+      startElo: points[0]?.elo ?? currentElo,
+      endElo: currentElo,
+      delta: currentElo - (points[0]?.elo ?? currentElo),
+      minElo: Math.min(...eloValues, currentElo),
+      maxElo: Math.max(...eloValues, currentElo),
+      games: games.length,
+    },
+  };
 }
 
 function getWeekStartMs(inputMs) {
@@ -3655,7 +3743,10 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
   }
   const nextMusic = String(music || '').trim();
   const allowed = getQueueMusicPaths().map(entry => entry.src);
-  if (nextMusic && !allowed.includes(nextMusic)) {
+  const isYouTube = /^youtube:[a-zA-Z0-9_-]{6,20}$/.test(nextMusic);
+  const isAudioUrl = /^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(nextMusic);
+  const isLocalCustom = nextMusic === 'local:custom';
+  if (nextMusic && !allowed.includes(nextMusic) && !isYouTube && !isAudioUrl && !isLocalCustom) {
     return res.status(400).json({ error: 'Musique invalide.' });
   }
   pQ.updateQueueMusic.run({ music: nextMusic, id });
@@ -3839,6 +3930,12 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
   const p = pQ.getByPseudo.get(req.params.pseudo);
   if (!p) return res.status(404).json({ error: 'Introuvable' });
   res.json(sanitize(p));
+});
+
+app.get('/api/players/:id/elo-history', (req, res) => {
+  const history = buildPlayerEloHistory(req.params.id, req.query.days);
+  if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
+  res.json(history);
 });
 
 app.get('/api/players/:id', (req, res) => {
@@ -4616,7 +4713,7 @@ app.get('/api/leaderboard/wins', (_, res) => {
 });
 app.get('/api/site-stats', (_, res) => {
   const presence = getPresenceCounts();
-  const activeGames = db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0;
+  const activeGames = getActiveGameCount();
   const registeredHumans = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0`).get()?.c || 0);
   const registeredBots = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1`).get()?.c || 0);
   const registeredPlayers = registeredHumans + registeredBots;
@@ -4668,7 +4765,7 @@ app.get('/api/site-stats', (_, res) => {
 function getStatsOverview() {
   const presence = getPresenceCounts();
   const registeredPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-  const activeGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'active'`).get()?.c || 0);
+  const activeGames = getActiveGameCount();
   const finishedGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'finished'`).get()?.c || 0);
   const totalGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games`).get()?.c || 0);
   const totalMoves = Number(db.prepare(`SELECT COALESCE(SUM(move_count), 0) AS v FROM games`).get()?.v || 0);
@@ -6559,4 +6656,3 @@ function startBot() {
 
   bot.login(botToken).catch(e => console.error('[BOT] Login failed:', e));
 }
-

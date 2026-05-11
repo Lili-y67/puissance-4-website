@@ -363,6 +363,58 @@ input[type="file"]{display:none;}
 .social-val{font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;}
 .social-lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:2px;}
 
+/* ELO history */
+.elo-history-card{
+  position:relative;
+  margin-top:14px;
+  padding:18px;
+  border-radius:22px;
+  border:1px solid rgba(255,255,255,.07);
+  background:
+    radial-gradient(circle at 12% 0%,rgba(133,235,255,.12),transparent 30%),
+    radial-gradient(circle at 100% 16%,rgba(255,214,10,.10),transparent 34%),
+    linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);
+  box-shadow:0 20px 46px rgba(0,0,0,.22);
+  overflow:hidden;
+  animation:slide-in .5s .08s cubic-bezier(.22,1,.36,1) both;
+}
+.elo-history-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(120deg,transparent,rgba(255,255,255,.045),transparent);
+  transform:translateX(-100%);
+  animation:elo-card-sheen 7s ease-in-out infinite;
+}
+@keyframes elo-card-sheen{0%,68%{transform:translateX(-100%)}86%,100%{transform:translateX(100%)}}
+.elo-history-head{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;}
+.elo-history-kicker{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
+.elo-history-title{font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:900;letter-spacing:2px;text-transform:uppercase;line-height:1;margin-top:3px;}
+.elo-history-sub{font-size:12px;color:var(--muted);margin-top:3px;}
+.elo-history-ranges{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+.elo-history-range{
+  min-width:42px;
+  padding:9px 11px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.035);
+  color:var(--muted);
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:800;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:transform .16s,border-color .16s,color .16s,background .16s,box-shadow .16s;
+}
+.elo-history-range:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.32);color:#85EBFF;}
+.elo-history-range.active{background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.44);color:#85EBFF;box-shadow:0 0 20px rgba(133,235,255,.10);}
+.elo-history-canvas-wrap{position:relative;z-index:1;height:230px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.16);}
+#elo-history-canvas{display:block;width:100%;height:100%;}
+.elo-history-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px;}
+.elo-history-stat{padding:10px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);}
+.elo-history-stat strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;}
+.elo-history-stat span{display:block;margin-top:2px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
+
 /* â”€â”€ Stats â”€â”€ */
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;animation:slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
 .stat-card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;gap:6px;transition:all 0.2s;box-shadow:0 16px 34px rgba(0,0,0,.18);position:relative;overflow:hidden;}
@@ -673,6 +725,12 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .social-row { gap: 8px; }
   .social-card { padding: 10px 8px; }
   .social-val { font-size: 22px; }
+  .elo-history-card { padding: 14px 12px; border-radius: 18px; }
+  .elo-history-head { flex-direction: column; align-items: stretch; }
+  .elo-history-ranges { justify-content: stretch; }
+  .elo-history-range { flex: 1; }
+  .elo-history-canvas-wrap { height: 190px; }
+  .elo-history-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .stat-card { min-width: 0; }
   .stat-val { font-size: 24px; }
@@ -1091,6 +1149,9 @@ let queueMusicLibrary = [];
 let queueMusicThemes = [];
 let queueMusicPreviewAudio = null;
 let queueMusicPreviewTimer = null;
+let eloHistoryDays = 7;
+let eloHistoryTimer = null;
+let lastEloHistoryData = null;
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1380,6 +1441,11 @@ async function load() {
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
     renderQueueMusicPicker(freshPlayer);
+    loadEloHistory(freshPlayer.id, eloHistoryDays, true);
+    if (eloHistoryTimer) clearInterval(eloHistoryTimer);
+    eloHistoryTimer = setInterval(() => {
+      if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays, true);
+    }, 15000);
 
     // Charger le statut en ligne (tous les profils)
     // Exposer pour que presence.js rappelle aprÃ¨s identified
@@ -1616,6 +1682,30 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
 
+    <div class="elo-history-card">
+      <div class="elo-history-head">
+        <div>
+          <div class="elo-history-kicker">Progression en temps reel</div>
+          <div class="elo-history-title">Courbe ELO</div>
+          <div class="elo-history-sub">Le graphe se compresse selon l'intervalle choisi.</div>
+        </div>
+        <div class="elo-history-ranges">
+          <button class="elo-history-range" data-elo-days="1" onclick="setEloHistoryRange(1)">1j</button>
+          <button class="elo-history-range active" data-elo-days="7" onclick="setEloHistoryRange(7)">7j</button>
+          <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
+        </div>
+      </div>
+      <div class="elo-history-canvas-wrap">
+        <canvas id="elo-history-canvas"></canvas>
+      </div>
+      <div class="elo-history-stats" id="elo-history-stats">
+        <div class="elo-history-stat"><strong>--</strong><span>Depart</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>Actuel</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>Variation</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>Parties</span></div>
+      </div>
+    </div>
+
     <!-- Stats -->
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
       <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.webp" alt="Victoires"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
@@ -1797,6 +1887,17 @@ function render(player, games, following, followers, followStatus, tournaments =
         <select id="queue-music-select" class="search-input" style="max-width:420px;margin:0" onchange="previewQueueMusicChoice(this.value)"></select>
         <button class="avatar-decoration-btn" id="queue-music-preview-btn" type="button" onclick="toggleQueueMusicPreview()">Play 15s</button>
         <button class="avatar-decoration-btn" id="queue-music-save-btn" type="button" onclick="saveQueueMusicChoice()">Appliquer la musique</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <input id="queue-music-url-input" class="search-input" style="flex:1;min-width:260px;margin:0" placeholder="URL YouTube ou lien audio direct https://...mp3">
+        <button class="avatar-decoration-btn" type="button" onclick="useCustomQueueMusicUrl()">Utiliser URL</button>
+        <label class="avatar-decoration-btn" style="cursor:pointer">
+          Fichier local
+          <input id="queue-music-file-input" type="file" accept="audio/*" style="display:none" onchange="useLocalQueueMusicFile(this.files && this.files[0])">
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">
+        YouTube fonctionne via le lecteur intégré. Un fichier local reste uniquement sur ce navigateur, sans stockage sur le site.
       </div>
     </div>
     <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
@@ -2086,6 +2187,161 @@ function render(player, games, following, followers, followStatus, tournaments =
   initAutoRejoinToggle();
   initVipBoostUI();
 }
+
+function setEloHistoryRange(days) {
+  eloHistoryDays = [1, 7, 15].includes(Number(days)) ? Number(days) : 7;
+  if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
+}
+
+function setEloHistoryButtonState(days) {
+  document.querySelectorAll('[data-elo-days]').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.eloDays) === Number(days));
+  });
+}
+
+async function loadEloHistory(playerId, days = 7, silent = false) {
+  if (!playerId) return;
+  setEloHistoryButtonState(days);
+  try {
+    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/elo-history?days=${encodeURIComponent(days)}`);
+    if (!res.ok) throw new Error('history');
+    const data = await res.json();
+    lastEloHistoryData = data;
+    drawEloHistory(data);
+  } catch {
+    if (!silent) {
+      const stats = document.getElementById('elo-history-stats');
+      if (stats) stats.innerHTML = '<div class="elo-history-stat" style="grid-column:1/-1"><strong>--</strong><span>Courbe indisponible</span></div>';
+    }
+  }
+}
+
+function drawEloHistory(data) {
+  const canvas = document.getElementById('elo-history-canvas');
+  if (!canvas) return;
+  const wrap = canvas.parentElement;
+  const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  const width = Math.max(320, Math.floor(wrap?.clientWidth || 680));
+  const height = Math.max(180, Math.floor(wrap?.clientHeight || 230));
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const points = Array.isArray(data?.points) ? data.points : [];
+  const stats = data?.stats || {};
+  const playerColor = data?.player?.color || currentPlayer?.color || '#ff2d55';
+  const startTime = Number(stats.startTime || points[0]?.t || (Date.now() - 7 * 86400000));
+  const endTime = Number(stats.endTime || Date.now());
+  const rawMin = Number(stats.minElo || data?.player?.elo || 1000);
+  const rawMax = Number(stats.maxElo || data?.player?.elo || 1000);
+  const pad = Math.max(18, Math.round((rawMax - rawMin) * 0.18));
+  const minElo = rawMin - pad;
+  const maxElo = rawMax + pad;
+  const left = 48;
+  const right = 18;
+  const top = 20;
+  const bottom = 34;
+  const plotW = width - left - right;
+  const plotH = height - top - bottom;
+  const x = t => left + ((Number(t || startTime) - startTime) / Math.max(1, endTime - startTime)) * plotW;
+  const y = elo => top + (1 - ((Number(elo || minElo) - minElo) / Math.max(1, maxElo - minElo))) * plotH;
+
+  const bg = ctx.createLinearGradient(0, 0, width, height);
+  bg.addColorStop(0, 'rgba(255,255,255,0.035)');
+  bg.addColorStop(1, 'rgba(0,0,0,0.10)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.font = "11px Barlow, sans-serif";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i += 1) {
+    const gy = top + (plotH / 4) * i;
+    const value = Math.round(maxElo - ((maxElo - minElo) / 4) * i);
+    ctx.strokeStyle = 'rgba(255,255,255,0.055)';
+    ctx.beginPath();
+    ctx.moveTo(left, gy);
+    ctx.lineTo(width - right, gy);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(238,238,245,0.42)';
+    ctx.fillText(String(value), 10, gy + 4);
+  }
+  for (let i = 0; i <= 3; i += 1) {
+    const gx = left + (plotW / 3) * i;
+    ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+    ctx.beginPath();
+    ctx.moveTo(gx, top);
+    ctx.lineTo(gx, height - bottom);
+    ctx.stroke();
+  }
+
+  const drawable = points.length ? points : [{ t: startTime, elo: data?.player?.elo || 1000 }, { t: endTime, elo: data?.player?.elo || 1000 }];
+  const line = drawable.map(point => ({ x: x(point.t), y: y(point.elo), point }));
+  const fillGradient = ctx.createLinearGradient(0, top, 0, height - bottom);
+  fillGradient.addColorStop(0, `${playerColor}55`);
+  fillGradient.addColorStop(1, `${playerColor}00`);
+  ctx.beginPath();
+  line.forEach((p, index) => index ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.lineTo(line[line.length - 1].x, height - bottom);
+  ctx.lineTo(line[0].x, height - bottom);
+  ctx.closePath();
+  ctx.fillStyle = fillGradient;
+  ctx.fill();
+
+  const strokeGradient = ctx.createLinearGradient(left, 0, width - right, 0);
+  strokeGradient.addColorStop(0, playerColor);
+  strokeGradient.addColorStop(0.55, '#85EBFF');
+  strokeGradient.addColorStop(1, '#ffd60a');
+  ctx.beginPath();
+  line.forEach((p, index) => index ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = strokeGradient;
+  ctx.shadowColor = playerColor;
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  line.forEach((p, index) => {
+    if (line.length > 22 && index !== line.length - 1 && index % 3 !== 0) return;
+    const delta = Number(p.point.delta || 0);
+    ctx.fillStyle = delta > 0 ? '#30d158' : delta < 0 ? '#ff4d6d' : '#85EBFF';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, index === line.length - 1 ? 5 : 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.72)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+
+  ctx.font = "700 11px Barlow, sans-serif";
+  ctx.fillStyle = 'rgba(238,238,245,0.52)';
+  ctx.fillText(`${data.days || eloHistoryDays}j`, width - right - 24, height - 12);
+  ctx.fillStyle = '#eeeef5';
+  ctx.font = "900 20px 'Barlow Condensed', sans-serif";
+  ctx.fillText(`${Math.round(stats.endElo || data?.player?.elo || 0)} ELO`, left, 24);
+
+  const statsEl = document.getElementById('elo-history-stats');
+  if (statsEl) {
+    const delta = Number(stats.delta || 0);
+    const deltaClass = delta > 0 ? 'color:#30d158' : delta < 0 ? 'color:#ff4d6d' : 'color:var(--muted)';
+    statsEl.innerHTML = `
+      <div class="elo-history-stat"><strong>${Math.round(stats.startElo || data?.player?.elo || 0)}</strong><span>Depart</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(stats.endElo || data?.player?.elo || 0)}</strong><span>Actuel</span></div>
+      <div class="elo-history-stat"><strong style="${deltaClass}">${delta >= 0 ? '+' : ''}${Math.round(delta)}</strong><span>Variation</span></div>
+      <div class="elo-history-stat"><strong>${Number(stats.games || 0)}</strong><span>Parties</span></div>
+    `;
+  }
+}
+
+window.addEventListener('resize', () => {
+  if (lastEloHistoryData) requestAnimationFrame(() => drawEloHistory(lastEloHistoryData));
+});
 
 // â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function switchTab(name) {
@@ -3511,9 +3767,61 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
   renderAvatarDecorationGallery(player);
 }
 
+function extractYouTubeId(value) {
+  const raw = String(value || '').trim();
+  if (/^youtube:[a-zA-Z0-9_-]{6,20}$/.test(raw)) return raw.slice(8);
+  const match = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,20})/);
+  return match ? match[1] : '';
+}
+
+function normalizeCustomQueueMusicValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const youtubeId = extractYouTubeId(raw);
+  if (youtubeId) return `youtube:${youtubeId}`;
+  if (/^https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(raw)) return `audio:${raw}`;
+  if (/^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(raw)) return raw;
+  return '';
+}
+
+function openQueueMusicDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('p4-profile-media', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('files');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveLocalQueueMusicBlob(file) {
+  const db = await openQueueMusicDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').put({ blob: file, name: file.name, type: file.type, savedAt: Date.now() }, 'queue_music');
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function loadLocalQueueMusicObjectUrl() {
+  const db = await openQueueMusicDb();
+  const entry = await new Promise((resolve, reject) => {
+    const tx = db.transaction('files', 'readonly');
+    const request = tx.objectStore('files').get('queue_music');
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+  db.close();
+  return entry?.blob ? URL.createObjectURL(entry.blob) : '';
+}
+
 function formatQueueMusicLabel(src) {
   if (!src) return 'Aucune musique personnalisée';
   if (typeof src === 'object' && src !== null) return String(src.label || src.src || '');
+  if (String(src).startsWith('youtube:')) return `YouTube (${String(src).slice(8)})`;
+  if (String(src).startsWith('audio:')) return `Audio URL - ${formatQueueMusicLabel(String(src).slice(6))}`;
+  if (String(src) === 'local:custom') return 'Fichier local du navigateur';
   const file = String(src).split('/').pop() || src;
   return decodeURIComponent(file.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '));
 }
@@ -3560,6 +3868,9 @@ function renderQueueMusicPicker(player = currentPlayer) {
     : entries.filter(entry => entry.theme === themeSelect.value);
   const options = [`<option value="">Musique par défaut du site • Musique Chambre</option>`]
     .concat(filteredEntries.map(entry => `<option value="${entry.src}" ${entry.src === currentValue ? 'selected' : ''}>${escapeHtml(entry.themeLabel)} • ${escapeHtml(entry.label)}</option>`));
+  if (currentValue && !entries.some(entry => entry.src === currentValue)) {
+    options.push(`<option value="${escapeHtml(currentValue)}" selected>Personnalisée • ${escapeHtml(formatQueueMusicLabel(currentValue))}</option>`);
+  }
   select.innerHTML = options.join('');
   meta.textContent = currentValue
     ? `Musique active : ${formatQueueMusicLabel(entries.find(entry => entry.src === currentValue) || currentValue)}`
@@ -3577,7 +3888,55 @@ function previewQueueMusicChoice(value) {
     : 'Sélection : musique par défaut du site (Musique Chambre).';
   stopQueueMusicPreview();
   const previewBtn = document.getElementById('queue-music-preview-btn');
-  if (previewBtn) previewBtn.disabled = !value;
+  if (previewBtn) {
+    previewBtn.disabled = !value || String(value).startsWith('youtube:');
+    previewBtn.title = String(value).startsWith('youtube:')
+      ? 'YouTube sera lu pendant la file, mais l aperçu 15s est reserve aux fichiers audio.'
+      : '';
+  }
+}
+
+function useCustomQueueMusicUrl() {
+  const input = document.getElementById('queue-music-url-input');
+  const select = document.getElementById('queue-music-select');
+  const value = normalizeCustomQueueMusicValue(input?.value || '');
+  if (!value) {
+    PROFIL_SFX.error();
+    alert('URL invalide. Mets une URL YouTube ou un lien audio direct https en mp3/ogg/wav/m4a.');
+    return;
+  }
+  if (select && !Array.from(select.options).some(option => option.value === value)) {
+    select.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(value)}">${escapeHtml(formatQueueMusicLabel(value))}</option>`);
+  }
+  if (select) select.value = value;
+  previewQueueMusicChoice(value);
+}
+
+async function useLocalQueueMusicFile(file) {
+  if (!file) return;
+  if (!/^audio\//i.test(file.type || '')) {
+    PROFIL_SFX.error();
+    alert('Choisis un fichier audio.');
+    return;
+  }
+  if (file.size > 15 * 1024 * 1024) {
+    PROFIL_SFX.error();
+    alert('Fichier trop lourd. Vise 15 Mo max pour éviter de saturer le navigateur.');
+    return;
+  }
+  try {
+    await saveLocalQueueMusicBlob(file);
+    const select = document.getElementById('queue-music-select');
+    if (select && !Array.from(select.options).some(option => option.value === 'local:custom')) {
+      select.insertAdjacentHTML('beforeend', '<option value="local:custom">Personnalisée • Fichier local</option>');
+    }
+    if (select) select.value = 'local:custom';
+    previewQueueMusicChoice('local:custom');
+    PROFIL_SFX.upload();
+  } catch (e) {
+    PROFIL_SFX.error();
+    alert('Impossible de garder ce fichier dans le navigateur.');
+  }
 }
 
 function stopQueueMusicPreview() {
@@ -3594,7 +3953,7 @@ function stopQueueMusicPreview() {
   if (previewBtn) previewBtn.textContent = 'Play 15s';
 }
 
-function toggleQueueMusicPreview() {
+async function toggleQueueMusicPreview() {
   const select = document.getElementById('queue-music-select');
   const value = String(select?.value || '');
   if (!value) return;
@@ -3603,7 +3962,11 @@ function toggleQueueMusicPreview() {
     stopQueueMusicPreview();
     return;
   }
-  queueMusicPreviewAudio = new Audio(value);
+  let src = value;
+  if (value.startsWith('audio:')) src = value.slice(6);
+  if (value === 'local:custom') src = await loadLocalQueueMusicObjectUrl().catch(() => '');
+  if (value.startsWith('youtube:') || !src) return;
+  queueMusicPreviewAudio = new Audio(src);
   queueMusicPreviewAudio.volume = 0.55;
   queueMusicPreviewAudio.currentTime = 0;
   queueMusicPreviewAudio.play().catch(() => {

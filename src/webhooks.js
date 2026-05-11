@@ -3,7 +3,7 @@
  * Never send private network data such as IP addresses to Discord.
  */
 
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || '';
+const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz';
 const BASE = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
 
 async function send(embeds) {

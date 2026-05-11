@@ -2070,6 +2070,7 @@ html, body {
       <a class="dock-link" href="/stats">📈 Stats</a>
       <a class="dock-link" href="/regles">📘 Règles</a>
       <a class="dock-link" href="/api-doc">🧪 API</a>
+      <a class="dock-link" href="https://discord.gg/MrKbBAAWcm">📣 Discord</a>
     </div>
   </div>
   <!-- Hero -->
@@ -3015,6 +3016,8 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
 const QueueMusic = (() => {
   const DEFAULT_QUEUE_MUSIC = '/sounds/Musique Chambre.mp3';
   let audio = null;
+  let youtubeFrame = null;
+  let localObjectUrl = '';
   let volume = 0.35;
   function canUseCustomQueueMusic(player) {
     return !!(player && (Number(player.is_perso || 0) === 1 || String(player.role || '') === 'admin'));
@@ -3028,16 +3031,70 @@ const QueueMusic = (() => {
       const player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
       if (!canUseCustomQueueMusic(player)) return '';
       const music = String(player?.queue_music || '').trim();
-      return /^\/sounds\/.+\.(mp3|ogg|wav|m4a)$/i.test(music) ? music : '';
+      if (/^\/sounds\/.+\.(mp3|ogg|wav|m4a)$/i.test(music)) return music;
+      if (/^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(music)) return music;
+      if (/^youtube:[a-zA-Z0-9_-]{6,20}$/.test(music)) return music;
+      if (music === 'local:custom') return music;
+      return '';
     } catch {
       return '';
     }
   }
-  function syncSource() {
+
+  function openQueueMusicDb() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('p4-profile-media', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('files');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function localQueueMusicSrc() {
+    const db = await openQueueMusicDb();
+    const entry = await new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readonly');
+      const request = tx.objectStore('files').get('queue_music');
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if (localObjectUrl) URL.revokeObjectURL(localObjectUrl);
+    localObjectUrl = entry?.blob ? URL.createObjectURL(entry.blob) : '';
+    return localObjectUrl;
+  }
+
+  function stopYouTube() {
+    if (youtubeFrame) {
+      youtubeFrame.remove();
+      youtubeFrame = null;
+    }
+  }
+
+  function startYouTube(videoId) {
+    stopYouTube();
+    const frame = document.createElement('iframe');
+    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&loop=1&playlist=${encodeURIComponent(videoId)}&controls=0&modestbranding=1`;
+    frame.allow = 'autoplay; encrypted-media';
+    frame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+    document.body.appendChild(frame);
+    youtubeFrame = frame;
+  }
+
+  async function syncSource() {
     const a = get();
     if (!a) return;
     const customMusic = getPlayerQueueMusic();
-    const nextSrc = customMusic || DEFAULT_QUEUE_MUSIC;
+    let nextSrc = customMusic || DEFAULT_QUEUE_MUSIC;
+    if (nextSrc.startsWith('youtube:')) {
+      a.pause();
+      a.removeAttribute('src');
+      startYouTube(nextSrc.slice(8));
+      return;
+    }
+    stopYouTube();
+    if (nextSrc.startsWith('audio:')) nextSrc = nextSrc.slice(6);
+    if (nextSrc === 'local:custom') nextSrc = await localQueueMusicSrc().catch(() => '') || DEFAULT_QUEUE_MUSIC;
     const currentSrc = a.getAttribute('src') || '';
     if (currentSrc !== nextSrc) {
       a.setAttribute('src', nextSrc);
@@ -3054,10 +3111,11 @@ const QueueMusic = (() => {
     if (icon) icon.textContent = pct === 0 ? '🔇' : (pct < 50 ? '🔉' : '🔊');
   }
   return {
-    start() {
+    async start() {
       const a = get();
       if (!a) return;
-      syncSource();
+      await syncSource();
+      if (youtubeFrame) return;
       const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
       if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
       a.volume = volume;
@@ -3077,6 +3135,7 @@ const QueueMusic = (() => {
       }
     },
     stop() {
+      stopYouTube();
       const a = get();
       if (!a) return;
       a.pause();

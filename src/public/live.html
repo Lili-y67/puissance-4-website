@@ -93,8 +93,10 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .board-wrap{padding:18px;border-radius:22px;background:linear-gradient(180deg,#111128,#0a0a18);border:1px solid rgba(255,255,255,.04)}
 .live-board{width:min(100%,760px);margin:0 auto;background:#0a0a18;border-radius:26px;padding:18px;display:grid;grid-template-columns:repeat(7,1fr);gap:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 16px 40px rgba(0,0,0,.35)}
 .live-cell{position:relative;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.04),rgba(7,7,26,.96));box-shadow:inset 0 3px 10px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.03);overflow:hidden}
-.live-token{position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;font-size:68%;font-weight:900;border-radius:50%}
-.mini-token{position:absolute;inset:2px;display:flex;align-items:center;justify-content:center;font-weight:900;border-radius:50%}
+.live-token{position:absolute;inset:4px;display:flex;align-items:center;justify-content:center;font-size:68%;font-weight:900;border-radius:50%;transition:transform .24s ease,opacity .2s ease,filter .2s ease;will-change:transform,opacity;transform:translateZ(0)}
+.mini-token{position:absolute;inset:2px;display:flex;align-items:center;justify-content:center;font-weight:900;border-radius:50%;transition:transform .24s ease,opacity .2s ease,filter .2s ease;will-change:transform,opacity;transform:translateZ(0)}
+.token-drop{animation:token-drop .34s cubic-bezier(.2,.9,.25,1.18) both}
+@keyframes token-drop{from{opacity:.25;transform:translate3d(0,-34%,0) scale(.88)}70%{opacity:1;transform:translate3d(0,5%,0) scale(1.04)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 .live-token.s-emoji,.mini-token.s-emoji{border-radius:0!important;overflow:visible!important;background:transparent!important;box-shadow:none!important;clip-path:none!important}
 .live-token.s-emoji canvas,.mini-token.s-emoji canvas{display:block;width:100%;height:100%}
 .live-token.s-emoji img,.mini-token.s-emoji img{width:100%;height:100%;object-fit:cover;border-radius:18%;display:block}
@@ -538,6 +540,55 @@ function isWinCell(game, row, col) {
   return Array.isArray(game?.winCells) && game.winCells.some(cell => Number(cell?.[0]) === row && Number(cell?.[1]) === col);
 }
 
+function tokenStyleKey(player = {}) {
+  return [
+    player.color || '',
+    player.color_secondary || '',
+    player.shape || '',
+    player.token_emoji_image || '',
+  ].join('|');
+}
+
+function renderBoardInto(board, game, large = true) {
+  const p1 = game.players[1], p2 = game.players[2];
+  const cellClass = large ? 'live-cell' : 'mini-cell';
+  const tokenClass = large ? 'live-token' : 'mini-token';
+  if (board.children.length !== 42) {
+    board.innerHTML = '';
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 7; c++) {
+        const cell = document.createElement('div');
+        cell.className = cellClass;
+        cell.dataset.row = String(r);
+        cell.dataset.col = String(c);
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  for (const cell of board.children) {
+    const r = Number(cell.dataset.row);
+    const c = Number(cell.dataset.col);
+    const val = game.grid?.[r]?.[c] ?? 0;
+    const player = val === 1 ? p1 : val === 2 ? p2 : null;
+    const styleKey = player ? tokenStyleKey(player) : '';
+    cell.classList.toggle('win-cell', isWinCell(game, r, c));
+
+    if (Number(cell.dataset.value || 0) !== val || cell.dataset.styleKey !== styleKey) {
+      cell.dataset.value = String(val);
+      cell.dataset.styleKey = styleKey;
+      cell.replaceChildren();
+      if (player) {
+        const token = document.createElement('div');
+        token.className = `${tokenClass} token-drop`;
+        cell.appendChild(token);
+        applyTokenStyle(token, player, large);
+        token.addEventListener('animationend', () => token.classList.remove('token-drop'), { once: true });
+      }
+    }
+  }
+}
+
 function renderList(games) {
   const container = document.getElementById('games-grid');
   const activeCount = games.filter(g => g.status === 'active').length;
@@ -584,25 +635,7 @@ function renderList(games) {
 
     const board = document.createElement('div');
     board.className = 'mini-board';
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 7; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'mini-cell';
-        if (isWinCell(game, r, c)) cell.classList.add('win-cell');
-        const val = game.grid?.[r]?.[c] ?? 0;
-        if (val === 1 || val === 2) {
-          const token = document.createElement('div');
-          token.className = 'mini-token';
-          cell.appendChild(token);
-          applyTokenStyle(token, val === 1 ? p1 : p2, false);
-        }
-        if (isWinCell(game, r, c)) {
-          cell.classList.add('win-cell');
-          cell.style.boxShadow = 'inset 0 2px 6px rgba(0,0,0,.55), 0 0 0 2px rgba(255,214,10,.95), 0 0 20px rgba(255,214,10,.42)';
-        }
-        board.appendChild(cell);
-      }
-    }
+    renderBoardInto(board, game, false);
 
     const footer = document.createElement('div');
     footer.className = 'card-footer';
@@ -691,24 +724,7 @@ function renderSpec(game) {
 
   players.append(left, center, right);
 
-  const board = document.getElementById('live-board');
-  board.innerHTML = '';
-  for (let r = 0; r < 6; r++) {
-    for (let c = 0; c < 7; c++) {
-      const cell = document.createElement('div');
-      cell.className = 'live-cell';
-      if (isWinCell(game, r, c)) cell.classList.add('win-cell');
-      const val = game.grid?.[r]?.[c] ?? 0;
-      if (val === 1 || val === 2) {
-        const token = document.createElement('div');
-        token.className = 'live-token';
-        const pl = val === 1 ? p1 : p2;
-        cell.appendChild(token);
-        applyTokenStyle(token, pl, true);
-      }
-      board.appendChild(cell);
-    }
-  }
+  renderBoardInto(document.getElementById('live-board'), game, true);
 
   const meta = document.getElementById('spec-meta');
   meta.innerHTML = `

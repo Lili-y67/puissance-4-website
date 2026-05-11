@@ -12,8 +12,16 @@ const {
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
+  AttachmentBuilder,
   MessageFlags,
 } = require('discord.js');
+
+let Canvas = null;
+try {
+  Canvas = require('canvas');
+} catch {
+  Canvas = null;
+}
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
@@ -24,8 +32,8 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     .slice(0, 25);
 
   return [
-    { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
-    { name: 'moi', description: 'Afficher ton profil lie Discord' },
+    { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }, { type: 4, name: 'periode', description: 'Intervalle de la courbe ELO', required: false, choices: [{ name: '1 jour', value: 1 }, { name: '7 jours', value: 7 }, { name: '15 jours', value: 15 }] }] },
+    { name: 'moi', description: 'Afficher ton profil lie Discord', options: [{ type: 4, name: 'periode', description: 'Intervalle de la courbe ELO', required: false, choices: [{ name: '1 jour', value: 1 }, { name: '7 jours', value: 7 }, { name: '15 jours', value: 15 }] }] },
     { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'stats', description: 'Afficher les statistiques du site' },
     { name: 'systeme', description: 'Afficher l etat public du serveur' },
@@ -111,7 +119,7 @@ function startDiscordBot(ctx) {
     return btn;
   }
 
-  function containerMessage({ color = 0xff2d55, title, subtitle = '', sections = [], buttons = [], rows = [] }) {
+  function containerMessage({ color = 0xff2d55, title, subtitle = '', sections = [], buttons = [], rows = [], files = [] }) {
     const container = new ContainerBuilder().setAccentColor(color);
     const header = [`## ${title}`, subtitle].filter(Boolean).join('\n');
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(header));
@@ -123,7 +131,9 @@ function startDiscordBot(ctx) {
     if (buttons.length || rows.length) container.addSeparatorComponents(new SeparatorBuilder());
     if (buttons.length) container.addActionRowComponents(rowButtons(buttons));
     for (const row of rows) container.addActionRowComponents(row);
-    return { flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral, components: [container] };
+    const payload = { flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral, components: [container] };
+    if (files.length) payload.files = files;
+    return payload;
   }
 
   function ephemeralMessage(payload) {
@@ -240,6 +250,171 @@ function startDiscordBot(ctx) {
     return row?.accuracy != null ? `${Math.round(Number(row.accuracy))}%` : '--';
   }
 
+  function parseGameDateMs(value) {
+    if (!value) return 0;
+    const raw = String(value).trim();
+    const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+    const withZone = /Z$|[+-]\d{2}:\d{2}$/.test(normalized) ? normalized : `${normalized}Z`;
+    const parsed = Date.parse(withZone);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function eloHistory(player, days = 15) {
+    const playerId = Number(player?.id || 0);
+    const safeDays = [1, 7, 15].includes(Number(days)) ? Number(days) : 15;
+    const now = Date.now();
+    const start = now - safeDays * 24 * 60 * 60 * 1000;
+    const rows = ctx.db.prepare(`
+      SELECT id, player1_id, player2_id, winner_id, elo_p1, elo_p2, finished_at
+      FROM games
+      WHERE (player1_id = ? OR player2_id = ?)
+        AND status = 'finished'
+        AND finished_at IS NOT NULL
+      ORDER BY finished_at ASC, id ASC
+    `).all(playerId, playerId);
+    const games = rows
+      .map(game => ({ ...game, finishedMs: parseGameDateMs(game.finished_at) }))
+      .filter(game => game.finishedMs >= start && game.finishedMs <= now);
+    const deltas = games.map(game => Number(game.player1_id) === playerId ? Number(game.elo_p1 || 0) : Number(game.elo_p2 || 0));
+    const currentElo = Number(player?.elo || 0);
+    let running = currentElo - deltas.reduce((sum, delta) => sum + delta, 0);
+    const points = [{ t: start, elo: running, delta: 0 }];
+    games.forEach((game, index) => {
+      running += deltas[index];
+      points.push({ t: game.finishedMs, elo: running, delta: deltas[index], gameId: game.id });
+    });
+    points.push({ t: now, elo: currentElo, delta: 0 });
+    const values = points.map(point => Number(point.elo || 0));
+    return {
+      days: safeDays,
+      points,
+      stats: {
+        startTime: start,
+        endTime: now,
+        startElo: points[0].elo,
+        endElo: currentElo,
+        delta: currentElo - points[0].elo,
+        minElo: Math.min(...values, currentElo),
+        maxElo: Math.max(...values, currentElo),
+        games: games.length,
+      },
+    };
+  }
+
+  function drawEloChartAttachment(player, days = 15) {
+    if (!Canvas) return null;
+    const { createCanvas } = Canvas;
+    const width = 920;
+    const height = 330;
+    const canvas = createCanvas(width, height);
+    const c = canvas.getContext('2d');
+    const history = eloHistory(player, days);
+    const points = history.points || [];
+    const stats = history.stats || {};
+    const accent = /^#[0-9a-f]{6}$/i.test(player.color || '') ? player.color : '#ff2d55';
+    const accentRgb = hexToRgb(accent) || { r: 255, g: 45, b: 85 };
+    const startTime = Number(stats.startTime || points[0]?.t || Date.now() - days * 86400000);
+    const endTime = Number(stats.endTime || Date.now());
+    const minRaw = Number(stats.minElo || player.elo || 1000);
+    const maxRaw = Number(stats.maxElo || player.elo || 1000);
+    const pad = Math.max(20, Math.round((maxRaw - minRaw) * 0.2));
+    const minElo = minRaw - pad;
+    const maxElo = maxRaw + pad;
+    const left = 72;
+    const right = 42;
+    const top = 58;
+    const bottom = 54;
+    const plotW = width - left - right;
+    const plotH = height - top - bottom;
+    const px = t => left + ((Number(t || startTime) - startTime) / Math.max(1, endTime - startTime)) * plotW;
+    const py = elo => top + (1 - ((Number(elo || minElo) - minElo) / Math.max(1, maxElo - minElo))) * plotH;
+
+    const bg = c.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#141427');
+    bg.addColorStop(0.55, '#0b0b18');
+    bg.addColorStop(1, '#17101f');
+    c.fillStyle = bg;
+    c.fillRect(0, 0, width, height);
+    c.fillStyle = 'rgba(255,45,85,0.12)';
+    c.beginPath();
+    c.arc(820, 70, 160, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(133,235,255,0.10)';
+    c.beginPath();
+    c.arc(120, 280, 150, 0, Math.PI * 2);
+    c.fill();
+
+    c.font = '900 30px Arial';
+    c.fillStyle = '#f5f5fb';
+    c.fillText('COURBE ELO', left, 36);
+    c.font = '700 16px Arial';
+    c.fillStyle = 'rgba(238,238,245,0.58)';
+    c.fillText(`${player.pseudo} - ${days} derniers jours`, left + 190, 36);
+
+    c.lineWidth = 1;
+    c.font = '13px Arial';
+    for (let i = 0; i <= 4; i += 1) {
+      const y = top + (plotH / 4) * i;
+      const value = Math.round(maxElo - ((maxElo - minElo) / 4) * i);
+      c.strokeStyle = 'rgba(255,255,255,0.08)';
+      c.beginPath();
+      c.moveTo(left, y);
+      c.lineTo(width - right, y);
+      c.stroke();
+      c.fillStyle = 'rgba(238,238,245,0.55)';
+      c.fillText(String(value), 22, y + 5);
+    }
+
+    const line = points.map(point => ({ x: px(point.t), y: py(point.elo), point }));
+    const fill = c.createLinearGradient(0, top, 0, height - bottom);
+    fill.addColorStop(0, `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0.4)`);
+    fill.addColorStop(1, `rgba(${accentRgb.r},${accentRgb.g},${accentRgb.b},0)`);
+    c.beginPath();
+    line.forEach((p, index) => index ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+    c.lineTo(line[line.length - 1].x, height - bottom);
+    c.lineTo(line[0].x, height - bottom);
+    c.closePath();
+    c.fillStyle = fill;
+    c.fill();
+
+    const stroke = c.createLinearGradient(left, 0, width - right, 0);
+    stroke.addColorStop(0, accent);
+    stroke.addColorStop(0.55, '#85EBFF');
+    stroke.addColorStop(1, '#FFD60A');
+    c.beginPath();
+    line.forEach((p, index) => index ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+    c.strokeStyle = stroke;
+    c.lineWidth = 5;
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+    c.shadowColor = accent;
+    c.shadowBlur = 18;
+    c.stroke();
+    c.shadowBlur = 0;
+
+    line.forEach((p, index) => {
+      if (line.length > 24 && index !== line.length - 1 && index % 3 !== 0) return;
+      const delta = Number(p.point.delta || 0);
+      c.fillStyle = delta > 0 ? '#30D158' : delta < 0 ? '#FF4D6D' : '#85EBFF';
+      c.beginPath();
+      c.arc(p.x, p.y, index === line.length - 1 ? 7 : 5, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,0.82)';
+      c.lineWidth = 2;
+      c.stroke();
+    });
+
+    const delta = Number(stats.delta || 0);
+    c.font = '900 34px Arial';
+    c.fillStyle = delta >= 0 ? '#30D158' : '#FF4D6D';
+    c.fillText(`${delta >= 0 ? '+' : ''}${Math.round(delta)} ELO`, width - 238, 42);
+    c.font = '700 14px Arial';
+    c.fillStyle = 'rgba(238,238,245,0.62)';
+    c.fillText(`${stats.games || 0} parties analysees`, width - 238, 66);
+
+    return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `elo-${player.id}-${days}j.png` });
+  }
+
   function latestGames(playerId) {
     return ctx.db.prepare(`
       WITH recent AS (
@@ -294,13 +469,16 @@ function startDiscordBot(ctx) {
     return [new ActionRowBuilder().addComponents(menu)];
   }
 
-  function profilePayload(player) {
+  function profilePayload(player, days = 15) {
     const rank = rankOf(player.elo);
     const rankIcon = rankEmoji(rank);
     const games = latestGames(player.id);
+    const safeDays = [1, 7, 15].includes(Number(days)) ? Number(days) : 15;
+    const eloChart = drawEloChartAttachment(player, safeDays);
     const follows = ctx.db.prepare(
       'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
     ).get(player.id, player.id);
+    const history = eloHistory(player, safeDays);
     const last = games[0];
     const lastLine = last
       ? `Derniere partie: ${code(`#${last.id}`)} / ${last.move_count || 0} coups / ${last.duration || 0}s`
@@ -311,6 +489,7 @@ function startDiscordBot(ctx) {
       subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)} | Coins: **${fmt(player.coins || 0)}**`,
       sections: [
         `### Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
+        `### Evolution ELO\n${safeDays} jour${safeDays > 1 ? 's' : ''}: **${history.stats.delta >= 0 ? '+' : ''}${Math.round(history.stats.delta)} ELO** | Parties: **${history.stats.games}** | Depart: **${Math.round(history.stats.startElo)}** -> Actuel: **${Math.round(history.stats.endElo)}**${eloChart ? '\nGraphique joint en image.' : ''}`,
         `### Social et profil\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${lastLine}`,
       ],
       buttons: [
@@ -319,6 +498,7 @@ function startDiscordBot(ctx) {
         linkButton('Live', `${api}/live`, '🔴'),
       ],
       rows: profileRows(player, games),
+      files: eloChart ? [eloChart] : [],
     });
   }
 
@@ -839,12 +1019,12 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));
         if (!player) return replyError(interaction, 'Joueur introuvable');
-        return interaction.editReply(profilePayload(player));
+        return interaction.editReply(profilePayload(player, interaction.options.getInteger('periode') || 15));
       }
       if (interaction.commandName === 'moi') {
         const player = playerByDiscord(interaction.user.id);
         if (!player) return replyError(interaction, 'Compte non lie', `Lie ton compte depuis ${api}/profil`);
-        return interaction.editReply(profilePayload(player));
+        return interaction.editReply(profilePayload(player, interaction.options.getInteger('periode') || 15));
       }
       if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
       if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));

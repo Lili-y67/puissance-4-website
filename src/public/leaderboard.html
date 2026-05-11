@@ -311,6 +311,11 @@ body::after {
 .row-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
 .rank-img { width: 28px; height: 28px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 4px rgba(255,255,255,0.15)); }
 .podium-rank-img { width: 40px; height: 40px; object-fit: contain; display: block; margin: 4px auto 0; filter: drop-shadow(0 0 6px rgba(255,255,255,0.2)); }
+.bot-pagination{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.bot-page-btn{min-width:38px;height:34px;padding:0 12px;border-radius:999px;border:1px solid rgba(133,235,255,.20);background:rgba(133,235,255,.07);color:#85ebff;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:900;letter-spacing:1px;cursor:pointer;transition:transform .15s,border-color .18s,background .18s}
+.bot-page-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.46);background:rgba(133,235,255,.13)}
+.bot-page-btn.active{background:linear-gradient(135deg,rgba(133,235,255,.24),rgba(139,92,246,.16));border-color:rgba(133,235,255,.58);color:#fff}
+.bot-page-btn:disabled{opacity:.38;cursor:not-allowed;transform:none}
 
 /* ── Empty ── */
 .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
@@ -473,6 +478,8 @@ const TROPHIES = [null, '/assets/trophy_gold.png', '/assets/trophy_silver.png', 
 let allPlayers = [];
 let allBots = [];
 let currentTab = 'elo';
+let botPage = 1;
+const BOTS_PER_PAGE = 6;
 
 async function load() {
   try {
@@ -661,7 +668,11 @@ function renderBots() {
     return;
   }
 
-  bots.forEach((p, i) => {
+  const totalPages = Math.max(1, Math.ceil(bots.length / BOTS_PER_PAGE));
+  botPage = Math.max(1, Math.min(botPage, totalPages));
+  const startIndex = (botPage - 1) * BOTS_PER_PAGE;
+  bots.slice(startIndex, startIndex + BOTS_PER_PAGE).forEach((p, i) => {
+    const globalRank = startIndex + i + 1;
     const row = document.createElement('a');
     row.className = 'list-row';
     row.href = `/profil?id=${p.id}`;
@@ -669,7 +680,7 @@ function renderBots() {
 
     const rankEl = document.createElement('div');
     rankEl.className = 'row-rank';
-    rankEl.textContent = `#${i + 1}`;
+    rankEl.textContent = `#${globalRank}`;
 
     const av = mkAvatar(p, 36);
 
@@ -710,6 +721,31 @@ function renderBots() {
     row.append(rankEl, av, identity, right);
     listEl.appendChild(row);
   });
+
+  if (totalPages > 1) {
+    const pager = document.createElement('div');
+    pager.className = 'bot-pagination';
+    const prev = document.createElement('button');
+    prev.className = 'bot-page-btn';
+    prev.textContent = '←';
+    prev.disabled = botPage <= 1;
+    prev.onclick = () => { botPage--; renderBots(); };
+    pager.appendChild(prev);
+    for (let page = 1; page <= totalPages; page++) {
+      const btn = document.createElement('button');
+      btn.className = `bot-page-btn${page === botPage ? ' active' : ''}`;
+      btn.textContent = String(page);
+      btn.onclick = () => { botPage = page; renderBots(); };
+      pager.appendChild(btn);
+    }
+    const next = document.createElement('button');
+    next.className = 'bot-page-btn';
+    next.textContent = '→';
+    next.disabled = botPage >= totalPages;
+    next.onclick = () => { botPage++; renderBots(); };
+    pager.appendChild(next);
+    listEl.appendChild(pager);
+  }
 }
 
 function switchTab(tab) {
