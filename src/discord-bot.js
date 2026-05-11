@@ -489,7 +489,7 @@ function startDiscordBot(ctx) {
       subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)} | Coins: **${fmt(player.coins || 0)}**`,
       sections: [
         `### Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
-        `### Evolution ELO\n${safeDays} jour${safeDays > 1 ? 's' : ''}: **${history.stats.delta >= 0 ? '+' : ''}${Math.round(history.stats.delta)} ELO** | Parties: **${history.stats.games}** | Depart: **${Math.round(history.stats.startElo)}** -> Actuel: **${Math.round(history.stats.endElo)}**${eloChart ? '\nGraphique joint en image.' : ''}`,
+        `### Evolution ELO\n${safeDays} jour${safeDays > 1 ? 's' : ''}: **${history.stats.delta >= 0 ? '+' : ''}${Math.round(history.stats.delta)} ELO** | Parties: **${history.stats.games}** | Depart: **${Math.round(history.stats.startElo)}** -> Actuel: **${Math.round(history.stats.endElo)}**}`,
         `### Social et profil\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${lastLine}`,
       ],
       buttons: [
