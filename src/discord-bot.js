@@ -474,7 +474,7 @@ function startDiscordBot(ctx) {
     const rankIcon = rankEmoji(rank);
     const games = latestGames(player.id);
     const safeDays = [1, 7, 15].includes(Number(days)) ? Number(days) : 15;
-    const eloChart = drawEloChartAttachment(player, safeDays);
+    //const eloChart = drawEloChartAttachment(player, safeDays);
     const follows = ctx.db.prepare(
       'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
     ).get(player.id, player.id);
@@ -498,7 +498,7 @@ function startDiscordBot(ctx) {
         linkButton('Live', `${api}/live`, '🔴'),
       ],
       rows: profileRows(player, games),
-      files: eloChart ? [eloChart] : [],
+      //files: eloChart ? [eloChart] : [],
     });
   }
 

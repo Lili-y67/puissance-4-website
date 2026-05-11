@@ -199,12 +199,14 @@ class GameManager {
         isDraw,
         isSuspect,
         reason,
-        p1: { pseudo: p1.pseudo, elo: p1.elo, delta: p1Delta },
-        p2: { pseudo: p2.pseudo, elo: p2.elo, delta: p2Delta },
+        p1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, delta: p1Delta, color: p1.color },
+        p2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, delta: p2Delta, color: p2.color },
         winner: winner?.pseudo,
         loser: loser?.pseudo,
         moves: state.moveCount,
         duration,
+        board: Array.isArray(state.board) ? state.board.map(row => [...row]) : null,
+        winCells: Array.isArray(winCells) ? winCells : [],
         replayUrl: `${BASE}/replay/${state.id}`,
       });
     } catch (e) {}

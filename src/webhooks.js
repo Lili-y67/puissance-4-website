@@ -12,6 +12,22 @@ const TYPE_TEXT_DISPLAY = 10;
 const TYPE_SEPARATOR = 14;
 const TYPE_CONTAINER = 17;
 const BUTTON_LINK = 5;
+const EMOJI = Object.freeze({
+  replay: '\uD83C\uDFAC',
+  profile: '\uD83D\uDC64',
+  live: '\uD83D\uDD34',
+  trophy: '\uD83C\uDFC6',
+  draw: '\uD83E\uDD1D',
+  warning: '\u26A0\uFE0F',
+  bolt: '\u26A1',
+  cart: '\uD83D\uDED2',
+  sword: '\u2694\uFE0F',
+  link: '\uD83D\uDD17',
+  red: '\uD83D\uDD34',
+  yellow: '\uD83D\uDFE1',
+  black: '\u26AB',
+  win: '\uD83D\uDFE2',
+});
 
 async function postWebhook(payload) {
   if (!DISCORD_WEBHOOK) return;
@@ -75,6 +91,61 @@ function linkButton(label, url, emoji) {
 
 function actionRow(buttons = []) {
   return { type: TYPE_ACTION_ROW, components: buttons.slice(0, 5) };
+}
+
+function hexToRgb(hex) {
+  const normalized = String(hex || '').trim().replace('#', '');
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+  return [
+    parseInt(normalized.slice(0, 2), 16),
+    parseInt(normalized.slice(2, 4), 16),
+    parseInt(normalized.slice(4, 6), 16),
+  ];
+}
+
+function tokenEmojiFromColor(color, fallback) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return fallback;
+  const palette = [
+    { emoji: '\uD83D\uDD34', rgb: [255, 45, 85] },
+    { emoji: '\uD83D\uDFE0', rgb: [255, 159, 10] },
+    { emoji: '\uD83D\uDFE1', rgb: [255, 214, 10] },
+    { emoji: '\uD83D\uDFE2', rgb: [48, 209, 88] },
+    { emoji: '\uD83D\uDD35', rgb: [47, 128, 255] },
+    { emoji: '\uD83D\uDFE3', rgb: [191, 90, 242] },
+    { emoji: '\u26AA', rgb: [235, 245, 255] },
+    { emoji: '\u26AB', rgb: [35, 35, 45] },
+  ];
+  let best = palette[0];
+  let bestDistance = Infinity;
+  for (const item of palette) {
+    const distance = Math.hypot(rgb[0] - item.rgb[0], rgb[1] - item.rgb[1], rgb[2] - item.rgb[2]);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = item;
+    }
+  }
+  return best.emoji || fallback;
+}
+
+function normalizeWinCell(cell) {
+  if (Array.isArray(cell)) return `${Number(cell[0])}:${Number(cell[1])}`;
+  if (cell && typeof cell === 'object') return `${Number(cell.row)}:${Number(cell.col)}`;
+  return '';
+}
+
+function boardGrid(board, p1Emoji, p2Emoji, winCells = []) {
+  if (!Array.isArray(board) || board.length !== 6) return '';
+  const winners = new Set((Array.isArray(winCells) ? winCells : []).map(normalizeWinCell).filter(Boolean));
+  return board
+    .map((row, r) => (Array.isArray(row) ? row : [])
+      .slice(0, 7)
+      .map((cell, c) => {
+        if (winners.has(`${r}:${c}`)) return EMOJI.win;
+        return Number(cell) === 1 ? p1Emoji : Number(cell) === 2 ? p2Emoji : EMOJI.black;
+      })
+      .join(''))
+    .join('\n');
 }
 
 function fieldLines(fields = []) {
@@ -142,21 +213,31 @@ module.exports = {
   mkContainer,
   linkButton,
 
-  wlogGame({ gameId, isDraw, isSuspect, reason, p1, p2, winner, moves, duration, replayUrl }) {
-    const title = isDraw ? 'Partie nulle' : isSuspect ? 'Partie suspecte' : `Victoire de ${winner}`;
+  wlogGame({ gameId, isDraw, isSuspect, reason, p1, p2, winner, moves, duration, replayUrl, board, winCells }) {
+    const titleIcon = isDraw ? EMOJI.draw : isSuspect ? EMOJI.warning : EMOJI.trophy;
+    const title = isDraw ? `${titleIcon} Partie nulle` : isSuspect ? `${titleIcon} Partie suspecte` : `${titleIcon} Victoire de ${winner}`;
     const color = isDraw ? 0xffd60a : isSuspect ? 0xff9f0a : 0x30d158;
     const d1 = Number(p1?.delta || 0) >= 0 ? `+${p1?.delta || 0}` : String(p1?.delta || 0);
     const d2 = Number(p2?.delta || 0) >= 0 ? `+${p2?.delta || 0}` : String(p2?.delta || 0);
-    send([mkContainer(color, title, [
-      ['Joueur 1', `${clean(p1?.pseudo)} (${p1?.elo || 0} ELO) -> ${d1}`, true],
-      ['Joueur 2', `${clean(p2?.pseudo)} (${p2?.elo || 0} ELO) -> ${d2}`, true],
-      ['Resultat', isDraw ? 'Nul' : `${clean(winner)} gagne`, true],
-      ['Coups', moves, true],
-      ['Duree', `${duration || 0}s`, true],
-      ['Raison', reason, true],
-      ['Partie ID', gameId, true],
-      ['Suspect', isSuspect ? 'Oui' : 'Non', true],
-    ], {
+    const p1Emoji = tokenEmojiFromColor(p1?.color, EMOJI.red);
+    const p2Emoji = tokenEmojiFromColor(p2?.color, EMOJI.yellow);
+    const grid = boardGrid(board, p1Emoji, p2Emoji, winCells);
+    const fields = [
+      ['Duel', `${p1Emoji} **${clean(p1?.pseudo)}** \`${p1?.elo || 0} ELO\` (${d1})\n${p2Emoji} **${clean(p2?.pseudo)}** \`${p2?.elo || 0} ELO\` (${d2})`, false],
+      ['Resultat', isDraw ? `${EMOJI.draw} Nul` : `${EMOJI.trophy} **${clean(winner)}** gagne`, true],
+      ['Rythme', `${moves || 0} coups • ${duration || 0}s`, true],
+      ['Controle', `ID #${gameId} • Suspect: ${isSuspect ? 'Oui' : 'Non'}\nRaison: ${clean(reason)}`, false],
+    ];
+    if (grid) {
+      fields.splice(1, 0, ['Plateau final', `${grid}\n1\uFE0F\u20E32\uFE0F\u20E33\uFE0F\u20E34\uFE0F\u20E35\uFE0F\u20E36\uFE0F\u20E37\uFE0F\u20E3\n${EMOJI.win} = ligne gagnante`, false]);
+    }
+    const buttons = [
+      replayUrl ? linkButton('Replay', replayUrl, EMOJI.replay) : null,
+      linkButton('Live', `${BASE}/live`, EMOJI.live),
+      p1?.id ? linkButton(clean(p1.pseudo, 'J1').slice(0, 20), `${BASE}/profil?id=${p1.id}`, EMOJI.profile) : null,
+      p2?.id ? linkButton(clean(p2.pseudo, 'J2').slice(0, 20), `${BASE}/profil?id=${p2.id}`, EMOJI.profile) : null,
+    ].filter(Boolean);
+    send([mkContainer(color, title, fields, {
       subtitle: isSuspect ? 'Surveillance anti-abus' : 'Fin de partie',
       buttons: replayUrl ? [linkButton('Voir le replay', replayUrl, '🎬')] : [],
     })]);
