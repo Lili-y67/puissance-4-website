@@ -317,16 +317,6 @@ html, body {
   text-shadow: 0 0 40px var(--red-glow), 0 0 80px var(--red-glow);
   animation: flicker 6s ease-in-out infinite;
 }
-.hero-logo-img{
-  width:min(420px,92vw);
-  aspect-ratio:16/9;
-  border-radius:28px;
-  object-fit:cover;
-  display:block;
-  margin:0 0 18px;
-  border:1px solid rgba(255,255,255,.11);
-  box-shadow:0 26px 80px rgba(0,0,0,.42),0 0 34px rgba(133,235,255,.18);
-}
 @keyframes flicker {
   0%,96%,100% { opacity: 1; }
   97%          { opacity: 0.7; }
@@ -575,9 +565,9 @@ html, body {
   width:7px;
   height:7px;
   border-radius:50%;
-  background:#85EBFF;
-  box-shadow:0 0 0 4px rgba(133,235,255,0.12);
-  animation:badge-pulse-blue 1.85s ease-in-out infinite;
+  background:#fdff85;
+  box-shadow:0 0 0 4px rgba(255, 247, 133, 0.12);
+  animation:badge-pulse-yellow 1.85s ease-in-out infinite;
 }
 .site-visitor-badge{
   display:inline-flex;
@@ -2085,7 +2075,6 @@ html, body {
   <!-- Hero -->
   <div class="hero">
     <div class="logo-eyebrow">Jouez en ligne</div>
-    <img class="hero-logo-img" src="/assets/site-logo.png" alt="Puissance 4">
     <div class="logo">
       <span class="logo-p4">Puissance </span><span class="logo-num">4</span>
     </div>
