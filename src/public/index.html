@@ -3032,7 +3032,7 @@ const QueueMusic = (() => {
       if (!canUseCustomQueueMusic(player)) return '';
       const music = String(player?.queue_music || '').trim();
       if (/^\/sounds\/.+\.(mp3|ogg|wav|m4a)$/i.test(music)) return music;
-      if (/^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(music)) return music;
+      if (/^audio:https:\/\/[^\s"'<>]+$/i.test(music)) return music;
       if (/^youtube:[a-zA-Z0-9_-]{6,20}$/.test(music)) return music;
       if (music === 'local:custom') return music;
       return '';
@@ -3074,9 +3074,9 @@ const QueueMusic = (() => {
   function startYouTube(videoId) {
     stopYouTube();
     const frame = document.createElement('iframe');
-    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&loop=1&playlist=${encodeURIComponent(videoId)}&controls=0&modestbranding=1`;
+    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&loop=1&playlist=${encodeURIComponent(videoId)}&controls=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
     frame.allow = 'autoplay; encrypted-media';
-    frame.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none';
+    frame.style.cssText = 'position:fixed;right:10px;bottom:10px;width:1px;height:1px;opacity:0.01;pointer-events:none;border:0';
     document.body.appendChild(frame);
     youtubeFrame = frame;
   }
@@ -3114,13 +3114,13 @@ const QueueMusic = (() => {
     async start() {
       const a = get();
       if (!a) return;
-      await syncSource();
-      if (youtubeFrame) return;
       const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
       if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
+      syncUI();
+      await syncSource();
+      if (youtubeFrame) return;
       a.volume = volume;
       a.currentTime = 0;
-      syncUI();
       // DÃ©bloquer l'AudioContext si suspendu (politique autoplay navigateur)
       const tryPlay = () => a.play().catch(() => {});
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
@@ -3320,12 +3320,28 @@ function showLoggedInView(p) {
   `;
 }
 
-function connectAndQueue() {
+async function refreshStoredPlayerForQueue() {
+  const token = localStorage.getItem('token');
+  const id = myPlayer?.id || JSON.parse(localStorage.getItem('player') || '{}')?.id;
+  if (!token || !id) return;
+  try {
+    const res = await fetch(`/api/players/${encodeURIComponent(id)}`, { headers: { 'x-session-token': token } });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.player) return;
+    myPlayer = { ...myPlayer, ...data.player };
+    localStorage.setItem('player', JSON.stringify(myPlayer));
+    sessionStorage.setItem('player', JSON.stringify(myPlayer));
+  } catch {}
+}
+
+async function connectAndQueue() {
+  await refreshStoredPlayerForQueue();
   socket = io({ transports: ['polling'] });
   localStorage.setItem('last_active', Date.now());
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
   socket.on('identified',   (player) => {
-    myPlayer = player;
+    myPlayer = { ...myPlayer, ...player };
     localStorage.setItem('player', JSON.stringify(myPlayer));
     // Envoyer la shape depuis localStorage (plus fiable que la DB Railway)
     const lsPlayer = JSON.parse(localStorage.getItem('player') || '{}');

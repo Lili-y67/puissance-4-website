@@ -3744,7 +3744,7 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
   const nextMusic = String(music || '').trim();
   const allowed = getQueueMusicPaths().map(entry => entry.src);
   const isYouTube = /^youtube:[a-zA-Z0-9_-]{6,20}$/.test(nextMusic);
-  const isAudioUrl = /^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(nextMusic);
+  const isAudioUrl = /^audio:https:\/\/[^\s"'<>]+$/i.test(nextMusic);
   const isLocalCustom = nextMusic === 'local:custom';
   if (nextMusic && !allowed.includes(nextMusic) && !isYouTube && !isAudioUrl && !isLocalCustom) {
     return res.status(400).json({ error: 'Musique invalide.' });

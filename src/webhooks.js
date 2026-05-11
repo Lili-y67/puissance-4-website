@@ -5,13 +5,7 @@
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz';
 const BASE = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
-const COMPONENTS_V2 = 1 << 15;
-const TYPE_ACTION_ROW = 1;
-const TYPE_BUTTON = 2;
-const TYPE_TEXT_DISPLAY = 10;
-const TYPE_SEPARATOR = 14;
-const TYPE_CONTAINER = 17;
-const BUTTON_LINK = 5;
+
 const EMOJI = Object.freeze({
   replay: '\uD83C\uDFAC',
   profile: '\uD83D\uDC64',
@@ -53,35 +47,30 @@ function clean(value, fallback = '-') {
 
 function truncate(value, max = 3900) {
   const text = clean(value);
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
-function mkEmbed(color, title, fields = []) {
-  return {
+function mkEmbed(color, title, fields = [], options = {}) {
+  const embed = {
     color,
-    title,
-    fields: fields.map(([name, value, inline = false]) => ({
+    title: clean(title),
+    fields: fields.filter(Boolean).map(([name, value, inline = false]) => ({
       name: clean(name),
-      value: clean(value),
+      value: truncate(value, 1024),
       inline,
     })),
     timestamp: new Date().toISOString(),
-    footer: { text: 'Puissance 4 Ranked' },
+    footer: { text: options.footer || 'Puissance 4 Ranked' },
   };
-}
-
-function textDisplay(content) {
-  return { type: TYPE_TEXT_DISPLAY, content: truncate(content) };
-}
-
-function separator() {
-  return { type: TYPE_SEPARATOR, divider: true, spacing: 1 };
+  if (options.description) embed.description = truncate(options.description, 4096);
+  if (options.url) embed.url = options.url;
+  return embed;
 }
 
 function linkButton(label, url, emoji) {
   const button = {
-    type: TYPE_BUTTON,
-    style: BUTTON_LINK,
+    type: 2,
+    style: 5,
     label: truncate(label, 80),
     url,
   };
@@ -90,7 +79,35 @@ function linkButton(label, url, emoji) {
 }
 
 function actionRow(buttons = []) {
-  return { type: TYPE_ACTION_ROW, components: buttons.slice(0, 5) };
+  return { type: 1, components: buttons.filter(Boolean).slice(0, 5) };
+}
+
+function mkContainer(color, title, fields = [], options = {}) {
+  return {
+    kind: 'p4-webhook-card',
+    embed: mkEmbed(color, title, fields, {
+      description: options.subtitle,
+      url: options.url,
+      footer: options.footer,
+    }),
+    buttons: Array.isArray(options.buttons) ? options.buttons.filter(Boolean) : [],
+  };
+}
+
+function cardToPayload(card) {
+  if (card?.kind === 'p4-webhook-card') {
+    const payload = { embeds: [card.embed] };
+    if (card.buttons?.length) payload.components = [actionRow(card.buttons)];
+    return payload;
+  }
+  return { embeds: [card] };
+}
+
+async function send(items) {
+  const cards = Array.isArray(items) ? items : [items];
+  for (const card of cards.filter(Boolean).slice(0, 10)) {
+    await postWebhook(cardToPayload(card));
+  }
 }
 
 function hexToRgb(hex) {
@@ -148,67 +165,12 @@ function boardGrid(board, p1Emoji, p2Emoji, winCells = []) {
     .join('\n');
 }
 
-function fieldLines(fields = []) {
-  return fields
-    .filter(Boolean)
-    .map(([name, value, inline = false]) => {
-      const safeName = clean(name);
-      const safeValue = clean(value);
-      return inline ? `**${safeName}**\n${safeValue}` : `### ${safeName}\n${safeValue}`;
-    })
-    .join('\n\n');
-}
-
-function mkContainer(color, title, fields = [], options = {}) {
-  const components = [
-    textDisplay(`## ${clean(title)}\n${options.subtitle ? clean(options.subtitle) : 'Puissance 4 Ranked'}`),
-  ];
-  const body = fieldLines(fields);
-  if (body) {
-    components.push(separator());
-    components.push(textDisplay(body));
-  }
-  const buttons = Array.isArray(options.buttons) ? options.buttons.filter(Boolean) : [];
-  if (buttons.length) {
-    components.push(separator());
-    components.push(actionRow(buttons));
-  }
-  return {
-    type: TYPE_CONTAINER,
-    accent_color: color,
-    components,
-  };
-}
-
-function embedToContainer(embed) {
-  const fields = (embed.fields || []).map(field => [field.name, field.value, field.inline]);
-  const buttons = [];
-  const markdownLinks = fields
-    .map(([, value]) => String(value || '').match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/))
-    .filter(Boolean)
-    .slice(0, 3);
-  for (const match of markdownLinks) buttons.push(linkButton(match[1], match[2], '🔗'));
-  return mkContainer(embed.color || 0xff2d55, embed.title || 'Webhook', fields, {
-    subtitle: embed.footer?.text || 'Puissance 4 Ranked',
-    buttons,
-  });
-}
-
-async function sendContainers(containers) {
-  await postWebhook({
-    flags: COMPONENTS_V2,
-    components: containers.slice(0, 5),
-  });
-}
-
-async function send(embedsOrContainers) {
-  const items = Array.isArray(embedsOrContainers) ? embedsOrContainers : [embedsOrContainers];
-  const containers = items.map(item => item?.type === TYPE_CONTAINER ? item : embedToContainer(item || {}));
-  await sendContainers(containers);
+function profileButtons(id) {
+  return Number.isFinite(Number(id)) ? [linkButton('Voir profil', `${BASE}/profil?id=${id}`, EMOJI.profile)] : [];
 }
 
 module.exports = {
-  wlog: embeds => send(embeds),
+  wlog: cards => send(cards),
   mkEmbed,
   mkContainer,
   linkButton,
@@ -225,21 +187,21 @@ module.exports = {
     const fields = [
       ['Duel', `${p1Emoji} **${clean(p1?.pseudo)}** \`${p1?.elo || 0} ELO\` (${d1})\n${p2Emoji} **${clean(p2?.pseudo)}** \`${p2?.elo || 0} ELO\` (${d2})`, false],
       ['Resultat', isDraw ? `${EMOJI.draw} Nul` : `${EMOJI.trophy} **${clean(winner)}** gagne`, true],
-      ['Rythme', `${moves || 0} coups • ${duration || 0}s`, true],
-      ['Controle', `ID #${gameId} • Suspect: ${isSuspect ? 'Oui' : 'Non'}\nRaison: ${clean(reason)}`, false],
+      ['Rythme', `${moves || 0} coups - ${duration || 0}s`, true],
+      ['Controle', `ID #${gameId} - Suspect: ${isSuspect ? 'Oui' : 'Non'}\nRaison: ${clean(reason)}`, false],
     ];
     if (grid) {
-      fields.splice(1, 0, ['Plateau final', `${grid}\n1\uFE0F\u20E32\uFE0F\u20E33\uFE0F\u20E34\uFE0F\u20E35\uFE0F\u20E36\uFE0F\u20E37\uFE0F\u20E3\n${EMOJI.win} = ligne gagnante`, false]);
+      fields.splice(1, 0, ['Plateau final', `${grid}\n1\uFE0F\u20E3 2\uFE0F\u20E3 3\uFE0F\u20E3 4\uFE0F\u20E3 5\uFE0F\u20E3 6\uFE0F\u20E3 7\uFE0F\u20E3\n${EMOJI.win} = ligne gagnante`, false]);
     }
-    const buttons = [
-      replayUrl ? linkButton('Replay', replayUrl, EMOJI.replay) : null,
-      linkButton('Live', `${BASE}/live`, EMOJI.live),
-      p1?.id ? linkButton(clean(p1.pseudo, 'J1').slice(0, 20), `${BASE}/profil?id=${p1.id}`, EMOJI.profile) : null,
-      p2?.id ? linkButton(clean(p2.pseudo, 'J2').slice(0, 20), `${BASE}/profil?id=${p2.id}`, EMOJI.profile) : null,
-    ].filter(Boolean);
     send([mkContainer(color, title, fields, {
       subtitle: isSuspect ? 'Surveillance anti-abus' : 'Fin de partie',
-      buttons: replayUrl ? [linkButton('Voir le replay', replayUrl, '🎬')] : [],
+      url: replayUrl,
+      buttons: [
+        replayUrl ? linkButton('Replay', replayUrl, EMOJI.replay) : null,
+        linkButton('Live', `${BASE}/live`, EMOJI.live),
+        p1?.id ? linkButton(clean(p1.pseudo, 'J1').slice(0, 20), `${BASE}/profil?id=${p1.id}`, EMOJI.profile) : null,
+        p2?.id ? linkButton(clean(p2.pseudo, 'J2').slice(0, 20), `${BASE}/profil?id=${p2.id}`, EMOJI.profile) : null,
+      ],
     })]);
   },
 
@@ -247,14 +209,14 @@ module.exports = {
     send([mkContainer(0x30d158, 'Nouveau compte', [
       ['Pseudo', pseudo, true],
       ['ID', id, true],
-    ], { subtitle: 'Un nouveau joueur rejoint l arene', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Un nouveau joueur rejoint l arene', buttons: profileButtons(id) })]);
   },
 
   wlogLogin(pseudo, id) {
     send([mkContainer(0x4c6ef5, 'Connexion', [
       ['Pseudo', pseudo, true],
       ['ID', id, true],
-    ], { subtitle: 'Session joueur ouverte', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Session joueur ouverte', buttons: profileButtons(id) })]);
   },
 
   wlogLoginFail(pseudo) {
@@ -268,7 +230,7 @@ module.exports = {
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Taille', `${sizeKB} KB`, true],
-    ], { subtitle: 'Cosmetique profil', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Cosmetique profil', buttons: profileButtons(id) })]);
   },
 
   wlogBanner(pseudo, id, sizeKB) {
@@ -276,21 +238,21 @@ module.exports = {
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Taille', `${sizeKB} KB`, true],
-    ], { subtitle: 'Cosmetique profil', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Cosmetique profil', buttons: profileButtons(id) })]);
   },
 
   wlogProfileView(visitorPseudo, targetPseudo, targetId) {
     send([mkContainer(0x636366, 'Profil consulte', [
       ['Visiteur', visitorPseudo, true],
       ['Profil', targetPseudo, true],
-    ], { subtitle: 'Activite profil', buttons: [linkButton('Ouvrir profil', `${BASE}/profil?id=${targetId}`, '👤')] })]);
+    ], { subtitle: 'Activite profil', buttons: profileButtons(targetId) })]);
   },
 
   wlogReplay(watcherPseudo, gameId) {
     send([mkContainer(0x8b9cf4, 'Replay visionne', [
       ['Visionne par', watcherPseudo, true],
       ['Partie ID', gameId, true],
-    ], { subtitle: 'Replay consulte', buttons: [linkButton('Voir replay', `${BASE}/replay/${gameId}`, '🎬')] })]);
+    ], { subtitle: 'Replay consulte', buttons: [linkButton('Voir replay', `${BASE}/replay/${gameId}`, EMOJI.replay)] })]);
   },
 
   wlogAdminLogin() {
@@ -300,12 +262,11 @@ module.exports = {
   },
 
   wlogAdminAction(action, pseudo, id, details = []) {
-    const profileButton = Number.isFinite(Number(id)) ? [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] : [];
     send([mkContainer(0xff2d55, `Action admin - ${clean(action)}`, [
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ...details,
-    ], { subtitle: 'Journal moderation', buttons: profileButton })]);
+    ], { subtitle: 'Journal moderation', buttons: profileButtons(id) })]);
   },
 
   wlogDiscordLink(pseudo, discordId, discordUsername, role) {
@@ -320,7 +281,7 @@ module.exports = {
     send([mkContainer(0xff6b00, 'Mot de passe reinitialise', [
       ['Joueur', pseudo, true],
       ['ID', id, true],
-    ], { subtitle: 'Securite compte', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Securite compte', buttons: profileButtons(id) })]);
   },
 
   wlogDelete(pseudo, id) {
@@ -342,7 +303,7 @@ module.exports = {
     send([mkContainer(0xff3b30, banned ? 'Joueur banni' : 'Joueur debanni', [
       ['Joueur', pseudo, true],
       ['ID', id, true],
-    ], { subtitle: 'Moderation', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Moderation', buttons: profileButtons(id) })]);
   },
 
   wlogMute(pseudo, id, hours) {
@@ -350,7 +311,7 @@ module.exports = {
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Duree', hours > 0 ? `${hours}h` : 'Leve', true],
-    ], { subtitle: 'Moderation', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Moderation', buttons: profileButtons(id) })]);
   },
 
   wlogShopPurchase(pseudo, id, item, coins) {
@@ -359,7 +320,7 @@ module.exports = {
       ['ID', id, true],
       ['Article', item, true],
       ['Coins depenses', coins, true],
-    ], { subtitle: 'Boutique coins', buttons: [linkButton('Voir boutique', `${BASE}/boutique`, '🛒'), linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Boutique coins', buttons: [linkButton('Voir boutique', `${BASE}/boutique`, EMOJI.cart), ...profileButtons(id)] })]);
   },
 
   wlogBoost(type, multiplier, appliedBy, duration) {
@@ -368,7 +329,7 @@ module.exports = {
       ['Multiplicateur', `x${multiplier}`, true],
       ['Par', clean(appliedBy, 'Puissance4-Booster'), true],
       ['Duree', duration || '-', true],
-    ], { subtitle: 'Boost serveur', buttons: [linkButton('Rejoindre', BASE, '⚡')] })]);
+    ], { subtitle: 'Boost serveur', buttons: [linkButton('Rejoindre', BASE, EMOJI.bolt)] })]);
   },
 
   wlogCoins(pseudo, id, delta, reason = '') {
@@ -377,7 +338,7 @@ module.exports = {
       ['ID', id, true],
       ['Delta', Number(delta || 0) >= 0 ? `+${delta}` : delta, true],
       ['Raison', reason || '-', false],
-    ], { subtitle: 'Economie coins', buttons: [linkButton('Voir profil', `${BASE}/profil?id=${id}`, '👤')] })]);
+    ], { subtitle: 'Economie coins', buttons: profileButtons(id) })]);
   },
 
   wlogTournament(name, id, status) {
@@ -385,7 +346,7 @@ module.exports = {
       ['Nom', name, true],
       ['ID', id, true],
       ['Statut', status, true],
-    ], { subtitle: 'Evenement tournoi', buttons: [linkButton('Voir tournoi', `${BASE}/tournoi?id=${id}`, '🏆')] })]);
+    ], { subtitle: 'Evenement tournoi', buttons: [linkButton('Voir tournoi', `${BASE}/tournoi?id=${id}`, EMOJI.trophy)] })]);
   },
 
   wlogDuel(sender, target, type) {
@@ -393,13 +354,13 @@ module.exports = {
       ['Createur', sender, true],
       ['Cible', target || 'Lien public', true],
       ['Type', type || 'ranked', true],
-    ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, '⚔️')] })]);
+    ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.sword)] })]);
   },
 
   wlogSystem(status, message) {
     send([mkContainer(0xff3b30, 'Etat serveur', [
       ['Statut', status, true],
       ['Message', message || '-', false],
-    ], { subtitle: 'Alerte systeme', buttons: [linkButton('Ouvrir le site', BASE, '⚠️')] })]);
+    ], { subtitle: 'Alerte systeme', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.warning)] })]);
   },
 };

@@ -160,7 +160,7 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
   "color": "#ff2d55",
   "color_secondary": "#85EBFF"
 }</code></pre><pre><code>const player = await fetch('/api/players/2').then(r => r.json());</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/elo-history?days=1|7|15</span></div><p>Retourne la courbe ELO compress&eacute;e sur 1, 7 ou 15 jours. Le profil l&rsquo;utilise pour le canvas temps r&eacute;el, et le bot Discord s&rsquo;en sert pour dessiner le graphique de <code>/profil</code>.</p><div class="subgrid"><pre><code>{
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/elo-history?days=1|7|15</span></div><p>Retourne la courbe ELO compress&eacute;e sur 1, 7 ou 15 jours. Le profil web l&rsquo;utilise pour son canvas temps r&eacute;el.</p><div class="subgrid"><pre><code>{
   "player": { "id": 2, "pseudo": "Lili_y", "elo": 1012 },
   "days": 7,
   "points": [{ "t": 1778410000000, "elo": 1000, "delta": 0 }],
@@ -282,7 +282,7 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
       </div></section>
       <section class="section" id="discord-commands"><div class="section-head"><div><h2>Commandes Bot Discord</h2><p>Commandes slash align&eacute;es avec l&rsquo;API officielle du site. Le bot ne renvoie jamais d&rsquo;IP ni de donn&eacute;es r&eacute;seau priv&eacute;es.</p></div><div class="legend"><span class="chip socket">Slash</span><span class="chip get">Public</span><span class="chip delete">Admin</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/api</span></div><p>Ouvre la documentation API officielle : endpoints HTTP, Socket.IO, erreurs et exemples.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/profil pseudo periode</span></div><p>Miroir Discord de <code>GET /api/players/by-pseudo/:pseudo</code>, <code>GET /api/players/:id</code> et <code>/api/players/:id/elo-history</code>. Retourne rang, ELO, coins, badges, stats, follow, dernier match et une image canvas de la courbe ELO sur 1 / 7 / 15 jours.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/profil pseudo</span></div><p>Miroir Discord de <code>GET /api/players/by-pseudo/:pseudo</code> et <code>GET /api/players/:id</code>. Retourne rang, ELO, coins, badges, stats, follow et dernier match.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/classement</span></div><p>Top ELO rapide, compatible avec <code>GET /api/leaderboard</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/leaderboard type</span></div><p>Classement officiel par <code>elo</code> ou <code>victoires</code>, reli&eacute; &agrave; <code>/api/leaderboard</code> et <code>/api/leaderboard/wins</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/stats</span></div><p>Vue Discord des stats globales : pr&eacute;sence, parties, comptes, coins et boosts. Reli&eacute; &agrave; <code>/api/stats/overview</code> et <code>/api/site-stats</code>.</p></article>

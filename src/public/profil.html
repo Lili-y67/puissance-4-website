@@ -408,26 +408,25 @@ input[type="file"]{display:none;}
 }
 .elo-history-range:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.32);color:#85EBFF;}
 .elo-history-range.active{background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.44);color:#85EBFF;box-shadow:0 0 20px rgba(133,235,255,.10);}
-.elo-history-canvas-wrap{position:relative;z-index:1;height:230px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.16);}
+.elo-history-canvas-wrap{position:relative;z-index:1;height:230px;border-radius:18px;overflow:visible;border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.16);}
 #elo-history-canvas{display:block;width:100%;height:100%;}
 .elo-history-tooltip{
   position:absolute;
-  z-index:4;
-  min-width:128px;
-  padding:9px 11px;
-  border-radius:13px;
-  border:1px solid rgba(133,235,255,.28);
-  background:rgba(10,12,24,.92);
-  box-shadow:0 18px 42px rgba(0,0,0,.34),0 0 22px rgba(133,235,255,.12);
-  backdrop-filter:blur(10px);
+  z-index:30;
+  min-width:150px;
+  padding:11px 12px;
+  border-radius:14px;
+  border:1px solid rgba(133,235,255,.48);
+  background:linear-gradient(180deg,rgba(12,14,30,.98),rgba(6,7,16,.98));
+  box-shadow:0 20px 48px rgba(0,0,0,.62),0 0 26px rgba(133,235,255,.20);
   pointer-events:none;
   opacity:0;
   transform:translate(-50%,-112%) scale(.96);
   transition:opacity .12s ease,transform .12s ease;
 }
 .elo-history-tooltip.show{opacity:1;transform:translate(-50%,-118%) scale(1);}
-.elo-history-tooltip strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;line-height:1;color:#fff;}
-.elo-history-tooltip span{display:block;margin-top:3px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.elo-history-tooltip strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:1px;line-height:1;color:#fff;text-shadow:0 0 14px rgba(255,255,255,.18);}
+.elo-history-tooltip span{display:block;margin-top:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(238,238,245,.74);}
 .elo-history-tooltip .delta{font-weight:800;}
 .elo-history-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px;}
 .elo-history-stat{padding:10px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);}
@@ -2302,7 +2301,9 @@ function drawEloHistory(data) {
   }
 
   const drawable = points.length ? points : [{ t: startTime, elo: data?.player?.elo || 1000 }, { t: endTime, elo: data?.player?.elo || 1000 }];
-  const line = drawable.map(point => ({ x: x(point.t), y: y(point.elo), point }));
+  const line = drawable
+    .map(point => ({ x: x(point.t), y: y(point.elo), point }))
+    .filter((point, index, arr) => index === 0 || Math.abs(point.x - arr[index - 1].x) > 0.5 || Math.abs(point.y - arr[index - 1].y) > 0.5);
   eloHistoryHitPoints = line.map(p => ({
     x: p.x,
     y: p.y,
@@ -2318,7 +2319,16 @@ function drawEloHistory(data) {
   fillGradient.addColorStop(0, `${playerColor}55`);
   fillGradient.addColorStop(1, `${playerColor}00`);
   ctx.beginPath();
-  line.forEach((p, index) => index ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  line.forEach((p, index) => {
+    if (index === 0) ctx.moveTo(p.x, p.y);
+    else {
+      const prev = line[index - 1];
+      const midX = (prev.x + p.x) / 2;
+      const midY = (prev.y + p.y) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+      if (index === line.length - 1) ctx.quadraticCurveTo(p.x, p.y, p.x, p.y);
+    }
+  });
   ctx.lineTo(line[line.length - 1].x, height - bottom);
   ctx.lineTo(line[0].x, height - bottom);
   ctx.closePath();
@@ -2330,7 +2340,16 @@ function drawEloHistory(data) {
   strokeGradient.addColorStop(0.55, '#85EBFF');
   strokeGradient.addColorStop(1, '#ffd60a');
   ctx.beginPath();
-  line.forEach((p, index) => index ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  line.forEach((p, index) => {
+    if (index === 0) ctx.moveTo(p.x, p.y);
+    else {
+      const prev = line[index - 1];
+      const midX = (prev.x + p.x) / 2;
+      const midY = (prev.y + p.y) / 2;
+      ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
+      if (index === line.length - 1) ctx.quadraticCurveTo(p.x, p.y, p.x, p.y);
+    }
+  });
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -3890,8 +3909,8 @@ function normalizeCustomQueueMusicValue(value) {
   if (!raw) return '';
   const youtubeId = extractYouTubeId(raw);
   if (youtubeId) return `youtube:${youtubeId}`;
-  if (/^https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(raw)) return `audio:${raw}`;
-  if (/^audio:https:\/\/[^\s"'<>]+\.(mp3|ogg|wav|m4a)(\?[^\s"'<>]*)?$/i.test(raw)) return raw;
+  if (/^https:\/\/[^\s"'<>]+$/i.test(raw)) return `audio:${raw}`;
+  if (/^audio:https:\/\/[^\s"'<>]+$/i.test(raw)) return raw;
   return '';
 }
 
