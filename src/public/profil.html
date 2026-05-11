@@ -410,6 +410,25 @@ input[type="file"]{display:none;}
 .elo-history-range.active{background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.44);color:#85EBFF;box-shadow:0 0 20px rgba(133,235,255,.10);}
 .elo-history-canvas-wrap{position:relative;z-index:1;height:230px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.16);}
 #elo-history-canvas{display:block;width:100%;height:100%;}
+.elo-history-tooltip{
+  position:absolute;
+  z-index:4;
+  min-width:128px;
+  padding:9px 11px;
+  border-radius:13px;
+  border:1px solid rgba(133,235,255,.28);
+  background:rgba(10,12,24,.92);
+  box-shadow:0 18px 42px rgba(0,0,0,.34),0 0 22px rgba(133,235,255,.12);
+  backdrop-filter:blur(10px);
+  pointer-events:none;
+  opacity:0;
+  transform:translate(-50%,-112%) scale(.96);
+  transition:opacity .12s ease,transform .12s ease;
+}
+.elo-history-tooltip.show{opacity:1;transform:translate(-50%,-118%) scale(1);}
+.elo-history-tooltip strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;line-height:1;color:#fff;}
+.elo-history-tooltip span{display:block;margin-top:3px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+.elo-history-tooltip .delta{font-weight:800;}
 .elo-history-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px;}
 .elo-history-stat{padding:10px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);}
 .elo-history-stat strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;}
@@ -1152,6 +1171,8 @@ let queueMusicPreviewTimer = null;
 let eloHistoryDays = 7;
 let eloHistoryTimer = null;
 let lastEloHistoryData = null;
+let eloHistoryHitPoints = [];
+let eloHistoryHoverReady = false;
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1697,6 +1718,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
       <div class="elo-history-canvas-wrap">
         <canvas id="elo-history-canvas"></canvas>
+        <div class="elo-history-tooltip" id="elo-history-tooltip"></div>
       </div>
       <div class="elo-history-stats" id="elo-history-stats">
         <div class="elo-history-stat"><strong>--</strong><span>Depart</span></div>
@@ -2281,6 +2303,17 @@ function drawEloHistory(data) {
 
   const drawable = points.length ? points : [{ t: startTime, elo: data?.player?.elo || 1000 }, { t: endTime, elo: data?.player?.elo || 1000 }];
   const line = drawable.map(point => ({ x: x(point.t), y: y(point.elo), point }));
+  eloHistoryHitPoints = line.map(p => ({
+    x: p.x,
+    y: p.y,
+    elo: Number(p.point.elo || 0),
+    delta: Number(p.point.delta || 0),
+    gameId: p.point.gameId || null,
+    label: p.point.label || (p.point.gameId ? `Partie #${p.point.gameId}` : ''),
+    result: p.point.result || '',
+    t: Number(p.point.t || 0),
+  }));
+  initEloHistoryHover();
   const fillGradient = ctx.createLinearGradient(0, top, 0, height - bottom);
   fillGradient.addColorStop(0, `${playerColor}55`);
   fillGradient.addColorStop(1, `${playerColor}00`);
@@ -2337,6 +2370,84 @@ function drawEloHistory(data) {
       <div class="elo-history-stat"><strong>${Number(stats.games || 0)}</strong><span>Parties</span></div>
     `;
   }
+}
+
+function formatEloPointDate(ms) {
+  if (!ms) return '';
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(ms));
+}
+
+function showEloHistoryTooltip(point) {
+  const tooltip = document.getElementById('elo-history-tooltip');
+  const wrap = document.querySelector('.elo-history-canvas-wrap');
+  if (!tooltip || !wrap || !point) return;
+  const deltaColor = point.delta > 0 ? '#30d158' : point.delta < 0 ? '#ff4d6d' : '#85EBFF';
+  const deltaText = point.delta ? `${point.delta > 0 ? '+' : ''}${Math.round(point.delta)} ELO` : 'Point de repere';
+  tooltip.innerHTML = `
+    <strong>${Math.round(point.elo)} ELO</strong>
+    <span class="delta" style="color:${deltaColor}">${deltaText}</span>
+    <span>${point.gameId ? `Partie #${point.gameId}` : (point.label || 'Courbe ELO')}</span>
+    <span>${formatEloPointDate(point.t)}</span>
+  `;
+  const tooltipWidth = 150;
+  const x = Math.max(tooltipWidth / 2 + 8, Math.min(point.x, wrap.clientWidth - tooltipWidth / 2 - 8));
+  const y = Math.max(48, point.y);
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+  tooltip.classList.add('show');
+}
+
+function hideEloHistoryTooltip() {
+  document.getElementById('elo-history-tooltip')?.classList.remove('show');
+}
+
+function handleEloHistoryMove(event) {
+  const canvas = document.getElementById('elo-history-canvas');
+  if (!canvas || !eloHistoryHitPoints.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.clientWidth / Math.max(1, rect.width);
+  const scaleY = canvas.clientHeight / Math.max(1, rect.height);
+  const mouseX = (event.clientX - rect.left) * scaleX;
+  const mouseY = (event.clientY - rect.top) * scaleY;
+  let nearest = null;
+  let nearestDistance = Infinity;
+  for (const point of eloHistoryHitPoints) {
+    const distance = Math.hypot(point.x - mouseX, point.y - mouseY);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = point;
+    }
+  }
+  if (nearest && nearestDistance <= 16) {
+    canvas.style.cursor = 'pointer';
+    showEloHistoryTooltip(nearest);
+  } else {
+    canvas.style.cursor = 'default';
+    hideEloHistoryTooltip();
+  }
+}
+
+function initEloHistoryHover() {
+  const canvas = document.getElementById('elo-history-canvas');
+  if (!canvas) return;
+  if (canvas.dataset.eloHoverReady === '1') return;
+  canvas.dataset.eloHoverReady = '1';
+  eloHistoryHoverReady = true;
+  canvas.addEventListener('mousemove', handleEloHistoryMove);
+  canvas.addEventListener('mouseleave', () => {
+    canvas.style.cursor = 'default';
+    hideEloHistoryTooltip();
+  });
+  canvas.addEventListener('click', () => {
+    const tooltip = document.getElementById('elo-history-tooltip');
+    const gameText = tooltip?.textContent?.match(/Partie #(\d+)/);
+    if (gameText?.[1]) location.href = `/replay/${gameText[1]}`;
+  });
 }
 
 window.addEventListener('resize', () => {
