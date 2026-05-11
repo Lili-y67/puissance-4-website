@@ -86,7 +86,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_games_p1       ON games(player1_id);
   CREATE INDEX IF NOT EXISTS idx_games_p2       ON games(player2_id);
   CREATE INDEX IF NOT EXISTS idx_players_pseudo ON players(pseudo);
-  CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id);
   CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
   CREATE INDEX IF NOT EXISTS idx_games_finished_p1_id ON games(status, player1_id, id DESC);
   CREATE INDEX IF NOT EXISTS idx_games_finished_p2_id ON games(status, player2_id, id DESC);
@@ -196,6 +195,9 @@ try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p1 INTEGER`); } catch(e) 
 try { db.exec(`ALTER TABLE games ADD COLUMN elo_before_p2 INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN reverted      INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#ff2d55'`); } catch(e) {}
+
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_enabled ON players(is_bot, bot_enabled, deleted)`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
 const pQ = {
