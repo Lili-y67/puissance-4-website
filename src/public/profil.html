@@ -392,7 +392,8 @@ input[type="file"]{display:none;}
 .elo-history-kicker{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
 .elo-history-title{font-family:'Barlow Condensed',sans-serif;font-size:27px;font-weight:900;letter-spacing:2px;text-transform:uppercase;line-height:1;margin-top:3px;}
 .elo-history-sub{font-size:12px;color:var(--muted);margin-top:3px;}
-.elo-history-ranges{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+.elo-history-actions{display:flex;gap:8px;align-items:flex-start;justify-content:flex-end;flex-wrap:wrap;flex-shrink:0;}
+.elo-history-ranges,.elo-history-export{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
 .elo-history-range{
   min-width:42px;
   padding:9px 11px;
@@ -408,6 +409,21 @@ input[type="file"]{display:none;}
 }
 .elo-history-range:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.32);color:#85EBFF;}
 .elo-history-range.active{background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.44);color:#85EBFF;box-shadow:0 0 20px rgba(133,235,255,.10);}
+.elo-history-copy{
+  min-width:54px;
+  padding:9px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,214,10,.18);
+  background:rgba(255,214,10,.055);
+  color:#ffd60a;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:900;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;
+}
+.elo-history-copy:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.42);background:rgba(255,214,10,.10);box-shadow:0 0 20px rgba(255,214,10,.10);}
 .elo-history-canvas-wrap{position:relative;z-index:1;height:230px;border-radius:18px;overflow:visible;border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.16);}
 #elo-history-canvas{display:block;width:100%;height:100%;}
 .elo-history-tooltip{
@@ -428,7 +444,7 @@ input[type="file"]{display:none;}
 .elo-history-tooltip strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:1px;line-height:1;color:#fff;text-shadow:0 0 14px rgba(255,255,255,.18);}
 .elo-history-tooltip span{display:block;margin-top:4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:rgba(238,238,245,.74);}
 .elo-history-tooltip .delta{font-weight:800;}
-.elo-history-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px;}
+.elo-history-stats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin-top:12px;}
 .elo-history-stat{padding:10px 11px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);}
 .elo-history-stat strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;}
 .elo-history-stat span{display:block;margin-top:2px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
@@ -1709,10 +1725,16 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="elo-history-title">Courbe ELO</div>
           <div class="elo-history-sub">Le graphe se compresse selon l'intervalle choisi.</div>
         </div>
-        <div class="elo-history-ranges">
-          <button class="elo-history-range" data-elo-days="1" onclick="setEloHistoryRange(1)">1j</button>
-          <button class="elo-history-range active" data-elo-days="7" onclick="setEloHistoryRange(7)">7j</button>
-          <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
+        <div class="elo-history-actions">
+          <div class="elo-history-ranges">
+            <button class="elo-history-range" data-elo-days="1" onclick="setEloHistoryRange(1)">1j</button>
+            <button class="elo-history-range active" data-elo-days="7" onclick="setEloHistoryRange(7)">7j</button>
+            <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
+          </div>
+          <div class="elo-history-export">
+            <button class="elo-history-copy" type="button" onclick="copyEloHistoryExport('csv')">CSV</button>
+            <button class="elo-history-copy" type="button" onclick="copyEloHistoryExport('json')">JSON</button>
+          </div>
         </div>
       </div>
       <div class="elo-history-canvas-wrap">
@@ -1724,6 +1746,9 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="elo-history-stat"><strong>--</strong><span>Actuel</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Variation</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Parties</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>ELO min</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>ELO max</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>ELO moyen</span></div>
       </div>
     </div>
 
@@ -2399,13 +2424,82 @@ function drawEloHistory(data) {
   const statsEl = document.getElementById('elo-history-stats');
   if (statsEl) {
     const delta = Number(stats.delta || 0);
+    const eloValues = drawable.map(point => Number(point.elo || 0)).filter(Number.isFinite);
+    const minHistoryElo = eloValues.length ? Math.min(...eloValues) : Number(stats.minElo || data?.player?.elo || 0);
+    const maxHistoryElo = eloValues.length ? Math.max(...eloValues) : Number(stats.maxElo || data?.player?.elo || 0);
+    const avgHistoryElo = eloValues.length ? eloValues.reduce((sum, elo) => sum + elo, 0) / eloValues.length : Number(data?.player?.elo || 0);
     const deltaClass = delta > 0 ? 'color:#30d158' : delta < 0 ? 'color:#ff4d6d' : 'color:var(--muted)';
     statsEl.innerHTML = `
       <div class="elo-history-stat"><strong>${Math.round(stats.startElo || data?.player?.elo || 0)}</strong><span>Depart</span></div>
       <div class="elo-history-stat"><strong>${Math.round(stats.endElo || data?.player?.elo || 0)}</strong><span>Actuel</span></div>
       <div class="elo-history-stat"><strong style="${deltaClass}">${delta >= 0 ? '+' : ''}${Math.round(delta)}</strong><span>Variation</span></div>
       <div class="elo-history-stat"><strong>${Number(stats.games || 0)}</strong><span>Parties</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(minHistoryElo)}</strong><span>ELO min</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(maxHistoryElo)}</strong><span>ELO max</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(avgHistoryElo)}</strong><span>ELO moyen</span></div>
     `;
+  }
+}
+
+function buildEloHistoryExportRows() {
+  const data = lastEloHistoryData || {};
+  const points = Array.isArray(data.points) ? data.points : [];
+  return points.map((point, index) => ({
+    index,
+    date: point.t ? new Date(Number(point.t)).toISOString() : '',
+    elo: Math.round(Number(point.elo || 0)),
+    delta: Math.round(Number(point.delta || 0)),
+    gameId: point.gameId || '',
+    result: point.result || '',
+    label: point.label || '',
+  }));
+}
+
+function eloHistoryRowsToCsv(rows) {
+  const headers = ['index', 'date', 'elo', 'delta', 'gameId', 'result', 'label'];
+  const escapeCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  return [
+    headers.join(','),
+    ...rows.map(row => headers.map(key => escapeCsv(row[key])).join(',')),
+  ].join('\n');
+}
+
+async function copyTextToClipboardSafe(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  const ok = document.execCommand('copy');
+  textarea.remove();
+  return ok;
+}
+
+async function copyEloHistoryExport(format = 'csv') {
+  const rows = buildEloHistoryExportRows();
+  if (!rows.length) {
+    alert('Aucune donnee ELO a exporter pour le moment.');
+    return;
+  }
+  const payload = format === 'json'
+    ? JSON.stringify({
+        player: lastEloHistoryData?.player || null,
+        days: lastEloHistoryData?.days || eloHistoryDays,
+        stats: lastEloHistoryData?.stats || {},
+        points: rows,
+      }, null, 2)
+    : eloHistoryRowsToCsv(rows);
+  try {
+    await copyTextToClipboardSafe(payload);
+    alert(format === 'json' ? 'Graphique ELO copie en JSON.' : 'Graphique ELO copie en CSV.');
+  } catch {
+    alert('Impossible de copier automatiquement. Reessaie depuis un navigateur compatible.');
   }
 }
 
