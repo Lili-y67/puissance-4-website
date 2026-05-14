@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -309,7 +309,7 @@ function renderAnalysis(analysis) {
     <div class="variant">
       <b>#${i + 1}</b>
       <span>Colonne ${Number(v.col) + 1}</span>
-      <strong>${v.eval || '0.0'} · ${Math.round(Number(v.winPct || 0))}%</strong>
+      <strong>${v.eval || '0.0'} Â· ${Math.round(Number(v.winPct || 0))}%</strong>
     </div>
   `).join('') || '<div class="variant"><b>-</b><span>Aucune variante</span><strong>--</strong></div>';
 }
@@ -317,5 +317,6 @@ function renderAnalysis(analysis) {
 renderBoard();
 requestAnalysis();
 </script>
+<script src="/custom-background.js" defer></script>
 </body>
 </html>

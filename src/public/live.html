@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -181,7 +181,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   <div class="headline">
     <div>
       <div class="headline-title" id="headline-title">Parties en direct</div>
-      <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
+      <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours Â· <span id="live-status" style="color:var(--green)">Temps reel</span></div>
     </div>
     <div class="headline-actions">
       <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
@@ -190,7 +190,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 
   <div class="view show" id="list-view">
     <div class="games-grid" id="games-grid">
-      <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
+      <div class="empty-state"><div class="empty-icon">â³</div><div class="empty-title">Chargement...</div></div>
     </div>
   </div>
 
@@ -198,7 +198,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
     <div class="spec-shell">
       <div class="spec-card">
         <div class="spec-top">
-          <button class="back-btn" type="button" onclick="backToLive()">← Retour au live</button>
+          <button class="back-btn" type="button" onclick="backToLive()">â† Retour au live</button>
           <div>
             <div class="spec-title" id="spec-title">Spectateur</div>
             <div class="spec-sub" id="spec-sub">Chargement de la partie...</div>
@@ -273,7 +273,7 @@ let selectedGameId = null;
 
 function parseShape(raw) {
   if (!raw) return { shape: 'circle', emoji: null };
-  if (raw.startsWith('emoji:')) return { shape: 'emoji', emoji: raw.slice(6) || '★' };
+  if (raw.startsWith('emoji:')) return { shape: 'emoji', emoji: raw.slice(6) || 'â˜…' };
   return { shape: raw, emoji: null };
 }
 
@@ -594,7 +594,7 @@ function renderList(games) {
   const activeCount = games.filter(g => g.status === 'active').length;
   document.getElementById('count').textContent = activeCount;
   if (!games.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">ðŸŽ®</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
     prevIds = new Set();
     return;
   }
@@ -682,7 +682,7 @@ async function startPreconfiguredBotMatch() {
   } catch (e) {
     alert(e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🤖 Lancer bots'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'ðŸ¤– Lancer bots'; }
   }
 }
 
@@ -691,7 +691,7 @@ function renderSpec(game) {
   const finished = game.status === 'finished';
   const winner = finished && game.result?.winner ? game.players[game.result.winner] : null;
   document.getElementById('spec-title').textContent = `Partie #${game.id}`;
-  document.getElementById('spec-sub').textContent = `${game.moves} coups joues · tour de ${game.players[game.current].pseudo}`;
+  document.getElementById('spec-sub').textContent = `${game.moves} coups joues Â· tour de ${game.players[game.current].pseudo}`;
 
   document.getElementById('spec-sub').textContent = finished
     ? `${game.moves} coups joues - ${winner ? `victoire de ${winner.pseudo}` : 'partie terminee'}`
@@ -811,5 +811,6 @@ setInterval(() => {
 }, REFRESH_MS);
 </script>
 <script src="/presence.js"></script>
+<script src="/custom-background.js" defer></script>
 </body>
 </html>

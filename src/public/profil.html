@@ -648,6 +648,12 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .profile-banner-choice-preview{position:relative;width:100%;max-width:360px;height:96px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:14px}
 .profile-banner-choice-preview img{width:100%;height:100%;object-fit:cover;display:block}
 .profile-banner-choice-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.custom-bg-preview{width:100%;min-height:132px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,rgba(255,45,85,.12),rgba(133,235,255,.08));overflow:hidden;position:relative}
+.custom-bg-preview::after{content:'APERÇU';position:absolute;left:14px;bottom:12px;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:2px;color:rgba(255,255,255,.76);text-shadow:0 2px 14px rgba(0,0,0,.55)}
+.custom-bg-preview.has-image{background-image:linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.38)),var(--preview-bg);background-size:var(--preview-size,cover);background-position:center;background-repeat:no-repeat}
+.custom-bg-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.custom-bg-upload-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.custom-bg-upload-row .search-input{min-width:180px;flex:1;margin:0}
 @media (max-width: 760px){
   .avatar-decoration-modal{padding:18px 16px}
   .avatar-decoration-modal-layout{grid-template-columns:1fr}
@@ -1477,6 +1483,7 @@ async function load() {
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
     renderQueueMusicPicker(freshPlayer);
+    renderCustomBackgroundPicker(freshPlayer);
     loadEloHistory(freshPlayer.id, eloHistoryDays, true);
     if (eloHistoryTimer) clearInterval(eloHistoryTimer);
     eloHistoryTimer = setInterval(() => {
@@ -1946,6 +1953,54 @@ function render(player, games, following, followers, followStatus, tournaments =
         YouTube fonctionne via le lecteur intégré. Un fichier local reste uniquement sur ce navigateur, sans stockage sur le site.
       </div>
     </div>
+    ${(isPerso(player) || String(player.role || '').toLowerCase() === 'admin') ? `
+    <div class="avatar-decoration-card" id="custom-background-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Fond personnalisé</span>
+        <span class="save-confirm" id="custom-bg-confirm">✓ Enregistré !</span>
+      </div>
+      <div class="avatar-decoration-row">
+        <div class="custom-bg-preview" id="custom-bg-preview"></div>
+        <div class="avatar-decoration-meta" id="custom-bg-meta">Accessible Perso. Tu peux définir une image PC et une image mobile optionnelle. Max 4 Mo par image, changement toutes les semaines sauf admin.</div>
+      </div>
+      <div class="custom-bg-upload-row">
+        <label class="avatar-decoration-btn" style="cursor:pointer">
+          Image PC
+          <input id="custom-bg-desktop-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="pickCustomBackgroundFile('desktop', this.files && this.files[0])">
+        </label>
+        <input id="custom-bg-desktop-name" class="search-input" readonly value="Aucune nouvelle image PC">
+        <button class="avatar-decoration-btn" type="button" onclick="removeCustomBackgroundVariant('desktop')">Retirer PC</button>
+      </div>
+      <div class="custom-bg-upload-row">
+        <label class="avatar-decoration-btn" style="cursor:pointer">
+          Image mobile
+          <input id="custom-bg-mobile-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none" onchange="pickCustomBackgroundFile('mobile', this.files && this.files[0])">
+        </label>
+        <input id="custom-bg-mobile-name" class="search-input" readonly value="Aucune nouvelle image mobile">
+        <button class="avatar-decoration-btn" type="button" onclick="removeCustomBackgroundVariant('mobile')">Retirer mobile</button>
+      </div>
+      <div class="custom-bg-controls">
+        <label class="color-picker-inline" style="min-width:0;flex-direction:column;align-items:flex-start">
+          <span>Opacité <b id="custom-bg-opacity-value">28%</b></span>
+          <input id="custom-bg-opacity" type="range" min="8" max="70" value="28" oninput="previewCustomBackgroundSettings()" style="width:100%">
+        </label>
+        <label class="color-picker-inline" style="min-width:0;flex-direction:column;align-items:flex-start">
+          <span>Taille</span>
+          <select id="custom-bg-size" class="search-input" style="margin:0;width:100%" onchange="previewCustomBackgroundSettings()">
+            <option value="cover">Remplir</option>
+            <option value="contain">Image entière</option>
+            <option value="120%">Zoom 120%</option>
+            <option value="140%">Zoom 140%</option>
+            <option value="160%">Zoom 160%</option>
+            <option value="auto">Taille réelle</option>
+          </select>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="avatar-decoration-btn" id="custom-bg-save-btn" type="button" onclick="saveCustomBackground()">Appliquer le fond</button>
+        <button class="avatar-decoration-btn" type="button" onclick="resetCustomBackground()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.26);color:#ff6b88">Tout retirer</button>
+      </div>
+    </div>` : ''}
     <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
       <div class="avatar-decoration-modal">
         <div class="avatar-decoration-modal-head">
@@ -4254,6 +4309,176 @@ async function saveQueueMusicChoice() {
   }
 }
 
+const CUSTOM_BG_MAX_BYTES = 4 * 1024 * 1024;
+let pendingCustomBgDesktop = null;
+let pendingCustomBgMobile = null;
+let pendingCustomBgRemoveDesktop = false;
+let pendingCustomBgRemoveMobile = false;
+
+function canEditCustomBackground(player = currentPlayer) {
+  return isPerso(player) || String(player?.role || '').toLowerCase() === 'admin';
+}
+
+function getCustomBgRemainingMs(player = currentPlayer) {
+  if (String(player?.role || '').toLowerCase() === 'admin') return 0;
+  return Math.max(0, Number(player?.custom_bg_changed_at || 0) + 7 * 24 * 60 * 60 * 1000 - Date.now());
+}
+
+function renderCustomBackgroundPicker(player = currentPlayer) {
+  const card = document.getElementById('custom-background-card');
+  if (!card) return;
+  const preview = document.getElementById('custom-bg-preview');
+  const opacityInput = document.getElementById('custom-bg-opacity');
+  const sizeSelect = document.getElementById('custom-bg-size');
+  const desktopName = document.getElementById('custom-bg-desktop-name');
+  const mobileName = document.getElementById('custom-bg-mobile-name');
+  const opacity = Math.round(Math.max(0.08, Math.min(0.7, Number(player?.custom_bg_opacity || 0.28))) * 100);
+  const size = String(player?.custom_bg_size || 'cover');
+  if (opacityInput) opacityInput.value = opacity;
+  if (sizeSelect) sizeSelect.value = ['cover', 'contain', 'auto', '120%', '140%', '160%'].includes(size) ? size : 'cover';
+  if (desktopName) desktopName.value = pendingCustomBgDesktop?.name || (pendingCustomBgRemoveDesktop ? 'PC sera retiré' : (player?.custom_bg_desktop ? 'Fond PC actif' : 'Aucune image PC'));
+  if (mobileName) mobileName.value = pendingCustomBgMobile?.name || (pendingCustomBgRemoveMobile ? 'Mobile sera retiré' : (player?.custom_bg_mobile ? 'Fond mobile actif' : 'Aucune image mobile'));
+  const src = pendingCustomBgDesktop?.dataUrl || (!pendingCustomBgRemoveDesktop ? String(player?.custom_bg_desktop || '') : '');
+  if (preview) {
+    preview.classList.toggle('has-image', !!src);
+    preview.style.setProperty('--preview-bg', src ? `url("${src}")` : 'none');
+    preview.style.setProperty('--preview-size', sizeSelect?.value || 'cover');
+  }
+  previewCustomBackgroundSettings();
+}
+
+function updateCustomBackgroundMeta() {
+  const meta = document.getElementById('custom-bg-meta');
+  const opacityValue = document.getElementById('custom-bg-opacity-value');
+  const opacity = Number(document.getElementById('custom-bg-opacity')?.value || 28);
+  if (opacityValue) opacityValue.textContent = `${opacity}%`;
+  if (!meta) return;
+  const remaining = getCustomBgRemainingMs(currentPlayer);
+  meta.textContent = remaining > 0
+    ? `Patiente ${formatCooldownHours(remaining)} avant de changer ton fond. Max 4 Mo par image.`
+    : 'Accessible Perso. Image PC + image mobile optionnelle. Max 4 Mo par image, changement toutes les semaines sauf admin.';
+}
+
+function previewCustomBackgroundSettings() {
+  const preview = document.getElementById('custom-bg-preview');
+  const opacity = Number(document.getElementById('custom-bg-opacity')?.value || 28);
+  const size = document.getElementById('custom-bg-size')?.value || 'cover';
+  if (preview) {
+    preview.style.opacity = String(Math.max(8, Math.min(70, opacity)) / 100);
+    preview.style.setProperty('--preview-size', size);
+  }
+  updateCustomBackgroundMeta();
+}
+
+function pickCustomBackgroundFile(variant, file) {
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp|gif)$/i.test(file.type || '')) {
+    alert('Format invalide. Utilise PNG, JPG, WEBP ou GIF.');
+    return;
+  }
+  if (file.size > CUSTOM_BG_MAX_BYTES) {
+    alert('Image trop lourde. Maximum 4 Mo.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const entry = { name: file.name, dataUrl: String(reader.result || '') };
+    if (variant === 'mobile') {
+      pendingCustomBgMobile = entry;
+      pendingCustomBgRemoveMobile = false;
+    } else {
+      pendingCustomBgDesktop = entry;
+      pendingCustomBgRemoveDesktop = false;
+    }
+    renderCustomBackgroundPicker(currentPlayer);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeCustomBackgroundVariant(variant) {
+  if (variant === 'mobile') {
+    pendingCustomBgMobile = null;
+    pendingCustomBgRemoveMobile = true;
+  } else {
+    pendingCustomBgDesktop = null;
+    pendingCustomBgRemoveDesktop = true;
+  }
+  renderCustomBackgroundPicker(currentPlayer);
+}
+
+function patchStoredPlayer(patch) {
+  for (const storage of [localStorage, sessionStorage]) {
+    try {
+      const current = JSON.parse(storage.getItem('player') || '{}');
+      if (current?.id) storage.setItem('player', JSON.stringify({ ...current, ...patch }));
+    } catch {}
+  }
+}
+
+async function saveCustomBackground() {
+  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  if (!me?.id || !token) return alert('Connecte-toi avant de changer ton fond.');
+  if (!canEditCustomBackground(me)) return alert('Réservé au grade Perso.');
+  const remaining = getCustomBgRemainingMs(currentPlayer || me);
+  if (remaining > 0) return alert(`Fond disponible dans ${formatCooldownHours(remaining)}.`);
+  const btn = document.getElementById('custom-bg-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement...'; }
+  try {
+    const body = {
+      token,
+      opacity: Number(document.getElementById('custom-bg-opacity')?.value || 28) / 100,
+      size: document.getElementById('custom-bg-size')?.value || 'cover',
+      desktopData: pendingCustomBgDesktop?.dataUrl || '',
+      mobileData: pendingCustomBgMobile?.dataUrl || '',
+      removeDesktop: pendingCustomBgRemoveDesktop,
+      removeMobile: pendingCustomBgRemoveMobile,
+    };
+    const res = await fetch(`/api/players/${me.id}/custom-background`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Erreur fond personnalisé.');
+    const patch = {
+      custom_bg_desktop: data.custom_bg_desktop || '',
+      custom_bg_mobile: data.custom_bg_mobile || '',
+      custom_bg_opacity: Number(data.custom_bg_opacity || body.opacity),
+      custom_bg_size: data.custom_bg_size || body.size,
+      custom_bg_changed_at: Number(data.custom_bg_changed_at || Date.now()),
+    };
+    Object.assign(me, patch);
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) Object.assign(currentPlayer, patch);
+    patchStoredPlayer(patch);
+    pendingCustomBgDesktop = null;
+    pendingCustomBgMobile = null;
+    pendingCustomBgRemoveDesktop = false;
+    pendingCustomBgRemoveMobile = false;
+    renderCustomBackgroundPicker(currentPlayer || me);
+    window.P4CustomBackground?.apply?.(currentPlayer || me);
+    PROFIL_SFX.upload();
+    const confirm = document.getElementById('custom-bg-confirm');
+    if (confirm) {
+      confirm.classList.add('show');
+      setTimeout(() => confirm.classList.remove('show'), 1600);
+    }
+  } catch (error) {
+    PROFIL_SFX.error();
+    alert(error.message || 'Impossible d enregistrer le fond.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Appliquer le fond'; }
+  }
+}
+
+function resetCustomBackground() {
+  pendingCustomBgDesktop = null;
+  pendingCustomBgMobile = null;
+  pendingCustomBgRemoveDesktop = true;
+  pendingCustomBgRemoveMobile = true;
+  saveCustomBackground();
+}
+
 function openAvatarDecorationPicker() {
   const bg = document.getElementById('avatar-decoration-modal-bg');
   if (!bg) return;
@@ -4979,5 +5204,6 @@ initProfileInteractionSounds();
 load();
 </script>
 <script src="/presence.js"></script>
+<script src="/custom-background.js" defer></script>
 </body>
 </html>
