@@ -25,7 +25,7 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
 .board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
-.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.filled.emoji-token::after{display:none}.local-emoji-token{position:absolute;inset:7%;display:grid;place-items:center;border-radius:24%;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.18),rgba(255,255,255,.04) 40%,rgba(0,0,0,.16) 70%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.local-emoji-token canvas{width:100%;height:100%;display:block}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}.cell.win .local-emoji-token{box-shadow:inset 0 0 0 2px rgba(255,255,255,.16),0 0 34px var(--green),0 0 8px #fff}
+.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.filled.emoji-token::after{display:none}.local-emoji-token{position:absolute;inset:6%;display:grid;place-items:center;border-radius:0;background:transparent;box-shadow:none;filter:drop-shadow(0 0 14px var(--piece-glow,var(--piece))) drop-shadow(0 3px 8px rgba(0,0,0,.5));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.local-emoji-token canvas{width:100%;height:100%;display:block}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}.cell.win .local-emoji-token{filter:drop-shadow(0 0 20px var(--green)) drop-shadow(0 0 8px #fff)}
 @keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
 .footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
 @media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}}
@@ -207,12 +207,12 @@ function makeGradientEmojiToken(target, emoji, colorA, colorB) {
   ctx.font = `${fontSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = '#000';
   ctx.fillText(emoji, size / 2, size / 2);
   ctx.globalCompositeOperation = 'source-in';
   const gradient = ctx.createLinearGradient(12, 8, size - 10, size - 8);
-  gradient.addColorStop(0, lightenHex(colorA, 0.5));
-  gradient.addColorStop(0.48, colorA);
+  gradient.addColorStop(0, lightenHex(colorA, 0.58));
+  gradient.addColorStop(0.46, colorA);
   gradient.addColorStop(1, colorB);
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
