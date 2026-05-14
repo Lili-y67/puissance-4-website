@@ -19,17 +19,17 @@ body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(255,45,8
 .intro{padding:26px}.eyebrow{font:900 12px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
 h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.accent{color:var(--yellow);text-shadow:0 0 24px rgba(255,214,10,.28)}
 .sub{color:var(--muted);line-height:1.55;max-width:520px}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
-.setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto;gap:10px}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.color{width:52px;height:44px;border:none;border-radius:12px;background:transparent;cursor:pointer}
+.setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.emoji-input{width:62px;text-align:center;font-size:22px;padding:8px 6px}.color{width:52px;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);cursor:pointer;padding:3px}.color.secondary{filter:saturate(1.25);box-shadow:0 0 16px rgba(133,235,255,.08)}
 .score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
-.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;vertical-align:-2px;box-shadow:0 0 18px currentColor}
+.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:8px;vertical-align:-2px;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}.token-dot.emoji{width:auto;height:auto;border-radius:0;background:transparent!important;font-size:20px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
 .board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
-.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece);box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece);animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}
+.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.filled.emoji-token::after{content:attr(data-token);display:grid;place-items:center;inset:7%;border-radius:24%;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.24),rgba(255,255,255,.06) 28%,rgba(0,0,0,.18) 64%),var(--piece-gradient,var(--piece));font-size:clamp(24px,5.7vw,52px);line-height:1;text-shadow:0 0 18px var(--piece-glow,var(--piece)),0 3px 10px rgba(0,0,0,.55);box-shadow:inset 0 0 0 2px rgba(255,255,255,.12),0 0 24px var(--piece-glow,var(--piece));font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}.cell.win.emoji-token::after{box-shadow:inset 0 0 0 2px rgba(255,255,255,.16),0 0 34px var(--green),0 0 8px #fff}
 @keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
 .footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
 @media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}}
-@media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr}.color{width:100%}}
+@media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr 1fr}.row .input:first-child{grid-column:1/-1}.color,.emoji-input{width:100%}}
 </style>
 </head>
 <body>
@@ -56,11 +56,11 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
       <div class="setup">
         <div class="player-box">
           <label>Joueur 1</label>
-          <div class="row"><input class="input" id="p1-name" value="Joueur 1" maxlength="16"><input class="color" id="p1-color" type="color" value="#ff2d55"></div>
+          <div class="row"><input class="input" id="p1-name" value="Joueur 1" maxlength="16"><input class="emoji-input input" id="p1-emoji" placeholder="⭐" maxlength="4" title="Emoji de pion"><input class="color" id="p1-color" type="color" value="#ff2d55" title="Couleur 1"><input class="color secondary" id="p1-color2" type="color" value="#ff8fab" title="Couleur 2"></div>
         </div>
         <div class="player-box">
           <label>Joueur 2</label>
-          <div class="row"><input class="input" id="p2-name" value="Joueur 2" maxlength="16"><input class="color" id="p2-color" type="color" value="#ffd60a"></div>
+          <div class="row"><input class="input" id="p2-name" value="Joueur 2" maxlength="16"><input class="emoji-input input" id="p2-emoji" placeholder="💎" maxlength="4" title="Emoji de pion"><input class="color" id="p2-color" type="color" value="#ffd60a" title="Couleur 1"><input class="color secondary" id="p2-color2" type="color" value="#85ebff" title="Couleur 2"></div>
         </div>
       </div>
       <div class="score">
@@ -114,6 +114,21 @@ function playerColor(player) {
   return document.getElementById(`p${player}-color`).value || (player === 1 ? '#ff2d55' : '#ffd60a');
 }
 
+function playerColor2(player) {
+  return document.getElementById(`p${player}-color2`)?.value || (player === 1 ? '#ff8fab' : '#85ebff');
+}
+
+function playerGradient(player) {
+  const primary = playerColor(player);
+  const secondary = playerColor2(player);
+  return `radial-gradient(circle at 32% 24%, rgba(255,255,255,.34), transparent 20%), linear-gradient(135deg, ${primary}, ${secondary})`;
+}
+
+function playerEmoji(player) {
+  const raw = document.getElementById(`p${player}-emoji`)?.value.trim() || '';
+  return [...raw][0] || '';
+}
+
 function initGrid() {
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
@@ -140,10 +155,14 @@ function renderBoard(winCells = []) {
   for (const r of rows) {
     for (const c of cols) {
       const value = grid[r][c];
+      const emoji = value ? playerEmoji(value) : '';
       const cell = document.createElement('button');
       cell.type = 'button';
-      cell.className = `cell${value ? ' filled' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}`;
+      cell.className = `cell${value ? ' filled' : ''}${emoji ? ' emoji-token' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}`;
       cell.style.setProperty('--piece', value ? playerColor(value) : 'transparent');
+      cell.style.setProperty('--piece-glow', value ? playerColor2(value) : 'transparent');
+      cell.style.setProperty('--piece-gradient', value ? playerGradient(value) : 'transparent');
+      if (emoji) cell.dataset.token = emoji;
       cell.setAttribute('aria-label', `Colonne ${c + 1}`);
       cell.addEventListener('click', () => playColumn(c));
       boardEl.appendChild(cell);
@@ -154,8 +173,14 @@ function renderBoard(winCells = []) {
 
 function updateStatus(text = null, label = 'Tour actuel') {
   const color = playerColor(current);
+  const glow = playerColor2(current);
+  const gradient = playerGradient(current);
+  const emoji = playerEmoji(current);
+  const marker = emoji
+    ? `<span class="token-dot emoji" style="color:${color}">${escapeHtml(emoji)}</span>`
+    : `<span class="token-dot" style="color:${glow};--piece-gradient:${gradient}"></span>`;
   statusLabel.textContent = label;
-  statusText.innerHTML = `<span class="token-dot" style="color:${color};background:${color}"></span>${escapeHtml(text || playerName(current))}`;
+  statusText.innerHTML = `${marker}${escapeHtml(text || playerName(current))}`;
 }
 
 function escapeHtml(value) {
@@ -244,7 +269,7 @@ function updateScores() {
   document.getElementById('score-draw').textContent = scores.draw;
 }
 
-['p1-name','p2-name','p1-color','p2-color'].forEach(id => {
+['p1-name','p2-name','p1-color','p2-color','p1-color2','p2-color2','p1-emoji','p2-emoji'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => {
     renderBoard();
     updateStatus(ended ? statusText.textContent : null, ended ? statusLabel.textContent : 'Tour actuel');
