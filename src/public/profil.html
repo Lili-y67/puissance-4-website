@@ -2269,8 +2269,28 @@ function drawEloHistory(data) {
   const bottom = 34;
   const plotW = width - left - right;
   const plotH = height - top - bottom;
-  const x = t => left + ((Number(t || startTime) - startTime) / Math.max(1, endTime - startTime)) * plotW;
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const xByTime = t => left + ((Number(t || startTime) - startTime) / Math.max(1, endTime - startTime)) * plotW;
   const y = elo => top + (1 - ((Number(elo || minElo) - minElo) / Math.max(1, maxElo - minElo))) * plotH;
+  const drawSmoothPath = drawPoints => {
+    if (!drawPoints.length) return;
+    if (drawPoints.length === 1) {
+      ctx.moveTo(drawPoints[0].x, drawPoints[0].y);
+      return;
+    }
+    ctx.moveTo(drawPoints[0].x, drawPoints[0].y);
+    for (let i = 0; i < drawPoints.length - 1; i += 1) {
+      const p0 = drawPoints[Math.max(0, i - 1)];
+      const p1 = drawPoints[i];
+      const p2 = drawPoints[i + 1];
+      const p3 = drawPoints[Math.min(drawPoints.length - 1, i + 2)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  };
 
   const bg = ctx.createLinearGradient(0, 0, width, height);
   bg.addColorStop(0, 'rgba(255,255,255,0.035)');
@@ -2300,10 +2320,24 @@ function drawEloHistory(data) {
     ctx.stroke();
   }
 
-  const drawable = points.length ? points : [{ t: startTime, elo: data?.player?.elo || 1000 }, { t: endTime, elo: data?.player?.elo || 1000 }];
-  const line = drawable
-    .map(point => ({ x: x(point.t), y: y(point.elo), point }))
-    .filter((point, index, arr) => index === 0 || Math.abs(point.x - arr[index - 1].x) > 0.5 || Math.abs(point.y - arr[index - 1].y) > 0.5);
+  const drawable = points.length
+    ? points
+    : [{ t: startTime, elo: data?.player?.elo || 1000, label: 'Debut' }, { t: endTime, elo: data?.player?.elo || 1000, label: 'Maintenant' }];
+  const gamePointCount = drawable.filter(point => point.gameId).length;
+  const useReadableSpacing = gamePointCount >= 1;
+  const line = drawable.map((point, index) => {
+    let px;
+    if (useReadableSpacing) {
+      px = left + (plotW * index) / Math.max(1, drawable.length - 1);
+    } else {
+      px = xByTime(point.t);
+    }
+    return {
+      x: clamp(px, left, width - right),
+      y: y(point.elo),
+      point,
+    };
+  });
   eloHistoryHitPoints = line.map(p => ({
     x: p.x,
     y: p.y,
@@ -2319,16 +2353,7 @@ function drawEloHistory(data) {
   fillGradient.addColorStop(0, `${playerColor}55`);
   fillGradient.addColorStop(1, `${playerColor}00`);
   ctx.beginPath();
-  line.forEach((p, index) => {
-    if (index === 0) ctx.moveTo(p.x, p.y);
-    else {
-      const prev = line[index - 1];
-      const midX = (prev.x + p.x) / 2;
-      const midY = (prev.y + p.y) / 2;
-      ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
-      if (index === line.length - 1) ctx.quadraticCurveTo(p.x, p.y, p.x, p.y);
-    }
-  });
+  drawSmoothPath(line);
   ctx.lineTo(line[line.length - 1].x, height - bottom);
   ctx.lineTo(line[0].x, height - bottom);
   ctx.closePath();
@@ -2340,16 +2365,7 @@ function drawEloHistory(data) {
   strokeGradient.addColorStop(0.55, '#85EBFF');
   strokeGradient.addColorStop(1, '#ffd60a');
   ctx.beginPath();
-  line.forEach((p, index) => {
-    if (index === 0) ctx.moveTo(p.x, p.y);
-    else {
-      const prev = line[index - 1];
-      const midX = (prev.x + p.x) / 2;
-      const midY = (prev.y + p.y) / 2;
-      ctx.quadraticCurveTo(prev.x, prev.y, midX, midY);
-      if (index === line.length - 1) ctx.quadraticCurveTo(p.x, p.y, p.x, p.y);
-    }
-  });
+  drawSmoothPath(line);
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
@@ -2360,7 +2376,9 @@ function drawEloHistory(data) {
   ctx.shadowBlur = 0;
 
   line.forEach((p, index) => {
-    if (line.length > 22 && index !== line.length - 1 && index % 3 !== 0) return;
+    const isAnchor = !p.point.gameId;
+    if (isAnchor && line.length > 3) return;
+    if (line.length > 30 && index !== line.length - 1 && index % 2 !== 0) return;
     const delta = Number(p.point.delta || 0);
     ctx.fillStyle = delta > 0 ? '#30d158' : delta < 0 ? '#ff4d6d' : '#85EBFF';
     ctx.beginPath();
