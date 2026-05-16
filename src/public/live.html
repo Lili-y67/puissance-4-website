@@ -281,6 +281,8 @@ let lastSpecSignature = '';
 let lastSpecStatusByGame = new Map();
 let liveAudioCtx = null;
 let liveAmbient = null;
+let liveAmbientAudio = null;
+let liveAmbientFadeTimer = null;
 let liveSoundEnabled = localStorage.getItem('p4_live_sound') !== '0';
 let lastSpecGameId = null;
 let liveGameOverSpokenAt = 0;
@@ -346,12 +348,20 @@ function playMoveSound() {
 }
 
 function playGameOverSound() {
-  speakGameOver();
+  stopLiveAmbient();
+  playArcadeGameOverSting();
   playNoise({ duration: 0.48, gain: 0.045, filter: 160 });
-  playTone({ freq: 392, duration: 0.14, type: 'triangle', gain: 0.052, delay: 0.08 });
-  playTone({ freq: 311, duration: 0.18, type: 'triangle', gain: 0.048, delay: 0.22 });
-  playTone({ freq: 247, duration: 0.24, type: 'sawtooth', gain: 0.038, delay: 0.42 });
-  playTone({ freq: 98, slideTo: 49, duration: 0.72, type: 'sine', gain: 0.04, delay: 0.48 });
+  playTone({ freq: 196, duration: 0.16, type: 'square', gain: 0.05, delay: 0.04 });
+  playTone({ freq: 146.83, duration: 0.2, type: 'square', gain: 0.046, delay: 0.24 });
+  playTone({ freq: 110, duration: 0.28, type: 'sawtooth', gain: 0.038, delay: 0.48 });
+  playTone({ freq: 55, slideTo: 27.5, duration: 0.85, type: 'sine', gain: 0.05, delay: 0.56 });
+  setTimeout(speakGameOver, 170);
+}
+
+function playArcadeGameOverSting() {
+  playTone({ freq: 880, slideTo: 440, duration: 0.11, type: 'square', gain: 0.03 });
+  playTone({ freq: 660, slideTo: 330, duration: 0.13, type: 'square', gain: 0.026, delay: 0.08 });
+  playTone({ freq: 440, slideTo: 220, duration: 0.2, type: 'triangle', gain: 0.025, delay: 0.18 });
 }
 
 function speakGameOver() {
@@ -362,11 +372,13 @@ function speakGameOver() {
   try {
     const utterance = new SpeechSynthesisUtterance('Game Over');
     utterance.lang = 'en-US';
-    utterance.rate = 0.82;
-    utterance.pitch = 0.62;
-    utterance.volume = 0.72;
+    utterance.rate = 0.66;
+    utterance.pitch = 0.28;
+    utterance.volume = 0.95;
     const voices = window.speechSynthesis.getVoices?.() || [];
-    const preferred = voices.find(v => /english|us|uk/i.test(`${v.lang} ${v.name}`));
+    const preferred =
+      voices.find(v => /david|mark|george|daniel|male|guy/i.test(v.name || '')) ||
+      voices.find(v => /english|us|uk/i.test(`${v.lang} ${v.name}`));
     if (preferred) utterance.voice = preferred;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
@@ -374,48 +386,83 @@ function speakGameOver() {
 }
 
 function startLiveAmbient() {
+  if (!liveSoundEnabled || liveAmbient) return;
+  if (liveAmbientFadeTimer) clearInterval(liveAmbientFadeTimer);
+  if (!liveAmbientAudio) {
+    liveAmbientAudio = new Audio('/sounds/Musique Chambre.mp3');
+    liveAmbientAudio.loop = true;
+    liveAmbientAudio.preload = 'auto';
+  }
+  liveAmbientAudio.volume = 0;
+  liveAmbientAudio.currentTime = liveAmbientAudio.currentTime || 0;
+  liveAmbient = { type: 'audio' };
+  liveAmbientAudio.play().then(() => {
+    let volume = 0;
+    liveAmbientFadeTimer = setInterval(() => {
+      if (!liveAmbientAudio || !liveAmbient) return;
+      volume = Math.min(0.24, volume + 0.025);
+      liveAmbientAudio.volume = volume;
+      if (volume >= 0.24) {
+        clearInterval(liveAmbientFadeTimer);
+        liveAmbientFadeTimer = null;
+      }
+    }, 90);
+  }).catch(() => {
+    liveAmbient = null;
+    startFallbackLiveAmbient();
+  });
+}
+
+function startFallbackLiveAmbient() {
   const ctx = getLiveAudioContext();
   if (!ctx || liveAmbient) return;
   const master = ctx.createGain();
   master.gain.setValueAtTime(0.0001, ctx.currentTime);
-  master.gain.exponentialRampToValueAtTime(0.018, ctx.currentTime + 0.65);
+  master.gain.exponentialRampToValueAtTime(0.014, ctx.currentTime + 0.65);
   master.connect(ctx.destination);
-
   const drone = ctx.createOscillator();
-  const droneGain = ctx.createGain();
   drone.type = 'sine';
-  drone.frequency.value = 55;
-  droneGain.gain.value = 0.42;
-  drone.connect(droneGain).connect(master);
+  drone.frequency.value = 65;
+  drone.connect(master);
   drone.start();
-
-  const notes = [220, 277.18, 329.63, 392, 329.63, 277.18, 246.94, 293.66];
-  let step = 0;
-  const playPirateStep = () => {
+  const interval = setInterval(() => {
     if (!liveAmbient || !liveSoundEnabled) return;
-    const base = notes[step % notes.length];
-    const accent = step % 4 === 0;
-    playTone({ freq: base, duration: accent ? 0.2 : 0.13, type: 'triangle', gain: accent ? 0.025 : 0.015 });
-    if (accent) playTone({ freq: base / 2, duration: 0.24, type: 'sawtooth', gain: 0.012, delay: 0.02 });
-    step++;
-  };
-  const interval = setInterval(playPirateStep, 360);
-  playPirateStep();
-  liveAmbient = { drone, gain: master, interval };
+    playTone({ freq: [261.63, 329.63, 392, 523.25][Math.floor(Math.random() * 4)], duration: 0.18, type: 'triangle', gain: 0.012 });
+  }, 1200);
+  liveAmbient = { type: 'synth', drone, gain: master, interval };
 }
 
 function stopLiveAmbient() {
-  if (!liveAmbient || !liveAudioCtx) return;
-  const ctx = liveAudioCtx;
-  const { drone, gain, interval } = liveAmbient;
+  if (!liveAmbient) return;
+  const current = liveAmbient;
   liveAmbient = null;
-  clearInterval(interval);
-  gain.gain.cancelScheduledValues(ctx.currentTime);
-  gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-  setTimeout(() => {
-    try { drone.stop(); } catch {}
-  }, 420);
+  if (liveAmbientFadeTimer) clearInterval(liveAmbientFadeTimer);
+  liveAmbientFadeTimer = null;
+
+  if (current.type === 'audio' && liveAmbientAudio) {
+    liveAmbientFadeTimer = setInterval(() => {
+      if (!liveAmbientAudio) return;
+      liveAmbientAudio.volume = Math.max(0, liveAmbientAudio.volume - 0.035);
+      if (liveAmbientAudio.volume <= 0.002) {
+        clearInterval(liveAmbientFadeTimer);
+        liveAmbientFadeTimer = null;
+        liveAmbientAudio.pause();
+      }
+    }, 60);
+    return;
+  }
+
+  if (current.type === 'synth' && liveAudioCtx) {
+    const ctx = liveAudioCtx;
+    const { drone, gain, interval } = current;
+    clearInterval(interval);
+    gain.gain.cancelScheduledValues(ctx.currentTime);
+    gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+    setTimeout(() => {
+      try { drone.stop(); } catch {}
+    }, 420);
+  }
 }
 
 function toggleLiveSound() {
