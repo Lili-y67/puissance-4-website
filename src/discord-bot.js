@@ -40,6 +40,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne', required: true }] },
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
+    { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
     { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
     {
       name: 'admin',
@@ -72,7 +73,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
             { name: 'Reload commandes', value: 'reload' },
           ],
         },
-        { type: 3, name: 'password', description: 'Mot de passe admin', required: true },
+        { type: 3, name: 'password', description: 'Ancien champ, utilise plutot /login', required: false },
         { type: 3, name: 'pseudo', description: 'Joueur cible si besoin', required: false, autocomplete: true },
         { type: 3, name: 'id', description: 'ID tournoi, partie ou ressource', required: false },
         { type: 3, name: 'item', description: 'Item boutique', required: false, choices: itemChoices },
@@ -98,6 +99,8 @@ function startDiscordBot(ctx) {
   const playerUrl = player => `${api}/profil?id=${player.id}`;
   const rankOf = elo => ctx.getRank(Number(elo || 0)) || { label: 'Non classe', color: '#8b9cf4' };
   const discordEmojiCache = new Map();
+  const staffSessions = new Map();
+  const STAFF_SESSION_TTL_MS = 10 * 60 * 1000;
 
   function rowButtons(buttons) {
     const row = new ActionRowBuilder();
@@ -216,6 +219,36 @@ function startDiscordBot(ctx) {
     const id = String(discordId || '').trim();
     if (!id) return null;
     return ctx.db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
+  }
+
+  function purgeStaffSessions() {
+    const now = Date.now();
+    for (const [discordId, session] of staffSessions.entries()) {
+      if (Number(session.expiresAt || 0) <= now) staffSessions.delete(discordId);
+    }
+  }
+
+  function localPasswordMatches(player, password) {
+    if (!player?.password) return false;
+    const expected = String(player.password);
+    const hashed = typeof ctx.hashPwd === 'function' ? ctx.hashPwd(String(password || '')) : String(password || '');
+    return expected === hashed || expected === String(password || '');
+  }
+
+  async function getLinkedStaffContext(discordId) {
+    const player = playerByDiscord(discordId);
+    if (!player) return { error: 'Compte Puissance 4 non lie a Discord.' };
+    const siteRole = String(player.role || 'user');
+    if ((STAFF_ORDER[siteRole] || 0) < STAFF_ORDER.moderator) {
+      return { error: 'Ton compte Puissance 4 n a pas de role staff.' };
+    }
+    const discordRole = await ctx.getDiscordRole(discordId, botToken).catch(() => 'user');
+    if ((STAFF_ORDER[discordRole] || 0) < STAFF_ORDER.moderator) {
+      return { error: 'Role Discord insuffisant ou non synchronise.' };
+    }
+    const effectiveRank = Math.min(STAFF_ORDER[siteRole] || 0, STAFF_ORDER[discordRole] || 0);
+    const effectiveRole = effectiveRank >= STAFF_ORDER.admin ? 'admin' : 'moderator';
+    return { player, siteRole, discordRole, effectiveRole };
   }
 
   function playerAccuracy(playerId) {
@@ -613,7 +646,7 @@ function startDiscordBot(ctx) {
       sections: [
         '### Joueurs\n`/profil`, `/moi`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
         '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
-        '### Staff\n`/admin` avec mot de passe + verification du role Discord.',
+        '### Staff\n`/login`, puis `/admin` utilise une session 10 min + verification du role Discord.',
       ],
       buttons: [linkButton('Ouvrir le site', api, '🎮'), linkButton('Doc API', `${api}/api-doc`, '🧪')],
     });
@@ -641,37 +674,77 @@ function startDiscordBot(ctx) {
     return interaction.respond(rows.map(p => ({ name: `${p.is_bot ? '[BOT] ' : ''}${p.pseudo} - ${fmt(p.elo)} ELO`.slice(0, 100), value: p.pseudo })));
   }
 
-  async function requireStaff(interaction, password, minimum = 'moderator') {
-    if (String(password || '') !== String(ctx.ADMIN_PASSWORD || '')) {
+  async function handleLogin(interaction) {
+    const password = interaction.options.getString('password', true);
+    const ctxStaff = await getLinkedStaffContext(interaction.user.id);
+    if (ctxStaff.error) return replyError(interaction, 'Connexion staff refusee', ctxStaff.error);
+    if (!localPasswordMatches(ctxStaff.player, password)) {
+      staffSessions.delete(interaction.user.id);
+      return replyError(interaction, 'Connexion staff refusee', 'Mot de passe du profil Puissance 4 invalide.');
+    }
+    const expiresAt = Date.now() + STAFF_SESSION_TTL_MS;
+    staffSessions.set(interaction.user.id, {
+      playerId: ctxStaff.player.id,
+      pseudo: ctxStaff.player.pseudo,
+      role: ctxStaff.effectiveRole,
+      expiresAt,
+      lastUsedAt: Date.now(),
+    });
+    return interaction.editReply(containerMessage({
+      color: 0x30d158,
+      title: 'Session staff active',
+      subtitle: `${ctxStaff.player.pseudo} connecte en ${ctxStaff.effectiveRole.toUpperCase()} pendant 10 minutes.`,
+      sections: ['La session est prolongee a chaque commande admin. Si tu restes AFK, elle expire automatiquement.'],
+    }));
+  }
+
+  async function requireStaff(interaction, minimum = 'moderator') {
+    purgeStaffSessions();
+    const session = staffSessions.get(interaction.user.id);
+    if (!session || Number(session.expiresAt || 0) <= Date.now()) {
+      staffSessions.delete(interaction.user.id);
       await interaction.editReply(containerMessage({
         color: 0xff3b30,
-        title: 'Acces refuse',
-        subtitle: 'Mot de passe admin invalide.',
+        title: 'Connexion staff requise',
+        subtitle: 'Utilise /login avec le mot de passe de ton profil Puissance 4.',
       }));
       return null;
     }
-    const role = await ctx.getDiscordRole(interaction.user.id, botToken).catch(() => 'user');
+    const ctxStaff = await getLinkedStaffContext(interaction.user.id);
+    if (ctxStaff.error || Number(ctxStaff.player?.id) !== Number(session.playerId)) {
+      staffSessions.delete(interaction.user.id);
+      await interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Session staff invalide',
+        subtitle: ctxStaff.error || 'Le compte Discord lie a change.',
+      }));
+      return null;
+    }
+    const role = ctxStaff.effectiveRole;
     if ((STAFF_ORDER[role] || 0) < (STAFF_ORDER[minimum] || 1)) {
       await interaction.editReply(containerMessage({
         color: 0xff3b30,
         title: 'Acces refuse',
-        subtitle: 'Role Discord insuffisant pour cette commande.',
+        subtitle: 'Role staff insuffisant pour cette commande.',
       }));
       return null;
     }
+    session.expiresAt = Date.now() + STAFF_SESSION_TTL_MS;
+    session.lastUsedAt = Date.now();
+    session.role = role;
+    staffSessions.set(interaction.user.id, session);
     return role;
   }
 
   async function handleAdmin(interaction) {
     const action = interaction.options.getString('action', true);
-    const password = interaction.options.getString('password', true);
     const pseudo = interaction.options.getString('pseudo');
     const value = interaction.options.getNumber('valeur');
     const reason = interaction.options.getString('raison') || '';
     const resourceId = interaction.options.getString('id');
     const itemKey = interaction.options.getString('item');
     const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
-    const role = await requireStaff(interaction, password, adminOnly.includes(action) ? 'admin' : 'moderator');
+    const role = await requireStaff(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
     if (action === 'reload') {
@@ -738,17 +811,20 @@ function startDiscordBot(ctx) {
       const minutes = Math.max(1, Math.min(1440, Math.ceil(Number(value || 60))));
       ctx.pQ.setMute.run({ until: Date.now() + minutes * 60000, id: target.id });
       ctx.WH.wlogMute(target.pseudo, target.id, minutes / 60);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `Mute applique via Discord (${minutes} min).`);
       return interaction.editReply(containerMessage({ color: 0xff9f0a, title: 'Joueur mute', subtitle: `${target.pseudo} pendant ${minutes} min.` }));
     }
     if (action === 'unmute') {
       ctx.pQ.setMute.run({ until: 0, id: target.id });
       ctx.WH.wlogMute(target.pseudo, target.id, 0);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, 'Mute retire via Discord.');
       return interaction.editReply(containerMessage({ color: 0x30d158, title: 'Mute leve', subtitle: target.pseudo }));
     }
     if (action === 'ban' || action === 'unban') {
       const banned = action === 'ban' ? 1 : 0;
       ctx.pQ.setBanned.run({ banned, id: target.id });
       ctx.WH.wlogBan(target.pseudo, target.id, banned);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, banned ? 'Compte banni via Discord.' : 'Bannissement retire via Discord.');
       return interaction.editReply(containerMessage({ color: banned ? 0xff3b30 : 0x30d158, title: banned ? 'Joueur banni' : 'Joueur debanni', subtitle: target.pseudo }));
     }
     if (action === 'coins') {
@@ -756,6 +832,7 @@ function startDiscordBot(ctx) {
       const nextCoins = Math.max(0, Number(target.coins || 0) + delta);
       ctx.pQ.updateCoins.run({ coins: nextCoins, id: target.id });
       ctx.WH.wlogCoins(target.pseudo, target.id, delta, reason || 'Commande Discord admin');
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `Coins modifies via Discord (${delta >= 0 ? '+' : ''}${delta}).`);
       return interaction.editReply(containerMessage({ color: 0xff9f0a, title: 'Coins modifies', subtitle: `${target.pseudo}: ${fmt(nextCoins)} coins (${delta >= 0 ? '+' : ''}${delta})` }));
     }
     if (action === 'elo') {
@@ -763,6 +840,7 @@ function startDiscordBot(ctx) {
       const nextElo = Math.max(0, Number(target.elo || 0) + delta);
       ctx.pQ.setElo.run({ elo: nextElo, id: target.id });
       ctx.WH.wlogAdminAction('ELO Discord', target.pseudo, target.id, [['Delta', delta, true], ['Nouveau', nextElo, true]]);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `ELO modifie via Discord : ${nextElo}.`);
       return interaction.editReply(containerMessage({ color: 0xffd60a, title: 'ELO modifie', subtitle: `${target.pseudo}: ${nextElo} ELO (${delta >= 0 ? '+' : ''}${delta})` }));
     }
     if (action === 'give-item') {
@@ -771,6 +849,7 @@ function startDiscordBot(ctx) {
       const quantity = Math.max(1, Math.min(99, Math.trunc(Number(value || 1))));
       ctx.shopItemQ.addQty.run({ player_id: target.id, item_key: item.key, quantity });
       ctx.WH.wlogAdminAction('Item boutique Discord', target.pseudo, target.id, [['Item', item.label, true], ['Quantite', quantity, true]]);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `Item ajoute via Discord : ${item.label} x${quantity}.`);
       return interaction.editReply(containerMessage({ color: 0xbf5af2, title: 'Item donne', subtitle: `${target.pseudo} recoit ${quantity} x ${item.label}` }));
     }
     return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Action inconnue', subtitle: action }));
@@ -858,6 +937,7 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'boosts') return interaction.editReply(boostsPayload());
       if (interaction.commandName === 'cosmetiques') return interaction.editReply(cosmeticsPayload(interaction.options.getString('type', true)));
       if (interaction.commandName === 'bots') return interaction.editReply(botsPayload());
+      if (interaction.commandName === 'login') return handleLogin(interaction);
       if (interaction.commandName === 'replay') {
         const payload = replayPayload(interaction.options.getInteger('id', true));
         if (!payload) return replyError(interaction, 'Partie introuvable');

@@ -173,6 +173,14 @@
 
     socket.on('system_status_update', refreshSystemStatus);
 
+    socket.on('profile_changed', ({ reason } = {}) => {
+      const message = `Votre profil a change.${reason ? `\nMotif : ${reason}` : ''}\nActualise la page pour appliquer les changements.`;
+      try {
+        window.dispatchEvent(new CustomEvent('p4:profile-changed', { detail: { reason } }));
+      } catch (e) {}
+      window.alert(message);
+    });
+
     socket.on('duel_invite', ({ id, sender } = {}) => {
       if (!id || !sender) return;
       const avatar = sender.avatar

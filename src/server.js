@@ -66,6 +66,19 @@ function getOnlineSocketIds(playerId) {
   return [...(onlineSockets.get(Number(playerId)) || new Set())];
 }
 
+function notifyPlayerProfileChanged(playerId, reason, details = {}) {
+  const id = Number(playerId || 0);
+  if (!id) return;
+  const payload = {
+    reason: String(reason || 'Profil mis a jour.'),
+    at: Date.now(),
+    ...details,
+  };
+  getOnlineSocketIds(id).forEach(socketId => {
+    io.to(socketId).emit('profile_changed', payload);
+  });
+}
+
 function registerVisitorSocket(socket, visitorIdRaw) {
   const visitorId = String(visitorIdRaw || '').trim().slice(0, 80);
   if (!visitorId) return;
@@ -650,43 +663,6 @@ function createGuestPlayerSession() {
   return createAnonymousGuestSession();
 }
 
-function isSafeCustomBackgroundPath(value) {
-  const src = String(value || '').trim();
-  return !src || /^\/uploads\/backgrounds\/[a-zA-Z0-9_.-]+\.(png|jpe?g|webp|gif)$/i.test(src);
-}
-
-function saveCustomBackgroundDataUrl(dataUrl, playerId, variant) {
-  const raw = String(dataUrl || '').trim();
-  if (!raw) return '';
-  const match = raw.match(/^data:image\/(png|jpeg|jpg|webp|gif);base64,([a-z0-9+/=]+)$/i);
-  if (!match) {
-    const error = new Error('Image invalide. Formats acceptes : PNG, JPG, WEBP ou GIF.');
-    error.status = 400;
-    throw error;
-  }
-  const ext = match[1].toLowerCase() === 'jpeg' ? 'jpg' : match[1].toLowerCase();
-  const buffer = Buffer.from(match[2], 'base64');
-  if (buffer.length > CUSTOM_BACKGROUND_MAX_BYTES) {
-    const error = new Error('Image trop lourde. Maximum 4 Mo.');
-    error.status = 413;
-    throw error;
-  }
-  fs.mkdirSync(CUSTOM_BACKGROUNDS_DIR, { recursive: true });
-  const safeVariant = variant === 'mobile' ? 'mobile' : 'desktop';
-  const filename = `${Number(playerId)}-${safeVariant}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
-  fs.writeFileSync(path.join(CUSTOM_BACKGROUNDS_DIR, filename), buffer);
-  return `/uploads/backgrounds/${filename}`;
-}
-
-function cleanupCustomBackgroundFile(src) {
-  if (!isSafeCustomBackgroundPath(src)) return;
-  const filePath = path.join(__dirname, 'public', String(src).replace(/^\//, ''));
-  const resolved = path.resolve(filePath);
-  const root = path.resolve(CUSTOM_BACKGROUNDS_DIR);
-  if (!resolved.startsWith(root)) return;
-  fs.promises.unlink(resolved).catch(() => {});
-}
-
 app.use(security.middleware());
 
 app.post('/api/auth/guest', security.routeGuard('guest'), (req, res) => {
@@ -771,9 +747,6 @@ const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
-const CUSTOM_BACKGROUNDS_DIR = path.join(__dirname, 'public', 'uploads', 'backgrounds');
-const CUSTOM_BACKGROUND_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const CUSTOM_BACKGROUND_MAX_BYTES = 4 * 1024 * 1024;
 const DEFAULT_QUEUE_MUSIC_FILE = 'Musique Chambre.mp3';
 const DEFAULT_QUEUE_MUSIC_SRC = `/sounds/${DEFAULT_QUEUE_MUSIC_FILE}`;
 const QUEUE_MUSIC_THEME_ORDER = ['cyber', 'dj', 'rock', 'country', 'zen', 'mystique', 'lounge', 'aventure', 'dark'];
@@ -1767,6 +1740,7 @@ app.patch('/api/admin/players/:id/coins', (req, res) => {
       ['Nouveau total', String(nextCoins), true],
     ]);
   } catch(e) {}
+  notifyPlayerProfileChanged(id, `Coins ajoutes par le staff (+${delta}).`);
   res.json({ ok: true, coins: nextCoins, added: delta });
 });
 
@@ -1798,6 +1772,7 @@ app.patch('/api/admin/players/:id/shop-item', (req, res) => {
     ]);
   } catch (e) {}
 
+  notifyPlayerProfileChanged(id, `Booster ajoute par le staff : ${item.label} x${quantity}.`);
   res.json({ ok: true, itemKey, quantity, total: nextQty });
 });
 
@@ -1866,6 +1841,8 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
       '_Si tu as des questions, contacte un administrateur sur le serveur Discord._',
     ].join('\n')); } catch(e) {}
   }
+  const roleLabel = role === 'vipplus' ? 'VIP+' : role.toUpperCase();
+  notifyPlayerProfileChanged(targetId, `Role modifie par le staff : ${roleLabel}.`);
   res.json({ ok: true });
 });
 
@@ -1906,6 +1883,7 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
       Number(target.is_perso) === 1
     ).catch(() => {});
   }
+  notifyPlayerProfileChanged(id, rawText ? `Badge perso modifie par le staff : ${rawText}.` : 'Badge perso retire par le staff.');
   res.json({ ok: true });
 });
 
@@ -1970,6 +1948,7 @@ app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
         '_Si tu n\'as pas demandé ce changement, contacte un administrateur._',
       ].join('\n')); } catch(e) {}
     }
+    notifyPlayerProfileChanged(Number(req.params.id), `Pseudo modifie par le staff : ${oldPseudo} devient ${pseudo.trim()}.`);
     res.json({ ok: true });
   } catch(e) { res.status(400).json({ error: 'Ce pseudo est déjà utilisé' }); }
 });
@@ -1981,6 +1960,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
   db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(Number(elo) || 1000, Number(req.params.id));
+  notifyPlayerProfileChanged(Number(req.params.id), `ELO modifie par le staff : ${Number(elo) || 1000}.`);
   res.json({ ok: true });
 });
 
@@ -1996,6 +1976,7 @@ app.patch('/api/admin/players/:id/mute', (req, res) => {
   const _pm = pQ.getById.get(Number(req.params.id));
   WH.wlogMute(_pm?.pseudo || req.params.id, req.params.id, durationMinutes / 60);
   pQ.setMute.run({ until, id: Number(req.params.id) });
+  notifyPlayerProfileChanged(Number(req.params.id), durationMinutes > 0 ? `Mute applique par le staff (${durationMinutes} min).` : 'Mute retire par le staff.');
   res.json({ ok: true, minutes: durationMinutes });
 });
 
@@ -2006,6 +1987,7 @@ app.patch('/api/admin/players/:id/ban', (req, res) => {
   const _pb = pQ.getById.get(Number(req.params.id));
   WH.wlogBan(_pb?.pseudo || req.params.id, req.params.id, banned);
   pQ.setBanned.run({ banned: banned ? 1 : 0, id: Number(req.params.id) });
+  notifyPlayerProfileChanged(Number(req.params.id), banned ? 'Compte banni par le staff.' : 'Bannissement retire par le staff.');
   res.json({ ok: true });
 });
 
@@ -2013,6 +1995,7 @@ app.patch('/api/admin/players/:id/ban', (req, res) => {
 app.patch('/api/admin/players/:id/suspicious', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
+  notifyPlayerProfileChanged(Number(req.params.id), 'Statut suspect retire par le staff.');
   res.json({ ok: true });
 });
 
@@ -3419,11 +3402,6 @@ function sanitize(p) {
       token_emoji_image: '',
       profile_banner: '',
       queue_music: '',
-      custom_bg_desktop: '',
-      custom_bg_mobile: '',
-      custom_bg_opacity: 0,
-      custom_bg_size: 'cover',
-      custom_bg_changed_at: 0,
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -3435,15 +3413,9 @@ function sanitize(p) {
     };
   }
   const canUseQueueMusic = isPersoPlayer(rest) || isAdminPlayer(rest);
-  const canUseCustomBackground = isPersoPlayer(rest) || isAdminPlayer(rest);
   return {
     ...rest,
     queue_music: canUseQueueMusic ? String(rest.queue_music || '') : '',
-    custom_bg_desktop: canUseCustomBackground ? String(rest.custom_bg_desktop || '') : '',
-    custom_bg_mobile: canUseCustomBackground ? String(rest.custom_bg_mobile || '') : '',
-    custom_bg_opacity: canUseCustomBackground ? Number(rest.custom_bg_opacity || 0.28) : 0,
-    custom_bg_size: canUseCustomBackground ? String(rest.custom_bg_size || 'cover') : 'cover',
-    custom_bg_changed_at: canUseCustomBackground ? Number(rest.custom_bg_changed_at || 0) : 0,
     is_vip: isVipPlayer(rest) ? 1 : 0,
     is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
     is_perso: isPersoPlayer(rest) ? 1 : 0,
@@ -3872,64 +3844,6 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
   }
   pQ.updateQueueMusic.run({ music: nextMusic, id });
   res.json({ ok: true, queue_music: nextMusic });
-});
-
-app.patch('/api/players/:id/custom-background', (req, res) => {
-  const id = Number(req.params.id);
-  const { token } = req.body || {};
-  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
-  const player = pQ.getById.get(id);
-  const isAdminTier = isAdminPlayer(player);
-  if (!isPersoPlayer(player) && !isAdminTier) {
-    return res.status(403).json({ error: 'Reserve au grade Perso.' });
-  }
-  const remaining = Math.max(0, Number(player?.custom_bg_changed_at || 0) + CUSTOM_BACKGROUND_COOLDOWN_MS - Date.now());
-  if (!isAdminTier && remaining > 0) {
-    return res.status(429).json({ error: `Fond personnalisable disponible dans ${formatCooldownHours(remaining)}.` });
-  }
-
-  try {
-    const opacity = Math.max(0.08, Math.min(0.7, Number(req.body?.opacity ?? player.custom_bg_opacity ?? 0.28)));
-    const sizeRaw = String(req.body?.size || player.custom_bg_size || 'cover').trim();
-    const size = ['cover', 'contain', 'auto', '120%', '140%', '160%'].includes(sizeRaw) ? sizeRaw : 'cover';
-    const removeDesktop = req.body?.removeDesktop === true;
-    const removeMobile = req.body?.removeMobile === true;
-    let desktop = String(player.custom_bg_desktop || '');
-    let mobile = String(player.custom_bg_mobile || '');
-
-    if (removeDesktop) {
-      cleanupCustomBackgroundFile(desktop);
-      desktop = '';
-    }
-    if (removeMobile) {
-      cleanupCustomBackgroundFile(mobile);
-      mobile = '';
-    }
-    if (req.body?.desktopData) {
-      cleanupCustomBackgroundFile(desktop);
-      desktop = saveCustomBackgroundDataUrl(req.body.desktopData, id, 'desktop');
-    }
-    if (req.body?.mobileData) {
-      cleanupCustomBackgroundFile(mobile);
-      mobile = saveCustomBackgroundDataUrl(req.body.mobileData, id, 'mobile');
-    }
-    if (!isSafeCustomBackgroundPath(desktop) || !isSafeCustomBackgroundPath(mobile)) {
-      return res.status(400).json({ error: 'Fond invalide.' });
-    }
-
-    const changedAt = Date.now();
-    pQ.updateCustomBackground.run({ id, desktop, mobile, opacity, size, changedAt });
-    res.json({
-      ok: true,
-      custom_bg_desktop: desktop,
-      custom_bg_mobile: mobile,
-      custom_bg_opacity: opacity,
-      custom_bg_size: size,
-      custom_bg_changed_at: changedAt,
-    });
-  } catch (error) {
-    res.status(error.status || 500).json({ error: error.message || 'Impossible d enregistrer le fond.' });
-  }
 });
 
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs
@@ -5595,6 +5509,8 @@ function buildDiscordBotContext() {
     shopItemQ,
     SHOP_ITEMS,
     getRank,
+    hashPwd,
+    notifyPlayerProfileChanged,
     getPresenceCounts,
     getBoostDisplayName,
     gm,
