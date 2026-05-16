@@ -150,12 +150,18 @@ function buildPlayerEloHistory(playerId, daysRaw = 7) {
   const now = Date.now();
   const start = now - days * 24 * 60 * 60 * 1000;
   const rows = db.prepare(`
-    SELECT id, player1_id, player2_id, winner_id, elo_p1, elo_p2, finished_at, move_count
-    FROM games
-    WHERE (player1_id = ? OR player2_id = ?)
-      AND status = 'finished'
-      AND finished_at IS NOT NULL
-    ORDER BY finished_at ASC, id ASC
+    SELECT g.id, g.player1_id, g.player2_id, g.winner_id,
+           g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2,
+           g.finished_at, g.move_count, g.duration, g.game_type,
+           p1.pseudo AS p1_pseudo, p1.elo AS p1_current_elo,
+           p2.pseudo AS p2_pseudo, p2.elo AS p2_current_elo
+    FROM games g
+    JOIN players p1 ON p1.id = g.player1_id
+    JOIN players p2 ON p2.id = g.player2_id
+    WHERE (g.player1_id = ? OR g.player2_id = ?)
+      AND g.status = 'finished'
+      AND g.finished_at IS NOT NULL
+    ORDER BY g.finished_at ASC, g.id ASC
   `).all(id, id);
 
   const games = rows
@@ -174,15 +180,30 @@ function buildPlayerEloHistory(playerId, daysRaw = 7) {
   }];
 
   games.forEach((game, index) => {
+    const isP1 = Number(game.player1_id) === id;
+    const opponentId = isP1 ? Number(game.player2_id) : Number(game.player1_id);
+    const beforeElo = isP1 ? Number(game.elo_before_p1 || 0) : Number(game.elo_before_p2 || 0);
+    const opponentBeforeElo = isP1 ? Number(game.elo_before_p2 || 0) : Number(game.elo_before_p1 || 0);
     const delta = deltas[index];
     running += delta;
     points.push({
       t: game.finishedMs,
+      finishedAt: game.finished_at || null,
       elo: running,
       delta,
+      beforeElo: beforeElo || running - delta,
+      afterElo: running,
       gameId: game.id,
       moveCount: game.move_count || 0,
+      duration: game.duration || 0,
+      type: game.game_type || 'ranked',
       result: game.winner_id == null ? 'draw' : Number(game.winner_id) === id ? 'win' : 'loss',
+      opponent: {
+        id: opponentId,
+        pseudo: isP1 ? game.p2_pseudo : game.p1_pseudo,
+        eloBefore: opponentBeforeElo || null,
+        currentElo: Number(isP1 ? game.p2_current_elo : game.p1_current_elo) || null,
+      },
       label: `Partie #${game.id}`,
     });
   });
@@ -199,12 +220,20 @@ function buildPlayerEloHistory(playerId, daysRaw = 7) {
   }
 
   const eloValues = points.map(point => Number(point.elo || 0));
+  const averageElo = eloValues.length
+    ? Math.round(eloValues.reduce((sum, elo) => sum + elo, 0) / eloValues.length)
+    : currentElo;
   return {
+    generatedAt: new Date(now).toISOString(),
     player: {
       id: player.id,
       pseudo: player.pseudo,
       color: player.color || '#ff2d55',
       elo: currentElo,
+      wins: Number(player.wins || 0),
+      losses: Number(player.losses || 0),
+      draws: Number(player.draws || 0),
+      isBot: Number(player.is_bot || 0) === 1,
       rank: getRank(currentElo),
     },
     days,
@@ -217,9 +246,50 @@ function buildPlayerEloHistory(playerId, daysRaw = 7) {
       delta: currentElo - (points[0]?.elo ?? currentElo),
       minElo: Math.min(...eloValues, currentElo),
       maxElo: Math.max(...eloValues, currentElo),
+      averageElo,
       games: games.length,
     },
   };
+}
+
+function buildPlayerEloHistoryCsv(history) {
+  const rows = Array.isArray(history?.points) ? history.points : [];
+  const headers = [
+    'player_id', 'player_pseudo', 'player_current_elo', 'days',
+    'index', 'point_type', 'date_iso', 'timestamp_ms',
+    'elo_before', 'elo_after', 'delta',
+    'game_id', 'game_type', 'result', 'move_count', 'duration_seconds',
+    'opponent_id', 'opponent_pseudo', 'opponent_elo_before', 'opponent_current_elo',
+    'rank_label',
+  ];
+  const escapeCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const lines = rows.map((point, index) => {
+    const row = {
+      player_id: history.player?.id || '',
+      player_pseudo: history.player?.pseudo || '',
+      player_current_elo: history.player?.elo || '',
+      days: history.days || '',
+      index,
+      point_type: point.result || '',
+      date_iso: point.t ? new Date(Number(point.t)).toISOString() : '',
+      timestamp_ms: point.t || '',
+      elo_before: point.beforeElo ?? point.elo ?? '',
+      elo_after: point.afterElo ?? point.elo ?? '',
+      delta: point.delta ?? '',
+      game_id: point.gameId || '',
+      game_type: point.type || '',
+      result: point.result || '',
+      move_count: point.moveCount || '',
+      duration_seconds: point.duration || '',
+      opponent_id: point.opponent?.id || '',
+      opponent_pseudo: point.opponent?.pseudo || '',
+      opponent_elo_before: point.opponent?.eloBefore || '',
+      opponent_current_elo: point.opponent?.currentElo || '',
+      rank_label: history.player?.rank?.label || history.player?.rank?.name || '',
+    };
+    return headers.map(key => escapeCsv(row[key])).join(',');
+  });
+  return [headers.join(','), ...lines].join('\n');
 }
 
 function getWeekStartMs(inputMs) {
@@ -4045,6 +4115,26 @@ app.get('/api/players/:id/elo-history', (req, res) => {
   const history = buildPlayerEloHistory(req.params.id, req.query.days);
   if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
   res.json(history);
+});
+
+app.get('/api/players/:id/elo-history/export', (req, res) => {
+  const history = buildPlayerEloHistory(req.params.id, req.query.days);
+  if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
+  const format = String(req.query.format || 'json').toLowerCase();
+  const safePseudo = String(history.player?.pseudo || `player-${req.params.id}`)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || `player-${req.params.id}`;
+  const filename = `elo-history-${safePseudo}-${history.days}j.${format === 'csv' ? 'csv' : 'json'}`;
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  if (format === 'csv') {
+    res.type('text/csv; charset=utf-8');
+    return res.send(buildPlayerEloHistoryCsv(history));
+  }
+  res.type('application/json; charset=utf-8');
+  res.send(JSON.stringify(history, null, 2));
 });
 
 app.get('/api/players/:id', (req, res) => {

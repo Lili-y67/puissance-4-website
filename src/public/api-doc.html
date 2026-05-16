@@ -160,12 +160,22 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
   "color": "#ff2d55",
   "color_secondary": "#85EBFF"
 }</code></pre><pre><code>const player = await fetch('/api/players/2').then(r => r.json());</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/elo-history?days=1|7|15</span></div><p>Retourne la courbe ELO compress&eacute;e sur 1, 7 ou 15 jours. Le profil web l&rsquo;utilise pour son canvas temps r&eacute;el.</p><div class="subgrid"><pre><code>{
-  "player": { "id": 2, "pseudo": "Lili_y", "elo": 1012 },
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/elo-history?days=1|7|15</span></div><p>Retourne la courbe ELO compress&eacute;e sur 1, 7 ou 15 jours. Le profil web l&rsquo;utilise pour son canvas temps r&eacute;el. Les points contiennent aussi les donn&eacute;es brutes utiles &agrave; l&rsquo;export : avant/apr&egrave;s ELO, adversaire, type de partie et r&eacute;sultat.</p><div class="subgrid"><pre><code>{
+  "generatedAt": "2026-05-16T12:00:00.000Z",
+  "player": { "id": 2, "pseudo": "Lili_y", "elo": 1012, "wins": 4 },
   "days": 7,
-  "points": [{ "t": 1778410000000, "elo": 1000, "delta": 0 }],
-  "stats": { "startElo": 1000, "endElo": 1012, "delta": 12, "games": 3 }
+  "points": [{
+    "gameId": 42,
+    "finishedAt": "2026-05-16 12:00:00",
+    "beforeElo": 1000,
+    "afterElo": 1012,
+    "delta": 12,
+    "result": "win",
+    "opponent": { "id": 7, "pseudo": "P4-Bot-Nova" }
+  }],
+  "stats": { "startElo": 1000, "endElo": 1012, "delta": 12, "games": 3, "averageElo": 1008 }
 }</code></pre><pre><code>curl "http://localhost:8080/api/players/2/elo-history?days=7"</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/elo-history/export?days=1|7|15&amp;format=json|csv</span></div><p>T&eacute;l&eacute;charge les donn&eacute;es brutes du graphique ELO en JSON ou CSV. Le bouton CSV/JSON du profil utilise cet endpoint.</p><div class="subgrid"><pre><code>curl -L "http://localhost:8080/api/players/2/elo-history/export?days=7&amp;format=csv" -o elo-history.csv</code></pre><pre><code>const file = await fetch('/api/players/2/elo-history/export?days=15&amp;format=json').then(r => r.json());</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players?type=all|humans|bots&amp;online=1&amp;q=...</span></div><p>Annuaire public des joueurs et bots : ELO, badges, rang, statut online, file et partie active. Utilis&eacute; par <code>/players</code> et <code>/bots</code>.</p><div class="subgrid"><pre><code>curl "http://localhost:8080/api/players?type=bots"</code></pre><pre><code>const bots = await fetch('/api/players?type=bots').then(r => r.json());</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/search?q=...</span></div><p>Recherche des joueurs par pseudo. Utilis&eacute; par le profil et l&rsquo;autocomplete.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/convert-bot</span></div><p>Transforme un compte non li&eacute; Discord en compte bot API. Session joueur obligatoire. Retourne un token <code>p4bot_...</code> affich&eacute; une seule fois, plus <code>activationCurl</code> pour activer le bot rapidement.</p><div class="meta"><div class="box"><div class="label">Erreur</div><div class="value">403 session invalide, 409 compte li&eacute; Discord ou d&eacute;j&agrave; bot</div></div><div class="box"><div class="label">Curl</div><div class="value"><code>curl -X POST -H "x-session-token: TOKEN" -H "Content-Type: application/json" -d "{\"token\":\"TOKEN\"}" /api/players/2/convert-bot</code></div></div></div></article>

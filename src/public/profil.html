@@ -1739,8 +1739,8 @@ function render(player, games, following, followers, followStatus, tournaments =
             <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
           </div>
           <div class="elo-history-export">
-            <button class="elo-history-copy" type="button" onclick="copyEloHistoryExport('csv')">CSV</button>
-            <button class="elo-history-copy" type="button" onclick="copyEloHistoryExport('json')">JSON</button>
+            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
+            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
           </div>
         </div>
       </div>
@@ -2502,16 +2502,34 @@ function buildEloHistoryExportRows() {
   return points.map((point, index) => ({
     index,
     date: point.t ? new Date(Number(point.t)).toISOString() : '',
+    playerId: data.player?.id || '',
+    pseudo: data.player?.pseudo || '',
+    currentElo: data.player?.elo || '',
+    eloBefore: Math.round(Number(point.beforeElo ?? point.elo ?? 0)),
+    eloAfter: Math.round(Number(point.afterElo ?? point.elo ?? 0)),
     elo: Math.round(Number(point.elo || 0)),
     delta: Math.round(Number(point.delta || 0)),
     gameId: point.gameId || '',
+    gameType: point.type || '',
     result: point.result || '',
+    moveCount: point.moveCount || '',
+    duration: point.duration || '',
+    opponentId: point.opponent?.id || '',
+    opponentPseudo: point.opponent?.pseudo || '',
+    opponentEloBefore: point.opponent?.eloBefore || '',
+    opponentCurrentElo: point.opponent?.currentElo || '',
     label: point.label || '',
   }));
 }
 
 function eloHistoryRowsToCsv(rows) {
-  const headers = ['index', 'date', 'elo', 'delta', 'gameId', 'result', 'label'];
+  const headers = [
+    'index', 'date', 'playerId', 'pseudo', 'currentElo',
+    'eloBefore', 'eloAfter', 'elo', 'delta',
+    'gameId', 'gameType', 'result', 'moveCount', 'duration',
+    'opponentId', 'opponentPseudo', 'opponentEloBefore', 'opponentCurrentElo',
+    'label',
+  ];
   const escapeCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
   return [
     headers.join(','),
@@ -2519,21 +2537,65 @@ function eloHistoryRowsToCsv(rows) {
   ].join('\n');
 }
 
-async function copyTextToClipboardSafe(text) {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return true;
+function downloadBlob(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function getEloHistoryExportFilename(format) {
+  const pseudo = String(lastEloHistoryData?.player?.pseudo || currentPlayer?.pseudo || 'joueur')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'joueur';
+  const days = lastEloHistoryData?.days || eloHistoryDays || 7;
+  return `elo-history-${pseudo}-${days}j.${format === 'json' ? 'json' : 'csv'}`;
+}
+
+async function downloadEloHistoryExport(format = 'csv') {
+  if (!currentPlayer?.id) {
+    alert('Aucun joueur charge pour exporter le graphique ELO.');
+    return;
   }
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  textarea.setAttribute('readonly', '');
-  textarea.style.position = 'fixed';
-  textarea.style.left = '-9999px';
-  document.body.appendChild(textarea);
-  textarea.select();
-  const ok = document.execCommand('copy');
-  textarea.remove();
-  return ok;
+  const wantedFormat = format === 'json' ? 'json' : 'csv';
+  try {
+    const res = await fetch(`/api/players/${encodeURIComponent(currentPlayer.id)}/elo-history/export?days=${encodeURIComponent(eloHistoryDays)}&format=${wantedFormat}`);
+    if (!res.ok) throw new Error('export');
+    const content = await res.text();
+    downloadBlob(
+      getEloHistoryExportFilename(wantedFormat),
+      content,
+      wantedFormat === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8'
+    );
+  } catch {
+    const rows = buildEloHistoryExportRows();
+    if (!rows.length) {
+      alert('Aucune donnee ELO a exporter pour le moment.');
+      return;
+    }
+    const payload = wantedFormat === 'json'
+      ? JSON.stringify({
+          player: lastEloHistoryData?.player || null,
+          days: lastEloHistoryData?.days || eloHistoryDays,
+          generatedAt: new Date().toISOString(),
+          stats: lastEloHistoryData?.stats || {},
+          points: rows,
+        }, null, 2)
+      : eloHistoryRowsToCsv(rows);
+    downloadBlob(
+      getEloHistoryExportFilename(wantedFormat),
+      payload,
+      wantedFormat === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8'
+    );
+  }
 }
 
 async function copyEloHistoryExport(format = 'csv') {
@@ -2550,12 +2612,7 @@ async function copyEloHistoryExport(format = 'csv') {
         points: rows,
       }, null, 2)
     : eloHistoryRowsToCsv(rows);
-  try {
-    await copyTextToClipboardSafe(payload);
-    alert(format === 'json' ? 'Graphique ELO copie en JSON.' : 'Graphique ELO copie en CSV.');
-  } catch {
-    alert('Impossible de copier automatiquement. Reessaie depuis un navigateur compatible.');
-  }
+  downloadBlob(getEloHistoryExportFilename(format), payload, format === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8');
 }
 
 function formatEloPointDate(ms) {
