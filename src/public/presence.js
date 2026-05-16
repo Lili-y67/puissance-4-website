@@ -126,13 +126,13 @@
   }
 
   refreshSystemStatus();
-  setInterval(refreshSystemStatus, 10000);
+  setInterval(refreshSystemStatus, 30000);
 
   const visitorId = getVisitorId();
 
   function initSocket() {
-    const socket = window.io('/', {
-      transports: ['polling'],
+    const socket = window._p4SharedSocket || window.io('/', {
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 3000,
       reconnectionAttempts: 20,
@@ -150,6 +150,7 @@
     socket.on('connect', () => {
       identifyFromStorage();
     });
+    if (socket.connected) identifyFromStorage();
 
     socket.on('presence_counts', (counts = {}) => {
       try {
@@ -249,7 +250,7 @@
       } else {
         socket.emit('visitor_presence', { visitorId });
       }
-    }, 15000);
+    }, 30000);
 
     socket.on('disconnect', () => clearInterval(heartbeat));
     window._presenceSocket = socket;

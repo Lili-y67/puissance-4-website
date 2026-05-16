@@ -185,7 +185,7 @@ document.querySelectorAll('.tab').forEach(btn => {
 search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 180); });
 document.querySelector(`.tab[data-type="${currentType}"]`)?.classList.add('active');
 load();
-setInterval(load, 15000);
+setInterval(load, 30000);
 </script>
 </body>
 </html>

@@ -26,8 +26,8 @@ const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
   cors: { origin: '*' },
-  transports: ['polling'],
-  allowUpgrades: false,
+  transports: ['websocket', 'polling'],
+  allowUpgrades: true,
 });
 
 const mm = new Matchmaking();

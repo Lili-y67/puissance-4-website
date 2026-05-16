@@ -969,12 +969,12 @@ async function loadStats() {
 }
 
 loadStats();
-setInterval(loadStats, 15000);
+setInterval(loadStats, 30000);
 
 (function initPresenceLive() {
   if (!window.io) return;
   const socket = window.io('/', {
-    transports: ['polling'],
+    transports: ['websocket', 'polling'],
     reconnection: true,
     reconnectionDelay: 3000,
     reconnectionAttempts: 20,

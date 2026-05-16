@@ -438,6 +438,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   letter-spacing: 1px;
 }
 .result-btns { display: flex; gap: 10px; margin-top: 4px; justify-content: center; }
+.result-btns .btn-action { flex: 0 1 auto; }
 @keyframes result-bot-fade {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -610,6 +611,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="result-summary" id="result-summary"></div>
       <div class="result-btns">
         <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">⚡ Rejouer</button>
+        <button class="btn-action ghost" id="btn-home" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">🏠 Accueil</button>
         <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
       </div>
     </div>
@@ -990,7 +992,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ── Socket ────────────────────────────────────────────────────────────────────
 function connectSocket(pendingMatch) {
-  socket = io({ transports: ['polling'] });
+  socket = io({ transports: ['websocket', 'polling'] });
 
   socket.on('connect', () => {
     localStorage.setItem('last_active', Date.now());
@@ -1305,6 +1307,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   canvas.height = size * DPR;
   canvas.style.width  = '100%';
   canvas.style.height = '100%';
+  canvas.style.filter = 'drop-shadow(1px 0 0 rgba(0,0,0,.95)) drop-shadow(-1px 0 0 rgba(0,0,0,.95)) drop-shadow(0 1px 0 rgba(0,0,0,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55))';
 
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
@@ -2032,6 +2035,15 @@ let iaBotName = '';
 let iaBotColor = '';
 const IA_R = 6, IA_C = 7;
 
+function replayBotViaHome() {
+  const elo = Number.isFinite(Number(iaTargetElo)) ? Math.round(Number(iaTargetElo)) : 1200;
+  sessionStorage.setItem('no_auto_queue', '1');
+  sessionStorage.setItem('open_bot_modal', '1');
+  sessionStorage.setItem('bot_modal_tab', 'elo');
+  sessionStorage.setItem('bot_modal_elo', String(elo));
+  location.href = '/';
+}
+
 async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
   mySide = 1;
@@ -2348,7 +2360,7 @@ function iaEnd(winner, winCells) {
   // Sauvegarder la partie bot pour le replay (sans stats)
   saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
 
-  document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue','1'); location.href='/'; };
+  document.querySelector('.btn-action.primary').onclick = replayBotViaHome;
   document.getElementById('result-overlay').classList.add('show');
   setStatus('');
 }
@@ -2422,7 +2434,7 @@ function iaEnd(winner, winCells) {
       : `L'IA a gagné cette fois...`;
 
   saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
-  document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue', '1'); location.href = '/'; };
+  document.querySelector('.btn-action.primary').onclick = replayBotViaHome;
   document.getElementById('result-overlay').classList.add('show');
   setStatus('');
 }
@@ -2505,10 +2517,7 @@ function iaEnd(winner, winCells) {
         : `Le bot a pris l'avantage cette fois.`;
   }
 
-  document.querySelector('.btn-action.primary').onclick = () => {
-    sessionStorage.setItem('no_auto_queue', '1');
-    location.href = '/';
-  };
+  document.querySelector('.btn-action.primary').onclick = replayBotViaHome;
   document.getElementById('result-overlay').classList.add('show');
   setStatus('');
 

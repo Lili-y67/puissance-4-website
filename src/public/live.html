@@ -32,6 +32,9 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .headline-sub strong{color:var(--text)}
 .status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(76,110,245,0.12);border:1px solid rgba(76,110,245,0.22);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .headline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sound-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.24);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.sound-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.48);background:rgba(255,214,10,.14)}
+.sound-btn.muted{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
 .bot-match-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(133,235,255,.1);border:1px solid rgba(133,235,255,.28);color:#85EBFF;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .bot-match-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.48);background:rgba(133,235,255,.16)}
 .bot-match-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
@@ -184,6 +187,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
       <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
     </div>
     <div class="headline-actions">
+      <button class="sound-btn" id="live-sound-btn" type="button" onclick="toggleLiveSound()">🔊 Sons live</button>
       <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
     </div>
   </div>
@@ -273,6 +277,158 @@ let selectedGameId = null;
 let liveAnalysisWorker = null;
 let liveAnalysisSignature = '';
 let liveAnalysisFallbackTimer = null;
+let lastSpecSignature = '';
+let lastSpecStatusByGame = new Map();
+let liveAudioCtx = null;
+let liveAmbient = null;
+let liveSoundEnabled = localStorage.getItem('p4_live_sound') !== '0';
+let lastSpecGameId = null;
+let liveGameOverSpokenAt = 0;
+
+function updateLiveSoundButton() {
+  const btn = document.getElementById('live-sound-btn');
+  if (!btn) return;
+  btn.classList.toggle('muted', !liveSoundEnabled);
+  btn.textContent = liveSoundEnabled ? '🔊 Sons live' : '🔇 Sons off';
+}
+
+function getLiveAudioContext() {
+  if (!liveSoundEnabled) return null;
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return null;
+  if (!liveAudioCtx) liveAudioCtx = new AudioContext();
+  if (liveAudioCtx.state === 'suspended') liveAudioCtx.resume().catch(() => {});
+  return liveAudioCtx;
+}
+
+function playTone({ freq = 440, duration = 0.16, type = 'sine', gain = 0.045, delay = 0, slideTo = null } = {}) {
+  const ctx = getLiveAudioContext();
+  if (!ctx) return;
+  const start = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const vol = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  if (slideTo) osc.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), start + duration);
+  vol.gain.setValueAtTime(0.0001, start);
+  vol.gain.exponentialRampToValueAtTime(gain, start + 0.018);
+  vol.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  osc.connect(vol).connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + duration + 0.03);
+}
+
+function playNoise({ duration = 0.2, gain = 0.035, delay = 0, filter = 180 } = {}) {
+  const ctx = getLiveAudioContext();
+  if (!ctx) return;
+  const start = ctx.currentTime + delay;
+  const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * duration)), ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = ctx.createBufferSource();
+  const filt = ctx.createBiquadFilter();
+  const vol = ctx.createGain();
+  src.buffer = buffer;
+  filt.type = 'lowpass';
+  filt.frequency.setValueAtTime(filter, start);
+  vol.gain.setValueAtTime(0.0001, start);
+  vol.gain.exponentialRampToValueAtTime(gain, start + 0.015);
+  vol.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+  src.connect(filt).connect(vol).connect(ctx.destination);
+  src.start(start);
+  src.stop(start + duration + 0.04);
+}
+
+function playMoveSound() {
+  playNoise({ duration: 0.18, gain: 0.032, filter: 260 });
+  playTone({ freq: 124, slideTo: 68, duration: 0.18, type: 'triangle', gain: 0.04 });
+  playTone({ freq: 740, slideTo: 520, duration: 0.08, type: 'sine', gain: 0.018, delay: 0.05 });
+}
+
+function playGameOverSound() {
+  speakGameOver();
+  playNoise({ duration: 0.48, gain: 0.045, filter: 160 });
+  playTone({ freq: 392, duration: 0.14, type: 'triangle', gain: 0.052, delay: 0.08 });
+  playTone({ freq: 311, duration: 0.18, type: 'triangle', gain: 0.048, delay: 0.22 });
+  playTone({ freq: 247, duration: 0.24, type: 'sawtooth', gain: 0.038, delay: 0.42 });
+  playTone({ freq: 98, slideTo: 49, duration: 0.72, type: 'sine', gain: 0.04, delay: 0.48 });
+}
+
+function speakGameOver() {
+  if (!liveSoundEnabled || !('speechSynthesis' in window)) return;
+  const now = Date.now();
+  if (now - liveGameOverSpokenAt < 2500) return;
+  liveGameOverSpokenAt = now;
+  try {
+    const utterance = new SpeechSynthesisUtterance('Game Over');
+    utterance.lang = 'en-US';
+    utterance.rate = 0.82;
+    utterance.pitch = 0.62;
+    utterance.volume = 0.72;
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const preferred = voices.find(v => /english|us|uk/i.test(`${v.lang} ${v.name}`));
+    if (preferred) utterance.voice = preferred;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  } catch {}
+}
+
+function startLiveAmbient() {
+  const ctx = getLiveAudioContext();
+  if (!ctx || liveAmbient) return;
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, ctx.currentTime);
+  master.gain.exponentialRampToValueAtTime(0.018, ctx.currentTime + 0.65);
+  master.connect(ctx.destination);
+
+  const drone = ctx.createOscillator();
+  const droneGain = ctx.createGain();
+  drone.type = 'sine';
+  drone.frequency.value = 55;
+  droneGain.gain.value = 0.42;
+  drone.connect(droneGain).connect(master);
+  drone.start();
+
+  const notes = [220, 277.18, 329.63, 392, 329.63, 277.18, 246.94, 293.66];
+  let step = 0;
+  const playPirateStep = () => {
+    if (!liveAmbient || !liveSoundEnabled) return;
+    const base = notes[step % notes.length];
+    const accent = step % 4 === 0;
+    playTone({ freq: base, duration: accent ? 0.2 : 0.13, type: 'triangle', gain: accent ? 0.025 : 0.015 });
+    if (accent) playTone({ freq: base / 2, duration: 0.24, type: 'sawtooth', gain: 0.012, delay: 0.02 });
+    step++;
+  };
+  const interval = setInterval(playPirateStep, 360);
+  playPirateStep();
+  liveAmbient = { drone, gain: master, interval };
+}
+
+function stopLiveAmbient() {
+  if (!liveAmbient || !liveAudioCtx) return;
+  const ctx = liveAudioCtx;
+  const { drone, gain, interval } = liveAmbient;
+  liveAmbient = null;
+  clearInterval(interval);
+  gain.gain.cancelScheduledValues(ctx.currentTime);
+  gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+  setTimeout(() => {
+    try { drone.stop(); } catch {}
+  }, 420);
+}
+
+function toggleLiveSound() {
+  liveSoundEnabled = !liveSoundEnabled;
+  localStorage.setItem('p4_live_sound', liveSoundEnabled ? '1' : '0');
+  updateLiveSoundButton();
+  if (!liveSoundEnabled) stopLiveAmbient();
+  else if (selectedGameId) {
+    getLiveAudioContext();
+    startLiveAmbient();
+    playTone({ freq: 660, duration: 0.1, type: 'sine', gain: 0.025 });
+  }
+}
 
 function parseShape(raw) {
   if (!raw) return { shape: 'circle', emoji: null };
@@ -315,6 +471,7 @@ function makeLiveEmojiToken(tokenEl, emoji, color, glowColor, large = false) {
   canvas.height = size * dpr;
   canvas.style.width = '100%';
   canvas.style.height = '100%';
+  canvas.style.filter = 'drop-shadow(1px 0 0 rgba(0,0,0,.95)) drop-shadow(-1px 0 0 rgba(0,0,0,.95)) drop-shadow(0 1px 0 rgba(0,0,0,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55))';
 
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
@@ -434,6 +591,8 @@ function getInitialGameId() {
 function goToSpec(gameId) {
   if (!gameId) return;
   selectedGameId = Number(gameId);
+  getLiveAudioContext();
+  startLiveAmbient();
   history.replaceState({}, '', '/spec/' + selectedGameId);
   document.getElementById('list-view').classList.remove('show');
   document.getElementById('spec-view').classList.add('show');
@@ -443,6 +602,7 @@ function goToSpec(gameId) {
 
 function backToLive() {
   selectedGameId = null;
+  stopLiveAmbient();
   history.replaceState({}, '', '/live');
   document.getElementById('spec-view').classList.remove('show');
   document.getElementById('list-view').classList.add('show');
@@ -777,6 +937,17 @@ function renderSpec(game) {
   const p1 = game.players[1], p2 = game.players[2];
   const finished = game.status === 'finished';
   const winner = finished && game.result?.winner ? game.players[game.result.winner] : null;
+  const specSignature = `${game.id}:${game.moves}:${game.status}`;
+  const previousStatus = lastSpecStatusByGame.get(Number(game.id));
+  if (Number(lastSpecGameId) === Number(game.id) && lastSpecSignature && lastSpecSignature !== specSignature && Number(game.id) === Number(selectedGameId)) {
+    if (finished && previousStatus && previousStatus !== 'finished') playGameOverSound();
+    else if (!finished) playMoveSound();
+  }
+  lastSpecGameId = Number(game.id);
+  lastSpecSignature = specSignature;
+  lastSpecStatusByGame.set(Number(game.id), game.status);
+  if (finished) stopLiveAmbient();
+  else startLiveAmbient();
   document.getElementById('spec-title').textContent = `Partie #${game.id}`;
   document.getElementById('spec-sub').textContent = `${game.moves} coups joues · tour de ${game.players[game.current].pseudo}`;
 
@@ -859,7 +1030,8 @@ function animBar() {
 }
 
 try {
-  socket = io({ transports: ['polling'] });
+  socket = io({ transports: ['websocket', 'polling'] });
+  window._p4SharedSocket = socket;
   socket.emit('join_live');
   socket.on('live_update', () => refresh());
   socket.on('connect', () => {
@@ -876,6 +1048,7 @@ try {
   console.warn('Socket indisponible, fallback polling');
 }
 
+updateLiveSoundButton();
 selectedGameId = getInitialGameId();
 if (selectedGameId) goToSpec(selectedGameId);
 refresh();

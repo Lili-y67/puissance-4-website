@@ -607,7 +607,7 @@ async function joinTournament(id, fromDetail = false) {
 
 function ensureSocket() {
   if (socket) return;
-  socket = io({ transports: ['polling'] });
+  socket = io({ transports: ['websocket', 'polling'] });
   socket.on('connect', () => {
     const player = parseStoredPlayer();
     const token = getToken();

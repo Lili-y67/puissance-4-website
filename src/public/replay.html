@@ -415,6 +415,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   const canvas = document.createElement('canvas');
   canvas.width = size * DPR; canvas.height = size * DPR;
   canvas.style.width = '100%'; canvas.style.height = '100%';
+  canvas.style.filter = 'drop-shadow(1px 0 0 rgba(0,0,0,.95)) drop-shadow(-1px 0 0 rgba(0,0,0,.95)) drop-shadow(0 1px 0 rgba(0,0,0,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55))';
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
   ctx.clearRect(0, 0, size, size);

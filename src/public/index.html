@@ -2947,12 +2947,31 @@ function ensureBotModal() {
   document.body.insertAdjacentHTML('beforeend', BOT_MODAL_HTML);
 }
 
-function openBotModal() {
+function openBotModal(options = {}) {
   ensureBotModal();
   const modal = document.getElementById('bot-modal');
   if (!modal) return;
+  const initialElo = Number.isFinite(Number(options.elo)) ? Number(options.elo) : 1200;
   modal.style.display = 'flex';
-  updateBotEloDisplay(1200);
+  if (options.tab === 'elo') {
+    const slider = document.getElementById('bot-elo-slider');
+    if (slider) slider.value = String(initialElo);
+    setBotTab('elo');
+  } else {
+    setBotTab('preset');
+  }
+  updateBotEloDisplay(initialElo);
+}
+
+function consumePendingBotModal() {
+  if (sessionStorage.getItem('open_bot_modal') !== '1') return false;
+  const elo = parseInt(sessionStorage.getItem('bot_modal_elo') || '1200', 10);
+  const tab = sessionStorage.getItem('bot_modal_tab') || 'elo';
+  sessionStorage.removeItem('open_bot_modal');
+  sessionStorage.removeItem('bot_modal_elo');
+  sessionStorage.removeItem('bot_modal_tab');
+  setTimeout(() => openBotModal({ tab, elo }), 80);
+  return true;
 }
 
 function setBotTab(tab) {
@@ -3274,7 +3293,7 @@ function renderQueueBoostAlert(boost, coinBoost) {
 function startSiteStatsPolling() {
   clearInterval(siteStatsInterval);
   refreshSiteStats();
-  siteStatsInterval = setInterval(refreshSiteStats, 15000);
+  siteStatsInterval = setInterval(refreshSiteStats, 30000);
 }
 
 function stopSiteStatsPolling() {
@@ -3339,7 +3358,8 @@ async function refreshStoredPlayerForQueue() {
 
 async function connectAndQueue() {
   await refreshStoredPlayerForQueue();
-  socket = io({ transports: ['polling'] });
+  socket = window._presenceSocket || io({ transports: ['websocket', 'polling'] });
+  window._p4SharedSocket = socket;
   localStorage.setItem('last_active', Date.now());
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
   socket.on('identified',   (player) => {
@@ -3352,6 +3372,7 @@ async function connectAndQueue() {
       tokenEmojiImage: lsPlayer.token_emoji_image || '',
     });
   });
+  if (socket.connected) socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
   socket.on('queue_joined', ({ position, reason }) => {
     QueueMusic.start();
     showQueueView(position);
@@ -3492,13 +3513,19 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('input-pseudo').value = p.pseudo;
       // Auto-queue si la préférence est activée (défaut = true)
       const autoRejoin = localStorage.getItem('auto_rejoin');
-      if (autoRejoin === null || autoRejoin === 'true') {
+      const skipAutoQueue = sessionStorage.getItem('no_auto_queue') === '1';
+      if (skipAutoQueue) sessionStorage.removeItem('no_auto_queue');
+      if (consumePendingBotModal()) {
+        showLoggedInView(p);
+      } else if (!skipAutoQueue && (autoRejoin === null || autoRejoin === 'true')) {
         connectAndQueue();
       } else {
         // Afficher l'interface connectée sans rejoindre la queue
         showLoggedInView(p);
       }
     }
+  } else {
+    consumePendingBotModal();
   }
 });
 

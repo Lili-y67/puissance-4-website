@@ -4423,7 +4423,7 @@ async function refreshLiveBadge(playerId) {
 function startProfileLivePolling(playerId) {
   if (profileLivePoll) clearInterval(profileLivePoll);
   refreshLiveBadge(playerId);
-  profileLivePoll = setInterval(() => refreshLiveBadge(playerId), 10000);
+  profileLivePoll = setInterval(() => refreshLiveBadge(playerId), 15000);
 }
 
 // ── Simulateur ELO ───────────────────────────────────────────────────────────
