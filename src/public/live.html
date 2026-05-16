@@ -270,6 +270,9 @@ const SHAPE_CLIPS = {
 let socket = null;
 let prevIds = new Set();
 let selectedGameId = null;
+let liveAnalysisWorker = null;
+let liveAnalysisSignature = '';
+let liveAnalysisFallbackTimer = null;
 
 function parseShape(raw) {
   if (!raw) return { shape: 'circle', emoji: null };
@@ -536,6 +539,90 @@ function evaluatePosition(game) {
   return { p1Share, p2Share, p1Precision, p2Precision, threats1, threats2, note };
 }
 
+function applyLiveAnalysis(game, analysis, source = 'worker') {
+  if (!game || !analysis) return;
+  const p1 = game.players[1], p2 = game.players[2];
+  const clampPct = value => Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  const p1Chance = clampPct(analysis.p1Share ?? analysis.current?.p1WinPct ?? analysis.p1Precision ?? 50);
+  const p2Chance = clampPct(analysis.p2Share ?? analysis.current?.p2WinPct ?? analysis.p2Precision ?? (100 - p1Chance));
+  const p1Share = Math.max(4, Math.min(96, p1Chance));
+  const p2Share = Math.max(4, Math.min(96, 100 - p1Share));
+  const threats1 = Number.isFinite(Number(analysis.threats1)) ? Number(analysis.threats1) : countThreats(game.grid || [], 1);
+  const threats2 = Number.isFinite(Number(analysis.threats2)) ? Number(analysis.threats2) : countThreats(game.grid || [], 2);
+
+  document.getElementById('eval-p1').style.width = `${p1Share}%`;
+  document.getElementById('eval-p2').style.width = `${100 - p1Share}%`;
+  document.getElementById('precision-p1').textContent = `${p1Chance}%`;
+  document.getElementById('precision-p2').textContent = `${p2Chance}%`;
+  document.getElementById('threats-p1').textContent = String(threats1);
+  document.getElementById('threats-p2').textContent = String(threats2);
+  document.getElementById('eval-label-left').textContent = p1.pseudo;
+  document.getElementById('eval-label-right').textContent = p2.pseudo;
+
+  let note = analysis.note || 'Analyse de position active. La barre estime les chances actuelles sans reveler le meilleur coup.';
+  if (source === 'worker') {
+    const leader = p1Chance === p2Chance ? null : (p1Chance > p2Chance ? p1 : p2);
+    if (leader && Math.abs(p1Chance - p2Chance) >= 22) {
+      note = `${leader.pseudo} controle mieux la position selon l'analyse profonde.`;
+    } else if (threats1 || threats2) {
+      note = `Menaces detectees: ${p1.pseudo} ${threats1} / ${p2.pseudo} ${threats2}. La partie peut basculer vite.`;
+    }
+  }
+  document.getElementById('analysis-note').textContent = note;
+}
+
+function getLiveAnalysisSignature(game) {
+  const grid = (game.grid || []).map(row => (row || []).join('')).join('/');
+  return `${game.id}|${game.current}|${game.moves}|${grid}`;
+}
+
+function requestLiveWorkerAnalysis(game) {
+  const signature = getLiveAnalysisSignature(game);
+  if (signature === liveAnalysisSignature) return;
+  liveAnalysisSignature = signature;
+
+  const fallback = evaluatePosition(game);
+  applyLiveAnalysis(game, fallback, 'fallback');
+  clearTimeout(liveAnalysisFallbackTimer);
+  liveAnalysisFallbackTimer = setTimeout(() => {
+    if (liveAnalysisSignature === signature) {
+      const note = document.getElementById('analysis-note');
+      if (note) note.textContent = `${fallback.note} Analyse rapide affichee pendant le calcul profond.`;
+    }
+  }, 450);
+
+  if (liveAnalysisWorker) liveAnalysisWorker.terminate();
+  liveAnalysisWorker = new Worker('/analyse-worker.js');
+  liveAnalysisWorker.onmessage = event => {
+    if (liveAnalysisSignature !== signature) return;
+    if (event.data?.type !== 'position') return;
+    clearTimeout(liveAnalysisFallbackTimer);
+    const workerAnalysis = event.data.analysis || {};
+    const current = workerAnalysis.current || {};
+    applyLiveAnalysis(game, {
+      current,
+      p1Share: current.p1WinPct,
+      p2Share: current.p2WinPct,
+      threats1: countThreats(game.grid || [], 1),
+      threats2: countThreats(game.grid || [], 2),
+    }, 'worker');
+    liveAnalysisWorker?.terminate();
+    liveAnalysisWorker = null;
+  };
+  liveAnalysisWorker.onerror = () => {
+    clearTimeout(liveAnalysisFallbackTimer);
+    liveAnalysisWorker?.terminate();
+    liveAnalysisWorker = null;
+  };
+  liveAnalysisWorker.postMessage({
+    mode: 'position',
+    board: game.grid || [],
+    player: Number(game.current || 1),
+    depth: 8,
+    variantCount: 1,
+  });
+}
+
 function isWinCell(game, row, col) {
   return Array.isArray(game?.winCells) && game.winCells.some(cell => Number(cell?.[0]) === row && Number(cell?.[1]) === col);
 }
@@ -733,18 +820,7 @@ function renderSpec(game) {
     <div class="meta-pill">Statut <strong>${finished ? 'TERMINEE' : 'ACTIVE'}</strong></div>
   `;
 
-  const analysis = evaluatePosition(game);
-  const p1Precision = Math.max(0, Math.min(99, Number(analysis.p1Precision) || 0));
-  const p2Precision = Math.max(0, Math.min(99, Number(analysis.p2Precision) || 0));
-  document.getElementById('eval-p1').style.width = `${analysis.p1Share}%`;
-  document.getElementById('eval-p2').style.width = `${analysis.p2Share}%`;
-  document.getElementById('precision-p1').textContent = `${p1Precision}%`;
-  document.getElementById('precision-p2').textContent = `${p2Precision}%`;
-  document.getElementById('threats-p1').textContent = String(analysis.threats1);
-  document.getElementById('threats-p2').textContent = String(analysis.threats2);
-  document.getElementById('analysis-note').textContent = analysis.note;
-  document.getElementById('eval-label-left').textContent = p1.pseudo;
-  document.getElementById('eval-label-right').textContent = p2.pseudo;
+  requestLiveWorkerAnalysis(game);
 }
 
 async function refresh() {

@@ -9,6 +9,8 @@ const DEFAULT_SEQ_DEPTH = 8;
 const WIN_SCORE = 100000;
 let ACTIVE_DEPTH = DEFAULT_DEPTH;
 let ACTIVE_SEQ_DEPTH = DEFAULT_SEQ_DEPTH;
+let TT = new Map();
+let NODE_COUNT = 0;
 
 //  Plateau 
 function makeBoard()   { return Array.from({ length: ROWS }, () => new Int8Array(COLS)); }
@@ -25,6 +27,9 @@ function undrop(board, col) {
 }
 function validCols(board) {
   return [3,2,4,1,5,0,6].filter(c => board[0][c] === 0);
+}
+function boardKey(board, turn, depth) {
+  return `${turn}|${depth}|${board.map(row => Array.from(row).join('')).join('')}`;
 }
 function checkWin(board, player) {
   const P = player;
@@ -72,13 +77,28 @@ function countImmediateWins(board, player) {
   return count;
 }
 
+function orderedCols(board, player) {
+  const cols = validCols(board);
+  const opp = player === 1 ? 2 : 1;
+  return cols.map(col => {
+    drop(board, col, player);
+    const win = checkWin(board, player);
+    const oppWins = win ? 0 : countImmediateWins(board, opp);
+    const forks = win ? 0 : countImmediateWins(board, player);
+    undrop(board, col);
+    const centerBonus = 7 - Math.abs(3 - col);
+    return { col, score: (win ? 10000 : 0) + forks * 900 - oppWins * 1200 + centerBonus };
+  }).sort((a, b) => b.score - a.score).map(entry => entry.col);
+}
+
 function evaluate(board) {
   let score = 0;
-  const centerWeights = [3, 4, 5, 7, 5, 4, 3];
+  const centerWeights = [6, 9, 13, 18, 13, 9, 6];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (board[r][c] === 1) score += centerWeights[c];
-      if (board[r][c] === 2) score -= centerWeights[c];
+      const stability = (ROWS - r) * 2;
+      if (board[r][c] === 1) score += centerWeights[c] + stability;
+      if (board[r][c] === 2) score -= centerWeights[c] + stability;
     }
   }
   for (let r = 0; r < ROWS; r++)
@@ -95,19 +115,25 @@ function evaluate(board) {
       score += scoreWindow([board[r][c],board[r+1][c+1],board[r+2][c+2],board[r+3][c+3]], 1);
   const p1Wins = countImmediateWins(board, 1);
   const p2Wins = countImmediateWins(board, 2);
-  score += p1Wins * 420;
-  score -= p2Wins * 460;
-  if (p1Wins >= 2) score += 1200;
-  if (p2Wins >= 2) score -= 1400;
+  score += p1Wins * 900;
+  score -= p2Wins * 950;
+  if (p1Wins >= 2) score += 3500;
+  if (p2Wins >= 2) score -= 3700;
   return score;
 }
 
 //  Minimax 
 function minimax(board, depth, alpha, beta, isP1Turn) {
+  NODE_COUNT++;
   if (checkWin(board, 1)) return  WIN_SCORE + depth;
   if (checkWin(board, 2)) return -WIN_SCORE - depth;
   if (isFull(board) || depth === 0) return evaluate(board);
-  const cols = validCols(board);
+  const turn = isP1Turn ? 1 : 2;
+  const key = boardKey(board, turn, depth);
+  const cached = TT.get(key);
+  if (cached !== undefined) return cached;
+  const cols = orderedCols(board, turn);
+  let exact = true;
   if (isP1Turn) {
     let best = -Infinity;
     for (const col of cols) {
@@ -115,8 +141,9 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
       best = Math.max(best, minimax(board, depth-1, alpha, beta, false));
       undrop(board, col);
       alpha = Math.max(alpha, best);
-      if (beta <= alpha) break;
+      if (beta <= alpha) { exact = false; break; }
     }
+    if (exact && TT.size < 120000) TT.set(key, best);
     return best;
   } else {
     let best = Infinity;
@@ -125,8 +152,9 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
       best = Math.min(best, minimax(board, depth-1, alpha, beta, true));
       undrop(board, col);
       beta = Math.min(beta, best);
-      if (beta <= alpha) break;
+      if (beta <= alpha) { exact = false; break; }
     }
+    if (exact && TT.size < 120000) TT.set(key, best);
     return best;
   }
 }
@@ -155,7 +183,7 @@ function scoreToDisplayEval(absScore) {
 }
 
 function bestMove(board, player, depth = ACTIVE_DEPTH, variantCount = 3) {
-  const cols = validCols(board);
+  const cols = orderedCols(board, player);
   if (!cols.length) return null;
   const isP1 = player === 1;
   let bestCol = cols[0], bestScore = isP1 ? -Infinity : Infinity;
@@ -270,115 +298,79 @@ function classifyMove(player, playedScore, bestScore, availableCols, context, pl
   const swing = Math.max(0, bestPct - playedPct);
   const oppImmediateWins = playedState.oppImmediateWins || 0;
   const bestAllowsOppImmediateWins = playedState.bestAllowsOppImmediateWins || 0;
+  const playedAllowsDoubleThreat = oppImmediateWins >= 2 && bestAllowsOppImmediateWins < 2;
 
   if (oppImmediateWins > bestAllowsOppImmediateWins) {
+    if (playedAllowsDoubleThreat) return 'blunder';
     if (oppImmediateWins >= 2) return 'blunder';
-    if (swing >= 20) return 'blunder';
+    if (swing >= 18) return 'blunder';
     return 'mistake';
   }
 
-  if (context.type === 'must_block' && swing >= 40) return 'blunder';
-  if (context.type === 'win_available' && swing >= 30) return 'blunder';
-  if (swing >= 48) return 'blunder';
-  if (swing >= 30) return 'mistake';
+  if (context.type === 'must_block' && swing >= 28) return 'blunder';
+  if (context.type === 'win_available' && swing >= 20) return 'blunder';
+  if (swing >= 42) return 'blunder';
+  if (swing >= 24) return 'mistake';
 
-  if (loss <= 8 && swing <= 1)   return 'best';
-  if (loss <= 45 && swing <= 4)  return 'excellent';
-  if (loss <= 140 && swing <= 10) return 'good';
-  if (loss <= 320 && swing <= 18) return 'inaccuracy';
-  if (loss <= 900 && swing <= 34) return 'mistake';
+  if (swing <= 1.2 && loss <= 25) return 'best';
+  if (swing <= 3.5 && loss <= 85) return 'excellent';
+  if (swing <= 8) return 'good';
+  if (swing <= 15) return 'inaccuracy';
+  if (swing <= 28) return 'mistake';
   return 'blunder';
 }
 
-//  Precision - methode basee sur la perte relative 
-// Formule : 103.1668 * exp(-0.04354 * lossPct) - 3.1668 (inspiree de chess.com)
-// lossPct = perte en % de l'avantage max possible (3000)
+function clampAccuracy(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 100;
+}
+
+// Precision basee sur la perte de chances, plus stable que le score brut.
 function moveAccuracyScore(cls, loss, forced, swing = 0) {
-  if (forced) return 100; // coup force = neutre
-  if (cls === 'best')      return 100;
-  if (cls === 'excellent') return Math.max(92, 99 - swing);
-  if (cls === 'good')      return Math.max(78, 90 - swing * 1.2);
-  if (cls === 'inaccuracy')return Math.max(55, 78 - swing * 1.5);
-  if (cls === 'mistake')   return Math.max(22, 54 - swing * 1.1);
-  return Math.max(0, 18 - swing * 0.6 - loss / 250); // blunder
+  if (forced) return 100;
+  if (cls === 'best') return 100;
+  const lossPenalty = Math.min(18, Math.log10(Math.max(1, Number(loss || 0))) * 4.2);
+  const chanceAccuracy = 100 * Math.exp(-Math.pow(Math.max(0, swing) / 18, 1.35));
+  const classFloor = {
+    excellent: 91,
+    good: 76,
+    inaccuracy: 54,
+    mistake: 24,
+    blunder: 0,
+  }[cls] ?? 0;
+  const classCeil = {
+    excellent: 99,
+    good: 91,
+    inaccuracy: 79,
+    mistake: 58,
+    blunder: 35,
+  }[cls] ?? 100;
+  return clampAccuracy(Math.max(classFloor, Math.min(classCeil, chanceAccuracy - lossPenalty)));
 }
 
 function calcAccuracy(scores) {
   if (!scores.length) return 100;
   const total = scores.reduce((a, s) => a + s.accScore, 0);
-  return Math.min(100, Math.round(total / scores.length));
+  const value = Number(total / scores.length);
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 100;
 }
 
-//  Commentaires 
-function generateComment(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
-  const turn = Math.floor(moveIndex / 2) + 1;
-  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol+1} etait meilleure.` : '';
-
-  // Coup force
-  if (cls === 'forced') return `Seul coup disponible - coup joue automatiquement.`;
-
-  // Contexte special
-  if (context.type === 'win_available' && cls === 'blunder')
-    return `Victoire en main a la col.${context.col+1} - mais rate ! Gaffe decisive.`;
-  if (context.type === 'must_block' && context.count > 1 && cls === 'blunder')
-    return `Double menace adverse impossible a bloquer - position perdue.`;
-  if (context.type === 'must_block' && cls === 'blunder')
-    return `Blocage obligatoire ignore - l'adversaire gagne maintenant.${hint}`;
-
-  switch(cls) {
-    case 'best':
-      return ['Coup parfait.', "L'IA aurait joue pareil.", 'Exactement le bon choix.'][moveIndex % 3];
-    case 'excellent':
-      return ['Tres bon coup, quasi optimal.', 'Solide - pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
-    case 'good':
-      return ['Bon coup, legere amelioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
-    case 'inaccuracy':
-      return `Legere imprecision, la position glisse de ${swing}% environ.${hint}`;
-    case 'mistake':
-      return turn <= 4 ? `Erreur en ouverture - difficile a rattraper.${hint}` : `Erreur nette, l'avantage chute de ${swing}% environ.${hint}`;
-    case 'blunder':
-      return turn <= 3 ? `Gaffe des l'ouverture !${hint}` : `Gaffe decisive, la position s'effondre de ${swing}% environ.${hint}`;
-    default: return '';
-  }
+function currentAbsScore(board) {
+  if (checkWin(board, 1)) return WIN_SCORE;
+  if (checkWin(board, 2)) return -WIN_SCORE;
+  if (isFull(board)) return 0;
+  return evaluate(board);
 }
 
-function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, availableCols, swing) {
-  const turn = Math.floor(moveIndex / 2) + 1;
-  const hint = (bestCol !== playedCol && cls !== 'forced') ? ` Colonne ${bestCol + 1} etait meilleure.` : '';
-
-  if (cls === 'forced') return `Seul coup disponible, coup joue automatiquement.`;
-  if (context.type === 'win_available' && cls === 'blunder')
-    return `Victoire en main a la col.${context.col + 1}, mais ratee. Gaffe decisive.`;
-  if (context.type === 'must_block' && context.count > 1 && cls === 'blunder')
-    return `Double menace adverse impossible a bloquer, position perdue.`;
-  if (context.type === 'must_block' && cls === 'blunder')
-    return `Blocage obligatoire ignore, l'adversaire gagne maintenant.${hint}`;
-
-  switch(cls) {
-    case 'best':
-      return ['Coup parfait.', "L'IA aurait joué pareil.", 'Exactement le bon choix.'][moveIndex % 3];
-    case 'excellent':
-      return ['Très bon coup, quasi optimal.', 'Solide a" pratiquement le meilleur.', 'Bonne lecture de position.'][moveIndex % 3];
-    case 'good':
-      return ['Bon coup, légère amélioration possible.', 'Correct mais il y avait mieux.', `Position solide.${hint}`][moveIndex % 3];
-    case 'inaccuracy':
-      return `Légère imprécision, tu perds environ ${swing}% de chances.${hint}`;
-    case 'mistake':
-      return turn <= 4 ? `Erreur en ouverture a" difficile à  rattraper.${hint}` : `Erreur nette, tu perds environ ${swing}% de chances.${hint}`;
-    case 'blunder':
-      return turn <= 3 ? `Gaffe dès l'ouverture !${hint}` : `Gaffe décisive, tu abandonnes environ ${swing}% de chances.${hint}`;
-    default:
-      return '';
-  }
-}
-
-//  Analyse principale 
 function analyzePosition(boardInput, player, depth = DEFAULT_DEPTH, variantCount = 3) {
   ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
   ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  TT = new Map();
+  NODE_COUNT = 0;
   const board = boardInput.map(row => Int8Array.from(row));
+  const currentScore = currentAbsScore(board);
   const analysis = bestMove(board, player, ACTIVE_DEPTH, variantCount);
-  const currentScore = evaluate(board);
+  const p1WinPct = scoreToWinPct(currentScore);
   return {
     player,
     depth: ACTIVE_DEPTH,
@@ -386,11 +378,12 @@ function analyzePosition(boardInput, player, depth = DEFAULT_DEPTH, variantCount
       score: currentScore,
       eval: scoreToDisplayEval(currentScore),
       bar: toBar(currentScore),
-      p1WinPct: scoreToWinPct(currentScore),
-      p2WinPct: 100 - scoreToWinPct(currentScore),
+      p1WinPct,
+      p2WinPct: 100 - p1WinPct,
     },
     bestCol: analysis?.col ?? null,
     variants: analysis?.variants || [],
+    meta: { nodes: NODE_COUNT, tableSize: TT.size },
   };
 }
 
@@ -433,6 +426,8 @@ self.onmessage = function(e) {
   const { moves, depth = DEFAULT_DEPTH, variantCount = 3, mode, board: boardInput, player: positionPlayer } = e.data;
   ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
   ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  TT = new Map();
+  NODE_COUNT = 0;
   if (mode === 'position') {
     self.postMessage({ type: 'position', analysis: analyzePosition(boardInput || makeBoard(), Number(positionPlayer || 1), ACTIVE_DEPTH, variantCount) });
     return;
@@ -492,9 +487,7 @@ self.onmessage = function(e) {
 
       // Score APRES le coup joue
       drop(board, playedCol, player);
-      const postScore = checkWin(board, player)
-        ? (player === 1 ? 100000 : -100000)
-        : (isFull(board) ? 0 : evaluate(board));
+      const postScore = currentAbsScore(board);
       undrop(board, playedCol);
 
       const evalCP  = toCentipawns(postScore);
@@ -518,9 +511,7 @@ self.onmessage = function(e) {
     results.push(result);
     drop(board, playedCol, player);
 
-    const postScore2 = checkWin(board, player)
-      ? (player === 1 ? 100000 : -100000)
-      : (isFull(board) ? 0 : evaluate(board));
+    const postScore2 = currentAbsScore(board);
     evalHistory.push({ moveIndex:i, player, score:toBar(postScore2), cp:toCentipawns(postScore2) });
 
     self.postMessage({ type:'progress', moveIndex:i, total:moves.length, result });
@@ -530,6 +521,6 @@ self.onmessage = function(e) {
   self.postMessage({
     type: 'done', results, evalHistory,
     accuracy: { p1: calcAccuracy(p1Scores), p2: calcAccuracy(p2Scores) },
-    meta: { depth: ACTIVE_DEPTH, variantCount }
+    meta: { depth: ACTIVE_DEPTH, variantCount, nodes: NODE_COUNT, tableSize: TT.size }
   });
 };

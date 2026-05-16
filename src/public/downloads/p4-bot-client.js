@@ -77,6 +77,14 @@ function formatPv(pv) {
   return Array.isArray(pv) && pv.length ? pv.map(col => `c${col + 1}`).join(' -> ') : '-';
 }
 
+function formatCandidates(candidates) {
+  if (!Array.isArray(candidates) || !candidates.length) return '-';
+  return candidates
+    .slice(0, 4)
+    .map(entry => `c${Number(entry.col) + 1}:${formatSignedCp(entry.cp || 0)}`)
+    .join(' | ');
+}
+
 function formatSignedCp(cp) {
   const value = Number(cp || 0);
   if (Math.abs(value) >= 100000) return value > 0 ? '+M' : '-M';
@@ -119,11 +127,20 @@ function scoreToCentipawns(score) {
   return Math.max(-5000, Math.min(5000, Math.round(score)));
 }
 
+function scoreToWinPct(score) {
+  if (!Number.isFinite(score)) return 50;
+  if (score >= 900_000) return 100;
+  if (score <= -900_000) return 0;
+  const normalized = Math.tanh(Math.max(-5000, Math.min(5000, score)) / 1150);
+  return Math.round(((normalized + 1) / 2) * 100);
+}
+
 function renderEngineReport(game, col, stats, shownBoard = game.board) {
   const elapsed = Math.max(1, Number(stats.elapsedMs || 1));
   const nodes = Number(stats.nodes || 0);
   const nps = Math.round(nodes / (elapsed / 1000));
   const cp = stats.centipawns ?? scoreToCentipawns(stats.score || 0);
+  const winPct = scoreToWinPct(cp);
   const lines = [
     '',
     '============================================================',
@@ -132,6 +149,7 @@ function renderEngineReport(game, col, stats, shownBoard = game.board) {
     `${color('Coup', '97;1')}              : c${Number(col) + 1} (${moveNumber(game)})`,
     `${color('Source', '97;1')}            : Engine${stats.tactical ? ` / ${stats.tactical}` : ''}`,
     `${color('Evaluation', '97;1')}        : ${colorEval(cp)} (${cp} cp)`,
+    `${color('Chance estimee', '97;1')}    : ${winPct}%`,
     `${color('Depth', '97;1')}             : ${stats.depth || 0}/${MAX_DEPTH}${stats.timeout ? ` ${color('timeout', '91;1')}` : ''}`,
     `Nodes             : ${nodes.toLocaleString('fr-FR')}`,
     `Nodes/seconde     : ${nps.toLocaleString('fr-FR')}`,
@@ -140,6 +158,7 @@ function renderEngineReport(game, col, stats, shownBoard = game.board) {
     `Table             : ${Number(stats.tableSize || 0).toLocaleString('fr-FR')} / ${MAX_TABLE.toLocaleString('fr-FR')}`,
     `Temps calcul      : ${elapsed} ms`,
     `CP -> Futurs coups: ${formatPv(stats.pv)}`,
+    `Candidats         : ${formatCandidates(stats.candidates)}`,
     '------------------------------------------------------------',
     formatBoard(shownBoard),
     '============================================================',
@@ -274,10 +293,12 @@ function scoreWindow(values, me) {
   const empty = values.filter(v => v === 0).length;
   if (mine === 4) return 1_000_000;
   if (theirs === 4) return -1_000_000;
-  if (mine === 3 && empty === 1) return 120;
-  if (mine === 2 && empty === 2) return 24;
-  if (theirs === 3 && empty === 1) return -145;
-  if (theirs === 2 && empty === 2) return -28;
+  if (mine === 3 && empty === 1) return 260;
+  if (mine === 2 && empty === 2) return 42;
+  if (mine === 1 && empty === 3) return 5;
+  if (theirs === 3 && empty === 1) return -310;
+  if (theirs === 2 && empty === 2) return -48;
+  if (theirs === 1 && empty === 3) return -6;
   return 0;
 }
 
@@ -296,13 +317,15 @@ function evaluate(board, me) {
   const opp = me === 1 ? 2 : 1;
   const center = board.map(row => row[3]).filter(v => v === me).length;
   const oppCenter = board.map(row => row[3]).filter(v => v === opp).length;
-  score += center * 14;
-  score -= oppCenter * 12;
+  score += center * 30;
+  score -= oppCenter * 26;
 
   const myThreats = countThreats(board, me);
   const oppThreats = countThreats(board, opp);
-  score += myThreats * 180;
-  score -= oppThreats * 220;
+  score += myThreats * 700;
+  score -= oppThreats * 820;
+  if (myThreats >= 2) score += 2400;
+  if (oppThreats >= 2) score -= 2700;
 
   // Slight preference for lower stable pieces.
   for (let r = 0; r < 6; r++) {
@@ -332,6 +355,20 @@ function orderedMoves(board, moves = legalMoves(board)) {
   return centerOrder.filter(col => moves.includes(col));
 }
 
+function orderedMovesFor(board, player, moves = legalMoves(board)) {
+  const opp = player === 1 ? 2 : 1;
+  return moves.map(col => {
+    const row = drop(board, col, player);
+    if (row < 0) return { col, score: -Infinity };
+    const win = checkWin(board, row, col, player);
+    const myThreats = win ? 0 : countThreats(board, player);
+    const oppThreats = win ? 0 : countThreats(board, opp);
+    undoDrop(board, row, col);
+    const centerBonus = 8 - Math.abs(3 - col);
+    return { col, score: (win ? 100000 : 0) + myThreats * 1000 - oppThreats * 1400 + centerBonus };
+  }).sort((a, b) => b.score - a.score).map(entry => entry.col);
+}
+
 function moveAllowsImmediateLoss(board, col, me) {
   const opp = me === 1 ? 2 : 1;
   const row = drop(board, col, me);
@@ -348,7 +385,7 @@ function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, 
     return evaluate(board, me);
   }
 
-  const moves = orderedMoves(board);
+  const moves = orderedMovesFor(board, currentPlayer);
   if (depth <= 0 || !moves.length || isFull(board)) return evaluate(board, me);
 
   const key = boardKey(board, currentPlayer, depth);
@@ -361,6 +398,7 @@ function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, 
   const maximizing = currentPlayer === me;
   const nextPlayer = currentPlayer === 1 ? 2 : 1;
   let bestScore = maximizing ? -Infinity : Infinity;
+  let exact = true;
 
   for (const col of moves) {
     const row = drop(board, col, currentPlayer);
@@ -383,12 +421,13 @@ function minimax(board, depth, alpha, beta, currentPlayer, me, deadline, table, 
     }
     if (beta <= alpha) {
       stats.prunes++;
+      exact = false;
       break;
     }
     if (stats.timeout) break;
   }
 
-  if (table.size < MAX_TABLE) table.set(key, bestScore);
+  if (exact && table.size < MAX_TABLE) table.set(key, bestScore);
   return bestScore;
 }
 
@@ -467,7 +506,7 @@ async function chooseMove(game) {
   }
 
   const safeMoves = moves.filter(col => !moveAllowsImmediateLoss(board, col, me));
-  const moveOrder = orderedMoves(board, safeMoves.length ? safeMoves : moves);
+  const moveOrder = orderedMovesFor(board, me, safeMoves.length ? safeMoves : moves);
   let best = moveOrder[0] ?? moves[0];
   let bestScore = -Infinity;
   const depthReports = [];
@@ -488,12 +527,16 @@ async function chooseMove(game) {
       }
     }
     if (!stats.timeout) {
+      const candidates = results
+        .map(result => ({ col: Number(result.col), cp: scoreToCentipawns(Number(result.score || 0)) }))
+        .sort((a, b) => b.cp - a.cp);
       best = depthBest;
       bestScore = depthBestScore;
       stats.depth = depth;
       stats.score = bestScore;
       stats.centipawns = scoreToCentipawns(bestScore);
       stats.pv = principalVariation(board, best, me, Math.min(8, depth + 1));
+      stats.candidates = candidates;
       stats.tableSize = table.size;
       depthReports.push({ depth, best, cp: stats.centipawns, pv: [...stats.pv], nodes: stats.nodes, prunes: stats.prunes, cacheHits: stats.cacheHits });
       if (LOG_SEARCH) {
