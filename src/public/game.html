@@ -717,12 +717,13 @@ function setCardElo(side, value) {
   } else if (activeMoveTimeSeconds > 0) {
     badge.textContent = `Classique Â· ${activeMoveTimeSeconds}s / coup`;
     badge.classList.add('show');
-  } else {
+  }
+  else 
+  {
     el.dataset.elo = '';
-    el.textContent = String(value || 'â€” ELO');
+    el.textContent = String(value || '-- ELO');
   }
 }
-
 function getCardElo(side) {
   const el = document.getElementById('elo-p' + side);
   if (!el) return null;

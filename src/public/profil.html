@@ -201,7 +201,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 
 @keyframes slide-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-/* â”€â”€ Profile header â”€â”€ */
+/* ── Profile header ── */
 .profile-header{
   position:relative;
   background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);border:1px solid var(--border);border-radius:28px;
@@ -341,7 +341,7 @@ input[type="file"]{display:none;}
 .profile-elo{font-family:Barlow Condensed,sans-serif;font-size:62px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;line-height:.9;}
 .profile-elo-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:right;margin-top:4px;}
 
-/* â”€â”€ Social counts â”€â”€ */
+/* ── Social counts ── */
 .social-row{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;
   animation:slide-in 0.5s 0.05s cubic-bezier(0.22,1,0.36,1) both;
@@ -449,7 +449,7 @@ input[type="file"]{display:none;}
 .elo-history-stat strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;}
 .elo-history-stat span{display:block;margin-top:2px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
 
-/* â”€â”€ Stats â”€â”€ */
+/* ── Stats ── */
 .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;animation:slide-in 0.5s 0.1s cubic-bezier(0.22,1,0.36,1) both;}
 .stat-card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px 14px;text-align:center;display:flex;flex-direction:column;gap:6px;transition:all 0.2s;box-shadow:0 16px 34px rgba(0,0,0,.18);position:relative;overflow:hidden;}
 .stat-card::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(145deg,rgba(255,255,255,.05),transparent 42%)}
@@ -473,16 +473,16 @@ input[type="file"]{display:none;}
 .wr-bar{height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
 .wr-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow));transition:width 1s cubic-bezier(0.22,1,0.36,1);}
 
-/* â”€â”€ Tabs â”€â”€ */
+/* ── Tabs ── */
 .tabs-row{display:flex;gap:4px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015)),var(--surface2);border-radius:14px;padding:5px;animation:slide-in 0.5s 0.2s cubic-bezier(0.22,1,0.36,1) both;border:1px solid rgba(255,255,255,.06);box-shadow:0 14px 32px rgba(0,0,0,.16);}
 .tab{flex:1;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:8px;border-radius:7px;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all 0.2s;}
 .tab.active{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02)),var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.3),0 0 20px rgba(76,110,245,.08);}
 
-/* â”€â”€ Tab panels â”€â”€ */
+/* ── Tab panels ── */
 .tab-panel{display:none;animation:slide-in 0.3s cubic-bezier(0.22,1,0.36,1) both;}
 .tab-panel.show{display:flex;flex-direction:column;gap:6px;}
 
-/* â”€â”€ History rows â”€â”€ */
+/* ── History rows ── */
 .game-row{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;min-height:74px;display:flex;align-items:center;gap:16px;cursor:pointer;text-decoration:none;color:var(--text);transition:all 0.2s;}
 .game-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
 .game-result{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
@@ -504,7 +504,7 @@ input[type="file"]{display:none;}
 .pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .pg-btn:disabled{opacity:0.3;cursor:not-allowed;}
 
-/* â”€â”€ Player rows (following/followers) â”€â”€ */
+/* ── Player rows (following/followers) ── */
 .player-row{
   background:var(--surface);border:1px solid var(--border);border-radius:12px;
   padding:12px 16px;display:flex;align-items:center;gap:12px;
@@ -528,7 +528,7 @@ input[type="file"]{display:none;}
 
 .empty-state{text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;}
 
-/* â”€â”€ Color picker card â”€â”€ */
+/* ── Color picker card ── */
 .color-card{
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:20px;
   padding:18px 20px;display:flex;flex-direction:column;gap:14px;
@@ -566,7 +566,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .btn-save-color:disabled{opacity:0.5;cursor:not-allowed;}
 .save-confirm{font-size:12px;color:var(--green);opacity:0;transition:opacity 0.3s;}
 
-/* â”€â”€ Shape picker â”€â”€ */
+/* ── Shape picker ── */
 .shape-card{
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:20px;
   padding:18px 20px;display:flex;flex-direction:column;gap:14px;
@@ -660,7 +660,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .avatar-decoration-modal-head{align-items:center}
 }
 
-/* â”€â”€ Search bar â”€â”€ */
+/* ── Search bar ── */
 .search-wrap{
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:20px;
   padding:18px 20px;display:flex;flex-direction:column;gap:12px;
@@ -797,7 +797,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .ac-item{padding:11px 12px;}
 }
 
-/* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile ───────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .page { padding: 14px 12px 36px; max-width: 100%; }
   .profile-shell{grid-template-columns:1fr;}
@@ -1029,7 +1029,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 </div>
 
 <script>
-// â”€â”€ Audio Profil â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Audio Profil ──────────────────────────────────────────────────────────────
 const PROFIL_SFX = (() => {
   let ctx = null;
   function getCtx() {
@@ -1491,12 +1491,12 @@ async function load() {
     }, 15000);
 
     // Charger le statut en ligne (tous les profils)
-    // Exposer pour que presence.js rappelle aprÃ¨s identified
+    // Exposer pour que presence.js rappelle après identified
     window._reloadStatus = () => loadStatus(freshPlayer.id);
     loadStatus(freshPlayer.id);
     startProfileLivePolling(freshPlayer.id);
 
-    // Charger les infos Discord si profil own + discord liÃ©
+    // Charger les infos Discord si profil own + discord lié
     if (isOwnProfile && freshPlayer.discord_id) {
       loadDiscordInfo();
     }
@@ -2640,7 +2640,7 @@ window.addEventListener('resize', () => {
   if (lastEloHistoryData) requestAnimationFrame(() => drawEloHistory(lastEloHistoryData));
 });
 
-// â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Tabs ──────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   ['history','following','followers'].forEach(t => {
     document.getElementById('tab-' + t)?.classList.toggle('active', t === name);
@@ -2680,7 +2680,7 @@ function initProfileSectionMenu() {
   setActive(sections[0].id);
 }
 
-// â”€â”€ Follow / Unfollow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Follow / Unfollow ─────────────────────────────────────────────────────────
 async function toggleFollow(targetId) {
   if (!viewerPlayer) return location.href = '/';
   const btn = document.getElementById('btn-follow');
@@ -2705,8 +2705,8 @@ async function toggleFollow(targetId) {
   }
 }
 
-// â”€â”€ Render helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ Pagination des parties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Render helpers ────────────────────────────────────────────────────────────
+// ── Pagination des parties ───────────────────────────────────────────────────
 const GAMES_PER_PAGE = 10;
 let _gamesData = [];
 let _gamesPlayer = null;
@@ -2824,7 +2824,7 @@ function renderPlayers(players, emptyMsg) {
   }).join('');
 }
 
-// â”€â”€ Banner upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Banner upload ─────────────────────────────────────────────────────────────
 function getUploadInput(target) {
   return target === 'banner' ? document.getElementById('banner-input') : document.getElementById('avatar-input');
 }
@@ -3467,8 +3467,8 @@ function resizeImage(dataUrl, maxSize) {
   });
 }
 
-// â”€â”€ DÃ©connexion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ Fermeture de compte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Déconnexion ───────────────────────────────────────────────────────────────
+// ── Fermeture de compte ───────────────────────────────────────────────────────
 function confirmCloseAccount() {
   const modal = document.createElement('div');
   modal.id = 'delete-modal';
@@ -3514,8 +3514,8 @@ function logout() {
   window.location.href = '/';
 }
 
-// â”€â”€ Recherche joueur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ Autocomplete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Recherche joueur ──────────────────────────────────────────────────────────
+// ── Autocomplete ──────────────────────────────────────────────────────────────
 let _acTimer = null;
 let _acIndex = -1;
 let _acResults = [];
@@ -3589,7 +3589,7 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.search-row')) document.getElementById('autocomplete-list').style.display = 'none';
 });
 
-// â”€â”€ Boost VIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Boost VIP ──────────────────────────────────────────────────────────────────
 async function initVipBoostUI() {
   const wrap = document.getElementById('vip-boost-wrap');
   if (!wrap) return;
@@ -3666,7 +3666,7 @@ function openOwnedBooster(kind) {
     : `Tu as ${counts.coins} booster(s) Coins dans ton inventaire.`);
 }
 
-// â”€â”€ Auto-rejoin toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Auto-rejoin toggle ────────────────────────────────────────────────────────
 function initAutoRejoinToggle() {
   const toggle = document.getElementById('auto-rejoin-toggle');
   if (!toggle) return;
@@ -3734,7 +3734,7 @@ async function searchPlayer() {
   }
 }
 
-// â”€â”€ Color picker (propre profil) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Color picker (propre profil) ─────────────────────────────────────────────
 const COLOR_PRESETS = [
   '#ff2d55','#ffd60a','#30d158','#0a84ff','#bf5af2','#ff9f0a','#00c7be','#ff375f',
 ];
@@ -3813,7 +3813,7 @@ function hexToRgb(hex) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-// â”€â”€ Shape picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Shape picker ──────────────────────────────────────────────────────────────
 const SHAPES = [
   { id: 'circle',   label: '●' },
   { id: 'triangle', label: '▲' },
@@ -4510,7 +4510,7 @@ async function toggleAdminPwd() {
   btn.textContent    = 'Masquer';
 }
 
-// â”€â”€ Statut en ligne â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Statut en ligne ──────────────────────────────────────────────────────────
 function formatLastSeen(ts) {
   if (!ts) return 'Jamais connecté';
   const diff = Date.now() - ts;
@@ -4594,7 +4594,7 @@ function startProfileLivePolling(playerId) {
   profileLivePoll = setInterval(() => refreshLiveBadge(playerId), 10000);
 }
 
-// â”€â”€ Simulateur ELO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Simulateur ELO ───────────────────────────────────────────────────────────
 // Table des rangs (miroir de rank.js côté client)
 const RANKS_SIM = [
   { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
@@ -4685,7 +4685,7 @@ function linkDiscord() {
   window.location.href = '/auth/discord/link?playerId=' + me.id;
 }
 
-// â”€â”€ Discord Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Discord Info ─────────────────────────────────────────────────────────────
 let lastBotToken = '';
 let lastBotActivationCurl = '';
 
@@ -4895,7 +4895,7 @@ async function loadDiscordInfo() {
   }
 }
 
-// â”€â”€ DÃ©liaison Discord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Déliaison Discord ────────────────────────────────────────────────────────
 async function requestUnlink() {
   const btn = document.getElementById('btn-unlink');
   if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours...'; }

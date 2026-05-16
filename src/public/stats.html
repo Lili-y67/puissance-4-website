@@ -522,23 +522,26 @@ body{
 }
 @media (max-width:640px){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
+  *,*::before,*::after{max-width:100%;box-sizing:border-box}
   .page{width:100%;max-width:100%;padding:18px 12px 40px;overflow:hidden}
   .brand{font-size:34px}
   .hero{padding:20px}
-  .hero-copy h1{font-size:42px}
+  .hero-copy h1{font-size:clamp(36px,15vw,42px);overflow-wrap:anywhere}
   .section-grid,.metrics,.progress-grid,.weekly-kpis,.week-strip,.week-stats{grid-template-columns:1fr}
   .summary-value{font-size:44px}
   .panel-title{font-size:28px}
   .topbar{justify-content:center;align-items:stretch;gap:12px}
   .brand-wrap{width:100%;align-items:center;text-align:center}
+  .brand{justify-content:center;text-align:center}
   .top-actions{display:grid;width:100%;grid-template-columns:1fr 1fr;justify-content:stretch}
   .top-actions .nav-btn{width:100%;min-width:0}
-  .hero-badges{justify-content:center}
-  .hero-badge{width:100%;justify-content:center;text-align:center}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+  .hero-badges{display:grid;grid-template-columns:1fr;justify-content:center;width:100%}
+  .hero-badge{width:100%;justify-content:center;text-align:center;white-space:normal}
   .hero-stat-top{flex-direction:column;align-items:flex-start}
   .hero-stat-card{padding:16px}
-  .hero-grid,.section-grid,.panel,.summary-card,.metric,.week-card,.chart-card{min-width:0}
-  .chart-wrap,.chart-card,.panel{width:100%;max-width:100%;overflow:hidden}
+  .hero-grid,.section-grid,.panel,.summary-card,.metric,.week-card,.chart-card,.hero-stat-card{min-width:0;width:100%}
+  .chart-wrap,.chart-card,.panel,.weekly-list,.best-list{width:100%;max-width:100%;overflow:hidden}
   .ticker-track{gap:18px;padding:10px 12px}
   .ticker-item{font-size:12px}
   .summary-card{min-height:132px;padding:16px}
@@ -550,6 +553,7 @@ body{
 @media (max-width:460px){
   .page{padding:14px 10px 32px}
   .brand{font-size:28px}
+  .brand img{width:38px!important;height:38px!important;border-radius:12px!important}
   .brand-kicker{font-size:11px;letter-spacing:3px}
   .top-actions{grid-template-columns:1fr}
   .top-actions .nav-btn{width:100%;padding:11px 12px}

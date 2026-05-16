@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-/* â”€â”€ Reset & Base â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Reset & Base ───────────────────────────────────────────────────────────── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -36,7 +36,7 @@ html, body {
   text-size-adjust: 100%;
 }
 
-/* â”€â”€ Animated background grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Animated background grid ───────────────────────────────────────────────── */
 .bg-grid {
   position: fixed;
   inset: 0;
@@ -149,7 +149,7 @@ html, body {
   );
 }
 
-/* â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
 .page {
   position: relative;
   z-index: 2;
@@ -246,7 +246,7 @@ html, body {
   background: rgba(255,255,255,0.06);
 }
 
-/* â”€â”€ Hero â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Hero ───────────────────────────────────────────────────────────────────── */
 .hero {
   position: relative;
   grid-area: hero;
@@ -641,7 +641,7 @@ html, body {
   50%{transform:scale(1.12);box-shadow:0 0 0 8px rgba(179,107,255,0.08),0 0 14px rgba(179,107,255,0.24);}
 }
 
-/* â”€â”€ Board decoration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Board decoration ───────────────────────────────────────────────────────── */
 .board-deco {
   --board-cell: clamp(24px, 2vw, 28px);
   display: grid;
@@ -662,7 +662,7 @@ html, body {
 .board-deco-cell.r { background: var(--red); border-color: var(--red); box-shadow: 0 0 8px var(--red-glow); }
 .board-deco-cell.y { background: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 8px var(--yel-glow); }
 
-/* â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Card ───────────────────────────────────────────────────────────────────── */
 .card {
   position: relative;
   grid-area: card;
@@ -736,7 +736,7 @@ html, body {
   align-items: center;
 }
 
-/* â”€â”€ Input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Input ──────────────────────────────────────────────────────────────────── */
 .input-wrap {
   position: relative;
   width: 100%;
@@ -768,7 +768,7 @@ html, body {
 }
 .input::placeholder { color: var(--muted); font-weight: 400; }
 
-/* â”€â”€ Divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Divider ────────────────────────────────────────────────────────────────── */
 .divider {
   display: flex;
   align-items: center;
@@ -787,7 +787,7 @@ html, body {
   background: var(--border);
 }
 
-/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Buttons ────────────────────────────────────────────────────────────────── */
 .btn {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: clamp(14px, 1.25vw, 17px);
@@ -876,7 +876,7 @@ html, body {
   }
 }
 
-/* â”€â”€ Stats strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Stats strip ────────────────────────────────────────────────────────────── */
 .stats-strip {
   display: flex;
   gap: 1px;
@@ -912,7 +912,7 @@ html, body {
 .stat-item.elo .stat-val { color: var(--yellow); }
 .stat-item.wins .stat-val { color: var(--red); }
 
-/* â”€â”€ Queue state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Queue state ────────────────────────────────────────────────────────────── */
 .queue-inner {
   display: flex;
   flex-direction: column;
@@ -1260,7 +1260,7 @@ html, body {
 }
 .duel-dialog-actions .btn { flex: 1; min-width: 140px; }
 
-/* â”€â”€ Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Links ──────────────────────────────────────────────────────────────────── */
 .link {
   text-align: center;
   font-size: 12px;
@@ -1274,7 +1274,7 @@ html, body {
 }
 .link a:hover { text-decoration: underline; }
 
-/* â”€â”€ Error message â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Error message ──────────────────────────────────────────────────────────── */
 .error-msg {
   font-size: 12px;
   color: var(--red);
@@ -1284,7 +1284,7 @@ html, body {
   letter-spacing: 0.3px;
 }
 
-/* â”€â”€ Transitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Transitions ────────────────────────────────────────────────────────────── */
 .fade-out {
   animation: fadeOut 0.25s ease forwards;
 }
@@ -1299,7 +1299,7 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* â”€â”€ Auth tabs â”€â”€ */
+/* ── Auth tabs ── */
 .auth-tabs { display:flex; gap:4px; background:var(--surface2); border-radius:10px; padding:4px; width:100%; }
 .auth-tab {
   flex:1; font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700;
@@ -1335,7 +1335,7 @@ html, body {
   width:34px; height:34px; padding:0; border:none; background:transparent; cursor:pointer;
 }
 
-/* â”€â”€ Theme / Color picker â”€â”€ */
+/* ── Theme / Color picker ── */
 
 /* Side quick menu */
 .side-quick-menu {
@@ -2012,16 +2012,18 @@ html, body {
     justify-content: center;
   }
   .site-online-badge,
+  .site-bots-online-badge,
   .site-games-badge,
   .site-visitor-badge,
-  .site-registered-badge{
+  .site-registered-badge,
+  .site-bots-badge{
     width: 100%;
     justify-content: center;
     text-align: center;
   }
 }
 
-/* â”€â”€ IA overlay â”€â”€ */
+/* ── IA overlay ── */
 </style>
 </head>
 <body>
@@ -2394,7 +2396,7 @@ html, body {
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// Sons lÃ©gers sur index
+// Sons légers sur index
 const SFX = (() => {
   let ctx = null;
   function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); return ctx; }
@@ -2414,9 +2416,9 @@ const SFX = (() => {
   };
 })();
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 //  DECORATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 const DECO = [0,0,0,0,0,0,0, 0,0,'r','y','r',0,0, 0,'r','y','r','y','r',0];
 const decoEl = document.getElementById('board-deco');
 DECO.forEach(v => {
@@ -2440,9 +2442,9 @@ function spawnTokens() {
 }
 spawnTokens();
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 //  AUTH TABS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 let authMode = 'login'; // 'login' | 'register'
 const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#00c7be', '#ff375f'];
 let selectedRegisterColor = '#ff2d55';
@@ -2507,9 +2509,9 @@ function rgbToHex(rgb) {
   return '#' + match.slice(0, 3).map(v => Number(v).toString(16).padStart(2, '0')).join('');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 //  AUTH (login / register)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('view-login').style.display !== 'none') handleAuth();
 });
@@ -2546,7 +2548,7 @@ async function handleAuth() {
       document.getElementById('btn-play-txt').textContent = origTxt;
       return;
     }
-    // Extraire et sauvegarder le token sÃ©parÃ©ment
+    // Extraire et sauvegarder le token séparément
     const { token, ...playerData } = data;
     myPlayer = playerData;
     if (token) localStorage.setItem('token', token);
@@ -2899,10 +2901,10 @@ async function createDuelLink() {
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 //  SOCKET & QUEUE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â”€â”€ Noms alÃ©atoires pour le robot â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ═══════════════════════════════════════════════════════════════════
+// ── Noms aléatoires pour le robot ────────────────────────────────────────────
 const BOT_NAMES = [
   'GalaxBot','NéonRex','CirKuit','PlasmaZen','VortexOS',
   'NovaByte','CryptoKid','OmégaDrift','SynthWave','TurboNul',
@@ -2993,7 +2995,7 @@ function updateBotEloDisplay(elo) {
 
 function startVsIA(difficulty = 'hard', targetElo = null) {
   document.getElementById('bot-modal').style.display = 'none';
-  // CrÃ©er un joueur invitÃ© si pas connectÃ©
+  // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
   const guestPlayer = saved ? JSON.parse(saved) : {
     id: 0, pseudo: 'Toi', elo: 1200,
@@ -3012,7 +3014,7 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
   location.href = '/game/bot';
 }
 
-// â”€â”€ Musique d'attente Queue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Musique d'attente Queue ────────────────────────────────────────────────────
 const QueueMusic = (() => {
   const DEFAULT_QUEUE_MUSIC = '/sounds/Musique Chambre.mp3';
   let audio = null;
@@ -3121,7 +3123,7 @@ const QueueMusic = (() => {
       if (youtubeFrame) return;
       a.volume = volume;
       a.currentTime = 0;
-      // DÃ©bloquer l'AudioContext si suspendu (politique autoplay navigateur)
+      // Débloquer l'AudioContext si suspendu (politique autoplay navigateur)
       const tryPlay = () => a.play().catch(() => {});
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
         const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -3285,7 +3287,7 @@ window.addEventListener('p4:presence-counts', (event) => {
 });
 
 function showLoggedInView(p) {
-  // Masquer le formulaire login, montrer un Ã©cran "prÃªt Ã  jouer"
+  // Masquer le formulaire login, montrer un écran "prêt à jouer"
   const loginView = document.getElementById('view-login');
   if (!loginView) return;
 
@@ -3409,7 +3411,7 @@ function showQueueView(position) {
       avatarWrap.style.display = 'flex';
     }
   }, 250);
-  // Clear tout interval prÃ©cÃ©dent avant d'en relancer un
+  // Clear tout interval précédent avant d'en relancer un
   clearInterval(timerInterval);
   timerInterval = null;
   queueStart    = Date.now();
@@ -3460,9 +3462,9 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeDuelModal();
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  INIT â€” auto-login si localStorage
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+//  INIT — auto-login si localStorage
+// ═══════════════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   initRegisterColorPicker();
   startSiteStatsPolling();
@@ -3474,11 +3476,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (saved && token) {
     const p = JSON.parse(saved);
-    // VÃ©rifier inactivitÃ© (10 min)
+    // Vérifier inactivité (10 min)
     const lastActive = parseInt(localStorage.getItem('last_active') || '0');
     const inactiveMs = Date.now() - lastActive;
     if (lastActive && inactiveMs > 10 * 60 * 1000) {
-      // Session expirÃ©e â€” nettoyer
+      // Session expirée — nettoyer
       localStorage.removeItem('token');
       localStorage.removeItem('player');
       localStorage.removeItem('last_active');
@@ -3488,12 +3490,12 @@ window.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('last_active', Date.now());
       sessionStorage.setItem('player', JSON.stringify(p));
       document.getElementById('input-pseudo').value = p.pseudo;
-      // Auto-queue si la prÃ©fÃ©rence est activÃ©e (dÃ©faut = true)
+      // Auto-queue si la préférence est activée (défaut = true)
       const autoRejoin = localStorage.getItem('auto_rejoin');
       if (autoRejoin === null || autoRejoin === 'true') {
         connectAndQueue();
       } else {
-        // Afficher l'interface connectÃ©e sans rejoindre la queue
+        // Afficher l'interface connectée sans rejoindre la queue
         showLoggedInView(p);
       }
     }
