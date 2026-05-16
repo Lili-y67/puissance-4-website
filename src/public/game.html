@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 â€” Partie</title>
+<title>Puissance 4 — Partie</title>
 <link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -39,7 +39,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 
 .page { position: relative; z-index: 2; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 32px; gap: 16px; }
 
-/* â”€â”€ Header â”€â”€ */
+/* ── Header ── */
 .top-bar {
   width: 100%;
   max-width: 760px;
@@ -66,7 +66,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 }
 .btn-quit:hover { border-color: var(--p1); color: var(--p1); }
 
-/* â”€â”€ Lobby overlay â”€â”€ */
+/* ── Lobby overlay ── */
 .lobby-overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(6,6,14,0.96); display: flex; align-items: center; justify-content: center;
@@ -114,7 +114,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 }
 @keyframes pulse-c { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
 
-/* â”€â”€ Player cards â”€â”€ */
+/* ── Player cards ── */
 .players-row {
   width: 100%;
   max-width: 760px;
@@ -184,7 +184,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 }
 .turn-badge.show { display: inline-flex; }
 
-/* â”€â”€ Status â”€â”€ */
+/* ── Status ── */
 .status-bar {
   width: 100%;
   max-width: 760px;
@@ -212,7 +212,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
 
-/* â”€â”€ Board â”€â”€ */
+/* ── Board ── */
 .board-wrap { position: relative; }
 .col-buttons { display: flex; gap: 6px; margin: 0 auto 4px; width: fit-content; }
 .col-btn {
@@ -220,7 +220,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   border-radius: 6px; transition: all 0.15s; position: relative;
   display: flex; align-items: center; justify-content: center;
 }
-.col-btn::after { content: 'â–¼'; font-size: 11px; color: var(--muted); opacity: 0; transition: all 0.15s; }
+.col-btn::after { content: '▼'; font-size: 11px; color: var(--muted); opacity: 0; transition: all 0.15s; }
 .col-btn:not(:disabled):hover::after { opacity: 1; color: var(--text); transform: translateY(2px); }
 .col-btn:not(:disabled):hover { background: rgba(255,255,255,0.04); }
 .col-btn:disabled { cursor: not-allowed; }
@@ -232,7 +232,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   border: 1px solid var(--border);
   box-shadow: 0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04);
   display: grid;
-  /* Taille fluide : s'adapte Ã  la largeur de l'Ã©cran */
+  /* Taille fluide : s'adapte à la largeur de l'écran */
   --cell-size: min(68px, calc((min(98vw, 520px) - 20px - 6px*6) / 7));
   grid-template-columns: repeat(7, var(--cell-size));
   grid-template-rows: repeat(6, var(--cell-size));
@@ -287,7 +287,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   background: linear-gradient(135deg, var(--p2-secondary, var(--p2-light, #ffe566)), var(--p2, #ffd60a));
   box-shadow: 0 0 18px var(--p2-glow), inset 0 -3px 6px rgba(0,0,0,0.3);
 }
-/* Shapes â€” appliquÃ©es en inline style via JS pour Ã©viter les conflits de spÃ©cificitÃ© */
+/* Shapes — appliquées en inline style via JS pour éviter les conflits de spécificité */
 .token.s-emoji { border-radius: 0 !important; overflow: visible; }
 .token.s-emoji canvas { display: block; width: 100%; height: 100%; }
 .cell.winning {
@@ -311,7 +311,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .cell.winning .token { animation: win-pulse 0.7s ease-in-out infinite alternate; }
 @keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.1); filter: brightness(1.3); } }
 
-/* â”€â”€ Result overlay â”€â”€ */
+/* ── Result overlay ── */
 .result-overlay {
   display: none;
   margin-top: 16px;
@@ -453,7 +453,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 .btn-action.ghost { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
 .btn-action.ghost:hover { border-color: var(--muted); color: var(--text); }
 
-/* â”€â”€ Responsive mobile â”€â”€ */
+/* ── Responsive mobile ── */
 @media (max-width: 600px) {
   .page { padding: 10px 6px 20px; gap: 8px; }
   .top-bar {
@@ -531,8 +531,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
         <div class="lobby-avatar" id="lav1">?</div>
       </div>
       <div class="lobby-info">
-        <div class="lobby-pseudo" id="lpseudo1">â€”</div>
-        <div class="lobby-elo"    id="lelo1">â€” ELO</div>
+        <div class="lobby-pseudo" id="lpseudo1">—</div>
+        <div class="lobby-elo"    id="lelo1">— ELO</div>
       </div>
     </div>
     <div class="vs-col">
@@ -545,16 +545,16 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
         <div class="lobby-avatar" id="lav2">?</div>
       </div>
       <div class="lobby-info">
-        <div class="lobby-pseudo" id="lpseudo2">â€”</div>
-        <div class="lobby-elo"    id="lelo2">â€” ELO</div>
+        <div class="lobby-pseudo" id="lpseudo2">—</div>
+        <div class="lobby-elo"    id="lelo2">— ELO</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Banner dÃ©connexion adversaire -->
+<!-- Banner déconnexion adversaire -->
 <div class="disconnect-banner" id="disconnect-banner">
-  <span id="disconnect-msg">Adversaire dÃ©connectÃ©...</span>
+  <span id="disconnect-msg">Adversaire déconnecté...</span>
   <span class="disconnect-timer" id="disconnect-timer">10</span>
   <span>s</span>
 </div>
@@ -563,7 +563,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   <div class="top-bar">
     <div class="logo-sm">Puissance <span>4</span></div>
     <span class="game-id-badge" id="game-id-badge" title="ID de la partie"></span>
-    <button class="btn-quit" onclick="quit()">âœ• Quitter</button>
+    <button class="btn-quit" onclick="quit()">✕ Quitter</button>
   </div>
 
   <div class="players-row">
@@ -575,12 +575,12 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="pc-dot"></div>
       <div class="pc-info">
         <div class="pc-name" id="name-p1">Joueur 1</div>
-        <div class="pc-elo"  id="elo-p1">â€” ELO</div>
+        <div class="pc-elo"  id="elo-p1">— ELO</div>
       </div>
     </div>
     <div class="turn-mid">
       <div class="vs-sm">VS</div>
-      <div class="turn-lbl" id="turn-lbl">â€”</div>
+      <div class="turn-lbl" id="turn-lbl">—</div>
       <div class="turn-timer" id="turn-timer">00s</div>
       <div class="turn-badge" id="turn-badge">Tournoi</div>
     </div>
@@ -592,7 +592,7 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="pc-dot"></div>
       <div class="pc-info">
         <div class="pc-name" id="name-p2">Joueur 2</div>
-        <div class="pc-elo"  id="elo-p2">â€” ELO</div>
+        <div class="pc-elo"  id="elo-p2">— ELO</div>
       </div>
     </div>
   </div>
@@ -609,8 +609,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
       <div class="result-meta" id="result-meta"></div>
       <div class="result-summary" id="result-summary"></div>
       <div class="result-btns">
-        <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">âš¡ Rejouer</button>
-        <a class="btn-action ghost" id="btn-replay" href="#">ðŸ“½ï¸ Replay</a>
+        <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">⚡ Rejouer</button>
+        <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
       </div>
     </div>
   </div>
@@ -618,9 +618,9 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  SOUNDS â€” Web Audio API, aucun fichier externe
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+//  SOUNDS — Web Audio API, aucun fichier externe
+// ═══════════════════════════════════════════════════════════════════
 const SFX = (() => {
   let ctx = null;
   function ac() {
@@ -658,8 +658,8 @@ let lobbyData   = null;
 let inCountdown = false; // true pendant le 3-2-1
 let p1Shape   = 'circle';
 let p2Shape   = 'circle';
-let p1Emoji   = 'â­';
-let p2Emoji   = 'ðŸ’Ž';
+let p1Emoji   = '⭐';
+let p2Emoji   = '💎';
 let p1EmojiImage = '';
 let p2EmojiImage = '';
 let tournamentMeta = null;
@@ -712,10 +712,10 @@ function setCardElo(side, value) {
     el.dataset.elo = String(Math.round(numeric));
     el.textContent = `${Math.round(numeric)} ELO`;
   } else if (activeMoveTimeSeconds > 0) {
-    badge.textContent = `Classique Ã‚Â· ${activeMoveTimeSeconds}s / coup`;
+    badge.textContent = `Classique · ${activeMoveTimeSeconds}s / coup`;
     badge.classList.add('show');
   } else if (activeMoveTimeSeconds > 0) {
-    badge.textContent = `Classique Â· ${activeMoveTimeSeconds}s / coup`;
+    badge.textContent = `Classique · ${activeMoveTimeSeconds}s / coup`;
     badge.classList.add('show');
   }
   else 
@@ -852,7 +852,7 @@ function applyTournamentMeta(meta, moveTimeSeconds = 0) {
   const badge = document.getElementById('turn-badge');
   if (!badge) return;
   if (tournamentMeta) {
-    badge.textContent = `${tournamentMeta.name} Â· ${tournamentMeta.moveTimeSeconds}s`;
+    badge.textContent = `${tournamentMeta.name} · ${tournamentMeta.moveTimeSeconds}s`;
     badge.classList.add('show');
   } else {
     badge.textContent = 'Tournoi';
@@ -896,9 +896,9 @@ function startTurnTimer() {
   }, 250);
 }
 
-// â”€â”€ Helpers couleur â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers couleur ───────────────────────────────────────────────────────────
 function colorDistance(h1, h2) {
-  // Distance de teinte en degrÃ©s
+  // Distance de teinte en degrés
   const hue = hex => {
     const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
     const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
@@ -947,7 +947,7 @@ function applyColors(c1, c2, s1 = '', s2 = '') {
   root.style.setProperty('--p2-dim',   hexToRgba(c2, 0.15));
 }
 
-// â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   // Lire depuis sessionStorage OU localStorage
   const pData = sessionStorage.getItem('player') || localStorage.getItem('player');
@@ -955,7 +955,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   if (!pData) return location.href = '/';
   myPlayer = JSON.parse(pData);
-  // S'assurer que sessionStorage est Ã  jour
+  // S'assurer que sessionStorage est à jour
   sessionStorage.setItem('player', pData);
 
   const iaData = sessionStorage.getItem('vs_ia');
@@ -964,9 +964,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (history.replaceState) history.replaceState(null, '', '/game/bot');
     startVsIA(JSON.parse(iaData));
   } else {
-    // RÃ©cupÃ©rer le gameId depuis l'URL /game/:id ou depuis sessionStorage
+    // Récupérer le gameId depuis l'URL /game/:id ou depuis sessionStorage
     const urlGameId = location.pathname.split('/').pop();
-    // /game/bot â†’ pas de rejoin rÃ©seau possible, rediriger
+    // /game/bot → pas de rejoin réseau possible, rediriger
     if (urlGameId === 'bot') {
       location.href = '/';
       return;
@@ -988,7 +988,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// â”€â”€ Socket â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Socket ────────────────────────────────────────────────────────────────────
 function connectSocket(pendingMatch) {
   socket = io({ transports: ['polling'] });
 
@@ -1001,19 +1001,19 @@ function connectSocket(pendingMatch) {
     myPlayer = p;
     if (pendingMatch) {
       socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
-      // isRejoin = true si la partie Ã©tait dÃ©jÃ  en cours (pas de startsIn, ou URL /game/:id)
+      // isRejoin = true si la partie était déjà en cours (pas de startsIn, ou URL /game/:id)
       const urlPart = location.pathname.split('/').pop();
       const isRejoin = pendingMatch._rejoin === true || (urlPart && !isNaN(Number(urlPart)) && Number(urlPart) > 0 && !pendingMatch._fresh);
       if (!isRejoin) {
         setupLobby(pendingMatch);
       }
-      // sinon : game_rejoined va gÃ©rer l'affichage directement sans countdown
+      // sinon : game_rejoined va gérer l'affichage directement sans countdown
     }
   });
 
   socket.on('game_rejoined', (data) => {
     // Si le countdown d'une nouvelle partie est en cours, ignorer ce rejoined
-    // (il arrive parce qu'on a Ã©mis rejoin_game dans identified, mais c'est une nouvelle partie)
+    // (il arrive parce qu'on a émis rejoin_game dans identified, mais c'est une nouvelle partie)
     if (inCountdown) return;
 
     data.yourSide = data.side;
@@ -1030,12 +1030,12 @@ function connectSocket(pendingMatch) {
     );
     const rawS1 = data.players[1].shape || 'circle';
     const rawS2 = data.players[2].shape || 'circle';
-    if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'â­'; }
+    if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
     else p1Shape = rawS1;
-    if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'ðŸ’Ž'; }
+    if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
     else p2Shape = rawS2;
 
-    // DÃ©marrer directement (sans lobby si rejoin)
+    // Démarrer directement (sans lobby si rejoin)
     if (rawS1 === 'emoji_image') {
       p1Shape = 'emoji_image';
       p1EmojiImage = data.players[1].token_emoji_image || '';
@@ -1059,7 +1059,7 @@ function connectSocket(pendingMatch) {
     currentTurn = data.current;
     updateTurnUI();
 
-    // Reconstruire le plateau depuis la grille reÃ§ue
+    // Reconstruire le plateau depuis la grille reçue
     renderBoard(); // s'assurer que les cellules existent
     const grid = data.grid;
     for (let r = 0; r < 6; r++) {
@@ -1069,7 +1069,7 @@ function connectSocket(pendingMatch) {
       }
     }
 
-    // Fermer le banner de dÃ©connexion + stopper le chrono s'il tourne
+    // Fermer le banner de déconnexion + stopper le chrono s'il tourne
     const banner = document.getElementById('disconnect-banner');
     if (banner) {
       if (banner._interval) { clearInterval(banner._interval); banner._interval = null; }
@@ -1083,13 +1083,13 @@ function connectSocket(pendingMatch) {
   });
   socket.on('game_not_found', () => { sessionStorage.setItem('no_auto_queue','1'); location.href = '/'; });
 
-  // match_found depuis la queue (cas oÃ¹ on arrive sans pendingMatch)
+  // match_found depuis la queue (cas où on arrive sans pendingMatch)
   socket.on('match_found', (d) => { d._fresh = true; setupLobby(d); });
 
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
   socket.on('color_updated', ({ playerId, color }) => {
-    // Adversaire a changÃ© sa couleur en cours de partie
+    // Adversaire a changé sa couleur en cours de partie
     if (!lobbyData) return;
     const side = lobbyData.players[1].id === playerId ? 1 : 2;
     lobbyData.players[side].color = color;
@@ -1105,7 +1105,7 @@ function connectSocket(pendingMatch) {
     const msg    = document.getElementById('disconnect-msg');
     const timer  = document.getElementById('disconnect-timer');
     if (!banner) return;
-    if (msg)   msg.textContent   = `${pseudo} s'est dÃ©connectÃ©...`;
+    if (msg)   msg.textContent   = `${pseudo} s'est déconnecté...`;
     if (timer) timer.textContent = timeout;
     banner.classList.add('show');
     // Countdown
@@ -1124,7 +1124,7 @@ function connectSocket(pendingMatch) {
       if (banner._interval) clearInterval(banner._interval);
       banner.classList.remove('show');
     }
-    setStatus(`âœ… ${pseudo} a reconnectÃ© !`);
+    setStatus(`✅ ${pseudo} a reconnecté !`);
     setTimeout(() => setStatus(''), 2500);
   });
 
@@ -1132,18 +1132,18 @@ function connectSocket(pendingMatch) {
     console.error('[Socket]', message);
     if (message === 'Aucune partie en cours.' || message === 'Partie inactive.') {
       sessionStorage.removeItem('match');
-      alert('La partie a expirÃ© (serveur redÃ©marrÃ©). Retour Ã  l\'accueil.');
+      alert('La partie a expiré (serveur redémarré). Retour à l\'accueil.');
       location.href = '/';
     }
   });
 }
 
-// â”€â”€ Lobby â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
-  // Mettre Ã  jour l'URL avec le gameId pour permettre le reload (pas en mode IA)
+  // Mettre à jour l'URL avec le gameId pour permettre le reload (pas en mode IA)
   if (data.gameId && !iaMode && history.replaceState) {
     history.replaceState(null, '', '/game/' + data.gameId);
-    // Mettre Ã  jour le match en sessionStorage avec le gameId
+    // Mettre à jour le match en sessionStorage avec le gameId
     const stored = sessionStorage.getItem('match');
     if (stored) {
       const m = JSON.parse(stored);
@@ -1157,7 +1157,7 @@ function setupLobby(data) {
   mySide    = data.yourSide;
   applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
 
-  // Fix couleur similaire : si les deux couleurs sont trop proches, dÃ©caler celle du p2
+  // Fix couleur similaire : si les deux couleurs sont trop proches, décaler celle du p2
   let c1 = data.players[1].color || '#ff2d55';
   let c2 = data.players[2].color || '#ffd60a';
   if (colorDistance(c1, c2) < 60) {
@@ -1166,12 +1166,12 @@ function setupLobby(data) {
   }
   applyColors(c1, c2, data.players[1].color_secondary || '', data.players[2].color_secondary || '');
 
-  // Stocker les shapes (format 'circle' ou 'emoji:â­')
+  // Stocker les shapes (format 'circle' ou 'emoji:⭐')
   const rawS1 = data.players[1].shape || 'circle';
   const rawS2 = data.players[2].shape || 'circle';
-  if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'â­'; }
+  if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
   else p1Shape = rawS1;
-  if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'ðŸ’Ž'; }
+  if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
   else p2Shape = rawS2;
 
   if (rawS1 === 'emoji_image') {
@@ -1200,7 +1200,7 @@ function setupLobby(data) {
     }
   });
 
-  // Countdown â€” on affiche n, attend 1s, affiche n-1, etc.
+  // Countdown — on affiche n, attend 1s, affiche n-1, etc.
   let n = data.startsIn || 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
@@ -1219,7 +1219,7 @@ function setupLobby(data) {
   }, 1000);
 }
 
-// â”€â”€ Game start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Game start ────────────────────────────────────────────────────────────────
 function startGame(data) {
   document.getElementById('lobby-overlay').classList.add('hidden');
 
@@ -1233,7 +1233,7 @@ function startGame(data) {
   currentTurn = 1;
   gameOver    = false;
   renderBoard();
-  // Locker la board 400ms pour Ã©viter les clics parasites au dÃ©marrage
+  // Locker la board 400ms pour éviter les clics parasites au démarrage
   const boardEl = document.getElementById('board');
   boardEl.classList.add('locked');
   setTimeout(() => boardEl.classList.remove('locked'), 400);
@@ -1241,7 +1241,7 @@ function startGame(data) {
   updateTurnUI();
 }
 
-// â”€â”€ Board â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Board ─────────────────────────────────────────────────────────────────────
 function renderBoard() {
   const boardEl = document.getElementById('board');
   const colsEl  = document.getElementById('col-btns');
@@ -1267,7 +1267,7 @@ function renderBoard() {
   }
 }
 
-// â”€â”€ Gameplay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
   if (gameOver || currentTurn !== mySide) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
@@ -1284,7 +1284,7 @@ function onMovePlayed(data) {
   updateTurnUI();
 }
 
-// â”€â”€ Emoji â†’ pion colorisÃ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Emoji → pion colorisé ────────────────────────────────────────────────────
 // Dessine l'emoji en blanc sur canvas, l'utilise comme mask-image CSS
 // pour coloriser avec la couleur du joueur
 function makeEmojiToken(tokenEl, emoji, color, glowColor) {
@@ -1296,9 +1296,9 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
     'inset:4px;position:absolute;display:flex;align-items:center;justify-content:center;'
   );
 
-  // Calculer la taille depuis --cell-size (fiable mÃªme si token pas encore visible)
+  // Calculer la taille depuis --cell-size (fiable même si token pas encore visible)
   const cssCell = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 68;
-  const size = cssCell - 8; // inset: 4px de chaque cÃ´tÃ©
+  const size = cssCell - 8; // inset: 4px de chaque côté
   const DPR = window.devicePixelRatio || 1;
   const canvas = document.createElement('canvas');
   canvas.width  = size * DPR;
@@ -1334,7 +1334,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   // Coloriser : on recouvre avec la couleur en mode source-in
   // (garde la forme de l'emoji, applique la couleur)
   ctx.globalCompositeOperation = 'source-in';
-  // DÃ©gradÃ© radial pour l'effet 3D
+  // Dégradé radial pour l'effet 3D
   const grad = ctx.createRadialGradient(
     canvas.width * 0.38, canvas.height * 0.32, 0,
     canvas.width * 0.5,  canvas.height * 0.5,  canvas.width * 0.55
@@ -1351,7 +1351,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
 }
 
 function lightenHex(hex, amount) {
-  // MÃ©lange hex avec blanc selon amount (0-1)
+  // Mélange hex avec blanc selon amount (0-1)
   const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
   const lr = Math.round(r + (255-r)*amount), lg = Math.round(g + (255-g)*amount), lb = Math.round(b + (255-b)*amount);
   return `rgb(${lr},${lg},${lb})`;
@@ -1403,7 +1403,7 @@ function applyToken(row, col, player) {
       token.className = 'token';
     }
   }
-  // DÃ©clencher l'animation drop aprÃ¨s avoir prÃ©parÃ© le token
+  // Déclencher l'animation drop après avoir préparé le token
   void cell.offsetWidth;
   cell.classList.add('drop');
 }
@@ -1419,7 +1419,7 @@ function updateTurnUI() {
   }
 
   if (isMe) {
-    document.getElementById('turn-lbl').textContent = 'â† TON TOUR';
+    document.getElementById('turn-lbl').textContent = '← TON TOUR';
     setStatus('');
   } else {
     document.getElementById('turn-lbl').textContent = 'ADVERSAIRE...';
@@ -1432,12 +1432,12 @@ function updateTurnUI() {
   else stopTurnTimer();
 }
 
-// â”€â”€ Game over â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Game over ─────────────────────────────────────────────────────────────────
 function onGameOverLegacy(data) {
   gameOver = true;
   stopTurnTimer();
 
-  // Fermer le banner de dÃ©connexion s'il est encore visible
+  // Fermer le banner de déconnexion s'il est encore visible
   const dcBanner = document.getElementById('disconnect-banner');
   if (dcBanner) {
     if (dcBanner._interval) { clearInterval(dcBanner._interval); dcBanner._interval = null; }
@@ -1460,8 +1460,8 @@ function onGameOverLegacy(data) {
   const isWinner = data.winner === mySide;
   const isDraw   = data.reason === 'draw';
   setTimeout(() => { if (isDraw) SFX.draw(); else if (isWinner) SFX.win(); else SFX.lose(); }, 300);
-  // Toujours afficher le result overlay (mÃªme pour le perdant)
-  // Utiliser l'ID du joueur depuis les donnÃ©es de la partie (plus fiable que myPlayer.id)
+  // Toujours afficher le result overlay (même pour le perdant)
+  // Utiliser l'ID du joueur depuis les données de la partie (plus fiable que myPlayer.id)
   const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
   const eloD = (myId !== undefined)
     ? (data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? data.eloChanges?.[Number(myId)] ?? 0)
@@ -1469,13 +1469,13 @@ function onGameOverLegacy(data) {
 
   const titleEl = document.getElementById('result-title');
   if (isDraw) {
-    titleEl.textContent = 'âš–ï¸ Ã‰GALITÃ‰';
+    titleEl.textContent = '⚖️ ÉGALITÉ';
     titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
   } else if (isWinner) {
-    titleEl.textContent = 'ðŸ† VICTOIRE !';
+    titleEl.textContent = '🏆 VICTOIRE !';
     titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
   } else {
-    titleEl.textContent = 'ðŸ’€ DÃ‰FAITE';
+    titleEl.textContent = '💀 DÉFAITE';
     titleEl.style.background = 'linear-gradient(135deg, #555, #888)';
   }
   titleEl.style.webkitBackgroundClip = 'text';
@@ -1494,7 +1494,7 @@ function onGameOverLegacy(data) {
 
   if (data.reason === 'disconnect') {
     document.getElementById('result-reason').textContent = isWinner
-      ? 'Adversaire dÃ©connectÃ©' : 'DÃ©connexion dÃ©tectÃ©e';
+      ? 'Adversaire déconnecté' : 'Déconnexion détectée';
   } else if (data.reason === 'draw') {
     document.getElementById('result-reason').textContent = 'Partie nulle';
   } else {
@@ -1509,9 +1509,9 @@ function onGameOverLegacy(data) {
 
   document.getElementById('btn-replay').href = '/replay/' + data.gameId;
   document.getElementById('result-overlay').classList.add('show');
-  // Nettoyer le match de sessionStorage â€” partie terminÃ©e
+  // Nettoyer le match de sessionStorage — partie terminée
   sessionStorage.removeItem('match');
-  // Mettre Ã  jour l'URL pour reflÃ©ter la partie terminÃ©e
+  // Mettre à jour l'URL pour refléter la partie terminée
   if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
 }
 
@@ -1574,13 +1574,13 @@ function onGameOver(data) {
 
   const titleEl = document.getElementById('result-title');
   if (isDraw) {
-    titleEl.textContent = 'Ã‰GALITÃ‰';
+    titleEl.textContent = 'ÉGALITÉ';
     titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
   } else if (isWinner) {
     titleEl.textContent = 'VICTOIRE';
     titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
   } else {
-    titleEl.textContent = 'DÃ‰FAITE';
+    titleEl.textContent = 'DÉFAITE';
     titleEl.style.background = 'linear-gradient(135deg, #8d8d99, #d7d7df)';
   }
   titleEl.style.webkitBackgroundClip = 'text';
@@ -1593,7 +1593,7 @@ function onGameOver(data) {
   const eloEl = document.getElementById('result-elo');
   eloEl.textContent = isDraw
     ? 'La grille reste visible et la fin de partie reste lisible.'
-    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'Lâ€™adversaire')} remporte la partie.`;
+    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'L’adversaire')} remporte la partie.`;
   eloEl.style.color = 'var(--text)';
   eloEl.textContent = '0 ELO';
   eloEl.style.color = vipBoostApplied
@@ -1603,17 +1603,17 @@ function onGameOver(data) {
 
   const reasonEl = document.getElementById('result-reason');
   if (data.reason === 'disconnect') {
-    reasonEl.textContent = isWinner ? 'Victoire par dÃ©connexion adverse.' : 'DÃ©faite aprÃ¨s dÃ©connexion.';
+    reasonEl.textContent = isWinner ? 'Victoire par déconnexion adverse.' : 'Défaite après déconnexion.';
   } else if (isDraw) {
-    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichÃ©es ci-dessous.';
+    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichées ci-dessous.';
   } else if (vipBoostApplied) {
     reasonEl.textContent = premiumBoostTier === 'vip_plus'
-      ? 'Boost VIP+ appliquÃ© sur ton gain Elo.'
+      ? 'Boost VIP+ appliqué sur ton gain Elo.'
       : premiumBoostTier === 'perso'
-        ? 'Boost Perso appliquÃ© sur ton gain Elo.'
-        : 'Boost VIP appliquÃ© sur ton gain Elo.';
+        ? 'Boost Perso appliqué sur ton gain Elo.'
+        : 'Boost VIP appliqué sur ton gain Elo.';
   } else {
-    reasonEl.textContent = isWinner ? 'Fin de partie validÃ©e, Elo mis Ã  jour.' : 'Fin de partie validÃ©e, Elo ajustÃ©.';
+    reasonEl.textContent = isWinner ? 'Fin de partie validée, Elo mis à jour.' : 'Fin de partie validée, Elo ajusté.';
   }
 
   if (!isDraw && data.reason !== 'disconnect' && !vipBoostApplied) {
@@ -1627,12 +1627,12 @@ function onGameOver(data) {
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
         <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
-        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} â†’ ${myAfter}` : ''} Â· ${deltaText(myDelta)}</div>
+        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : ''} · ${deltaText(myDelta)}</div>
       </div>
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
         <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
-        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} â†’ ${oppAfter}` : ''} Â· ${deltaText(oppDelta)}</div>
+        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : ''} · ${deltaText(oppDelta)}</div>
       </div>
     `;
   }
@@ -1727,13 +1727,13 @@ function onGameOver(data) {
 
   const titleEl = document.getElementById('result-title');
   if (isDraw) {
-    titleEl.textContent = 'Ã‰GALITÃ‰';
+    titleEl.textContent = 'ÉGALITÉ';
     titleEl.style.background = 'linear-gradient(135deg, var(--muted), var(--text))';
   } else if (isWinner) {
     titleEl.textContent = 'VICTOIRE';
     titleEl.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
   } else {
-    titleEl.textContent = 'DÃ‰FAITE';
+    titleEl.textContent = 'DÉFAITE';
     titleEl.style.background = 'linear-gradient(135deg, #8d8d99, #d7d7df)';
   }
   titleEl.style.webkitBackgroundClip = 'text';
@@ -1744,23 +1744,23 @@ function onGameOver(data) {
 
   const eloEl = document.getElementById('result-elo');
   eloEl.textContent = isDraw
-    ? 'Fin de partie affichÃ©e sans masquer la grille.'
-    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'Lâ€™adversaire')} remporte la partie.`;
+    ? 'Fin de partie affichée sans masquer la grille.'
+    : `${data.players?.[data.winner]?.pseudo || (isWinner ? 'Tu' : 'L’adversaire')} remporte la partie.`;
   eloEl.style.color = 'var(--text)';
 
   const reasonEl = document.getElementById('result-reason');
   if (data.reason === 'disconnect') {
-    reasonEl.textContent = isWinner ? 'Victoire par dÃ©connexion adverse.' : 'DÃ©faite aprÃ¨s dÃ©connexion.';
+    reasonEl.textContent = isWinner ? 'Victoire par déconnexion adverse.' : 'Défaite après déconnexion.';
   } else if (isDraw) {
-    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichÃ©es ci-dessous.';
+    reasonEl.textContent = 'Partie nulle. Les variations Elo de chacun sont affichées ci-dessous.';
   } else if (vipBoostApplied) {
     reasonEl.textContent = premiumBoostTier === 'vip_plus'
-      ? 'Boost VIP+ appliquÃ© sur ton gain Elo.'
+      ? 'Boost VIP+ appliqué sur ton gain Elo.'
       : premiumBoostTier === 'perso'
-        ? 'Boost Perso appliquÃ© sur ton gain Elo.'
-        : 'Boost VIP appliquÃ© sur ton gain Elo.';
+        ? 'Boost Perso appliqué sur ton gain Elo.'
+        : 'Boost VIP appliqué sur ton gain Elo.';
   } else {
-    reasonEl.textContent = isWinner ? 'Fin de partie validÃ©e, Elo mis Ã  jour.' : 'Fin de partie validÃ©e, Elo ajustÃ©.';
+    reasonEl.textContent = isWinner ? 'Fin de partie validée, Elo mis à jour.' : 'Fin de partie validée, Elo ajusté.';
   }
 
   const deltaText = (delta) => `${delta >= 0 ? '+' : ''}${delta} Elo`;
@@ -1784,7 +1784,7 @@ function onGameOver(data) {
   const metaEl = document.getElementById('result-meta');
   if (metaEl) {
     const winnerLabel = isDraw ? 'Nul' : (data.players?.[data.winner]?.pseudo || 'Inconnu');
-    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} â†’ ${myAfter}` : deltaText(myDelta);
+    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
     metaEl.innerHTML = `
       <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
       <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
@@ -1798,12 +1798,12 @@ function onGameOver(data) {
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[mySide]?.pseudo || 'Moi'}</div>
         <div class="result-player-elo" id="result-my-elo">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
-        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} â†’ ${myAfter}` : ''} Â· ${deltaText(myDelta)}</div>
+        <div class="result-player-delta">${Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : ''} · ${deltaText(myDelta)}</div>
       </div>
       <div class="result-player-box">
         <div class="result-player-name">${data.players?.[oppSide]?.pseudo || 'Adversaire'}</div>
         <div class="result-player-elo" id="result-opp-elo">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
-        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} â†’ ${oppAfter}` : ''} Â· ${deltaText(oppDelta)}</div>
+        <div class="result-player-delta">${Number.isFinite(oppBefore) && Number.isFinite(oppAfter) ? `${oppBefore} → ${oppAfter}` : ''} · ${deltaText(oppDelta)}</div>
       </div>
     `;
   }
@@ -1839,9 +1839,9 @@ function onGameOver(data) {
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-//  MODE IA â€” Partie locale, pas de socket, pas de classement
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+//  MODE IA — Partie locale, pas de socket, pas de classement
+// ═══════════════════════════════════════════════════════════════════
 function setCardElo(side, value) {
   const el = document.getElementById('elo-p' + side);
   if (!el) return;
@@ -1853,7 +1853,7 @@ function setCardElo(side, value) {
     return;
   }
   el.dataset.elo = '';
-  el.textContent = String(value || 'â€” ELO');
+  el.textContent = String(value || '— ELO');
 }
 
 function getCardElo(side) {
@@ -1964,7 +1964,7 @@ function onGameOver(data) {
   const metaEl = document.getElementById('result-meta');
   if (metaEl) {
     const winnerLabel = isDraw ? 'Nul' : winnerLabelText;
-    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} â†’ ${myAfter}` : deltaText(myDelta);
+    const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
     metaEl.innerHTML = `
       <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
       <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
@@ -1980,7 +1980,7 @@ function onGameOver(data) {
         <div class="result-player-elo" id="result-my-elo-main">${Number.isFinite(myBefore) ? myBefore : '--'}</div>
         <div class="result-player-elo bot-elo">
           <span class="result-player-before" id="result-my-elo-before">${Number.isFinite(myBefore) ? myBefore : '--'}</span>
-          <span class="result-player-arrow">â†’</span>
+          <span class="result-player-arrow">→</span>
           <span class="result-player-after" id="result-my-elo-after">${Number.isFinite(myBefore) ? myBefore : '--'}</span>
         </div>
         <div class="result-player-delta"><strong><span class="delta-value" id="result-my-elo-delta">${myDelta >= 0 ? '+' : ''}0</span> ELO</strong></div>
@@ -1990,7 +1990,7 @@ function onGameOver(data) {
         <div class="result-player-elo" id="result-opp-elo-main">${Number.isFinite(oppBefore) ? oppBefore : '--'}</div>
         <div class="result-player-elo bot-elo">
           <span class="result-player-before" id="result-opp-elo-before">${Number.isFinite(oppBefore) ? oppBefore : '--'}</span>
-          <span class="result-player-arrow">â†’</span>
+          <span class="result-player-arrow">→</span>
           <span class="result-player-after" id="result-opp-elo-after">${Number.isFinite(oppBefore) ? oppBefore : '--'}</span>
         </div>
         <div class="result-player-delta"><strong><span class="delta-value" id="result-opp-elo-delta">${oppDelta >= 0 ? '+' : ''}0</span> ELO</strong></div>
@@ -2043,7 +2043,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   iaBotName = botName;
   iaGrid = Array.from({ length: IA_R }, () => Array(IA_C).fill(0));
 
-  // RÃ©cupÃ©rer la vraie couleur et forme du bot depuis la DB
+  // Récupérer la vraie couleur et forme du bot depuis la DB
   try {
     const botInfo = await fetch('/api/bot-id').then(r => r.json());
     iaBotColor = botInfo.color || botColor;
@@ -2066,7 +2066,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
 
   const savedPlayer = getResolvedPlayerVisual(myPlayer || getStoredPlayerVisual());
   const rawShape = savedPlayer.shape || 'circle';
-  if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || 'â­'; }
+  if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;
 
   if (rawShape === 'emoji_image') {
@@ -2079,16 +2079,16 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   const playerColor = myPlayer.color || '#ff2d55';
   applyColors(playerColor, iaBotColor, savedPlayer.color_secondary || '', '');
 
-  const diffLabel = { easy:'ðŸŸ¢ Facile', medium:'ðŸŸ¡ Moyen', hard:'ðŸ”´ Difficile' }[difficulty] || '';
+  const diffLabel = { easy:'🟢 Facile', medium:'🟡 Moyen', hard:'🔴 Difficile' }[difficulty] || '';
 
   const lav1 = document.getElementById('lav1');
   const lav2 = document.getElementById('lav2');
   if (myPlayer.avatar) lav1.innerHTML = `<img src="${myPlayer.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
   else lav1.textContent = myPlayer.pseudo[0].toUpperCase();
-  lav2.textContent = 'ðŸ¤–';
+  lav2.textContent = '🤖';
   document.getElementById('lpseudo1').textContent = myPlayer.pseudo;
   document.getElementById('lpseudo2').textContent = botName;
-  document.getElementById('lelo1').textContent = (myPlayer.elo || 'â€”') + ' ELO';
+  document.getElementById('lelo1').textContent = (myPlayer.elo || '—') + ' ELO';
   document.getElementById('lelo2').textContent = diffLabel;
   applyLobbyPlayerVisual(1, savedPlayer);
   applyLobbyPlayerVisual(2, window.__iaBotVisual);
@@ -2107,8 +2107,8 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       clearInterval(iv); inCountdown = false; SFX.go();
       document.getElementById('lobby-overlay').classList.add('hidden');
       document.getElementById('name-p1').textContent = myPlayer.pseudo;
-      setCardElo(1, myPlayer.elo || 'â€”');
-      document.getElementById('name-p2').textContent = 'ðŸ¤– ' + botName;
+      setCardElo(1, myPlayer.elo || '—');
+      document.getElementById('name-p2').textContent = '🤖 ' + botName;
       setCardElo(2, diffLabel);
       applyPlayerCardVisual(1, savedPlayer);
       applyPlayerCardVisual(2, { ...window.__iaBotVisual, pseudo: botName });
@@ -2166,16 +2166,16 @@ function iaSimulate(col, p) {
   return !!w;
 }
 
-// â”€â”€ IA Facile : alÃ©atoire sauf victoire immÃ©diate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── IA Facile : aléatoire sauf victoire immédiate ─────────────────────────────
 function iaChooseEasy() {
   const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
   // Jouer victoire si possible
   for (const c of valid) if (iaSimulate(c, 2)) return c;
-  // Sinon alÃ©atoire pur
+  // Sinon aléatoire pur
   return valid[Math.floor(Math.random()*valid.length)];
 }
 
-// â”€â”€ IA Moyen : victoire + blocage + centre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── IA Moyen : victoire + blocage + centre ────────────────────────────────────
 function iaChooseMedium() {
   const valid = Array.from({length:IA_C},(_,i)=>i).filter(c=>iaGetRow(c)!==-1);
   for (const c of valid) if (iaSimulate(c, 2)) return c;
@@ -2189,7 +2189,7 @@ function iaChooseMedium() {
   return pref[0];
 }
 
-// â”€â”€ IA Difficile : Minimax Alpha-Beta â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── IA Difficile : Minimax Alpha-Beta ────────────────────────────────────────
 function iaScoreWindow(w, p) {
   const o = p===1?2:1;
   const mine=w.filter(c=>c===p).length, opp=w.filter(c=>c===o).length, emp=w.filter(c=>c===0).length;
@@ -2250,7 +2250,7 @@ function iaChooseHard() {
   return bestCol;
 }
 
-// Mapping ELO â†’ profondeur Minimax + erreur intentionnelle
+// Mapping ELO → profondeur Minimax + erreur intentionnelle
 function eloToParams(elo) {
   if (elo < 700)  return { depth: 0, blunderRate: 0.7,  missWinRate: 0.6  }; // ~500
   if (elo < 1300) return { depth: 1, blunderRate: 0.25, missWinRate: 0.15 }; // ~1000
@@ -2267,9 +2267,9 @@ function iaChoose() {
   // Pour easy/medium/hard on garde la logique d'origine MAIS on utilise targetElo
   const params = eloToParams(iaTargetElo);
 
-  // Peut-on gagner immÃ©diatement ?
+  // Peut-on gagner immédiatement ?
   for (const c of valid) if (iaSimulate(c, 2)) {
-    // missWinRate : chance de rater la victoire (niveaux trÃ¨s bas)
+    // missWinRate : chance de rater la victoire (niveaux très bas)
     if (Math.random() < params.missWinRate) break;
     return c;
   }
@@ -2277,25 +2277,25 @@ function iaChoose() {
   // Doit-on bloquer ?
   const mustBlock = valid.filter(c => iaSimulate(c, 1));
 
-  // blunderRate : chance de jouer n'importe oÃ¹ au lieu de bloquer
+  // blunderRate : chance de jouer n'importe où au lieu de bloquer
   if (mustBlock.length > 0 && Math.random() >= params.blunderRate) {
     return mustBlock[0];
   }
 
-  // Depth 0 â†’ alÃ©atoire avec lÃ©gÃ¨re prÃ©fÃ©rence centre
+  // Depth 0 → aléatoire avec légère préférence centre
   if (params.depth === 0) {
     const pref = [3,2,4,1,5,0,6].filter(c => iaGetRow(c) !== -1);
-    // 50% alÃ©atoire, 50% centre
+    // 50% aléatoire, 50% centre
     return Math.random() < 0.5 ? valid[Math.floor(Math.random()*valid.length)] : pref[0];
   }
 
-  // Depth 1 â†’ juste victoire + blocage + centre
+  // Depth 1 → juste victoire + blocage + centre
   if (params.depth === 1) {
     const pref = [3,2,4,1,5,0,6].filter(c => iaGetRow(c) !== -1);
     return pref[0];
   }
 
-  // Depth >= 3 â†’ Minimax avec profondeur adaptÃ©e + bruit intentionnel
+  // Depth >= 3 → Minimax avec profondeur adaptée + bruit intentionnel
   const b = iaGrid.map(r=>[...r]);
   let bestCol = valid[0], bestScore = -Infinity;
   for (const col of valid) {
@@ -2334,16 +2334,16 @@ function iaEnd(winner, winCells) {
   setTimeout(() => { isDraw ? SFX.draw() : isWin ? SFX.win() : SFX.lose(); }, 300);
   const titleEl = document.getElementById('result-title');
   if (isDraw) {
-    titleEl.textContent='âš–ï¸ Ã‰GALITÃ‰'; titleEl.style.background='linear-gradient(135deg,var(--muted),var(--text))';
+    titleEl.textContent='⚖️ ÉGALITÉ'; titleEl.style.background='linear-gradient(135deg,var(--muted),var(--text))';
   } else if (isWin) {
-    titleEl.textContent='ðŸ† VICTOIRE !'; titleEl.style.background='linear-gradient(135deg,var(--p1),var(--p2))';
+    titleEl.textContent='🏆 VICTOIRE !'; titleEl.style.background='linear-gradient(135deg,var(--p1),var(--p2))';
   } else {
-    titleEl.textContent='ðŸ’€ DÃ‰FAITE'; titleEl.style.background='linear-gradient(135deg,#555,#888)';
+    titleEl.textContent='💀 DÉFAITE'; titleEl.style.background='linear-gradient(135deg,#555,#888)';
   }
   titleEl.style.webkitBackgroundClip='text'; titleEl.style.webkitTextFillColor='transparent';
   document.getElementById('result-elo').textContent = '';
   const diffLabel = { easy:'Facile', medium:'Moyen', hard:'Difficile' }[iaDifficulty] || '';
-  document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? `Tu as battu l'IA (${diffLabel}) !` : `L'IA (${diffLabel}) a gagnÃ© cette fois...`;
+  document.getElementById('result-reason').textContent = isDraw ? 'Partie nulle' : isWin ? `Tu as battu l'IA (${diffLabel}) !` : `L'IA (${diffLabel}) a gagné cette fois...`;
 
   // Sauvegarder la partie bot pour le replay (sans stats)
   saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
@@ -2375,12 +2375,12 @@ async function saveBotReplay(winner, duration = 0) {
       const btn = document.getElementById('btn-replay');
       btn.style.display = '';
       btn.href = '/replay-bot/' + gameId;
-      btn.textContent = 'ðŸ“½ï¸ Replay & Analyse';
+      btn.textContent = '📽️ Replay & Analyse';
       // Afficher le delta ELO du bot
       if (typeof botDelta === 'number') {
         const sign = botDelta >= 0 ? '+' : '';
         document.getElementById('result-elo').textContent =
-          `ðŸ¤– ${iaBotName} : ${sign}${botDelta} ELO (â†’ ${newBotElo})`;
+          `🤖 ${iaBotName} : ${sign}${botDelta} ELO (→ ${newBotElo})`;
         document.getElementById('result-elo').style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
       }
     }
@@ -2400,13 +2400,13 @@ function iaEnd(winner, winCells) {
 
   const titleEl = document.getElementById('result-title');
   if (isDraw) {
-    titleEl.textContent = 'Ã‰GALITÃ‰';
+    titleEl.textContent = 'ÉGALITÉ';
     titleEl.style.background = 'linear-gradient(135deg,var(--muted),var(--text))';
   } else if (isWin) {
     titleEl.textContent = 'VICTOIRE';
     titleEl.style.background = 'linear-gradient(135deg,var(--p1),var(--p2))';
   } else {
-    titleEl.textContent = 'DÃ‰FAITE';
+    titleEl.textContent = 'DÉFAITE';
     titleEl.style.background = 'linear-gradient(135deg,#555,#888)';
   }
   titleEl.style.webkitBackgroundClip = 'text';
@@ -2419,7 +2419,7 @@ function iaEnd(winner, winCells) {
     ? 'Partie nulle'
     : isWin
       ? `Tu as battu l'IA !`
-      : `L'IA a gagnÃ© cette fois...`;
+      : `L'IA a gagné cette fois...`;
 
   saveBotReplay(winner, Math.round((Date.now() - iaStartTime) / 1000));
   document.querySelector('.btn-action.primary').onclick = () => { sessionStorage.setItem('no_auto_queue', '1'); location.href = '/'; };
@@ -2449,10 +2449,10 @@ async function saveBotReplay(winner, duration = 0) {
       const btn = document.getElementById('btn-replay');
       btn.style.display = '';
       btn.href = '/replay-bot/' + gameId;
-      btn.textContent = 'ðŸ“½ï¸ Replay & Analyse';
+      btn.textContent = '📽️ Replay & Analyse';
       if (typeof botDelta === 'number') {
         const sign = botDelta >= 0 ? '+' : '';
-        document.getElementById('result-elo').textContent = `ðŸ¤– ${iaBotName} : ${sign}${botDelta} ELO (â†’ ${newBotElo})`;
+        document.getElementById('result-elo').textContent = `🤖 ${iaBotName} : ${sign}${botDelta} ELO (→ ${newBotElo})`;
         document.getElementById('result-elo').style.color = botDelta >= 0 ? 'var(--red)' : '#30d158';
       }
     }
@@ -2559,7 +2559,7 @@ async function saveBotReplay(winner, duration = 0) {
             <div class="result-player-elo bot-elo bot-total" id="bot-elo-total">${beforeValue}</div>
             <div class="result-player-transition">
               <span class="result-player-before" id="bot-elo-before">${beforeValue}</span>
-              <span class="result-player-arrow">â†’</span>
+              <span class="result-player-arrow">→</span>
               <span class="result-player-after" id="bot-elo-after">${beforeValue}</span>
             </div>
             <div class="result-player-delta bot-delta centered"><strong><span id="bot-elo-delta">+0</span> ELO BOT</strong></div>

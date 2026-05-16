@@ -63,7 +63,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div>
         <div class="kicker">Duel par lien</div>
         <div class="title" id="duel-title">Chargement</div>
-        <div class="copy" id="duel-copy">On rÃ©cupÃ¨re les informations du dÃ©fi et on te propose de lâ€™accepter directement si tu es connectÃ©.</div>
+        <div class="copy" id="duel-copy">On récupère les informations du défi et on te propose de l’accepter directement si tu es connecté.</div>
       </div>
     </div>
     <div class="chips" id="duel-chips"></div>
@@ -75,15 +75,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="meta">
       <div class="meta-card">
         <div class="meta-label">Type</div>
-        <div class="meta-value" id="duel-mode">â€”</div>
+        <div class="meta-value" id="duel-mode">—</div>
       </div>
       <div class="meta-card">
         <div class="meta-label">Statut</div>
-        <div class="meta-value" id="duel-status">â€”</div>
+        <div class="meta-value" id="duel-status">—</div>
       </div>
       <div class="meta-card">
         <div class="meta-label">Expire</div>
-        <div class="meta-value" id="duel-created">â€”</div>
+        <div class="meta-value" id="duel-created">—</div>
       </div>
     </div>
   </div>
@@ -299,7 +299,7 @@ async function acceptDuel() {
 async function copyCurrentLink() {
   try {
     await navigator.clipboard.writeText(window.location.href);
-    setState('Lien copiÃ© dans le presse-papiers.', 'ok');
+    setState('Lien copié dans le presse-papiers.', 'ok');
   } catch (error) {
     setState('Impossible de copier le lien automatiquement.', 'warn');
   }

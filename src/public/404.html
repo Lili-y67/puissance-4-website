@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 â€” Page introuvable</title>
+<title>Puissance 4 — Page introuvable</title>
 <link rel="icon" type="image/png" href="/assets/site-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -36,7 +36,7 @@ html, body {
   background-size: 40px 40px;
 }
 
-/* â”€â”€ Plateau Puissance 4 â”€â”€ */
+/* ── Plateau Puissance 4 ── */
 .board-scene {
   position: fixed;
   bottom: 0; left: 50%;
@@ -67,11 +67,11 @@ html, body {
   overflow: hidden;
 }
 
-/* Pions existants dÃ©coratifs */
+/* Pions existants décoratifs */
 .cell.red   { background: radial-gradient(circle at 35% 30%, #ff6b82, #ff2d55); box-shadow: 0 0 14px rgba(255,45,85,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,45,85,0.3); }
 .cell.yellow{ background: radial-gradient(circle at 35% 30%, #ffe566, #ffd60a); box-shadow: 0 0 14px rgba(255,214,10,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,214,10,0.3); }
 
-/* â”€â”€ Pion qui tombe â”€â”€ */
+/* ── Pion qui tombe ── */
 .falling-token {
   position: fixed;
   left: 50%;
@@ -95,7 +95,7 @@ html, body {
   100% { top: calc(100vh - 400px); opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
-/* TraÃ®nÃ©e lumineuse */
+/* Traînée lumineuse */
 .falling-token::after {
   content: '';
   position: absolute;
@@ -112,7 +112,7 @@ html, body {
   100%     { opacity: 0; }
 }
 
-/* â”€â”€ Contenu 404 â”€â”€ */
+/* ── Contenu 404 ── */
 .content {
   position: fixed;
   inset: 0;
@@ -235,7 +235,7 @@ html, body {
 <div class="falling-token"></div>
 <div class="impact-ring"></div>
 
-<!-- Plateau dÃ©coratif -->
+<!-- Plateau décoratif -->
 <div class="board-scene">
   <div class="board" id="board"></div>
 </div>
@@ -245,16 +245,16 @@ html, body {
   <div class="error-code">404</div>
   <div class="error-title">Colonne introuvable !</div>
   <div class="error-sub">
-    Tu as jouÃ© dans une colonne qui <em>n'existe pas</em>.<br>
-    Cette page s'est perdue quelque part entre la rangÃ©e 4 et le vide.
+    Tu as joué dans une colonne qui <em>n'existe pas</em>.<br>
+    Cette page s'est perdue quelque part entre la rangée 4 et le vide.
   </div>
-  <a class="btn-home" href="/">âš¡ Retour Ã  l'arÃ¨ne</a>
+  <a class="btn-home" href="/">⚡ Retour à l'arène</a>
 </div>
 
 <script>
-// GÃ©nÃ©rer un plateau dÃ©coratif avec des pions semi-alÃ©atoires
+// Générer un plateau décoratif avec des pions semi-aléatoires
 const board = document.getElementById('board');
-// Grille 6 rangÃ©es Ã— 7 colonnes â€” colonne du milieu (index 3) libre pour l'animation
+// Grille 6 rangées × 7 colonnes — colonne du milieu (index 3) libre pour l'animation
 const pattern = [
   [0,1,0,0,0,2,0],
   [2,0,1,0,2,0,1],
