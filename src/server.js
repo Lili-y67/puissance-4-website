@@ -4012,6 +4012,26 @@ function applyCouponPrice(price, coupon) {
   return Math.max(0, Math.ceil(Number(price || 0) * (1 - Math.min(95, value) / 100)));
 }
 
+app.post('/api/shop/coupon/validate', (req, res) => {
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour valider un code promo.' });
+  const code = normalizeCouponCode(req.body?.coupon);
+  if (!code) return res.status(400).json({ error: 'Code promo manquant.' });
+  const coupon = getUsableCoupon(code, playerId);
+  if (!coupon) return res.status(400).json({ error: 'Code invalide, expire ou deja utilise.' });
+  res.json({
+    ok: true,
+    coupon: {
+      code: coupon.code,
+      type: coupon.type,
+      value: Number(coupon.value || 0),
+      expiresAt: Number(coupon.expires_at || 0) || null,
+      remainingUses: Math.max(0, Number(coupon.max_uses || 0) - Number(coupon.uses || 0)),
+    },
+  });
+});
+
 function serializeClan(row, withMembers = false) {
   if (!row) return null;
   const clan = {
