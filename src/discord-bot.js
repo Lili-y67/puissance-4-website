@@ -14,6 +14,7 @@ const {
   SeparatorBuilder,
   MessageFlags,
 } = require('discord.js');
+const crypto = require('crypto');
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
@@ -41,6 +42,17 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
     { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
+    {
+      name: 'coupon',
+      description: 'Creer un code promotionnel boutique',
+      options: [
+        { type: 3, name: 'code', description: 'Code a creer, vide = aleatoire', required: false },
+        { type: 3, name: 'type', description: 'Type de reduction', required: false, choices: [{ name: 'Pourcentage', value: 'discount' }, { name: 'Montant fixe', value: 'flat' }] },
+        { type: 4, name: 'valeur', description: 'Pourcentage ou montant retire', required: false },
+        { type: 4, name: 'utilisations', description: 'Nombre maximum d utilisations', required: false },
+        { type: 4, name: 'heures', description: 'Expiration en heures, vide = pas d expiration', required: false },
+      ],
+    },
     { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
     {
       name: 'admin',
@@ -91,7 +103,7 @@ function startDiscordBot(ctx) {
     return null;
   }
 
-  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages] });
   const api = String(process.env.BASE_URL || DEFAULT_API).replace(/\/+$/, '');
   const fmt = value => Number(value || 0).toLocaleString('fr-FR');
   const truncate = (value, max = 100) => String(value == null ? '' : value).slice(0, max);
@@ -101,6 +113,18 @@ function startDiscordBot(ctx) {
   const discordEmojiCache = new Map();
   const staffSessions = new Map();
   const STAFF_SESSION_TTL_MS = 10 * 60 * 1000;
+
+  function normalizeCouponCode(value) {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]/g, '')
+      .slice(0, 24);
+  }
+
+  function makeCouponCode() {
+    return `P4-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  }
 
   function rowButtons(buttons) {
     const row = new ActionRowBuilder();
@@ -221,6 +245,45 @@ function startDiscordBot(ctx) {
     return ctx.db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
   }
 
+  function xpNeededForLevel(level) {
+    return 100 + Math.max(0, Number(level || 0)) * 35;
+  }
+
+  function awardDiscordActivityGem(message) {
+    if (!message?.guildId || message.author?.bot) return;
+    const discordId = String(message.author?.id || '');
+    const player = playerByDiscord(discordId);
+    if (!player || Number(player.is_bot || 0) === 1) return;
+    const now = Date.now();
+    const row = ctx.db.prepare(`SELECT * FROM discord_activity WHERE discord_id = ?`).get(discordId);
+    if (row && now - Number(row.last_reward_at || 0) < 60 * 1000) {
+      ctx.db.prepare(`UPDATE discord_activity SET messages = messages + 1, updated_at = ? WHERE discord_id = ?`).run(now, discordId);
+      return;
+    }
+    let xp = Number(row?.xp || 0) + 5 + Math.floor(Math.random() * 8);
+    let level = Number(row?.level || 0);
+    let gainedGems = 0;
+    while (xp >= xpNeededForLevel(level)) {
+      xp -= xpNeededForLevel(level);
+      level += 1;
+      gainedGems += 1;
+    }
+    ctx.db.prepare(`
+      INSERT INTO discord_activity (discord_id, player_id, xp, level, messages, last_reward_at, updated_at)
+      VALUES (?, ?, ?, ?, 1, ?, ?)
+      ON CONFLICT(discord_id) DO UPDATE SET
+        player_id=excluded.player_id,
+        xp=excluded.xp,
+        level=excluded.level,
+        messages=discord_activity.messages + 1,
+        last_reward_at=excluded.last_reward_at,
+        updated_at=excluded.updated_at
+    `).run(discordId, player.id, xp, level, now, now);
+    if (gainedGems > 0 && Number(player.is_bot || 0) !== 1) {
+      ctx.pQ.addGems.run({ delta: gainedGems, id: player.id });
+    }
+  }
+
   function purgeStaffSessions() {
     const now = Date.now();
     for (const [discordId, session] of staffSessions.entries()) {
@@ -233,6 +296,14 @@ function startDiscordBot(ctx) {
     const expected = String(player.password);
     const hashed = typeof ctx.hashPwd === 'function' ? ctx.hashPwd(String(password || '')) : String(password || '');
     return expected === hashed || expected === String(password || '');
+  }
+
+  function staffPasswordMatches(player, password) {
+    const raw = String(password || '');
+    if (!raw) return false;
+    if (localPasswordMatches(player, raw)) return true;
+    // Compat: les admins utilisaient deja le mot de passe global avec /admin.
+    return player?.role === 'admin' && raw === String(ctx.ADMIN_PASSWORD || '');
   }
 
   async function getLinkedStaffContext(discordId) {
@@ -678,9 +749,9 @@ function startDiscordBot(ctx) {
     const password = interaction.options.getString('password', true);
     const ctxStaff = await getLinkedStaffContext(interaction.user.id);
     if (ctxStaff.error) return replyError(interaction, 'Connexion staff refusee', ctxStaff.error);
-    if (!localPasswordMatches(ctxStaff.player, password)) {
+    if (!staffPasswordMatches(ctxStaff.player, password)) {
       staffSessions.delete(interaction.user.id);
-      return replyError(interaction, 'Connexion staff refusee', 'Mot de passe du profil Puissance 4 invalide.');
+      return replyError(interaction, 'Connexion staff refusee', 'Mot de passe invalide.');
     }
     const expiresAt = Date.now() + STAFF_SESSION_TTL_MS;
     staffSessions.set(interaction.user.id, {
@@ -736,6 +807,30 @@ function startDiscordBot(ctx) {
     return role;
   }
 
+  async function requireStaffForAdmin(interaction, minimum = 'moderator') {
+    const password = interaction.options.getString('password') || '';
+    if (password) {
+      const ctxStaff = await getLinkedStaffContext(interaction.user.id);
+      if (ctxStaff.error) {
+        await interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Connexion staff refusee', subtitle: ctxStaff.error }));
+        return null;
+      }
+      if (!staffPasswordMatches(ctxStaff.player, password)) {
+        await interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Mot de passe invalide', subtitle: 'Utilise le mot de passe de ton profil ou le mot de passe admin global si tu es admin.' }));
+        return null;
+      }
+      staffSessions.set(interaction.user.id, {
+        playerId: ctxStaff.player.id,
+        pseudo: ctxStaff.player.pseudo,
+        role: ctxStaff.effectiveRole,
+        expiresAt: Date.now() + STAFF_SESSION_TTL_MS,
+        lastUsedAt: Date.now(),
+      });
+    }
+    return requireStaff(interaction, minimum);
+  }
+
+
   async function handleAdmin(interaction) {
     const action = interaction.options.getString('action', true);
     const pseudo = interaction.options.getString('pseudo');
@@ -744,7 +839,7 @@ function startDiscordBot(ctx) {
     const resourceId = interaction.options.getString('id');
     const itemKey = interaction.options.getString('item');
     const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
-    const role = await requireStaff(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
+    const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
     if (action === 'reload') {
@@ -853,6 +948,50 @@ function startDiscordBot(ctx) {
       return interaction.editReply(containerMessage({ color: 0xbf5af2, title: 'Item donne', subtitle: `${target.pseudo} recoit ${quantity} x ${item.label}` }));
     }
     return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Action inconnue', subtitle: action }));
+  }
+
+  async function handleCoupon(interaction) {
+    const role = await requireStaff(interaction, 'admin');
+    if (!role) return;
+
+    const type = interaction.options.getString('type') === 'flat' ? 'flat' : 'discount';
+    const codeValue = normalizeCouponCode(interaction.options.getString('code') || makeCouponCode());
+    if (!codeValue || codeValue.length < 3) {
+      return replyError(interaction, 'Code coupon invalide', 'Utilise au moins 3 caracteres alphanumeriques.');
+    }
+
+    const maxValue = type === 'flat' ? 100000 : 95;
+    const value = Math.max(1, Math.min(maxValue, Math.trunc(Number(interaction.options.getInteger('valeur') || (type === 'flat' ? 100 : 20)))));
+    const maxUses = Math.max(1, Math.min(10000, Math.trunc(Number(interaction.options.getInteger('utilisations') || 1))));
+    const hours = Math.max(0, Math.min(8760, Math.trunc(Number(interaction.options.getInteger('heures') || 0))));
+    const expiresAt = hours ? Date.now() + hours * 60 * 60 * 1000 : null;
+    const staff = await getLinkedStaffContext(interaction.user.id);
+
+    ctx.db.prepare(`
+      INSERT INTO coupons (code, type, value, max_uses, uses, expires_at, created_by, created_at)
+      VALUES (?, ?, ?, ?, 0, ?, ?, ?)
+      ON CONFLICT(code) DO UPDATE SET
+        type=excluded.type,
+        value=excluded.value,
+        max_uses=excluded.max_uses,
+        uses=0,
+        expires_at=excluded.expires_at,
+        created_by=excluded.created_by,
+        created_at=excluded.created_at
+    `).run(codeValue, type, value, maxUses, expiresAt, staff.player?.id || null, Date.now());
+
+    return interaction.editReply(containerMessage({
+      color: 0x85ebff,
+      title: 'Coupon boutique cree',
+      subtitle: `${code(codeValue)} est pret pour la boutique.`,
+      sections: [[
+        `Type : **${type === 'flat' ? 'montant fixe' : 'reduction'}**`,
+        `Valeur : **${value}${type === 'flat' ? '' : '%'}**`,
+        `Utilisations : **${maxUses}**`,
+        `Expiration : **${hours ? `${hours}h` : 'aucune'}**`,
+      ]],
+      buttons: [linkButton('Ouvrir la boutique', `${api}/boutique`, '🛒')],
+    }));
   }
 
   function updateStatus() {
@@ -965,9 +1104,18 @@ function startDiscordBot(ctx) {
       }
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
       if (interaction.commandName === 'admin') return handleAdmin(interaction);
+      if (interaction.commandName === 'coupon') return handleCoupon(interaction);
     } catch (error) {
       console.error('[BOT ERROR]', error);
       return replyError(interaction, 'Erreur bot Discord', truncate(error.message || 'Erreur inconnue', 300));
+    }
+  });
+
+  bot.on('messageCreate', message => {
+    try {
+      awardDiscordActivityGem(message);
+    } catch (error) {
+      console.warn('[BOT] Activite Discord:', error.message);
     }
   });
 

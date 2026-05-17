@@ -302,6 +302,39 @@ input[type="file"]{display:none;}
 .profile-pill:nth-child(4){animation-delay:.6s}
 .profile-pill strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;letter-spacing:1px;text-transform:uppercase}
 @keyframes profile-pill-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.clan-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(260px,.95fr);gap:14px}
+.clan-card{
+  position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:22px;
+  background:radial-gradient(circle at 10% 0%,var(--clan-glow,rgba(133,235,255,.12)),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);
+  padding:18px;box-shadow:0 20px 46px rgba(0,0,0,.22)
+}
+.clan-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--clan-line,rgba(133,235,255,.18)),transparent 38%);opacity:.38;pointer-events:none}
+.clan-card>*{position:relative;z-index:1}
+.clan-identity{display:flex;align-items:center;gap:14px}
+.clan-blason{
+  width:66px;height:66px;border-radius:20px;display:flex;align-items:center;justify-content:center;
+  font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif;font-size:34px;
+  background:rgba(255,255,255,.05);border:1px solid var(--clan-border,rgba(133,235,255,.28));
+  box-shadow:0 0 28px var(--clan-glow,rgba(133,235,255,.18)), inset 0 0 20px rgba(255,255,255,.035)
+}
+.clan-title{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;letter-spacing:1px;text-transform:uppercase;line-height:1}
+.clan-tag{display:inline-flex;align-items:center;gap:6px;margin-top:7px;padding:4px 9px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;border:1px solid var(--clan-border,rgba(133,235,255,.28));color:var(--clan-color,#85EBFF);background:var(--clan-bg,rgba(133,235,255,.08))}
+.clan-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
+.clan-meta-box{border:1px solid rgba(255,255,255,.06);border-radius:14px;background:rgba(255,255,255,.035);padding:10px;text-align:center}
+.clan-meta-box strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900}
+.clan-meta-box span{display:block;margin-top:2px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px}
+.clan-form{display:grid;grid-template-columns:1fr 96px;gap:10px}
+.clan-form .search-input{max-width:none;margin:0}
+.clan-form textarea{grid-column:1/-1;min-height:72px;resize:vertical}
+.clan-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.clan-directory{display:flex;flex-direction:column;gap:10px;max-height:360px;overflow:auto;padding-right:4px}
+.clan-row{display:flex;align-items:center;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
+.clan-row-badge{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(255,255,255,.05);border:1px solid var(--clan-border,rgba(133,235,255,.25))}
+.clan-row-main{min-width:0;flex:1}
+.clan-row-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clan-row-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clan-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-family:'Barlow Condensed','Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+@media (max-width:760px){.clan-grid{grid-template-columns:1fr}.clan-form{grid-template-columns:1fr}.clan-meta{grid-template-columns:1fr}}
 .profile-marquee{
   position:relative;overflow:hidden;border-top:1px solid rgba(255,255,255,.05);
   border-bottom:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.025);
@@ -1304,15 +1337,15 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
 }
 
 function isVipPlus(player = currentPlayer) {
-  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isVip(player = currentPlayer) {
-  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isPerso(player = currentPlayer) {
-  return Number(player?.is_perso) === 1;
+  return Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1;
 }
 
 function canUseGradient(player = currentPlayer) {
@@ -1320,6 +1353,7 @@ function canUseGradient(player = currentPlayer) {
 }
 
 function getPremiumTier(player = currentPlayer) {
+  if (Number(player?.is_bot) === 1) return 'bot';
   if (isPerso(player)) return 'perso';
   if (isVipPlus(player)) return 'vip_plus';
   if (Number(player?.is_vip) === 1) return 'vip';
@@ -1348,12 +1382,21 @@ function getVipBadgeTier(player = currentPlayer) {
 }
 
 function renderVipBadge(player = currentPlayer) {
+  if (Number(player?.is_bot) === 1) return '';
   if (!isVip(player)) return '';
   const accent = getVipAccent(player);
   const tier = getVipBadgeTier(player);
   return `<span class="vip-tier-badge" style="background:${accent.bg};color:${accent.color};border:1px solid ${accent.border};--vip-glow:${tier.glow}" title="${escapeHtml(tier.title)}">
     <img src="${tier.src}" alt="${escapeHtml(tier.title)}">${accent.label}
   </span>`;
+}
+
+function renderBotBadge(player = currentPlayer) {
+  if (Number(player?.is_bot) !== 1) return '';
+  const enabled = Number(player?.bot_enabled ?? 1) === 1;
+  const color = enabled ? '#b8bbc7' : '#ff7a45';
+  const label = enabled ? 'BOT' : 'BOT SUSPENDU';
+  return `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(142,142,147,0.16);color:${color};border:1px solid rgba(184,187,199,0.38);box-shadow:0 0 14px rgba(184,187,199,0.18);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤖 ${label}</span>`;
 }
 
 function renderResultMiniStats(wins = 0, losses = 0, draws = 0, wr = 0) {
@@ -1426,6 +1469,93 @@ function getTournamentStatusColor(status) {
   if (status === 'pending') return '#ffd60a';
   if (status === 'paused') return '#68d4ff';
   return 'var(--muted)';
+}
+
+function clanAccentStyle(clan) {
+  const color = /^#[0-9a-f]{6}$/i.test(String(clan?.color || '')) ? clan.color : '#85EBFF';
+  return `--clan-color:${color};--clan-bg:${color}16;--clan-border:${color}55;--clan-glow:${color}26;--clan-line:${color}22`;
+}
+
+function renderClanBadge(clan) {
+  if (!clan) return '';
+  return `<span class="clan-chip" style="${clanAccentStyle(clan)};background:var(--clan-bg);border:1px solid var(--clan-border);color:var(--clan-color)" title="Clan ${escapeHtml(clan.name)}">
+    <span>${escapeHtml(clan.blason || '🛡️')}</span> ${escapeHtml(clan.tag || 'CLAN')}
+  </span>`;
+}
+
+function renderClanSection(player, isOwnProfile) {
+  const clan = player?.clan || null;
+  const isAdminTier = String(player?.role || '') === 'admin';
+  const canCreate = isOwnProfile && !clan && (isPerso(player) || isAdminTier);
+  const canBrowse = isOwnProfile && !clan;
+  const canLeave = isOwnProfile && clan && Number(clan.owner_id || 0) !== Number(player.id || 0);
+  const clanStyle = clanAccentStyle(clan || { color: '#85EBFF' });
+  return `
+    <section class="profile-section" id="section-clan">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title">Clan</div>
+          <div class="profile-section-sub">Blason, equipe et appartenance du profil.</div>
+        </div>
+      </div>
+      <div class="clan-grid">
+        <div class="clan-card" style="${clanStyle}">
+          ${clan ? `
+            <div class="clan-identity">
+              <div class="clan-blason">${escapeHtml(clan.blason || '🛡️')}</div>
+              <div style="min-width:0">
+                <div class="clan-title">${escapeHtml(clan.name)}</div>
+                <div class="clan-tag">${escapeHtml(clan.tag)} · ${escapeHtml(clan.member_role === 'owner' ? 'Fondateur' : 'Membre')}</div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:14px">${escapeHtml(clan.description || 'Aucune description pour ce clan.')}</div>
+            <div class="clan-meta">
+              <div class="clan-meta-box"><strong>${Number(clan.member_count || 1)}</strong><span>Membres</span></div>
+              <div class="clan-meta-box"><strong>${escapeHtml(clan.owner_pseudo || 'Owner')}</strong><span>Fondateur</span></div>
+              <div class="clan-meta-box"><strong>${clan.created_at ? new Date(Number(clan.created_at)).toLocaleDateString('fr-FR') : '--'}</strong><span>Creation</span></div>
+            </div>
+            ${canLeave ? `<div class="clan-actions"><button class="btn-save-color" onclick="leaveClan()" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Quitter le clan</button></div>` : ''}
+          ` : canCreate ? `
+            <div class="clan-identity">
+              <div class="clan-blason">🛡️</div>
+              <div>
+                <div class="clan-title">Creer ton clan</div>
+                <div class="clan-tag">Reserve Perso</div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.55;margin:12px 0 14px">Un compte ne peut appartenir qu'a un seul clan. Creation limitee a une fois tous les 30 jours, sauf admin.</div>
+            <div class="clan-form">
+              <input id="clan-name-input" class="search-input" maxlength="28" placeholder="Nom du clan">
+              <input id="clan-tag-input" class="search-input" maxlength="6" placeholder="TAG">
+              <input id="clan-blason-input" class="search-input" maxlength="4" placeholder="🛡️" style="font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif">
+              <input id="clan-color-input" class="search-input" type="color" value="#85EBFF">
+              <textarea id="clan-desc-input" class="search-input" maxlength="120" placeholder="Petite description du clan..."></textarea>
+            </div>
+            <div class="clan-actions"><button class="btn-save-color" onclick="createClan()">Creer le clan</button></div>
+          ` : `
+            <div class="clan-identity">
+              <div class="clan-blason">🛡️</div>
+              <div>
+                <div class="clan-title">Aucun clan</div>
+                <div class="clan-tag">Libre</div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.55;margin-top:12px">${isOwnProfile ? 'La creation est reservee aux comptes Perso. Tu peux rejoindre un clan existant si une place est disponible.' : 'Ce joueur ne fait pas encore partie d un clan.'}</div>
+          `}
+        </div>
+        <div class="clan-card" style="${clanStyle}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+            <div>
+              <div class="card-label">Annuaire clans</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px">${canBrowse ? 'Choisis une equipe a rejoindre.' : 'Top clans du site.'}</div>
+            </div>
+          </div>
+          <div class="clan-directory" id="clan-directory">
+            <div style="font-size:12px;color:var(--muted)">Chargement des clans...</div>
+          </div>
+        </div>
+      </div>
+    </section>`;
 }
 
 function formatRemainingTime(ms) {
@@ -1577,6 +1707,7 @@ function render(player, games, following, followers, followStatus, tournaments =
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
+    { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
     ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
     ...(isOwnProfile ? [{ href: '#section-bot', icon: '🤖', title: 'Mode bot', sub: 'API et token' }] : []),
     { href: '#section-discord', icon: '💬', title: 'Discord', sub: 'Liaison et serveur' },
@@ -1631,11 +1762,13 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="profile-info">
           <div class="profile-pseudo">${player.pseudo}</div>
           <div class="profile-badges">
+            ${renderBotBadge(player)}
             ${renderVipBadge(player)}
+            ${renderClanBadge(player.clan)}
             ${player.is_perso && !hasCustomPersoRole(player) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
-            ${player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoRoleAccent(player).bg};color:${getPersoRoleAccent(player).color};border:1px solid ${getPersoRoleAccent(player).border};box-shadow:0 0 14px ${getPersoRoleAccent(player).color}55,inset 0 0 10px ${getPersoRoleAccent(player).bg};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${getPersoRoleAccent(player).emoji ? `<span style="margin-right:4px">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoRoleAccent(player).bg};color:${getPersoRoleAccent(player).color};border:1px solid ${getPersoRoleAccent(player).border};box-shadow:0 0 14px ${getPersoRoleAccent(player).color}55,inset 0 0 10px ${getPersoRoleAccent(player).bg};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${getPersoRoleAccent(player).emoji ? `<span style="margin-right:4px">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -1791,6 +1924,8 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
     </div>
     </section>
+
+    ${renderClanSection(player, isOwnProfile)}
 
     ${tournaments.length ? `
     <section class="profile-section" id="section-tournaments">
@@ -2250,6 +2385,79 @@ function render(player, games, following, followers, followStatus, tournaments =
   initProfileSectionMenu();
   initAutoRejoinToggle();
   initVipBoostUI();
+  loadClanDirectory();
+}
+
+async function loadClanDirectory() {
+  const wrap = document.getElementById('clan-directory');
+  if (!wrap) return;
+  try {
+    const res = await fetch('/api/clans');
+    const data = await res.json();
+    const clans = Array.isArray(data?.clans) ? data.clans : [];
+    if (!clans.length) {
+      wrap.innerHTML = '<div style="font-size:12px;color:var(--muted)">Aucun clan cree pour le moment.</div>';
+      return;
+    }
+    const canJoin = isOwnProfile && !currentPlayer?.clan;
+    wrap.innerHTML = clans.map(clan => `
+      <div class="clan-row" style="${clanAccentStyle(clan)}">
+        <div class="clan-row-badge">${escapeHtml(clan.blason || '🛡️')}</div>
+        <div class="clan-row-main">
+          <div class="clan-row-name">${escapeHtml(clan.name)}</div>
+          <div class="clan-row-sub">${escapeHtml(clan.tag)} · ${Number(clan.member_count || 0)} membres · par ${escapeHtml(clan.owner_pseudo || 'Owner')}</div>
+        </div>
+        ${canJoin ? `<button class="btn-save-color" style="padding:8px 10px;min-width:0;color:var(--clan-color);border-color:var(--clan-border);background:var(--clan-bg)" onclick="joinClan(${Number(clan.id)})">Rejoindre</button>` : ''}
+      </div>
+    `).join('');
+  } catch {
+    wrap.innerHTML = '<div style="font-size:12px;color:#ff6b88">Impossible de charger les clans.</div>';
+  }
+}
+
+async function createClan() {
+  const token = localStorage.getItem('token') || '';
+  const body = {
+    token,
+    name: document.getElementById('clan-name-input')?.value || '',
+    tag: document.getElementById('clan-tag-input')?.value || '',
+    blason: document.getElementById('clan-blason-input')?.value || '🛡️',
+    color: document.getElementById('clan-color-input')?.value || '#85EBFF',
+    description: document.getElementById('clan-desc-input')?.value || '',
+  };
+  try {
+    const res = await fetch('/api/clans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Impossible de creer le clan.');
+    location.reload();
+  } catch {
+    alert('Erreur reseau clan.');
+  }
+}
+
+async function joinClan(id) {
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch(`/api/clans/${encodeURIComponent(id)}/join`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Impossible de rejoindre le clan.');
+    location.reload();
+  } catch {
+    alert('Erreur reseau clan.');
+  }
+}
+
+async function leaveClan() {
+  if (!confirm('Quitter ce clan ?')) return;
+  const token = localStorage.getItem('token') || '';
+  try {
+    const res = await fetch('/api/clans/leave', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Impossible de quitter le clan.');
+    location.reload();
+  } catch {
+    alert('Erreur reseau clan.');
+  }
 }
 
 function setEloHistoryRange(days) {
@@ -3917,7 +4125,7 @@ const SHAPES = [
   { id: 'diamond',  label: '◆' },
   { id: 'star',     label: '★' },
   { id: 'heart',    label: '♥' },
-  { id: 'emoji',    label: 'Emoji VIP' },
+  { id: 'emoji',    label: 'Emoji libre' },
   { id: 'emoji_image', label: 'Emoji VIP+' },
 ];
 const DEFAULT_PROFILE_EMOJI = String.fromCodePoint(0x2B50);
@@ -3945,11 +4153,11 @@ function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = ''
     emoji_image: { borderRadius: '12px', clipPath: '' },
   };
   SHAPES.forEach(s => {
-    const lockedVip = (s.id === 'emoji' && !isVip(currentPlayer)) || (s.id === 'emoji_image' && !isVipPlus(currentPlayer));
+    const lockedVip = s.id === 'emoji_image' && !isVipPlus(currentPlayer);
     const btn = document.createElement('div');
     btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '') + (lockedVip ? ' disabled' : '');
     btn.dataset.shape = s.id;
-    btn.title = lockedVip ? (s.id === 'emoji' ? 'Reserve au role VIP' : 'Reserve au role VIP+') : '';
+    btn.title = lockedVip ? 'Reserve au role VIP+' : (s.id === 'emoji' && !isVip(currentPlayer) ? 'Emoji libre, cooldown 1h sans VIP' : '');
     btn.onclick = () => {
       if (lockedVip) return;
       selectShape(s.id);
@@ -4917,9 +5125,7 @@ async function saveShape() {
   if (!me.id) return;
   const token = localStorage.getItem('token');
   if (selectedShape === 'emoji' && !isVip(me)) {
-    PROFIL_SFX.error();
-    alert('L emoji perso est reserve au VIP.');
-    return;
+    // Autorise pour tous, le serveur applique simplement un cooldown 1h sans VIP.
   }
   if (selectedShape === 'emoji_image' && !selectedTokenEmojiImage && !pendingTokenEmojiImage) {
     PROFIL_SFX.error();

@@ -116,11 +116,13 @@ try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_image TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN gems INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -199,6 +201,61 @@ try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#f
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_enabled ON players(is_bot, bot_enabled, deleted)`); } catch(e) {}
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS clans (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    name           TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    tag            TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+    blason         TEXT    NOT NULL DEFAULT '🛡️',
+    color          TEXT    NOT NULL DEFAULT '#85EBFF',
+    description    TEXT    NOT NULL DEFAULT '',
+    owner_id       INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS clan_members (
+    clan_id    INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+    player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    role       TEXT    NOT NULL DEFAULT 'member',
+    joined_at  INTEGER NOT NULL,
+    PRIMARY KEY (clan_id, player_id),
+    UNIQUE (player_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_clan_members_player ON clan_members(player_id);
+  CREATE INDEX IF NOT EXISTS idx_clan_members_clan ON clan_members(clan_id);
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS coupons (
+    code         TEXT PRIMARY KEY,
+    type         TEXT NOT NULL DEFAULT 'discount',
+    value        INTEGER NOT NULL DEFAULT 0,
+    max_uses     INTEGER NOT NULL DEFAULT 1,
+    uses         INTEGER NOT NULL DEFAULT 0,
+    expires_at   INTEGER,
+    created_by   INTEGER,
+    created_at   INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS coupon_uses (
+    code       TEXT NOT NULL REFERENCES coupons(code) ON DELETE CASCADE,
+    player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    used_at    INTEGER NOT NULL,
+    PRIMARY KEY (code, player_id)
+  );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS discord_activity (
+    discord_id      TEXT PRIMARY KEY,
+    player_id       INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    xp              INTEGER NOT NULL DEFAULT 0,
+    level           INTEGER NOT NULL DEFAULT 0,
+    messages        INTEGER NOT NULL DEFAULT 0,
+    last_reward_at  INTEGER NOT NULL DEFAULT 0,
+    updated_at      INTEGER NOT NULL
+  );
+`);
+
 // ── Players ───────────────────────────────────────────────────────────────────
 const pQ = {
   getById:     db.prepare(`SELECT * FROM players WHERE id = ?`),
@@ -233,6 +290,9 @@ const pQ = {
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
   updateCoins:  db.prepare(`UPDATE players SET coins = @coins WHERE id = @id`),
   addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),
+  updateGems:   db.prepare(`UPDATE players SET gems = @gems WHERE id = @id`),
+  addGems:      db.prepare(`UPDATE players SET gems = gems + @delta WHERE id = @id`),
+  updateTokenEmojiChangedAt: db.prepare(`UPDATE players SET token_emoji_changed_at = @changedAt WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   setElo:       db.prepare(`UPDATE players SET elo = @elo WHERE id = @id`),
   win:          db.prepare(`UPDATE players SET wins   = wins   + 1 WHERE id = ?`),
@@ -324,6 +384,48 @@ const fQ = {
   countFollowers: db.prepare(`SELECT COUNT(*) as n FROM follows WHERE following_id = ?`),
 };
 
+const cQ = {
+  create: db.prepare(`
+    INSERT INTO clans (name, tag, blason, color, description, owner_id, created_at, updated_at)
+    VALUES (@name, @tag, @blason, @color, @description, @owner_id, @created_at, @updated_at)
+  `),
+  addMember: db.prepare(`
+    INSERT INTO clan_members (clan_id, player_id, role, joined_at)
+    VALUES (@clan_id, @player_id, @role, @joined_at)
+  `),
+  removeMember: db.prepare(`DELETE FROM clan_members WHERE player_id = ?`),
+  getById: db.prepare(`SELECT * FROM clans WHERE id = ?`),
+  getByName: db.prepare(`SELECT * FROM clans WHERE name = ? COLLATE NOCASE`),
+  getByTag: db.prepare(`SELECT * FROM clans WHERE tag = ? COLLATE NOCASE`),
+  getForPlayer: db.prepare(`
+    SELECT c.*, cm.role AS member_role, cm.joined_at, p.pseudo AS owner_pseudo,
+      (SELECT COUNT(*) FROM clan_members cm2 WHERE cm2.clan_id = c.id) AS member_count
+    FROM clan_members cm
+    JOIN clans c ON c.id = cm.clan_id
+    JOIN players p ON p.id = c.owner_id
+    WHERE cm.player_id = ?
+  `),
+  list: db.prepare(`
+    SELECT c.*,
+      p.pseudo AS owner_pseudo,
+      (SELECT COUNT(*) FROM clan_members cm WHERE cm.clan_id = c.id) AS member_count
+    FROM clans c
+    JOIN players p ON p.id = c.owner_id
+    ORDER BY member_count DESC, c.created_at DESC
+    LIMIT ?
+  `),
+  lastCreatedBy: db.prepare(`
+    SELECT * FROM clans WHERE owner_id = ? ORDER BY created_at DESC LIMIT 1
+  `),
+  members: db.prepare(`
+    SELECT cm.*, p.pseudo, p.elo, p.avatar, p.color, p.role AS player_role, p.is_vip, p.is_vip_plus, p.is_perso
+    FROM clan_members cm
+    JOIN players p ON p.id = cm.player_id
+    WHERE cm.clan_id = ?
+    ORDER BY CASE cm.role WHEN 'owner' THEN 0 ELSE 1 END, p.elo DESC, cm.joined_at ASC
+  `),
+};
+
 // ── Boosts ────────────────────────────────────────────────────────────────────
 const bQ = {
   create:        db.prepare(`INSERT INTO boosts (multiplier, applied_by) VALUES (@multiplier, @applied_by)`),
@@ -398,15 +500,15 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
       return 1;
     }
   })();
-  const p1Coins = isFriendly || isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
-  const p2Coins = isFriendly || isSuspect ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p1Coins = isFriendly || isSuspect || p1IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p2Coins = isFriendly || isSuspect || p2IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
 
   if (!isFriendly && !isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
     pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
     pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
-    pQ.addCoins.run({ delta: p1Coins, id: game.player1_id });
-    pQ.addCoins.run({ delta: p2Coins, id: game.player2_id });
+    if (p1Coins > 0) pQ.addCoins.run({ delta: p1Coins, id: game.player1_id });
+    if (p2Coins > 0) pQ.addCoins.run({ delta: p2Coins, id: game.player2_id });
     if (isDraw) {
       pQ.draw.run(game.player1_id);
       pQ.draw.run(game.player2_id);
@@ -664,4 +766,4 @@ const tQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, sQ, abQ, rQ, tQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, cQ, sQ, abQ, rQ, tQ, calcElo, finishGame };

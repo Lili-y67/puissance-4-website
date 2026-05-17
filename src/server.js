@@ -6,7 +6,7 @@ const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
 
-const { initDb, db, pQ, gQ, mQ, fQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
 const { getRank } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
@@ -490,9 +490,8 @@ function acceptDuelChallenge(challenge, accepterId) {
   const senderSocket = pickDuelSocket(sender.id);
   const targetSocket = pickDuelSocket(target.id);
   if (!senderSocket || !targetSocket) {
-    challenge.status = 'expired';
     duelChallenges.set(challenge.id, challenge);
-    return { error: 'Le duel ne peut pas demarrer car un joueur n est plus connecte.' };
+    return { error: 'Connexion du duel pas encore prête. Réessaie dans une seconde.' };
   }
 
   const p1 = buildPlayableSocketPayload(sender);
@@ -573,7 +572,7 @@ function hasPersoRoleIds(roleIds = []) {
 }
 
 function isPersoPlayer(player) {
-  return !!player && Number(player.is_perso) === 1;
+  return !!player && (Number(player.is_perso) === 1 || Number(player.is_bot) === 1);
 }
 
 function isAdminPlayer(player) {
@@ -601,13 +600,14 @@ function getPremiumBoostConfig(player) {
 
 function isVipPlayer(player) {
   if (!player) return false;
+  if (Number(player.is_bot) === 1) return true;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
   if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1 && Number(player.is_perso) !== 1) return false;
   return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isAdminPlayer(player);
 }
 
 function isVipPlusPlayer(player) {
-  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isAdminPlayer(player));
+  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || Number(player.is_bot) === 1 || isAdminPlayer(player));
 }
 
 let canvasFontsRegistered = false;
@@ -738,9 +738,21 @@ function getBotFromRequest(req) {
   const tokenHash = hashBotToken(token);
   return db.prepare(`
     SELECT * FROM players
-    WHERE bot_token_hash = ? AND is_bot = 1 AND bot_enabled = 1 AND deleted = 0
+    WHERE bot_token_hash = ? AND is_bot = 1 AND deleted = 0
     LIMIT 1
   `).get(tokenHash) || null;
+}
+
+function ensureBotEnabled(bot, res) {
+  if (!bot) {
+    res.status(401).json({ error: 'Token bot invalide.' });
+    return false;
+  }
+  if (Number(bot.bot_enabled || 0) !== 1) {
+    res.status(403).json({ error: 'Compte bot suspendu par le staff.' });
+    return false;
+  }
+  return true;
 }
 
 function publicBotRuntime(playerId) {
@@ -762,6 +774,7 @@ function getOnlineBotCount() {
 
 const VIP_MEDIA_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const VIP_PLUS_MEDIA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const TOKEN_EMOJI_COOLDOWN_MS = 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
@@ -1730,7 +1743,7 @@ app.get('/api/admin/security', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const players = db.prepare(`SELECT id, pseudo, elo, coins, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -1750,19 +1763,72 @@ app.patch('/api/admin/players/:id/coins', (req, res) => {
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
   const delta = Number(req.body?.delta);
-  if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta <= 0) {
+  if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
     return res.status(400).json({ error: 'Montant invalide.' });
   }
-  const nextCoins = Number(target.coins || 0) + delta;
+  const nextCoins = Math.max(0, Number(target.coins || 0) + delta);
   pQ.updateCoins.run({ coins: nextCoins, id });
   try {
-    WH.wlogAdminAction('Coins ajoutes', target.pseudo, id, [
-      ['Ajout', String(delta), true],
+    WH.wlogAdminAction(delta > 0 ? 'Coins ajoutes' : 'Coins retires', target.pseudo, id, [
+      ['Variation', `${delta > 0 ? '+' : ''}${delta}`, true],
       ['Nouveau total', String(nextCoins), true],
     ]);
   } catch(e) {}
-  notifyPlayerProfileChanged(id, `Coins ajoutes par le staff (+${delta}).`);
+  notifyPlayerProfileChanged(id, `Coins modifies par le staff (${delta > 0 ? '+' : ''}${delta}).`);
   res.json({ ok: true, coins: nextCoins, added: delta });
+});
+
+app.patch('/api/admin/players/:id/gems', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const delta = Number(req.body?.delta);
+  if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
+    return res.status(400).json({ error: 'Montant invalide.' });
+  }
+  const nextGems = Math.max(0, Number(target.gems || 0) + delta);
+  pQ.updateGems.run({ gems: nextGems, id });
+  try {
+    WH.wlogAdminAction(delta > 0 ? 'Gemmes ajoutees' : 'Gemmes retirees', target.pseudo, id, [
+      ['Variation', `${delta > 0 ? '+' : ''}${delta}`, true],
+      ['Nouveau total', String(nextGems), true],
+    ]);
+  } catch(e) {}
+  notifyPlayerProfileChanged(id, `Gemmes modifiees par le staff (${delta > 0 ? '+' : ''}${delta}).`);
+  res.json({ ok: true, gems: nextGems, added: delta });
+});
+
+app.patch('/api/admin/players/:id/bot-enabled', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target || Number(target.is_bot || 0) !== 1) return res.status(404).json({ error: 'Bot introuvable.' });
+  const enabled = req.body?.enabled ? 1 : 0;
+  db.prepare(`UPDATE players SET bot_enabled = ? WHERE id = ?`).run(enabled, id);
+  if (!enabled) {
+    const qIdx = botApiQueue.indexOf(id);
+    if (qIdx >= 0) botApiQueue.splice(qIdx, 1);
+    botRuntime.set(id, { status: 'suspended', lastSeen: Date.now() });
+  }
+  notifyPlayerProfileChanged(id, enabled ? 'Bot reactive par le staff.' : 'Bot suspendu par le staff.');
+  res.json({ ok: true, bot_enabled: enabled });
+});
+
+app.post('/api/admin/coupons', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const code = normalizeCouponCode(req.body?.code || crypto.randomBytes(4).toString('hex').toUpperCase());
+  const type = String(req.body?.type || 'discount') === 'flat' ? 'flat' : 'discount';
+  const value = Math.max(1, Math.min(type === 'flat' ? 100000 : 95, Math.trunc(Number(req.body?.value || 20))));
+  const maxUses = Math.max(1, Math.min(10000, Math.trunc(Number(req.body?.maxUses || 1))));
+  const durationHours = Math.max(0, Math.min(24 * 365, Number(req.body?.durationHours || 0)));
+  const expiresAt = durationHours > 0 ? Date.now() + durationHours * 60 * 60 * 1000 : null;
+  db.prepare(`
+    INSERT INTO coupons (code, type, value, max_uses, uses, expires_at, created_by, created_at)
+    VALUES (?, ?, ?, ?, 0, ?, NULL, ?)
+    ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, max_uses=excluded.max_uses, expires_at=excluded.expires_at
+  `).run(code, type, value, maxUses, expiresAt, Date.now());
+  res.json({ ok: true, coupon: { code, type, value, maxUses, expiresAt } });
 });
 
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
@@ -2055,6 +2121,7 @@ const SHOP_ITEMS = Object.freeze({
   coin_boost_plus: { key: 'coin_boost_plus', category: 'coin_boosters', label: 'Coin Boost +', price: 6000, boostType: 'coins', multiplier: 10, defaultStock: 3 },
 });
 const SHOP_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, v.price])));
+const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, Math.max(1, Math.ceil(Number(v.price || 0) * 0.45))])));
 const SHOP_STOCK_KEYS = Object.freeze(
   Object.fromEntries(Object.values(SHOP_ITEMS).filter(v => Number.isFinite(v.defaultStock)).map(v => [v.key, `shop_stock_${v.key}`]))
 );
@@ -3122,6 +3189,7 @@ app.get('/api/shop/me', (req, res) => {
     player: sanitize(player),
     items: SHOP_ITEMS,
     prices: SHOP_PRICES,
+    gemPrices: SHOP_GEM_PRICES,
     stock,
     inventory,
   });
@@ -3138,10 +3206,18 @@ app.post('/api/shop/buy', async (req, res) => {
 
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  const price = Number(item.price || 0);
+  const currency = String(req.body?.currency || 'coins').toLowerCase() === 'gems' ? 'gems' : 'coins';
+  const requestedCoupon = normalizeCouponCode(req.body?.coupon);
+  const coupon = getUsableCoupon(requestedCoupon, playerId);
+  if (requestedCoupon && !coupon) {
+    return res.status(400).json({ error: 'Coupon invalide, expire, deja utilise ou limite atteinte.' });
+  }
+  const basePrice = currency === 'gems' ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45))) : Number(item.price || 0);
+  const price = applyCouponPrice(basePrice, coupon);
+  const balance = currency === 'gems' ? Number(player.gems || 0) : Number(player.coins || 0);
 
-  if (Number(player.coins || 0) < price) {
-    return res.status(400).json({ error: 'Pas assez de coins.' });
+  if (balance < price) {
+    return res.status(400).json({ error: currency === 'gems' ? 'Pas assez de gemmes.' : 'Pas assez de coins.' });
   }
   if (pack === 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: 'VIP+ deja actif.' });
@@ -3157,12 +3233,15 @@ app.post('/api/shop/buy', async (req, res) => {
   }
 
   const now = Date.now();
-  const currentCoins = Number(player.coins || 0);
   const currentVipExpiry = Number(player.vip_expires_at || 0);
   const baseExpiry = currentVipExpiry > now ? currentVipExpiry : now;
-  const nextCoins = currentCoins - price;
 
-  pQ.updateCoins.run({ coins: nextCoins, id: playerId });
+  if (currency === 'gems') pQ.updateGems.run({ gems: balance - price, id: playerId });
+  else pQ.updateCoins.run({ coins: balance - price, id: playerId });
+  if (coupon) {
+    db.prepare(`UPDATE coupons SET uses = uses + 1 WHERE code = ?`).run(coupon.code);
+    db.prepare(`INSERT OR IGNORE INTO coupon_uses (code, player_id, used_at) VALUES (?, ?, ?)`).run(coupon.code, playerId, Date.now());
+  }
 
   if (pack === 'vip_1m') {
     pQ.updateVip.run({ is_vip: 1, id: playerId });
@@ -3218,6 +3297,10 @@ app.post('/api/shop/buy', async (req, res) => {
     pack,
     item,
     prices: SHOP_PRICES,
+    gemPrices: SHOP_GEM_PRICES,
+    currency,
+    paid: price,
+    coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value, expiresAt: Number(coupon.expires_at || 0) || null } : null,
     items: SHOP_ITEMS,
     stock,
     inventory,
@@ -3493,7 +3576,9 @@ app.post('/api/players/:id/convert-bot', (req, res) => {
   db.prepare(`
     UPDATE players
     SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?,
-        bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0
+        bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0,
+        coins = 0,
+        custom_role_text = 'BOT', custom_role_color = '#8E8E93', custom_role_emoji = '🤖'
     WHERE id = ?
   `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), id);
   const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
@@ -3519,7 +3604,7 @@ app.get('/api/bot/me', (req, res) => {
 
 app.post('/api/bot/ping', (req, res) => {
   const bot = getBotFromRequest(req);
-  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(bot, res)) return;
   const status = String(req.body?.status || req.query?.status || 'idle').slice(0, 40);
   botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
   db.prepare(`UPDATE players SET bot_last_seen = ? WHERE id = ?`).run(Date.now(), bot.id);
@@ -3529,7 +3614,7 @@ app.post('/api/bot/ping', (req, res) => {
 
 app.post('/api/bot/queue/join', (req, res) => {
   const bot = getBotFromRequest(req);
-  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(bot, res)) return;
   botRuntime.set(Number(bot.id), { status: 'queue', lastSeen: Date.now() });
   broadcastPresenceCounts();
   const active = findActiveBotGame(bot.id);
@@ -3556,7 +3641,7 @@ app.post('/api/bot/queue/join', (req, res) => {
 
 app.post('/api/bot/queue/leave', (req, res) => {
   const bot = getBotFromRequest(req);
-  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(bot, res)) return;
   const idx = botApiQueue.indexOf(Number(bot.id));
   if (idx >= 0) botApiQueue.splice(idx, 1);
   botRuntime.set(Number(bot.id), { status: 'idle', lastSeen: Date.now() });
@@ -3566,13 +3651,13 @@ app.post('/api/bot/queue/leave', (req, res) => {
 
 app.get('/api/bot/game', (req, res) => {
   const bot = getBotFromRequest(req);
-  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(bot, res)) return;
   res.json({ game: serializeBotGameState(findActiveBotGame(bot.id), bot.id) });
 });
 
 app.post('/api/bot/move', (req, res) => {
   const bot = getBotFromRequest(req);
-  if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(bot, res)) return;
   const state = findActiveBotGame(bot.id);
   if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
   const side = Number(state.players[1].id) === Number(bot.id) ? 1 : 2;
@@ -3585,7 +3670,7 @@ app.post('/api/bot/move', (req, res) => {
 
 app.post('/api/bot/challenge/:id', (req, res) => {
   const challenger = getBotFromRequest(req);
-  if (!challenger) return res.status(401).json({ error: 'Token bot invalide.' });
+  if (!ensureBotEnabled(challenger, res)) return;
   const targetId = Number(req.params.id);
   const target = pQ.getById.get(targetId);
   if (!target || target.deleted || Number(target.is_bot || 0) !== 1 || Number(target.bot_enabled || 0) !== 1) {
@@ -3676,7 +3761,11 @@ app.patch('/api/players/:id/shape', (req, res) => {
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(Number(req.params.id));
   if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
-    return res.status(403).json({ error: 'L emoji perso est reserve au VIP.' });
+    const last = Number(player?.token_emoji_changed_at || 0);
+    const remaining = last + TOKEN_EMOJI_COOLDOWN_MS - Date.now();
+    if (remaining > 0) {
+      return res.status(429).json({ error: `Emoji modifiable dans ${Math.ceil(remaining / 60000)} min.`, remainingMs: remaining });
+    }
   }
   if (base === 'emoji_image' && !isVipPlusPlayer(player) && !isAdminPlayer(player)) {
     return res.status(403).json({ error: 'L emoji image est reserve au VIP+.' });
@@ -3685,6 +3774,9 @@ app.patch('/api/players/:id/shape', (req, res) => {
     return res.status(400).json({ error: 'Ajoute d\'abord un emoji perso VIP.' });
   }
   pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA'
+  if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
+    pQ.updateTokenEmojiChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
+  }
   res.json({ ok: true });
 });
 
@@ -3886,6 +3978,147 @@ app.get('/api/players/search', (req, res) => {
   } catch(e) {
     console.error('[search]', e.message);
     res.json([]);
+  }
+});
+
+function cleanClanPayload(body = {}) {
+  const name = String(body.name || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+  const tag = String(body.tag || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  const blason = String(body.blason || '🛡️').trim().slice(0, 8) || '🛡️';
+  const color = /^#[0-9a-fA-F]{6}$/.test(String(body.color || '')) ? String(body.color).toUpperCase() : '#85EBFF';
+  const description = String(body.description || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+  return { name, tag, blason, color, description };
+}
+
+function normalizeCouponCode(code = '') {
+  return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
+}
+
+function getUsableCoupon(code, playerId) {
+  const normalized = normalizeCouponCode(code);
+  if (!normalized) return null;
+  const coupon = db.prepare(`SELECT * FROM coupons WHERE code = ?`).get(normalized);
+  if (!coupon) return null;
+  if (Number(coupon.expires_at || 0) && Number(coupon.expires_at || 0) < Date.now()) return null;
+  if (Number(coupon.max_uses || 0) > 0 && Number(coupon.uses || 0) >= Number(coupon.max_uses || 0)) return null;
+  if (db.prepare(`SELECT 1 FROM coupon_uses WHERE code = ? AND player_id = ?`).get(normalized, playerId)) return null;
+  return coupon;
+}
+
+function applyCouponPrice(price, coupon) {
+  if (!coupon) return Number(price || 0);
+  const value = Math.max(0, Number(coupon.value || 0));
+  if (String(coupon.type || '') === 'flat') return Math.max(0, Number(price || 0) - value);
+  return Math.max(0, Math.ceil(Number(price || 0) * (1 - Math.min(95, value) / 100)));
+}
+
+function serializeClan(row, withMembers = false) {
+  if (!row) return null;
+  const clan = {
+    id: Number(row.id),
+    name: row.name,
+    tag: row.tag,
+    blason: row.blason || '🛡️',
+    color: row.color || '#85EBFF',
+    description: row.description || '',
+    owner_id: Number(row.owner_id || 0),
+    owner_pseudo: row.owner_pseudo || '',
+    member_role: row.member_role || '',
+    member_count: Number(row.member_count || 0),
+    joined_at: Number(row.joined_at || 0) || null,
+    created_at: Number(row.created_at || 0),
+  };
+  if (withMembers) clan.members = cQ.members.all(clan.id).map(member => ({ ...sanitize(member), clan_role: member.role, joined_at: Number(member.joined_at || 0) }));
+  return clan;
+}
+
+app.get('/api/clans', (_, res) => {
+  try {
+    res.json({ clans: cQ.list.all(80).map(row => serializeClan(row)) });
+  } catch (error) {
+    console.error('[CLAN] list:', error.message);
+    res.status(500).json({ error: 'Impossible de charger les clans.' });
+  }
+});
+
+app.get('/api/players/:id/clan', (req, res) => {
+  const playerId = Number(req.params.id || 0);
+  const clan = cQ.getForPlayer.get(playerId);
+  res.json({ clan: serializeClan(clan, true) });
+});
+
+app.post('/api/clans', security.routeGuard('clan'), (req, res) => {
+  try {
+    const token = String(req.body?.token || req.headers['x-token'] || req.headers['x-session-token'] || '');
+    const playerId = validateSession(token);
+    if (!playerId || isAnonymousPlayerId(playerId)) return res.status(401).json({ error: 'Connecte-toi pour créer un clan.' });
+    const player = pQ.getById.get(playerId);
+    if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+    if (!isPersoPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Seuls les Perso peuvent créer un clan.' });
+    if (cQ.getForPlayer.get(playerId)) return res.status(409).json({ error: 'Tu es déjà dans un clan.' });
+
+    const last = cQ.lastCreatedBy.get(playerId);
+    const cooldownMs = 30 * 24 * 60 * 60 * 1000;
+    if (!isAdminPlayer(player) && last && Date.now() - Number(last.created_at || 0) < cooldownMs) {
+      const leftDays = Math.ceil((cooldownMs - (Date.now() - Number(last.created_at || 0))) / 86400000);
+      return res.status(429).json({ error: `Tu pourras recréer un clan dans ${leftDays} jour(s).` });
+    }
+
+    const clean = cleanClanPayload(req.body);
+    if (clean.name.length < 3) return res.status(400).json({ error: 'Nom de clan invalide (3 caractères minimum).' });
+    if (clean.tag.length < 2) return res.status(400).json({ error: 'Tag invalide (2 à 6 lettres/chiffres).' });
+    if (cQ.getByName.get(clean.name)) return res.status(409).json({ error: 'Ce nom de clan existe déjà.' });
+    if (cQ.getByTag.get(clean.tag)) return res.status(409).json({ error: 'Ce tag de clan existe déjà.' });
+
+    const now = Date.now();
+    const tx = db.transaction(() => {
+      const info = cQ.create.run({ ...clean, owner_id: playerId, created_at: now, updated_at: now });
+      cQ.addMember.run({ clan_id: info.lastInsertRowid, player_id: playerId, role: 'owner', joined_at: now });
+      return Number(info.lastInsertRowid);
+    });
+    const clanId = tx();
+    notifyPlayerProfileChanged(playerId, 'Clan créé');
+    res.json({ ok: true, clan: serializeClan(cQ.getForPlayer.get(playerId), true), clanId });
+  } catch (error) {
+    console.error('[CLAN] create:', error.message);
+    res.status(500).json({ error: 'Impossible de créer le clan.' });
+  }
+});
+
+app.post('/api/clans/:id/join', security.routeGuard('clan'), (req, res) => {
+  try {
+    const token = String(req.body?.token || req.headers['x-token'] || req.headers['x-session-token'] || '');
+    const playerId = validateSession(token);
+    if (!playerId || isAnonymousPlayerId(playerId)) return res.status(401).json({ error: 'Connecte-toi pour rejoindre un clan.' });
+    const player = pQ.getById.get(playerId);
+    if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    if (cQ.getForPlayer.get(playerId)) return res.status(409).json({ error: 'Tu es déjà dans un clan.' });
+    cQ.addMember.run({ clan_id: clanId, player_id: playerId, role: 'member', joined_at: Date.now() });
+    notifyPlayerProfileChanged(playerId, 'Clan rejoint');
+    res.json({ ok: true, clan: serializeClan(cQ.getForPlayer.get(playerId), true) });
+  } catch (error) {
+    console.error('[CLAN] join:', error.message);
+    res.status(500).json({ error: 'Impossible de rejoindre le clan.' });
+  }
+});
+
+app.post('/api/clans/leave', security.routeGuard('clan'), (req, res) => {
+  try {
+    const token = String(req.body?.token || req.headers['x-token'] || req.headers['x-session-token'] || '');
+    const playerId = validateSession(token);
+    if (!playerId || isAnonymousPlayerId(playerId)) return res.status(401).json({ error: 'Connecte-toi pour quitter un clan.' });
+    const clan = cQ.getForPlayer.get(playerId);
+    if (!clan) return res.status(404).json({ error: 'Tu n es dans aucun clan.' });
+    if (Number(clan.owner_id) === Number(playerId)) return res.status(409).json({ error: 'Le créateur ne peut pas quitter son clan pour le moment.' });
+    cQ.removeMember.run(playerId);
+    notifyPlayerProfileChanged(playerId, 'Clan quitté');
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[CLAN] leave:', error.message);
+    res.status(500).json({ error: 'Impossible de quitter le clan.' });
   }
 });
 
@@ -4125,7 +4358,8 @@ app.get('/api/players/:id', (req, res) => {
   }
 
   const p = sanitize(player);
-  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal }, games, games_total: gamesTotal, following, followers });
+  const clan = serializeClan(cQ.getForPlayer.get(player.id));
+  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal, clan }, games, games_total: gamesTotal, following, followers });
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {

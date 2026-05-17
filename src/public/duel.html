@@ -91,7 +91,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   </div>
 </div>
 
-<script src="/presence.js" defer></script>
+<script src="/presence.js"></script>
 <script>
 let duelData = null;
 
@@ -142,6 +142,23 @@ function getStoredAuth() {
     player = null;
   }
   return { token, player };
+}
+
+async function waitForDuelIdentity(token, playerId) {
+  if (!token || !playerId) return;
+  if (typeof window.refreshPresenceIdentity === 'function') {
+    window.refreshPresenceIdentity();
+  } else if (window._presenceSocket?.connected) {
+    window._presenceSocket.emit('identify', { playerId, token });
+  }
+  const started = Date.now();
+  while (Date.now() - started < 1400) {
+    if (window._presenceSocket?.connected) {
+      await new Promise(resolve => setTimeout(resolve, 180));
+      return;
+    }
+    await new Promise(resolve => setTimeout(resolve, 80));
+  }
 }
 
 function renderDuel(challenge) {
@@ -237,18 +254,14 @@ async function acceptDuel() {
       sessionStorage.setItem('duel_guest_token', guestData.token);
       sessionStorage.setItem('duel_guest_player', JSON.stringify(guestData.player));
       token = guestData.token;
-      if (typeof window.refreshPresenceIdentity === 'function') {
-        window.refreshPresenceIdentity();
-        await new Promise(resolve => setTimeout(resolve, 250));
-      } else if (window._presenceSocket?.connected) {
-        window._presenceSocket.emit('identify', { playerId: guestData.player.id, token: guestData.token });
-        await new Promise(resolve => setTimeout(resolve, 250));
-      }
+      await waitForDuelIdentity(guestData.token, guestData.player.id);
     } catch (error) {
       setState('Erreur reseau pendant la preparation invite.', 'err');
       return;
     }
   }
+  const stored = getStoredAuth();
+  await waitForDuelIdentity(token, stored.player?.id);
   const btn = document.getElementById('accept-btn');
   btn.disabled = true;
   setState('Validation du duel en cours...', 'warn');
@@ -272,13 +285,7 @@ async function acceptDuel() {
       sessionStorage.setItem('duel_guest_token', guestData.token);
       sessionStorage.setItem('duel_guest_player', JSON.stringify(guestData.player));
       token = guestData.token;
-      if (typeof window.refreshPresenceIdentity === 'function') {
-        window.refreshPresenceIdentity();
-        await new Promise(resolve => setTimeout(resolve, 250));
-      } else if (window._presenceSocket?.connected) {
-        window._presenceSocket.emit('identify', { playerId: guestData.player.id, token: guestData.token });
-        await new Promise(resolve => setTimeout(resolve, 250));
-      }
+      await waitForDuelIdentity(guestData.token, guestData.player.id);
       res = await fetch('/api/duels/' + encodeURIComponent(duelId) + '/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,9 +294,21 @@ async function acceptDuel() {
       data = await res.json().catch(() => ({}));
     }
     if (!res.ok) {
-      setState(data?.error || 'Impossible de valider le duel.', 'err');
-      btn.disabled = false;
-      return;
+      if (/connexion du duel/i.test(String(data?.error || ''))) {
+        setState('Connexion en cours, nouvelle tentative...', 'warn');
+        await new Promise(resolve => setTimeout(resolve, 900));
+        res = await fetch('/api/duels/' + encodeURIComponent(duelId) + '/accept', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+        data = await res.json().catch(() => ({}));
+      }
+      if (!res.ok) {
+        setState(data?.error || 'Impossible de valider le duel.', 'err');
+        btn.disabled = false;
+        return;
+      }
     }
     setState('Duel valide. Preparation de la partie...', 'ok');
   } catch (error) {

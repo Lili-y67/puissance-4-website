@@ -324,7 +324,23 @@ body{
               </div>
             </div>
           </div>
-          <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+            <div class="coin-badge" style="padding:8px 10px">
+              <img class="coin-icon" src="/assets/gem.png" alt="gemme">
+              <div>
+                <div class="coins-label">Mes gemmes</div>
+                <div class="coins-value" id="gems-value" style="font-size:26px;color:#85EBFF">0</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+              <select id="currency-select" class="search-input" style="max-width:120px;margin:0;padding:9px 10px" onchange="renderShop();switchShopCategory(currentCategory)">
+                <option value="coins">Coins</option>
+                <option value="gems">Gemmes</option>
+              </select>
+              <input id="coupon-input" class="search-input" style="max-width:160px;margin:0;padding:9px 10px" placeholder="Code promo">
+            </div>
+            <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
+          </div>
         </div>
         <div class="hero-side-title">Rappel rapide</div>
         <div class="hero-side-list">
@@ -598,6 +614,7 @@ const SHOP_PRICES = {
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
 };
+let SHOP_GEM_PRICES = Object.fromEntries(Object.entries(SHOP_PRICES).map(([key, price]) => [key, Math.max(1, Math.ceil(Number(price || 0) * 0.45))]));
 
 let shopPlayer = null;
 let shopStock = {};
@@ -626,9 +643,16 @@ function getCustomBoosterValue(pack) {
 }
 
 function getCustomBoosterPrice(pack) {
-  if (pack === 'elo_custom') return Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
-  if (pack === 'coin_custom') return Math.round(getCustomBoosterValue(pack) * 600);
-  return Number(SHOP_PRICES[pack] || 0);
+  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  if (pack === 'elo_custom') {
+    const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
+    return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
+  }
+  if (pack === 'coin_custom') {
+    const coins = Math.round(getCustomBoosterValue(pack) * 600);
+    return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
+  }
+  return Number((currency === 'gems' ? SHOP_GEM_PRICES : SHOP_PRICES)[pack] || 0);
 }
 
 function getCustomInventoryQty(prefix) {
@@ -684,8 +708,10 @@ function getDynamicBoosterItem(pack) {
 
 function setCoinsUi(coins, stateText) {
   const coinsEl = document.getElementById('coins-value');
+  const gemsEl = document.getElementById('gems-value');
   const stateEl = document.getElementById('coins-state');
   if (coinsEl) coinsEl.textContent = Number(coins || 0);
+  if (gemsEl) gemsEl.textContent = Number(shopPlayer?.gems || 0);
   if (stateEl) stateEl.textContent = stateText || '';
 }
 
@@ -711,7 +737,8 @@ function getStockQty(pack) {
 
 function getButtonState(pack) {
   const price = getCustomBoosterPrice(pack);
-  const coins = Number(shopPlayer?.coins || 0);
+  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
   const owned = item.type === 'rank' ? packOwned(pack) : false;
@@ -720,7 +747,7 @@ function getButtonState(pack) {
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
-  if (coins < price) return { disabled: true, note: `Il manque ${price - coins} coins` };
+  if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
   if (item.type === 'bundle') return { disabled: false, note: `${stock === null ? 'Offre active' : `Stock ${stock}`} - Offre limitee` };
   if (item.type === 'booster') {
     const inv = pack === 'elo_custom'
@@ -731,7 +758,7 @@ function getButtonState(pack) {
     const stockNote = stock === null ? 'Stock libre' : `Stock ${stock}`;
     return { disabled: false, note: `${stockNote} · Inventaire ${inv}` };
   }
-  return { disabled: false, note: `${price} coins` };
+  return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
 }
 
 function getDisplayItem(pack) {
@@ -1237,6 +1264,7 @@ async function loadShop() {
     shopPlayer = data.player || null;
     shopStock = data.stock || {};
     shopInventory = data.inventory || {};
+    SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
   } catch (e) {
@@ -1255,7 +1283,9 @@ async function buyPack(pack) {
   const item = getDisplayItem(pack);
   const packLabel = item?.title || pack;
   const price = getCustomBoosterPrice(pack);
-  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} coins ?`)) return;
+  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const coupon = String(document.getElementById('coupon-input')?.value || '').trim();
+  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
   if (btn) {
@@ -1274,6 +1304,8 @@ async function buyPack(pack) {
           : pack === 'coin_custom'
             ? Number(customBoosterState.coins || 1)
             : undefined,
+        currency,
+        coupon: coupon || undefined,
       }),
     });
     const data = await res.json();
@@ -1284,6 +1316,7 @@ async function buyPack(pack) {
     shopPlayer = data.player || shopPlayer;
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
+    SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
   } catch (e) {

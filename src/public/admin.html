@@ -609,6 +609,24 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
+        <div class="admin-section-title">Coupons boutique</div>
+        <div class="admin-section-copy">Genere un code promotionnel utilisable dans la boutique sur coins ou gemmes.</div>
+      </div>
+      <div id="coupon-result" style="font-size:13px;color:#85EBFF;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;align-items:end">
+      <input id="coupon-code" class="search-input" style="margin:0" placeholder="CODE ou vide">
+      <select id="coupon-type" class="search-input" style="margin:0"><option value="discount">% reduction</option><option value="flat">Montant fixe</option></select>
+      <input id="coupon-value" type="number" class="search-input" style="margin:0" value="20" min="1" max="95" placeholder="Valeur">
+      <input id="coupon-uses" type="number" class="search-input" style="margin:0" value="10" min="1" max="10000" placeholder="Utilisations">
+      <input id="coupon-hours" type="number" class="search-input" style="margin:0" value="24" min="0" max="8760" placeholder="Validite h">
+      <button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.3);height:40px" onclick="createCoupon()">Generer</button>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
         <div class="admin-section-title">Alerte serveur</div>
         <div class="admin-section-copy">Active ce panneau juste avant un redeploiement ou un reset Railway pour prevenir les joueurs.</div>
       </div>
@@ -947,6 +965,8 @@ function renderPlayers(players) {
           <span style="color:var(--muted)">·</span>
           <span style="color:var(--yellow)">${Number(p.coins || 0)} coins</span>
           <span style="color:var(--muted)">·</span>
+          <span style="color:#85EBFF">${Number(p.gems || 0)} gemmes</span>
+          <span style="color:var(--muted)">·</span>
           <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
           ${vipExpiryText(p) ? `<span style="color:var(--muted)">·</span><span>${vipExpiryText(p)}</span>` : ''}
         </div>
@@ -1010,6 +1030,7 @@ function openModal(id) {
   const customRoleColor = /^#[0-9a-fA-F]{6}$/.test(String(player.custom_role_color || '')) ? player.custom_role_color : '#ff9f0a';
   const customRoleEmoji = String(player.custom_role_emoji || '').replace(/"/g, '&quot;');
   const currentCoins = Number(player.coins || 0);
+  const currentGems = Number(player.gems || 0);
   const inventory = player.shop_inventory || {};
   const boosterInventory = Object.entries(ADMIN_SHOP_BOOSTERS)
     .map(([key, label]) => {
@@ -1085,10 +1106,28 @@ function openModal(id) {
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Coins</div>
         <div style="font-size:12px;color:var(--yellow);margin-bottom:8px">Total actuel : <strong>${currentCoins}</strong></div>
         <div style="display:flex;gap:8px">
-          <input type="number" id="give-coins" value="100" min="1" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <input type="number" id="give-coins" value="100" min="-1000000" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px" title="Montant positif pour ajouter, negatif pour retirer">
           <button class="btn-sm" style="background:rgba(255,214,10,0.15);color:var(--yellow)" onclick="giveCoins(${id})">Give</button>
         </div>
       </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Gemmes</div>
+        <div style="font-size:12px;color:#85EBFF;margin-bottom:8px">Total actuel : <strong>${currentGems}</strong></div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="give-gems" value="10" min="-1000000" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px" title="Montant positif pour ajouter, negatif pour retirer">
+          <button class="btn-sm" style="background:rgba(133,235,255,0.15);color:#85EBFF" onclick="giveGems(${id})">Give</button>
+        </div>
+      </div>
+
+      ${player.is_bot ? `
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Restriction bot</div>
+        <button class="btn-sm" style="width:100%;background:${Number(player.bot_enabled || 0) === 1 ? 'rgba(255,45,85,0.12)' : 'rgba(48,209,88,0.12)'};color:${Number(player.bot_enabled || 0) === 1 ? 'var(--red)' : 'var(--green)'}" onclick="toggleBotEnabled(${id}, ${Number(player.bot_enabled || 0) === 1 ? 0 : 1})">
+          ${Number(player.bot_enabled || 0) === 1 ? 'Suspendre le bot' : 'Réactiver le bot'}
+        </button>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Un bot suspendu reçoit une erreur API "Compte bot suspendu par le staff".</div>
+      </div>` : ''}
 
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Boosters boutique</div>
@@ -1169,6 +1208,35 @@ async function giveCoins(id) {
   const delta = Number(document.getElementById('give-coins')?.value || 0);
   const data = await api('PATCH', `/api/admin/players/${id}/coins`, { delta });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur coins.');
+}
+
+async function giveGems(id) {
+  const delta = Number(document.getElementById('give-gems')?.value || 0);
+  const data = await api('PATCH', `/api/admin/players/${id}/gems`, { delta });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur gemmes.');
+}
+
+async function toggleBotEnabled(id, enabled) {
+  const data = await api('PATCH', `/api/admin/players/${id}/bot-enabled`, { enabled: !!enabled });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur bot.');
+}
+
+async function createCoupon() {
+  const body = {
+    code: document.getElementById('coupon-code')?.value || '',
+    type: document.getElementById('coupon-type')?.value || 'discount',
+    value: Number(document.getElementById('coupon-value')?.value || 20),
+    maxUses: Number(document.getElementById('coupon-uses')?.value || 10),
+    durationHours: Number(document.getElementById('coupon-hours')?.value || 0),
+  };
+  const data = await api('POST', '/api/admin/coupons', body);
+  const out = document.getElementById('coupon-result');
+  if (!data.ok) {
+    if (out) out.textContent = data.error || 'Erreur coupon.';
+    return;
+  }
+  const expires = data.coupon.expiresAt ? ` expire le ${new Date(data.coupon.expiresAt).toLocaleString('fr-FR')}` : ' sans expiration';
+  if (out) out.textContent = `Code ${data.coupon.code} cree (${data.coupon.value}${data.coupon.type === 'flat' ? '' : '%'}) -${expires}.`;
 }
 
 async function giveShopItem(id) {
