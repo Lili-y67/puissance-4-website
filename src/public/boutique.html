@@ -52,12 +52,32 @@ body{
 .pill:nth-child(2){animation-delay:.2s}.pill:nth-child(3){animation-delay:.4s}.pill:nth-child(4){animation-delay:.6s}
 @keyframes badgeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 .hero-side{padding:22px;border-radius:26px;background:rgba(10,11,22,.72);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
-.coins-panel{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:18px;background:var(--surface-2);border:1px solid rgba(255,255,255,.06);margin-bottom:14px}
-.coins-left{display:flex;align-items:center;gap:12px}
-.coin-badge{display:inline-flex;align-items:center;gap:10px;min-height:58px;padding:10px 14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,122,69,.24), rgba(255,122,69,.12));border:1px solid rgba(255,122,69,.35);box-shadow:0 0 22px rgba(255,122,69,.14), inset 0 0 14px rgba(255,255,255,.03)}
-.coin-icon{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,214,10,.32))}
+.coins-panel{display:flex;align-items:stretch;justify-content:space-between;gap:14px;padding:14px;border-radius:22px;background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.07);margin-bottom:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.coins-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.wallet-card{display:inline-flex;align-items:center;gap:10px;min-height:62px;padding:11px 15px;border-radius:20px;position:relative;overflow:hidden}
+.wallet-card::after{content:'';position:absolute;inset:-35% auto auto -20%;width:90px;height:90px;border-radius:50%;opacity:.28;filter:blur(10px)}
+.wallet-card.coin-badge{background:linear-gradient(135deg, rgba(255,159,10,.26), rgba(255,122,69,.11));border:1px solid rgba(255,159,10,.42);box-shadow:0 0 24px rgba(255,159,10,.14), inset 0 0 16px rgba(255,255,255,.035)}
+.wallet-card.coin-badge::after{background:var(--yellow)}
+.wallet-card.gem-badge{background:linear-gradient(135deg, rgba(133,235,255,.25), rgba(47,128,255,.10));border:1px solid rgba(133,235,255,.48);box-shadow:0 0 28px rgba(133,235,255,.16), inset 0 0 16px rgba(255,255,255,.035)}
+.wallet-card.gem-badge::after{background:var(--blue)}
+.coin-icon,.gem-icon{position:relative;z-index:1;width:36px;height:36px;object-fit:contain}
+.coin-icon{filter:drop-shadow(0 0 10px rgba(255,214,10,.38))}
+.gem-icon{filter:drop-shadow(0 0 12px rgba(133,235,255,.50))}
 .coins-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .coins-value{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;color:var(--yellow);line-height:1}
+.wallet-card>div:not(:first-child){position:relative;z-index:1}
+.gem-badge .coins-value{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.28)}
+.shop-controls{display:flex;flex-direction:column;gap:10px;align-items:stretch;min-width:250px;max-width:310px}
+.currency-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;border-radius:18px;background:rgba(7,7,17,.56);border:1px solid rgba(255,255,255,.08)}
+.currency-switch button{border:0;border-radius:13px;padding:10px 12px;background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.18s}
+.currency-switch button.active.coin{background:rgba(255,159,10,.16);color:var(--yellow);box-shadow:0 0 18px rgba(255,159,10,.12)}
+.currency-switch button.active.gem{background:rgba(133,235,255,.16);color:var(--blue);box-shadow:0 0 18px rgba(133,235,255,.13)}
+.promo-box{position:relative;padding:12px;border-radius:18px;background:linear-gradient(135deg, rgba(88,86,214,.14), rgba(133,235,255,.07));border:1px solid rgba(133,235,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.promo-box::before{content:'CODE PROMO';display:block;margin-bottom:7px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--blue);text-transform:uppercase}
+.promo-input{width:100%;padding:11px 13px 11px 38px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(8,9,18,.72);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;text-transform:uppercase;outline:none}
+.promo-input:focus{border-color:rgba(133,235,255,.55);box-shadow:0 0 0 3px rgba(133,235,255,.08)}
+.promo-icon{position:absolute;left:24px;bottom:23px;color:var(--blue);filter:drop-shadow(0 0 8px rgba(133,235,255,.35))}
+.promo-help{margin-top:7px;font-size:11px;color:var(--muted)}
 .hero-side-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
 .hero-side-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .hero-side-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
@@ -66,9 +86,11 @@ body{
 .section-head{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:4px 2px}
 .section-title{font-family:'Barlow Condensed',sans-serif;font-size:40px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .section-sub{font-size:14px;color:var(--muted);max-width:760px}
-.category-tabs{display:flex;gap:10px;flex-wrap:wrap}
-.category-tab{padding:10px 16px;border-radius:999px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,.03);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
-.category-tab.active{background:rgba(255,45,85,.14);border-color:rgba(255,45,85,.32);color:#fff}
+.category-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:8px;border-radius:22px;background:rgba(10,11,22,.62);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.category-tab{position:relative;overflow:hidden;padding:11px 18px;border-radius:16px;border:1px solid transparent;cursor:pointer;background:rgba(255,255,255,.025);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;transition:.2s}
+.category-tab::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg, transparent, rgba(255,255,255,.10), transparent);transform:translateX(-120%);transition:transform .45s ease}
+.category-tab:hover::before{transform:translateX(120%)}
+.category-tab.active{background:linear-gradient(135deg, rgba(255,45,85,.22), rgba(133,235,255,.10));border-color:rgba(255,45,85,.36);color:#fff;box-shadow:0 0 24px rgba(255,45,85,.13)}
 .subsection-label{margin:4px 0 2px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .boosters-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
 .booster-column{display:flex;flex-direction:column;gap:10px}
@@ -96,12 +118,14 @@ body{
 .stat-line-left strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
 .stat-line-left span{font-size:13px;color:var(--muted)}
 .price{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
-.price img{width:30px;height:30px;object-fit:contain}
+.price img{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,255,255,.18))}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
 .stat-line.perso .price,.stat-line.perso strong{color:var(--orange)}
 .stat-line.booster-elo .price,.stat-line.booster-elo strong{color:var(--yellow)}
 .stat-line.booster-coin .price,.stat-line.booster-coin strong{color:var(--orange)}
+.price.gems{color:var(--blue)!important;text-shadow:0 0 18px rgba(133,235,255,.18)}
+.price.gems img{filter:drop-shadow(0 0 12px rgba(133,235,255,.48))}
 .feature-list{display:flex;flex-direction:column;gap:10px}
 .feature{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:14px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .feature-emoji{font-size:16px;line-height:1.1}
@@ -247,7 +271,8 @@ body{
   .card{min-height:auto;padding:18px 16px;border-radius:22px}
   .coins-panel{align-items:flex-start;flex-direction:column}
   .coins-left{width:100%}
-  .coin-badge{width:100%;justify-content:center}
+  .wallet-card{width:100%;justify-content:center}
+  .shop-controls{width:100%;max-width:none;min-width:0}
   .hero-side-item{align-items:flex-start;flex-direction:column}
   .config-bullets{grid-template-columns:1fr}
   .card-actions{flex-direction:column}
@@ -316,7 +341,7 @@ body{
       <div class="hero-side">
         <div class="coins-panel">
           <div class="coins-left">
-            <div class="coin-badge">
+            <div class="wallet-card coin-badge">
               <img class="coin-icon" src="/coin.png" alt="coin">
               <div>
                 <div class="coins-label">Mes coins</div>
@@ -324,20 +349,23 @@ body{
               </div>
             </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-            <div class="coin-badge" style="padding:8px 10px">
-              <img class="coin-icon" src="/assets/gem.png" alt="gemme">
+          <div class="shop-controls">
+            <div class="wallet-card gem-badge">
+              <img class="gem-icon" src="/assets/gem.png" alt="gemme">
               <div>
                 <div class="coins-label">Mes gemmes</div>
-                <div class="coins-value" id="gems-value" style="font-size:26px;color:#85EBFF">0</div>
+                <div class="coins-value" id="gems-value">0</div>
               </div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-              <select id="currency-select" class="search-input" style="max-width:120px;margin:0;padding:9px 10px" onchange="renderShop();switchShopCategory(currentCategory)">
-                <option value="coins">Coins</option>
-                <option value="gems">Gemmes</option>
-              </select>
-              <input id="coupon-input" class="search-input" style="max-width:160px;margin:0;padding:9px 10px" placeholder="Code promo">
+            <input id="currency-select" type="hidden" value="coins">
+            <div class="currency-switch" aria-label="Choix de monnaie">
+              <button type="button" id="currency-btn-coins" class="active coin" onclick="setShopCurrency('coins')">🪙 Coins</button>
+              <button type="button" id="currency-btn-gems" class="gem" onclick="setShopCurrency('gems')"><img src="/assets/gem.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Gemmes</button>
+            </div>
+            <div class="promo-box">
+              <span class="promo-icon">◇</span>
+              <input id="coupon-input" class="promo-input" placeholder="EX: P4-BOOST">
+              <div class="promo-help">Optionnel, appliqué au moment de confirmer l'achat.</div>
             </div>
             <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
           </div>
@@ -642,8 +670,45 @@ function getCustomBoosterValue(pack) {
   return pack === 'elo_custom' ? Number(customBoosterState.elo || 0.1) : Number(customBoosterState.coins || 1);
 }
 
+function getShopCurrency() {
+  return document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+}
+
+function getCurrencyLabel() {
+  return getShopCurrency() === 'gems' ? 'gemmes' : 'coins';
+}
+
+function getCurrencyIcon() {
+  return getShopCurrency() === 'gems' ? '/assets/gem.png' : '/coin.png';
+}
+
+function renderPriceHtml(price) {
+  const isGems = getShopCurrency() === 'gems';
+  return `<div class="price ${isGems ? 'gems' : 'coins'}"><img src="${getCurrencyIcon()}" alt="${isGems ? 'gemmes' : 'coins'}">${price}</div>`;
+}
+
+function renderPriceNote(pack, suffix = '') {
+  return `Prix : ${getCustomBoosterPrice(pack)} ${getCurrencyLabel()}${suffix}`;
+}
+
+function getCardStatSub(item, pack) {
+  const price = getCustomBoosterPrice(pack);
+  const label = getCurrencyLabel();
+  return String(item.statSub || '').replace(/^\d+\s+coins/i, `${price} ${label}`);
+}
+
+function setShopCurrency(currency) {
+  const next = currency === 'gems' ? 'gems' : 'coins';
+  const input = document.getElementById('currency-select');
+  if (input) input.value = next;
+  document.getElementById('currency-btn-coins')?.classList.toggle('active', next === 'coins');
+  document.getElementById('currency-btn-gems')?.classList.toggle('active', next === 'gems');
+  renderShop();
+  switchShopCategory(currentCategory);
+}
+
 function getCustomBoosterPrice(pack) {
-  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const currency = getShopCurrency();
   if (pack === 'elo_custom') {
     const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
@@ -674,7 +739,7 @@ function getDynamicBoosterItem(pack) {
       duration: `x${bonus.toFixed(1)}`,
       title: 'Booster ELO personnalisé',
       stat: `x${total.toFixed(2)}`,
-      statSub: `${getCustomBoosterPrice(pack)} coins pour +${bonus.toFixed(1)} ELO`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour +${bonus.toFixed(1)} ELO`,
       meta: 'Choisis exactement la puissance de ton booster ELO. Le prix suit automatiquement le multiplicateur choisi.',
       features: [
         ['🎚️', 'Puissance libre', 'De +0.1 jusqu’à +1.0 sur ton gain ELO.'],
@@ -694,7 +759,7 @@ function getDynamicBoosterItem(pack) {
       duration: `x${multiplier}`,
       title: 'Booster Coins personnalisé',
       stat: `x${multiplier}`,
-      statSub: `${getCustomBoosterPrice(pack)} coins pour x${multiplier}`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier}`,
       meta: 'Choisis ton multiplicateur coins librement. Plus il monte, plus le prix grimpe instantanément.',
       features: [
         ['🪙', 'Multiplicateur libre', 'De x1 jusqu’à x10 selon le niveau voulu.'],
@@ -737,7 +802,7 @@ function getStockQty(pack) {
 
 function getButtonState(pack) {
   const price = getCustomBoosterPrice(pack);
-  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const currency = getShopCurrency();
   const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
@@ -1098,7 +1163,7 @@ function renderCustomBoosterCard(pack) {
             <div class="config-value ${isElo ? 'elo' : 'coins'}">${isElo ? '+' + currentValue.toFixed(1) : 'x' + currentValue}</div>
             <div class="config-price-note">${isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
           </div>
-          <div class="price"><img src="/coin.png" alt="">${price}</div>
+          ${renderPriceHtml(price)}
         </div>
         <div class="config-slider-wrap">
           <input
@@ -1154,9 +1219,9 @@ function renderCard(pack) {
       <div class="stat-line ${item.theme}">
         <div class="stat-line-left">
           <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
-          <span>${item.type === 'booster' ? item.statSub : item.statSub}</span>
+          <span>${getCardStatSub(item, pack)}</span>
         </div>
-        <div class="price"><img src="/coin.png" alt="">${price}</div>
+          ${renderPriceHtml(price)}
       </div>
       <div class="feature-list">
         ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
@@ -1206,14 +1271,8 @@ function openPreview(pack) {
   showcase.className = `preview-showcase ${item.theme}`;
   showcase.innerHTML = renderPreviewShowcase(item);
   note.textContent = item.type === 'booster'
-    ? `Prix : ${getCustomBoosterPrice(pack)} coins · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`
-    : `Prix : ${getCustomBoosterPrice(pack)} coins · Aperçu uniquement, rien n'est sauvegardé`;
-  note.textContent = item.type === 'booster'
-    ? `Prix : ${SHOP_PRICES[pack]} coins · Stock global limité`
-    : `Prix : ${SHOP_PRICES[pack]} coins · Aperçu uniquement, rien n’est sauvegardé`;
-  note.textContent = item.type === 'booster'
-    ? `Prix : ${getCustomBoosterPrice(pack)} coins · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`
-    : `Prix : ${getCustomBoosterPrice(pack)} coins · Aperçu uniquement, rien n'est sauvegardé`;
+    ? renderPriceNote(pack, ` · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
+    : renderPriceNote(pack, ` · Aperçu uniquement, rien n'est sauvegardé`);
   features.innerHTML = item.features.map(([emoji, t, text]) => `
     <div class="feature">
       <div class="feature-emoji">${emoji}</div>
@@ -1283,7 +1342,7 @@ async function buyPack(pack) {
   const item = getDisplayItem(pack);
   const packLabel = item?.title || pack;
   const price = getCustomBoosterPrice(pack);
-  const currency = document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const currency = getShopCurrency();
   const coupon = String(document.getElementById('coupon-input')?.value || '').trim();
   if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
