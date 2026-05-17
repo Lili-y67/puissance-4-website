@@ -276,6 +276,7 @@ let prevIds = new Set();
 let selectedGameId = null;
 let liveAnalysisWorker = null;
 let liveAnalysisSignature = '';
+let liveAnalysisPendingSignature = '';
 let liveAnalysisFallbackTimer = null;
 let lastSpecSignature = '';
 let lastSpecStatusByGame = new Map();
@@ -755,23 +756,27 @@ function getLiveAnalysisSignature(game) {
 
 function requestLiveWorkerAnalysis(game) {
   const signature = getLiveAnalysisSignature(game);
-  if (signature === liveAnalysisSignature) return;
-  liveAnalysisSignature = signature;
+  if (signature === liveAnalysisSignature || signature === liveAnalysisPendingSignature) return;
+  liveAnalysisPendingSignature = signature;
 
   const fallback = evaluatePosition(game);
-  applyLiveAnalysis(game, fallback, 'fallback');
   clearTimeout(liveAnalysisFallbackTimer);
   liveAnalysisFallbackTimer = setTimeout(() => {
-    if (liveAnalysisSignature === signature) {
+    if (liveAnalysisPendingSignature === signature) {
+      applyLiveAnalysis(game, fallback, 'fallback');
       const note = document.getElementById('analysis-note');
       if (note) note.textContent = `${fallback.note} Analyse rapide affichee pendant le calcul profond.`;
+      liveAnalysisSignature = signature;
+      liveAnalysisPendingSignature = '';
+      liveAnalysisWorker?.terminate();
+      liveAnalysisWorker = null;
     }
-  }, 450);
+  }, 650);
 
   if (liveAnalysisWorker) liveAnalysisWorker.terminate();
   liveAnalysisWorker = new Worker('/analyse-worker.js');
   liveAnalysisWorker.onmessage = event => {
-    if (liveAnalysisSignature !== signature) return;
+    if (liveAnalysisPendingSignature !== signature) return;
     if (event.data?.type !== 'position') return;
     clearTimeout(liveAnalysisFallbackTimer);
     const workerAnalysis = event.data.analysis || {};
@@ -783,11 +788,18 @@ function requestLiveWorkerAnalysis(game) {
       threats1: countThreats(game.grid || [], 1),
       threats2: countThreats(game.grid || [], 2),
     }, 'worker');
+    liveAnalysisSignature = signature;
+    liveAnalysisPendingSignature = '';
     liveAnalysisWorker?.terminate();
     liveAnalysisWorker = null;
   };
   liveAnalysisWorker.onerror = () => {
     clearTimeout(liveAnalysisFallbackTimer);
+    if (liveAnalysisPendingSignature === signature) {
+      applyLiveAnalysis(game, fallback, 'fallback');
+      liveAnalysisSignature = signature;
+      liveAnalysisPendingSignature = '';
+    }
     liveAnalysisWorker?.terminate();
     liveAnalysisWorker = null;
   };
@@ -844,9 +856,10 @@ function renderBoardInto(board, game, large = true) {
       cell.replaceChildren();
       if (player) {
         const token = document.createElement('div');
-        token.className = `${tokenClass} token-drop`;
+        token.className = tokenClass;
         cell.appendChild(token);
         applyTokenStyle(token, player, large);
+        requestAnimationFrame(() => token.classList.add('token-drop'));
         token.addEventListener('animationend', () => token.classList.remove('token-drop'), { once: true });
       }
     }
@@ -1077,5 +1090,6 @@ setInterval(() => {
 }, REFRESH_MS);
 </script>
 <script src="/presence.js"></script>
+<script src="/theme.js"></script>
 </body>
 </html>

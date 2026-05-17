@@ -21,6 +21,7 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
 .sub{color:var(--muted);line-height:1.55;max-width:520px}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
 .setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.emoji-input{width:62px;text-align:center;font-size:22px;padding:8px 6px}.color{width:52px;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);cursor:pointer;padding:3px}.color.secondary{filter:saturate(1.25);box-shadow:0 0 16px rgba(133,235,255,.08)}
 .score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.local-replays{margin-top:14px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.035);padding:13px;display:none;gap:8px;flex-direction:column}.local-replays.show{display:flex}.local-replays-title{font:900 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.local-replay-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.055);border-radius:13px;padding:9px 10px;background:rgba(0,0,0,.12)}.local-replay-row strong{display:block;font:900 15px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.local-replay-row span{font-size:12px;color:var(--muted)}.local-replay-row button{border:1px solid rgba(133,235,255,.24);border-radius:10px;background:rgba(133,235,255,.08);color:var(--blue);padding:8px 10px;font:900 12px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;cursor:pointer}
 .game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:0 0 auto;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}.token-dot.emoji{width:24px;height:24px;border-radius:0;background:transparent!important;font-size:20px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}.token-dot.emoji canvas{width:100%;height:100%;display:block}
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
@@ -68,6 +69,10 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
         <div class="score-card"><b id="score-draw">0</b><span>Nuls</span></div>
         <div class="score-card"><b id="score-p2">0</b><span>Joueur 2</span></div>
       </div>
+      <div class="local-replays" id="local-replays">
+        <div class="local-replays-title">Replays temporaires</div>
+        <div id="local-replay-list"></div>
+      </div>
     </aside>
 
     <section class="panel game">
@@ -97,6 +102,8 @@ let ended = false;
 let history = [];
 let scores = { 1: 0, 2: 0, draw: 0 };
 let nextStarter = 1;
+let localReplays = [];
+let localReplayTimer = null;
 
 const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
@@ -264,6 +271,7 @@ function playColumn(col) {
     ended = true;
     scores[current]++;
     nextStarter = current;
+    saveLocalReplay(current, win);
     renderBoard(win);
     updateScores();
     updateStatus(`${playerName(current)} gagne !`, 'Victoire locale');
@@ -272,6 +280,7 @@ function playColumn(col) {
   if (grid[0].every(Boolean)) {
     ended = true;
     scores.draw++;
+    saveLocalReplay(null, []);
     renderBoard();
     updateScores();
     updateStatus('Match nul', 'Fin de manche');
@@ -310,15 +319,19 @@ function undoMove() {
 }
 
 function newRound() {
+  stopLocalReplayPlayback();
   initGrid();
   renderBoard();
   updateStatus();
 }
 
 function resetAll() {
+  stopLocalReplayPlayback();
   scores = { 1: 0, 2: 0, draw: 0 };
   nextStarter = 1;
+  localReplays = [];
   updateScores();
+  renderLocalReplays();
   newRound();
 }
 
@@ -326,6 +339,91 @@ function updateScores() {
   document.getElementById('score-p1').textContent = scores[1];
   document.getElementById('score-p2').textContent = scores[2];
   document.getElementById('score-draw').textContent = scores.draw;
+}
+
+function saveLocalReplay(winner, winCells = []) {
+  const replay = {
+    id: Date.now(),
+    winner,
+    winCells,
+    moves: history.map(move => ({ ...move })),
+    players: {
+      1: { name: playerName(1), color: playerColor(1), color2: playerColor2(1), emoji: playerEmoji(1) },
+      2: { name: playerName(2), color: playerColor(2), color2: playerColor2(2), emoji: playerEmoji(2) },
+    },
+    createdAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+  };
+  localReplays.unshift(replay);
+  localReplays = localReplays.slice(0, 8);
+  renderLocalReplays();
+}
+
+function renderLocalReplays() {
+  const wrap = document.getElementById('local-replays');
+  const list = document.getElementById('local-replay-list');
+  if (!wrap || !list) return;
+  wrap.classList.toggle('show', localReplays.length > 0);
+  list.innerHTML = localReplays.map((replay, index) => {
+    const label = replay.winner ? `${escapeHtml(replay.players[replay.winner].name)} gagne` : 'Match nul';
+    return `
+      <div class="local-replay-row">
+        <div>
+          <strong>${label}</strong>
+          <span>${replay.moves.length} coups - ${escapeHtml(replay.createdAt)}</span>
+        </div>
+        <button type="button" onclick="playLocalReplay(${index})">Replay</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function stopLocalReplayPlayback() {
+  if (localReplayTimer) {
+    clearTimeout(localReplayTimer);
+    localReplayTimer = null;
+  }
+}
+
+function applyReplayPlayerSettings(replay) {
+  [1, 2].forEach(player => {
+    const data = replay.players[player];
+    document.getElementById(`p${player}-name`).value = data.name;
+    document.getElementById(`p${player}-color`).value = data.color;
+    document.getElementById(`p${player}-color2`).value = data.color2;
+    document.getElementById(`p${player}-emoji`).value = data.emoji || '';
+  });
+}
+
+function playLocalReplay(index) {
+  const replay = localReplays[index];
+  if (!replay) return;
+  stopLocalReplayPlayback();
+  applyReplayPlayerSettings(replay);
+  grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  history = [];
+  current = replay.moves[0]?.player || 1;
+  ended = true;
+  let step = 0;
+  renderBoard();
+  updateStatus('Replay en cours...', 'Replay local');
+
+  const next = () => {
+    const move = replay.moves[step];
+    if (!move) {
+      renderBoard(replay.winCells || []);
+      current = replay.winner || (replay.moves.at(-1)?.player || 1);
+      updateStatus(replay.winner ? `${replay.players[replay.winner].name} gagne !` : 'Match nul', 'Replay termine');
+      return;
+    }
+    grid[move.row][move.col] = move.player;
+    history.push({ ...move });
+    current = move.player === 1 ? 2 : 1;
+    renderBoard();
+    updateStatus(`Coup ${step + 1} / ${replay.moves.length}`, 'Replay local');
+    step += 1;
+    localReplayTimer = setTimeout(next, 420);
+  };
+  localReplayTimer = setTimeout(next, 250);
 }
 
 ['p1-name','p2-name','p1-color','p2-color','p1-color2','p2-color2','p1-emoji','p2-emoji'].forEach(id => {
@@ -342,5 +440,6 @@ mobileTurnView.addEventListener?.('change', () => {
 
 newRound();
 </script>
+<script src="/theme.js"></script>
 </body>
 </html>

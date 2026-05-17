@@ -394,6 +394,8 @@ input[type="file"]{display:none;}
 .elo-history-sub{font-size:12px;color:var(--muted);margin-top:3px;}
 .elo-history-actions{display:flex;gap:8px;align-items:flex-start;justify-content:flex-end;flex-wrap:wrap;flex-shrink:0;}
 .elo-history-ranges,.elo-history-export{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
+.elo-history-date-range{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;width:100%;}
+.elo-history-date-range input{min-width:126px;padding:7px 9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:var(--text);font:800 12px Barlow;}
 .elo-history-range{
   min-width:42px;
   padding:9px 11px;
@@ -1184,10 +1186,14 @@ let queueMusicThemes = [];
 let queueMusicPreviewAudio = null;
 let queueMusicPreviewTimer = null;
 let eloHistoryDays = 7;
+let eloHistoryStartDate = '';
+let eloHistoryEndDate = '';
 let eloHistoryTimer = null;
 let lastEloHistoryData = null;
 let eloHistoryHitPoints = [];
 let eloHistoryHoverReady = false;
+let eloHistoryActivePoint = null;
+let queueMusicPreviewFrame = null;
 let profileShopInventory = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1731,6 +1737,11 @@ function render(player, games, following, followers, followStatus, tournaments =
             <button class="elo-history-range active" data-elo-days="7" onclick="setEloHistoryRange(7)">7j</button>
             <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
           </div>
+          <div class="elo-history-date-range">
+            <input type="date" id="elo-history-start-date" aria-label="Date de debut ELO">
+            <input type="date" id="elo-history-end-date" aria-label="Date de fin ELO">
+            <button class="elo-history-range" type="button" onclick="applyEloHistoryDateRange()">Plage</button>
+          </div>
           <div class="elo-history-export">
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
@@ -1742,9 +1753,9 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="elo-history-tooltip" id="elo-history-tooltip"></div>
       </div>
       <div class="elo-history-stats" id="elo-history-stats">
-        <div class="elo-history-stat"><strong>--</strong><span>Depart</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Actuel</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Variation</span></div>
+        <div class="elo-history-stat"><strong>--</strong><span>Ecart type</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Parties</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>ELO min</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>ELO max</span></div>
@@ -2236,6 +2247,31 @@ function render(player, games, following, followers, followStatus, tournaments =
 
 function setEloHistoryRange(days) {
   eloHistoryDays = [1, 7, 15].includes(Number(days)) ? Number(days) : 7;
+  eloHistoryStartDate = '';
+  eloHistoryEndDate = '';
+  const startInput = document.getElementById('elo-history-start-date');
+  const endInput = document.getElementById('elo-history-end-date');
+  if (startInput) startInput.value = '';
+  if (endInput) endInput.value = '';
+  if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
+}
+
+function applyEloHistoryDateRange() {
+  const startInput = document.getElementById('elo-history-start-date');
+  const endInput = document.getElementById('elo-history-end-date');
+  const start = String(startInput?.value || '');
+  const end = String(endInput?.value || '');
+  if (!start || !end) {
+    alert('Choisis une date de debut et une date de fin.');
+    return;
+  }
+  if (new Date(end) < new Date(start)) {
+    alert('La date de fin doit etre apres la date de debut.');
+    return;
+  }
+  eloHistoryStartDate = start;
+  eloHistoryEndDate = end;
+  document.querySelectorAll('[data-elo-days]').forEach(btn => btn.classList.remove('active'));
   if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
 }
 
@@ -2247,9 +2283,14 @@ function setEloHistoryButtonState(days) {
 
 async function loadEloHistory(playerId, days = 7, silent = false) {
   if (!playerId) return;
-  setEloHistoryButtonState(days);
+  if (!eloHistoryStartDate || !eloHistoryEndDate) setEloHistoryButtonState(days);
   try {
-    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/elo-history?days=${encodeURIComponent(days)}`);
+    const params = new URLSearchParams({ days: String(days) });
+    if (eloHistoryStartDate && eloHistoryEndDate) {
+      params.set('start', eloHistoryStartDate);
+      params.set('end', eloHistoryEndDate);
+    }
+    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/elo-history?${params.toString()}`);
     if (!res.ok) throw new Error('history');
     const data = await res.json();
     lastEloHistoryData = data;
@@ -2371,6 +2412,10 @@ function drawEloHistory(data) {
     gameId: p.point.gameId || null,
     label: p.point.label || (p.point.gameId ? `Partie #${p.point.gameId}` : ''),
     result: p.point.result || '',
+    moveCount: Number(p.point.moveCount || 0),
+    duration: Number(p.point.duration || 0),
+    opponent: p.point.opponent || null,
+    type: p.point.type || '',
     t: Number(p.point.t || 0),
   }));
   initEloHistoryHover();
@@ -2416,10 +2461,15 @@ function drawEloHistory(data) {
 
   ctx.font = "700 11px Barlow, sans-serif";
   ctx.fillStyle = 'rgba(238,238,245,0.52)';
-  ctx.fillText(`${data.days || eloHistoryDays}j`, width - right - 24, height - 12);
+  const rangeStart = Number(stats.startTime || startTime);
+  const rangeEnd = Number(stats.endTime || endTime);
+  const rangeLabel = `${formatHistoryDateOnly(rangeStart)} → ${formatHistoryDateOnly(rangeEnd)}`;
+  ctx.fillText(rangeLabel, Math.max(left, width - right - ctx.measureText(rangeLabel).width), height - 12);
   ctx.fillStyle = '#eeeef5';
   ctx.font = "900 20px 'Barlow Condensed', sans-serif";
   ctx.fillText(`${Math.round(stats.endElo || data?.player?.elo || 0)} ELO`, left, 24);
+  const sub = document.querySelector('.elo-history-sub');
+  if (sub) sub.textContent = `Plage affichee : ${rangeLabel}. Clique un point de partie pour ouvrir le replay.`;
 
   const statsEl = document.getElementById('elo-history-stats');
   if (statsEl) {
@@ -2428,15 +2478,22 @@ function drawEloHistory(data) {
     const minHistoryElo = eloValues.length ? Math.min(...eloValues) : Number(stats.minElo || data?.player?.elo || 0);
     const maxHistoryElo = eloValues.length ? Math.max(...eloValues) : Number(stats.maxElo || data?.player?.elo || 0);
     const avgHistoryElo = eloValues.length ? eloValues.reduce((sum, elo) => sum + elo, 0) / eloValues.length : Number(data?.player?.elo || 0);
+    const variance = eloValues.length
+      ? eloValues.reduce((sum, elo) => sum + Math.pow(elo - avgHistoryElo, 2), 0) / eloValues.length
+      : 0;
+    const stdDeviation = Math.sqrt(variance);
+    const lowestPoint = drawable.reduce((best, point) => Number(point.elo || Infinity) < Number(best?.elo || Infinity) ? point : best, drawable[0] || null);
+    const highestPoint = drawable.reduce((best, point) => Number(point.elo || -Infinity) > Number(best?.elo || -Infinity) ? point : best, drawable[0] || null);
     const deltaClass = delta > 0 ? 'color:#30d158' : delta < 0 ? 'color:#ff4d6d' : 'color:var(--muted)';
     statsEl.innerHTML = `
-      <div class="elo-history-stat"><strong>${Math.round(stats.startElo || data?.player?.elo || 0)}</strong><span>Depart</span></div>
       <div class="elo-history-stat"><strong>${Math.round(stats.endElo || data?.player?.elo || 0)}</strong><span>Actuel</span></div>
       <div class="elo-history-stat"><strong style="${deltaClass}">${delta >= 0 ? '+' : ''}${Math.round(delta)}</strong><span>Variation</span></div>
+      <div class="elo-history-stat"><strong>${stdDeviation.toFixed(1)}</strong><span>Ecart type</span></div>
       <div class="elo-history-stat"><strong>${Number(stats.games || 0)}</strong><span>Parties</span></div>
-      <div class="elo-history-stat"><strong>${Math.round(minHistoryElo)}</strong><span>ELO min</span></div>
-      <div class="elo-history-stat"><strong>${Math.round(maxHistoryElo)}</strong><span>ELO max</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(maxHistoryElo)}</strong><span>Meilleur ELO${highestPoint?.gameId ? ` · #${highestPoint.gameId}` : ''}</span></div>
+      <div class="elo-history-stat"><strong>${Math.round(minHistoryElo)}</strong><span>Pire ELO${lowestPoint?.gameId ? ` · #${lowestPoint.gameId}` : ''}</span></div>
       <div class="elo-history-stat"><strong>${Math.round(avgHistoryElo)}</strong><span>ELO moyen</span></div>
+      <div class="elo-history-stat"><strong>${rangeLabel}</strong><span>Plage</span></div>
     `;
   }
 }
@@ -2465,6 +2522,35 @@ function buildEloHistoryExportRows() {
     opponentCurrentElo: point.opponent?.currentElo || '',
     label: point.label || '',
   }));
+}
+
+function formatHistoryDateOnly(ms) {
+  if (!ms) return '--';
+  return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }).format(new Date(ms));
+}
+
+function formatHistoryDuration(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds || 0)));
+  const minutes = Math.floor(total / 60);
+  const rest = total % 60;
+  if (minutes <= 0) return `${rest}s`;
+  return `${minutes}m ${String(rest).padStart(2, '0')}s`;
+}
+
+function formatHistoryResult(result) {
+  if (result === 'win') return 'Victoire';
+  if (result === 'loss') return 'Defaite';
+  if (result === 'draw') return 'Nul';
+  return 'Point';
+}
+
+function getEloHistoryExportQuery() {
+  const params = new URLSearchParams({ days: String(eloHistoryDays) });
+  if (eloHistoryStartDate && eloHistoryEndDate) {
+    params.set('start', eloHistoryStartDate);
+    params.set('end', eloHistoryEndDate);
+  }
+  return params;
 }
 
 function eloHistoryRowsToCsv(rows) {
@@ -2512,7 +2598,9 @@ async function downloadEloHistoryExport(format = 'csv') {
   }
   const wantedFormat = format === 'json' ? 'json' : 'csv';
   try {
-    const res = await fetch(`/api/players/${encodeURIComponent(currentPlayer.id)}/elo-history/export?days=${encodeURIComponent(eloHistoryDays)}&format=${wantedFormat}`);
+    const params = getEloHistoryExportQuery();
+    params.set('format', wantedFormat);
+    const res = await fetch(`/api/players/${encodeURIComponent(currentPlayer.id)}/elo-history/export?${params.toString()}`);
     if (!res.ok) throw new Error('export');
     const content = await res.text();
     downloadBlob(
@@ -2574,15 +2662,17 @@ function showEloHistoryTooltip(point) {
   const tooltip = document.getElementById('elo-history-tooltip');
   const wrap = document.querySelector('.elo-history-canvas-wrap');
   if (!tooltip || !wrap || !point) return;
+  eloHistoryActivePoint = point;
   const deltaColor = point.delta > 0 ? '#30d158' : point.delta < 0 ? '#ff4d6d' : '#85EBFF';
   const deltaText = point.delta ? `${point.delta > 0 ? '+' : ''}${Math.round(point.delta)} ELO` : 'Point de repere';
   tooltip.innerHTML = `
     <strong>${Math.round(point.elo)} ELO</strong>
     <span class="delta" style="color:${deltaColor}">${deltaText}</span>
-    <span>${point.gameId ? `Partie #${point.gameId}` : (point.label || 'Courbe ELO')}</span>
-    <span>${formatEloPointDate(point.t)}</span>
+    <span>${point.gameId ? `Replay #${point.gameId} - ${formatHistoryResult(point.result)}` : (point.label || 'Courbe ELO')}</span>
+    <span>${formatEloPointDate(point.t)}${point.moveCount ? ` - ${point.moveCount} coups` : ''}${point.duration ? ` - ${formatHistoryDuration(point.duration)}` : ''}</span>
+    ${point.opponent?.pseudo ? `<span>vs ${escapeHtml(point.opponent.pseudo)}</span>` : ''}
   `;
-  const tooltipWidth = 150;
+  const tooltipWidth = 210;
   const x = Math.max(tooltipWidth / 2 + 8, Math.min(point.x, wrap.clientWidth - tooltipWidth / 2 - 8));
   const y = Math.max(48, point.y);
   tooltip.style.left = `${x}px`;
@@ -2591,6 +2681,7 @@ function showEloHistoryTooltip(point) {
 }
 
 function hideEloHistoryTooltip() {
+  eloHistoryActivePoint = null;
   document.getElementById('elo-history-tooltip')?.classList.remove('show');
 }
 
@@ -2632,9 +2723,7 @@ function initEloHistoryHover() {
     hideEloHistoryTooltip();
   });
   canvas.addEventListener('click', () => {
-    const tooltip = document.getElementById('elo-history-tooltip');
-    const gameText = tooltip?.textContent?.match(/Partie #(\d+)/);
-    if (gameText?.[1]) location.href = `/replay/${gameText[1]}`;
+    if (eloHistoryActivePoint?.gameId) location.href = `/replay/${eloHistoryActivePoint.gameId}`;
   });
 }
 
@@ -4188,9 +4277,9 @@ function previewQueueMusicChoice(value) {
   stopQueueMusicPreview();
   const previewBtn = document.getElementById('queue-music-preview-btn');
   if (previewBtn) {
-    previewBtn.disabled = !value || String(value).startsWith('youtube:');
+    previewBtn.disabled = !value;
     previewBtn.title = String(value).startsWith('youtube:')
-      ? 'YouTube sera lu pendant la file, mais l aperçu 15s est reserve aux fichiers audio.'
+      ? 'Aperçu YouTube 15s via le lecteur intégré.'
       : '';
   }
 }
@@ -4243,6 +4332,10 @@ function stopQueueMusicPreview() {
     clearTimeout(queueMusicPreviewTimer);
     queueMusicPreviewTimer = null;
   }
+  if (queueMusicPreviewFrame) {
+    queueMusicPreviewFrame.remove();
+    queueMusicPreviewFrame = null;
+  }
   if (queueMusicPreviewAudio) {
     queueMusicPreviewAudio.pause();
     queueMusicPreviewAudio.currentTime = 0;
@@ -4261,10 +4354,25 @@ async function toggleQueueMusicPreview() {
     stopQueueMusicPreview();
     return;
   }
+  if (queueMusicPreviewFrame) {
+    stopQueueMusicPreview();
+    return;
+  }
   let src = value;
   if (value.startsWith('audio:')) src = value.slice(6);
   if (value === 'local:custom') src = await loadLocalQueueMusicObjectUrl().catch(() => '');
-  if (value.startsWith('youtube:') || !src) return;
+  if (value.startsWith('youtube:')) {
+    const videoId = value.slice(8);
+    queueMusicPreviewFrame = document.createElement('iframe');
+    queueMusicPreviewFrame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&controls=1&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+    queueMusicPreviewFrame.allow = 'autoplay; encrypted-media; picture-in-picture';
+    queueMusicPreviewFrame.style.cssText = 'position:fixed;right:18px;bottom:18px;width:min(360px,calc(100vw - 36px));height:205px;z-index:99999;border:1px solid rgba(255,255,255,.18);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.45);background:#000;';
+    document.body.appendChild(queueMusicPreviewFrame);
+    queueMusicPreviewTimer = setTimeout(() => stopQueueMusicPreview(), 15000);
+    if (previewBtn) previewBtn.textContent = 'Stop';
+    return;
+  }
+  if (!src) return;
   queueMusicPreviewAudio = new Audio(src);
   queueMusicPreviewAudio.volume = 0.55;
   queueMusicPreviewAudio.currentTime = 0;
@@ -5036,5 +5144,6 @@ initProfileInteractionSounds();
 load();
 </script>
 <script src="/presence.js"></script>
+<script src="/theme.js"></script>
 </body>
 </html>

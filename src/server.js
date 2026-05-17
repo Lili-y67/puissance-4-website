@@ -154,14 +154,30 @@ function parseSqliteDateMs(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function buildPlayerEloHistory(playerId, daysRaw = 7) {
+function parseHistoryDateBound(value, endOfDay = false) {
+  const raw = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return 0;
+  const suffix = endOfDay ? 'T23:59:59.999' : 'T00:00:00.000';
+  const ms = Date.parse(`${raw}${suffix}`);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
   const id = Number(playerId || 0);
-  const days = [1, 7, 15].includes(Number(daysRaw)) ? Number(daysRaw) : 7;
+  let days = [1, 7, 15].includes(Number(daysRaw)) ? Number(daysRaw) : 7;
   const player = pQ.getById.get(id);
   if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return null;
 
-  const now = Date.now();
-  const start = now - days * 24 * 60 * 60 * 1000;
+  const realNow = Date.now();
+  let now = realNow;
+  let start = now - days * 24 * 60 * 60 * 1000;
+  const requestedStart = parseHistoryDateBound(range.start, false);
+  const requestedEnd = parseHistoryDateBound(range.end, true);
+  if (requestedStart && requestedEnd && requestedEnd >= requestedStart) {
+    start = requestedStart;
+    now = Math.min(requestedEnd, realNow);
+    days = Math.max(1, Math.ceil((now - start) / (24 * 60 * 60 * 1000)));
+  }
   const rows = db.prepare(`
     SELECT g.id, g.player1_id, g.player2_id, g.winner_id,
            g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2,
@@ -250,6 +266,11 @@ function buildPlayerEloHistory(playerId, daysRaw = 7) {
       rank: getRank(currentElo),
     },
     days,
+    range: {
+      start: new Date(start).toISOString(),
+      end: new Date(now).toISOString(),
+      custom: !!(requestedStart && requestedEnd && requestedEnd >= requestedStart),
+    },
     points,
     stats: {
       startTime: start,
@@ -4026,13 +4047,13 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 });
 
 app.get('/api/players/:id/elo-history', (req, res) => {
-  const history = buildPlayerEloHistory(req.params.id, req.query.days);
+  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end });
   if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
   res.json(history);
 });
 
 app.get('/api/players/:id/elo-history/export', (req, res) => {
-  const history = buildPlayerEloHistory(req.params.id, req.query.days);
+  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end });
   if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
   const format = String(req.query.format || 'json').toLowerCase();
   const safePseudo = String(history.player?.pseudo || `player-${req.params.id}`)
