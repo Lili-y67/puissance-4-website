@@ -550,13 +550,14 @@ input[type="file"]{display:none;}
 .color-custom-wrap:hover{border-color:rgba(255,255,255,0.15);}
 .color-dot{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,0.2);flex-shrink:0;transition:background 0.2s, box-shadow 0.2s;}
 .color-hex{font-size:12px;color:var(--muted);}
-.color-editor{display:grid;grid-template-columns:minmax(190px,220px) 1fr auto;gap:12px;align-items:center}
+.color-editor{display:grid;grid-template-columns:minmax(190px,220px) 1fr;gap:12px;align-items:start}
 .color-preview-card{display:flex;align-items:center;gap:12px;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 14px;min-height:70px}
 .color-preview-big{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,0.18);flex-shrink:0;transition:background .2s,box-shadow .2s}
 .color-preview-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
 .color-preview-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .color-preview-value{font-size:13px;color:var(--text);font-weight:600}
-.color-inputs{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.color-inputs{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.color-inputs .color-custom-wrap{min-width:0}
 input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:none;}
 .btn-save-color{
   font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
@@ -566,6 +567,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 }
 .btn-save-color:hover{background:rgba(48,209,88,0.25);}
 .btn-save-color:disabled{opacity:0.5;cursor:not-allowed;}
+.color-editor .btn-save-color{grid-column:1/-1;justify-self:end;min-width:160px}
 .save-confirm{font-size:12px;color:var(--green);opacity:0;transition:opacity 0.3s;}
 
 /* ── Shape picker ── */
@@ -767,6 +769,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .elo-history-range { flex: 1; }
   .elo-history-canvas-wrap { height: 190px; }
   .elo-history-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .color-editor { grid-template-columns: 1fr; }
+  .color-inputs { grid-template-columns: 1fr; }
+  .color-editor .btn-save-color { justify-self: stretch; width: 100%; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .stat-card { min-width: 0; }
   .stat-val { font-size: 24px; }
@@ -2493,7 +2498,6 @@ function drawEloHistory(data) {
       <div class="elo-history-stat"><strong>${Math.round(maxHistoryElo)}</strong><span>Meilleur ELO${highestPoint?.gameId ? ` · #${highestPoint.gameId}` : ''}</span></div>
       <div class="elo-history-stat"><strong>${Math.round(minHistoryElo)}</strong><span>Pire ELO${lowestPoint?.gameId ? ` · #${lowestPoint.gameId}` : ''}</span></div>
       <div class="elo-history-stat"><strong>${Math.round(avgHistoryElo)}</strong><span>ELO moyen</span></div>
-      <div class="elo-history-stat"><strong>${rangeLabel}</strong><span>Plage</span></div>
     `;
   }
 }
