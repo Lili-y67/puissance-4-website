@@ -263,6 +263,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 }
 
 </style>
+<script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
+<link rel="stylesheet" href="/theme.css">
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -402,7 +404,7 @@ function lightenHex(hex, amount) {
   return `rgb(${lr},${lg},${lb})`;
 }
 
-function makeEmojiToken(tokenEl, emoji, color, glowColor) {
+function makeEmojiToken(tokenEl, emoji, color, glowColor, tintColor = '') {
   tokenEl.textContent = '';
   tokenEl.setAttribute('style',
     'border-radius:0!important;clip-path:none!important;' +
@@ -415,7 +417,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   const canvas = document.createElement('canvas');
   canvas.width = size * DPR; canvas.height = size * DPR;
   canvas.style.width = '100%'; canvas.style.height = '100%';
-  canvas.style.filter = 'drop-shadow(1px 0 0 rgba(0,0,0,.95)) drop-shadow(-1px 0 0 rgba(0,0,0,.95)) drop-shadow(0 1px 0 rgba(0,0,0,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55))';
+  canvas.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,.35))';
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
   ctx.clearRect(0, 0, size, size);
@@ -424,18 +426,26 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   const tc = tmp.getContext('2d');
   let lo=4, hi=size*1.5, fontSize=size*0.75;
   for (let i=0; i<8; i++) {
-    const mid=(lo+hi)/2; tc.font=`${mid}px serif`;
+    const mid=(lo+hi)/2; tc.font=`${mid}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
     const m=tc.measureText(emoji);
     const w=m.actualBoundingBoxRight-m.actualBoundingBoxLeft||m.width;
     const h=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent||mid;
     if (Math.max(w,h)<size*0.82) lo=mid; else hi=mid; fontSize=lo;
   }
-  ctx.font=`${fontSize}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const emojiFont = `"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
+  ctx.font=`${fontSize}px ${emojiFont}`; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(emoji, size/2, size/2);
-  ctx.globalCompositeOperation='source-in';
-  const grad=ctx.createRadialGradient(canvas.width*0.38,canvas.height*0.32,0,canvas.width*0.5,canvas.height*0.5,canvas.width*0.55);
-  grad.addColorStop(0, lightenHex(color, 0.55)); grad.addColorStop(1, color);
-  ctx.fillStyle=grad; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.globalCompositeOperation='source-atop';
+  ctx.globalAlpha = 0.46;
+  const grad=ctx.createLinearGradient(size*0.12,size*0.05,size*0.92,size*0.95);
+  grad.addColorStop(0, lightenHex(color, 0.62)); grad.addColorStop(0.48, color); grad.addColorStop(1, tintColor || color);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,size,size);
+  ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = 0.34;
+  ctx.fillText(emoji, size/2, size/2);
+  ctx.restore();
   tokenEl.style.filter=`drop-shadow(0 0 ${size*0.1}px ${glowColor})`;
   tokenEl.appendChild(canvas);
 }
@@ -609,8 +619,9 @@ function placeToken(row, col, player) {
       const cs = getComputedStyle(document.documentElement);
       const col = cs.getPropertyValue(player === 1 ? '--p1-color' : '--p2-color').trim();
       const glow = cs.getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
+      const tint = cs.getPropertyValue(player === 1 ? '--p1-secondary' : '--p2-secondary').trim();
       const em = player === 1 ? p1Emoji : p2Emoji;
-      makeEmojiToken(token, em, col, glow);
+      makeEmojiToken(token, em, col, glow, tint);
     } else {
       const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
       token.style.borderRadius = clip.borderRadius;

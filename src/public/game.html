@@ -518,6 +518,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .status-bar { font-size: 10px; padding: 8px 10px; }
 }
 </style>
+<script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
+<link rel="stylesheet" href="/theme.css">
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -1286,10 +1288,9 @@ function onMovePlayed(data) {
   updateTurnUI();
 }
 
-// ── Emoji → pion colorisé ────────────────────────────────────────────────────
-// Dessine l'emoji en blanc sur canvas, l'utilise comme mask-image CSS
-// pour coloriser avec la couleur du joueur
-function makeEmojiToken(tokenEl, emoji, color, glowColor) {
+// ── Emoji → pion teinté ──────────────────────────────────────────────────────
+// Garde les détails de l'emoji original, puis ajoute un dégradé joueur léger.
+function makeEmojiToken(tokenEl, emoji, color, glowColor, tintColor = '') {
   tokenEl.textContent = '';
   // Forcer via setAttribute pour surpasser .cell.p1 .token { background: ... }
   tokenEl.setAttribute('style',
@@ -1307,7 +1308,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   canvas.height = size * DPR;
   canvas.style.width  = '100%';
   canvas.style.height = '100%';
-  canvas.style.filter = 'drop-shadow(1px 0 0 rgba(0,0,0,.95)) drop-shadow(-1px 0 0 rgba(0,0,0,.95)) drop-shadow(0 1px 0 rgba(0,0,0,.95)) drop-shadow(0 -1px 0 rgba(0,0,0,.95)) drop-shadow(0 2px 4px rgba(0,0,0,.55))';
+  canvas.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,.35))';
 
   const ctx = canvas.getContext('2d');
   ctx.scale(DPR, DPR);
@@ -1320,7 +1321,7 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
   let lo = 4, hi = size * 1.5, fontSize = size * 0.75;
   for (let i = 0; i < 8; i++) {
     const mid = (lo + hi) / 2;
-    tc.font = `${mid}px serif`;
+    tc.font = `${mid}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
     const m = tc.measureText(emoji);
     const w = m.actualBoundingBoxRight - m.actualBoundingBoxLeft || m.width;
     const h = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent || mid;
@@ -1329,23 +1330,30 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor) {
     fontSize = lo;
   }
 
-  ctx.font = `${fontSize}px serif`;
+  const emojiFont = `"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`;
+  ctx.font = `${fontSize}px ${emojiFont}`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
+
+  // Rendu hybride: on garde les details/couleurs de l'emoji, puis on applique
+  // une teinte en transparence. Ca evite l'effet "emoji entierement jaune".
   ctx.fillText(emoji, size / 2, size / 2);
 
-  // Coloriser : on recouvre avec la couleur en mode source-in
-  // (garde la forme de l'emoji, applique la couleur)
-  ctx.globalCompositeOperation = 'source-in';
-  // Dégradé radial pour l'effet 3D
-  const grad = ctx.createRadialGradient(
-    canvas.width * 0.38, canvas.height * 0.32, 0,
-    canvas.width * 0.5,  canvas.height * 0.5,  canvas.width * 0.55
-  );
-  grad.addColorStop(0, lightenHex(color, 0.55));
-  grad.addColorStop(1, color);
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-atop';
+  ctx.globalAlpha = 0.46;
+  const grad = ctx.createLinearGradient(size * 0.12, size * 0.05, size * 0.92, size * 0.95);
+  grad.addColorStop(0, lightenHex(color, 0.62));
+  grad.addColorStop(0.48, color);
+  grad.addColorStop(1, tintColor || color);
   ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, size, size);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.34;
+  ctx.fillText(emoji, size / 2, size / 2);
+  ctx.restore();
 
   // Glow via shadow sur le canvas
   tokenEl.style.filter = `drop-shadow(0 0 ${size*0.1}px ${glowColor})`;
@@ -1396,9 +1404,10 @@ function applyToken(row, col, player) {
       const cs   = getComputedStyle(root);
       const col  = cs.getPropertyValue(player === 1 ? '--p1' : '--p2').trim();
       const glow = cs.getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
+      const tint = cs.getPropertyValue(player === 1 ? '--p1-secondary' : '--p2-secondary').trim();
       const em   = player === 1 ? p1Emoji : p2Emoji;
       // Dessiner le canvas AVANT l'animation drop
-      makeEmojiToken(token, em, col, glow);
+      makeEmojiToken(token, em, col, glow, tint);
     } else {
       const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
       token.style.borderRadius = clip.borderRadius;

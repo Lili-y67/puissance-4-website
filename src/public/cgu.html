@@ -38,13 +38,18 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
 .rule-list .icon{font-size:15px;flex-shrink:0;margin-top:1px}
 .rule-list strong,.card-body strong{color:var(--text)}
 .highlight{background:rgba(255,45,85,.06);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:12px 16px;margin:0 20px 16px;font-size:13px;line-height:1.6;color:var(--muted)}
+.quick-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 18px}
+.quick-links a{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-decoration:none}
+.update-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 13px;border-radius:999px;border:1px solid rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:#ffd60a;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .sanction-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border-radius:0 0 8px 8px;overflow:hidden;margin:0 20px 16px}
 .sanction-cell{background:var(--surface2);padding:10px 12px;font-size:12px;line-height:1.5}
 .sanction-cell.header{background:rgba(255,255,255,.03);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .cgu-footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8}
 .cgu-footer a{color:var(--muted);text-decoration:underline}
-@media (max-width:480px){nav{padding:10px 12px;height:auto;flex-wrap:wrap}.nav-back{width:100%;text-align:center;margin-left:0}.page{padding:22px 10px 42px}.page-title{font-size:28px}.card-header,.card-body,.rule-list{padding-left:14px;padding-right:14px}.sanction-grid{grid-template-columns:1fr;margin:0 14px 14px}}
+@media (max-width:480px){nav{padding:10px 12px;height:auto;flex-wrap:wrap}.nav-back{width:100%;text-align:center;margin-left:0}.page{padding:22px 10px 42px}.page-title{font-size:28px}.card-header,.card-body,.rule-list{padding-left:14px;padding-right:14px}.quick-links{margin-left:14px;margin-right:14px}.quick-links a{width:100%;justify-content:center}.sanction-grid{grid-template-columns:1fr;margin:0 14px 14px}}
 </style>
+<script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
+<link rel="stylesheet" href="/theme.css">
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -55,7 +60,14 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
 </nav>
 <div class="page">
   <div class="page-title">Conditions <span>d'utilisation</span></div>
-  <div class="page-sub">Derniere mise a jour : 6 avril 2026 · Proprietaire : Lili_y</div>
+  <div class="page-sub">Dernière mise à jour : 17 mai 2026 · Propriétaire : Lili_y</div>
+  <div class="update-pill">Version mise à jour avec coins, boutique, bots, Discord et cosmétiques</div>
+  <div class="quick-links">
+    <a href="/regles">Règles du jeu</a>
+    <a href="/boutique">Boutique</a>
+    <a href="/api-doc">API</a>
+    <a href="https://discord.gg/MrKbBAAWcm">Discord</a>
+  </div>
 
   <div class="card">
     <div class="card-header">
@@ -66,9 +78,9 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
       </div>
     </div>
     <div class="card-body">
-      Puissance 4 Ranked est un site de jeu en ligne amateur, gratuit et evolutif gere par <strong>Lili_y</strong>.
-      En accedant au site, en creant un compte ou en utilisant ses fonctionnalites, vous acceptez les presentes conditions d'utilisation.
-      Elles peuvent etre mises a jour a tout moment.
+      Puissance 4 Ranked est un site de jeu en ligne amateur, gratuit et évolutif géré par <strong>Lili_y</strong>.
+      En accédant au site, en créant un compte, en liant Discord, en utilisant la boutique, les bots, l'API ou les fonctionnalités premium,
+      vous acceptez les présentes conditions d'utilisation. Elles peuvent être mises à jour à tout moment pour suivre l'évolution du projet.
     </div>
   </div>
 
@@ -76,16 +88,16 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
     <div class="card-header">
       <div class="card-icon red">⚠️</div>
       <div>
-        <div class="card-title">Regles de conduite</div>
+        <div class="card-title">Règles de conduite</div>
         <div class="card-sub">Comportements interdits</div>
       </div>
     </div>
     <ul class="rule-list">
-      <li><span class="icon">🚫</span><span><strong>Insultes et harcelement</strong> — Tout comportement offensant, discriminatoire ou abusif envers un autre joueur est interdit.</span></li>
-      <li><span class="icon">🤖</span><span><strong>Triche et manipulation</strong> — Les scripts, bots, exploits, matchs arranges ou manipulations de classement sont interdits.</span></li>
-      <li><span class="icon">🔁</span><span><strong>Farming</strong> — Le farm d'ELO, de coins ou de recompenses via parties organisees artificiellement est interdit.</span></li>
-      <li><span class="icon">🪪</span><span><strong>Usurpation</strong> — Se faire passer pour un joueur, un moderateur ou un administrateur est interdit.</span></li>
-      <li><span class="icon">💻</span><span><strong>Attaques techniques</strong> — Toute tentative d'attaque, de surcharge ou d'exploitation du service est interdite.</span></li>
+      <li><span class="icon">🚫</span><span><strong>Insultes et harcèlement</strong> — Tout comportement offensant, discriminatoire ou abusif envers un autre joueur est interdit.</span></li>
+      <li><span class="icon">🤖</span><span><strong>Triche et manipulation</strong> — Les scripts, exploits, matchs arrangés ou manipulations de classement sont interdits. Les bots ne sont autorisés que via les outils/API prévus.</span></li>
+      <li><span class="icon">🔁</span><span><strong>Farming</strong> — Le farm d'ELO, de coins ou de récompenses via parties organisées artificiellement est interdit.</span></li>
+      <li><span class="icon">🪪</span><span><strong>Usurpation</strong> — Se faire passer pour un joueur, un modérateur, un administrateur ou un bot officiel est interdit.</span></li>
+      <li><span class="icon">💻</span><span><strong>Attaques techniques</strong> — Toute tentative d'attaque, de surcharge, de contournement de sécurité ou d'exploitation du service est interdite.</span></li>
     </ul>
   </div>
 
@@ -94,10 +106,10 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
       <div class="card-icon orange">🔨</div>
       <div>
         <div class="card-title">Sanctions</div>
-        <div class="card-sub">Application a la discretion du staff</div>
+        <div class="card-sub">Application à la discrétion du staff</div>
       </div>
     </div>
-    <div class="card-body" style="padding-bottom:12px">Le staff peut appliquer des sanctions sans preavis selon la gravite du comportement.</div>
+    <div class="card-body" style="padding-bottom:12px">Le staff peut appliquer des sanctions sans préavis selon la gravité du comportement.</div>
     <div class="sanction-grid">
       <div class="sanction-cell header">Infraction</div>
       <div class="sanction-cell header">Sanction</div>
@@ -105,17 +117,17 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
       <div class="sanction-cell">Comportement irrespectueux</div>
       <div class="sanction-cell">Mute jeu</div>
       <div class="sanction-cell">Temporaire</div>
-      <div class="sanction-cell">Triche averee</div>
+      <div class="sanction-cell">Triche avérée</div>
       <div class="sanction-cell">Ban + reset ELO/coins</div>
-      <div class="sanction-cell">Definitif</div>
-      <div class="sanction-cell">Farm organise</div>
+      <div class="sanction-cell">Définitif</div>
+      <div class="sanction-cell">Farm organisé</div>
       <div class="sanction-cell">Reset + retrait des gains</div>
-      <div class="sanction-cell">Immediat</div>
-      <div class="sanction-cell">Recidive grave</div>
+      <div class="sanction-cell">Immédiat</div>
+      <div class="sanction-cell">Récidive grave</div>
       <div class="sanction-cell">Ban permanent</div>
-      <div class="sanction-cell">Definitif</div>
+      <div class="sanction-cell">Définitif</div>
     </div>
-    <div class="highlight"><strong>Note :</strong> aucune procedure d'appel n'est garantie. Le staff peut annuler des gains, des avantages ou des achats en cas d'abus manifeste.</div>
+    <div class="highlight"><strong>Note :</strong> aucune procédure d'appel n'est garantie. Le staff peut annuler des gains, des avantages, des rôles, des coins ou des achats en cas d'abus manifeste.</div>
   </div>
 
   <div class="card">
@@ -127,12 +139,13 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
       </div>
     </div>
     <ul class="rule-list">
-      <li><span class="icon">🪙</span><span><strong>Coins</strong> — Les coins se gagnent en jouant des parties legitimes et servent a acheter des avantages dans la boutique.</span></li>
-      <li><span class="icon">⭐</span><span><strong>VIP</strong> — Le role VIP donne acces a des options cosmetiques et a un boost ELO selon les regles affichees sur le site.</span></li>
-      <li><span class="icon">💎</span><span><strong>VIP+</strong> — Le role VIP+ donne acces aux fonctions premium avancees, comme certaines decorations et options visuelles supplementaires.</span></li>
-      <li><span class="icon">✨</span><span><strong>Perso</strong> — Le pack Perso permet des elements personnalises supplementaires, comme le badge perso et certaines options reservees.</span></li>
-      <li><span class="icon">📦</span><span><strong>Boosters</strong> — Les boosters peuvent etre limites par un stock global ou un inventaire. Un achat consomme le stock affiche.</span></li>
-      <li><span class="icon">🚫</span><span><strong>Abus boutique</strong> — Toute tentative de duplication, de detournement ou d'utilisation frauduleuse peut entrainer la suppression des gains ou une sanction.</span></li>
+      <li><span class="icon">🪙</span><span><strong>Coins</strong> — Les coins se gagnent en jouant des parties légitimes et servent à acheter des avantages dans la boutique.</span></li>
+      <li><span class="icon">⭐</span><span><strong>VIP</strong> — Le rôle VIP peut être temporaire, donne accès à des options cosmétiques et à un boost ELO selon les règles affichées sur le site.</span></li>
+      <li><span class="icon">💎</span><span><strong>VIP+</strong> — Le rôle VIP+ donne accès aux fonctions premium avancées, aux délais réduits et à certaines options visuelles supplémentaires.</span></li>
+      <li><span class="icon">✨</span><span><strong>Perso</strong> — Le pack Perso donne accès au badge personnalisé, à des options avancées et aux fonctionnalités réservées indiquées sur le profil ou la boutique.</span></li>
+      <li><span class="icon">📦</span><span><strong>Boosters</strong> — Les boosters ELO ou coins peuvent être limités par un stock global ou un inventaire. Un achat consomme le stock affiché.</span></li>
+      <li><span class="icon">♻️</span><span><strong>Reset ELO</strong> — Les resets achetés ou appliqués par le staff suivent les règles de la boutique et ne doivent pas servir à contourner le matchmaking.</span></li>
+      <li><span class="icon">🚫</span><span><strong>Abus boutique</strong> — Toute tentative de duplication, de détournement ou d'utilisation frauduleuse peut entraîner la suppression des gains ou une sanction.</span></li>
     </ul>
   </div>
 
@@ -141,15 +154,67 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
       <div class="card-icon purple">🎨</div>
       <div>
         <div class="card-title">Cosmetiques et personnalisation</div>
-        <div class="card-sub">Avatar, bannieres, decorations et contenus perso</div>
+        <div class="card-sub">Avatar, bannières, décorations et contenus perso</div>
       </div>
     </div>
     <ul class="rule-list">
-      <li><span class="icon">🖼️</span><span><strong>Avatar et banniere</strong> — Les contenus importes doivent rester appropries. Les contenus choquants, haineux, sexuels explicites ou illegaux peuvent etre retires sans preavis.</span></li>
-      <li><span class="icon">🪄</span><span><strong>Decorations et bibliotheques</strong> — Certaines decorations, bannieres pseudo et autres effets proviennent de bibliotheques internes au site. Leur disponibilite peut changer avec les mises a jour.</span></li>
-      <li><span class="icon">⏱️</span><span><strong>Delais de modification</strong> — Certaines options ont un cooldown : pseudo, GIF, emoji image, decoration avatar ou autres contenus premium.</span></li>
-      <li><span class="icon">🏷️</span><span><strong>Badge perso</strong> — Le badge personnalise ne doit pas usurper un role officiel ou tromper les autres joueurs.</span></li>
-      <li><span class="icon">🛡️</span><span><strong>Moderation</strong> — Le staff peut retirer, corriger ou bloquer un contenu cosmetique juge abusif, trompeur ou contraire au projet.</span></li>
+      <li><span class="icon">🖼️</span><span><strong>Avatar et bannière</strong> — Les contenus importés doivent rester appropriés. Les contenus choquants, haineux, sexuels explicites ou illégaux peuvent être retirés sans préavis.</span></li>
+      <li><span class="icon">🪄</span><span><strong>Décorations et bibliothèques</strong> — Certaines décorations, bannières pseudo et autres effets proviennent de bibliothèques internes au site. Leur disponibilité peut changer avec les mises à jour.</span></li>
+      <li><span class="icon">🎵</span><span><strong>Musiques d'attente</strong> — Les musiques personnalisées ou sélectionnées doivent rester adaptées à l'ambiance du site. Les URL externes peuvent être limitées ou désactivées selon les contraintes techniques.</span></li>
+      <li><span class="icon">⏱️</span><span><strong>Délais de modification</strong> — Certaines options ont un cooldown : pseudo, GIF, emoji image, décoration avatar, musique ou autres contenus premium.</span></li>
+      <li><span class="icon">🏷️</span><span><strong>Badge perso</strong> — Le badge personnalisé ne doit pas usurper un rôle officiel ou tromper les autres joueurs.</span></li>
+      <li><span class="icon">🛡️</span><span><strong>Modération</strong> — Le staff peut retirer, corriger ou bloquer un contenu cosmétique jugé abusif, trompeur ou contraire au projet.</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon blue">🎮</div>
+      <div>
+        <div class="card-title">Parties, ELO et analyse</div>
+        <div class="card-sub">Classement, bots, replays et spectateur live</div>
+      </div>
+    </div>
+    <ul class="rule-list">
+      <li><span class="icon">🏆</span><span><strong>ELO</strong> — Le classement évolue selon les parties ranked. Les matchs amicaux, locaux ou certains matchs contre bots peuvent avoir des règles ELO différentes.</span></li>
+      <li><span class="icon">🤖</span><span><strong>Bots</strong> — Les bots officiels ou créés via API peuvent jouer sur le site, mais ils sont séparés du classement humain lorsque c'est prévu.</span></li>
+      <li><span class="icon">📺</span><span><strong>Live</strong> — Les parties en cours peuvent être visibles depuis la page live avec analyse, effets visuels et informations publiques de jeu.</span></li>
+      <li><span class="icon">🎞️</span><span><strong>Replays</strong> — Les parties peuvent être rejouées, analysées et partagées via un lien de replay quand le site le permet.</span></li>
+      <li><span class="icon">📊</span><span><strong>Analyse</strong> — Les évaluations, précisions et commentaires sont indicatifs. Ils peuvent évoluer selon les mises à jour du moteur d'analyse.</span></li>
+      <li><span class="icon">⏱️</span><span><strong>Timers</strong> — Une partie peut être perdue automatiquement si le temps par coup est dépassé.</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon purple">🧩</div>
+      <div>
+        <div class="card-title">Discord, API et automatisation</div>
+        <div class="card-sub">Connexion, commandes et clients externes</div>
+      </div>
+    </div>
+    <ul class="rule-list">
+      <li><span class="icon">🔗</span><span><strong>Liaison Discord</strong> — La connexion Discord peut récupérer certaines informations publiques du compte et faciliter la récupération de compte ou les fonctionnalités liées au serveur.</span></li>
+      <li><span class="icon">🔐</span><span><strong>Sécurité Discord</strong> — Certaines actions admin peuvent demander un mot de passe, une session temporaire ou une vérification supplémentaire.</span></li>
+      <li><span class="icon">🧠</span><span><strong>API bot</strong> — Les tokens bot sont personnels. Ils ne doivent pas être partagés publiquement et peuvent être désactivés en cas d'abus.</span></li>
+      <li><span class="icon">📡</span><span><strong>Webhooks et notifications</strong> — Le site peut envoyer des notifications Discord pour certaines actions publiques ou administratives, sans publier d'adresse IP.</span></li>
+      <li><span class="icon">🚦</span><span><strong>Rate limit</strong> — Les appels excessifs à l'API ou aux endpoints publics peuvent être bloqués ou ralentis.</span></li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon orange">🎪</div>
+      <div>
+        <div class="card-title">Tournois et événements</div>
+        <div class="card-sub">Files dédiées, récompenses et pauses</div>
+      </div>
+    </div>
+    <ul class="rule-list">
+      <li><span class="icon">🏁</span><span><strong>Tournois</strong> — Les tournois peuvent être automatiques, publics ou créés par des rôles autorisés selon les règles affichées.</span></li>
+      <li><span class="icon">🥇</span><span><strong>Récompenses</strong> — Les gains annoncés peuvent être distribués aux meilleurs joueurs à la fin du tournoi, sous réserve d'absence d'abus.</span></li>
+      <li><span class="icon">⏸️</span><span><strong>Pause</strong> — Quitter certaines pages ou files peut mettre un joueur en pause selon la logique du tournoi.</span></li>
+      <li><span class="icon">🧾</span><span><strong>Correction</strong> — Un tournoi peut être annulé, corrigé ou réinitialisé en cas de bug, triche ou mauvais fonctionnement.</span></li>
     </ul>
   </div>
 
@@ -157,15 +222,15 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
     <div class="card-header">
       <div class="card-icon green">🔒</div>
       <div>
-        <div class="card-title">Donnees personnelles</div>
-        <div class="card-sub">Ce qui est stocke</div>
+        <div class="card-title">Données personnelles</div>
+        <div class="card-sub">Ce qui est stocké</div>
       </div>
     </div>
     <ul class="rule-list">
-      <li><span class="icon">📦</span><span><strong>Donnees collectees</strong> — Pseudo, mot de passe chiffre, identifiant Discord optionnel, avatar, banniere, historique des parties et elements de personnalisation.</span></li>
-      <li><span class="icon">🎯</span><span><strong>Finalite</strong> — Ces donnees servent exclusivement au fonctionnement du site : connexion, profil, classement, boutique, historique et moderation.</span></li>
-      <li><span class="icon">🚫</span><span><strong>Pas de revente</strong> — Aucune donnee personnelle n'est revendue a des fins commerciales.</span></li>
-      <li><span class="icon">🗑️</span><span><strong>Suppression</strong> — Vous pouvez fermer votre compte. Certaines parties peuvent rester visibles de maniere anonymisee pour conserver l'historique du jeu.</span></li>
+      <li><span class="icon">📦</span><span><strong>Données collectées</strong> — Pseudo, mot de passe chiffré, identifiant Discord optionnel, avatar, bannière, historique des parties, coins, boosters, rôles et éléments de personnalisation.</span></li>
+      <li><span class="icon">🎯</span><span><strong>Finalité</strong> — Ces données servent exclusivement au fonctionnement du site : connexion, profil, classement, boutique, historique, bots, API et modération.</span></li>
+      <li><span class="icon">🚫</span><span><strong>Pas de revente</strong> — Aucune donnée personnelle n'est revendue à des fins commerciales.</span></li>
+      <li><span class="icon">🗑️</span><span><strong>Suppression</strong> — Vous pouvez fermer votre compte. Certaines parties peuvent rester visibles de manière anonymisée pour conserver l'historique du jeu.</span></li>
     </ul>
   </div>
 
@@ -173,15 +238,15 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
     <div class="card-header">
       <div class="card-icon blue">⚖️</div>
       <div>
-        <div class="card-title">Limitation de responsabilite</div>
+        <div class="card-title">Limitation de responsabilité</div>
         <div class="card-sub">Nature amateur du projet</div>
       </div>
     </div>
     <ul class="rule-list">
-      <li><span class="icon">🔧</span><span>Le site peut etre indisponible a tout moment pour maintenance, panne, redemarrage ou mise a jour.</span></li>
-      <li><span class="icon">📉</span><span>Les donnees de jeu, classements, coins, boosters ou avantages peuvent etre corrigees ou reinitialisees si necessaire pour l'equilibre ou la securite du service.</span></li>
-      <li><span class="icon">💸</span><span>Aucune compensation financiere ne sera accordee en cas de perte de donnees, d'indisponibilite ou de retrait d'un avantage.</span></li>
-      <li><span class="icon">🌐</span><span>L'administration n'est pas responsable des contenus fournis par les utilisateurs.</span></li>
+      <li><span class="icon">🔧</span><span>Le site peut être indisponible à tout moment pour maintenance, panne, redémarrage ou mise à jour.</span></li>
+      <li><span class="icon">📉</span><span>Les données de jeu, classements, coins, boosters ou avantages peuvent être corrigées ou réinitialisées si nécessaire pour l'équilibre ou la sécurité du service.</span></li>
+      <li><span class="icon">💸</span><span>Aucune compensation financière ne sera accordée en cas de perte de données, d'indisponibilité ou de retrait d'un avantage.</span></li>
+      <li><span class="icon">🌐</span><span>L'administration n'est pas responsable des contenus fournis par les utilisateurs ou des contenus externes chargés depuis des URL tierces.</span></li>
     </ul>
   </div>
 
@@ -189,18 +254,18 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter
     <div class="card-header">
       <div class="card-icon orange">💬</div>
       <div>
-        <div class="card-title">Contact et moderation</div>
-        <div class="card-sub">Pour signaler un probleme</div>
+        <div class="card-title">Contact et modération</div>
+        <div class="card-sub">Pour signaler un problème</div>
       </div>
     </div>
     <div class="card-body">
-      Pour toute question, contestation ou signalement, rejoignez le serveur Discord du projet et contactez un moderateur ou un administrateur.
+      Pour toute question, contestation ou signalement, rejoignez le serveur Discord du projet et contactez un modérateur ou un administrateur.
     </div>
   </div>
 
   <div class="cgu-footer">
     © 2026 Puissance 4 Ranked · Lili_y<br>
-    <a href="/">Retour a l'accueil</a>
+    <a href="/">Retour à l'accueil</a>
   </div>
 </div>
 <script src="/presence.js"></script>
