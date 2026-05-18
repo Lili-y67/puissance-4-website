@@ -226,6 +226,24 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 
   <div class="card">
     <div class="card-header">
+      <div class="card-icon blue">💎</div>
+      <div>
+        <div class="card-title">Gemmes</div>
+        <div class="card-sub">Monnaie Discord complémentaire</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Les gemmes sont pensées comme une monnaie bonus liée à l'activité Discord : présence, niveau, événements et récompenses communautaires.
+      Elles complètent les coins et peuvent proposer des prix réduits sur certaines offres boutique. Le spam, le farm Discord ou les abus de progression peuvent être annulés par le staff.
+    </div>
+    <div class="elo-grid">
+      <div class="elo-item"><div class="elo-val mid">Discord</div><div class="elo-lbl">Activité et événements</div></div>
+      <div class="elo-item"><div class="elo-val pos">Prix réduits</div><div class="elo-lbl">Alternative aux coins</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
       <div class="card-icon purple">🛍️</div>
       <div>
         <div class="card-title">Boosters et boutique</div>
@@ -249,6 +267,127 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
         <strong>Inventaire</strong>
         <span>Les boosters achetes vont dans ton inventaire, puis peuvent etre utilises depuis ton profil selon les fonctions actives.</span>
       </div>
+      <div class="shop-box">
+        <strong>Coupons</strong>
+        <span>Un code promo valide peut réduire le prix avant confirmation. Certains codes ont une date de fin ou un nombre d'utilisations limité.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Offres limitees</strong>
+        <span>Les packs spéciaux peuvent afficher un timer, appliquer un coupon automatique et disparaître quand la durée ou le stock arrive à zéro.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon yellow">⭐</div>
+      <div>
+        <div class="card-title">Premium et cosmetiques</div>
+        <div class="card-sub">VIP, VIP+, Perso et personnalisation</div>
+      </div>
+    </div>
+    <div class="shop-grid">
+      <div class="shop-box">
+        <strong>VIP</strong>
+        <span>Accès aux options VIP, GIF avatar/bannière selon délai, emoji custom simple et boost ELO premium à activation limitée.</span>
+      </div>
+      <div class="shop-box">
+        <strong>VIP+</strong>
+        <span>Avantages premium améliorés, délais plus courts, décoration avatar, options visuelles avancées et boost ELO supérieur.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Perso</strong>
+        <span>Badge personnalisé, accès étendu aux fonctions premium, clans, boosters Perso et outils avancés de personnalisation.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Cooldowns</strong>
+        <span>Pseudo, emoji, GIF, décoration, musique ou bannière peuvent avoir un délai avant modification. Les admins peuvent le contourner pour modération.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon purple">🎮</div>
+      <div>
+        <div class="card-title">Modes de jeu</div>
+        <div class="card-sub">Ranked, amical, bot et local</div>
+      </div>
+    </div>
+    <div class="shop-grid">
+      <div class="shop-box">
+        <strong>Ranked en ligne</strong>
+        <span>Matchmaking classique avec ELO, timer par coup et résultat enregistré dans l'historique.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Duel</strong>
+        <span>Un duel peut être ranked ou amical. Les liens de duel expirent et les duels ranked demandent une connexion valide.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Contre ordinateur</strong>
+        <span>Le bot peut avoir son propre ELO. Selon le mode, l'ELO humain peut rester hors classement pour éviter les abus.</span>
+      </div>
+      <div class="shop-box">
+        <strong>1v1 local</strong>
+        <span>Mode hors compte pour jouer sur le même appareil, avec replay temporaire et personnalisation locale des pions.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon blue">📺</div>
+      <div>
+        <div class="card-title">Live, replay et analyse</div>
+        <div class="card-sub">Spectateur, précision et historique</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Les parties en cours peuvent être suivies depuis le live avec avatars, décorations, formes de pions et analyse automatique.
+      Les replays conservent les coups, le vainqueur, l'évolution ELO et la ligne gagnante. Les commentaires d'analyse, la précision et les variations restent indicatifs : ils aident à comprendre une partie, mais ne remplacent pas une analyse parfaite.
+    </div>
+    <div class="shop-grid">
+      <div class="shop-box">
+        <strong>Precision</strong>
+        <span>La précision estime la qualité globale des coups à partir de l'évaluation du moteur d'analyse.</span>
+      </div>
+      <div class="shop-box">
+        <strong>Export</strong>
+        <span>Certaines fonctions permettent d'exporter un replay, un graphique ELO ou des données en JSON/CSV.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon green">🛡️</div>
+      <div>
+        <div class="card-title">Clans</div>
+        <div class="card-sub">Equipe, tchat et classement</div>
+      </div>
+    </div>
+    <div class="card-body">
+      Les clans permettent de regrouper des joueurs autour d'un blason, d'un tchat temps réel, d'une liste de membres et d'un classement basé sur l'ELO moyen.
+      La création est réservée aux joueurs éligibles, un joueur ne peut appartenir qu'à un clan à la fois, et les abus de tchat suivent les mêmes règles de modération que le reste du site.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon orange">🧩</div>
+      <div>
+        <div class="card-title">API, bots et automatisation</div>
+        <div class="card-sub">Pour les intégrations avancées</div>
+      </div>
+    </div>
+    <div class="card-body">
+      La documentation officielle est disponible sur <strong>/api-doc</strong>. Elle décrit les endpoints publics, les routes de boutique, les duels, les bots API, les événements Socket.IO et les erreurs possibles.
+      Les tokens bot sont secrets, affichés une seule fois, et doivent respecter les limites de fréquence. Les bots suspendus ou abusifs peuvent être bloqués par l'administration.
+    </div>
+    <div class="cta" style="margin:14px 0 0">
+      <div class="cta-title">Besoin de coder autour du site ?</div>
+      <div class="cta-sub">La doc API contient aussi des exemples fetch et curl.</div>
+      <a class="btn-play" href="/api-doc">📘 Ouvrir la doc API</a>
     </div>
   </div>
 

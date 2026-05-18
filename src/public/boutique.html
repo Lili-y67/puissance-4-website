@@ -128,6 +128,9 @@ body{
 .price-old{font-size:.62em;color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:rgba(255,45,85,.82);opacity:.72}
 .price-new{display:inline-flex;align-items:center;gap:6px;color:inherit;text-shadow:0 0 18px rgba(255,214,10,.16)}
 .price-discount-badge{position:absolute;right:-10px;top:-14px;padding:4px 8px;border-radius:999px;background:linear-gradient(135deg, var(--red), #ff9f0a);border:1px solid rgba(255,255,255,.20);color:white;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:.8px;box-shadow:0 8px 22px rgba(255,45,85,.26);transform:rotate(4deg)}
+.offer-timer{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:8px 11px;border-radius:999px;background:rgba(255,214,10,.10);border:1px solid rgba(255,214,10,.26);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;box-shadow:0 0 24px rgba(255,214,10,.08)}
+.offer-timer strong{font-size:16px}
+.auto-coupon-chip{display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:7px 10px;border-radius:999px;background:rgba(48,209,88,.10);border:1px solid rgba(48,209,88,.26);color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .price.gems .price-new{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.22)}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
@@ -660,6 +663,7 @@ let SHOP_GEM_PRICES = Object.fromEntries(Object.entries(SHOP_PRICES).map(([key, 
 let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
+let shopLimitedOffer = null;
 let currentCategory = 'ranks';
 let customBoosterState = { elo: 0.1, coins: 1 };
 let previewDecorations = [];
@@ -667,6 +671,7 @@ let previewProfileBanners = [];
 let previewAnimTimer = null;
 let appliedCouponCode = '';
 let appliedCoupon = null;
+let offerTimerInterval = null;
 const PREVIEW_NAME_PARTS = ['li', 'na', 'shi', 'ka', 'yo', 'mi', 'sa', 'ly', 'no', 'ra', 'el', 'ia', 'zu', 'ko', 'ri', 'ta', 'ma', 'ne', 'cy', 'va'];
 const PREVIEW_AVATAR_STYLES = ['adventurer', 'adventurer-neutral', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'pixel-art'];
 
@@ -749,6 +754,35 @@ function renderPriceNote(pack, suffix = '') {
   const discount = getDiscountedPrice(getCustomBoosterPrice(pack));
   const promo = discount.hasDiscount ? ` au lieu de ${discount.basePrice}` : '';
   return `Prix : ${discount.finalPrice} ${getCurrencyLabel()}${promo}${suffix}`;
+}
+
+function formatOfferCountdown(expiresAt) {
+  const left = Math.max(0, Number(expiresAt || 0) - Date.now());
+  const hours = Math.floor(left / 3600000);
+  const minutes = Math.floor((left % 3600000) / 60000);
+  const seconds = Math.floor((left % 60000) / 1000);
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+}
+
+function renderOfferTimerHtml() {
+  if (!shopLimitedOffer?.expiresAt || Number(shopLimitedOffer.expiresAt) <= Date.now()) return '';
+  return `<div class="offer-timer">⏳ <span>${escapeHtml(shopLimitedOffer.label || 'Offre limitee')}</span> <strong data-offer-countdown>${formatOfferCountdown(shopLimitedOffer.expiresAt)}</strong></div>`;
+}
+
+function startOfferTimer() {
+  clearInterval(offerTimerInterval);
+  offerTimerInterval = setInterval(() => {
+    document.querySelectorAll('[data-offer-countdown]').forEach(el => {
+      el.textContent = formatOfferCountdown(shopLimitedOffer?.expiresAt);
+    });
+    if (shopLimitedOffer?.expiresAt && Number(shopLimitedOffer.expiresAt) <= Date.now()) {
+      clearInterval(offerTimerInterval);
+      shopLimitedOffer = null;
+      renderShop();
+      switchShopCategory(currentCategory);
+    }
+  }, 1000);
 }
 
 function getCardStatSub(item, pack) {
@@ -846,6 +880,18 @@ function setCouponStatus(message, type = '') {
   el.textContent = message || 'Optionnel, appliqué au moment de confirmer l achat.';
   el.classList.toggle('ok', type === 'ok');
   el.classList.toggle('error', type === 'error');
+}
+
+function applyAutoCoupon(coupon, label = '') {
+  if (!coupon?.code || appliedCouponCode) return;
+  appliedCouponCode = coupon.code;
+  appliedCoupon = coupon;
+  const input = document.getElementById('coupon-input');
+  const btn = document.getElementById('coupon-validate-btn');
+  if (input) input.value = coupon.code;
+  if (btn) btn.disabled = true;
+  const value = `${coupon.value}${coupon.type === 'flat' ? '' : '%'}`;
+  setCouponStatus(`${label || 'Coupon automatique'} actif : ${coupon.code} (-${value}).`, 'ok');
 }
 
 function onCouponInput() {
@@ -1336,6 +1382,10 @@ function renderCard(pack) {
   const bundleStockHtml = item.type === 'bundle'
     ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) - offre limitee.</span></div></div>`
     : '';
+  const offerTimerHtml = item.type === 'bundle' ? renderOfferTimerHtml() : '';
+  const autoCouponHtml = item.type === 'bundle' && shopLimitedOffer?.coupon
+    ? `<div class="auto-coupon-chip">✅ Coupon auto : ${escapeHtml(shopLimitedOffer.coupon.code)}</div>`
+    : '';
   return `
     <article class="card ${item.theme}">
       <div class="tier">
@@ -1344,6 +1394,7 @@ function renderCard(pack) {
       </div>
       <h2>${item.title}</h2>
       <div class="meta">${item.meta}</div>
+      ${offerTimerHtml}${autoCouponHtml}
       <div class="stat-line ${item.theme}">
         <div class="stat-line-left">
           <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
@@ -1451,13 +1502,16 @@ async function loadShop() {
     shopPlayer = data.player || null;
     shopStock = data.stock || {};
     shopInventory = data.inventory || {};
+    shopLimitedOffer = data.limitedOffer || null;
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
+    if (shopLimitedOffer?.coupon) applyAutoCoupon(shopLimitedOffer.coupon, shopLimitedOffer.label || 'Offre limitee');
   } catch (e) {
     setCoinsUi(0, 'Impossible de charger ton solde.');
   }
   renderShop();
+  startOfferTimer();
   switchShopCategory(currentCategory);
 }
 

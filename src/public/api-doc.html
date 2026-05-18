@@ -224,7 +224,13 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
   "items": { "elo_mini": { "price": 250, "multiplier": 1.05 } },
   "prices": { "elo_mini": 250 },
   "stock": { "elo_mini": 10 },
-  "inventory": { "elo_mini": 2, "coin_boost": 1 }
+  "inventory": { "elo_mini": 2, "coin_boost": 1 },
+  "limitedOffer": {
+    "code": "FLASH20",
+    "label": "Pack week-end",
+    "expiresAt": 1779120000000,
+    "coupon": { "type": "discount", "value": 20 }
+  }
 }</code></pre><pre><code>const shop = await fetch('/api/shop/me?token=' + token)
   .then(r => r.json());</code></pre></div><pre><code>curl "http://localhost:8080/api/shop/me?token=SESSION_TOKEN"</code></pre></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/buy</span></div><p>Ach&egrave;te un pack ou un booster avec des coins.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>pack</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pas assez de coins, pack d&eacute;j&agrave; actif, rupture de stock, session invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/shop/buy', {
@@ -234,7 +240,8 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
 });</code></pre><pre><code>curl -X POST http://localhost:8080/api/shop/buy ^
   -H "Content-Type: application/json" ^
   -d "{\"token\":\"SESSION_TOKEN\",\"pack\":\"elo_mini\"}"</code></pre></div></article>
-        <article class="endpoint"><div class="note ok">Les coins sont gagn&eacute;s via les parties. Les boosters ELO / coins sont des items d&rsquo;inventaire, distincts des boosts globaux admin.</div></article>
+        <article class="endpoint"><div class="note ok">Les coins sont gagn&eacute;s via les parties. Les gemmes compl&egrave;tent les coins pour certaines offres. Les boosters ELO / coins sont des items d&rsquo;inventaire, distincts des boosts globaux admin.</div></article>
+        <article class="endpoint"><div class="note">Quand <code>limitedOffer</code> contient un coupon, la boutique peut l&rsquo;appliquer automatiquement en preview avant confirmation d&rsquo;achat. Les stocks, timers et coupons restent recalcul&eacute;s c&ocirc;t&eacute; serveur au moment de valider.</div></article>
       </div></section>
       <section class="section" id="duels"><div class="section-head"><div><h2>Duels</h2><p>D&eacute;fi direct ou par lien, en <strong>Ranked</strong> ou <strong>Amical</strong>. Les liens amicaux expirent en 15 minutes et acceptent les invit&eacute;s.</p></div><div class="legend"><span class="chip post">POST</span><span class="chip socket">SOCKET</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/duels/challenge</span></div><p>Envoie un duel &agrave; un joueur connect&eacute;. <code>gameType</code> peut valoir <code>ranked</code> ou <code>friendly</code>.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>targetId</code>, <code>gameType</code></div></div><div class="box"><div class="label">Retour</div><div class="value">challenge + <code>shareUrl</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">joueur hors ligne, duel d&eacute;j&agrave; en attente, joueur d&eacute;j&agrave; en partie, self-duel</div></div></div><div class="subgrid"><pre><code>await fetch('/api/duels/challenge', {
@@ -340,6 +347,23 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/boost</span></div><p>Active ou retire le boost ELO global.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/coin-boost</span></div><p>Lit le boost coins global actif.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/coin-boost</span></div><p>Active le boost coins global entre x1 et x10 avec dur&eacute;e custom.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/limited-pack</span></div><p>Cr&eacute;e ou met &agrave; jour une offre limit&eacute;e boutique avec coupon automatique, timer et nombre d&rsquo;utilisations maximum.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>code</code>, <code>value</code>, <code>maxUses</code>, <code>durationHours</code>, <code>label</code></div></div><div class="box"><div class="label">Effet</div><div class="value">stocke un coupon discount + expose <code>limitedOffer</code> dans <code>/api/shop/me</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">admin requis, code invalide, dur&eacute;e invalide, valeur hors limites</div></div></div><div class="subgrid"><pre><code>await fetch('/api/admin/limited-pack', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-admin-token': adminToken
+  },
+  body: JSON.stringify({
+    code: 'FLASH20',
+    value: 20,
+    maxUses: 25,
+    durationHours: 12,
+    label: 'Pack week-end'
+  })
+});</code></pre><pre><code>curl -X POST http://localhost:8080/api/admin/limited-pack ^
+  -H "Content-Type: application/json" ^
+  -H "x-admin-token: ADMIN_TOKEN" ^
+  -d "{\"code\":\"FLASH20\",\"value\":20,\"maxUses\":25,\"durationHours\":12,\"label\":\"Pack week-end\"}"</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/vip-boosts</span></div><p>Liste les boosts premium individuels actifs (VIP / VIP+ / Perso).</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/tournaments</span></div><p>Liste les tournois c&ocirc;t&eacute; admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/finish</span></div><p>Force la fin d&rsquo;un tournoi.</p></article>

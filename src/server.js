@@ -1833,6 +1833,43 @@ app.post('/api/admin/coupons', (req, res) => {
   res.json({ ok: true, coupon: { code, type, value, maxUses, expiresAt } });
 });
 
+function setConfigValue(key, value) {
+  db.prepare(`INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(key, String(value ?? ''));
+}
+
+function getConfigValue(key, fallback = '') {
+  return db.prepare(`SELECT value FROM config WHERE key = ?`).get(key)?.value ?? fallback;
+}
+
+app.post('/api/admin/limited-pack', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const code = normalizeCouponCode(req.body?.code || `LIMITED-${crypto.randomBytes(3).toString('hex').toUpperCase()}`);
+  const value = Math.max(1, Math.min(95, Math.trunc(Number(req.body?.value || 20))));
+  const maxUses = Math.max(1, Math.min(10000, Math.trunc(Number(req.body?.maxUses || 50))));
+  const durationHours = Math.max(1, Math.min(24 * 30, Number(req.body?.durationHours || 24)));
+  const expiresAt = Date.now() + durationHours * 60 * 60 * 1000;
+  const label = String(req.body?.label || 'Offre limitee').trim().slice(0, 48) || 'Offre limitee';
+
+  db.prepare(`
+    INSERT INTO coupons (code, type, value, max_uses, uses, expires_at, created_by, created_at)
+    VALUES (?, 'discount', ?, ?, 0, ?, NULL, ?)
+    ON CONFLICT(code) DO UPDATE SET
+      type='discount',
+      value=excluded.value,
+      max_uses=excluded.max_uses,
+      uses=0,
+      expires_at=excluded.expires_at,
+      created_at=excluded.created_at
+  `).run(code, value, maxUses, expiresAt, Date.now());
+
+  setConfigValue('shop_limited_offer_code', code);
+  setConfigValue('shop_limited_offer_label', label);
+  setConfigValue('shop_limited_offer_ends_at', expiresAt);
+
+  WH.wlogCoupon(code, 'discount', value, maxUses, expiresAt, 'Pack limite admin');
+  res.json({ ok: true, offer: { code, label, value, maxUses, expiresAt } });
+});
+
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
   const id = Number(req.params.id);
@@ -3239,6 +3276,9 @@ app.get('/api/shop/me', (req, res) => {
   const stock = Object.fromEntries(
     Object.keys(SHOP_STOCK_KEYS).map(key => [key, getShopStock(key)])
   );
+  const limitedOfferCode = normalizeCouponCode(getConfigValue('shop_limited_offer_code', ''));
+  const limitedOfferEndsAt = Number(getConfigValue('shop_limited_offer_ends_at', '0') || 0);
+  const limitedCoupon = limitedOfferCode && limitedOfferEndsAt > Date.now() ? getUsableCoupon(limitedOfferCode, playerId) : null;
   res.json({
     player: sanitize(player),
     items: SHOP_ITEMS,
@@ -3247,6 +3287,18 @@ app.get('/api/shop/me', (req, res) => {
     stock,
     inventory,
     activeBoosters,
+    limitedOffer: limitedOfferEndsAt > Date.now() ? {
+      code: limitedOfferCode,
+      label: getConfigValue('shop_limited_offer_label', 'Offre limitee'),
+      expiresAt: limitedOfferEndsAt,
+      coupon: limitedCoupon ? {
+        code: limitedCoupon.code,
+        type: limitedCoupon.type,
+        value: Number(limitedCoupon.value || 0),
+        expiresAt: Number(limitedCoupon.expires_at || 0) || null,
+        remainingUses: Math.max(0, Number(limitedCoupon.max_uses || 0) - Number(limitedCoupon.uses || 0)),
+      } : null,
+    } : null,
   });
 });
 

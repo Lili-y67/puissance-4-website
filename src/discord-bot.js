@@ -163,11 +163,31 @@ function startDiscordBot(ctx) {
     return { ...payload, flags: Number(payload.flags || 0) | MessageFlags.Ephemeral };
   }
 
+  function optionValue(interaction, name, fallback = null) {
+    const option = interaction.options?.get(name, false);
+    return option ? option.value : fallback;
+  }
+
+  function optionString(interaction, name, fallback = null) {
+    const value = optionValue(interaction, name, fallback);
+    return value == null ? fallback : String(value);
+  }
+
+  function optionNumber(interaction, name, fallback = null) {
+    const value = optionValue(interaction, name, fallback);
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function optionInteger(interaction, name, fallback = null) {
+    const value = optionNumber(interaction, name, fallback);
+    return value == null ? fallback : Math.trunc(value);
+  }
+
   async function replyError(interaction, title, subtitle = '') {
     const payload = ephemeralMessage(containerMessage({ color: 0xff3b30, title, subtitle }));
     if (interaction.deferred || interaction.replied) {
-      await interaction.deleteReply().catch(() => {});
-      return interaction.followUp(payload).catch(() => interaction.editReply(payload).catch(() => {}));
+      return interaction.editReply(payload).catch(() => interaction.followUp(payload).catch(() => {}));
     }
     return interaction.reply(payload).catch(() => {});
   }
@@ -840,7 +860,7 @@ function startDiscordBot(ctx) {
   }
 
   async function requireStaffForAdmin(interaction, minimum = 'moderator') {
-    const password = interaction.options.getString('password') || '';
+    const password = optionString(interaction, 'password', '') || '';
     if (password) {
       const ctxStaff = await getLinkedStaffContext(interaction.user.id);
       if (ctxStaff.error) {
@@ -864,12 +884,12 @@ function startDiscordBot(ctx) {
 
 
   async function handleAdmin(interaction) {
-    const action = ADMIN_COMMAND_ACTIONS[interaction.commandName] || interaction.options.getString('action', true);
-    const pseudo = interaction.options.getString('pseudo');
-    const value = interaction.options.getNumber('valeur');
-    const reason = interaction.options.getString('raison') || '';
-    const resourceId = interaction.options.getString('id');
-    const itemKey = interaction.options.getString('item');
+    const action = ADMIN_COMMAND_ACTIONS[interaction.commandName] || optionString(interaction, 'action', '');
+    const pseudo = optionString(interaction, 'pseudo');
+    const value = optionNumber(interaction, 'valeur');
+    const reason = optionString(interaction, 'raison', '') || '';
+    const resourceId = optionString(interaction, 'id');
+    const itemKey = optionString(interaction, 'item');
     const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
     const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
@@ -896,8 +916,8 @@ function startDiscordBot(ctx) {
     }
     if (action === 'boost-elo') {
       const multiplier = Math.max(1, Math.min(10, Number(value || 1)));
-      const expiresAt = multiplier > 1 ? Date.now() + 60 * 60 * 1000 : Date.now();
-      ctx.bQ.setGlobal.run(multiplier, expiresAt, 'Puissance4-Booster', Date.now());
+      ctx.bQ.deactivateAll.run();
+      if (multiplier > 1) ctx.bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster' });
       ctx.WH.wlogBoost('elo', multiplier, 'Puissance4-Booster', multiplier > 1 ? '60 min' : 'desactive');
       return interaction.editReply(boostsPayload());
     }
@@ -986,16 +1006,16 @@ function startDiscordBot(ctx) {
     const role = await requireStaff(interaction, 'admin');
     if (!role) return;
 
-    const type = interaction.options.getString('type') === 'flat' ? 'flat' : 'discount';
-    const codeValue = normalizeCouponCode(interaction.options.getString('code') || makeCouponCode());
+    const type = optionString(interaction, 'type') === 'flat' ? 'flat' : 'discount';
+    const codeValue = normalizeCouponCode(optionString(interaction, 'code') || makeCouponCode());
     if (!codeValue || codeValue.length < 3) {
       return replyError(interaction, 'Code coupon invalide', 'Utilise au moins 3 caracteres alphanumeriques.');
     }
 
     const maxValue = type === 'flat' ? 100000 : 95;
-    const value = Math.max(1, Math.min(maxValue, Math.trunc(Number(interaction.options.getInteger('valeur') || (type === 'flat' ? 100 : 20)))));
-    const maxUses = Math.max(1, Math.min(10000, Math.trunc(Number(interaction.options.getInteger('utilisations') || 1))));
-    const hours = Math.max(0, Math.min(8760, Math.trunc(Number(interaction.options.getInteger('heures') || 0))));
+    const value = Math.max(1, Math.min(maxValue, optionInteger(interaction, 'valeur', type === 'flat' ? 100 : 20)));
+    const maxUses = Math.max(1, Math.min(10000, optionInteger(interaction, 'utilisations', 1)));
+    const hours = Math.max(0, Math.min(8760, optionInteger(interaction, 'heures', 0)));
     const expiresAt = hours ? Date.now() + hours * 60 * 60 * 1000 : null;
     const staff = await getLinkedStaffContext(interaction.user.id);
 
