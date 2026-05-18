@@ -122,8 +122,13 @@ body{
 .stat-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
 .stat-line-left strong{display:block;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
 .stat-line-left span{font-size:13px;color:var(--muted)}
-.price{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
+.price{position:relative;display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900}
 .price img{width:30px;height:30px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,255,255,.18))}
+.price.discounted{flex-wrap:wrap;gap:6px 8px;justify-content:flex-end;line-height:1}
+.price-old{font-size:.62em;color:var(--muted);text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:rgba(255,45,85,.82);opacity:.72}
+.price-new{display:inline-flex;align-items:center;gap:6px;color:inherit;text-shadow:0 0 18px rgba(255,214,10,.16)}
+.price-discount-badge{position:absolute;right:-10px;top:-14px;padding:4px 8px;border-radius:999px;background:linear-gradient(135deg, var(--red), #ff9f0a);border:1px solid rgba(255,255,255,.20);color:white;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:.8px;box-shadow:0 8px 22px rgba(255,45,85,.26);transform:rotate(4deg)}
+.price.gems .price-new{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.22)}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
 .stat-line.perso .price,.stat-line.perso strong{color:var(--orange)}
@@ -661,6 +666,7 @@ let previewDecorations = [];
 let previewProfileBanners = [];
 let previewAnimTimer = null;
 let appliedCouponCode = '';
+let appliedCoupon = null;
 const PREVIEW_NAME_PARTS = ['li', 'na', 'shi', 'ka', 'yo', 'mi', 'sa', 'ly', 'no', 'ra', 'el', 'ia', 'zu', 'ko', 'ri', 'ta', 'ma', 'ne', 'cy', 'va'];
 const PREVIEW_AVATAR_STYLES = ['adventurer', 'adventurer-neutral', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'pixel-art'];
 
@@ -691,17 +697,62 @@ function getCurrencyIcon() {
   return getShopCurrency() === 'gems' ? '/assets/gem.png' : '/coin.png';
 }
 
+function getDiscountedPrice(price) {
+  const basePrice = Math.max(0, Number(price || 0));
+  const coupon = appliedCoupon && appliedCouponCode ? appliedCoupon : null;
+  if (!coupon || basePrice <= 0) {
+    return { basePrice, finalPrice: basePrice, hasDiscount: false, label: '' };
+  }
+
+  const value = Number(coupon.value || 0);
+  let finalPrice = basePrice;
+  let label = '';
+  if (String(coupon.type || '').toLowerCase() === 'flat') {
+    finalPrice = Math.max(0, basePrice - Math.max(0, value));
+    label = `-${Math.max(0, value)} ${getCurrencyLabel()}`;
+  } else {
+    const percent = Math.max(0, Math.min(95, value));
+    finalPrice = Math.max(0, Math.ceil(basePrice * (1 - percent / 100)));
+    label = `-${percent}%`;
+  }
+
+  return {
+    basePrice,
+    finalPrice,
+    hasDiscount: finalPrice < basePrice,
+    label,
+  };
+}
+
+function getDisplayPrice(pack) {
+  return getDiscountedPrice(getCustomBoosterPrice(pack)).finalPrice;
+}
+
 function renderPriceHtml(price) {
   const isGems = getShopCurrency() === 'gems';
-  return `<div class="price ${isGems ? 'gems' : 'coins'}"><img src="${getCurrencyIcon()}" alt="${isGems ? 'gemmes' : 'coins'}">${price}</div>`;
+  const discount = getDiscountedPrice(price);
+  const icon = getCurrencyIcon();
+  const alt = isGems ? 'gemmes' : 'coins';
+  if (!discount.hasDiscount) {
+    return `<div class="price ${isGems ? 'gems' : 'coins'}"><img src="${icon}" alt="${alt}">${discount.finalPrice}</div>`;
+  }
+  return `
+    <div class="price discounted ${isGems ? 'gems' : 'coins'}" title="Prix promo applique">
+      <span class="price-discount-badge">${escapeHtml(discount.label)}</span>
+      <span class="price-old">${discount.basePrice}</span>
+      <span class="price-new"><img src="${icon}" alt="${alt}">${discount.finalPrice}</span>
+    </div>
+  `;
 }
 
 function renderPriceNote(pack, suffix = '') {
-  return `Prix : ${getCustomBoosterPrice(pack)} ${getCurrencyLabel()}${suffix}`;
+  const discount = getDiscountedPrice(getCustomBoosterPrice(pack));
+  const promo = discount.hasDiscount ? ` au lieu de ${discount.basePrice}` : '';
+  return `Prix : ${discount.finalPrice} ${getCurrencyLabel()}${promo}${suffix}`;
 }
 
 function getCardStatSub(item, pack) {
-  const price = getCustomBoosterPrice(pack);
+  const price = getDisplayPrice(pack);
   const label = getCurrencyLabel();
   return String(item.statSub || '').replace(/^\d+\s+coins/i, `${price} ${label}`);
 }
@@ -799,10 +850,13 @@ function setCouponStatus(message, type = '') {
 
 function onCouponInput() {
   appliedCouponCode = '';
+  appliedCoupon = null;
   const raw = String(document.getElementById('coupon-input')?.value || '').trim();
   const btn = document.getElementById('coupon-validate-btn');
   if (btn) btn.disabled = raw.length < 3;
   setCouponStatus(raw ? 'Valide le code avant de l utiliser.' : 'Optionnel, appliqué au moment de confirmer l achat.');
+  renderShop();
+  switchShopCategory(currentCategory);
 }
 
 async function validateCoupon() {
@@ -827,16 +881,25 @@ async function validateCoupon() {
     const data = await res.json();
     if (!res.ok || !data.ok) {
       appliedCouponCode = '';
+      appliedCoupon = null;
       setCouponStatus(data.error || 'Code promo invalide.', 'error');
+      renderShop();
+      switchShopCategory(currentCategory);
       return;
     }
     appliedCouponCode = data.coupon.code;
+    appliedCoupon = data.coupon;
     const value = `${data.coupon.value}${data.coupon.type === 'flat' ? '' : '%'}`;
     const expiry = data.coupon.expiresAt ? ` · expire le ${new Date(data.coupon.expiresAt).toLocaleDateString('fr-FR')}` : '';
     setCouponStatus(`Code appliqué : -${value}${expiry}`, 'ok');
+    renderShop();
+    switchShopCategory(currentCategory);
   } catch {
     appliedCouponCode = '';
+    appliedCoupon = null;
     setCouponStatus('Validation impossible pour le moment.', 'error');
+    renderShop();
+    switchShopCategory(currentCategory);
   } finally {
     if (btn) {
       btn.textContent = 'Valider';
@@ -866,7 +929,7 @@ function getStockQty(pack) {
 }
 
 function getButtonState(pack) {
-  const price = getCustomBoosterPrice(pack);
+  const price = getDisplayPrice(pack);
   const currency = getShopCurrency();
   const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
@@ -1406,7 +1469,9 @@ async function buyPack(pack) {
 
   const item = getDisplayItem(pack);
   const packLabel = item?.title || pack;
-  const price = getCustomBoosterPrice(pack);
+  const basePrice = getCustomBoosterPrice(pack);
+  const priceInfo = getDiscountedPrice(basePrice);
+  const price = priceInfo.finalPrice;
   const currency = getShopCurrency();
   const rawCoupon = String(document.getElementById('coupon-input')?.value || '').trim();
   if (rawCoupon && !appliedCouponCode) {
@@ -1414,7 +1479,8 @@ async function buyPack(pack) {
     return;
   }
   const coupon = appliedCouponCode;
-  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
+  const promoText = coupon && priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
+  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
   if (btn) {
