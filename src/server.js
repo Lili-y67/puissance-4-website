@@ -1790,6 +1790,7 @@ app.patch('/api/admin/players/:id/gems', (req, res) => {
   const nextGems = Math.max(0, Number(target.gems || 0) + delta);
   pQ.updateGems.run({ gems: nextGems, id });
   try {
+    WH.wlogGems(target.pseudo, id, delta, 'Modification staff');
     WH.wlogAdminAction(delta > 0 ? 'Gemmes ajoutees' : 'Gemmes retirees', target.pseudo, id, [
       ['Variation', `${delta > 0 ? '+' : ''}${delta}`, true],
       ['Nouveau total', String(nextGems), true],
@@ -1828,6 +1829,7 @@ app.post('/api/admin/coupons', (req, res) => {
     VALUES (?, ?, ?, ?, 0, ?, NULL, ?)
     ON CONFLICT(code) DO UPDATE SET type=excluded.type, value=excluded.value, max_uses=excluded.max_uses, expires_at=excluded.expires_at
   `).run(code, type, value, maxUses, expiresAt, Date.now());
+  WH.wlogCoupon(code, type, value, maxUses, expiresAt, req.headers['x-admin-identity'] || 'Admin');
   res.json({ ok: true, coupon: { code, type, value, maxUses, expiresAt } });
 });
 
@@ -3289,6 +3291,15 @@ app.post('/api/shop/buy', async (req, res) => {
     } catch(e) {}
   }
 
+  try {
+    WH.wlogShopPurchase(player.pseudo, playerId, item.label || item.name || pack, {
+      currency,
+      paid: price,
+      basePrice,
+      coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
+    });
+  } catch(e) {}
+
   const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
   const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
   const stock = Object.fromEntries(
@@ -4195,8 +4206,10 @@ app.post('/api/clans', security.routeGuard('clan'), (req, res) => {
       return Number(info.lastInsertRowid);
     });
     const clanId = tx();
+    const createdClan = serializeClan(cQ.getForPlayer.get(playerId), true);
+    WH.wlogClan('create', createdClan, player);
     notifyPlayerProfileChanged(playerId, 'Clan créé');
-    res.json({ ok: true, clan: serializeClan(cQ.getForPlayer.get(playerId), true), clanId });
+    res.json({ ok: true, clan: createdClan, clanId });
   } catch (error) {
     console.error('[CLAN] create:', error.message);
     res.status(500).json({ error: 'Impossible de créer le clan.' });
@@ -4225,7 +4238,9 @@ app.patch('/api/clans/:id', security.routeGuard('clan'), (req, res) => {
     notifyClanMembers(clanId, 'Clan modifie');
     const fresh = cQ.getById.get(clanId);
     const owner = pQ.getById.get(Number(fresh.owner_id || 0));
-    res.json({ ok: true, clan: serializeClan({ ...fresh, owner_pseudo: owner?.pseudo || '' }, true) });
+    const serialized = serializeClan({ ...fresh, owner_pseudo: owner?.pseudo || '' }, true);
+    WH.wlogClan('update', serialized, session.player);
+    res.json({ ok: true, clan: serialized });
   } catch (error) {
     console.error('[CLAN] update:', error.message);
     res.status(500).json({ error: 'Impossible de modifier le clan.' });
@@ -4249,6 +4264,7 @@ app.delete('/api/clans/:id', security.routeGuard('clan'), (req, res) => {
       cQ.delete.run(clanId);
     });
     tx();
+    WH.wlogClan('delete', serializeClan(clan), session.player, [['Membres impactes', String(members.length), true]]);
     members.forEach(playerId => notifyPlayerProfileChanged(playerId, 'Clan supprime'));
     res.json({ ok: true });
   } catch (error) {
@@ -4314,6 +4330,11 @@ app.post('/api/clans/:id/members/:playerId/remove', security.routeGuard('clan'),
     if (!canManageClan(session.player, clan, member)) return res.status(403).json({ error: 'Gestion reservee au fondateur du clan.' });
     if (Number(clan.owner_id || 0) === targetId) return res.status(409).json({ error: 'Impossible de retirer le fondateur.' });
     cQ.removeMemberFromClan.run(clanId, targetId);
+    const target = pQ.getById.get(targetId);
+    WH.wlogClan('member', serializeClan(clan), session.player, [
+      ['Action', 'Retrait membre', true],
+      ['Membre', target ? `${target.pseudo} (#${target.id})` : `#${targetId}`, true],
+    ]);
     notifyPlayerProfileChanged(targetId, 'Retire du clan');
     res.json({ ok: true });
   } catch (error) {
@@ -4334,6 +4355,12 @@ app.post('/api/clans/:id/members/:playerId/role', security.routeGuard('clan'), (
     if (Number(clan.owner_id || 0) === targetId) return res.status(409).json({ error: 'Le fondateur reste owner.' });
     const role = String(req.body?.role || 'member') === 'officer' ? 'officer' : 'member';
     cQ.setMemberRole.run({ clan_id: clanId, player_id: targetId, role });
+    const target = pQ.getById.get(targetId);
+    WH.wlogClan('member', serializeClan(clan), session.player, [
+      ['Action', 'Changement role', true],
+      ['Membre', target ? `${target.pseudo} (#${target.id})` : `#${targetId}`, true],
+      ['Nouveau role', role, true],
+    ]);
     notifyPlayerProfileChanged(targetId, `Role clan modifie : ${role}`);
     res.json({ ok: true });
   } catch (error) {
@@ -4354,6 +4381,7 @@ app.post('/api/clans/:id/join', security.routeGuard('clan'), (req, res) => {
     if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
     if (cQ.getForPlayer.get(playerId)) return res.status(409).json({ error: 'Tu es déjà dans un clan.' });
     cQ.addMember.run({ clan_id: clanId, player_id: playerId, role: 'member', joined_at: Date.now() });
+    WH.wlogClan('join', serializeClan(cQ.getForPlayer.get(playerId)), player);
     notifyPlayerProfileChanged(playerId, 'Clan rejoint');
     res.json({ ok: true, clan: serializeClan(cQ.getForPlayer.get(playerId), true) });
   } catch (error) {
@@ -4371,6 +4399,8 @@ app.post('/api/clans/leave', security.routeGuard('clan'), (req, res) => {
     if (!clan) return res.status(404).json({ error: 'Tu n es dans aucun clan.' });
     if (Number(clan.owner_id) === Number(playerId)) return res.status(409).json({ error: 'Le créateur ne peut pas quitter son clan pour le moment.' });
     cQ.removeMember.run(playerId);
+    const player = pQ.getById.get(playerId);
+    WH.wlogClan('leave', serializeClan(clan), player || { id: playerId, pseudo: `#${playerId}` });
     notifyPlayerProfileChanged(playerId, 'Clan quitté');
     res.json({ ok: true });
   } catch (error) {

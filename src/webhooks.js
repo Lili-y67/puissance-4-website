@@ -15,6 +15,10 @@ const EMOJI = Object.freeze({
   warning: '\u26A0\uFE0F',
   bolt: '\u26A1',
   cart: '\uD83D\uDED2',
+  gem: '\uD83D\uDC8E',
+  shield: '\uD83D\uDEE1\uFE0F',
+  ticket: '\uD83C\uDF9F\uFE0F',
+  robot: '\uD83E\uDD16',
   sword: '\u2694\uFE0F',
   link: '\uD83D\uDD17',
   red: '\uD83D\uDD34',
@@ -169,6 +173,10 @@ function profileButtons(id) {
   return Number.isFinite(Number(id)) ? [linkButton('Voir profil', `${BASE}/profil?id=${id}`, EMOJI.profile)] : [];
 }
 
+function clanButtons(id) {
+  return Number.isFinite(Number(id)) ? [linkButton('Voir clan', `${BASE}/clan?id=${id}`, EMOJI.shield)] : [];
+}
+
 module.exports = {
   wlog: cards => send(cards),
   mkEmbed,
@@ -314,13 +322,58 @@ module.exports = {
     ], { subtitle: 'Moderation', buttons: profileButtons(id) })]);
   },
 
-  wlogShopPurchase(pseudo, id, item, coins) {
-    send([mkContainer(0xffd60a, 'Achat boutique', [
+  wlogShopPurchase(pseudo, id, item, priceOrMeta, meta = {}) {
+    const details = typeof priceOrMeta === 'object' && priceOrMeta !== null ? priceOrMeta : { paid: priceOrMeta, ...meta };
+    const currency = String(details.currency || 'coins') === 'gems' ? 'Gemmes' : 'Coins';
+    const coupon = details.coupon?.code || details.coupon || '';
+    send([mkContainer(currency === 'Gemmes' ? 0x85ebff : 0xffd60a, 'Achat boutique', [
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Article', item, true],
-      ['Coins depenses', coins, true],
-    ], { subtitle: 'Boutique coins', buttons: [linkButton('Voir boutique', `${BASE}/boutique`, EMOJI.cart), ...profileButtons(id)] })]);
+      [currency + ' depensees', details.paid ?? details.price ?? 0, true],
+      details.basePrice != null && Number(details.basePrice) !== Number(details.paid) ? ['Prix initial', details.basePrice, true] : null,
+      coupon ? ['Code promo', coupon, true] : null,
+    ], { subtitle: currency === 'Gemmes' ? 'Boutique gemmes' : 'Boutique coins', buttons: [linkButton('Voir boutique', `${BASE}/boutique`, currency === 'Gemmes' ? EMOJI.gem : EMOJI.cart), ...profileButtons(id)] })]);
+  },
+
+  wlogGems(pseudo, id, delta, reason = '') {
+    send([mkContainer(0x85ebff, 'Gemmes modifiees', [
+      ['Joueur', pseudo, true],
+      ['ID', id, true],
+      ['Delta', Number(delta || 0) >= 0 ? `+${delta}` : delta, true],
+      ['Raison', reason || '-', false],
+    ], { subtitle: 'Economie gemmes', buttons: profileButtons(id) })]);
+  },
+
+  wlogCoupon(code, type, value, maxUses, expiresAt, createdBy = 'Staff') {
+    send([mkContainer(0x8b5cf6, 'Code promo cree', [
+      ['Code', `\`${clean(code)}\``, true],
+      ['Type', type || 'discount', true],
+      ['Valeur', value, true],
+      ['Utilisations', maxUses || 1, true],
+      ['Expiration', expiresAt ? new Date(Number(expiresAt)).toLocaleString('fr-FR') : 'Aucune', true],
+      ['Cree par', createdBy || 'Staff', true],
+    ], { subtitle: 'Boutique - promotion limitee', buttons: [linkButton('Boutique', `${BASE}/boutique`, EMOJI.ticket)] })]);
+  },
+
+  wlogClan(action, clan = {}, actor = {}, details = []) {
+    const color = action === 'delete' ? 0xff3b30 : action === 'join' ? 0x30d158 : action === 'update' ? 0x85ebff : 0x8b5cf6;
+    const titleMap = {
+      create: 'Clan cree',
+      update: 'Clan modifie',
+      delete: 'Clan supprime',
+      join: 'Nouveau membre clan',
+      leave: 'Membre parti du clan',
+      member: 'Gestion membre clan',
+    };
+    send([mkContainer(color, `${EMOJI.shield} ${titleMap[action] || 'Clan'}`, [
+      ['Clan', `${clean(clan.blason, EMOJI.shield)} **${clean(clan.name)}** [${clean(clan.tag, 'CLAN')}]`, false],
+      ['ID clan', clan.id || '-', true],
+      ['ELO moyen', clan.avg_elo || '-', true],
+      ['Membres', clan.member_count || '-', true],
+      actor?.pseudo ? ['Action par', `${actor.pseudo} (#${actor.id || '?'})`, true] : null,
+      ...details,
+    ], { subtitle: 'Systeme de clans', buttons: clanButtons(clan.id) })]);
   },
 
   wlogBoost(type, multiplier, appliedBy, duration) {
