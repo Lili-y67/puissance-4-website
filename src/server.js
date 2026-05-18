@@ -2992,6 +2992,9 @@ app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/reg
 app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
 app.get('/local',      (_, res) => res.sendFile(path.join(__dirname, 'public/local.html')));
 app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
+app.get('/classement',  (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
+app.get('/clan',        (_, res) => res.sendFile(path.join(__dirname, 'public/clan.html')));
+app.get('/clan/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/clan.html')));
 app.get('/players',     (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
 app.get('/bots',        (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
@@ -3990,6 +3993,57 @@ function cleanClanPayload(body = {}) {
   return { name, tag, blason, color, description };
 }
 
+function getClanSession(req) {
+  const token = String(req.body?.token || req.query?.token || req.headers['x-token'] || req.headers['x-session-token'] || '');
+  const playerId = validateSession(token);
+  if (!playerId || isAnonymousPlayerId(playerId)) return null;
+  const player = pQ.getById.get(playerId);
+  if (!player || player.deleted) return null;
+  return { token, playerId, player };
+}
+
+function canManageClan(player, clan, member = null) {
+  if (!player || !clan) return false;
+  if (isAdminPlayer(player)) return true;
+  if (Number(clan.owner_id || 0) === Number(player.id || 0)) return true;
+  return member && String(member.role || '') === 'officer';
+}
+
+function serializeClanStats(clanId) {
+  const stats = cQ.stats.get(Number(clanId)) || {};
+  return {
+    member_count: Number(stats.member_count || 0),
+    avg_elo: Number(stats.avg_elo || 0),
+    max_elo: Number(stats.max_elo || 0),
+    min_elo: Number(stats.min_elo || 0),
+    wins: Number(stats.wins || 0),
+    losses: Number(stats.losses || 0),
+    draws: Number(stats.draws || 0),
+  };
+}
+
+function notifyClanMembers(clanId, reason) {
+  try {
+    cQ.members.all(Number(clanId)).forEach(member => notifyPlayerProfileChanged(Number(member.player_id), reason));
+  } catch (error) {
+    console.warn('[CLAN] notify:', error.message);
+  }
+}
+
+function serializeClanMessage(row, player = null) {
+  if (!row) return null;
+  return {
+    id: Number(row.id || 0),
+    clan_id: Number(row.clan_id || 0),
+    player_id: Number(row.player_id || player?.id || 0),
+    pseudo: row.pseudo || player?.pseudo || 'Membre',
+    avatar: row.avatar || player?.avatar || '',
+    color: row.color || player?.color || '#85EBFF',
+    message: String(row.message || ''),
+    created_at: Number(row.created_at || 0),
+  };
+}
+
 function normalizeCouponCode(code = '') {
   return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
 }
@@ -4045,9 +4099,23 @@ function serializeClan(row, withMembers = false) {
     owner_pseudo: row.owner_pseudo || '',
     member_role: row.member_role || '',
     member_count: Number(row.member_count || 0),
+    avg_elo: Number(row.avg_elo || 0),
+    max_elo: Number(row.max_elo || 0),
+    min_elo: Number(row.min_elo || 0),
+    wins: Number(row.wins || 0),
+    losses: Number(row.losses || 0),
+    draws: Number(row.draws || 0),
     joined_at: Number(row.joined_at || 0) || null,
     created_at: Number(row.created_at || 0),
   };
+  const stats = serializeClanStats(clan.id);
+  clan.member_count = Math.max(clan.member_count, stats.member_count);
+  clan.avg_elo = clan.avg_elo || stats.avg_elo;
+  clan.max_elo = clan.max_elo || stats.max_elo;
+  clan.min_elo = clan.min_elo || stats.min_elo;
+  clan.wins = clan.wins || stats.wins;
+  clan.losses = clan.losses || stats.losses;
+  clan.draws = clan.draws || stats.draws;
   if (withMembers) clan.members = cQ.members.all(clan.id).map(member => ({ ...sanitize(member), clan_role: member.role, joined_at: Number(member.joined_at || 0) }));
   return clan;
 }
@@ -4061,10 +4129,40 @@ app.get('/api/clans', (_, res) => {
   }
 });
 
+app.get('/api/clans/leaderboard', (_, res) => {
+  try {
+    res.json({ clans: cQ.leaderboard.all(50).map((row, index) => ({ ...serializeClan(row), rank: index + 1 })) });
+  } catch (error) {
+    console.error('[CLAN] leaderboard:', error.message);
+    res.status(500).json({ error: 'Impossible de charger le classement clans.' });
+  }
+});
+
 app.get('/api/players/:id/clan', (req, res) => {
   const playerId = Number(req.params.id || 0);
   const clan = cQ.getForPlayer.get(playerId);
   res.json({ clan: serializeClan(clan, true) });
+});
+
+app.get('/api/clans/:id', (req, res) => {
+  try {
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    const session = getClanSession(req);
+    const member = session ? cQ.member.get(clanId, session.playerId) : null;
+    const owner = pQ.getById.get(Number(clan.owner_id || 0));
+    res.json({
+      clan: {
+        ...serializeClan({ ...clan, owner_pseudo: owner?.pseudo || '' }, true),
+        viewer_role: member?.role || '',
+        can_manage: !!(session && canManageClan(session.player, clan, member)),
+      },
+    });
+  } catch (error) {
+    console.error('[CLAN] get:', error.message);
+    res.status(500).json({ error: 'Impossible de charger le clan.' });
+  }
 });
 
 app.post('/api/clans', security.routeGuard('clan'), (req, res) => {
@@ -4102,6 +4200,145 @@ app.post('/api/clans', security.routeGuard('clan'), (req, res) => {
   } catch (error) {
     console.error('[CLAN] create:', error.message);
     res.status(500).json({ error: 'Impossible de créer le clan.' });
+  }
+});
+
+app.patch('/api/clans/:id', security.routeGuard('clan'), (req, res) => {
+  try {
+    const session = getClanSession(req);
+    if (!session) return res.status(401).json({ error: 'Session invalide.' });
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    const member = cQ.member.get(clanId, session.playerId);
+    if (!canManageClan(session.player, clan, member)) return res.status(403).json({ error: 'Gestion reservee au fondateur du clan.' });
+
+    const clean = cleanClanPayload(req.body);
+    if (clean.name.length < 3) return res.status(400).json({ error: 'Nom de clan invalide (3 caracteres minimum).' });
+    if (clean.tag.length < 2) return res.status(400).json({ error: 'Tag invalide (2 a 6 lettres/chiffres).' });
+    const sameName = cQ.getByName.get(clean.name);
+    if (sameName && Number(sameName.id) !== clanId) return res.status(409).json({ error: 'Ce nom de clan existe deja.' });
+    const sameTag = cQ.getByTag.get(clean.tag);
+    if (sameTag && Number(sameTag.id) !== clanId) return res.status(409).json({ error: 'Ce tag de clan existe deja.' });
+
+    cQ.update.run({ ...clean, id: clanId, updated_at: Date.now() });
+    notifyClanMembers(clanId, 'Clan modifie');
+    const fresh = cQ.getById.get(clanId);
+    const owner = pQ.getById.get(Number(fresh.owner_id || 0));
+    res.json({ ok: true, clan: serializeClan({ ...fresh, owner_pseudo: owner?.pseudo || '' }, true) });
+  } catch (error) {
+    console.error('[CLAN] update:', error.message);
+    res.status(500).json({ error: 'Impossible de modifier le clan.' });
+  }
+});
+
+app.delete('/api/clans/:id', security.routeGuard('clan'), (req, res) => {
+  try {
+    const session = getClanSession(req);
+    if (!session) return res.status(401).json({ error: 'Session invalide.' });
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    if (!isAdminPlayer(session.player) && Number(clan.owner_id || 0) !== session.playerId) {
+      return res.status(403).json({ error: 'Suppression reservee au fondateur.' });
+    }
+    const members = cQ.members.all(clanId).map(member => Number(member.player_id));
+    const tx = db.transaction(() => {
+      cQ.deleteMessages.run(clanId);
+      members.forEach(playerId => cQ.removeMemberFromClan.run(clanId, playerId));
+      cQ.delete.run(clanId);
+    });
+    tx();
+    members.forEach(playerId => notifyPlayerProfileChanged(playerId, 'Clan supprime'));
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[CLAN] delete:', error.message);
+    res.status(500).json({ error: 'Impossible de supprimer le clan.' });
+  }
+});
+
+app.get('/api/clans/:id/messages', (req, res) => {
+  try {
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    const session = getClanSession(req);
+    if (!session || !cQ.member.get(clanId, session.playerId)) return res.status(403).json({ error: 'Tchat reserve aux membres du clan.' });
+    const messages = cQ.messages.all(clanId, 80).reverse().map(row => serializeClanMessage(row));
+    res.json({ messages });
+  } catch (error) {
+    console.error('[CLAN] messages:', error.message);
+    res.status(500).json({ error: 'Impossible de charger le tchat.' });
+  }
+});
+
+app.post('/api/clans/:id/messages', security.routeGuard('clan-chat'), (req, res) => {
+  try {
+    const session = getClanSession(req);
+    if (!session) return res.status(401).json({ error: 'Session invalide.' });
+    const clanId = Number(req.params.id || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    if (!cQ.member.get(clanId, session.playerId)) return res.status(403).json({ error: 'Tchat reserve aux membres du clan.' });
+    const message = String(req.body?.message || '').trim().replace(/\s+/g, ' ').slice(0, 300);
+    if (message.length < 1) return res.status(400).json({ error: 'Message vide.' });
+    const createdAt = Date.now();
+    const info = cQ.addMessage.run({ clan_id: clanId, player_id: session.playerId, message, created_at: createdAt });
+    const payload = serializeClanMessage({
+      id: info.lastInsertRowid,
+      clan_id: clanId,
+      player_id: session.playerId,
+      pseudo: session.player.pseudo,
+      avatar: session.player.avatar,
+      color: session.player.color,
+      message,
+      created_at: createdAt,
+    }, session.player);
+    io.to(`clan:${clanId}`).emit('clan_message', payload);
+    res.json({ ok: true, message: payload });
+  } catch (error) {
+    console.error('[CLAN] add message:', error.message);
+    res.status(500).json({ error: 'Impossible d envoyer le message.' });
+  }
+});
+
+app.post('/api/clans/:id/members/:playerId/remove', security.routeGuard('clan'), (req, res) => {
+  try {
+    const session = getClanSession(req);
+    if (!session) return res.status(401).json({ error: 'Session invalide.' });
+    const clanId = Number(req.params.id || 0);
+    const targetId = Number(req.params.playerId || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    const member = cQ.member.get(clanId, session.playerId);
+    if (!canManageClan(session.player, clan, member)) return res.status(403).json({ error: 'Gestion reservee au fondateur du clan.' });
+    if (Number(clan.owner_id || 0) === targetId) return res.status(409).json({ error: 'Impossible de retirer le fondateur.' });
+    cQ.removeMemberFromClan.run(clanId, targetId);
+    notifyPlayerProfileChanged(targetId, 'Retire du clan');
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[CLAN] remove member:', error.message);
+    res.status(500).json({ error: 'Impossible de retirer ce membre.' });
+  }
+});
+
+app.post('/api/clans/:id/members/:playerId/role', security.routeGuard('clan'), (req, res) => {
+  try {
+    const session = getClanSession(req);
+    if (!session) return res.status(401).json({ error: 'Session invalide.' });
+    const clanId = Number(req.params.id || 0);
+    const targetId = Number(req.params.playerId || 0);
+    const clan = cQ.getById.get(clanId);
+    if (!clan) return res.status(404).json({ error: 'Clan introuvable.' });
+    if (!isAdminPlayer(session.player) && Number(clan.owner_id || 0) !== session.playerId) return res.status(403).json({ error: 'Role reserve au fondateur.' });
+    if (Number(clan.owner_id || 0) === targetId) return res.status(409).json({ error: 'Le fondateur reste owner.' });
+    const role = String(req.body?.role || 'member') === 'officer' ? 'officer' : 'member';
+    cQ.setMemberRole.run({ clan_id: clanId, player_id: targetId, role });
+    notifyPlayerProfileChanged(targetId, `Role clan modifie : ${role}`);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('[CLAN] member role:', error.message);
+    res.status(500).json({ error: 'Impossible de changer le role.' });
   }
 });
 
@@ -5382,6 +5619,40 @@ io.on('connection', socket => {
   // Heartbeat de prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsence (pages hors jeu)
   socket.on('presence_ping', () => {
     if (socket.playerId && !isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
+  });
+
+  socket.on('join_clan_chat', ({ clanId } = {}) => {
+    const id = Number(clanId || 0);
+    if (!socket.playerId) return socket.emit('clan_error', { message: 'Identifie-toi pour rejoindre le tchat clan.' });
+    if (!id || !cQ.getById.get(id)) return socket.emit('clan_error', { message: 'Clan introuvable.' });
+    if (!cQ.member.get(id, socket.playerId)) return socket.emit('clan_error', { message: 'Tchat reserve aux membres du clan.' });
+    if (socket.clanRoom) socket.leave(socket.clanRoom);
+    socket.clanRoom = `clan:${id}`;
+    socket.join(socket.clanRoom);
+    socket.emit('clan_joined', { clanId: id });
+  });
+
+  socket.on('clan_message_send', ({ clanId, message } = {}) => {
+    const id = Number(clanId || 0);
+    if (!socket.playerId || !socket.playerData) return socket.emit('clan_error', { message: 'Identifie-toi pour envoyer un message.' });
+    if (!id || !cQ.getById.get(id)) return socket.emit('clan_error', { message: 'Clan introuvable.' });
+    if (!cQ.member.get(id, socket.playerId)) return socket.emit('clan_error', { message: 'Tchat reserve aux membres du clan.' });
+    const cleanMessage = String(message || '').trim().replace(/\s+/g, ' ').slice(0, 300);
+    if (!cleanMessage) return socket.emit('clan_error', { message: 'Message vide.' });
+    const createdAt = Date.now();
+    const info = cQ.addMessage.run({ clan_id: id, player_id: socket.playerId, message: cleanMessage, created_at: createdAt });
+    const freshPlayer = getPlayerRecord(socket.playerId) || socket.playerData;
+    const payload = serializeClanMessage({
+      id: info.lastInsertRowid,
+      clan_id: id,
+      player_id: socket.playerId,
+      pseudo: freshPlayer.pseudo,
+      avatar: freshPlayer.avatar,
+      color: freshPlayer.color,
+      message: cleanMessage,
+      created_at: createdAt,
+    }, freshPlayer);
+    io.to(`clan:${id}`).emit('clan_message', payload);
   });
 
   socket.on('duel_accept', ({ challengeId } = {}) => {

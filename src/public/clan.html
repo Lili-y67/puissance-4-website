@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - Clan</title>
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#05030c;--panel:rgba(14,13,30,.88);--panel2:rgba(25,22,44,.92);--border:rgba(255,255,255,.1);--text:#fff7ef;--muted:rgba(255,247,239,.55);--red:#ff2d55;--gold:#ffd60a;--cyan:#85ebff;--green:#30d158}
+body{min-height:100vh;background:var(--bg);color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:0;background:radial-gradient(circle at 18% 12%,rgba(255,45,85,.18),transparent 34%),radial-gradient(circle at 82% 16%,rgba(133,235,255,.14),transparent 30%),linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:auto,auto,52px 52px,52px 52px}
+.page{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:28px 18px 70px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:26px;padding:12px 14px;border:1px solid var(--border);border-radius:22px;background:rgba(10,9,20,.72);backdrop-filter:blur(18px)}
+.logo{display:inline-flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font-family:"Barlow Condensed",sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
+.logo::before{content:"";width:42px;height:42px;border-radius:13px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.13)}
+.logo span{color:var(--red)}
+.nav-actions{display:flex;gap:8px;flex-wrap:wrap}.nav-btn,.btn{border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.05);color:var(--text);text-decoration:none;padding:10px 14px;font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1.7px;text-transform:uppercase;cursor:pointer}.btn:hover,.nav-btn:hover{border-color:rgba(133,235,255,.45);transform:translateY(-1px)}
+.hero{position:relative;overflow:hidden;margin-bottom:22px;padding:34px;border:1px solid rgba(255,255,255,.1);border-radius:34px;background:linear-gradient(135deg,var(--clan-glow,rgba(133,235,255,.18)),transparent 35%),linear-gradient(145deg,rgba(28,18,42,.95),rgba(8,8,18,.96));box-shadow:0 28px 100px rgba(0,0,0,.35)}
+.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,var(--clan-color,#85ebff),transparent 62%);opacity:.18;filter:blur(8px);animation:pulse 4s ease-in-out infinite}@keyframes pulse{50%{transform:scale(1.12);opacity:.25}}
+.clan-title-row{position:relative;z-index:1;display:flex;align-items:center;gap:20px;flex-wrap:wrap}.blason{width:92px;height:92px;border-radius:28px;display:grid;place-items:center;font-size:42px;background:var(--clan-bg,rgba(133,235,255,.12));border:1px solid var(--clan-border,rgba(133,235,255,.35));box-shadow:0 0 42px var(--clan-glow,rgba(133,235,255,.22))}
+.kicker{font-family:"Barlow Condensed",sans-serif;font-weight:900;letter-spacing:5px;text-transform:uppercase;color:var(--clan-color,#85ebff);font-size:13px}.title{font-family:"Barlow Condensed",sans-serif;font-size:clamp(44px,7vw,82px);font-weight:900;text-transform:uppercase;line-height:.9}.tag{display:inline-flex;margin-top:10px;padding:7px 12px;border-radius:999px;background:var(--clan-bg);border:1px solid var(--clan-border);color:var(--clan-color);font-family:"Barlow Condensed",sans-serif;font-weight:900;letter-spacing:2px}
+.desc{margin-top:16px;color:rgba(255,247,239,.68);line-height:1.6;max-width:720px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}.stat{padding:16px;border-radius:18px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09)}.stat strong{display:block;font-family:"Barlow Condensed",sans-serif;font-size:34px}.stat span{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:20px}.card{background:linear-gradient(145deg,rgba(18,16,34,.9),rgba(8,8,18,.96));border:1px solid rgba(255,255,255,.1);border-radius:26px;padding:18px;box-shadow:0 22px 80px rgba(0,0,0,.28)}.card-title{font-family:"Barlow Condensed",sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.members{display:grid;gap:10px}.member{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border-radius:16px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08)}.avatar{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;overflow:hidden;border:2px solid var(--member-color,#85ebff);background:rgba(255,255,255,.06);font-weight:900}.avatar img{width:100%;height:100%;object-fit:cover}.member-name{font-weight:800}.member-meta{font-size:12px;color:var(--muted);margin-top:2px}.role{font-family:"Barlow Condensed",sans-serif;font-size:12px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase;color:var(--clan-color,#85ebff)}
+.mini-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.mini-actions button{font-size:11px;padding:7px 9px;border-radius:10px}
+.chat-box{height:390px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px}.msg{padding:10px 12px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}.msg-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}.msg strong{color:var(--clan-color,#85ebff)}.msg-text{line-height:1.45;overflow-wrap:anywhere}
+.chat-form{display:flex;gap:8px;margin-top:12px}.input,textarea{width:100%;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(12,12,26,.86);color:var(--text);padding:12px;font-family:inherit;outline:none}.input:focus,textarea:focus{border-color:var(--clan-border,rgba(133,235,255,.45))}textarea{min-height:78px;resize:vertical}.manage-grid{display:grid;grid-template-columns:1fr 110px;gap:10px}.manage-grid textarea{grid-column:1/-1}.danger{border-color:rgba(255,45,85,.3);color:#ff6b88;background:rgba(255,45,85,.08)}
+.notice{padding:14px;border-radius:16px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.22);color:#ffe58a;font-weight:700}.hidden{display:none!important}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.nav{align-items:stretch;flex-direction:column}.nav-actions{display:grid;grid-template-columns:1fr 1fr}.hero{padding:24px}.blason{width:74px;height:74px;font-size:34px}.member{grid-template-columns:40px minmax(0,1fr)}}@media(max-width:480px){.page{padding:16px 10px 46px}.stats{grid-template-columns:1fr}.mini-actions{grid-column:1/-1;justify-content:flex-start}.member{grid-template-columns:40px 1fr}.chat-form{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="nav">
+    <a class="logo" href="/">Puissance <span>4</span></a>
+    <div class="nav-actions">
+      <a class="nav-btn" href="/profil">Profil</a>
+      <a class="nav-btn" href="/leaderboard">Classement</a>
+    </div>
+  </nav>
+
+  <section class="hero" id="hero" style="--clan-color:#85EBFF;--clan-bg:#85EBFF18;--clan-border:#85EBFF55;--clan-glow:#85EBFF26">
+    <div class="clan-title-row">
+      <div class="blason" id="clan-blason">🛡️</div>
+      <div>
+        <div class="kicker">Clan Puissance 4</div>
+        <h1 class="title" id="clan-name">Chargement</h1>
+        <span class="tag" id="clan-tag">CLAN</span>
+      </div>
+    </div>
+    <p class="desc" id="clan-desc">Chargement des informations du clan...</p>
+    <div class="stats">
+      <div class="stat"><strong id="stat-members">0</strong><span>Membres</span></div>
+      <div class="stat"><strong id="stat-avg">0</strong><span>Elo moyen</span></div>
+      <div class="stat"><strong id="stat-wins">0</strong><span>Victoires</span></div>
+      <div class="stat"><strong id="stat-record">0-0</strong><span>W / L</span></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="card">
+      <div class="card-title">Membres</div>
+      <div class="members" id="members"></div>
+    </section>
+
+    <aside class="card">
+      <div class="card-title">Tchat clan</div>
+      <div id="chat-locked" class="notice hidden">Connecte-toi dans ce clan pour lire et envoyer des messages.</div>
+      <div class="chat-box" id="chat"></div>
+      <form class="chat-form" id="chat-form">
+        <input class="input" id="chat-input" maxlength="300" placeholder="Message au clan...">
+        <button class="btn" type="submit">Envoyer</button>
+      </form>
+    </aside>
+  </div>
+
+  <section class="card hidden" id="manage" style="margin-top:20px">
+    <div class="card-title">Gestion du clan</div>
+    <div class="manage-grid">
+      <input class="input" id="edit-name" maxlength="24" placeholder="Nom">
+      <input class="input" id="edit-tag" maxlength="6" placeholder="TAG">
+      <input class="input" id="edit-blason" maxlength="8" placeholder="Blason">
+      <input class="input" id="edit-color" type="color" value="#85EBFF">
+      <textarea id="edit-desc" maxlength="120" placeholder="Description"></textarea>
+      <button class="btn" onclick="saveClan()" type="button">Enregistrer</button>
+      <button class="btn danger" onclick="deleteClan()" type="button">Supprimer</button>
+    </div>
+  </section>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let clan = null;
+let token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+let player = null;
+let chatTimer = null;
+let clanSocket = null;
+let knownMessageIds = new Set();
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+function clanIdFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const queryId = params.get('id');
+  if (queryId) return queryId;
+  const parts = location.pathname.split('/').filter(Boolean);
+  return parts[0] === 'clan' && parts[1] ? parts[1] : '';
+}
+function setAccent(color) {
+  const safe = /^#[0-9a-f]{6}$/i.test(color || '') ? color : '#85EBFF';
+  document.getElementById('hero').style.cssText = `--clan-color:${safe};--clan-bg:${safe}18;--clan-border:${safe}55;--clan-glow:${safe}28`;
+}
+function readPlayer() {
+  try { player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null'); } catch { player = null; }
+}
+function initClanSocket() {
+  if (!token || !player?.id || clanSocket) return;
+  clanSocket = io({ transports: ['websocket', 'polling'] });
+  clanSocket.on('connect', () => {
+    clanSocket.emit('identify', { playerId: Number(player.id), token });
+    if (clan?.id) clanSocket.emit('join_clan_chat', { clanId: Number(clan.id) });
+  });
+  clanSocket.on('identified', () => {
+    if (clan?.id) clanSocket.emit('join_clan_chat', { clanId: Number(clan.id) });
+  });
+  clanSocket.on('clan_message', msg => {
+    if (!clan?.id || Number(msg?.clan_id) !== Number(clan.id)) return;
+    appendMessage(msg);
+  });
+  clanSocket.on('clan_error', err => {
+    console.warn('[Clan]', err?.message || err);
+  });
+}
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'x-session-token': token, ...(options.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+  return data;
+}
+function renderClan() {
+  if (!clan) return;
+  setAccent(clan.color);
+  document.getElementById('clan-blason').textContent = clan.blason || '🛡️';
+  document.getElementById('clan-name').textContent = clan.name || 'Clan';
+  document.getElementById('clan-tag').textContent = clan.tag || 'CLAN';
+  document.getElementById('clan-desc').textContent = clan.description || 'Aucune description pour ce clan.';
+  document.getElementById('stat-members').textContent = Number(clan.member_count || clan.members?.length || 0);
+  document.getElementById('stat-avg').textContent = Number(clan.avg_elo || 0).toLocaleString('fr-FR');
+  document.getElementById('stat-wins').textContent = Number(clan.wins || 0).toLocaleString('fr-FR');
+  document.getElementById('stat-record').textContent = `${Number(clan.wins || 0)}-${Number(clan.losses || 0)}`;
+
+  const members = document.getElementById('members');
+  members.innerHTML = (clan.members || []).map(member => {
+    const color = /^#[0-9a-f]{6}$/i.test(member.color || '') ? member.color : '#85EBFF';
+    const avatar = member.avatar ? `<img src="${escapeHtml(member.avatar)}" alt="">` : escapeHtml(String(member.pseudo || '?')[0] || '?');
+    const canManage = clan.can_manage && Number(member.player_id) !== Number(clan.owner_id);
+    const role = member.clan_role === 'owner' ? 'Owner' : member.clan_role === 'officer' ? 'Officier' : 'Membre';
+    return `<div class="member" style="--member-color:${color}">
+      <a class="avatar" href="/profil?id=${Number(member.player_id)}">${avatar}</a>
+      <div>
+        <div class="member-name">${escapeHtml(member.pseudo)}</div>
+        <div class="member-meta">${Number(member.elo || 0)} ELO · rejoint le ${member.joined_at ? new Date(Number(member.joined_at)).toLocaleDateString('fr-FR') : '--'}</div>
+      </div>
+      <div>
+        <div class="role">${role}</div>
+        ${canManage ? `<div class="mini-actions">
+          <button class="btn" onclick="setMemberRole(${Number(member.player_id)}, '${member.clan_role === 'officer' ? 'member' : 'officer'}')">${member.clan_role === 'officer' ? 'Membre' : 'Officier'}</button>
+          <button class="btn danger" onclick="removeMember(${Number(member.player_id)})">Retirer</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('') || '<div class="notice">Aucun membre.</div>';
+
+  document.getElementById('manage').classList.toggle('hidden', !clan.can_manage);
+  if (clan.can_manage) {
+    document.getElementById('edit-name').value = clan.name || '';
+    document.getElementById('edit-tag').value = clan.tag || '';
+    document.getElementById('edit-blason').value = clan.blason || '🛡️';
+    document.getElementById('edit-color').value = /^#[0-9a-f]{6}$/i.test(clan.color || '') ? clan.color : '#85EBFF';
+    document.getElementById('edit-desc').value = clan.description || '';
+  }
+}
+async function loadClan() {
+  readPlayer();
+  let id = clanIdFromUrl();
+  if (!id && player?.id) {
+    const data = await api(`/api/players/${encodeURIComponent(player.id)}/clan`);
+    id = data.clan?.id || '';
+  }
+  if (!id) {
+    document.getElementById('clan-name').textContent = 'Aucun clan';
+    document.getElementById('clan-desc').textContent = 'Rejoins ou cree un clan depuis ton profil.';
+    return;
+  }
+  const data = await api(`/api/clans/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`);
+  clan = data.clan;
+  renderClan();
+  initClanSocket();
+  if (clanSocket?.connected) clanSocket.emit('join_clan_chat', { clanId: Number(clan.id) });
+  await loadMessages();
+  clearInterval(chatTimer);
+  chatTimer = setInterval(loadMessages, 15000);
+}
+function messageMarkup(msg) {
+  return `<div class="msg" data-message-id="${Number(msg.id || 0)}">
+    <div class="msg-head"><strong>${escapeHtml(msg.pseudo)}</strong><span>${new Date(Number(msg.created_at)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span></div>
+    <div class="msg-text">${escapeHtml(msg.message)}</div>
+  </div>`;
+}
+function appendMessage(msg) {
+  const chat = document.getElementById('chat');
+  const id = Number(msg?.id || 0);
+  if (!chat || !id || knownMessageIds.has(id)) return;
+  knownMessageIds.add(id);
+  const empty = chat.querySelector('.notice');
+  if (empty) empty.remove();
+  chat.insertAdjacentHTML('beforeend', messageMarkup(msg));
+  chat.scrollTop = chat.scrollHeight;
+}
+async function loadMessages() {
+  const chat = document.getElementById('chat');
+  const locked = document.getElementById('chat-locked');
+  const form = document.getElementById('chat-form');
+  if (!clan?.id) return;
+  try {
+    const data = await api(`/api/clans/${clan.id}/messages?token=${encodeURIComponent(token)}`);
+    locked.classList.add('hidden');
+    form.classList.remove('hidden');
+    chat.classList.remove('hidden');
+    knownMessageIds = new Set((data.messages || []).map(msg => Number(msg.id || 0)).filter(Boolean));
+    chat.innerHTML = data.messages.map(messageMarkup).join('') || '<div class="notice">Aucun message pour le moment.</div>';
+    chat.scrollTop = chat.scrollHeight;
+  } catch {
+    locked.classList.remove('hidden');
+    form.classList.add('hidden');
+    chat.classList.add('hidden');
+  }
+}
+document.getElementById('chat-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  if (clanSocket?.connected) {
+    clanSocket.emit('clan_message_send', { clanId: Number(clan.id), message });
+  } else {
+    const data = await api(`/api/clans/${clan.id}/messages`, { method: 'POST', body: JSON.stringify({ token, message }) });
+    if (data.message) appendMessage(data.message);
+  }
+});
+async function saveClan() {
+  const body = {
+    token,
+    name: document.getElementById('edit-name').value,
+    tag: document.getElementById('edit-tag').value,
+    blason: document.getElementById('edit-blason').value,
+    color: document.getElementById('edit-color').value,
+    description: document.getElementById('edit-desc').value,
+  };
+  const data = await api(`/api/clans/${clan.id}`, { method: 'PATCH', body: JSON.stringify(body) });
+  clan = data.clan;
+  renderClan();
+}
+async function deleteClan() {
+  if (!confirm('Supprimer definitivement ce clan ?')) return;
+  await api(`/api/clans/${clan.id}`, { method: 'DELETE', body: JSON.stringify({ token }) });
+  location.href = '/profil';
+}
+async function removeMember(playerId) {
+  if (!confirm('Retirer ce membre du clan ?')) return;
+  await api(`/api/clans/${clan.id}/members/${playerId}/remove`, { method: 'POST', body: JSON.stringify({ token }) });
+  await loadClan();
+}
+async function setMemberRole(playerId, role) {
+  await api(`/api/clans/${clan.id}/members/${playerId}/role`, { method: 'POST', body: JSON.stringify({ token, role }) });
+  await loadClan();
+}
+loadClan().catch(error => {
+  document.getElementById('clan-name').textContent = 'Erreur';
+  document.getElementById('clan-desc').textContent = error.message || 'Impossible de charger le clan.';
+});
+</script>
+<script src="/presence.js"></script>
+<script src="/theme.js"></script>
+</body>
+</html>

@@ -221,8 +221,16 @@ db.exec(`
     PRIMARY KEY (clan_id, player_id),
     UNIQUE (player_id)
   );
+  CREATE TABLE IF NOT EXISTS clan_messages (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    clan_id    INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+    player_id  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    message    TEXT    NOT NULL,
+    created_at INTEGER NOT NULL
+  );
   CREATE INDEX IF NOT EXISTS idx_clan_members_player ON clan_members(player_id);
   CREATE INDEX IF NOT EXISTS idx_clan_members_clan ON clan_members(clan_id);
+  CREATE INDEX IF NOT EXISTS idx_clan_messages_clan ON clan_messages(clan_id, created_at);
 `);
 
 db.exec(`
@@ -389,11 +397,24 @@ const cQ = {
     INSERT INTO clans (name, tag, blason, color, description, owner_id, created_at, updated_at)
     VALUES (@name, @tag, @blason, @color, @description, @owner_id, @created_at, @updated_at)
   `),
+  update: db.prepare(`
+    UPDATE clans
+    SET name = @name,
+        tag = @tag,
+        blason = @blason,
+        color = @color,
+        description = @description,
+        updated_at = @updated_at
+    WHERE id = @id
+  `),
+  delete: db.prepare(`DELETE FROM clans WHERE id = ?`),
   addMember: db.prepare(`
     INSERT INTO clan_members (clan_id, player_id, role, joined_at)
     VALUES (@clan_id, @player_id, @role, @joined_at)
   `),
   removeMember: db.prepare(`DELETE FROM clan_members WHERE player_id = ?`),
+  removeMemberFromClan: db.prepare(`DELETE FROM clan_members WHERE clan_id = ? AND player_id = ?`),
+  setMemberRole: db.prepare(`UPDATE clan_members SET role = @role WHERE clan_id = @clan_id AND player_id = @player_id`),
   getById: db.prepare(`SELECT * FROM clans WHERE id = ?`),
   getByName: db.prepare(`SELECT * FROM clans WHERE name = ? COLLATE NOCASE`),
   getByTag: db.prepare(`SELECT * FROM clans WHERE tag = ? COLLATE NOCASE`),
@@ -424,6 +445,59 @@ const cQ = {
     WHERE cm.clan_id = ?
     ORDER BY CASE cm.role WHEN 'owner' THEN 0 ELSE 1 END, p.elo DESC, cm.joined_at ASC
   `),
+  member: db.prepare(`
+    SELECT cm.*, p.pseudo, p.elo, p.avatar, p.color, p.role AS player_role
+    FROM clan_members cm
+    JOIN players p ON p.id = cm.player_id
+    WHERE cm.clan_id = ? AND cm.player_id = ?
+  `),
+  stats: db.prepare(`
+    SELECT
+      COUNT(*) AS member_count,
+      ROUND(AVG(p.elo)) AS avg_elo,
+      MAX(p.elo) AS max_elo,
+      MIN(p.elo) AS min_elo,
+      SUM(p.wins) AS wins,
+      SUM(p.losses) AS losses,
+      SUM(p.draws) AS draws
+    FROM clan_members cm
+    JOIN players p ON p.id = cm.player_id
+    WHERE cm.clan_id = ?
+      AND p.deleted = 0
+      AND p.is_guest = 0
+      AND p.is_bot = 0
+  `),
+  leaderboard: db.prepare(`
+    SELECT c.*,
+      owner.pseudo AS owner_pseudo,
+      COUNT(cm.player_id) AS member_count,
+      ROUND(AVG(p.elo)) AS avg_elo,
+      MAX(p.elo) AS max_elo,
+      MIN(p.elo) AS min_elo,
+      SUM(p.wins) AS wins,
+      SUM(p.losses) AS losses,
+      SUM(p.draws) AS draws
+    FROM clans c
+    JOIN clan_members cm ON cm.clan_id = c.id
+    JOIN players p ON p.id = cm.player_id AND p.deleted = 0 AND p.is_guest = 0 AND p.is_bot = 0
+    JOIN players owner ON owner.id = c.owner_id
+    GROUP BY c.id
+    ORDER BY avg_elo DESC, member_count DESC, c.created_at ASC
+    LIMIT ?
+  `),
+  addMessage: db.prepare(`
+    INSERT INTO clan_messages (clan_id, player_id, message, created_at)
+    VALUES (@clan_id, @player_id, @message, @created_at)
+  `),
+  messages: db.prepare(`
+    SELECT cm.*, p.pseudo, p.avatar, p.color
+    FROM clan_messages cm
+    JOIN players p ON p.id = cm.player_id
+    WHERE cm.clan_id = ?
+    ORDER BY cm.created_at DESC
+    LIMIT ?
+  `),
+  deleteMessages: db.prepare(`DELETE FROM clan_messages WHERE clan_id = ?`),
 };
 
 // ── Boosts ────────────────────────────────────────────────────────────────────
