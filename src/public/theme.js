@@ -78,7 +78,14 @@
   function setMenuOpen(open) {
     document.body.classList.toggle('p4-global-menu-open', Boolean(open));
     const toggle = document.getElementById('p4-global-menu-toggle');
-    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      const icon = toggle.querySelector('.p4-global-menu-toggle-icon');
+      const text = toggle.querySelector('.p4-global-menu-toggle-text');
+      if (icon) icon.textContent = open ? '×' : '☰';
+      if (text) text.textContent = open ? 'Fermer' : 'Menu';
+    }
   }
 
   function mountGlobalMenu() {
@@ -125,7 +132,10 @@
           </a>
         `).join('')}
       </div>
-      <div class="p4-global-menu-foot">Menu compact pour éviter les pages qui débordent. Les pages de partie gardent leur interface dédiée.</div>
+      <div class="p4-global-menu-foot">
+        Menu compact pour éviter les pages qui débordent. Les pages de partie gardent leur interface dédiée.
+        <a class="p4-global-menu-copyright" href="/cgu">© 2026 Puissance-4 · CGU</a>
+      </div>
     `;
 
     toggle.addEventListener('click', () => setMenuOpen(!document.body.classList.contains('p4-global-menu-open')));

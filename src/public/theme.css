@@ -323,8 +323,8 @@
 }
 
 .p4-global-menu-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   overflow-y: auto;
   padding-right: 2px;
@@ -335,9 +335,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 58px;
-  padding: 11px 12px;
-  border-radius: 18px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border-radius: 16px;
   border: 1px solid rgba(255,255,255,.075);
   background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
   color: #f4f4fb;
@@ -368,9 +368,9 @@
 }
 
 .p4-global-menu-emoji {
-  width: 28px;
-  height: 28px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   background: rgba(255,255,255,.06);
@@ -417,6 +417,20 @@
   color: rgba(244,244,251,.70);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.p4-global-menu-copyright {
+  display: block;
+  margin-top: 8px;
+  color: #ffd60a;
+  text-decoration: none;
+  font: 900 12px "Barlow Condensed", sans-serif;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.p4-global-menu-copyright:hover {
+  text-decoration: underline;
 }
 
 body.p4-menu-mounted .home-dock .dock-links {
@@ -481,7 +495,5 @@ body.p4-menu-mounted .home-dock .dock-links {
     padding: 14px;
   }
 
-  .p4-global-menu-grid {
-    grid-template-columns: 1fr;
-  }
+  .p4-global-menu-link { min-height: 50px; }
 }

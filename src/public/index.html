@@ -159,7 +159,6 @@ html, body {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 420px);
   grid-template-areas:
-    "dock dock"
     "hero card";
   align-items: start;
   padding: clamp(14px, 2vw, 28px) clamp(10px, 1.6vw, 18px) clamp(28px, 4vw, 40px);
@@ -699,25 +698,21 @@ html, body {
 }
 
 /* ── Board decoration ───────────────────────────────────────────────────────── */
-.board-deco {
-  --board-cell: clamp(24px, 2vw, 28px);
-  display: grid;
-  grid-template-columns: repeat(7, var(--board-cell));
-  grid-template-rows: repeat(3, var(--board-cell));
-  gap: clamp(4px, .45vw, 5px);
-  margin: 20px 0 0;
-  opacity: 0.4;
+.hero-logo-mark {
+  width: min(270px, 54vw);
+  margin: 22px auto 0;
+  display: block;
+  border-radius: 28px;
+  opacity: .82;
+  filter: drop-shadow(0 18px 34px rgba(255,45,85,.16)) drop-shadow(0 0 26px rgba(133,235,255,.08));
+  transform: rotate(-1deg);
+  transition: transform .22s ease, opacity .22s ease, filter .22s ease;
 }
-.board-deco-cell {
-  width: var(--board-cell); height: var(--board-cell);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.05), rgba(19,19,42,0.95));
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.03);
-  transition: all 0.3s;
+.hero-logo-mark:hover {
+  opacity: 1;
+  transform: rotate(0deg) translateY(-2px) scale(1.02);
+  filter: drop-shadow(0 22px 42px rgba(255,45,85,.22)) drop-shadow(0 0 34px rgba(133,235,255,.14));
 }
-.board-deco-cell.r { background: var(--red); border-color: var(--red); box-shadow: 0 0 8px var(--red-glow); }
-.board-deco-cell.y { background: var(--yellow); border-color: var(--yellow); box-shadow: 0 0 8px var(--yel-glow); }
 
 /* ── Card ───────────────────────────────────────────────────────────────────── */
 .card {
@@ -1834,15 +1829,10 @@ html, body {
     padding: 7px 10px;
     font-size: 11px;
   }
-  .board-deco {
-    grid-template-columns: repeat(7, 24px);
-    grid-template-rows: repeat(3, 24px);
-    gap: 4px;
+  .hero-logo-mark {
+    width: min(210px, 62vw);
     margin-top: 14px;
-  }
-  .board-deco-cell {
-    width: 24px;
-    height: 24px;
+    border-radius: 22px;
   }
   .card {
     max-width: 100%;
@@ -2015,7 +2005,6 @@ html, body {
   .page {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "dock"
       "hero"
       "card";
   }
@@ -2119,30 +2108,6 @@ html, body {
 </div>
 
 <div class="page">
-  <div class="home-dock">
-    <div class="dock-brand">
-      <div class="dock-brand-logo"><img src="/assets/site-logo.png" alt="Puissance 4"></div>
-      <div class="dock-brand-copy">
-        <div class="dock-eyebrow">Arena Ranked</div>
-        <div class="dock-title">Puissance <span>4</span></div>
-      </div>
-    </div>
-    <div class="dock-links">
-      <a class="dock-link" href="/profil">👤 Profil</a>
-      <a class="dock-link" href="/live">🔴 Live</a>
-      <a class="dock-link" href="/local">🎲 Local</a>
-      <a class="dock-link" href="/players">👥 Joueurs</a>
-      <a class="dock-link" href="/leaderboard">🏆 Classement</a>
-      <a class="dock-link" href="/clan">🛡️ Clan</a>
-      <a class="dock-link" href="/tournoi">🏟️ Tournois</a>
-      <a class="dock-link" href="/analyse">🧠 Analyse</a>
-      <a class="dock-link" href="/boutique">🛒 Boutique</a>
-      <a class="dock-link" href="/stats">📈 Stats</a>
-      <a class="dock-link" href="/regles">📘 Règles</a>
-      <a class="dock-link" href="/api-doc">🧪 API</a>
-      <a class="dock-link" href="https://discord.gg/MrKbBAAWcm">📣 Discord</a>
-    </div>
-  </div>
   <!-- Hero -->
   <div class="hero">
     <div class="logo-eyebrow">Jouez en ligne</div>
@@ -2205,9 +2170,8 @@ html, body {
       </div>
     </div>
 
-    <!-- Mini board decoration -->
     <div class="hero-board-wrap">
-      <div class="board-deco" id="board-deco"></div>
+      <img class="hero-logo-mark" src="/assets/site-logo.png" alt="Puissance 4">
     </div>
     <div class="hero-ticker">
       <div class="hero-ticker-track">
@@ -2491,16 +2455,6 @@ const SFX = (() => {
   };
 })();
 
-// ═══════════════════════════════════════════════════════════════════
-//  DECORATION
-// ═══════════════════════════════════════════════════════════════════
-const DECO = [0,0,0,0,0,0,0, 0,0,'r','y','r',0,0, 0,'r','y','r','y','r',0];
-const decoEl = document.getElementById('board-deco');
-DECO.forEach(v => {
-  const c = document.createElement('div');
-  c.className = 'board-deco-cell' + (v ? ' ' + v : '');
-  decoEl.appendChild(c);
-});
 function spawnTokens() {
   const bg = document.getElementById('tokens-bg');
   for (let i = 0; i < 18; i++) {
