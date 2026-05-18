@@ -801,6 +801,125 @@ html, body {
   font-size:15px;
   line-height:1.65;
 }
+.welcome-profile-build{
+  position:relative;
+  max-width:660px;
+  margin:22px auto 0;
+  border-radius:28px;
+  border:1px solid rgba(255,255,255,.10);
+  overflow:hidden;
+  background:rgba(8,9,20,.74);
+  box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  text-align:left;
+}
+.welcome-profile-banner{
+  height:118px;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,45,85,.35), transparent 38%),
+    radial-gradient(circle at 78% 22%, rgba(133,235,255,.22), transparent 40%),
+    linear-gradient(135deg, rgba(255,45,85,.22), rgba(76,110,245,.16));
+  background-size:cover;
+  background-position:center;
+  opacity:.92;
+  transform-origin:center;
+  animation:welcomeBannerBuild .9s .08s cubic-bezier(.22,1,.36,1) both;
+}
+.welcome-profile-body{
+  position:relative;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:16px;
+  align-items:center;
+  padding:0 18px 18px;
+}
+.welcome-profile-avatar{
+  width:92px;
+  height:92px;
+  margin-top:-46px;
+  border-radius:28px;
+  border:4px solid rgba(8,9,20,.96);
+  background:linear-gradient(135deg, rgba(255,45,85,.20), rgba(133,235,255,.14)), rgba(255,255,255,.06);
+  box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 18px 30px rgba(0,0,0,.34);
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+  color:#fff;
+  font:900 40px 'Barlow Condensed',sans-serif;
+  text-transform:uppercase;
+  animation:welcomeAvatarBuild .65s .32s cubic-bezier(.22,1,.36,1) both;
+}
+.welcome-profile-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+.welcome-profile-name{
+  min-width:0;
+  animation:welcomeSlideBuild .55s .48s cubic-bezier(.22,1,.36,1) both;
+}
+.welcome-profile-name strong{
+  display:block;
+  font:900 34px/1 'Barlow Condensed',sans-serif;
+  letter-spacing:1px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.welcome-profile-name span{
+  display:block;
+  margin-top:6px;
+  color:rgba(238,238,245,.62);
+  font-size:12px;
+}
+.welcome-profile-badges{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.welcome-profile-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:5px 9px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.045);
+  font:900 11px 'Barlow Condensed',sans-serif;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.welcome-profile-elo{
+  text-align:right;
+  animation:welcomeSlideBuild .55s .62s cubic-bezier(.22,1,.36,1) both;
+}
+.welcome-profile-elo strong{
+  display:block;
+  font:900 40px/1 'Barlow Condensed',sans-serif;
+  color:#ffd60a;
+  text-shadow:0 0 24px rgba(255,214,10,.22);
+}
+.welcome-profile-elo span{
+  display:block;
+  margin-top:4px;
+  color:rgba(238,238,245,.48);
+  font:900 10px 'Barlow Condensed',sans-serif;
+  letter-spacing:2px;
+  text-transform:uppercase;
+}
+.welcome-build-line{
+  height:4px;
+  margin:0 18px 16px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(255,255,255,.08);
+}
+.welcome-build-line::before{
+  content:'';
+  display:block;
+  height:100%;
+  width:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#ff2d55,#ffd60a,#85EBFF);
+  transform-origin:left;
+  animation:welcomeBuildLine 1.6s .2s cubic-bezier(.22,1,.36,1) both;
+}
 .welcome-track{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
@@ -864,6 +983,10 @@ html, body {
 @keyframes welcomeLogoFloat{0%,100%{transform:translateX(-50%) translateY(0) rotate(-1deg)}50%{transform:translateX(-50%) translateY(-8px) rotate(1deg)}}
 @keyframes welcomeCardIn{to{opacity:1;transform:translateY(0)}}
 @keyframes welcomeOrbit{from{transform:rotate(0deg) translateX(58px) rotate(0deg)}to{transform:rotate(360deg) translateX(58px) rotate(-360deg)}}
+@keyframes welcomeBannerBuild{from{opacity:0;transform:scale(1.08)}to{opacity:.92;transform:scale(1)}}
+@keyframes welcomeAvatarBuild{from{opacity:0;transform:translateY(18px) scale(.72) rotate(-10deg)}to{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
+@keyframes welcomeSlideBuild{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes welcomeBuildLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 /* ── Card ───────────────────────────────────────────────────────────────────── */
 .card {
@@ -1953,6 +2076,29 @@ html, body {
     font-size:13px;
     line-height:1.5;
   }
+  .welcome-profile-body{
+    grid-template-columns:auto minmax(0,1fr);
+    gap:12px;
+    padding:0 14px 14px;
+  }
+  .welcome-profile-banner{height:92px}
+  .welcome-profile-avatar{
+    width:74px;
+    height:74px;
+    margin-top:-37px;
+    border-radius:22px;
+    font-size:32px;
+  }
+  .welcome-profile-name strong{font-size:27px}
+  .welcome-profile-elo{
+    grid-column:1/-1;
+    text-align:left;
+    display:flex;
+    align-items:end;
+    gap:8px;
+  }
+  .welcome-profile-elo strong{font-size:30px}
+  .welcome-build-line{margin:0 14px 14px}
   .welcome-track{
     grid-template-columns:1fr;
     margin-top:18px;
@@ -2340,9 +2486,24 @@ html, body {
     <div class="welcome-copy">
       <div class="welcome-kicker">Bienvenue dans l'arène</div>
       <div class="welcome-title">Ton compte est <span>prêt</span></div>
-      <div class="welcome-sub">
-        Puissance 4 Ranked combine matchmaking, profils décorés, coins, clans, bots, replays et live spectateur.
-        Voilà le petit tour rapide avant ta première partie.
+      <div class="welcome-sub" id="welcome-sub">
+        On construit ton profil, on applique tes infos Discord si elles existent, puis on te montre les outils importants avant ta première partie.
+      </div>
+      <div class="welcome-profile-build" id="welcome-profile-build">
+        <div class="welcome-profile-banner" id="welcome-profile-banner"></div>
+        <div class="welcome-profile-body">
+          <div class="welcome-profile-avatar" id="welcome-profile-avatar">?</div>
+          <div class="welcome-profile-name">
+            <strong id="welcome-profile-pseudo">Nouveau joueur</strong>
+            <span id="welcome-profile-meta">Profil généré · prêt pour le ranked</span>
+            <div class="welcome-profile-badges" id="welcome-profile-badges"></div>
+          </div>
+          <div class="welcome-profile-elo">
+            <strong id="welcome-profile-elo">1000</strong>
+            <span>ELO de départ</span>
+          </div>
+        </div>
+        <div class="welcome-build-line"></div>
       </div>
       <div class="welcome-track">
         <div class="welcome-card"><div class="welcome-card-emoji">⚔️</div><div><strong>Ranked & duels</strong><span>Entre en file, défie un joueur ou partage un lien de duel.</span></div></div>
@@ -2880,7 +3041,7 @@ function tryCompleteDiscordAuth() {
     localStorage.setItem('player', JSON.stringify(payload.player));
     sessionStorage.setItem('player', JSON.stringify(payload.player));
     history.replaceState(null, '', location.pathname + location.search);
-    redirectAfterAuthOrQueue();
+    redirectAfterAuthOrQueue({ welcome: Boolean(payload.created || payload.newAccount || payload.isNew) });
     return true;
   } catch (e) {
     console.error('[discord-auth]', e);
@@ -2969,10 +3130,68 @@ function redirectAfterAuthOrQueue(options = {}) {
 function showWelcomeTour() {
   const tour = document.getElementById('welcome-tour');
   if (!tour) return redirectAfterAuthOrQueue();
+  populateWelcomeProfile(myPlayer || getSafePlayer() || {});
   welcomeTourPending = true;
   tour.classList.add('show');
   tour.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
+}
+
+function populateWelcomeProfile(player = {}) {
+  const pseudo = String(player.pseudo || player.username || 'Nouveau joueur');
+  const discordInfo = normalizeDiscordInfo(player.discord_info);
+  const avatar = String(player.avatar || player.discord_avatar || discordInfo.avatar || discordInfo.avatar_url || '').trim();
+  const banner = String(player.banner || player.discord_banner || discordInfo.banner || discordInfo.banner_url || '').trim();
+  const color = String(player.color || '#ff2d55');
+  const elo = Number(player.elo || 1000);
+  const avatarEl = document.getElementById('welcome-profile-avatar');
+  const bannerEl = document.getElementById('welcome-profile-banner');
+  const pseudoEl = document.getElementById('welcome-profile-pseudo');
+  const metaEl = document.getElementById('welcome-profile-meta');
+  const eloEl = document.getElementById('welcome-profile-elo');
+  const badgesEl = document.getElementById('welcome-profile-badges');
+  if (pseudoEl) pseudoEl.textContent = pseudo;
+  if (eloEl) eloEl.textContent = String(Math.round(elo));
+  if (metaEl) {
+    const linked = player.discord_id || player.discord_info || discordInfo.id || avatar || banner;
+    metaEl.textContent = linked ? 'Discord détecté · avatar et style appliqués' : 'Profil généré · prêt pour le ranked';
+  }
+  if (bannerEl) {
+    const safeBanner = safeCssUrl(banner);
+    bannerEl.style.backgroundImage = banner
+      ? `linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.18)), url("${safeBanner}")`
+      : `radial-gradient(circle at 18% 20%, ${color}66, transparent 38%), radial-gradient(circle at 78% 22%, rgba(133,235,255,.22), transparent 40%), linear-gradient(135deg, rgba(255,45,85,.22), rgba(76,110,245,.16))`;
+  }
+  if (avatarEl) {
+    avatarEl.style.borderColor = color;
+    avatarEl.innerHTML = avatar
+      ? `<img src="${escapeHtml(avatar)}" alt="">`
+      : escapeHtml(pseudo.charAt(0).toUpperCase() || '?');
+  }
+  if (badgesEl) {
+    const badges = [];
+    if (Number(player.is_bot || 0) === 1) badges.push(['🤖', 'Bot']);
+    if (Number(player.is_vip_plus || 0) === 1) badges.push(['💎', 'VIP+']);
+    else if (Number(player.is_vip || 0) === 1) badges.push(['⭐', 'VIP']);
+    if (Number(player.is_perso || 0) === 1) badges.push(['✨', 'Perso']);
+    if (String(player.role || '').toLowerCase() === 'admin') badges.push(['⚡', 'Admin']);
+    if (player.discord_id || discordInfo.id) badges.push(['🔗', 'Discord']);
+    if (!badges.length) badges.push(['🎮', 'Membre']);
+    badgesEl.innerHTML = badges.map(([icon, label]) => `<span class="welcome-profile-badge">${icon} ${escapeHtml(label)}</span>`).join('');
+  }
+}
+
+function normalizeDiscordInfo(info) {
+  if (!info) return {};
+  if (typeof info === 'string') {
+    try { return JSON.parse(info); } catch (e) { return {}; }
+  }
+  if (typeof info === 'object') return info;
+  return {};
+}
+
+function safeCssUrl(url) {
+  return String(url || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
 function finishWelcomeTour() {

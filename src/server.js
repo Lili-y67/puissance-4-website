@@ -2855,6 +2855,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         linked_at: new Date().toISOString(),
       };
 
+      let createdNewPlayer = false;
       let targetPlayer = findPlayerByDiscordIdentity(discordUser) || findReusableDiscordPseudoPlayer(discordUser);
       if (!targetPlayer) {
         const wantedPseudo = getUniquePseudo(discordUser.global_name || discordUser.username || `Discord${discordUser.id.slice(-4)}`);
@@ -2862,6 +2863,7 @@ app.get('/auth/discord/callback', async (req, res) => {
           pseudo: wantedPseudo,
           password: hashPwd(genToken()),
         });
+        createdNewPlayer = true;
         targetPlayer = pQ.getById.get(created.id);
         const avatarUrl = discordAvatarUrl(discordUser);
         const bannerUrl = discordBannerUrl(discordUser);
@@ -2880,7 +2882,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       const linkedPlayer = pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       const token = createSession(linkedPlayer.id);
-      const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer) }));
+      const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer), created: createdNewPlayer }));
       return res.redirect('/#discord-auth=' + payload);
     }
 
