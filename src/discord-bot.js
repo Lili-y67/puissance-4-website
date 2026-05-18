@@ -18,11 +18,35 @@ const crypto = require('crypto');
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
+const ADMIN_COMMAND_ACTIONS = {
+  'admin-stats': 'stats',
+  'admin-player': 'player',
+  'admin-mute': 'mute',
+  'admin-unmute': 'unmute',
+  'admin-ban': 'ban',
+  'admin-unban': 'unban',
+  'admin-coins': 'coins',
+  'admin-elo': 'elo',
+  'admin-boost-elo': 'boost-elo',
+  'admin-boost-coins': 'boost-coins',
+  'admin-give-item': 'give-item',
+  'admin-tournoi-finish': 'tournoi-finish',
+  'admin-tournoi-pause': 'tournoi-pause',
+  'admin-tournoi-resume': 'tournoi-resume',
+  'admin-tournoi-delete': 'tournoi-delete',
+  'admin-backups': 'backups',
+  'admin-maintenance-on': 'maintenance-on',
+  'admin-maintenance-off': 'maintenance-off',
+  'admin-reload': 'reload',
+};
 
 function buildDiscordCommandDefinitions(shopItems = {}) {
-  const itemChoices = Object.values(shopItems || {})
-    .map(item => ({ name: String(item.label || item.key).slice(0, 100), value: item.key }))
-    .slice(0, 25);
+  const pseudoOption = (required = true) => ({ type: 3, name: 'pseudo', description: 'Joueur cible', required, autocomplete: true });
+  const valueOption = (description = 'Valeur') => ({ type: 10, name: 'valeur', description, required: true });
+  const optionalValueOption = (description = 'Valeur') => ({ type: 10, name: 'valeur', description, required: false });
+  const reasonOption = (description = 'Raison ou detail') => ({ type: 3, name: 'raison', description, required: false });
+  const idOption = (description = 'ID tournoi, partie ou ressource') => ({ type: 3, name: 'id', description, required: true });
+  const adminCommand = (name, description, options = []) => ({ name: `admin-${name}`, description, options });
 
   return [
     { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
@@ -42,57 +66,37 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
     { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
-    {
-      name: 'coupon',
-      description: 'Creer un code promotionnel boutique',
-      options: [
-        { type: 3, name: 'code', description: 'Code a creer, vide = aleatoire', required: false },
-        { type: 3, name: 'type', description: 'Type de reduction', required: false, choices: [{ name: 'Pourcentage', value: 'discount' }, { name: 'Montant fixe', value: 'flat' }] },
-        { type: 4, name: 'valeur', description: 'Pourcentage ou montant retire', required: false },
-        { type: 4, name: 'utilisations', description: 'Nombre maximum d utilisations', required: false },
-        { type: 4, name: 'heures', description: 'Expiration en heures, vide = pas d expiration', required: false },
-      ],
-    },
+    adminCommand('coupon', 'Creer un code promotionnel boutique', [
+      { type: 3, name: 'code', description: 'Code a creer, vide = aleatoire', required: false },
+      { type: 3, name: 'type', description: 'Type de reduction', required: false, choices: [{ name: 'Pourcentage', value: 'discount' }, { name: 'Montant fixe', value: 'flat' }] },
+      { type: 4, name: 'valeur', description: 'Pourcentage ou montant retire', required: false },
+      { type: 4, name: 'utilisations', description: 'Nombre maximum d utilisations', required: false },
+      { type: 4, name: 'heures', description: 'Expiration en heures, vide = pas d expiration', required: false },
+    ]),
     { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
-    {
-      name: 'admin',
-      description: 'Commandes staff Puissance 4',
-      options: [
-        {
-          type: 3,
-          name: 'action',
-          description: 'Action a executer',
-          required: true,
-          choices: [
-            { name: 'Stats serveur', value: 'stats' },
-            { name: 'Profil joueur', value: 'player' },
-            { name: 'Mute joueur', value: 'mute' },
-            { name: 'Unmute joueur', value: 'unmute' },
-            { name: 'Ban joueur', value: 'ban' },
-            { name: 'Unban joueur', value: 'unban' },
-            { name: 'Donner coins', value: 'coins' },
-            { name: 'Modifier ELO', value: 'elo' },
-            { name: 'Boost ELO global', value: 'boost-elo' },
-            { name: 'Boost Coins global', value: 'boost-coins' },
-            { name: 'Donner item', value: 'give-item' },
-            { name: 'Tournoi terminer', value: 'tournoi-finish' },
-            { name: 'Tournoi pause', value: 'tournoi-pause' },
-            { name: 'Tournoi reprendre', value: 'tournoi-resume' },
-            { name: 'Tournoi supprimer', value: 'tournoi-delete' },
-            { name: 'Backups disponibles', value: 'backups' },
-            { name: 'Maintenance ON', value: 'maintenance-on' },
-            { name: 'Maintenance OFF', value: 'maintenance-off' },
-            { name: 'Reload commandes', value: 'reload' },
-          ],
-        },
-        { type: 3, name: 'password', description: 'Ancien champ, utilise plutot /login', required: false },
-        { type: 3, name: 'pseudo', description: 'Joueur cible si besoin', required: false, autocomplete: true },
-        { type: 3, name: 'id', description: 'ID tournoi, partie ou ressource', required: false },
-        { type: 3, name: 'item', description: 'Item boutique', required: false, choices: itemChoices },
-        { type: 10, name: 'valeur', description: 'Nombre, minutes, ELO, coins ou multiplicateur', required: false },
-        { type: 3, name: 'raison', description: 'Raison ou duree minutes', required: false },
-      ],
-    },
+    adminCommand('stats', 'Afficher les statistiques staff'),
+    adminCommand('player', 'Afficher le profil staff d un joueur', [pseudoOption(true)]),
+    adminCommand('mute', 'Mute un joueur', [pseudoOption(true), optionalValueOption('Duree en minutes, defaut 60'), reasonOption('Raison du mute')]),
+    adminCommand('unmute', 'Retirer le mute d un joueur', [pseudoOption(true)]),
+    adminCommand('ban', 'Bannir un joueur', [pseudoOption(true), reasonOption('Raison du ban')]),
+    adminCommand('unban', 'Debannir un joueur', [pseudoOption(true)]),
+    adminCommand('coins', 'Ajouter ou retirer des coins', [pseudoOption(true), valueOption('Delta coins, negatif possible'), reasonOption('Motif')]),
+    adminCommand('elo', 'Ajouter ou retirer de l ELO', [pseudoOption(true), valueOption('Delta ELO, negatif possible'), reasonOption('Motif')]),
+    adminCommand('boost-elo', 'Activer ou modifier le boost ELO global', [valueOption('Multiplicateur entre 1 et 10')]),
+    adminCommand('boost-coins', 'Activer ou modifier le boost Coins global', [valueOption('Multiplicateur entre 1 et 10'), reasonOption('Duree en minutes, max 1440')]),
+    adminCommand('give-item', 'Donner un item boutique a un joueur', [
+      pseudoOption(true),
+      { type: 3, name: 'item', description: 'Code item: elo_custom_0_2, coin_custom_05, vip_1m...', required: true },
+      optionalValueOption('Quantite, defaut 1'),
+    ]),
+    adminCommand('tournoi-finish', 'Terminer un tournoi', [idOption('ID public ou interne du tournoi')]),
+    adminCommand('tournoi-pause', 'Mettre un tournoi en pause', [idOption('ID public ou interne du tournoi')]),
+    adminCommand('tournoi-resume', 'Reprendre un tournoi pause', [idOption('ID public ou interne du tournoi')]),
+    adminCommand('tournoi-delete', 'Supprimer un tournoi', [idOption('ID public ou interne du tournoi')]),
+    adminCommand('backups', 'Afficher les backups disponibles'),
+    adminCommand('maintenance-on', 'Activer l alerte maintenance', [reasonOption('Message affiche aux joueurs')]),
+    adminCommand('maintenance-off', 'Desactiver l alerte maintenance'),
+    adminCommand('reload', 'Recharger les commandes Discord'),
   ];
 }
 
@@ -210,6 +214,33 @@ function startDiscordBot(ctx) {
       BOT: ['Bot', 'Robot', 'Badge_Bot'],
     };
     return findGuildEmoji(map[name] || [name]) || fallback;
+  }
+
+  function resolveGiveItem(itemKey) {
+    const key = String(itemKey || '').trim();
+    if (!key) return null;
+    if (ctx.SHOP_ITEMS?.[key]) return ctx.SHOP_ITEMS[key];
+    const eloMatch = key.match(/^elo_custom_(\d+)_(\d+)$/);
+    if (eloMatch) {
+      const bonus = Number(`${eloMatch[1]}.${eloMatch[2]}`);
+      if (!Number.isFinite(bonus) || bonus < 0.1 || bonus > 1) return null;
+      return {
+        key,
+        label: `Booster ELO x${(1 + bonus).toFixed(2)}`,
+        boostType: 'elo',
+      };
+    }
+    const coinMatch = key.match(/^coin_custom_(\d{1,2})$/);
+    if (coinMatch) {
+      const multiplier = Number(coinMatch[1]);
+      if (!Number.isFinite(multiplier) || multiplier < 1 || multiplier > 10) return null;
+      return {
+        key,
+        label: `Booster Coins x${multiplier}`,
+        boostType: 'coins',
+      };
+    }
+    return null;
   }
 
   function roleBadges(player) {
@@ -710,6 +741,7 @@ function startDiscordBot(ctx) {
   }
 
   function helpPayload() {
+    const adminNames = Object.keys(ADMIN_COMMAND_ACTIONS).map(name => `/${name}`).join(', ');
     return containerMessage({
       color: 0x8b9cf4,
       title: 'Centre de commandes',
@@ -717,7 +749,7 @@ function startDiscordBot(ctx) {
       sections: [
         '### Joueurs\n`/profil`, `/moi`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
         '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
-        '### Staff\n`/login`, puis `/admin` utilise une session 10 min + verification du role Discord.',
+        `### Staff\n\`/login\`, puis commandes dediees: ${adminNames}\nCoupon: \`/admin-coupon\`. Session 10 min + verification du role Discord.`,
       ],
       buttons: [linkButton('Ouvrir le site', api, '🎮'), linkButton('Doc API', `${api}/api-doc`, '🧪')],
     });
@@ -832,7 +864,7 @@ function startDiscordBot(ctx) {
 
 
   async function handleAdmin(interaction) {
-    const action = interaction.options.getString('action', true);
+    const action = ADMIN_COMMAND_ACTIONS[interaction.commandName] || interaction.options.getString('action', true);
     const pseudo = interaction.options.getString('pseudo');
     const value = interaction.options.getNumber('valeur');
     const reason = interaction.options.getString('raison') || '';
@@ -939,7 +971,7 @@ function startDiscordBot(ctx) {
       return interaction.editReply(containerMessage({ color: 0xffd60a, title: 'ELO modifie', subtitle: `${target.pseudo}: ${nextElo} ELO (${delta >= 0 ? '+' : ''}${delta})` }));
     }
     if (action === 'give-item') {
-      const item = ctx.SHOP_ITEMS[itemKey];
+      const item = resolveGiveItem(itemKey);
       if (!item) return replyError(interaction, 'Item invalide', itemKey || '-');
       const quantity = Math.max(1, Math.min(99, Math.trunc(Number(value || 1))));
       ctx.shopItemQ.addQty.run({ player_id: target.id, item_key: item.key, quantity });
@@ -1103,8 +1135,8 @@ function startDiscordBot(ctx) {
         return interaction.editReply(payload);
       }
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
-      if (interaction.commandName === 'admin') return handleAdmin(interaction);
-      if (interaction.commandName === 'coupon') return handleCoupon(interaction);
+      if (ADMIN_COMMAND_ACTIONS[interaction.commandName]) return handleAdmin(interaction);
+      if (interaction.commandName === 'admin-coupon') return handleCoupon(interaction);
     } catch (error) {
       console.error('[BOT ERROR]', error);
       return replyError(interaction, 'Erreur bot Discord', truncate(error.message || 'Erreur inconnue', 300));

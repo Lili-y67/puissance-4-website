@@ -147,6 +147,16 @@ db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   tier         TEXT    NOT NULL DEFAULT 'vip',
   multiplier   REAL    NOT NULL DEFAULT 1.2
 )`);
+db.exec(`CREATE TABLE IF NOT EXISTS player_active_boosters (
+  player_id    INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  boost_type   TEXT    NOT NULL,
+  item_key     TEXT    NOT NULL,
+  label        TEXT    NOT NULL DEFAULT '',
+  multiplier   REAL    NOT NULL DEFAULT 1,
+  activated_at INTEGER NOT NULL,
+  expires_at   INTEGER NOT NULL,
+  PRIMARY KEY (player_id, boost_type)
+)`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS tournaments (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -540,6 +550,14 @@ function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   };
 }
 
+function getActiveShopBooster(playerId, boostType) {
+  return db.prepare(`
+    SELECT * FROM player_active_boosters
+    WHERE player_id = ? AND boost_type = ? AND expires_at > ?
+    LIMIT 1
+  `).get(playerId, boostType, Date.now());
+}
+
 const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false) => {
   const game = gQ.getById.get(gameId);
   const player1 = pQ.getById.get(game.player1_id);
@@ -547,10 +565,12 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
   const isFriendly = String(game?.game_type || 'ranked') === 'friendly';
+  const shopEloActive = !isFriendly && !isDraw ? getActiveShopBooster(winnerId, 'elo') : null;
+  const shopEloMultiplier = shopEloActive ? Math.max(1, Number(shopEloActive.multiplier || 1)) : 1;
   const eloCalc = isFriendly
     ? { dW: 0, dL: 0, globalMultiplier: 1, vipApplied: false, vipAppliedTo: null, vipMultiplier: 1, vipTier: null }
     : calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
-  const dW = eloCalc.dW;
+  const dW = !isFriendly && !isDraw && shopEloMultiplier > 1 ? Math.ceil(Number(eloCalc.dW || 0) * shopEloMultiplier) : eloCalc.dW;
   const dL = eloCalc.dL;
   const vipApplied = !isFriendly && !isDraw ? !!vipQ.getActive.get(winnerId, Date.now()) : false;
   const vipAppliedTo = vipApplied ? winnerId : null;
@@ -574,8 +594,12 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
       return 1;
     }
   })();
-  const p1Coins = isFriendly || isSuspect || p1IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
-  const p2Coins = isFriendly || isSuspect || p2IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * coinBoost);
+  const p1ShopCoinBoost = getActiveShopBooster(game.player1_id, 'coins');
+  const p2ShopCoinBoost = getActiveShopBooster(game.player2_id, 'coins');
+  const p1CoinMultiplier = coinBoost * (p1ShopCoinBoost ? Math.max(1, Number(p1ShopCoinBoost.multiplier || 1)) : 1);
+  const p2CoinMultiplier = coinBoost * (p2ShopCoinBoost ? Math.max(1, Number(p2ShopCoinBoost.multiplier || 1)) : 1);
+  const p1Coins = isFriendly || isSuspect || p1IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * p1CoinMultiplier);
+  const p2Coins = isFriendly || isSuspect || p2IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * p2CoinMultiplier);
 
   if (!isFriendly && !isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
@@ -621,7 +645,14 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     globalMultiplier,
     vipMultiplier,
     vipTier,
+    shopEloApplied: !!shopEloActive,
+    shopEloAppliedTo: shopEloActive ? winnerId : null,
+    shopEloMultiplier,
     coinBoostMultiplier: coinBoost,
+    shopCoinMultipliers: {
+      [game.player1_id]: p1ShopCoinBoost ? Number(p1ShopCoinBoost.multiplier || 1) : 1,
+      [game.player2_id]: p2ShopCoinBoost ? Number(p2ShopCoinBoost.multiplier || 1) : 1,
+    },
     coins: {
       [game.player1_id]: p1Coins,
       [game.player2_id]: p2Coins,

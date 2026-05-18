@@ -1241,6 +1241,7 @@ let eloHistoryHoverReady = false;
 let eloHistoryActivePoint = null;
 let queueMusicPreviewFrame = null;
 let profileShopInventory = {};
+let profileActiveBoosters = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
 let currentFollowingCache = [];
@@ -1309,9 +1310,38 @@ async function loadProfileShopInventory() {
     const res = await fetch('/api/shop/me', { headers: { 'x-session-token': token } });
     const data = await res.json();
     profileShopInventory = data?.inventory && typeof data.inventory === 'object' ? data.inventory : {};
+    profileActiveBoosters = data?.activeBoosters && typeof data.activeBoosters === 'object' ? data.activeBoosters : {};
   } catch {
     profileShopInventory = {};
+    profileActiveBoosters = {};
   }
+}
+
+function getProfileBoosterMeta(key) {
+  if (key === 'elo_mini') return { label: 'Mini Boost ELO', multiplier: 1.05, type: 'elo' };
+  if (key === 'elo_classic') return { label: 'Classic Boost ELO', multiplier: 1.10, type: 'elo' };
+  if (key === 'elo_max') return { label: 'Max Boost ELO', multiplier: 1.25, type: 'elo' };
+  if (key === 'elo_princess') return { label: 'Princess Boost ELO', multiplier: 1.50, type: 'elo' };
+  if (key === 'coin_boost') return { label: 'Coin Boost', multiplier: 5, type: 'coins' };
+  if (key === 'coin_boost_plus') return { label: 'Coin Boost +', multiplier: 10, type: 'coins' };
+  const elo = String(key).match(/^elo_custom_(\d+)_(\d+)$/);
+  if (elo) {
+    const bonus = Number(`${elo[1]}.${elo[2]}`);
+    return { label: `Booster ELO x${(1 + bonus).toFixed(2)}`, multiplier: Number((1 + bonus).toFixed(2)), type: 'elo' };
+  }
+  const coins = String(key).match(/^coin_custom_(\d{1,2})$/);
+  if (coins) {
+    const multiplier = Number(coins[1]);
+    return { label: `Booster Coins x${multiplier}`, multiplier, type: 'coins' };
+  }
+  return null;
+}
+
+function getProfileBoosterEntries(kind) {
+  return Object.entries(profileShopInventory || {})
+    .map(([key, qty]) => ({ key, qty: Number(qty || 0), meta: getProfileBoosterMeta(key) }))
+    .filter(entry => entry.qty > 0 && entry.meta && entry.meta.type === kind)
+    .sort((a, b) => Number(b.meta.multiplier || 1) - Number(a.meta.multiplier || 1));
 }
 
 function getProfileBoosterCounts() {
@@ -3982,9 +4012,48 @@ function openOwnedBooster(kind) {
   const counts = getProfileBoosterCounts();
   if (kind === 'elo' && counts.elo <= 0) return;
   if (kind === 'coins' && counts.coins <= 0) return;
-  alert(kind === 'elo'
-    ? `Tu as ${counts.elo} booster(s) ELO dans ton inventaire.`
-    : `Tu as ${counts.coins} booster(s) Coins dans ton inventaire.`);
+  const entries = getProfileBoosterEntries(kind);
+  if (!entries.length) return;
+  const active = profileActiveBoosters?.[kind];
+  const activeText = active
+    ? `\n\nActif actuellement : ${active.label || active.itemKey} jusqu'a ${new Date(Number(active.expiresAt || 0)).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.`
+    : '';
+  const list = entries
+    .map((entry, index) => `${index + 1}. ${entry.meta.label} (${entry.qty} dispo)`)
+    .join('\n');
+  const picked = prompt(`${kind === 'elo' ? 'Booster ELO' : 'Booster Coins'} disponible(s) :\n${list}${activeText}\n\nTape le numero du booster a activer pendant 2h :`);
+  if (picked === null) return;
+  const index = Math.trunc(Number(picked)) - 1;
+  const entry = entries[index];
+  if (!entry) return alert('Choix invalide.');
+  activateOwnedBooster(entry.key, entry.meta);
+}
+
+async function activateOwnedBooster(itemKey, meta = {}) {
+  const token = localStorage.getItem('token');
+  if (!token) return alert('Connecte-toi pour activer un booster.');
+  try {
+    const res = await fetch('/api/shop/boosters/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, itemKey }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      alert(data.error || 'Activation impossible.');
+      return;
+    }
+    profileShopInventory = data.inventory || {};
+    profileActiveBoosters = data.activeBoosters || {};
+    alert(`${meta.label || 'Booster'} active pendant 2h.`);
+    await loadProfileShopInventory();
+    if (typeof render === 'function' && currentPlayer) {
+      const totalGames = Number(currentPlayer.wins || 0) + Number(currentPlayer.losses || 0) + Number(currentPlayer.draws || 0);
+      render(currentPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
+    }
+  } catch(e) {
+    alert('Erreur reseau.');
+  }
 }
 
 // ── Auto-rejoin toggle ────────────────────────────────────────────────────────

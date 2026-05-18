@@ -1841,7 +1841,7 @@ app.patch('/api/admin/players/:id/shop-item', (req, res) => {
 
   const itemKey = String(req.body?.itemKey || '').trim();
   const quantity = Number(req.body?.quantity);
-  const item = SHOP_ITEMS[itemKey];
+  const item = resolveInventoryShopItem(itemKey);
 
   if (!item || !item.boostType) {
     return res.status(400).json({ error: 'Booster invalide.' });
@@ -2150,6 +2150,11 @@ const shopItemQ = {
     VALUES (@player_id, @item_key, @quantity)
     ON CONFLICT(player_id, item_key) DO UPDATE SET quantity = quantity + @quantity
   `),
+  consumeOne: db.prepare(`
+    UPDATE player_shop_items
+    SET quantity = quantity - 1
+    WHERE player_id = ? AND item_key = ? AND quantity > 0
+  `),
 };
 
 for (const item of Object.values(SHOP_ITEMS)) {
@@ -2206,6 +2211,39 @@ function buildCustomShopItem(pack, body = {}) {
       category: 'coin_boosters',
       label: `Booster Coins x${multiplier}`,
       price: multiplier * 600,
+      boostType: 'coins',
+      multiplier,
+      isCustom: true,
+    };
+  }
+  return null;
+}
+
+function resolveInventoryShopItem(itemKey) {
+  const key = String(itemKey || '').trim();
+  if (!key) return null;
+  if (SHOP_ITEMS[key]) return SHOP_ITEMS[key];
+  const eloMatch = key.match(/^elo_custom_(\d+)_(\d+)$/);
+  if (eloMatch) {
+    const bonus = normalizeCustomEloBonus(Number(`${eloMatch[1]}.${eloMatch[2]}`));
+    if (bonus === null) return null;
+    return {
+      key,
+      category: 'elo_boosters',
+      label: `Booster ELO x${(1 + bonus).toFixed(2)}`,
+      boostType: 'elo',
+      multiplier: Number((1 + bonus).toFixed(2)),
+      isCustom: true,
+    };
+  }
+  const coinMatch = key.match(/^coin_custom_(\d{1,2})$/);
+  if (coinMatch) {
+    const multiplier = normalizeCustomCoinMultiplier(Number(coinMatch[1]));
+    if (multiplier === null) return null;
+    return {
+      key,
+      category: 'coin_boosters',
+      label: `Booster Coins x${multiplier}`,
       boostType: 'coins',
       multiplier,
       isCustom: true,
@@ -3187,6 +3225,17 @@ app.get('/api/shop/me', (req, res) => {
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
   const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
   const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
+  const activeBoosters = Object.fromEntries(db.prepare(`
+    SELECT boost_type, item_key, label, multiplier, activated_at, expires_at
+    FROM player_active_boosters
+    WHERE player_id = ? AND expires_at > ?
+  `).all(playerId, Date.now()).map(row => [row.boost_type, {
+    itemKey: row.item_key,
+    label: row.label,
+    multiplier: Number(row.multiplier || 1),
+    activatedAt: Number(row.activated_at || 0),
+    expiresAt: Number(row.expires_at || 0),
+  }]));
   const stock = Object.fromEntries(
     Object.keys(SHOP_STOCK_KEYS).map(key => [key, getShopStock(key)])
   );
@@ -3197,7 +3246,63 @@ app.get('/api/shop/me', (req, res) => {
     gemPrices: SHOP_GEM_PRICES,
     stock,
     inventory,
+    activeBoosters,
   });
+});
+
+app.post('/api/shop/boosters/activate', (req, res) => {
+  const token = String(req.body?.token || req.headers['x-session-token'] || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const itemKey = String(req.body?.itemKey || '').trim();
+  const item = resolveInventoryShopItem(itemKey);
+  if (!item || !item.boostType) return res.status(400).json({ error: 'Booster invalide.' });
+  const owned = Number(shopItemQ.getOne.get(playerId, itemKey)?.quantity || 0);
+  if (owned <= 0) return res.status(400).json({ error: 'Tu ne possedes pas ce booster.' });
+
+  const now = Date.now();
+  const durationMs = 2 * 60 * 60 * 1000;
+  const tx = db.transaction(() => {
+    const result = shopItemQ.consumeOne.run(playerId, itemKey);
+    if (!result.changes) throw new Error('Booster deja utilise.');
+    db.prepare(`
+      INSERT INTO player_active_boosters (player_id, boost_type, item_key, label, multiplier, activated_at, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(player_id, boost_type) DO UPDATE SET
+        item_key=excluded.item_key,
+        label=excluded.label,
+        multiplier=excluded.multiplier,
+        activated_at=excluded.activated_at,
+        expires_at=excluded.expires_at
+    `).run(playerId, item.boostType, item.key, item.label || item.key, Number(item.multiplier || 1), now, now + durationMs);
+  });
+
+  try {
+    tx();
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Activation impossible.' });
+  }
+
+  const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
+  const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
+  const activeBoosters = Object.fromEntries(db.prepare(`
+    SELECT boost_type, item_key, label, multiplier, activated_at, expires_at
+    FROM player_active_boosters
+    WHERE player_id = ? AND expires_at > ?
+  `).all(playerId, Date.now()).map(row => [row.boost_type, {
+    itemKey: row.item_key,
+    label: row.label,
+    multiplier: Number(row.multiplier || 1),
+    activatedAt: Number(row.activated_at || 0),
+    expiresAt: Number(row.expires_at || 0),
+  }]));
+
+  try {
+    const player = pQ.getById.get(playerId);
+    WH.wlogBoost(item.boostType, Number(item.multiplier || 1), player?.pseudo || `ID ${playerId}`, '2h');
+  } catch(e) {}
+
+  res.json({ ok: true, itemKey, active: activeBoosters[item.boostType], inventory, activeBoosters });
 });
 
 app.post('/api/shop/buy', async (req, res) => {
@@ -4824,10 +4929,10 @@ app.get('/api/me/discord-info', (req, res) => {
 app.post('/api/discord/unlink/request', async (req, res) => {
   const token = req.headers['x-session-token'];
   const playerId = token ? validateSession(token) : null;
-  if (!playerId) return res.status(401).json({ error: 'Non authentifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
+  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
 
   const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(400).json({ error: 'Aucun Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
+  if (!player?.discord_id) return res.status(400).json({ error: 'Aucun Discord liée' });
 
   const { botToken } = discordConfig();
   if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible' });
@@ -4882,13 +4987,13 @@ app.post('/api/discord/unlink/request', async (req, res) => {
 app.post('/api/discord/unlink/confirm', (req, res) => {
   const token = req.headers['x-session-token'];
   const playerId = token ? validateSession(token) : null;
-  if (!playerId) return res.status(401).json({ error: 'Non authentifiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
+  if (!playerId) return res.status(401).json({ error: 'Non authentifié' });
 
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code manquant' });
 
   const row = rQ.getUnlink.get(playerId, String(code).trim(), Date.now());
-  if (!row) return res.status(400).json({ error: 'Code invalide ou expirAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expiré' });
 
   const player = pQ.getById.get(playerId);
   rQ.markUnlink.run(row.id);
@@ -5037,7 +5142,7 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(id);
-  if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord liAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!player?.discord_id) return res.status(400).json({ error: 'Pas de compte Discord liée.' });
   try {
     const { botToken: bt } = discordConfig();
     const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, bt);

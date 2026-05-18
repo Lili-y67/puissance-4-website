@@ -729,12 +729,14 @@ let myRole     = sessionStorage.getItem('adminRole') || 'admin';
 let allPlayers = [];
 let adminLoginRequestId = null;
 const ADMIN_SHOP_BOOSTERS = {
-  elo_mini: 'Mini Boost ELO',
-  elo_classic: 'Classic Boost ELO',
-  elo_max: 'Max Boost ELO',
-  elo_princess: 'Princess Boost ELO',
-  coin_boost: 'Coin Boost',
-  coin_boost_plus: 'Coin Boost +',
+  elo_custom_0_1: 'ELO x1.10',
+  elo_custom_0_2: 'ELO x1.20',
+  elo_custom_0_3: 'ELO x1.30',
+  elo_custom_0_5: 'ELO x1.50',
+  elo_custom_1_0: 'ELO x2.00',
+  coin_custom_02: 'Coins x2',
+  coin_custom_05: 'Coins x5',
+  coin_custom_10: 'Coins x10',
 };
 
 if (adminToken) showPanel();
