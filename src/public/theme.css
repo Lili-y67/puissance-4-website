@@ -383,6 +383,22 @@
   filter: drop-shadow(0 0 10px rgba(255,255,255,.24));
 }
 
+.p4-global-menu-link[href="/"]:hover .p4-global-menu-emoji { animation:p4MenuHome .65s ease; }
+.p4-global-menu-link[href="/profil"]:hover .p4-global-menu-emoji { animation:p4MenuProfile .7s ease; }
+.p4-global-menu-link[href="/live"]:hover .p4-global-menu-emoji { animation:p4MenuPulse .75s ease; }
+.p4-global-menu-link[href="/local"]:hover .p4-global-menu-emoji { animation:p4MenuDice .7s ease; }
+.p4-global-menu-link[href="/players"]:hover .p4-global-menu-emoji { animation:p4MenuPeople .7s ease; }
+.p4-global-menu-link[href="/leaderboard"]:hover .p4-global-menu-emoji { animation:p4MenuTrophy .75s ease; }
+.p4-global-menu-link[href="/clan"]:hover .p4-global-menu-emoji { animation:p4MenuShield .75s ease; }
+.p4-global-menu-link[href="/tournoi"]:hover .p4-global-menu-emoji { animation:p4MenuStadium .75s ease; }
+.p4-global-menu-link[href="/analyse"]:hover .p4-global-menu-emoji { animation:p4MenuBrain .8s ease; }
+.p4-global-menu-link[href="/boutique"]:hover .p4-global-menu-emoji { animation:p4MenuCart .75s ease; }
+.p4-global-menu-link[href="/stats"]:hover .p4-global-menu-emoji { animation:p4MenuStats .75s ease; }
+.p4-global-menu-link[href="/regles"]:hover .p4-global-menu-emoji { animation:p4MenuBook .75s ease; }
+.p4-global-menu-link[href="/api-doc"]:hover .p4-global-menu-emoji { animation:p4MenuApi .85s ease; }
+.p4-global-menu-link[href="/cgu"]:hover .p4-global-menu-emoji { animation:p4MenuLaw .75s ease; }
+.p4-global-menu-link[href^="https://discord"]:hover .p4-global-menu-emoji { animation:p4MenuDiscord .75s ease; }
+
 .p4-global-menu-copy {
   min-width: 0;
   display: flex;
@@ -441,6 +457,22 @@ body.p4-menu-mounted .home-dock .dock-links {
   to { transform: translateX(130%); }
 }
 
+@keyframes p4MenuHome{0%,100%{transform:scale(1.1)}45%{transform:translateY(-4px) scale(1.18)}}
+@keyframes p4MenuProfile{0%,100%{transform:rotate(-8deg) scale(1.12)}50%{transform:rotate(8deg) scale(1.18)}}
+@keyframes p4MenuPulse{0%,100%{transform:scale(1.08);box-shadow:0 0 0 0 rgba(255,45,85,.22)}50%{transform:scale(1.22);box-shadow:0 0 0 8px rgba(255,45,85,.08)}}
+@keyframes p4MenuDice{0%,100%{transform:rotate(0) scale(1.1)}35%{transform:rotate(90deg) scale(1.18)}70%{transform:rotate(180deg) scale(1.14)}}
+@keyframes p4MenuPeople{0%,100%{transform:translateX(0) scale(1.1)}35%{transform:translateX(-3px) scale(1.14)}70%{transform:translateX(3px) scale(1.14)}}
+@keyframes p4MenuTrophy{0%,100%{transform:translateY(0) scale(1.1)}35%{transform:translateY(-5px) rotate(-6deg) scale(1.2)}70%{transform:translateY(1px) rotate(5deg) scale(1.15)}}
+@keyframes p4MenuShield{0%,100%{transform:scale(1.1)}45%{transform:scale(1.22);filter:drop-shadow(0 0 14px rgba(133,235,255,.35))}}
+@keyframes p4MenuStadium{0%,100%{transform:rotate(0) scale(1.1)}50%{transform:rotate(-12deg) translateY(-3px) scale(1.18)}}
+@keyframes p4MenuBrain{0%,100%{transform:scale(1.1)}30%{transform:scale(1.18) rotate(-5deg)}65%{transform:scale(1.14) rotate(5deg)}}
+@keyframes p4MenuCart{0%,100%{transform:translateX(0) rotate(0) scale(1.1)}45%{transform:translateX(5px) rotate(-8deg) scale(1.15)}}
+@keyframes p4MenuStats{0%,100%{transform:scale(1.1)}25%{transform:translateY(4px) scale(1.08)}60%{transform:translateY(-5px) scale(1.2)}}
+@keyframes p4MenuBook{0%,100%{transform:perspective(120px) rotateY(0) scale(1.1)}50%{transform:perspective(120px) rotateY(-34deg) scale(1.17)}}
+@keyframes p4MenuApi{0%,100%{transform:rotate(0) scale(1.1)}40%{transform:rotate(-16deg) scale(1.18)}75%{transform:rotate(10deg) scale(1.14)}}
+@keyframes p4MenuLaw{0%,100%{transform:rotate(0) scale(1.1)}35%{transform:rotate(-10deg) scale(1.17)}70%{transform:rotate(10deg) scale(1.17)}}
+@keyframes p4MenuDiscord{0%,100%{transform:scale(1.1)}45%{transform:translateY(-4px) rotate(-10deg) scale(1.2)}}
+
 :root[data-theme="light"] .p4-global-menu-toggle {
   background: rgba(255,255,255,.88);
   color: #171423;
@@ -496,4 +528,8 @@ body.p4-menu-mounted .home-dock .dock-links {
   }
 
   .p4-global-menu-link { min-height: 50px; }
+  .p4-global-menu-label { font-size: 12px; }
+  .p4-global-menu-sub { font-size: 9px; }
+  .p4-global-menu-logo { width: 42px; height: 42px; border-radius: 14px; }
+  .p4-global-menu-title { font-size: 21px; }
 }

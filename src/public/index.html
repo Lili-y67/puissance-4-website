@@ -154,15 +154,17 @@ html, body {
   position: relative;
   z-index: 2;
   min-height: 100vh;
-  width: min(100%, 1380px);
+  width: min(100%, 1120px);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 420px);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "hero card";
+    "hero"
+    "card";
   align-items: start;
-  padding: clamp(14px, 2vw, 28px) clamp(10px, 1.6vw, 18px) clamp(28px, 4vw, 40px);
-  gap: clamp(14px, 2vw, 22px);
+  justify-items: center;
+  padding: clamp(18px, 3vw, 42px) clamp(10px, 1.6vw, 18px) clamp(28px, 4vw, 40px);
+  gap: clamp(16px, 2.4vw, 26px);
 }
 .page > * {
   min-width: 0;
@@ -250,9 +252,10 @@ html, body {
   position: relative;
   grid-area: hero;
   width: 100%;
+  max-width: 1120px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: clamp(8px, 1.2vw, 10px);
   padding: clamp(22px, 3vw, 36px) clamp(16px, 3vw, 34px) clamp(20px, 2.4vw, 30px);
   border-radius: clamp(22px, 3vw, 36px);
@@ -308,7 +311,8 @@ html, body {
   line-height: 0.88;
   text-transform: uppercase;
   position: relative;
-  align-self: flex-start;
+  align-self: center;
+  text-align: center;
 }
 .logo-p4  { color: var(--text); }
 .logo-num {
@@ -330,19 +334,21 @@ html, body {
   letter-spacing: clamp(1.6px, .2vw, 3px);
   text-transform: uppercase;
   margin-top: 2px;
-  text-align: left;
+  text-align: center;
 }
 .hero-copy {
   max-width: 760px;
   color: rgba(238,238,245,0.68);
   font-size: clamp(13px, 1.15vw, 15px);
   line-height: clamp(1.56, 1.9vw, 1.72);
+  text-align: center;
 }
 .hero-stat-cluster {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 4px;
+  justify-content: center;
 }
 .hero-panel-grid {
   width: 100%;
@@ -714,12 +720,157 @@ html, body {
   filter: drop-shadow(0 22px 42px rgba(255,45,85,.22)) drop-shadow(0 0 34px rgba(133,235,255,.14));
 }
 
+/* ── Welcome tour ───────────────────────────────────────────────────────────── */
+.welcome-tour{
+  position:fixed;
+  inset:0;
+  z-index:99990;
+  display:none;
+  place-items:center;
+  padding:18px;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,45,85,.28), transparent 34%),
+    radial-gradient(circle at 82% 28%, rgba(133,235,255,.18), transparent 36%),
+    rgba(2,2,8,.82);
+  backdrop-filter:blur(18px);
+}
+.welcome-tour.show{display:grid;animation:welcomeFade .32s ease both;}
+.welcome-stage{
+  position:relative;
+  width:min(900px,100%);
+  min-height:560px;
+  overflow:hidden;
+  border-radius:34px;
+  border:1px solid rgba(255,255,255,.12);
+  background:
+    linear-gradient(135deg, rgba(255,45,85,.12), rgba(76,110,245,.09)),
+    linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.018)),
+    rgba(11,11,26,.94);
+  box-shadow:0 36px 110px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.welcome-skip{
+  position:absolute;
+  top:16px;
+  right:16px;
+  z-index:4;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:999px;
+  background:rgba(255,255,255,.055);
+  color:rgba(238,238,245,.76);
+  padding:9px 13px;
+  font:900 12px 'Barlow Condensed',sans-serif;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.welcome-logo{
+  position:absolute;
+  top:34px;
+  left:50%;
+  width:138px;
+  height:138px;
+  transform:translateX(-50%);
+  border-radius:30px;
+  object-fit:cover;
+  box-shadow:0 0 54px rgba(255,45,85,.22),0 22px 44px rgba(0,0,0,.34);
+  animation:welcomeLogoFloat 3.2s ease-in-out infinite;
+}
+.welcome-copy{
+  position:relative;
+  z-index:2;
+  padding:195px clamp(22px,5vw,58px) 28px;
+  text-align:center;
+}
+.welcome-kicker{
+  color:var(--red);
+  font:900 12px 'Barlow Condensed',sans-serif;
+  letter-spacing:5px;
+  text-transform:uppercase;
+}
+.welcome-title{
+  margin-top:12px;
+  font:900 clamp(46px,9vw,88px)/.86 'Barlow Condensed',sans-serif;
+  letter-spacing:-1px;
+  text-transform:uppercase;
+}
+.welcome-title span{color:var(--red);text-shadow:0 0 34px rgba(255,45,85,.42);}
+.welcome-sub{
+  max-width:660px;
+  margin:16px auto 0;
+  color:rgba(238,238,245,.72);
+  font-size:15px;
+  line-height:1.65;
+}
+.welcome-track{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin:26px auto 0;
+  max-width:760px;
+}
+.welcome-card{
+  min-height:118px;
+  padding:14px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  transform:translateY(14px);
+  opacity:0;
+  animation:welcomeCardIn .55s cubic-bezier(.22,1,.36,1) forwards;
+}
+.welcome-card:nth-child(2){animation-delay:.12s}
+.welcome-card:nth-child(3){animation-delay:.24s}
+.welcome-card:nth-child(4){animation-delay:.36s}
+.welcome-card-emoji{font-size:28px;filter:drop-shadow(0 0 16px rgba(255,255,255,.16));}
+.welcome-card strong{
+  display:block;
+  margin-top:9px;
+  font:900 20px 'Barlow Condensed',sans-serif;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.welcome-card span{
+  display:block;
+  margin-top:5px;
+  color:rgba(238,238,245,.56);
+  font-size:12px;
+  line-height:1.35;
+}
+.welcome-actions{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:28px;
+}
+.welcome-orbit{
+  position:absolute;
+  inset:auto auto 36px 42px;
+  width:140px;
+  height:140px;
+  pointer-events:none;
+  opacity:.55;
+}
+.welcome-token{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  animation:welcomeOrbit 6s linear infinite;
+}
+.welcome-token.red{background:var(--red);box-shadow:0 0 24px rgba(255,45,85,.36);}
+.welcome-token.yellow{background:var(--yellow);box-shadow:0 0 24px rgba(255,214,10,.32);animation-delay:-3s;}
+@keyframes welcomeFade{from{opacity:0}to{opacity:1}}
+@keyframes welcomeLogoFloat{0%,100%{transform:translateX(-50%) translateY(0) rotate(-1deg)}50%{transform:translateX(-50%) translateY(-8px) rotate(1deg)}}
+@keyframes welcomeCardIn{to{opacity:1;transform:translateY(0)}}
+@keyframes welcomeOrbit{from{transform:rotate(0deg) translateX(58px) rotate(0deg)}to{transform:rotate(360deg) translateX(58px) rotate(-360deg)}}
+
 /* ── Card ───────────────────────────────────────────────────────────────────── */
 .card {
   position: relative;
   grid-area: card;
   width: 100%;
-  max-width: none;
+  max-width: 520px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015)),
     rgba(13,13,28,0.92);
@@ -1779,6 +1930,47 @@ html, body {
   .side-quick-menu.open .side-quick-panel { width: min(78vw, 260px); }
 }
 
+@media (max-width: 720px) {
+  .welcome-stage{
+    min-height:auto;
+    max-height:calc(100vh - 22px);
+    overflow-y:auto;
+    border-radius:24px;
+  }
+  .welcome-logo{
+    top:24px;
+    width:104px;
+    height:104px;
+    border-radius:22px;
+  }
+  .welcome-copy{
+    padding:144px 18px 22px;
+  }
+  .welcome-title{
+    font-size:clamp(42px,12vw,62px);
+  }
+  .welcome-sub{
+    font-size:13px;
+    line-height:1.5;
+  }
+  .welcome-track{
+    grid-template-columns:1fr;
+    margin-top:18px;
+  }
+  .welcome-card{
+    min-height:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-align:left;
+    padding:12px;
+  }
+  .welcome-card strong{margin-top:0}
+  .welcome-card span{margin-top:2px}
+  .welcome-actions .btn{width:100%}
+  .welcome-orbit{display:none}
+}
+
 @media (max-width: 480px) {
   .page {
     justify-content: flex-start;
@@ -1999,15 +2191,45 @@ html, body {
     padding: 10px;
     border-radius: 14px;
   }
-}
-
-@media (max-width: 1180px) {
-  .page {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "hero"
-      "card";
+  .welcome-stage{
+    min-height:auto;
+    border-radius:22px;
   }
+  .welcome-logo{
+    top:24px;
+    width:96px;
+    height:96px;
+    border-radius:22px;
+  }
+  .welcome-copy{
+    padding:140px 16px 22px;
+  }
+  .welcome-title{
+    font-size:42px;
+  }
+  .welcome-sub{
+    font-size:12px;
+    line-height:1.5;
+  }
+  .welcome-track{
+    grid-template-columns:1fr;
+    gap:8px;
+    margin-top:18px;
+  }
+  .welcome-card{
+    min-height:0;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    text-align:left;
+    padding:11px;
+  }
+  .welcome-card strong{margin-top:0;font-size:17px}
+  .welcome-card span{margin-top:2px}
+  .welcome-actions .btn{
+    width:100%;
+  }
+  .welcome-orbit{display:none}
 }
 
 @media (max-width: 760px) {
@@ -2104,6 +2326,35 @@ html, body {
   <div class="tournament-notice-actions">
     <button class="btn btn-ghost" type="button" onclick="openPublicTournamentNotice()">Voir</button>
     <button class="btn btn-play" type="button" onclick="joinPublicTournamentNotice()">Rejoindre</button>
+  </div>
+</div>
+
+<div class="welcome-tour" id="welcome-tour" aria-hidden="true">
+  <div class="welcome-stage">
+    <button class="welcome-skip" type="button" onclick="finishWelcomeTour()">Passer</button>
+    <img class="welcome-logo" src="/assets/site-logo.png" alt="Puissance 4">
+    <div class="welcome-orbit">
+      <span class="welcome-token red"></span>
+      <span class="welcome-token yellow"></span>
+    </div>
+    <div class="welcome-copy">
+      <div class="welcome-kicker">Bienvenue dans l'arène</div>
+      <div class="welcome-title">Ton compte est <span>prêt</span></div>
+      <div class="welcome-sub">
+        Puissance 4 Ranked combine matchmaking, profils décorés, coins, clans, bots, replays et live spectateur.
+        Voilà le petit tour rapide avant ta première partie.
+      </div>
+      <div class="welcome-track">
+        <div class="welcome-card"><div class="welcome-card-emoji">⚔️</div><div><strong>Ranked & duels</strong><span>Entre en file, défie un joueur ou partage un lien de duel.</span></div></div>
+        <div class="welcome-card"><div class="welcome-card-emoji">🪙</div><div><strong>Coins & boutique</strong><span>Gagne des coins, active des boosters et débloque ton style.</span></div></div>
+        <div class="welcome-card"><div class="welcome-card-emoji">📺</div><div><strong>Live & replays</strong><span>Suis les parties, analyse tes coups et retrouve ton historique.</span></div></div>
+        <div class="welcome-card"><div class="welcome-card-emoji">🛡️</div><div><strong>Clans & Discord</strong><span>Rejoins une équipe, discute et profite des events communautaires.</span></div></div>
+      </div>
+      <div class="welcome-actions">
+        <button class="btn btn-play" type="button" onclick="finishWelcomeTour()">⚡ Entrer dans l'arène</button>
+        <a class="btn btn-ghost" href="/regles" onclick="sessionStorage.setItem('no_auto_queue','1')">📘 Lire les règles</a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2583,7 +2834,7 @@ async function handleAuth() {
     if (token) localStorage.setItem('token', token);
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
-    redirectAfterAuthOrQueue();
+    redirectAfterAuthOrQueue({ welcome: authMode === 'register' });
   } catch {
     showError('Erreur réseau, réessaie.');
     btn.disabled = false;
@@ -2700,13 +2951,39 @@ async function ensureFriendlyDuelAuth(forceGuest = false) {
   return { token: data.token, player: data.player };
 }
 
-function redirectAfterAuthOrQueue() {
+let welcomeTourPending = false;
+
+function redirectAfterAuthOrQueue(options = {}) {
+  if (options.welcome && !welcomeTourPending) {
+    showWelcomeTour();
+    return;
+  }
   const redirect = consumePostAuthRedirect();
   if (redirect) {
     window.location.href = redirect;
     return;
   }
   connectAndQueue();
+}
+
+function showWelcomeTour() {
+  const tour = document.getElementById('welcome-tour');
+  if (!tour) return redirectAfterAuthOrQueue();
+  welcomeTourPending = true;
+  tour.classList.add('show');
+  tour.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function finishWelcomeTour() {
+  const tour = document.getElementById('welcome-tour');
+  welcomeTourPending = false;
+  if (tour) {
+    tour.classList.remove('show');
+    tour.setAttribute('aria-hidden', 'true');
+  }
+  document.body.style.overflow = '';
+  redirectAfterAuthOrQueue();
 }
 
 function getSafePlayer() {
