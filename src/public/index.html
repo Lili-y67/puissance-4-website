@@ -154,17 +154,16 @@ html, body {
   position: relative;
   z-index: 2;
   min-height: 100vh;
-  width: min(100%, 1120px);
+  width: min(100%, 1440px);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(620px, 1.35fr) minmax(360px, 520px);
   grid-template-areas:
-    "hero"
-    "card";
-  align-items: start;
+    "hero card";
+  align-items: center;
   justify-items: center;
   padding: clamp(18px, 3vw, 42px) clamp(10px, 1.6vw, 18px) clamp(28px, 4vw, 40px);
-  gap: clamp(16px, 2.4vw, 26px);
+  gap: clamp(18px, 2.8vw, 34px);
 }
 .page > * {
   min-width: 0;
@@ -252,7 +251,7 @@ html, body {
   position: relative;
   grid-area: hero;
   width: 100%;
-  max-width: 1120px;
+  max-width: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -987,6 +986,127 @@ html, body {
 @keyframes welcomeAvatarBuild{from{opacity:0;transform:translateY(18px) scale(.72) rotate(-10deg)}to{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
 @keyframes welcomeSlideBuild{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes welcomeBuildLine{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* Mini cinématique de création du profil */
+.welcome-cinema{
+  width:min(980px,100%);
+  min-height:min(720px,calc(100vh - 36px));
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255,45,85,.22), transparent 32%),
+    radial-gradient(circle at 82% 16%, rgba(133,235,255,.14), transparent 34%),
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.018)),
+    rgba(8,8,19,.96);
+}
+.welcome-cinema::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent),
+    repeating-linear-gradient(0deg, transparent 0 7px, rgba(255,255,255,.025) 8px);
+  transform:translateX(-120%);
+  animation:welcomeSceneSweep 4.8s .35s ease-in-out both;
+}
+.welcome-cinema .welcome-logo{
+  top:24px;
+  width:116px;
+  height:116px;
+  opacity:0;
+  animation:welcomeLogoIntro 1s .15s cubic-bezier(.22,1,.36,1) forwards, welcomeLogoFloat 3.2s 1.2s ease-in-out infinite;
+}
+.welcome-cinema .welcome-copy{
+  padding-top:158px;
+}
+.welcome-cinema .welcome-kicker,
+.welcome-cinema .welcome-title,
+.welcome-cinema .welcome-sub{
+  opacity:0;
+  animation:welcomeTextReveal .7s cubic-bezier(.22,1,.36,1) forwards;
+}
+.welcome-cinema .welcome-kicker{animation-delay:.55s}
+.welcome-cinema .welcome-title{animation-delay:.82s}
+.welcome-cinema .welcome-sub{animation-delay:1.08s}
+.welcome-step-rail{
+  max-width:720px;
+  margin:18px auto 0;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+}
+.welcome-step{
+  position:relative;
+  min-height:58px;
+  padding:10px 10px 9px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.035);
+  overflow:hidden;
+  opacity:0;
+  transform:translateY(12px) scale(.96);
+  animation:welcomeStepReveal .56s cubic-bezier(.22,1,.36,1) forwards;
+}
+.welcome-step:nth-child(1){animation-delay:1.35s}
+.welcome-step:nth-child(2){animation-delay:1.78s}
+.welcome-step:nth-child(3){animation-delay:2.2s}
+.welcome-step:nth-child(4){animation-delay:2.62s}
+.welcome-step::after{
+  content:'';
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:3px;
+  background:linear-gradient(90deg,#ff2d55,#ffd60a,#85EBFF);
+  transform:scaleX(0);
+  transform-origin:left;
+  animation:welcomeStepLoad .9s ease forwards;
+}
+.welcome-step:nth-child(1)::after{animation-delay:1.55s}
+.welcome-step:nth-child(2)::after{animation-delay:1.98s}
+.welcome-step:nth-child(3)::after{animation-delay:2.4s}
+.welcome-step:nth-child(4)::after{animation-delay:2.82s}
+.welcome-step span{
+  display:block;
+  color:#85EBFF;
+  font:900 11px 'Barlow Condensed',sans-serif;
+  letter-spacing:2px;
+}
+.welcome-step strong{
+  display:block;
+  margin-top:5px;
+  color:#fff;
+  font:900 14px/1.05 'Barlow Condensed',sans-serif;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.welcome-cinema .welcome-profile-build{
+  opacity:0;
+  transform:translateY(16px) scale(.98);
+  animation:welcomeProfilePanelIn .75s 3.05s cubic-bezier(.22,1,.36,1) forwards;
+}
+.welcome-cinema .welcome-profile-banner{animation-delay:3.35s}
+.welcome-cinema .welcome-profile-avatar{animation-delay:3.7s}
+.welcome-cinema .welcome-profile-name{animation-delay:3.95s}
+.welcome-cinema .welcome-profile-elo{animation-delay:4.15s}
+.welcome-cinema .welcome-build-line::before{animation-delay:4.45s}
+.welcome-cinema .welcome-card{
+  animation-delay:5.05s;
+}
+.welcome-cinema .welcome-card:nth-child(2){animation-delay:5.22s}
+.welcome-cinema .welcome-card:nth-child(3){animation-delay:5.39s}
+.welcome-cinema .welcome-card:nth-child(4){animation-delay:5.56s}
+.welcome-cinema .welcome-actions{
+  opacity:0;
+  transform:translateY(12px);
+  animation:welcomeTextReveal .6s 5.95s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes welcomeSceneSweep{0%{transform:translateX(-120%)}38%,100%{transform:translateX(120%)}}
+@keyframes welcomeLogoIntro{from{opacity:0;transform:translateX(-50%) translateY(18px) scale(.72) rotate(-8deg)}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1) rotate(-1deg)}}
+@keyframes welcomeTextReveal{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes welcomeStepReveal{to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes welcomeStepLoad{to{transform:scaleX(1)}}
+@keyframes welcomeProfilePanelIn{to{opacity:1;transform:translateY(0) scale(1)}}
 
 /* ── Card ───────────────────────────────────────────────────────────────────── */
 .card {
@@ -2445,6 +2565,59 @@ html, body {
   }
 }
 
+@media (max-width: 1180px) {
+  .page{
+    width:min(100%, 760px);
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:
+      "hero"
+      "card";
+    align-items:start;
+    gap:18px;
+  }
+  .card{
+    width:min(100%,520px);
+  }
+}
+
+@media (max-width: 720px) {
+  .welcome-cinema{
+    min-height:auto;
+  }
+  .welcome-step-rail{
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+  }
+  .welcome-step{
+    min-height:50px;
+    padding:9px;
+  }
+  .welcome-step strong{
+    font-size:12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page{
+    width:100%;
+    min-height:auto;
+    justify-content:stretch;
+    justify-items:stretch;
+    padding:76px 10px 92px;
+  }
+  .hero,
+  .card{
+    width:100%;
+    max-width:none;
+  }
+  .welcome-step-rail{
+    grid-template-columns:1fr;
+  }
+  .welcome-cinema .welcome-copy{
+    padding-top:132px;
+  }
+}
+
 /* ── IA overlay ── */
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -2476,7 +2649,7 @@ html, body {
 </div>
 
 <div class="welcome-tour" id="welcome-tour" aria-hidden="true">
-  <div class="welcome-stage">
+  <div class="welcome-stage welcome-cinema">
     <button class="welcome-skip" type="button" onclick="finishWelcomeTour()">Passer</button>
     <img class="welcome-logo" src="/assets/site-logo.png" alt="Puissance 4">
     <div class="welcome-orbit">
@@ -2484,10 +2657,16 @@ html, body {
       <span class="welcome-token yellow"></span>
     </div>
     <div class="welcome-copy">
-      <div class="welcome-kicker">Bienvenue dans l'arène</div>
-      <div class="welcome-title">Ton compte est <span>prêt</span></div>
+      <div class="welcome-kicker">Création du profil</div>
+      <div class="welcome-title">Bienvenue <span>à bord</span></div>
       <div class="welcome-sub" id="welcome-sub">
-        On construit ton profil, on applique tes infos Discord si elles existent, puis on te montre les outils importants avant ta première partie.
+        Petite présentation rapide : on assemble ton profil, on récupère ton style Discord si disponible, puis on te montre les outils utiles.
+      </div>
+      <div class="welcome-step-rail" aria-hidden="true">
+        <div class="welcome-step active"><span>01</span><strong>Profil généré</strong></div>
+        <div class="welcome-step"><span>02</span><strong>Avatar synchronisé</strong></div>
+        <div class="welcome-step"><span>03</span><strong>Badges installés</strong></div>
+        <div class="welcome-step"><span>04</span><strong>Arène prête</strong></div>
       </div>
       <div class="welcome-profile-build" id="welcome-profile-build">
         <div class="welcome-profile-banner" id="welcome-profile-banner"></div>
