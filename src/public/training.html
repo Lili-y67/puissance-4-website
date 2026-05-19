@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puissance 4 - Entraînement</title>
+<link rel="icon" type="image/png" href="/assets/site-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#06060e;--surface:#0d0d1c;--surface2:#15152d;--border:rgba(255,255,255,.08);--text:#f1f1f7;--muted:rgba(241,241,247,.56);--red:#ff2d55;--yellow:#ffd60a;--blue:#85ebff;--green:#30d158}
+body{min-height:100vh;background:radial-gradient(circle at 20% 10%,rgba(255,45,85,.2),transparent 30%),radial-gradient(circle at 82% 18%,rgba(133,235,255,.14),transparent 28%),linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px),var(--bg);background-size:auto,auto,48px 48px,48px 48px;color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
+.page{width:min(1120px,calc(100% - 24px));margin:0 auto;padding:22px 0 42px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.brand{text-decoration:none;color:var(--text);font:900 30px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;display:inline-flex;align-items:center;gap:10px}.brand::before{content:"";width:42px;height:42px;border-radius:13px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}.brand span{color:var(--red)}
+.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a,.nav button{border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);text-decoration:none;border-radius:13px;padding:10px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;cursor:pointer}
+.layout{display:grid;grid-template-columns:.78fr 1.22fr;gap:18px;align-items:start}
+.panel{border:1px solid var(--border);border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 28px 80px rgba(0,0,0,.32);overflow:hidden}
+.intro{padding:26px}.eyebrow{font:900 12px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
+h1{font:900 clamp(46px,8vw,82px) "Barlow Condensed";line-height:.88;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.accent{color:var(--blue);text-shadow:0 0 24px rgba(133,235,255,.28)}
+.sub{color:var(--muted);line-height:1.55}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
+.score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:18px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.queue-note{margin-top:18px;padding:13px 14px;border-radius:16px;border:1px solid rgba(255,214,10,.18);background:rgba(255,214,10,.07);color:#ffe77a;font-size:13px;line-height:1.45}
+.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:0 0 auto;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}
+.actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
+.board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
+.cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}
+@keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}
+.footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.intro{padding:20px}}
+@media(max-width:440px){.score{grid-template-columns:1fr}.actions{grid-template-columns:1fr}}
+</style>
+<script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
+<link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <a class="brand" href="/">Puissance <span>4</span></a>
+    <nav class="nav">
+      <a href="/">File d'attente</a>
+      <button type="button" onclick="newRound()">Nouvelle manche</button>
+    </nav>
+  </header>
+  <section class="layout">
+    <aside class="panel intro">
+      <div class="eyebrow">Pendant la queue</div>
+      <h1>Mode <span class="accent">Training</span></h1>
+      <p class="sub">Une partie rapide contre une IA difficile pour patienter. Si tu l'as ouvert depuis la file, garde l'onglet d'accueil ouvert : la queue continue là-bas.</p>
+      <div class="chips"><div class="chip">Sans ELO</div><div class="chip">IA tactique</div><div class="chip">Reset instant</div></div>
+      <div class="score">
+        <div class="score-card"><b id="score-player">0</b><span>Toi</span></div>
+        <div class="score-card"><b id="score-draw">0</b><span>Nuls</span></div>
+        <div class="score-card"><b id="score-ai">0</b><span>IA</span></div>
+      </div>
+      <div class="queue-note">Astuce : si une vraie partie est trouvée, retourne sur l'onglet d'accueil. Cette page ne touche pas à ton compte ni à ton ELO.</div>
+    </aside>
+    <section class="panel game">
+      <div class="status">
+        <div class="turn">
+          <small id="status-label">Tour actuel</small>
+          <strong id="status-text"><span class="token-dot"></span>Toi</strong>
+        </div>
+        <div class="actions">
+          <button class="btn" type="button" id="undo-btn" onclick="undoMove()">Annuler</button>
+          <button class="btn primary" type="button" onclick="newRound()">Rejouer</button>
+        </div>
+      </div>
+      <div class="board-shell"><div class="board" id="board"></div></div>
+      <div class="footer-note">Clique une colonne. L'IA joue automatiquement juste après toi.</div>
+    </section>
+  </section>
+</main>
+<script>
+const ROWS=6,COLS=7,HUMAN=1,AI=2;
+let grid=[],current=HUMAN,ended=false,history=[],scores={player:0,ai:0,draw:0};
+const colors={1:['#ff2d55','#ff8fab'],2:['#85ebff','#2f80ff']};
+const boardEl=document.getElementById('board');
+const statusText=document.getElementById('status-text');
+const statusLabel=document.getElementById('status-label');
+const undoBtn=document.getElementById('undo-btn');
+function initGrid(){grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));current=HUMAN;ended=false;history=[]}
+function gradient(p){return `radial-gradient(circle at 32% 24%, rgba(255,255,255,.34), transparent 20%), linear-gradient(135deg, ${colors[p][0]}, ${colors[p][1]})`}
+function legalMoves(b=grid){return Array.from({length:COLS},(_,c)=>b[0][c]===0?c:null).filter(c=>c!==null)}
+function drop(b,col,p){for(let r=ROWS-1;r>=0;r--){if(b[r][col]===0){b[r][col]=p;return r}}return -1}
+function clone(b){return b.map(r=>r.slice())}
+function winCells(b,row,col,p){const dirs=[[0,1],[1,0],[1,1],[1,-1]];for(const [dr,dc] of dirs){const cells=[[row,col]];for(const s of [1,-1]){for(let k=1;k<4;k++){const r=row+dr*k*s,c=col+dc*k*s;if(r<0||r>=ROWS||c<0||c>=COLS||b[r][c]!==p)break;cells.push([r,c])}}if(cells.length>=4)return cells.slice(0,4)}return []}
+function scoreWindow(vals,me){const opp=me===1?2:1,m=vals.filter(v=>v===me).length,o=vals.filter(v=>v===opp).length,e=vals.filter(v=>!v).length;if(m===4)return 100000;if(o===4)return-100000;if(m===3&&e===1)return 80;if(m===2&&e===2)return 18;if(o===3&&e===1)return-95;if(o===2&&e===2)return-16;return 0}
+function evaluate(b,me){let s=b.map(r=>r[3]).filter(v=>v===me).length*8;for(let r=0;r<6;r++)for(let c=0;c<4;c++)s+=scoreWindow([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]],me);for(let c=0;c<7;c++)for(let r=0;r<3;r++)s+=scoreWindow([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]],me);for(let r=0;r<3;r++)for(let c=0;c<4;c++)s+=scoreWindow([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]],me);for(let r=3;r<6;r++)for(let c=0;c<4;c++)s+=scoreWindow([b[r][c],b[r-1][c+1],b[r-2][c+2],b[r-3][c+3]],me);return s}
+function minimax(b,depth,alpha,beta,maxing){const moves=legalMoves(b);if(depth===0||!moves.length)return {score:evaluate(b,AI)};const order=[3,2,4,1,5,0,6].filter(c=>moves.includes(c));let best={score:maxing?-Infinity:Infinity,col:order[0]};for(const col of order){const copy=clone(b),p=maxing?AI:HUMAN,row=drop(copy,col,p),win=winCells(copy,row,col,p).length>=4;const val=win?{score:maxing?100000+depth:-100000-depth}:minimax(copy,depth-1,alpha,beta,!maxing);if(maxing){if(val.score>best.score)best={score:val.score,col};alpha=Math.max(alpha,val.score)}else{if(val.score<best.score)best={score:val.score,col};beta=Math.min(beta,val.score)}if(beta<=alpha)break}return best}
+function aiMove(){if(ended)return;const col=minimax(grid,6,-Infinity,Infinity,true).col;if(Number.isInteger(col))playColumn(col,true)}
+function playColumn(col,byAi=false){if(ended||current!== (byAi?AI:HUMAN))return;const row=drop(grid,col,current);if(row<0)return;history.push({row,col,player:current});const cells=winCells(grid,row,col,current);if(cells.length){ended=true;current===HUMAN?scores.player++:scores.ai++;render(cells);setStatus(current===HUMAN?'Victoire training':'Défaite training',current);syncScores();return}if(!legalMoves().length){ended=true;scores.draw++;render();setStatus('Match nul',0);syncScores();return}current=current===HUMAN?AI:HUMAN;render();setStatus(current===HUMAN?'À toi de jouer':'IA réfléchit...',current);if(current===AI)setTimeout(aiMove,420)}
+function render(wins=[]){const winSet=new Set(wins.map(([r,c])=>`${r}:${c}`));boardEl.innerHTML='';for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){const v=grid[r][c],cell=document.createElement('button');cell.type='button';cell.className=`cell${v?' filled':''}${winSet.has(`${r}:${c}`)?' win':''}`;cell.style.setProperty('--piece',v?colors[v][0]:'transparent');cell.style.setProperty('--piece-glow',v?colors[v][1]:'transparent');cell.style.setProperty('--piece-gradient',v?gradient(v):'transparent');cell.onclick=()=>playColumn(c,false);boardEl.appendChild(cell)}undoBtn.disabled=ended||history.length<2}
+function setStatus(text,p){statusLabel.textContent=ended?'Résultat':'Tour actuel';statusText.innerHTML=`${p?'<span class="token-dot"></span>':''}${text}`;const dot=statusText.querySelector('.token-dot');if(dot&&p){dot.style.color=colors[p][0];dot.style.setProperty('--piece-gradient',gradient(p))}}
+function syncScores(){document.getElementById('score-player').textContent=scores.player;document.getElementById('score-ai').textContent=scores.ai;document.getElementById('score-draw').textContent=scores.draw}
+function undoMove(){if(history.length<2||ended)return;for(let i=0;i<2;i++){const m=history.pop();grid[m.row][m.col]=0}current=HUMAN;render();setStatus('Toi',HUMAN)}
+function newRound(){initGrid();render();setStatus('Toi',HUMAN);syncScores()}
+newRound();
+</script>
+<script src="/theme.js"></script>
+</body>
+</html>

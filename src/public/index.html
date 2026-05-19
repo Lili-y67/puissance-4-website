@@ -1415,7 +1415,7 @@ html, body {
 }
 .queue-actions-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   width: 100%;
 }
@@ -1640,6 +1640,39 @@ html, body {
   font-size:11px;
   color:rgba(238,238,245,.7);
 }
+.queue-mini-stats{
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:1px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+}
+.queue-mini-stat{
+  min-width:0;
+  padding:9px 6px;
+  text-align:center;
+  background:rgba(10,10,24,.42);
+}
+.queue-mini-stat b{
+  display:block;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;
+  line-height:1;
+  color:var(--text);
+}
+.queue-mini-stat span{
+  display:block;
+  margin-top:3px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
 .queue-pill{
   display:inline-flex;
   align-items:center;
@@ -1655,17 +1688,6 @@ html, body {
   text-transform:uppercase;
 }
 .queue-rank-img{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 0 8px currentColor)}
-.queue-focus-tip{
-  width:min(360px,100%);
-  margin:-2px auto 4px;
-  padding:7px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,214,10,.16);
-  background:rgba(255,214,10,.07);
-  color:rgba(255,231,120,.86);
-  font-size:11px;
-  text-align:center;
-}
 .boost-alert-author{
   margin-bottom:7px;
 }
@@ -3154,28 +3176,16 @@ html, body {
             <span id="queue-winrate">Winrate --</span>
           </div>
         </div>
-      </div>
-      <div class="queue-focus-tip" id="queue-focus-tip" style="display:none">Matchmaking en cours · garde l'onglet ouvert pour entrer plus vite.</div>
-
-      <div class="queue-volume" id="queue-volume">
-        <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
-        <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
-        <span class="queue-volume-val" id="queue-volume-val">35%</span>
-      </div>
-
-      <!-- Player stats recap -->
-      <div class="stats-strip" id="queue-stats" style="display:none">
-        <div class="stat-item elo">
-          <div class="stat-val" id="stat-elo">—</div>
-          <div class="stat-key">ELO</div>
+        <div class="queue-mini-stats">
+          <div class="queue-mini-stat"><b id="queue-mini-games">0</b><span>Parties</span></div>
+          <div class="queue-mini-stat"><b id="queue-mini-wins">0</b><span>Victoires</span></div>
+          <div class="queue-mini-stat"><b id="queue-mini-losses">0</b><span>Défaites</span></div>
+          <div class="queue-mini-stat"><b id="queue-mini-draws">0</b><span>Nuls</span></div>
         </div>
-        <div class="stat-item wins">
-          <div class="stat-val" id="stat-wins">—</div>
-          <div class="stat-key">Victoires</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-val" id="stat-games">—</div>
-          <div class="stat-key">Parties</div>
+        <div class="queue-volume" id="queue-volume">
+          <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
+          <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
+          <span class="queue-volume-val" id="queue-volume-val">35%</span>
         </div>
       </div>
 
@@ -3185,6 +3195,9 @@ html, body {
         </button>
         <button class="btn btn-duel" type="button" onclick="openDuelModal()">
           ⚔️ Envoyer un duel
+        </button>
+        <button class="btn btn-ghost" type="button" onclick="openTrainingWhileQueued()">
+          🎯 S'entraîner
         </button>
       </div>
     </div>
@@ -4116,6 +4129,10 @@ function setQueueMusicVolume(value) {
   QueueMusic.setVolume(Number(value) / 100);
 }
 
+function openTrainingWhileQueued() {
+  window.open('/training', '_blank', 'noopener,noreferrer');
+}
+
 function showQueueVolume(show) {
   const el = document.getElementById('queue-volume');
   if (!el) return;
@@ -4338,10 +4355,6 @@ function showQueueView(position) {
     queueView.style.display = 'block';
     queueView.classList.add('fade-in');
     showQueueVolume(true);
-    document.getElementById('queue-stats').style.display = 'flex';
-    document.getElementById('stat-elo').textContent   = myPlayer.elo;
-    document.getElementById('stat-wins').textContent  = myPlayer.wins;
-    document.getElementById('stat-games').textContent = myPlayer.wins + myPlayer.losses + myPlayer.draws;
     document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
     renderQueueBoostAlert(currentGlobalBoost, currentCoinBoost);
 
@@ -4353,7 +4366,6 @@ function showQueueView(position) {
     const pseudoEl   = document.getElementById('queue-pseudo');
     const rankEl     = document.getElementById('queue-rank-pill');
     const winrateEl  = document.getElementById('queue-winrate');
-    const tipEl      = document.getElementById('queue-focus-tip');
     if (avatarWrap && avatarEl) {
       const color = myPlayer.color || '#ff2d55';
       avatarEl.style.borderColor = color;
@@ -4371,6 +4383,9 @@ function showQueueView(position) {
       }
       if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
       const games = Number(myPlayer.wins || 0) + Number(myPlayer.losses || 0) + Number(myPlayer.draws || 0);
+      const wins = Number(myPlayer.wins || 0);
+      const losses = Number(myPlayer.losses || 0);
+      const draws = Number(myPlayer.draws || 0);
       const rank = getQueueRank(myPlayer.elo);
       if (rankEl) {
         rankEl.style.color = rank.color;
@@ -4379,10 +4394,17 @@ function showQueueView(position) {
         rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""> ${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO`;
       }
       if (winrateEl) winrateEl.textContent = games > 0
-        ? `Winrate ${Math.round((Number(myPlayer.wins || 0) / games) * 100)}%`
+        ? `Winrate ${Math.round((wins / games) * 100)}%`
         : 'Premiere partie classee';
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+      };
+      setText('queue-mini-games', games);
+      setText('queue-mini-wins', wins);
+      setText('queue-mini-losses', losses);
+      setText('queue-mini-draws', draws);
       avatarWrap.style.display = 'grid';
-      if (tipEl) tipEl.style.display = 'block';
     }
   }, 250);
   // Clear tout interval précédent avant d'en relancer un
