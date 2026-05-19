@@ -135,6 +135,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN bot_description TEXT NOT NULL DEFA
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_skill INTEGER NOT NULL DEFAULT 1000`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_enabled INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_last_seen INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_ip_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
@@ -210,6 +211,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#f
 
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_enabled ON players(is_bot, bot_enabled, deleted)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_ip_hash ON players(bot_ip_hash, is_bot, deleted)`); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS clans (

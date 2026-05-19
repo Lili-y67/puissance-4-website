@@ -3773,6 +3773,22 @@ app.post('/api/players/:id/convert-bot', (req, res) => {
   if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
   if (player.discord_id) return res.status(409).json({ error: 'Un compte lie Discord ne peut pas devenir un bot.' });
   if (Number(player.is_bot) === 1) return res.status(409).json({ error: 'Ce compte est deja en mode bot. Le token ne peut pas etre regenere.' });
+  const botIpHash = hashIp(getClientIp(req));
+  const existingBotForIp = db.prepare(`
+    SELECT id, pseudo
+    FROM players
+    WHERE deleted = 0
+      AND is_guest = 0
+      AND is_bot = 1
+      AND bot_ip_hash = ?
+      AND id != ?
+    LIMIT 1
+  `).get(botIpHash, id);
+  if (existingBotForIp) {
+    return res.status(409).json({
+      error: `Un seul compte bot par connexion est autorise. Bot deja cree : ${existingBotForIp.pseudo}.`,
+    });
+  }
   const botToken = makeBotToken();
   const skill = Math.max(100, Math.min(3000, Number(req.body?.skill || player.elo || 1000)));
   const description = String(req.body?.description || 'Bot cree par un joueur.').trim().slice(0, 180);
@@ -3780,10 +3796,11 @@ app.post('/api/players/:id/convert-bot', (req, res) => {
     UPDATE players
     SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?,
         bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0,
+        bot_ip_hash = ?,
         coins = 0,
         custom_role_text = 'BOT', custom_role_color = '#8E8E93', custom_role_emoji = '🤖'
     WHERE id = ?
-  `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), id);
+  `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), botIpHash, id);
   const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
   const activationCurl = `curl.exe -k -X POST -H "Authorization: Bearer ${botToken}" "${baseUrl}/api/bot/ping?status=seeking"`;
   res.json({

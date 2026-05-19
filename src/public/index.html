@@ -1423,6 +1423,15 @@ html, body {
   .queue-actions-row {
     grid-template-columns: 1fr;
   }
+  .queue-player-card {
+    grid-template-columns:auto 1fr;
+  }
+  .queue-token-preview {
+    grid-column:1 / -1;
+    width:100%;
+    height:34px;
+    border-radius:12px;
+  }
 }
 
 /* ── Stats strip ────────────────────────────────────────────────────────────── */
@@ -1605,6 +1614,79 @@ html, body {
   border:2px solid var(--red);background:var(--red-dim);color:var(--red);
 }
 .queue-avatar-core img{width:100%;height:100%;object-fit:cover;display:block}
+.queue-player-card{
+  width:min(360px,100%);
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:12px;
+  margin:4px auto 8px;
+  padding:12px 14px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
+  box-shadow:0 18px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.queue-player-main{min-width:0;text-align:left}
+.queue-player-name{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.8px;
+  color:var(--text);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.queue-player-meta{
+  margin-top:3px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+  font-size:11px;
+  color:rgba(238,238,245,.7);
+}
+.queue-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(133,235,255,.22);
+  background:rgba(133,235,255,.08);
+  color:#85ebff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:900;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.queue-token-preview{
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  font-weight:900;
+  border:1px solid rgba(255,255,255,.13);
+  background:var(--queue-token-bg, rgba(255,45,85,.16));
+  color:var(--queue-token-color, var(--red));
+  box-shadow:0 0 22px var(--queue-token-glow, rgba(255,45,85,.22));
+}
+.queue-token-preview img{width:72%;height:72%;object-fit:contain;display:block}
+.queue-focus-tip{
+  width:min(360px,100%);
+  margin:-2px auto 4px;
+  padding:7px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,214,10,.16);
+  background:rgba(255,214,10,.07);
+  color:rgba(255,231,120,.86);
+  font-size:11px;
+  text-align:center;
+}
 .boost-alert-author{
   margin-bottom:7px;
 }
@@ -3086,13 +3168,21 @@ html, body {
       </div>
 
       <!-- Avatar joueur dans la queue -->
-      <div id="queue-avatar-wrap" style="display:none;flex-direction:column;align-items:center;gap:6px;margin-top:4px">
+      <div id="queue-avatar-wrap" class="queue-player-card" style="display:none">
         <div class="queue-avatar-shell" id="queue-avatar-shell">
           <div class="queue-avatar-deco" id="queue-avatar-deco"></div>
           <div class="queue-avatar-core" id="queue-avatar"></div>
         </div>
-        <div id="queue-pseudo" style="font-size:13px;font-weight:600;letter-spacing:1px;"></div>
+        <div class="queue-player-main">
+          <div id="queue-pseudo" class="queue-player-name"></div>
+          <div class="queue-player-meta">
+            <span class="queue-pill" id="queue-rank-pill">Rang</span>
+            <span id="queue-winrate">Winrate --</span>
+          </div>
+        </div>
+        <div class="queue-token-preview" id="queue-token-preview">●</div>
       </div>
+      <div class="queue-focus-tip" id="queue-focus-tip" style="display:none">Matchmaking en cours · garde l'onglet ouvert pour entrer plus vite.</div>
 
       <!-- Player stats recap -->
       <div class="stats-strip" id="queue-stats" style="display:none">
@@ -3559,6 +3649,41 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function queueRankName(elo) {
+  const value = Number(elo || 0);
+  if (value >= 2500) return 'Obsidian';
+  if (value >= 2200) return 'Master';
+  if (value >= 1900) return 'Diamond';
+  if (value >= 1600) return 'Amethyst';
+  if (value >= 1300) return 'Quartz';
+  return 'Bronze';
+}
+
+function renderQueueTokenPreview(player) {
+  const token = document.getElementById('queue-token-preview');
+  if (!token || !player) return;
+  const color = player.color || '#ff2d55';
+  const color2 = player.color_secondary || '';
+  const emojiImage = String(player.token_emoji_image || '').trim();
+  token.style.setProperty('--queue-token-color', color);
+  token.style.setProperty('--queue-token-bg', color2
+    ? `linear-gradient(135deg, ${color}, ${color2})`
+    : `${color}24`);
+  token.style.setProperty('--queue-token-glow', `${color}44`);
+  if (emojiImage) {
+    token.innerHTML = `<img src="${escapeHtml(emojiImage)}" alt="">`;
+    return;
+  }
+  const shapeMap = {
+    circle: '●',
+    triangle: '▲',
+    diamond: '◆',
+    star: '★',
+    heart: '♥',
+  };
+  token.textContent = shapeMap[player.shape] || '●';
 }
 
 function closeDuelModal() {
@@ -4265,6 +4390,9 @@ function showQueueView(position) {
     const avatarDeco = document.getElementById('queue-avatar-deco');
     const avatarEl   = document.getElementById('queue-avatar');
     const pseudoEl   = document.getElementById('queue-pseudo');
+    const rankEl     = document.getElementById('queue-rank-pill');
+    const winrateEl  = document.getElementById('queue-winrate');
+    const tipEl      = document.getElementById('queue-focus-tip');
     if (avatarWrap && avatarEl) {
       const color = myPlayer.color || '#ff2d55';
       avatarEl.style.borderColor = color;
@@ -4281,7 +4409,14 @@ function showQueueView(position) {
         avatarDeco.innerHTML = deco ? `<img src="${deco}" alt="">` : '';
       }
       if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
-      avatarWrap.style.display = 'flex';
+      const games = Number(myPlayer.wins || 0) + Number(myPlayer.losses || 0) + Number(myPlayer.draws || 0);
+      if (rankEl) rankEl.textContent = `${queueRankName(myPlayer.elo)} · ${Number(myPlayer.elo || 0)} ELO`;
+      if (winrateEl) winrateEl.textContent = games > 0
+        ? `Winrate ${Math.round((Number(myPlayer.wins || 0) / games) * 100)}%`
+        : 'Premiere partie classee';
+      renderQueueTokenPreview(myPlayer);
+      avatarWrap.style.display = 'grid';
+      if (tipEl) tipEl.style.display = 'block';
     }
   }, 250);
   // Clear tout interval précédent avant d'en relancer un

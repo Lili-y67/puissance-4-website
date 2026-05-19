@@ -1314,9 +1314,10 @@ async function loadQueueMusicLibrary() {
 }
 
 async function loadProfileShopInventory() {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (!token || !isOwnProfile) {
     profileShopInventory = {};
+    profileActiveBoosters = {};
     return;
   }
   try {
@@ -1623,12 +1624,12 @@ async function load() {
   await loadAvatarDecorationLibrary();
   await loadProfileBannerLibrary();
   await loadQueueMusicLibrary();
-  await loadProfileShopInventory();
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
   viewerPlayer   = saved ? JSON.parse(saved) : null;
   const playerId = urlId || (viewerPlayer?.id ?? null);
   isOwnProfile   = viewerPlayer && (!urlId || String(urlId) === String(viewerPlayer.id));
+  await loadProfileShopInventory();
 
   if (isOwnProfile) {
     document.getElementById('btn-logout').style.display = 'block';
@@ -4031,7 +4032,10 @@ async function activateVipBoost() {
   } catch(e) { alert('Erreur réseau'); }
 }
 
-function openOwnedBooster(kind) {
+async function openOwnedBooster(kind) {
+  if (isOwnProfile && !Object.keys(profileShopInventory || {}).length) {
+    await loadProfileShopInventory();
+  }
   const counts = getProfileBoosterCounts();
   if (kind === 'elo' && counts.elo <= 0) return;
   if (kind === 'coins' && counts.coins <= 0) return;
@@ -4053,7 +4057,7 @@ function openOwnedBooster(kind) {
 }
 
 async function activateOwnedBooster(itemKey, meta = {}) {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (!token) return alert('Connecte-toi pour activer un booster.');
   try {
     const res = await fetch('/api/shop/boosters/activate', {

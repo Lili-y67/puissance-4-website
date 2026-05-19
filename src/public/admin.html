@@ -369,6 +369,7 @@ input:focus,select:focus{
 .admin-stack>.table-wrap:nth-child(1){grid-column:span 7}
 .admin-stack>.table-wrap:nth-child(2){grid-column:span 5}
 .admin-stack>.table-wrap:nth-child(3){grid-column:span 12}
+.admin-stack>.table-wrap:nth-child(4){grid-column:span 12}
 .admin-stack>.pill-tabs{grid-column:span 12}
 #admin-games-section,#admin-tournaments-section,#admin-players-section{grid-column:span 12}
 .table-wrap{
@@ -562,7 +563,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <div>
       <div class="admin-hero-kicker">Centre de controle</div>
       <div class="admin-hero-title">Operations Puissance 4</div>
-      <div class="admin-hero-copy">Surveille les joueurs, gere les boosts, les coins, les tournois, les sauvegardes, les bots, les cosmetiques premium et les alertes serveur depuis une interface unique.</div>
+      <div class="admin-hero-copy">Surveille les joueurs, gere les boosts, les coins, les tournois, les bots, les cosmetiques premium et les alertes serveur depuis une interface unique.</div>
     </div>
     <div class="admin-hero-orb">⚙</div>
   </section>
@@ -715,17 +716,6 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
         <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setSystemStatus(false)">Retirer</button>
       </div>
     </div>
-  </div>
-
-  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-      <div>
-        <div class="admin-section-title">Sauvegarde bases</div>
-        <div class="admin-section-copy">Télécharge la base SQLite principale et ses fichiers WAL / SHM séparément.</div>
-      </div>
-      <div id="backup-status-preview" style="font-size:13px;color:var(--muted);"></div>
-    </div>
-    <div id="backup-files-list" style="display:flex;gap:10px;flex-wrap:wrap;"></div>
   </div>
 
   <!-- Onglets Joueurs / Parties -->
@@ -917,12 +907,9 @@ async function showPanel() {
   if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const systemActions = document.getElementById('system-status-actions');
   if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
-  const backupList = document.getElementById('backup-files-list');
-  if (backupList && myRole !== 'admin') backupList.innerHTML = `<div style="font-size:12px;color:var(--muted)">Réservé aux administrateurs.</div>`;
   await loadBoostStatus();
   await loadCoinBoostStatus();
   await loadSystemStatus();
-  await loadBackupFiles();
   await loadVipBoosts();
   await loadPlayers();
 }
@@ -1639,63 +1626,6 @@ async function loadSystemStatus() {
       ? `<span style="color:var(--orange)">Alerte active</span>`
       : `<span style="color:var(--muted)">Aucune alerte active</span>`;
   } catch (e) {}
-}
-
-async function loadBackupFiles() {
-  const list = document.getElementById('backup-files-list');
-  const preview = document.getElementById('backup-status-preview');
-  if (!list) return;
-  if (myRole !== 'admin') {
-    list.innerHTML = `<div style="font-size:12px;color:var(--muted)">Réservé aux administrateurs.</div>`;
-    if (preview) preview.innerHTML = '';
-    return;
-  }
-  try {
-    const data = await api('GET', '/api/admin/backups');
-    const files = Array.isArray(data.files) ? data.files : [];
-    const available = files.filter(f => f.exists);
-    if (preview) {
-      preview.innerHTML = available.length
-        ? `<span style="color:var(--blue)">${available.length} fichier(s) disponible(s)</span>`
-        : `<span style="color:var(--muted)">Aucun fichier disponible</span>`;
-    }
-    list.innerHTML = files.map(file => {
-      const sizeKo = file.size ? `${Math.max(1, Math.round(file.size / 1024))} Ko` : 'indisponible';
-      return `
-        <button class="btn-sm" ${file.exists ? '' : 'disabled'}
-          style="background:${file.exists ? 'rgba(133,235,255,0.12)' : 'rgba(255,255,255,0.04)'};color:${file.exists ? 'var(--blue)' : 'var(--muted)'};border:1px solid ${file.exists ? 'rgba(133,235,255,0.28)' : 'rgba(255,255,255,0.06)'};"
-          onclick="${file.exists ? `downloadBackup('${file.key}', '${file.filename}')` : ''}">
-          ${file.label} · ${sizeKo}
-        </button>
-      `;
-    }).join('');
-  } catch (e) {
-    if (preview) preview.innerHTML = `<span style="color:var(--red)">Erreur de lecture</span>`;
-    list.innerHTML = '';
-  }
-}
-
-async function downloadBackup(key, filename) {
-  try {
-    const res = await fetch(`/api/admin/backups/${encodeURIComponent(key)}`, {
-      headers: { 'x-admin-token': adminToken }
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Téléchargement impossible.');
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || `backup-${key}.db`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    alert(e.message || 'Erreur sauvegarde.');
-  }
 }
 
 async function setSystemStatus(restarting) {
