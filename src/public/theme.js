@@ -19,7 +19,8 @@
 
     const btn = document.getElementById('p4-theme-toggle');
     if (btn) {
-      btn.textContent = next === 'light' ? 'Clair' : 'Sombre';
+      btn.textContent = next === 'light' ? '☀️' : '🌙';
+      btn.title = next === 'light' ? 'Mode clair' : 'Mode sombre';
       btn.setAttribute('aria-label', next === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair');
     }
   }

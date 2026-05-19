@@ -266,10 +266,13 @@ pre {
   background: rgba(12,12,28,.72);
   color: #f1f1f7;
   backdrop-filter: blur(12px);
-  padding: 10px 13px;
-  font: 900 12px "Barlow Condensed", sans-serif;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 900 18px "Barlow Condensed", sans-serif;
   cursor: pointer;
   box-shadow: 0 12px 30px rgba(0,0,0,.22);
 }

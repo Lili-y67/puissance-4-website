@@ -1426,12 +1426,6 @@ html, body {
   .queue-player-card {
     grid-template-columns:auto 1fr;
   }
-  .queue-token-preview {
-    grid-column:1 / -1;
-    width:100%;
-    height:34px;
-    border-radius:12px;
-  }
 }
 
 /* ── Stats strip ────────────────────────────────────────────────────────────── */
@@ -1536,17 +1530,16 @@ html, body {
   padding: 6px 16px;
 }
 .queue-volume {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 5;
   display: none;
   align-items: center;
+  justify-content: center;
   gap: 10px;
+  width:min(360px,100%);
+  margin:2px auto 8px;
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(13,13,28,0.92);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+  border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 18px 36px rgba(0,0,0,0.35);
   backdrop-filter: blur(12px);
 }
@@ -1617,7 +1610,7 @@ html, body {
 .queue-player-card{
   width:min(360px,100%);
   display:grid;
-  grid-template-columns:auto 1fr auto;
+  grid-template-columns:auto 1fr;
   align-items:center;
   gap:12px;
   margin:4px auto 8px;
@@ -1650,7 +1643,7 @@ html, body {
 .queue-pill{
   display:inline-flex;
   align-items:center;
-  gap:5px;
+  gap:7px;
   padding:4px 8px;
   border-radius:999px;
   border:1px solid rgba(133,235,255,.22);
@@ -1661,21 +1654,7 @@ html, body {
   letter-spacing:.7px;
   text-transform:uppercase;
 }
-.queue-token-preview{
-  width:38px;
-  height:38px;
-  border-radius:14px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:20px;
-  font-weight:900;
-  border:1px solid rgba(255,255,255,.13);
-  background:var(--queue-token-bg, rgba(255,45,85,.16));
-  color:var(--queue-token-color, var(--red));
-  box-shadow:0 0 22px var(--queue-token-glow, rgba(255,45,85,.22));
-}
-.queue-token-preview img{width:72%;height:72%;object-fit:contain;display:block}
+.queue-rank-img{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 0 8px currentColor)}
 .queue-focus-tip{
   width:min(360px,100%);
   margin:-2px auto 4px;
@@ -2346,7 +2325,7 @@ html, body {
   .auth-tab { font-size: 13px; padding: 8px 10px; }
   .input { padding: 12px 14px 12px 38px; font-size: 14px; }
   #bot-modal > div { padding: 22px 16px; }
-  .queue-volume { right: 10px; bottom: 10px; padding: 9px 10px; }
+  .queue-volume { padding: 9px 10px; }
   .queue-volume-slider { width: 92px; }
   .queue-avatar-shell{width:48px;height:48px}
   .queue-avatar-deco{inset:-8px}
@@ -2567,12 +2546,7 @@ html, body {
   .queue-timer {
     font-size: 20px;
   }
-  .queue-volume {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    justify-content: center;
-  }
+  .queue-volume { justify-content: center; }
   .queue-volume-slider {
     width: min(42vw, 140px);
   }
@@ -3180,9 +3154,14 @@ html, body {
             <span id="queue-winrate">Winrate --</span>
           </div>
         </div>
-        <div class="queue-token-preview" id="queue-token-preview">●</div>
       </div>
       <div class="queue-focus-tip" id="queue-focus-tip" style="display:none">Matchmaking en cours · garde l'onglet ouvert pour entrer plus vite.</div>
+
+      <div class="queue-volume" id="queue-volume">
+        <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
+        <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
+        <span class="queue-volume-val" id="queue-volume-val">35%</span>
+      </div>
 
       <!-- Player stats recap -->
       <div class="stats-strip" id="queue-stats" style="display:none">
@@ -3210,12 +3189,6 @@ html, body {
       </div>
     </div>
   </div>
-</div>
-
-<div class="queue-volume" id="queue-volume">
-  <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
-  <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
-  <span class="queue-volume-val" id="queue-volume-val">35%</span>
 </div>
 
 <div class="duel-modal" id="duel-modal" aria-hidden="true">
@@ -3651,39 +3624,27 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function queueRankName(elo) {
+function getQueueRank(elo) {
   const value = Number(elo || 0);
-  if (value >= 2500) return 'Obsidian';
-  if (value >= 2200) return 'Master';
-  if (value >= 1900) return 'Diamond';
-  if (value >= 1600) return 'Amethyst';
-  if (value >= 1300) return 'Quartz';
-  return 'Bronze';
-}
-
-function renderQueueTokenPreview(player) {
-  const token = document.getElementById('queue-token-preview');
-  if (!token || !player) return;
-  const color = player.color || '#ff2d55';
-  const color2 = player.color_secondary || '';
-  const emojiImage = String(player.token_emoji_image || '').trim();
-  token.style.setProperty('--queue-token-color', color);
-  token.style.setProperty('--queue-token-bg', color2
-    ? `linear-gradient(135deg, ${color}, ${color2})`
-    : `${color}24`);
-  token.style.setProperty('--queue-token-glow', `${color}44`);
-  if (emojiImage) {
-    token.innerHTML = `<img src="${escapeHtml(emojiImage)}" alt="">`;
-    return;
-  }
-  const shapeMap = {
-    circle: '●',
-    triangle: '▲',
-    diamond: '◆',
-    star: '★',
-    heart: '♥',
+  const ranks = [
+    { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
+    { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
+    { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
+    { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
+    { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
+    { name:'Amethyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+  ];
+  const safe = Math.max(100, Math.min(value || 1000, 3500));
+  const rank = ranks.find(r => safe >= r.min && safe <= r.max) || ranks[0];
+  const range = Math.max(1, rank.max - rank.min);
+  const level = Math.min(5, Math.ceil(((safe - rank.min) / range) * 5) || 1);
+  const roman = ['I','II','III','IV','V'][level - 1];
+  return {
+    ...rank,
+    level,
+    label: `${rank.name} ${roman}`,
+    image: `/ranks/${rank.key}_${level}.png`,
   };
-  token.textContent = shapeMap[player.shape] || '●';
 }
 
 function closeDuelModal() {
@@ -4410,11 +4371,16 @@ function showQueueView(position) {
       }
       if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
       const games = Number(myPlayer.wins || 0) + Number(myPlayer.losses || 0) + Number(myPlayer.draws || 0);
-      if (rankEl) rankEl.textContent = `${queueRankName(myPlayer.elo)} · ${Number(myPlayer.elo || 0)} ELO`;
+      const rank = getQueueRank(myPlayer.elo);
+      if (rankEl) {
+        rankEl.style.color = rank.color;
+        rankEl.style.borderColor = `${rank.color}55`;
+        rankEl.style.background = `${rank.color}18`;
+        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""> ${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO`;
+      }
       if (winrateEl) winrateEl.textContent = games > 0
         ? `Winrate ${Math.round((Number(myPlayer.wins || 0) / games) * 100)}%`
         : 'Premiere partie classee';
-      renderQueueTokenPreview(myPlayer);
       avatarWrap.style.display = 'grid';
       if (tipEl) tipEl.style.display = 'block';
     }
