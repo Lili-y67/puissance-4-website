@@ -503,6 +503,8 @@ html, body { height: 100%; background: var(--bg); background-attachment: fixed; 
   .result-title { font-size: 28px !important; }
   .result-elo   { font-size: 14px !important; }
   .result-summary { grid-template-columns: 1fr; }
+  .result-summary.single { grid-template-columns: minmax(0, 1fr); }
+  .result-player-box.bot-only { min-width: 0; width: 100%; }
   .result-player-elo { font-size: 22px; }
   .btn-action   { padding: 10px 16px; font-size: 13px; }
 
