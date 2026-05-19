@@ -9,44 +9,54 @@
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#06060e;--surface:#0d0d1c;--surface2:#13132a;--border:rgba(255,255,255,.06);--text:#eeeef5;--muted:rgba(238,238,245,.38);--red:#ff2d55;--yellow:#ffd60a;--green:#30d158;--blue:#4c6ef5;--orange:#ff9f0a}
-body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh}
-.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(255,45,85,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,45,85,.03) 1px,transparent 1px);background-size:40px 40px}
-.bg-glow{position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:600px;height:400px;z-index:0;pointer-events:none;background:radial-gradient(ellipse,rgba(255,45,85,.06) 0%,transparent 70%)}
-nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:16px}
+body{background:
+  radial-gradient(circle at 18% 8%,rgba(255,45,85,.18),transparent 32%),
+  radial-gradient(circle at 88% 14%,rgba(76,110,245,.16),transparent 34%),
+  radial-gradient(circle at 48% 95%,rgba(255,214,10,.08),transparent 40%),
+  var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;overflow-x:hidden}
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(180deg,rgba(0,0,0,.95),rgba(0,0,0,.35))}
+.bg-glow{position:fixed;top:-180px;left:50%;transform:translateX(-50%);width:760px;height:470px;z-index:0;pointer-events:none;background:radial-gradient(ellipse,rgba(255,45,85,.13) 0%,transparent 70%);animation:cgu-glow 9s ease-in-out infinite}
+@keyframes cgu-glow{0%,100%{opacity:.78;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.05)}}
+nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.78);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.08);padding:0 20px;height:64px;display:flex;align-items:center;gap:16px}
 .nav-logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:10px}
 .nav-logo::before{content:"";width:38px;height:38px;border-radius:12px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
 .nav-logo span{color:var(--red)}
-.nav-back{margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none;padding:6px 14px;border:1px solid var(--border);border-radius:8px}
-.page{position:relative;z-index:2;max-width:760px;margin:0 auto;padding:36px 16px 80px}
-.page-title{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.nav-back{margin-left:auto;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:8px 16px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.035);transition:transform .18s ease,border-color .18s ease,color .18s ease}
+.nav-back:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.16);color:var(--text)}
+.page{position:relative;z-index:2;max-width:1040px;margin:0 auto;padding:42px 18px 86px}
+.page-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(46px,8vw,92px);font-weight:900;letter-spacing:1px;line-height:.88;text-transform:uppercase;margin-bottom:8px;text-shadow:0 28px 80px rgba(0,0,0,.46)}
 .page-title span{color:var(--red)}
-.page-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:16px}
-.card-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
-.card-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.page-sub{font-size:14px;color:rgba(238,238,245,.58);margin-bottom:18px}
+.card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018)),rgba(13,13,28,.86);border:1px solid rgba(255,255,255,.085);border-radius:24px;overflow:hidden;margin-bottom:18px;box-shadow:0 24px 70px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.045);backdrop-filter:blur(12px);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.card::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--red),var(--yellow),#85EBFF);opacity:.66}
+.card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.14);box-shadow:0 30px 86px rgba(0,0,0,.44),0 0 34px rgba(255,45,85,.05)}
+.card-header{padding:20px 22px 16px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:14px}
+.card-icon{width:46px;height:46px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 .card-icon.red{background:rgba(255,45,85,.12);color:var(--red)}
 .card-icon.yellow{background:rgba(255,214,10,.12);color:var(--yellow)}
 .card-icon.green{background:rgba(48,209,88,.12);color:var(--green)}
 .card-icon.blue{background:rgba(10,132,255,.12);color:#0a84ff}
 .card-icon.purple{background:rgba(191,90,242,.12);color:#bf5af2}
 .card-icon.orange{background:rgba(255,159,10,.12);color:var(--orange)}
-.card-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
+.card-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase}
 .card-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.card-body{padding:16px 20px;font-size:13px;line-height:1.75;color:var(--muted)}
-.rule-list{list-style:none;display:flex;flex-direction:column;gap:8px;padding:16px 20px}
-.rule-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.6;color:var(--muted)}
+.card-body{padding:18px 22px;font-size:14px;line-height:1.78;color:rgba(238,238,245,.62)}
+.rule-list{list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:18px 22px}
+.rule-list li{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.62;color:rgba(238,238,245,.6);padding:12px;border-radius:14px;background:rgba(19,19,42,.62);border:1px solid rgba(255,255,255,.06)}
 .rule-list .icon{font-size:15px;flex-shrink:0;margin-top:1px}
 .rule-list strong,.card-body strong{color:var(--text)}
-.highlight{background:rgba(255,45,85,.06);border-left:3px solid var(--red);border-radius:0 8px 8px 0;padding:12px 16px;margin:0 20px 16px;font-size:13px;line-height:1.6;color:var(--muted)}
+.highlight{background:rgba(255,45,85,.08);border-left:3px solid var(--red);border-radius:0 14px 14px 0;padding:13px 16px;margin:0 22px 18px;font-size:13px;line-height:1.65;color:rgba(238,238,245,.64)}
 .quick-links{display:flex;flex-wrap:wrap;gap:8px;margin:0 20px 18px}
-.quick-links a{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-decoration:none}
+.quick-links a{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;text-decoration:none;transition:transform .18s ease,border-color .18s ease,background .18s ease}
+.quick-links a:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.07)}
 .update-pill{display:inline-flex;align-items:center;gap:8px;margin-bottom:18px;padding:9px 13px;border-radius:999px;border:1px solid rgba(255,214,10,.22);background:rgba(255,214,10,.08);color:#ffd60a;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .sanction-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border);border-radius:0 0 8px 8px;overflow:hidden;margin:0 20px 16px}
-.sanction-cell{background:var(--surface2);padding:10px 12px;font-size:12px;line-height:1.5}
+.sanction-cell{background:rgba(19,19,42,.74);padding:11px 13px;font-size:12px;line-height:1.5}
 .sanction-cell.header{background:rgba(255,255,255,.03);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .cgu-footer{margin-top:40px;text-align:center;font-size:12px;color:var(--muted);line-height:1.8}
 .cgu-footer a{color:var(--muted);text-decoration:underline}
-@media (max-width:480px){nav{padding:10px 12px;height:auto;flex-wrap:wrap}.nav-back{width:100%;text-align:center;margin-left:0}.page{padding:22px 10px 42px}.page-title{font-size:28px}.card-header,.card-body,.rule-list{padding-left:14px;padding-right:14px}.quick-links{margin-left:14px;margin-right:14px}.quick-links a{width:100%;justify-content:center}.sanction-grid{grid-template-columns:1fr;margin:0 14px 14px}}
+@media (max-width:760px){.rule-list{grid-template-columns:1fr}.page{max-width:640px}.card{border-radius:20px}}
+@media (max-width:480px){nav{padding:10px 12px;height:auto;flex-wrap:wrap}.nav-back{width:100%;text-align:center;margin-left:0}.page{padding:22px 10px 42px}.page-title{font-size:42px}.card-header,.card-body,.rule-list{padding-left:14px;padding-right:14px}.quick-links{margin-left:14px;margin-right:14px}.quick-links a{width:100%;justify-content:center}.sanction-grid{grid-template-columns:1fr;margin:0 14px 14px}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css">

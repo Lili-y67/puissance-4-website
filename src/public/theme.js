@@ -64,7 +64,6 @@
     { href: '/stats', icon: '📈', label: 'Stats', sub: 'Données du site' },
     { href: '/regles', icon: '📘', label: 'Règles', sub: 'Jeu et gains' },
     { href: '/api-doc', icon: '🧪', label: 'API', sub: 'Docs développeur' },
-    { href: '/cgu', icon: '⚖️', label: 'CGU', sub: 'Conditions' },
     { href: 'https://discord.gg/MrKbBAAWcm', icon: '📣', label: 'Discord', sub: 'Communauté' },
   ];
 

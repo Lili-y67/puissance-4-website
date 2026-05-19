@@ -2191,6 +2191,25 @@ const shopItemQ = {
   `),
 };
 
+const WELCOME_REWARDS = Object.freeze({
+  coins: 500,
+  gems: 10,
+  items: [
+    { key: 'elo_custom_0_2', quantity: 1 },
+    { key: 'coin_custom_02', quantity: 1 },
+  ],
+});
+
+function grantWelcomeRewards(playerId) {
+  const id = Number(playerId || 0);
+  if (!id) return;
+  pQ.addCoins.run({ delta: WELCOME_REWARDS.coins, id });
+  pQ.addGems.run({ delta: WELCOME_REWARDS.gems, id });
+  for (const item of WELCOME_REWARDS.items) {
+    shopItemQ.addQty.run({ player_id: id, item_key: item.key, quantity: item.quantity });
+  }
+}
+
 for (const item of Object.values(SHOP_ITEMS)) {
   if (!Number.isFinite(item.defaultStock)) continue;
   db.prepare(`INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING`).run(SHOP_STOCK_KEYS[item.key], String(item.defaultStock));
@@ -2869,6 +2888,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         const bannerUrl = discordBannerUrl(discordUser);
         if (avatarUrl) pQ.updateAvatar.run({ avatar: avatarUrl, id: targetPlayer.id });
         if (bannerUrl) pQ.updateBanner.run({ banner: bannerUrl, id: targetPlayer.id });
+        grantWelcomeRewards(targetPlayer.id);
         targetPlayer = pQ.getById.get(targetPlayer.id);
       } else {
         const avatarUrl = discordAvatarUrl(discordUser);
@@ -2876,6 +2896,10 @@ app.get('/auth/discord/callback', async (req, res) => {
         if (avatarUrl && !targetPlayer.avatar) pQ.updateAvatar.run({ avatar: avatarUrl, id: targetPlayer.id });
         if (bannerUrl && !targetPlayer.banner) pQ.updateBanner.run({ banner: bannerUrl, id: targetPlayer.id });
         targetPlayer = pQ.getById.get(targetPlayer.id);
+      }
+
+      if (Number(targetPlayer.is_bot || 0) === 1) {
+        return res.redirect('/?error=mode_bot');
       }
 
       claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
@@ -3632,6 +3656,8 @@ app.post('/api/auth/register', security.routeGuard('register'), (req, res) => {
       pQ.updateColor.run({ color: req.body.color, id: player.id });
       player = pQ.getById.get(player.id);
     }
+    grantWelcomeRewards(player.id);
+    player = pQ.getById.get(player.id);
     const token = createSession(player.id);
     security.recordRegistration(req, player.pseudo, player.id);
     res.json({ ...sanitize(player), token });
@@ -3656,6 +3682,13 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
   if (player.password && player.password !== hashPwd(password)) {
     security.recordLoginFailure(req, pseudo);
     return res.status(401).json({ error: 'Mot de passe incorrect.' });
+  }
+
+  if (Number(player.is_bot || 0) === 1) {
+    security.recordLoginFailure(req, pseudo);
+    return res.status(403).json({
+      error: 'Mode Bot activé : connexion au site impossible. Utilise le token bot dans ton client.',
+    });
   }
 
   const token = createSession(player.id);

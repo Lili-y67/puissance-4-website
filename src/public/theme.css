@@ -396,7 +396,6 @@
 .p4-global-menu-link[href="/stats"]:hover .p4-global-menu-emoji { animation:p4MenuStats .75s ease; }
 .p4-global-menu-link[href="/regles"]:hover .p4-global-menu-emoji { animation:p4MenuBook .75s ease; }
 .p4-global-menu-link[href="/api-doc"]:hover .p4-global-menu-emoji { animation:p4MenuApi .85s ease; }
-.p4-global-menu-link[href="/cgu"]:hover .p4-global-menu-emoji { animation:p4MenuLaw .75s ease; }
 .p4-global-menu-link[href^="https://discord"]:hover .p4-global-menu-emoji { animation:p4MenuDiscord .75s ease; }
 
 .p4-global-menu-copy {

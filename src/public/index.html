@@ -953,6 +953,7 @@ html, body {
 .welcome-card:nth-child(6){animation-delay:.60s}
 .welcome-card:nth-child(7){animation-delay:.72s}
 .welcome-card:nth-child(8){animation-delay:.84s}
+.welcome-card:nth-child(9){animation-delay:.96s}
 .welcome-card-emoji{font-size:28px;filter:drop-shadow(0 0 16px rgba(255,255,255,.16));}
 .welcome-card strong{
   display:block;
@@ -1196,6 +1197,7 @@ html, body {
 .welcome-cinema .welcome-card:nth-child(6){animation-delay:5.90s}
 .welcome-cinema .welcome-card:nth-child(7){animation-delay:6.07s}
 .welcome-cinema .welcome-card:nth-child(8){animation-delay:6.24s}
+.welcome-cinema .welcome-card:nth-child(9){animation-delay:6.41s}
 .welcome-cinema .welcome-actions{
   opacity:0;
   transform:translateY(12px);
@@ -2809,6 +2811,7 @@ html, body {
         <div class="welcome-card"><div class="welcome-card-emoji">🛡️</div><div><strong>Clans</strong><span>Crée ou rejoins un clan, discute en temps réel et grimpe dans le classement d’équipe.</span></div></div>
         <div class="welcome-card"><div class="welcome-card-emoji">🤖</div><div><strong>Bots & API</strong><span>Transforme un compte en bot, utilise les endpoints officiels et lance ton client Node.</span></div></div>
         <div class="welcome-card"><div class="welcome-card-emoji">📺</div><div><strong>Live</strong><span>Suis les parties en direct avec avatars, décorations, sons et ligne gagnante animée.</span></div></div>
+        <div class="welcome-card featured"><div class="welcome-card-emoji">🎁</div><div><strong>Pack de bienvenue</strong><span>Ton compte reçoit 500 coins, 10 gemmes, 1 booster ELO x1.2 et 1 booster coins x2 pour démarrer.</span></div></div>
       </div>
       <div class="welcome-demo">
         <div class="welcome-demo-panel">
@@ -3345,6 +3348,7 @@ function showDiscordQueryError() {
     discord_id: 'Impossible de récupérer ton compte Discord.',
     erreur_serveur: 'Erreur serveur Discord. Réessaie plus tard.',
     joueur_introuvable: 'Compte introuvable pour cette connexion Discord.',
+    mode_bot: 'Mode Bot activé : connexion au site impossible. Utilise le token bot dans ton client.',
   };
   showError(errorMap[error] || 'Connexion Discord impossible.');
   params.delete('error');
