@@ -1738,6 +1738,194 @@ html, body {
   backdrop-filter: blur(10px);
 }
 .duel-modal.open { display: flex; }
+.training-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(4,4,10,0.78);
+  backdrop-filter: blur(12px);
+}
+.training-modal.open { display: flex; }
+.training-dialog {
+  width: min(980px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(255,45,85,.14), transparent 30%),
+    radial-gradient(circle at 92% 0%, rgba(133,235,255,.12), transparent 34%),
+    linear-gradient(180deg, rgba(24,24,44,.98), rgba(10,10,24,.98));
+  box-shadow: 0 30px 90px rgba(0,0,0,.52);
+  padding: 18px;
+}
+.training-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.training-kicker {
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:var(--red);
+}
+.training-title {
+  margin-top:4px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:34px;
+  font-weight:900;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.training-copy {
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+}
+.training-close {
+  width:38px;
+  height:38px;
+  border-radius:13px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  cursor:pointer;
+  font-size:20px;
+}
+.training-layout {
+  display:grid;
+  grid-template-columns:240px minmax(0,1fr);
+  gap:16px;
+  align-items:start;
+}
+.training-side {
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:22px;
+  background:rgba(255,255,255,.035);
+  padding:14px;
+}
+.training-score {
+  display:grid;
+  gap:10px;
+}
+.training-score-card {
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:16px;
+  background:rgba(8,8,20,.42);
+  padding:12px;
+  text-align:center;
+}
+.training-score-card b {
+  display:block;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:30px;
+  font-weight:900;
+}
+.training-score-card span {
+  display:block;
+  margin-top:2px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.training-status {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  padding:12px 14px;
+}
+.training-status small {
+  display:block;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.training-status strong {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-top:3px;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:24px;
+  font-weight:900;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.training-dot {
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:var(--piece-gradient);
+  box-shadow:0 0 18px var(--piece-glow);
+}
+.training-board-shell {
+  padding:clamp(10px,2vw,18px);
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:26px;
+  background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35);
+}
+.training-board {
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:clamp(6px,1.2vw,12px);
+  max-width:640px;
+  margin:0 auto;
+}
+.training-cell {
+  aspect-ratio:1;
+  border:0;
+  border-radius:50%;
+  cursor:pointer;
+  position:relative;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);
+  transition:transform .14s, box-shadow .18s;
+}
+.training-cell:hover {
+  transform:translateY(-2px);
+  box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12);
+}
+.training-cell.filled::after {
+  content:"";
+  position:absolute;
+  inset:8%;
+  border-radius:50%;
+  background:var(--piece-gradient);
+  box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow);
+  animation:trainingDrop .28s cubic-bezier(.2,1.35,.45,1);
+}
+.training-cell.win { animation:trainingWin .8s ease-in-out infinite alternate; }
+.training-cell.win::after { box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff; }
+@keyframes trainingDrop { from{transform:translateY(-80%) scale(.85);opacity:.2} to{transform:translateY(0) scale(1);opacity:1} }
+@keyframes trainingWin { to{transform:scale(1.04);filter:brightness(1.18)} }
+@media (max-width:760px) {
+  .training-dialog { padding:14px; }
+  .training-layout { grid-template-columns:1fr; }
+  .training-side { order:2; }
+  .training-status { flex-direction:column; align-items:stretch; }
+}
 .duel-dialog {
   width: min(460px, 100%);
   border-radius: 24px;
@@ -3204,6 +3392,41 @@ html, body {
   </div>
 </div>
 
+<div class="training-modal" id="training-modal" aria-hidden="true">
+  <div class="training-dialog">
+    <div class="training-head">
+      <div>
+        <div class="training-kicker">Pendant la file</div>
+        <div class="training-title">Mode entraînement</div>
+        <div class="training-copy">La recherche reste active derrière. Joue une partie rapide contre une IA difficile en attendant le matchmaking.</div>
+      </div>
+      <button class="training-close" type="button" onclick="closeTrainingOverlay()" aria-label="Fermer">×</button>
+    </div>
+    <div class="training-layout">
+      <aside class="training-side">
+        <div class="training-score">
+          <div class="training-score-card"><b id="training-score-player">0</b><span>Toi</span></div>
+          <div class="training-score-card"><b id="training-score-ai">0</b><span>IA</span></div>
+          <div class="training-score-card"><b id="training-score-draw">0</b><span>Nuls</span></div>
+        </div>
+        <button class="btn btn-play" type="button" style="width:100%;margin-top:12px" onclick="trainingNewRound()">Rejouer</button>
+      </aside>
+      <section>
+        <div class="training-status">
+          <div>
+            <small id="training-status-label">Tour actuel</small>
+            <strong id="training-status-text"><span class="training-dot"></span>Toi</strong>
+          </div>
+          <button class="btn btn-ghost" type="button" id="training-undo-btn" onclick="trainingUndo()">Annuler</button>
+        </div>
+        <div class="training-board-shell">
+          <div class="training-board" id="training-board" aria-label="Grille entraînement"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
 <div class="duel-modal" id="duel-modal" aria-hidden="true">
   <div class="duel-dialog">
     <div class="duel-dialog-head">
@@ -4130,7 +4353,224 @@ function setQueueMusicVolume(value) {
 }
 
 function openTrainingWhileQueued() {
-  window.open('/training', '_blank', 'noopener,noreferrer');
+  openTrainingOverlay();
+}
+
+const TRAINING_ROWS = 6;
+const TRAINING_COLS = 7;
+const TRAINING_HUMAN = 1;
+const TRAINING_AI = 2;
+let trainingGrid = [];
+let trainingCurrent = TRAINING_HUMAN;
+let trainingEnded = false;
+let trainingHistory = [];
+let trainingScores = { player: 0, ai: 0, draw: 0 };
+const trainingColors = { 1: ['#ff2d55', '#ff8fab'], 2: ['#85ebff', '#2f80ff'] };
+
+function trainingGradient(player) {
+  const colors = trainingColors[player] || trainingColors[TRAINING_HUMAN];
+  return `radial-gradient(circle at 32% 24%, rgba(255,255,255,.34), transparent 20%), linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+}
+
+function trainingLegalMoves(board = trainingGrid) {
+  return Array.from({ length: TRAINING_COLS }, (_, col) => board[0][col] === 0 ? col : null).filter(col => col !== null);
+}
+
+function trainingClone(board) {
+  return board.map(row => row.slice());
+}
+
+function trainingDrop(board, col, player) {
+  for (let row = TRAINING_ROWS - 1; row >= 0; row--) {
+    if (board[row][col] === 0) {
+      board[row][col] = player;
+      return row;
+    }
+  }
+  return -1;
+}
+
+function trainingWinCells(board, row, col, player) {
+  const dirs = [[0, 1], [1, 0], [1, 1], [1, -1]];
+  for (const [dr, dc] of dirs) {
+    const cells = [[row, col]];
+    for (const sign of [1, -1]) {
+      for (let step = 1; step < 4; step++) {
+        const r = row + dr * step * sign;
+        const c = col + dc * step * sign;
+        if (r < 0 || r >= TRAINING_ROWS || c < 0 || c >= TRAINING_COLS || board[r][c] !== player) break;
+        cells.push([r, c]);
+      }
+    }
+    if (cells.length >= 4) return cells.slice(0, 4);
+  }
+  return [];
+}
+
+function trainingScoreWindow(values, me) {
+  const opp = me === TRAINING_HUMAN ? TRAINING_AI : TRAINING_HUMAN;
+  const mine = values.filter(v => v === me).length;
+  const theirs = values.filter(v => v === opp).length;
+  const empty = values.filter(v => v === 0).length;
+  if (mine === 4) return 100000;
+  if (theirs === 4) return -100000;
+  if (mine === 3 && empty === 1) return 90;
+  if (mine === 2 && empty === 2) return 20;
+  if (theirs === 3 && empty === 1) return -105;
+  if (theirs === 2 && empty === 2) return -18;
+  return 0;
+}
+
+function trainingEvaluate(board, me) {
+  let score = board.map(row => row[3]).filter(v => v === me).length * 8;
+  for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) score += trainingScoreWindow([board[r][c], board[r][c + 1], board[r][c + 2], board[r][c + 3]], me);
+  for (let c = 0; c < 7; c++) for (let r = 0; r < 3; r++) score += trainingScoreWindow([board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]], me);
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) score += trainingScoreWindow([board[r][c], board[r + 1][c + 1], board[r + 2][c + 2], board[r + 3][c + 3]], me);
+  for (let r = 3; r < 6; r++) for (let c = 0; c < 4; c++) score += trainingScoreWindow([board[r][c], board[r - 1][c + 1], board[r - 2][c + 2], board[r - 3][c + 3]], me);
+  return score;
+}
+
+function trainingMinimax(board, depth, alpha, beta, maximizing) {
+  const moves = trainingLegalMoves(board);
+  if (depth === 0 || !moves.length) return { score: trainingEvaluate(board, TRAINING_AI), col: moves[0] ?? 3 };
+  const order = [3, 2, 4, 1, 5, 0, 6].filter(col => moves.includes(col));
+  let best = { score: maximizing ? -Infinity : Infinity, col: order[0] ?? moves[0] };
+  for (const col of order) {
+    const copy = trainingClone(board);
+    const player = maximizing ? TRAINING_AI : TRAINING_HUMAN;
+    const row = trainingDrop(copy, col, player);
+    const won = trainingWinCells(copy, row, col, player).length >= 4;
+    const result = won
+      ? { score: maximizing ? 100000 + depth : -100000 - depth, col }
+      : trainingMinimax(copy, depth - 1, alpha, beta, !maximizing);
+    if (maximizing) {
+      if (result.score > best.score) best = { score: result.score, col };
+      alpha = Math.max(alpha, result.score);
+    } else {
+      if (result.score < best.score) best = { score: result.score, col };
+      beta = Math.min(beta, result.score);
+    }
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+
+function trainingRender(winCells = []) {
+  const board = document.getElementById('training-board');
+  const undo = document.getElementById('training-undo-btn');
+  if (!board) return;
+  const winSet = new Set(winCells.map(([r, c]) => `${r}:${c}`));
+  board.innerHTML = '';
+  for (let r = 0; r < TRAINING_ROWS; r++) {
+    for (let c = 0; c < TRAINING_COLS; c++) {
+      const value = trainingGrid[r][c];
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = `training-cell${value ? ' filled' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}`;
+      if (value) {
+        cell.style.setProperty('--piece-gradient', trainingGradient(value));
+        cell.style.setProperty('--piece-glow', trainingColors[value][1]);
+      }
+      cell.onclick = () => trainingPlayColumn(c, false);
+      board.appendChild(cell);
+    }
+  }
+  if (undo) undo.disabled = trainingEnded || trainingHistory.length < 2;
+}
+
+function trainingSetStatus(text, player = 0) {
+  const label = document.getElementById('training-status-label');
+  const status = document.getElementById('training-status-text');
+  if (label) label.textContent = trainingEnded ? 'Résultat' : 'Tour actuel';
+  if (!status) return;
+  status.innerHTML = `${player ? '<span class="training-dot"></span>' : ''}${escapeHtml(text)}`;
+  const dot = status.querySelector('.training-dot');
+  if (dot && player) {
+    dot.style.setProperty('--piece-gradient', trainingGradient(player));
+    dot.style.setProperty('--piece-glow', trainingColors[player][1]);
+  }
+}
+
+function trainingSyncScores() {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  set('training-score-player', trainingScores.player);
+  set('training-score-ai', trainingScores.ai);
+  set('training-score-draw', trainingScores.draw);
+}
+
+function trainingNewRound() {
+  trainingGrid = Array.from({ length: TRAINING_ROWS }, () => Array(TRAINING_COLS).fill(0));
+  trainingCurrent = TRAINING_HUMAN;
+  trainingEnded = false;
+  trainingHistory = [];
+  trainingRender();
+  trainingSetStatus('Toi', TRAINING_HUMAN);
+  trainingSyncScores();
+}
+
+function trainingAiMove() {
+  if (trainingEnded || trainingCurrent !== TRAINING_AI) return;
+  const col = trainingMinimax(trainingGrid, 6, -Infinity, Infinity, true).col;
+  if (Number.isInteger(col)) trainingPlayColumn(col, true);
+}
+
+function trainingPlayColumn(col, byAi) {
+  if (trainingEnded || trainingCurrent !== (byAi ? TRAINING_AI : TRAINING_HUMAN)) return;
+  const row = trainingDrop(trainingGrid, col, trainingCurrent);
+  if (row < 0) return;
+  trainingHistory.push({ row, col, player: trainingCurrent });
+  const wins = trainingWinCells(trainingGrid, row, col, trainingCurrent);
+  if (wins.length) {
+    trainingEnded = true;
+    if (trainingCurrent === TRAINING_HUMAN) trainingScores.player++;
+    else trainingScores.ai++;
+    trainingRender(wins);
+    trainingSetStatus(trainingCurrent === TRAINING_HUMAN ? 'Victoire training' : 'Défaite training', trainingCurrent);
+    trainingSyncScores();
+    return;
+  }
+  if (!trainingLegalMoves().length) {
+    trainingEnded = true;
+    trainingScores.draw++;
+    trainingRender();
+    trainingSetStatus('Match nul');
+    trainingSyncScores();
+    return;
+  }
+  trainingCurrent = trainingCurrent === TRAINING_HUMAN ? TRAINING_AI : TRAINING_HUMAN;
+  trainingRender();
+  trainingSetStatus(trainingCurrent === TRAINING_HUMAN ? 'Toi' : 'IA réfléchit...', trainingCurrent);
+  if (trainingCurrent === TRAINING_AI) setTimeout(trainingAiMove, 360);
+}
+
+function trainingUndo() {
+  if (trainingEnded || trainingHistory.length < 2) return;
+  for (let i = 0; i < 2; i++) {
+    const move = trainingHistory.pop();
+    if (move) trainingGrid[move.row][move.col] = 0;
+  }
+  trainingCurrent = TRAINING_HUMAN;
+  trainingRender();
+  trainingSetStatus('Toi', TRAINING_HUMAN);
+}
+
+function openTrainingOverlay() {
+  const modal = document.getElementById('training-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  if (!trainingGrid.length || trainingEnded) trainingNewRound();
+  else trainingRender();
+}
+
+function closeTrainingOverlay() {
+  const modal = document.getElementById('training-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
 }
 
 function showQueueVolume(show) {
@@ -4449,13 +4889,16 @@ function handleLeaveQueue() {
 }
 
 document.addEventListener('click', (e) => {
-  const modal = document.getElementById('duel-modal');
-  if (!modal?.classList.contains('open')) return;
-  if (e.target === modal) closeDuelModal();
+  const duelModal = document.getElementById('duel-modal');
+  const trainingModal = document.getElementById('training-modal');
+  if (duelModal?.classList.contains('open') && e.target === duelModal) closeDuelModal();
+  if (trainingModal?.classList.contains('open') && e.target === trainingModal) closeTrainingOverlay();
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeDuelModal();
+  if (e.key !== 'Escape') return;
+  closeDuelModal();
+  closeTrainingOverlay();
 });
 
 // ═══════════════════════════════════════════════════════════════════
