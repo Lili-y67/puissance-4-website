@@ -255,8 +255,22 @@ body{
 .status-line span{font-size:13px;color:var(--muted)}
 .status-line strong{font-family:'Barlow Condensed',sans-serif;font-size:24px}
 .note{font-size:13px;color:var(--muted);line-height:1.7}
+.shop-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:14px}
+.guide-step{position:relative;overflow:hidden;padding:15px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.065)}
+.guide-step::before{content:'';position:absolute;inset:0 auto auto 0;width:3px;height:100%;background:linear-gradient(180deg,var(--red),var(--yellow),var(--blue));opacity:.75}
+.guide-step-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.guide-step-num{width:30px;height:30px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(255,45,85,.12);border:1px solid rgba(255,45,85,.24);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900}
+.guide-step h3{font-family:'Barlow Condensed',sans-serif;font-size:20px;letter-spacing:1px;text-transform:uppercase}
+.guide-step p{font-size:13px;color:var(--muted);line-height:1.55}
+.guide-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.guide-badge{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);font-size:12px;color:var(--text)}
+.guide-badge.coin{border-color:rgba(255,159,10,.24);background:rgba(255,159,10,.08);color:var(--yellow)}
+.guide-badge.gem{border-color:rgba(133,235,255,.24);background:rgba(133,235,255,.08);color:var(--blue)}
+.guide-badge.promo{border-color:rgba(48,209,88,.22);background:rgba(48,209,88,.08);color:var(--green)}
+.faq-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.faq-grid .feature{min-height:96px}
 @media (max-width:980px){
-  .hero-inner,.grid,.boosters-row{grid-template-columns:1fr}
+  .hero-inner,.grid,.boosters-row,.shop-guide-grid,.faq-grid{grid-template-columns:1fr}
   .hero-title{font-size:54px}
 }
 @media (max-width:760px){
@@ -429,17 +443,36 @@ body{
 
   <section class="panel">
     <div class="panel-title">Comment ça marche ?</div>
-    <div class="status-line"><span>Chaque partie jouée</span><strong style="color:var(--yellow)">+1 à +3</strong></div>
-    <div class="status-line" style="margin-top:12px"><span>Rangs premium</span><strong style="color:var(--green)">Directs</strong></div>
-    <div class="status-line" style="margin-top:12px"><span>Boosters</span><strong style="color:var(--orange)">Stock limité</strong></div>
+    <div class="shop-guide-grid">
+      <div class="guide-step">
+        <div class="guide-step-top"><div class="guide-step-num">1</div><h3>Gagne</h3></div>
+        <p>Chaque partie terminée donne des coins. Les gemmes sont une monnaie bonus liée à l'activité Discord et aux événements.</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-top"><div class="guide-step-num">2</div><h3>Choisis</h3></div>
+        <p>Sélectionne la monnaie en haut à droite, applique un code promo si tu en as un, puis vérifie le prix final avant achat.</p>
+      </div>
+      <div class="guide-step">
+        <div class="guide-step-top"><div class="guide-step-num">3</div><h3>Active</h3></div>
+        <p>Les rangs s'appliquent directement. Les boosters vont dans ton inventaire et s'activent ensuite depuis ton profil.</p>
+      </div>
+    </div>
+    <div class="guide-badges">
+      <div class="guide-badge coin">🪙 Coins : +1 à +3 par partie</div>
+      <div class="guide-badge gem">💎 Gemmes : prix réduits</div>
+      <div class="guide-badge promo">✅ Coupons : réduction au paiement</div>
+    </div>
+    <div class="status-line" style="margin-top:14px"><span>Rangs premium</span><strong style="color:var(--green)">Activation directe</strong></div>
+    <div class="status-line" style="margin-top:12px"><span>Boosters ELO / Coins</span><strong style="color:var(--orange)">Inventaire</strong></div>
+    <div class="status-line" style="margin-top:12px"><span>Stocks globaux</span><strong style="color:var(--yellow)">Limités</strong></div>
     <p class="note" style="margin-top:16px">
-      Les boosters achetés vont dans ton inventaire personnel. Le stock global baisse à chaque achat pour éviter les achats massifs.
+      Les boosters personnalisés utilisent un prix dynamique : plus le multiplicateur choisi est élevé, plus le coût augmente. Les stocks limités existent pour éviter les achats massifs et garder une vraie rareté côté boutique.
     </p>
   </section>
 
   <section class="panel">
     <div class="panel-title">FAQ Boutique</div>
-    <div class="feature-list">
+    <div class="feature-list faq-grid">
       <div class="feature">
         <div class="feature-emoji">🛒</div>
         <div class="feature-copy">
@@ -451,7 +484,28 @@ body{
         <div class="feature-emoji">📦</div>
         <div class="feature-copy">
           <strong>Pourquoi certains boosters sont en rupture ?</strong>
-          <span>Le stock des boosters est global et limité. Une fois le stock épuisé, l’achat est bloqué jusqu’à réapprovisionnement.</span>
+          <span>Le stock des boosters est global et limité. Une fois le stock épuisé, l'achat est bloqué jusqu'à réapprovisionnement admin.</span>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">💎</div>
+        <div class="feature-copy">
+          <strong>Coins ou gemmes, quelle différence ?</strong>
+          <span>Les coins se gagnent surtout en jouant. Les gemmes servent de monnaie premium alternative avec des prix réduits.</span>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🎟️</div>
+        <div class="feature-copy">
+          <strong>Comment fonctionnent les codes promo ?</strong>
+          <span>Un code doit être validé avant achat. Si le code est correct et encore valable, la réduction apparaît directement sur les prix.</span>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">🎒</div>
+        <div class="feature-copy">
+          <strong>Où activer mes boosters ?</strong>
+          <span>Après achat, va sur ton profil. Les boutons Booster ELO et Booster Coins deviennent disponibles si ton inventaire en contient.</span>
         </div>
       </div>
       <div class="feature">
@@ -473,6 +527,13 @@ body{
         <div class="feature-copy">
           <strong>Si je possède déjà un rang ?</strong>
           <span>La boutique le détecte automatiquement et bloque l’achat avec un état “Vous avez déjà ce rôle”.</span>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-emoji">♻️</div>
+        <div class="feature-copy">
+          <strong>Le reset ELO change quoi ?</strong>
+          <span>Il remet ton ELO à 1000 sans supprimer ton compte ni tes historiques visibles. À utiliser seulement si tu veux repartir proprement.</span>
         </div>
       </div>
     </div>
