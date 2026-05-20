@@ -1424,7 +1424,7 @@ html, body {
     grid-template-columns: 1fr;
   }
   .queue-player-card {
-    grid-template-columns:auto 1fr;
+    grid-template-columns:auto minmax(0,1fr) auto;
   }
 }
 
@@ -1608,9 +1608,9 @@ html, body {
 }
 .queue-avatar-core img{width:100%;height:100%;object-fit:cover;display:block}
 .queue-player-card{
-  width:min(360px,100%);
+  width:min(390px,100%);
   display:grid;
-  grid-template-columns:auto 1fr;
+  grid-template-columns:auto minmax(0,1fr) auto;
   align-items:center;
   gap:12px;
   margin:4px auto 8px;
@@ -1620,10 +1620,11 @@ html, body {
   background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
   box-shadow:0 18px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
 }
-.queue-player-main{min-width:0;text-align:left}
+.queue-player-main{min-width:0;text-align:left;align-self:center}
 .queue-player-name{
   font-family:'Barlow Condensed',sans-serif;
-  font-size:20px;
+  font-size:23px;
+  line-height:.95;
   font-weight:900;
   letter-spacing:.8px;
   color:var(--text);
@@ -1631,14 +1632,14 @@ html, body {
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.queue-player-meta{
-  margin-top:3px;
-  display:flex;
-  align-items:center;
-  gap:7px;
-  flex-wrap:wrap;
-  font-size:11px;
-  color:rgba(238,238,245,.7);
+.queue-player-sub{
+  margin-top:5px;
+  font-size:12px;
+  line-height:1.2;
+  color:rgba(238,238,245,.72);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .queue-mini-stats{
   grid-column:1 / -1;
@@ -1674,10 +1675,13 @@ html, body {
   color:var(--muted);
 }
 .queue-pill{
+  grid-column:1 / -1;
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   gap:7px;
-  padding:4px 8px;
+  width:100%;
+  padding:8px 10px;
   border-radius:999px;
   border:1px solid rgba(133,235,255,.22);
   background:rgba(133,235,255,.08);
@@ -1686,8 +1690,50 @@ html, body {
   font-weight:900;
   letter-spacing:.7px;
   text-transform:uppercase;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .queue-rank-img{width:18px;height:18px;object-fit:contain;filter:drop-shadow(0 0 8px currentColor)}
+.queue-rank-text{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.queue-piece-preview{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 0 20px var(--queue-piece-glow, rgba(255,45,85,.22));
+}
+.queue-piece-shape{
+  width:24px;
+  height:24px;
+  display:block;
+  background:var(--queue-piece-bg, var(--red));
+  color:var(--queue-piece-color, var(--red));
+  filter:drop-shadow(0 0 10px var(--queue-piece-glow, rgba(255,45,85,.35)));
+}
+.queue-piece-shape.circle{border-radius:50%}
+.queue-piece-shape.triangle{clip-path:polygon(50% 0, 100% 100%, 0 100%)}
+.queue-piece-shape.diamond{clip-path:polygon(50% 0, 100% 50%, 50% 100%, 0 50%)}
+.queue-piece-shape.star{clip-path:polygon(50% 0,61% 35%,98% 35%,68% 56%,79% 91%,50% 70%,21% 91%,32% 56%,2% 35%,39% 35%)}
+.queue-piece-shape.heart{clip-path:path('M12 21 C5 15 1 11 1 7 A4 4 0 0 1 8 4 C10 1 14 1 16 4 A4 4 0 0 1 23 7 C23 11 19 15 12 21 Z')}
+.queue-piece-preview img{width:28px;height:28px;object-fit:contain;display:block;filter:drop-shadow(0 0 10px var(--queue-piece-glow, rgba(255,255,255,.25)))}
+@media (max-width: 420px){
+  .queue-player-card{width:100%;padding:11px;gap:10px}
+  .queue-avatar-shell,.queue-avatar-core{width:50px;height:50px}
+  .queue-avatar-deco{inset:-8px}
+  .queue-player-name{font-size:21px}
+  .queue-piece-preview{width:36px;height:36px;border-radius:12px}
+  .queue-piece-shape{width:21px;height:21px}
+  .queue-mini-stat{padding:8px 4px}
+}
 .boost-alert-author{
   margin-bottom:7px;
 }
@@ -3359,11 +3405,10 @@ html, body {
         </div>
         <div class="queue-player-main">
           <div id="queue-pseudo" class="queue-player-name"></div>
-          <div class="queue-player-meta">
-            <span class="queue-pill" id="queue-rank-pill">Rang</span>
-            <span id="queue-winrate">Winrate --</span>
-          </div>
+          <div id="queue-winrate" class="queue-player-sub">Winrate --</div>
         </div>
+        <div class="queue-piece-preview" id="queue-piece-preview" aria-hidden="true"></div>
+        <span class="queue-pill" id="queue-rank-pill">Rang</span>
         <div class="queue-mini-stats">
           <div class="queue-mini-stat"><b id="queue-mini-games">0</b><span>Parties</span></div>
           <div class="queue-mini-stat"><b id="queue-mini-wins">0</b><span>Victoires</span></div>
@@ -3881,6 +3926,32 @@ function getQueueRank(elo) {
     label: `${rank.name} ${roman}`,
     image: `/ranks/${rank.key}_${level}.png`,
   };
+}
+
+function renderQueuePiecePreview(player) {
+  const preview = document.getElementById('queue-piece-preview');
+  if (!preview || !player) return;
+
+  const color = String(player.color || '#ff2d55').trim() || '#ff2d55';
+  const color2 = String(player.color_secondary || '').trim();
+  const shape = String(player.shape || 'circle').trim().toLowerCase();
+  const emojiImage = String(player.token_emoji_image || '').trim();
+  const safeShape = ['circle', 'triangle', 'diamond', 'star', 'heart'].includes(shape) ? shape : 'circle';
+  const fill = color2 ? `linear-gradient(135deg, ${color}, ${color2})` : color;
+  const glow = `${color}66`;
+
+  preview.style.setProperty('--queue-piece-bg', fill);
+  preview.style.setProperty('--queue-piece-color', color);
+  preview.style.setProperty('--queue-piece-glow', glow);
+  preview.style.borderColor = `${color}55`;
+  preview.style.background = color2 ? `linear-gradient(135deg, ${color}22, ${color2}22)` : `${color}16`;
+
+  if (emojiImage) {
+    preview.innerHTML = `<img src="${escapeHtml(emojiImage)}" alt="">`;
+    return;
+  }
+
+  preview.innerHTML = `<span class="queue-piece-shape ${safeShape}"></span>`;
 }
 
 function closeDuelModal() {
@@ -4831,8 +4902,9 @@ function showQueueView(position) {
         rankEl.style.color = rank.color;
         rankEl.style.borderColor = `${rank.color}55`;
         rankEl.style.background = `${rank.color}18`;
-        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""> ${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO`;
+        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO</span>`;
       }
+      renderQueuePiecePreview(myPlayer);
       if (winrateEl) winrateEl.textContent = games > 0
         ? `Winrate ${Math.round((wins / games) * 100)}%`
         : 'Premiere partie classee';
