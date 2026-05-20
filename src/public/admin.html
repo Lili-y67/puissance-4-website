@@ -230,8 +230,10 @@ input:focus,select:focus{
 }
 .search-input{
   width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);border-radius:999px;
-  padding:12px 15px;color:var(--ink);font-size:14px;font-family:'Barlow',sans-serif;outline:none;transition:.2s;margin-bottom:0;
+  min-height:44px;padding:12px 16px;color:var(--ink);font-size:14px;line-height:1.25;font-family:'Barlow',sans-serif;outline:none;transition:.2s;margin-bottom:0;
+  text-overflow:ellipsis;
 }
+.search-input::placeholder{color:rgba(239,237,246,.48)}
 .search-input:focus{border-color:rgba(133,235,255,.46);box-shadow:0 0 0 4px rgba(133,235,255,.10);background:rgba(255,255,255,.07)}
 .admin-hero{
   position:relative;overflow:hidden;margin-bottom:22px;padding:28px;border-radius:30px;
@@ -391,7 +393,7 @@ input:focus,select:focus{
 .admin-section-title{
   font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2.5px;text-transform:uppercase;
 }
-.admin-section-copy{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45}
+.admin-section-copy{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45;max-width:760px}
 .pill-tabs{display:flex;gap:10px;flex-wrap:wrap}
 .pill-tab{
   padding:11px 17px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
@@ -402,9 +404,58 @@ input:focus,select:focus{
 .pill-tab:hover{border-color:rgba(133,235,255,.28);color:var(--ink)}
 .coupon-grid{
   display:grid;
-  grid-template-columns:1.15fr .9fr .75fr .85fr .85fr auto;
+  grid-template-columns:minmax(180px,1.2fr) minmax(150px,.9fr) minmax(110px,.7fr) minmax(130px,.8fr) minmax(130px,.8fr) auto;
   gap:10px;
   align-items:end;
+}
+#boost-status,#coupon-result,#limited-pack-result,#system-status-preview{
+  max-width:min(100%,560px);
+  line-height:1.45;
+  text-align:right;
+  overflow-wrap:anywhere;
+}
+.coupon-list{
+  display:grid;
+  gap:8px;
+  margin-top:14px;
+}
+.coupon-row{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:10px;
+  align-items:center;
+  padding:11px 13px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(133,235,255,.08),rgba(255,255,255,.035));
+}
+.coupon-code{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:1px;
+  color:#85EBFF;
+}
+.coupon-meta{font-size:12px;color:var(--muted);line-height:1.35}
+.coupon-timer{
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,214,10,.12);
+  border:1px solid rgba(255,214,10,.25);
+  color:var(--yellow);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+.limited-pack-items{
+  grid-column:1 / -1;
+  min-height:74px;
+  resize:vertical;
+  border-radius:20px;
+  white-space:pre-wrap;
 }
 .admin-action-panel{
   display:flex;
@@ -488,6 +539,8 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   #boost-global-actions>*,#coin-boost-actions>*,#system-status-actions>*{flex:1 1 160px}
   .coupon-grid{grid-template-columns:1fr 1fr}
   .coupon-grid .btn-sm{grid-column:1/-1;height:44px}
+  .coupon-row{grid-template-columns:1fr}
+  #boost-status,#coupon-result,#limited-pack-result,#system-status-preview{text-align:left}
   .modal{max-height:calc(100vh - 24px);overflow-y:auto;padding:22px 16px;border-radius:22px}
   .modal-btns{flex-direction:column}
 }
@@ -506,6 +559,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
 @media(max-width:420px){
   .stats-row{grid-template-columns:1fr}
   .coupon-grid{grid-template-columns:1fr}
+  .coupon-row{grid-template-columns:1fr}
   .nav>div:last-child>*{flex:1 1 100%}
   .security-badges span{flex:1 1 100%;text-align:center}
   .mobile-card-actions,
@@ -629,9 +683,14 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
         <div style="min-width:72px;text-align:center;">
           <div id="boost-val" style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:var(--yellow);">1.0x</div>
         </div>
+        <div style="min-width:160px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Durée</div>
+          <input id="boost-duration" type="number" min="1" max="1440" value="60" class="search-input" style="margin:0;height:40px" placeholder="Minutes">
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;">Durée custom, max 24h.</div>
+        </div>
         <div id="boost-global-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);" onclick="setBoost(Number(document.getElementById('boost-slider').value))">Appliquer</button>
-          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1)">Désactiver</button>
+          <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);" onclick="setBoost(Number(document.getElementById('boost-slider').value), Math.ceil(Number(document.getElementById('boost-duration').value)))">Appliquer</button>
+          <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setBoost(1,0)">Désactiver</button>
         </div>
       </div>
 
@@ -678,6 +737,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       <input id="coupon-hours" type="number" class="search-input" style="margin:0" value="24" min="0" max="8760" placeholder="Validite h">
       <button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.3);height:40px" onclick="createCoupon()">Generer</button>
     </div>
+    <div id="active-coupons-list" class="coupon-list"></div>
   </div>
 
   <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
@@ -694,6 +754,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       <input id="limited-pack-value" type="number" class="search-input" style="margin:0" value="20" min="1" max="95" placeholder="% remise">
       <input id="limited-pack-uses" type="number" class="search-input" style="margin:0" value="50" min="1" max="10000" placeholder="Utilisations">
       <input id="limited-pack-hours" type="number" class="search-input" style="margin:0" value="24" min="1" max="720" placeholder="Validite h">
+      <textarea id="limited-pack-items" class="search-input limited-pack-items" placeholder="Contenu du pack, ex : vip_1m:1, elo_classic:2, coin_boost:1, coins:500, gems:20"></textarea>
       <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);height:40px" onclick="createLimitedPack()">Créer</button>
     </div>
   </div>
@@ -791,6 +852,8 @@ let adminToken = sessionStorage.getItem('adminToken');
 let myRole     = sessionStorage.getItem('adminRole') || 'admin';
 let allPlayers = [];
 let adminLoginRequestId = null;
+let activeCouponsTimer = null;
+let activeCouponsTickTimer = null;
 const ADMIN_SHOP_BOOSTERS = {
   elo_custom_0_1: 'ELO x1.10',
   elo_custom_0_2: 'ELO x1.20',
@@ -909,6 +972,11 @@ async function showPanel() {
   if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   await loadBoostStatus();
   await loadCoinBoostStatus();
+  await loadActiveCoupons();
+  clearInterval(activeCouponsTimer);
+  clearInterval(activeCouponsTickTimer);
+  activeCouponsTimer = setInterval(loadActiveCoupons, 30000);
+  activeCouponsTickTimer = setInterval(refreshCouponCountdowns, 1000);
   await loadSystemStatus();
   await loadVipBoosts();
   await loadPlayers();
@@ -921,6 +989,75 @@ async function api(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   return res.json();
+}
+
+function formatAdminDuration(ms) {
+  if (ms === null || ms === undefined) return 'Sans expiration';
+  const total = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  if (days > 0) return `${days}j ${hours}h`;
+  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  return `${Math.max(0, minutes)} min`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function parseAdminPackItems(value) {
+  return String(value || '')
+    .split(/[\n,;]/)
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const [key, qty] = part.split(/[:x*]/).map(v => v.trim());
+      return { key, qty: Math.max(1, Math.trunc(Number(qty || 1))) };
+    })
+    .filter(entry => entry.key);
+}
+
+async function loadActiveCoupons() {
+  const el = document.getElementById('active-coupons-list');
+  if (!el) return;
+  try {
+    const data = await api('GET', '/api/admin/coupons');
+    if (!Array.isArray(data) || !data.length) {
+      el.innerHTML = '<div class="coupon-meta">Aucun coupon actif pour le moment.</div>';
+      return;
+    }
+    el.innerHTML = data.map(coupon => {
+      const typeLabel = coupon.type === 'flat' ? `-${coupon.value}` : `-${coupon.value}%`;
+      const remaining = coupon.remainingMs === null ? 'Permanent' : formatAdminDuration(coupon.remainingMs);
+      const uses = `${Number(coupon.uses || 0)}/${Number(coupon.maxUses || 0) || '∞'}`;
+      return `
+        <div class="coupon-row">
+          <div>
+            <div class="coupon-code">${escapeHtml(coupon.code)}</div>
+            <div class="coupon-meta">${typeLabel} · utilisations ${uses}</div>
+          </div>
+          <div class="coupon-timer" data-coupon-countdown="${coupon.expiresAt || ''}">${remaining}</div>
+          <div class="coupon-meta">${coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleString('fr-FR') : 'Sans date'}</div>
+        </div>
+      `;
+    }).join('');
+    refreshCouponCountdowns();
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur chargement coupons.</div>';
+  }
+}
+
+function refreshCouponCountdowns() {
+  document.querySelectorAll('[data-coupon-countdown]').forEach(el => {
+    const expiresAt = Number(el.getAttribute('data-coupon-countdown') || 0);
+    el.textContent = expiresAt > 0 ? formatAdminDuration(expiresAt - Date.now()) : 'Permanent';
+  });
 }
 
 async function loadPlayers() {
@@ -1299,6 +1436,7 @@ async function createCoupon() {
   }
   const expires = data.coupon.expiresAt ? ` expire le ${new Date(data.coupon.expiresAt).toLocaleString('fr-FR')}` : ' sans expiration';
   if (out) out.textContent = `Code ${data.coupon.code} cree (${data.coupon.value}${data.coupon.type === 'flat' ? '' : '%'}) -${expires}.`;
+  await loadActiveCoupons();
 }
 
 async function createLimitedPack() {
@@ -1310,6 +1448,7 @@ async function createLimitedPack() {
     value: Number(document.getElementById('limited-pack-value')?.value || 20),
     maxUses: Number(document.getElementById('limited-pack-uses')?.value || 50),
     durationHours: Number(document.getElementById('limited-pack-hours')?.value || 24),
+    items: parseAdminPackItems(document.getElementById('limited-pack-items')?.value || ''),
   };
   const data = await api('POST', '/api/admin/limited-pack', body);
   if (!data.ok) {
@@ -1317,7 +1456,9 @@ async function createLimitedPack() {
     return;
   }
   const expires = data.offer.expiresAt ? new Date(data.offer.expiresAt).toLocaleString('fr-FR') : 'sans expiration';
-  if (out) out.textContent = `${data.offer.label} actif : ${data.offer.code} (-${data.offer.value}%) jusqu'au ${expires}.`;
+  const count = Array.isArray(data.offer.items) ? data.offer.items.length : 0;
+  if (out) out.textContent = `${data.offer.label} actif : ${data.offer.code} (-${data.offer.value}%) jusqu'au ${expires}${count ? ` · ${count} contenu(s)` : ''}.`;
+  await loadActiveCoupons();
 }
 
 async function giveShopItem(id) {
@@ -1580,9 +1721,14 @@ async function loadBoostStatus() {
     const el = document.getElementById('boost-status');
     if (!el) return;
     if (data.multiplier > 1) {
-      el.innerHTML = `<span style="color:var(--yellow)">Boost actif : <strong>${data.multiplier}x</strong></span>`;
+      const remaining = data.remainingMs ? ` (${Math.ceil(Number(data.remainingMs || 0) / 60000)} min)` : '';
+      el.innerHTML = `<span style="color:var(--yellow)">Boost actif : <strong>${data.multiplier}x</strong>${remaining}</span>`;
       document.getElementById('boost-slider').value = data.multiplier;
       document.getElementById('boost-val').textContent = parseFloat(data.multiplier).toFixed(1) + 'x';
+      const durationInput = document.getElementById('boost-duration');
+      if (durationInput && data.remainingMs > 0) {
+        durationInput.value = Math.max(1, Math.ceil(Number(data.remainingMs || 0) / 60000));
+      }
     } else {
       el.innerHTML = '<span style="color:var(--muted)">Aucun boost actif (x1.0)</span>';
     }
@@ -1645,13 +1791,13 @@ async function setSystemStatus(restarting) {
   }
 }
 
-async function setBoost(mult) {
+async function setBoost(mult, durationMinutes = 0) {
   try {
-    await api('POST', '/api/admin/boost', { multiplier: mult });
+    await api('POST', '/api/admin/boost', { multiplier: mult, durationMinutes });
     await loadBoostStatus();
     await loadCoinBoostStatus();
     const t = document.createElement('div');
-    t.textContent = mult > 1 ? `Boost x${mult} activé !` : 'Boost désactivé';
+    t.textContent = mult > 1 && durationMinutes > 0 ? `Boost x${mult} activé !` : 'Boost désactivé';
     Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(255,255,255,0.1)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
     document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
   } catch(e) {}

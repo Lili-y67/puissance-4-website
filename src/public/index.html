@@ -4823,9 +4823,21 @@ async function refreshStoredPlayerForQueue() {
 }
 
 async function connectAndQueue() {
+  if (!myPlayer?.id) {
+    showError('Connecte-toi avant de rejoindre la file.');
+    return;
+  }
   await refreshStoredPlayerForQueue();
-  socket = window._presenceSocket || io({ transports: ['websocket', 'polling'] });
-  window._p4SharedSocket = socket;
+  if (socket) {
+    try { socket.removeAllListeners(); socket.disconnect(); } catch (e) {}
+    socket = null;
+  }
+  socket = io('/', {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1200,
+    reconnectionAttempts: 8,
+  });
   localStorage.setItem('last_active', Date.now());
   socket.on('connect',      ()       => socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') }));
   socket.on('identified',   (player) => {
@@ -4854,6 +4866,7 @@ async function connectAndQueue() {
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     window.location.href = '/game';
   });
+  socket.on('connect_error', () => showError('Connexion à la file impossible pour le moment.'));
   socket.on('error', ({ message }) => showError(message));
 }
 
@@ -4905,9 +4918,10 @@ function showQueueView(position) {
         rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO</span>`;
       }
       renderQueuePiecePreview(myPlayer);
-      if (winrateEl) winrateEl.textContent = games > 0
-        ? `Winrate ${Math.round((wins / games) * 100)}%`
-        : 'Premiere partie classee';
+      if (winrateEl) {
+        winrateEl.textContent = games > 0 ? `Winrate ${Math.round((wins / games) * 100)}%` : '';
+        winrateEl.style.display = games > 0 ? 'block' : 'none';
+      }
       const setText = (id, value) => {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
@@ -4937,8 +4951,21 @@ function updateTimer() {
 function handleLeaveQueue() {
   QueueMusic.stop();
   showQueueVolume(false);
-  if (socket) { socket.emit('queue_leave'); socket.disconnect(); socket = null; }
+  if (socket) {
+    try {
+      socket.emit('queue_leave');
+      socket.removeAllListeners('queue_joined');
+      socket.removeAllListeners('match_found');
+      socket.removeAllListeners('identified');
+      socket.removeAllListeners('connect');
+      socket.removeAllListeners('connect_error');
+      socket.removeAllListeners('error');
+      socket.disconnect();
+    } catch (e) {}
+    socket = null;
+  }
   clearInterval(timerInterval);
+  timerInterval = null;
   const loginView = document.getElementById('view-login');
   const queueView = document.getElementById('view-queue');
   queueView.classList.add('fade-out');

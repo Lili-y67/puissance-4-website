@@ -68,6 +68,7 @@ db.exec(`
     multiplier  REAL    NOT NULL,
     applied_by  TEXT    NOT NULL,
     active      INTEGER NOT NULL DEFAULT 1,
+    expires_at  INTEGER NOT NULL DEFAULT 0,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS sessions (
@@ -104,6 +105,7 @@ try { db.exec(`ALTER TABLE games ADD COLUMN analysis_data TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_info TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
+try { db.exec(`ALTER TABLE boosts ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -514,8 +516,8 @@ const cQ = {
 
 // ── Boosts ────────────────────────────────────────────────────────────────────
 const bQ = {
-  create:        db.prepare(`INSERT INTO boosts (multiplier, applied_by) VALUES (@multiplier, @applied_by)`),
-  getActive:     db.prepare(`SELECT * FROM boosts WHERE active = 1 ORDER BY created_at DESC LIMIT 1`),
+  create:        db.prepare(`INSERT INTO boosts (multiplier, applied_by, expires_at) VALUES (@multiplier, @applied_by, @expires_at)`),
+  getActive:     db.prepare(`SELECT * FROM boosts WHERE active = 1 AND (expires_at = 0 OR expires_at > ?) ORDER BY created_at DESC LIMIT 1`),
   deactivateAll: db.prepare(`UPDATE boosts SET active = 0`),
 };
 
@@ -523,7 +525,7 @@ const bQ = {
 function calcElo(winnerElo, loserElo, isDraw = false, winnerId = null) {
   const K          = 32;
   const expW       = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
-  const globalMult = bQ.getActive.get()?.multiplier ?? 1;
+  const globalMult = bQ.getActive.get(Date.now())?.multiplier ?? 1;
   // Boost VIP individuel sur le gagnant
   const vipActive  = winnerId && !isDraw ? vipQ.getActive.get(winnerId, Date.now()) : null;
   const vipMult    = vipActive ? Number(vipActive.multiplier || 1) : 1;
@@ -576,7 +578,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const dL = eloCalc.dL;
   const vipApplied = !isFriendly && !isDraw ? !!vipQ.getActive.get(winnerId, Date.now()) : false;
   const vipAppliedTo = vipApplied ? winnerId : null;
-  const globalMultiplier = isFriendly ? 1 : (eloCalc.globalMultiplier ?? (bQ.getActive.get()?.multiplier ?? 1));
+  const globalMultiplier = isFriendly ? 1 : (eloCalc.globalMultiplier ?? (bQ.getActive.get(Date.now())?.multiplier ?? 1));
   const activeBoost = vipApplied ? vipQ.getActive.get(winnerId, Date.now()) : null;
   const vipMultiplier = vipApplied ? Number(activeBoost?.multiplier || 1) : 1;
   const vipTier = vipApplied ? String(activeBoost?.tier || 'vip') : null;

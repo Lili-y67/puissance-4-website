@@ -516,7 +516,7 @@ function startDiscordBot(ctx) {
   }
 
   function boostsPayload() {
-    const eloBoost = ctx.bQ.getActive.get();
+    const eloBoost = ctx.bQ.getActive.get(Date.now());
     const coinMultiplier = Number(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
     const coinExpiresAt = Number(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
     const coinBy = ctx.getBoostDisplayName(ctx.db.prepare(`SELECT value FROM config WHERE key='coin_boost_applied_by'`).get()?.value || '');
@@ -917,7 +917,7 @@ function startDiscordBot(ctx) {
     if (action === 'boost-elo') {
       const multiplier = Math.max(1, Math.min(10, Number(value || 1)));
       ctx.bQ.deactivateAll.run();
-      if (multiplier > 1) ctx.bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster' });
+      if (multiplier > 1) ctx.bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster', expires_at: 0 });
       ctx.WH.wlogBoost('elo', multiplier, 'Puissance4-Booster', multiplier > 1 ? '60 min' : 'desactive');
       return interaction.editReply(boostsPayload());
     }

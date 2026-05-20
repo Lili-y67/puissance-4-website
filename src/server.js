@@ -1833,6 +1833,28 @@ app.post('/api/admin/coupons', (req, res) => {
   res.json({ ok: true, coupon: { code, type, value, maxUses, expiresAt } });
 });
 
+app.get('/api/admin/coupons', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const now = Date.now();
+  const rows = db.prepare(`
+    SELECT code, type, value, max_uses, uses, expires_at, created_at
+    FROM coupons
+    WHERE (expires_at IS NULL OR expires_at = 0 OR expires_at > ?)
+      AND (max_uses <= 0 OR uses < max_uses)
+    ORDER BY COALESCE(expires_at, 9999999999999) ASC, created_at DESC
+    LIMIT 40
+  `).all(now);
+  res.json(rows.map(row => ({
+    code: row.code,
+    type: row.type,
+    value: Number(row.value || 0),
+    maxUses: Number(row.max_uses || 0),
+    uses: Number(row.uses || 0),
+    expiresAt: Number(row.expires_at || 0) || null,
+    remainingMs: Number(row.expires_at || 0) ? Math.max(0, Number(row.expires_at || 0) - now) : null,
+  })));
+});
+
 function setConfigValue(key, value) {
   db.prepare(`INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(key, String(value ?? ''));
 }
@@ -1849,6 +1871,7 @@ app.post('/api/admin/limited-pack', (req, res) => {
   const durationHours = Math.max(1, Math.min(24 * 30, Number(req.body?.durationHours || 24)));
   const expiresAt = Date.now() + durationHours * 60 * 60 * 1000;
   const label = String(req.body?.label || 'Offre limitee').trim().slice(0, 48) || 'Offre limitee';
+  const rawItems = parseLimitedPackItems(req.body?.items || req.body?.contents || '');
 
   db.prepare(`
     INSERT INTO coupons (code, type, value, max_uses, uses, expires_at, created_by, created_at)
@@ -1865,9 +1888,10 @@ app.post('/api/admin/limited-pack', (req, res) => {
   setConfigValue('shop_limited_offer_code', code);
   setConfigValue('shop_limited_offer_label', label);
   setConfigValue('shop_limited_offer_ends_at', expiresAt);
+  setConfigValue('shop_limited_offer_items', JSON.stringify(rawItems));
 
   WH.wlogCoupon(code, 'discount', value, maxUses, expiresAt, 'Pack limite admin');
-  res.json({ ok: true, offer: { code, label, value, maxUses, expiresAt } });
+  res.json({ ok: true, offer: { code, label, value, maxUses, expiresAt, items: rawItems } });
 });
 
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
@@ -2303,6 +2327,27 @@ function resolveInventoryShopItem(itemKey) {
     };
   }
   return null;
+}
+
+function parseLimitedPackItems(value) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value || '')
+        .split(/[\n,;]/)
+        .map(part => part.trim())
+        .filter(Boolean)
+        .map(part => {
+          const [key, qty] = part.split(/[:x*]/).map(v => v.trim());
+          return { key, qty: Number(qty || 1) };
+        });
+
+  return raw
+    .map(entry => ({
+      key: String(entry.key || entry.itemKey || '').trim(),
+      qty: Math.max(1, Math.min(999, Math.trunc(Number(entry.qty || entry.quantity || 1)))),
+    }))
+    .filter(entry => entry.key && (entry.key === 'coins' || entry.key === 'gems' || !!resolveInventoryShopItem(entry.key)))
+    .slice(0, 12);
 }
 
 function applyShopGrant(playerId, grant, context = {}) {
@@ -3314,6 +3359,7 @@ app.get('/api/shop/me', (req, res) => {
       code: limitedOfferCode,
       label: getConfigValue('shop_limited_offer_label', 'Offre limitee'),
       expiresAt: limitedOfferEndsAt,
+      items: parseLimitedPackItems(getConfigValue('shop_limited_offer_items', '')),
       coupon: limitedCoupon ? {
         code: limitedCoupon.code,
         type: limitedCoupon.type,
@@ -5451,18 +5497,33 @@ app.get('/api/admin/games', (req, res) => {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Boost ELO global AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 app.get('/api/admin/boost', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const active = bQ.getActive.get();
-  res.json({ active: !!(active), multiplier: active?.multiplier ?? 1 });
+  const active = bQ.getActive.get(Date.now());
+  const expiresAt = Number(active?.expires_at || 0) || null;
+  res.json({
+    active: !!(active),
+    multiplier: active?.multiplier ?? 1,
+    expiresAt,
+    remainingMs: expiresAt ? Math.max(0, expiresAt - Date.now()) : null,
+  });
 });
 app.post('/api/admin/boost', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
   const m = parseFloat(req.body.multiplier);
+  const durationMinutes = Math.ceil(Number(req.body?.durationMinutes || 0));
   if (isNaN(m) || m < 1 || m > 2) return res.status(400).json({ error: 'Entre 1.0 et 2.0.' });
-  bQ.deactivateAll.run();
-  if (m > 1) {
-    bQ.create.run({ multiplier: m, applied_by: 'Puissance4-Booster' });
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 0 || durationMinutes > 1440) {
+    return res.status(400).json({ error: 'Duree invalide (max 24h).' });
   }
-  res.json({ ok: true, multiplier: m });
+  bQ.deactivateAll.run();
+  const expiresAt = m > 1 && durationMinutes !== 0 ? Date.now() + durationMinutes * 60 * 1000 : null;
+  if (m > 1 && durationMinutes !== 0) {
+    bQ.create.run({
+      multiplier: m,
+      applied_by: 'Puissance4-Booster',
+      expires_at: expiresAt,
+    });
+  }
+  res.json({ ok: true, multiplier: m, expiresAt });
 });
 
 app.get('/api/admin/coin-boost', (req, res) => {
@@ -5580,7 +5641,7 @@ app.get('/api/site-stats', (_, res) => {
   const registeredPlayers = registeredHumans + registeredBots;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
-  const activeBoost = bQ.getActive.get();
+  const activeBoost = bQ.getActive.get(Date.now());
   const now = Date.now();
   const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1);
   const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0);
@@ -5652,7 +5713,7 @@ function getStatsOverview() {
     WHERE item_key IN ('coin_boost', 'coin_boost_plus')
        OR item_key LIKE 'coin_custom_%'
   `).get()?.v || 0);
-  const activeGlobalBoost = bQ.getActive.get();
+  const activeGlobalBoost = bQ.getActive.get(Date.now());
   const activeCoinBoost = {
     multiplier: Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_multiplier'`).get()?.value || 1),
     expiresAt: Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0),
@@ -6511,7 +6572,7 @@ function startBot() {
     const registered = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
     const vip = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND (is_vip=1 OR is_vip_plus=1 OR is_perso=1)`).get()?.c || 0);
     const coins = Number(db.prepare(`SELECT COALESCE(SUM(coins),0) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-    const boost = bQ.getActive.get();
+    const boost = bQ.getActive.get(Date.now());
     const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
     const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
     const coinBoostActive = coinBoostMultiplier > 1 && coinBoostExpiresAt > Date.now();
@@ -6528,7 +6589,7 @@ function startBot() {
   }
 
   function botBoostsEmbed() {
-    const activeBoost = bQ.getActive.get();
+    const activeBoost = bQ.getActive.get(Date.now());
     const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
     const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
     const coinBoostBy = getBoostDisplayName(db.prepare(`SELECT value FROM config WHERE key='coin_boost_applied_by'`).get()?.value || '');
@@ -6664,7 +6725,7 @@ function startBot() {
     if (action === 'boost-elo') {
       const multiplier = Math.max(1, Math.min(2, Number(value || 1)));
       bQ.deactivateAll.run();
-      if (multiplier > 1) bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster' });
+      if (multiplier > 1) bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster', expires_at: 0 });
       WH.wlogBoost('elo', multiplier, 'Puissance4-Booster', 'global');
       return interaction.editReply({ content: `Boost ELO regle sur x${multiplier}.` });
     }
