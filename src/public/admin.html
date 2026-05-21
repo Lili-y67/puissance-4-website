@@ -421,7 +421,7 @@ input:focus,select:focus{
 }
 .coupon-row{
   display:grid;
-  grid-template-columns:1fr auto auto;
+  grid-template-columns:1fr auto auto auto;
   gap:10px;
   align-items:center;
   padding:11px 13px;
@@ -457,6 +457,43 @@ input:focus,select:focus{
   border-radius:20px;
   white-space:pre-wrap;
 }
+.pack-builder-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.pack-builder-actions button{
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.055);
+  color:var(--ink);
+  border-radius:999px;
+  padding:9px 12px;
+  cursor:pointer;
+  font-family:'Barlow Condensed',sans-serif;
+  font-weight:900;
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.pack-builder-actions button:hover{border-color:rgba(255,214,10,.35);color:var(--yellow)}
+.pack-builder-preview{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  min-height:38px;
+  padding:10px;
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+}
+.pack-builder-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 10px;
+  border-radius:999px;
+  background:rgba(255,214,10,.10);
+  border:1px solid rgba(255,214,10,.24);
+  color:var(--yellow);
+  font-size:12px;
+  font-weight:800;
+}
+.pack-builder-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-weight:900}
 .admin-action-panel{
   display:flex;
   gap:14px;
@@ -744,19 +781,11 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div class="admin-section-title">Pack limité</div>
-        <div class="admin-section-copy">Active une offre temporaire boutique : timer visible, coupon auto et remise appliquable côté joueur.</div>
+        <div class="admin-section-copy">Active une offre temporaire visible directement dans la boutique, sans code coupon.</div>
       </div>
       <div id="limited-pack-result" style="font-size:13px;color:var(--yellow);"></div>
     </div>
-    <div class="coupon-grid">
-      <input id="limited-pack-label" class="search-input" style="margin:0" value="Flash Pack" placeholder="Nom affiché">
-      <input id="limited-pack-code" class="search-input" style="margin:0" placeholder="CODE ou vide">
-      <input id="limited-pack-value" type="number" class="search-input" style="margin:0" value="20" min="1" max="95" placeholder="% remise">
-      <input id="limited-pack-uses" type="number" class="search-input" style="margin:0" value="50" min="1" max="10000" placeholder="Utilisations">
-      <input id="limited-pack-hours" type="number" class="search-input" style="margin:0" value="24" min="1" max="720" placeholder="Validite h">
-      <textarea id="limited-pack-items" class="search-input limited-pack-items" placeholder="Contenu du pack, ex : vip_1m:1, elo_classic:2, coin_boost:1, coins:500, gems:20"></textarea>
-      <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);height:40px" onclick="createLimitedPack()">Créer</button>
-    </div>
+    <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);height:42px" onclick="openLimitedPackBuilder()">Créer / modifier le pack limité</button>
   </div>
 
   <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
@@ -854,6 +883,7 @@ let allPlayers = [];
 let adminLoginRequestId = null;
 let activeCouponsTimer = null;
 let activeCouponsTickTimer = null;
+let limitedPackItems = [];
 const ADMIN_SHOP_BOOSTERS = {
   elo_custom_0_1: 'ELO x1.10',
   elo_custom_0_2: 'ELO x1.20',
@@ -864,6 +894,19 @@ const ADMIN_SHOP_BOOSTERS = {
   coin_custom_05: 'Coins x5',
   coin_custom_10: 'Coins x10',
 };
+const LIMITED_PACK_CHOICES = [
+  ['coins', 'Coins'],
+  ['gems', 'Gemmes'],
+  ['vip_1m', 'VIP 1 mois'],
+  ['vip_1y', 'VIP 1 an'],
+  ['vip_plus', 'VIP+'],
+  ['perso', 'Perso'],
+  ['elo_classic', 'Boost ELO Classic'],
+  ['elo_max', 'Boost ELO Max'],
+  ['coin_boost', 'Boost Coins'],
+  ['coin_boost_plus', 'Boost Coins+'],
+  ['elo_reset', 'Reset ELO'],
+];
 
 if (adminToken) showPanel();
 
@@ -1044,6 +1087,7 @@ async function loadActiveCoupons() {
           </div>
           <div class="coupon-timer" data-coupon-countdown="${coupon.expiresAt || ''}">${remaining}</div>
           <div class="coupon-meta">${coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleString('fr-FR') : 'Sans date'}</div>
+          ${myRole === 'admin' ? `<button class="btn-sm" style="background:rgba(255,45,85,.12);color:var(--red);border:1px solid rgba(255,45,85,.28)" onclick="deleteCoupon('${escapeHtml(coupon.code)}')">Supprimer</button>` : ''}
         </div>
       `;
     }).join('');
@@ -1051,6 +1095,16 @@ async function loadActiveCoupons() {
   } catch (e) {
     el.innerHTML = '<div style="color:var(--red);font-size:13px">Erreur chargement coupons.</div>';
   }
+}
+
+async function deleteCoupon(code) {
+  if (!confirm(`Supprimer le coupon ${code} ?`)) return;
+  const data = await api('DELETE', `/api/admin/coupons/${encodeURIComponent(code)}`);
+  if (!data.ok) {
+    alert(data.error || 'Suppression impossible.');
+    return;
+  }
+  await loadActiveCoupons();
 }
 
 function refreshCouponCountdowns() {
@@ -1444,11 +1498,11 @@ async function createLimitedPack() {
   if (out) out.textContent = 'Creation...';
   const body = {
     label: document.getElementById('limited-pack-label')?.value || 'Flash Pack',
-    code: document.getElementById('limited-pack-code')?.value || '',
-    value: Number(document.getElementById('limited-pack-value')?.value || 20),
-    maxUses: Number(document.getElementById('limited-pack-uses')?.value || 50),
+    priceCoins: Number(document.getElementById('limited-pack-price-coins')?.value || 1000),
+    priceGems: Number(document.getElementById('limited-pack-price-gems')?.value || 450),
+    stock: Number(document.getElementById('limited-pack-stock')?.value || 50),
     durationHours: Number(document.getElementById('limited-pack-hours')?.value || 24),
-    items: parseAdminPackItems(document.getElementById('limited-pack-items')?.value || ''),
+    items: limitedPackItems,
   };
   const data = await api('POST', '/api/admin/limited-pack', body);
   if (!data.ok) {
@@ -1457,8 +1511,69 @@ async function createLimitedPack() {
   }
   const expires = data.offer.expiresAt ? new Date(data.offer.expiresAt).toLocaleString('fr-FR') : 'sans expiration';
   const count = Array.isArray(data.offer.items) ? data.offer.items.length : 0;
-  if (out) out.textContent = `${data.offer.label} actif : ${data.offer.code} (-${data.offer.value}%) jusqu'au ${expires}${count ? ` · ${count} contenu(s)` : ''}.`;
-  await loadActiveCoupons();
+  if (out) out.textContent = `${data.offer.label} actif jusqu'au ${expires}${count ? ` · ${count} contenu(s)` : ''}.`;
+  closeLimitedPackBuilder();
+}
+
+function openLimitedPackBuilder() {
+  closeLimitedPackBuilder();
+  limitedPackItems = limitedPackItems.length ? limitedPackItems : [{ key: 'coins', qty: 500 }, { key: 'elo_classic', qty: 1 }];
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg';
+  modal.id = 'limited-pack-modal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:720px">
+      <h3>Pack limité</h3>
+      <div class="coupon-grid" style="grid-template-columns:1.2fr .7fr .7fr .7fr .7fr;margin-bottom:14px">
+        <input id="limited-pack-label" class="search-input" value="Flash Pack" placeholder="Nom affiché">
+        <input id="limited-pack-price-coins" type="number" class="search-input" value="1000" min="1" placeholder="Prix coins">
+        <input id="limited-pack-price-gems" type="number" class="search-input" value="450" min="1" placeholder="Prix gemmes">
+        <input id="limited-pack-stock" type="number" class="search-input" value="50" min="1" placeholder="Stock">
+        <input id="limited-pack-hours" type="number" class="search-input" value="24" min="1" max="720" placeholder="Heures">
+      </div>
+      <div class="admin-field-label">Ajouter du contenu</div>
+      <div class="pack-builder-actions">
+        ${LIMITED_PACK_CHOICES.map(([key, label]) => `<button type="button" onclick="addLimitedPackItem('${key}')">${label}</button>`).join('')}
+      </div>
+      <div class="admin-field-label">Contenu actuel</div>
+      <div id="limited-pack-preview" class="pack-builder-preview"></div>
+      <div class="modal-btns">
+        <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3)" onclick="createLimitedPack()">Créer le pack</button>
+        <button class="btn-sm" style="background:rgba(255,255,255,.06);color:var(--muted)" onclick="closeLimitedPackBuilder()">Fermer</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  renderLimitedPackPreview();
+}
+
+function closeLimitedPackBuilder() {
+  document.getElementById('limited-pack-modal')?.remove();
+}
+
+function addLimitedPackItem(key) {
+  const existing = limitedPackItems.find(item => item.key === key);
+  if (existing) existing.qty += key === 'coins' ? 500 : key === 'gems' ? 10 : 1;
+  else limitedPackItems.push({ key, qty: key === 'coins' ? 500 : key === 'gems' ? 10 : 1 });
+  renderLimitedPackPreview();
+}
+
+function removeLimitedPackItem(index) {
+  limitedPackItems.splice(index, 1);
+  renderLimitedPackPreview();
+}
+
+function renderLimitedPackPreview() {
+  const el = document.getElementById('limited-pack-preview');
+  if (!el) return;
+  if (!limitedPackItems.length) {
+    el.innerHTML = '<span class="coupon-meta">Aucun contenu ajouté.</span>';
+    return;
+  }
+  el.innerHTML = limitedPackItems.map((item, index) => {
+    const label = LIMITED_PACK_CHOICES.find(([key]) => key === item.key)?.[1] || item.key;
+    return `<span class="pack-builder-chip">${escapeHtml(label)} x${Number(item.qty || 1)} <button type="button" onclick="removeLimitedPackItem(${index})">×</button></span>`;
+  }).join('');
 }
 
 async function giveShopItem(id) {

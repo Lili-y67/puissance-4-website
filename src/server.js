@@ -1855,6 +1855,15 @@ app.get('/api/admin/coupons', (req, res) => {
   })));
 });
 
+app.delete('/api/admin/coupons/:code', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const code = normalizeCouponCode(req.params.code);
+  if (!code) return res.status(400).json({ error: 'Code invalide.' });
+  db.prepare(`DELETE FROM coupon_uses WHERE code = ?`).run(code);
+  const result = db.prepare(`DELETE FROM coupons WHERE code = ?`).run(code);
+  res.json({ ok: result.changes > 0, deleted: result.changes > 0 });
+});
+
 function setConfigValue(key, value) {
   db.prepare(`INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(key, String(value ?? ''));
 }
@@ -1865,33 +1874,24 @@ function getConfigValue(key, fallback = '') {
 
 app.post('/api/admin/limited-pack', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
-  const code = normalizeCouponCode(req.body?.code || `LIMITED-${crypto.randomBytes(3).toString('hex').toUpperCase()}`);
-  const value = Math.max(1, Math.min(95, Math.trunc(Number(req.body?.value || 20))));
-  const maxUses = Math.max(1, Math.min(10000, Math.trunc(Number(req.body?.maxUses || 50))));
   const durationHours = Math.max(1, Math.min(24 * 30, Number(req.body?.durationHours || 24)));
   const expiresAt = Date.now() + durationHours * 60 * 60 * 1000;
   const label = String(req.body?.label || 'Offre limitee').trim().slice(0, 48) || 'Offre limitee';
   const rawItems = parseLimitedPackItems(req.body?.items || req.body?.contents || '');
+  const priceCoins = Math.max(1, Math.min(999999, Math.trunc(Number(req.body?.priceCoins || req.body?.price || 1000))));
+  const priceGems = Math.max(1, Math.min(999999, Math.trunc(Number(req.body?.priceGems || Math.ceil(priceCoins * 0.45)))));
+  const stock = Math.max(1, Math.min(10000, Math.trunc(Number(req.body?.stock || 50))));
+  if (!rawItems.length) return res.status(400).json({ error: 'Ajoute au moins un contenu dans le pack.' });
 
-  db.prepare(`
-    INSERT INTO coupons (code, type, value, max_uses, uses, expires_at, created_by, created_at)
-    VALUES (?, 'discount', ?, ?, 0, ?, NULL, ?)
-    ON CONFLICT(code) DO UPDATE SET
-      type='discount',
-      value=excluded.value,
-      max_uses=excluded.max_uses,
-      uses=0,
-      expires_at=excluded.expires_at,
-      created_at=excluded.created_at
-  `).run(code, value, maxUses, expiresAt, Date.now());
-
-  setConfigValue('shop_limited_offer_code', code);
+  setConfigValue('shop_limited_offer_code', '');
   setConfigValue('shop_limited_offer_label', label);
   setConfigValue('shop_limited_offer_ends_at', expiresAt);
   setConfigValue('shop_limited_offer_items', JSON.stringify(rawItems));
+  setConfigValue('shop_limited_offer_price', priceCoins);
+  setConfigValue('shop_limited_offer_gem_price', priceGems);
+  setConfigValue('shop_limited_offer_stock', stock);
 
-  WH.wlogCoupon(code, 'discount', value, maxUses, expiresAt, 'Pack limite admin');
-  res.json({ ok: true, offer: { code, label, value, maxUses, expiresAt, items: rawItems } });
+  res.json({ ok: true, offer: { label, priceCoins, priceGems, stock, expiresAt, items: rawItems } });
 });
 
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
@@ -2371,6 +2371,46 @@ function applyShopGrant(playerId, grant, context = {}) {
     const baseExpiry = Number(player?.vip_expires_at || 0) > now ? Number(player.vip_expires_at) : now;
     pQ.updateVip.run({ is_vip: 1, id: playerId });
     pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + Math.max(1, Number(grant.days || 30)) * 24 * 60 * 60 * 1000, id: playerId });
+  }
+}
+
+function applyLimitedPackEntry(playerId, entry, context = {}) {
+  const key = String(entry?.key || '').trim();
+  const qty = Math.max(1, Math.min(999, Math.trunc(Number(entry?.qty || 1))));
+  if (!key) return;
+  if (key === 'coins') {
+    pQ.addCoins.run({ delta: qty, id: playerId });
+    return;
+  }
+  if (key === 'gems') {
+    const player = pQ.getById.get(playerId);
+    pQ.updateGems.run({ gems: Number(player?.gems || 0) + qty, id: playerId });
+    return;
+  }
+  if (key === 'vip_1m') {
+    applyShopGrant(playerId, { type: 'vip_days', days: 30 }, context);
+    return;
+  }
+  if (key === 'vip_1y') {
+    applyShopGrant(playerId, { type: 'vip_days', days: 365 }, context);
+    return;
+  }
+  if (key === 'vip_plus') {
+    pQ.updateVip.run({ is_vip: 1, id: playerId });
+    pQ.updateVipPlus.run({ is_vip_plus: 1, id: playerId });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
+    return;
+  }
+  if (key === 'perso') {
+    pQ.updatePerso.run({ is_perso: 1, id: playerId });
+    return;
+  }
+  if (key === 'elo_reset') {
+    pQ.setElo.run({ elo: 1000, id: playerId });
+    return;
+  }
+  if (resolveInventoryShopItem(key)) {
+    shopItemQ.addQty.run({ player_id: playerId, item_key: key, quantity: qty });
   }
 }
 
@@ -3347,6 +3387,7 @@ app.get('/api/shop/me', (req, res) => {
   const limitedOfferCode = normalizeCouponCode(getConfigValue('shop_limited_offer_code', ''));
   const limitedOfferEndsAt = Number(getConfigValue('shop_limited_offer_ends_at', '0') || 0);
   const limitedCoupon = limitedOfferCode && limitedOfferEndsAt > Date.now() ? getUsableCoupon(limitedOfferCode, playerId) : null;
+  const limitedStock = Number(getConfigValue('shop_limited_offer_stock', '0') || 0);
   res.json({
     player: sanitize(player),
     items: SHOP_ITEMS,
@@ -3359,6 +3400,9 @@ app.get('/api/shop/me', (req, res) => {
       code: limitedOfferCode,
       label: getConfigValue('shop_limited_offer_label', 'Offre limitee'),
       expiresAt: limitedOfferEndsAt,
+      priceCoins: Number(getConfigValue('shop_limited_offer_price', '1000') || 1000),
+      priceGems: Number(getConfigValue('shop_limited_offer_gem_price', '450') || 450),
+      stock: Math.max(0, limitedStock),
       items: parseLimitedPackItems(getConfigValue('shop_limited_offer_items', '')),
       coupon: limitedCoupon ? {
         code: limitedCoupon.code,
@@ -3432,7 +3476,20 @@ app.post('/api/shop/buy', async (req, res) => {
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
 
   const pack = String(req.body?.pack || '').trim();
-  const item = SHOP_ITEMS[pack] || buildCustomShopItem(pack, req.body || {});
+  let item = SHOP_ITEMS[pack] || buildCustomShopItem(pack, req.body || {});
+  if (pack === 'limited_offer') {
+    const endsAt = Number(getConfigValue('shop_limited_offer_ends_at', '0') || 0);
+    const limitedItems = parseLimitedPackItems(getConfigValue('shop_limited_offer_items', ''));
+    if (endsAt <= Date.now() || !limitedItems.length) return res.status(400).json({ error: 'Offre limitee indisponible.' });
+    item = {
+      key: 'limited_offer',
+      label: getConfigValue('shop_limited_offer_label', 'Pack limite'),
+      price: Number(getConfigValue('shop_limited_offer_price', '1000') || 1000),
+      gemPrice: Number(getConfigValue('shop_limited_offer_gem_price', '450') || 450),
+      grants: limitedItems,
+      defaultStock: Number(getConfigValue('shop_limited_offer_stock', '0') || 0),
+    };
+  }
   if (!item) return res.status(400).json({ error: 'Pack invalide.' });
 
   const player = pQ.getById.get(playerId);
@@ -3443,7 +3500,11 @@ app.post('/api/shop/buy', async (req, res) => {
   if (requestedCoupon && !coupon) {
     return res.status(400).json({ error: 'Coupon invalide, expire, deja utilise ou limite atteinte.' });
   }
-  const basePrice = currency === 'gems' ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45))) : Number(item.price || 0);
+  const basePrice = pack === 'limited_offer' && currency === 'gems'
+    ? Number(item.gemPrice || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
+    : currency === 'gems'
+      ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
+      : Number(item.price || 0);
   const price = applyCouponPrice(basePrice, coupon);
   const balance = currency === 'gems' ? Number(player.gems || 0) : Number(player.coins || 0);
 
@@ -3459,7 +3520,10 @@ app.post('/api/shop/buy', async (req, res) => {
   if ((pack === 'vip_1m' || pack === 'vip_1y') && Number(player.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: 'VIP+ est deja actif a vie.' });
   }
-  if (Number.isFinite(item.defaultStock) && getShopStock(pack) <= 0) {
+  if (pack === 'limited_offer' && Number(item.defaultStock || 0) <= 0) {
+    return res.status(400).json({ error: 'Rupture de stock.' });
+  }
+  if (pack !== 'limited_offer' && Number.isFinite(item.defaultStock) && getShopStock(pack) <= 0) {
     return res.status(400).json({ error: 'Rupture de stock.' });
   }
 
@@ -3490,6 +3554,8 @@ app.post('/api/shop/buy', async (req, res) => {
     pQ.updatePerso.run({ is_perso: 1, id: playerId });
   } else if (pack === 'elo_reset') {
     pQ.setElo.run({ elo: 1000, id: playerId });
+  } else if (pack === 'limited_offer' && Array.isArray(item.grants)) {
+    for (const grant of item.grants) applyLimitedPackEntry(playerId, grant, { now, player });
   } else if (Array.isArray(item.grants)) {
     for (const grant of item.grants) applyShopGrant(playerId, grant, { now, player });
   } else {
@@ -3502,6 +3568,12 @@ app.post('/api/shop/buy', async (req, res) => {
   const stockKey = SHOP_STOCK_KEYS[pack];
   if (stockKey) {
     db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
+  }
+  if (pack === 'limited_offer') {
+    db.prepare(`
+      INSERT INTO config (key, value) VALUES ('shop_limited_offer_stock', '0')
+      ON CONFLICT(key) DO UPDATE SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT)
+    `).run();
   }
 
   const fresh = pQ.getById.get(playerId);

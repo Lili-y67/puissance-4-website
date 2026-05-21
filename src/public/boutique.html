@@ -421,12 +421,14 @@ body{
       </div>
       <div class="category-tabs">
         <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
+        <button type="button" class="category-tab" id="tab-offers" onclick="switchShopCategory('offers')">Packs limités</button>
         <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
       </div>
     </div>
   </section>
 
   <section id="shop-ranks-section" class="grid"></section>
+  <section id="shop-offers-section" class="grid" style="display:none"></section>
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
     <div class="boosters-row">
@@ -833,6 +835,11 @@ function setShopCurrency(currency) {
 
 function getCustomBoosterPrice(pack) {
   const currency = getShopCurrency();
+  if (pack === 'limited_offer') {
+    return currency === 'gems'
+      ? Number(shopLimitedOffer?.priceGems || Math.ceil(Number(shopLimitedOffer?.priceCoins || 0) * 0.45))
+      : Number(shopLimitedOffer?.priceCoins || 0);
+  }
   if (pack === 'elo_custom') {
     const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
@@ -1011,7 +1018,9 @@ function getButtonState(pack) {
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
   const owned = item.type === 'rank' ? packOwned(pack) : false;
-  const stock = Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
+  const stock = pack === 'limited_offer'
+    ? Number(shopLimitedOffer?.stock ?? 0)
+    : Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
 
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
@@ -1031,6 +1040,37 @@ function getButtonState(pack) {
 }
 
 function getDisplayItem(pack) {
+  if (pack === 'limited_offer' && shopLimitedOffer?.expiresAt) {
+    const items = Array.isArray(shopLimitedOffer.items) ? shopLimitedOffer.items : [];
+    const labelFor = (key) => ({
+      coins: 'Coins offerts',
+      gems: 'Gemmes offertes',
+      vip_1m: 'VIP 1 mois',
+      vip_1y: 'VIP 1 an',
+      vip_plus: 'VIP+',
+      perso: 'Pack Perso',
+      elo_reset: 'Reset ELO',
+      elo_classic: 'Boost ELO Classic',
+      elo_max: 'Boost ELO Max',
+      coin_boost: 'Boost Coins',
+      coin_boost_plus: 'Boost Coins+',
+    }[key] || key);
+    return {
+      key: 'limited_offer',
+      type: 'bundle',
+      theme: 'perso',
+      badge: '🔥 Offre',
+      duration: 'Limité',
+      title: shopLimitedOffer.label || 'Pack limité',
+      stat: 'Timer',
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} · stock limité`,
+      meta: 'Offre temporaire créée par le staff, disponible directement sans code promo.',
+      defaultStock: Number(shopLimitedOffer.stock || 0),
+      features: items.length
+        ? items.map(item => ['🎁', labelFor(item.key), `Quantité : ${Number(item.qty || 1)}`])
+        : [['🎁', 'Pack surprise', 'Contenu défini par le staff.']],
+    };
+  }
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return null;
   if (pack === 'vip_1m') {
@@ -1413,9 +1453,7 @@ function renderCard(pack) {
     ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) - offre limitee.</span></div></div>`
     : '';
   const offerTimerHtml = item.type === 'bundle' ? renderOfferTimerHtml() : '';
-  const autoCouponHtml = item.type === 'bundle' && shopLimitedOffer?.coupon
-    ? `<div class="auto-coupon-chip">✅ Coupon auto : ${escapeHtml(shopLimitedOffer.coupon.code)}</div>`
-    : '';
+  const autoCouponHtml = '';
   return `
     <article class="card ${item.theme}">
       <div class="tier">
@@ -1435,6 +1473,7 @@ function renderCard(pack) {
       <div class="feature-list">
         ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
         ${item.type === 'booster' ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) · inventaire perso ${inv}.</span></div></div>` : ''}
+        ${bundleStockHtml}
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
@@ -1449,16 +1488,20 @@ function renderCard(pack) {
 
 function renderShop() {
   document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-offers-section').innerHTML = shopLimitedOffer?.expiresAt && Number(shopLimitedOffer.stock || 0) > 0
+    ? renderCard('limited_offer')
+    : `<div class="card perso" style="grid-column:1/-1"><h2>Aucun pack limité</h2><div class="meta">Le staff n'a pas encore activé d'offre temporaire.</div></div>`;
   document.getElementById('shop-elo-boosters-grid').innerHTML = [renderCustomBoosterCard('elo_custom')].join('');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [renderCustomBoosterCard('coin_custom')].join('');
 }
 
 function switchShopCategory(category) {
-  if (category === 'offers') category = 'ranks';
   currentCategory = category;
   document.getElementById('tab-ranks').classList.toggle('active', category === 'ranks');
+  document.getElementById('tab-offers').classList.toggle('active', category === 'offers');
   document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
   document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
+  document.getElementById('shop-offers-section').style.display = category === 'offers' ? 'grid' : 'none';
   document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
 }
 
@@ -1534,7 +1577,6 @@ async function loadShop() {
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
-    if (shopLimitedOffer?.coupon) applyAutoCoupon(shopLimitedOffer.coupon, shopLimitedOffer.label || 'Offre limitee');
   } catch (e) {
     setCoinsUi(0, 'Impossible de charger ton solde.');
   }
@@ -1593,6 +1635,9 @@ async function buyPack(pack) {
     shopPlayer = data.player || shopPlayer;
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
+    if (pack === 'limited_offer' && shopLimitedOffer) {
+      shopLimitedOffer.stock = Math.max(0, Number(shopLimitedOffer.stock || 0) - 1);
+    }
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
