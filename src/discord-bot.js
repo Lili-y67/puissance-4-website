@@ -443,10 +443,16 @@ function startDiscordBot(ctx) {
         const opponent = isP1 ? game.p2_pseudo : game.p1_pseudo;
         const delta = isP1 ? Number(game.elo_p1 || 0) : Number(game.elo_p2 || 0);
         const result = game.winner_id == null ? 'NUL' : Number(game.winner_id) === Number(player.id) ? 'WIN' : 'LOSE';
+        const emojiMap = {
+          WIN: { id: '1507869143985295440', name: 'victoire' },
+          LOSE: { id: '1507869174419161250', name: 'defaite' },
+          NUL: { id: '1507869216127193228', name: 'nulle' }
+        };
         return new StringSelectMenuOptionBuilder()
           .setLabel(`${result} vs ${opponent} / ${delta >= 0 ? '+' : ''}${delta} ELO`.slice(0, 100))
           .setDescription(`#${game.id} / ${game.move_count || 0} coups / ${game.duration || 0}s`.slice(0, 100))
-          .setValue(`game:${game.id}`);
+          .setValue(`game:${game.id}`)
+          .setEmoji(emojiMap[result]);
       }));
     return [new ActionRowBuilder().addComponents(menu)];
   }
