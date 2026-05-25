@@ -3,8 +3,14 @@
  * Never send private network data such as IP addresses to Discord.
  */
 
-const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz';
-const BASE = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
+const BASE = (process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app').replace(/\/+$/, '');
+const WEBHOOKS = Object.freeze({
+  get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
+  post: process.env.DISCORD_WEBHOOK_POST || 'https://discord.com/api/webhooks/1508532434008801351/EdesEHSTzRz5xlDEYpa9fRIHTBNrFuE1ch-lm9vNubPKqa8Nerch36lvqumJHmmKuWp5',
+  games: process.env.DISCORD_WEBHOOK_GAMES || 'https://discord.com/api/webhooks/1508532437549060268/SKY1sUhOfMrXJHWSygRovS821KoRyBjpJu_yLzOJl1XaRSWcoIBNIfR82NJHlqiIwugy',
+  global: process.env.DISCORD_WEBHOOK_GLOBAL || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
+  default: process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
+});
 
 const EMOJI = Object.freeze({
   replay: '\uD83C\uDFAC',
@@ -27,10 +33,15 @@ const EMOJI = Object.freeze({
   win: '\uD83D\uDFE2',
 });
 
-async function postWebhook(payload) {
-  if (!DISCORD_WEBHOOK) return;
+function webhookUrl(target = 'global') {
+  return WEBHOOKS[target] || WEBHOOKS.default || WEBHOOKS.global || WEBHOOKS.get;
+}
+
+async function postWebhook(payload, target = 'global') {
+  const url = webhookUrl(target);
+  if (!url) return;
   try {
-    const res = await fetch(DISCORD_WEBHOOK, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -54,6 +65,15 @@ function truncate(value, max = 3900) {
   return text.length > max ? `${text.slice(0, max - 1)}...` : text;
 }
 
+function publicMediaUrl(value) {
+  const src = String(value || '').trim();
+  if (!src || /^data:/i.test(src)) return '';
+  if (/^https?:\/\//i.test(src)) return src;
+  if (src.startsWith('/')) return `${BASE}${src}`;
+  if (/^(assets|images|uploads)\//i.test(src)) return `${BASE}/${src}`;
+  return '';
+}
+
 function mkEmbed(color, title, fields = [], options = {}) {
   const embed = {
     color,
@@ -68,6 +88,10 @@ function mkEmbed(color, title, fields = [], options = {}) {
   };
   if (options.description) embed.description = truncate(options.description, 4096);
   if (options.url) embed.url = options.url;
+  const thumbnail = publicMediaUrl(options.thumbnail);
+  const image = publicMediaUrl(options.image);
+  if (thumbnail) embed.thumbnail = { url: thumbnail };
+  if (image) embed.image = { url: image };
   return embed;
 }
 
@@ -99,6 +123,8 @@ function mkContainer(color, title, fields = [], options = {}) {
       description: options.subtitle,
       url: options.url,
       footer: options.footer,
+      thumbnail: options.thumbnail,
+      image: options.image,
     }),
     buttons: Array.isArray(options.buttons) ? options.buttons.filter(Boolean) : [],
   };
@@ -113,10 +139,10 @@ function cardToPayload(card) {
   return { embeds: [card] };
 }
 
-async function send(items) {
+async function send(items, target = 'global') {
   const cards = Array.isArray(items) ? items : [items];
   for (const card of cards.filter(Boolean).slice(0, 10)) {
-    await postWebhook(cardToPayload(card));
+    await postWebhook(cardToPayload(card), target);
   }
 }
 
@@ -216,7 +242,7 @@ module.exports = {
         p1?.id ? linkButton(clean(p1.pseudo, 'J1').slice(0, 20), `${BASE}/profil?id=${p1.id}`, EMOJI.profile) : null,
         p2?.id ? linkButton(clean(p2.pseudo, 'J2').slice(0, 20), `${BASE}/profil?id=${p2.id}`, EMOJI.profile) : null,
       ],
-    })]);
+    })], 'games');
   },
 
   wlogRegister(pseudo, id) {
@@ -239,20 +265,20 @@ module.exports = {
     ], { subtitle: 'Tentative refusee' })]);
   },
 
-  wlogAvatar(pseudo, id, sizeKB) {
+  wlogAvatar(pseudo, id, sizeKB, image = '') {
     send([mkContainer(0xff9f0a, 'Avatar change', [
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Taille', `${sizeKB} KB`, true],
-    ], { subtitle: 'Cosmetique profil', buttons: profileButtons(id) })]);
+    ], { subtitle: 'Cosmetique profil', thumbnail: image, buttons: profileButtons(id) })]);
   },
 
-  wlogBanner(pseudo, id, sizeKB) {
+  wlogBanner(pseudo, id, sizeKB, image = '') {
     send([mkContainer(0xff9f0a, 'Banniere changee', [
       ['Joueur', pseudo, true],
       ['ID', id, true],
       ['Taille', `${sizeKB} KB`, true],
-    ], { subtitle: 'Cosmetique profil', buttons: profileButtons(id) })]);
+    ], { subtitle: 'Cosmetique profil', image, buttons: profileButtons(id) })]);
   },
 
   wlogProfileView(visitorPseudo, targetPseudo, targetId) {
@@ -266,7 +292,7 @@ module.exports = {
     send([mkContainer(0x8b9cf4, 'Replay visionne', [
       ['Visionne par', watcherPseudo, true],
       ['Partie ID', gameId, true],
-    ], { subtitle: 'Replay consulte', buttons: [linkButton('Voir replay', `${BASE}/replay/${gameId}`, EMOJI.replay)] })]);
+    ], { subtitle: 'Replay consulte', buttons: [linkButton('Voir replay', `${BASE}/replay/${gameId}`, EMOJI.replay)] })], 'games');
   },
 
   wlogAdminLogin() {
@@ -422,7 +448,7 @@ module.exports = {
       ['Nom', name, true],
       ['ID', id, true],
       ['Statut', status, true],
-    ], { subtitle: 'Evenement tournoi', buttons: [linkButton('Voir tournoi', `${BASE}/tournoi?id=${id}`, EMOJI.trophy)] })]);
+    ], { subtitle: 'Evenement tournoi', buttons: [linkButton('Voir tournoi', `${BASE}/tournoi?id=${id}`, EMOJI.trophy)] })], 'games');
   },
 
   wlogDuel(sender, target, type) {
@@ -430,19 +456,21 @@ module.exports = {
       ['Createur', sender, true],
       ['Cible', target || 'Lien public', true],
       ['Type', type || 'ranked', true],
-    ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.sword)] })]);
+    ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.sword)] })], 'games');
   },
 
   wlogApiEvent(event = {}) {
     const status = Number(event.status || 0);
     const color = status >= 500 ? 0xff3b30 : status >= 400 ? 0xff9f0a : 0x4c6ef5;
+    const target = String(event.method || '').toUpperCase() === 'GET' ? 'get' : 'post';
     send([mkContainer(color, 'API site', [
       ['Route', `${clean(event.method)} ${clean(event.path)}`, false],
       ['Statut', `${status || '-'} - ${Number(event.durationMs || 0)}ms`, true],
       ['Acteur', clean(event.actor, 'Visiteur/Anonyme'), true],
       ['Type', clean(event.kind, 'api'), true],
+      event.changes ? ['Changements', event.changes, false] : null,
       event.note ? ['Note', event.note, false] : null,
-    ], { subtitle: 'Journal site sans IP, token, mot de passe ni contenu prive', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.link)] })]);
+    ], { thumbnail: event.thumbnail, image: event.image, buttons: [linkButton('Ouvrir le site', BASE, EMOJI.link)] })], target);
   },
 
   wlogSystem(status, message, details = {}) {

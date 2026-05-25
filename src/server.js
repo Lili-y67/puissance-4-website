@@ -1448,12 +1448,26 @@ const API_AUDIT_EXCLUDED = [
   /^\/api\/bot\/ping$/,
   /^\/api\/bot\/move$/,
 ];
+const API_AUDIT_SENSITIVE_KEYS = new Set([
+  'password',
+  'pwd',
+  'token',
+  'playerToken',
+  'botToken',
+  'bot_token',
+  'code',
+  'requestId',
+  'adminToken',
+  'discordCode',
+  'secret',
+  'authorization',
+]);
 
 function shouldAuditApiRequest(req) {
   const pathOnly = String(req.path || '').split('?')[0];
   if (!pathOnly.startsWith('/api/')) return false;
   if (API_AUDIT_EXCLUDED.some(pattern => pattern.test(pathOnly))) return false;
-  return req.method !== 'GET' || pathOnly.startsWith('/api/admin/');
+  return true;
 }
 
 function inferApiAuditActor(req) {
@@ -1496,6 +1510,44 @@ function classifyApiAuditEvent(req) {
   return 'site';
 }
 
+function summarizeApiAuditValue(key, value) {
+  const lowerKey = String(key || '').toLowerCase();
+  if (API_AUDIT_SENSITIVE_KEYS.has(key) || API_AUDIT_SENSITIVE_KEYS.has(lowerKey)) return '[masque]';
+  if (value == null) return 'vide';
+  if (typeof value === 'boolean') return value ? 'oui' : 'non';
+  if (typeof value === 'number') return String(value);
+  if (Array.isArray(value)) return `${value.length} element(s)`;
+  if (typeof value === 'object') {
+    if (lowerKey.includes('items')) return `${Object.keys(value).length} entree(s)`;
+    return 'objet';
+  }
+  const text = String(value).trim();
+  if (!text) return 'vide';
+  if (/^data:image\//i.test(text) || text.length > 1800) return `[donnee volumineuse ${Math.ceil(text.length / 1024)} KB]`;
+  if (/^https?:\/\//i.test(text)) return text.slice(0, 120);
+  return text.length > 120 ? `${text.slice(0, 117)}...` : text;
+}
+
+function buildApiAuditChanges(req) {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const entries = Object.entries(body)
+    .filter(([key]) => !API_AUDIT_SENSITIVE_KEYS.has(key) && !API_AUDIT_SENSITIVE_KEYS.has(String(key).toLowerCase()))
+    .filter(([key]) => !['captcha', 'confirm', 'adminIdentity'].includes(String(key)))
+    .slice(0, 10);
+  const parts = entries.map(([key, value]) => `${key}: ${summarizeApiAuditValue(key, value)}`);
+  const targetId = req.params?.id || req.params?.playerId || '';
+  if (targetId && !parts.some(part => part.startsWith('target:'))) parts.unshift(`target: #${targetId}`);
+  return parts.join('\n');
+}
+
+function buildApiAuditMedia(req) {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  return {
+    thumbnail: body.avatar || body.avatar_decoration || body.tokenEmojiImage || body.token_emoji_image || '',
+    image: body.banner || body.profile_banner || body.profileBanner || '',
+  };
+}
+
 app.use((req, res, next) => {
   if (!shouldAuditApiRequest(req)) return next();
   const startedAt = Date.now();
@@ -1508,6 +1560,8 @@ app.use((req, res, next) => {
         durationMs: Date.now() - startedAt,
         actor: inferApiAuditActor(req),
         kind: classifyApiAuditEvent(req),
+        changes: buildApiAuditChanges(req),
+        ...buildApiAuditMedia(req),
       });
     } catch(e) {}
   });
@@ -4445,7 +4499,7 @@ app.patch('/api/players/:id/banner', (req, res) => {
   pQ.updateBanner.run({ banner, id: Number(req.params.id) });
   if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pBanner = pQ.getById.get(Number(req.params.id));
-  WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024));
+  WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024), banner);
   res.json({ ok: true });
 });
 
@@ -4472,7 +4526,7 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   pQ.updateAvatar.run({ avatar, id: Number(req.params.id) });
   if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pAvatar = pQ.getById.get(Number(req.params.id));
-  WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024));
+  WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024), avatar);
   res.json({ ok: true });
 });
 
