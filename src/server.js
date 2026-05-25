@@ -1949,7 +1949,7 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   const vipExpiryMap = { '1m': 30 * 24 * 60 * 60 * 1000, '1y': 365 * 24 * 60 * 60 * 1000 };
   if (role === 'vip') {
     if (!vipExpiryMap[vipDuration]) return res.status(400).json({ error: 'Choisis une duree VIP valide.' });
-    WH.wlogAdminAction('VIP accordAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP aprAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs', 'oui', true]]);
+    WH.wlogAdminAction('VIP accordée', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP après', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: targetId });
     pQ.updateVipExpiry.run({ vip_expires_at: Date.now() + vipExpiryMap[vipDuration], id: targetId });
@@ -1986,7 +1986,7 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
       `Bonjour **${target.pseudo}** !`,
       '',
       role === 'vip'
-        ? 'Le statut **VIP** vient de tAAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtre attribuAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.'
+        ? "Le statut **VIP** vient d'être offert pendant une durée limité. N'hésite pas à le prolonger dans la Boutique 🛒"
         : role === 'vipplus'
           ? "Le statut **VIP+** vient de t'être attribue."
         : `Ton rôle a été modifié en : **${oldRole}** devient à présent **${role}**`,
@@ -3847,11 +3847,11 @@ function findReusableDiscordPseudoPlayer(discordUser) {
 app.post('/api/auth/register', security.routeGuard('register'), (req, res) => {
   const { pseudo, password } = req.body;
   if (!pseudo?.trim() || !password) return res.status(400).json({ error: 'Pseudo et mot de passe requis.' });
-  if (pseudo.trim().length < 2) return res.status(400).json({ error: 'Pseudo trop court (2 caractAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres min).' });
-  if (password.length < 4)     return res.status(400).json({ error: 'Mot de passe trop court (4 caractAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres min).' });
+  if (pseudo.trim().length < 2) return res.status(400).json({ error: 'Pseudo trop court (2 caractères min).' });
+  if (password.length < 4)     return res.status(400).json({ error: 'Mot de passe trop court (4 caractères min).' });
 
   const existing = pQ.getByPseudo.get(pseudo.trim());
-  if (existing) return res.status(409).json({ error: 'Ce pseudo est dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  pris.' });
+  if (existing) return res.status(409).json({ error: 'Ce pseudo est déjà pris.' });
 
   try {
     let player = pQ.register.get({ pseudo: pseudo.trim(), password: hashPwd(password) });
@@ -3907,7 +3907,7 @@ function sanitize(p) {
   if (rest.deleted) {
     return {
       ...rest,
-      pseudo:     '[SupprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA]',
+      pseudo:     '[Supprimée]',
       avatar:     '',
       avatar_decoration: '',
       token_emoji_image: '',
@@ -4157,7 +4157,7 @@ app.delete('/api/players/:id', (req, res) => {
   // Les parties restent intactes (pas de FK cascade sur games)
   // Anonymiser + marquer deleted AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA on garde le joueur en DB pour les parties historiques
   db.prepare(`UPDATE players SET
-    pseudo     = '[SupprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA]',
+    pseudo     = '[Supprimée]',
     password   = '',
     color      = '#555555',
     avatar     = '',
