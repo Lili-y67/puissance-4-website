@@ -16,6 +16,7 @@ const ipToPlayers  = new Map();
 const playerToIp   = new Map(); 
 const onlineSockets = new Map();
 const visitorSockets = new Map();
+const connectedRoleRemoveTimers = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
@@ -2781,6 +2782,39 @@ async function syncPlayerDiscordConnectedRole(playerOrId, connected) {
   });
 }
 
+function cancelConnectedRoleRemoval(playerId) {
+  const id = Number(playerId || 0);
+  const timer = connectedRoleRemoveTimers.get(id);
+  if (timer) clearTimeout(timer);
+  connectedRoleRemoveTimers.delete(id);
+}
+
+function markDiscordConnectedRealtime(player) {
+  if (!player?.id || !player.discord_id) return;
+  cancelConnectedRoleRemoval(player.id);
+  syncPlayerDiscordConnectedRole(player, true).catch(() => {});
+}
+
+function scheduleDiscordConnectedRemoval(playerId) {
+  const id = Number(playerId || 0);
+  if (!id) return;
+  cancelConnectedRoleRemoval(id);
+  connectedRoleRemoveTimers.set(id, setTimeout(() => {
+    connectedRoleRemoveTimers.delete(id);
+    const sockets = onlineSockets.get(id);
+    if (sockets && sockets.size > 0) return;
+    syncPlayerDiscordConnectedRole(id, false).catch(() => {});
+  }, 3500));
+}
+
+function syncOnlineDiscordConnectedRoles() {
+  for (const playerId of onlineSockets.keys()) {
+    if (isAnonymousPlayerId(playerId)) continue;
+    const player = pQ.getById.get(Number(playerId));
+    if (player?.discord_id) markDiscordConnectedRealtime(player);
+  }
+}
+
 async function clearAllDiscordConnectedRoles() {
   const { botToken } = discordConfig();
   if (!botToken) return;
@@ -5056,7 +5090,9 @@ app.get('/api/players/:id', (req, res) => {
 
   const p = sanitize(player);
   const clan = serializeClan(cQ.getForPlayer.get(player.id));
-  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal, clan }, games, games_total: gamesTotal, following, followers });
+  const runtime = Number(player.is_bot || 0) === 1 ? publicBotRuntime(player.id) : null;
+  const online = Number(player.is_bot || 0) === 1 ? !!runtime.online : onlineSockets.has(Number(player.id));
+  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal, clan, online }, games, games_total: gamesTotal, following, followers });
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {
@@ -6066,10 +6102,9 @@ io.on('connection', socket => {
     if (!ipToPlayers.has(clientIp)) ipToPlayers.set(clientIp, new Set());
     ipToPlayers.get(clientIp).add(socket.playerId);
     // Marquer en ligne
-    const wasOffline = !onlineSockets.has(socket.playerId) || onlineSockets.get(socket.playerId).size === 0;
     if (!onlineSockets.has(socket.playerId)) onlineSockets.set(socket.playerId, new Set());
     onlineSockets.get(socket.playerId).add(socket.id);
-    if (wasOffline && !isAnonymousPlayerId(socket.playerId)) syncPlayerDiscordConnectedRole(player, true).catch(() => {});
+    if (!isAnonymousPlayerId(socket.playerId)) markDiscordConnectedRealtime(player);
     if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
     socket.emit('identified', sanitize(player));
     broadcastPresenceCounts();
@@ -6320,7 +6355,7 @@ io.on('connection', socket => {
         socks.delete(socket.id);
         if (socks.size === 0) {
           onlineSockets.delete(socket.playerId);
-          if (!isAnonymousPlayerId(disconnectedPlayerId)) syncPlayerDiscordConnectedRole(disconnectedPlayerId, false).catch(() => {});
+          if (!isAnonymousPlayerId(disconnectedPlayerId)) scheduleDiscordConnectedRemoval(disconnectedPlayerId);
         }
       }
     }
@@ -6521,6 +6556,7 @@ function buildDiscordBotContext() {
     hashPwd,
     notifyPlayerProfileChanged,
     syncPlayerDiscordRankRole,
+    syncOnlineDiscordConnectedRoles,
     getPresenceCounts,
     getBoostDisplayName,
     gm,

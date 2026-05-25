@@ -287,6 +287,7 @@ input[type="file"]{display:none;}
 .profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;}
 .profile-discord-roles{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;max-width:100%}
 .profile-discord-roles .discord-role-chip{font-size:9px;padding:3px 7px;letter-spacing:.55px;gap:5px}
+.profile-discord-roles .discord-role-chip .rank-mini-emoji{font-size:10px}
 .profile-discord-roles .discord-role-dot{width:6px;height:6px}
 .profile-discord-more{font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.7px;text-transform:uppercase}
 .vip-tier-badge{font-size:11px;padding:2px 8px 2px 5px;border-radius:6px;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;text-transform:uppercase;box-shadow:0 0 16px var(--vip-glow, rgba(255,214,10,.22)), inset 0 0 10px rgba(255,255,255,.04);}
@@ -723,8 +724,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   font-size:11px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:.8px;
   text-transform:uppercase
 }
-.discord-role-chip.rank-role{font-size:10px;padding:4px 8px;letter-spacing:.6px;opacity:.86}
-.discord-role-chip .rank-mini-emoji{font-size:8px;line-height:1;opacity:.75;margin-right:-1px}
+.discord-role-chip.rank-role{font-size:10px;padding:4px 8px;letter-spacing:.6px;opacity:.92}
+.discord-role-chip .rank-mini-emoji{font-size:12px;line-height:1;opacity:.95;margin-right:-1px}
 .discord-role-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:currentColor}
 .discord-role-chip.connected-role{color:#30d158!important;background:rgba(48,209,88,.12)!important;border-color:rgba(48,209,88,.35)!important}
 .discord-role-chip.connected-role .discord-role-dot{background:#30d158;box-shadow:0 0 0 0 rgba(48,209,88,.55);animation:discordConnectedPulse 1.45s ease-in-out infinite}
@@ -4817,6 +4818,10 @@ async function loadStatus(playerId) {
     const ring = document.getElementById('avatar-ring');
     const wrap = document.getElementById('status-badge-wrap');
     if (!ring || !wrap) return;
+    if (currentPlayer && String(currentPlayer.id) === String(playerId)) {
+      currentPlayer.online = !!data.online;
+      updateProfileDiscordRoles(currentPlayer);
+    }
 
     if (data.online) {
       if (data.is_bot) {
@@ -4873,7 +4878,10 @@ async function refreshLiveBadge(playerId) {
 function startProfileLivePolling(playerId) {
   if (profileLivePoll) clearInterval(profileLivePoll);
   refreshLiveBadge(playerId);
-  profileLivePoll = setInterval(() => refreshLiveBadge(playerId), 15000);
+  profileLivePoll = setInterval(() => {
+    refreshLiveBadge(playerId);
+    loadStatus(playerId);
+  }, 15000);
 }
 
 // ── Simulateur ELO ───────────────────────────────────────────────────────────
@@ -5092,16 +5100,25 @@ const DISCORD_RANK_ROLE_EMOJIS = {
   Amethyste: '🔮',
 };
 const DISCORD_RANK_ROLE_RE = /^(Malachite|Quartz|Ambre|Jade|Saphir|Améthyste|Amethyste) (I|II|III|IV|V)$/i;
+const DISCORD_CONNECTED_ROLE_RE = /^connect[eé]e$/i;
+
+function normalizeDiscordRoleName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
 
 function discordServerRoleChip(role) {
   const name = String(role?.name || role?.id || '').trim();
   const col = role?.color && role.color !== '#000000' ? role.color : '#99aab5';
-  const isConnected = name.toLowerCase() === 'connectée' || name.toLowerCase() === 'connectee';
+  const normalizedName = normalizeDiscordRoleName(name);
+  const isConnected = DISCORD_CONNECTED_ROLE_RE.test(normalizedName);
   const rankMatch = name.match(DISCORD_RANK_ROLE_RE);
   const rankBase = rankMatch ? rankMatch[1] : '';
-  const rankEmoji = rankBase ? (DISCORD_RANK_ROLE_EMOJIS[rankBase] || '') : '';
+  const rankEmoji = role?.rankEmoji || (rankBase ? (DISCORD_RANK_ROLE_EMOJIS[rankBase] || '') : '');
   const classes = ['discord-role-chip'];
-  if (rankMatch) classes.push('rank-role');
+  if (rankMatch || role?.isSiteRank) classes.push('rank-role');
   if (isConnected) classes.push('connected-role');
   const dotStyle = isConnected ? '' : `style="background:${col}"`;
   const style = isConnected ? '' : `style="background:${col}22;color:${col};border:1px solid ${col}55"`;
@@ -5120,9 +5137,24 @@ function getDiscordServerRolesFromPlayer(player) {
   } catch (_) {
     info = null;
   }
-  return Array.isArray(info?.server_roles)
+  const roles = Array.isArray(info?.server_roles)
     ? info.server_roles.filter(role => role && role.name && role.name !== '@everyone')
     : [];
+  const withoutOldRank = roles.filter(role => !DISCORD_RANK_ROLE_RE.test(String(role?.name || '').trim()));
+  const rank = player.rank || null;
+  if (rank?.label) {
+    withoutOldRank.unshift({
+      name: rank.discordRoleName || rank.label,
+      color: rank.color || '#99aab5',
+      isSiteRank: true,
+      rankEmoji: rank.emoji || '',
+    });
+  }
+  const hasConnected = withoutOldRank.some(role => DISCORD_CONNECTED_ROLE_RE.test(normalizeDiscordRoleName(role?.name)));
+  if (player.online && !hasConnected) {
+    withoutOldRank.unshift({ name: 'Connectée', color: '#30d158' });
+  }
+  return withoutOldRank;
 }
 
 function renderProfileDiscordRoles(player) {
@@ -5134,6 +5166,19 @@ function renderProfileDiscordRoles(player) {
     ${visible.map(discordServerRoleChip).join('')}
     ${hidden ? `<span class="profile-discord-more">+${hidden}</span>` : ''}
   </div>`;
+}
+
+function updateProfileDiscordRoles(player = currentPlayer) {
+  const html = renderProfileDiscordRoles(player);
+  const existing = document.querySelector('.profile-discord-roles');
+  if (existing) {
+    if (html) existing.outerHTML = html;
+    else existing.remove();
+    return;
+  }
+  if (!html) return;
+  const badges = document.querySelector('.profile-badges');
+  if (badges) badges.insertAdjacentHTML('afterend', html);
 }
 
 async function loadDiscordInfo() {

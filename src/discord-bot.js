@@ -857,6 +857,7 @@ function startDiscordBot(ctx) {
         utilityFailed.push(`${name} (${error.message || 'erreur'})`);
       }
     }
+    if (typeof ctx.syncOnlineDiscordConnectedRoles === 'function') ctx.syncOnlineDiscordConnectedRoles();
 
     const missing = expected.filter(name => !byName.has(name));
     return interaction.editReply(containerMessage({
