@@ -1,287 +1,395 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 — Page introuvable</title>
+<title>Puissance 4 - Page introuvable</title>
 <link rel="icon" type="image/png" href="/assets/site-logo.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-:root {
-  --bg:      #06060e;
-  --surface: #0d0d1c;
-  --border:  rgba(255,255,255,0.06);
-  --red:     #ff2d55;
-  --yellow:  #ffd60a;
-  --muted:   rgba(238,238,245,0.35);
-  --text:    #eeeef5;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#06060e;
+  --surface:#111123;
+  --surface2:#17172d;
+  --border:rgba(255,255,255,.09);
+  --text:#f3f3f8;
+  --muted:rgba(243,243,248,.54);
+  --red:#ff2d55;
+  --yellow:#ffd60a;
+  --cyan:#85ebff;
+  --green:#30d158;
+  --violet:#8b9cf4;
 }
-
-html, body {
-  height: 100%;
-  background: var(--bg); background-attachment: fixed;
-  color: var(--text);
-  font-family: 'Barlow', sans-serif;
-  overflow: hidden;
+html,body{min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Barlow,sans-serif}
+body{
+  display:grid;
+  place-items:center;
+  padding:28px;
+  background:
+    radial-gradient(circle at 18% 18%,rgba(255,45,85,.20),transparent 28%),
+    radial-gradient(circle at 84% 14%,rgba(133,235,255,.16),transparent 30%),
+    radial-gradient(circle at 50% 92%,rgba(255,214,10,.11),transparent 36%),
+    #06060e;
 }
-
-/* Grille de fond */
-.bg-grid {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+.noise,.grid,.scan{position:fixed;inset:0;pointer-events:none}
+.grid{
+  opacity:.7;
   background-image:
-    linear-gradient(rgba(255,45,85,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,45,85,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+    linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(circle at center,#000 0 58%,transparent 86%);
+  animation:grid-drift 18s linear infinite;
 }
-
-/* ── Plateau Puissance 4 ── */
-.board-scene {
-  position: fixed;
-  bottom: 0; left: 50%;
-  transform: translateX(-50%);
-  z-index: 1;
+.noise{
+  opacity:.08;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.65'/%3E%3C/svg%3E");
+  mix-blend-mode:screen;
 }
-
-.board {
-  display: grid;
-  grid-template-columns: repeat(7, 52px);
-  grid-template-rows: repeat(6, 52px);
-  gap: 6px;
-  background: #1a1a3e;
-  border: 2px solid rgba(88,101,242,0.4);
-  border-bottom: none;
-  border-radius: 16px 16px 0 0;
-  padding: 10px;
-  box-shadow: 0 -8px 40px rgba(88,101,242,0.15), inset 0 2px 0 rgba(255,255,255,0.04);
+.scan{
+  background:linear-gradient(to bottom,transparent,rgba(133,235,255,.07),transparent);
+  height:34%;
+  animation:scan 5.4s ease-in-out infinite;
 }
-
-.cell {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: #06060e;
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-  position: relative;
-  overflow: hidden;
+.shell{
+  position:relative;
+  z-index:2;
+  width:min(1120px,100%);
+  min-height:min(720px,calc(100dvh - 56px));
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(310px,430px);
+  gap:34px;
+  align-items:center;
 }
-
-/* Pions existants décoratifs */
-.cell.red   { background: radial-gradient(circle at 35% 30%, #ff6b82, #ff2d55); box-shadow: 0 0 14px rgba(255,45,85,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,45,85,0.3); }
-.cell.yellow{ background: radial-gradient(circle at 35% 30%, #ffe566, #ffd60a); box-shadow: 0 0 14px rgba(255,214,10,0.4), inset 0 -2px 4px rgba(0,0,0,0.3); border-color: rgba(255,214,10,0.3); }
-
-/* ── Pion qui tombe ── */
-.falling-token {
-  position: fixed;
-  left: 50%;
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ff6b82, #ff2d55);
-  box-shadow: 0 0 20px rgba(255,45,85,0.6);
-  transform: translateX(-50%);
-  z-index: 10;
-  animation: fall-infinite 2.8s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+.copy{position:relative;z-index:3;max-width:610px}
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 11px;
+  border:1px solid rgba(133,235,255,.24);
+  border-radius:999px;
+  background:rgba(133,235,255,.08);
+  color:var(--cyan);
+  font-family:"Barlow Condensed",sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  box-shadow:0 0 24px rgba(133,235,255,.08);
 }
-
-@keyframes fall-infinite {
-  0%   { top: -80px; opacity: 1; transform: translateX(-50%) scale(1); }
-  72%  { top: calc(100vh - 380px); opacity: 1; transform: translateX(-50%) scale(1); }
-  /* Rebond */
-  78%  { top: calc(100vh - 420px); transform: translateX(-50%) scale(1.12, 0.88); }
-  84%  { top: calc(100vh - 390px); transform: translateX(-50%) scale(0.92, 1.08); }
-  90%  { top: calc(100vh - 405px); transform: translateX(-50%) scale(1.05, 0.96); }
-  96%  { top: calc(100vh - 395px); transform: translateX(-50%) scale(1); }
-  100% { top: calc(100vh - 400px); opacity: 1; transform: translateX(-50%) scale(1); }
+.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan);animation:pulse 1.6s ease-in-out infinite}
+h1{
+  margin-top:22px;
+  font-family:"Barlow Condensed",sans-serif;
+  font-size:clamp(116px,19vw,224px);
+  line-height:.78;
+  letter-spacing:0;
+  font-weight:900;
+  color:transparent;
+  background:linear-gradient(112deg,var(--red),#ff7a92 32%,var(--yellow) 66%,var(--cyan));
+  background-size:190% 100%;
+  -webkit-background-clip:text;
+  background-clip:text;
+  filter:drop-shadow(0 0 34px rgba(255,45,85,.22));
+  animation:headline-shift 4.8s ease-in-out infinite;
 }
-
-/* Traînée lumineuse */
-.falling-token::after {
-  content: '';
-  position: absolute;
-  top: -60px; left: 50%;
-  transform: translateX(-50%);
-  width: 3px; height: 60px;
-  background: linear-gradient(to bottom, transparent, rgba(255,45,85,0.4));
-  border-radius: 2px;
-  animation: trail 2.8s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+.title{
+  margin-top:20px;
+  font-family:"Barlow Condensed",sans-serif;
+  font-size:clamp(29px,5vw,58px);
+  line-height:.98;
+  font-weight:900;
+  letter-spacing:0;
+  text-transform:uppercase;
+  max-width:720px;
 }
-
-@keyframes trail {
-  0%, 80% { opacity: 1; }
-  100%     { opacity: 0; }
+.subtitle{
+  margin-top:16px;
+  max-width:560px;
+  color:var(--muted);
+  font-size:16px;
+  line-height:1.7;
 }
-
-/* ── Contenu 404 ── */
-.content {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-bottom: 280px;
-  text-align: center;
-  pointer-events: none;
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-height:46px;
+  padding:12px 18px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  color:var(--text);
+  text-decoration:none;
+  font-family:"Barlow Condensed",sans-serif;
+  font-weight:900;
+  letter-spacing:1.4px;
+  text-transform:uppercase;
+  background:rgba(255,255,255,.055);
+  transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease;
 }
-
-.error-code {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: clamp(80px, 18vw, 140px);
-  font-weight: 900;
-  letter-spacing: 8px;
-  line-height: 1;
-  background: linear-gradient(135deg, var(--red), #ff6b82, var(--yellow));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 30px rgba(255,45,85,0.3));
-  animation: flicker 4s ease-in-out infinite;
+.btn.primary{background:rgba(255,45,85,.18);border-color:rgba(255,45,85,.38);color:#fff;box-shadow:0 18px 44px rgba(255,45,85,.14)}
+.btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.085)}
+.btn.primary:hover{border-color:rgba(255,45,85,.58);box-shadow:0 22px 54px rgba(255,45,85,.24)}
+.hint{
+  margin-top:18px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  color:rgba(243,243,248,.46);
+  font-size:13px;
 }
-
-@keyframes flicker {
-  0%, 95%, 100% { filter: drop-shadow(0 0 30px rgba(255,45,85,0.3)); }
-  96%           { filter: drop-shadow(0 0 60px rgba(255,45,85,0.8)) brightness(1.2); }
-  97%           { filter: drop-shadow(0 0 30px rgba(255,45,85,0.3)); }
-  98%           { filter: drop-shadow(0 0 55px rgba(255,45,85,0.7)) brightness(1.1); }
+.hint kbd{
+  min-width:25px;
+  height:25px;
+  display:inline-grid;
+  place-items:center;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  font-family:Barlow,sans-serif;
+  font-size:12px;
 }
-
-.error-title {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: clamp(18px, 4vw, 28px);
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--text);
-  margin-top: 8px;
+.arena{position:relative;min-height:560px;display:grid;place-items:center;perspective:900px}
+.halo{
+  position:absolute;
+  width:min(78vw,520px);
+  aspect-ratio:1;
+  border-radius:50%;
+  background:
+    radial-gradient(circle,rgba(133,235,255,.16),transparent 58%),
+    conic-gradient(from 0deg,transparent,rgba(255,45,85,.36),transparent,rgba(255,214,10,.32),transparent);
+  filter:blur(2px);
+  opacity:.75;
+  animation:spin 14s linear infinite;
 }
-
-.error-sub {
-  font-size: 14px;
-  color: var(--muted);
-  margin-top: 10px;
-  line-height: 1.7;
-  max-width: 320px;
+.board-wrap{
+  position:relative;
+  transform:rotateX(8deg) rotateY(-10deg);
+  transform-style:preserve-3d;
+  animation:board-float 4.6s ease-in-out infinite;
 }
-
-.error-sub em {
-  color: var(--red);
-  font-style: normal;
-  font-weight: 600;
+.board{
+  display:grid;
+  grid-template-columns:repeat(7,42px);
+  grid-template-rows:repeat(6,42px);
+  gap:8px;
+  padding:14px;
+  border-radius:18px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.018)),
+    #16163b;
+  border:1px solid rgba(133,235,255,.24);
+  box-shadow:
+    0 30px 90px rgba(0,0,0,.44),
+    0 0 50px rgba(76,110,245,.16),
+    inset 0 1px 0 rgba(255,255,255,.12);
 }
-
-.btn-home {
-  pointer-events: all;
-  margin-top: 28px;
-  padding: 13px 28px;
-  background: var(--red);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 4px 20px rgba(255,45,85,0.35);
+.slot{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 58%,#050512,#09091a 72%);
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:inset 0 4px 14px rgba(0,0,0,.62);
+  position:relative;
+  overflow:hidden;
 }
-.btn-home:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(255,45,85,0.5);
+.slot::after{content:"";position:absolute;inset:8px;border-radius:50%;border:1px solid rgba(255,255,255,.045)}
+.token{background:radial-gradient(circle at 32% 26%,#fff3a2 0 9%,#ffe568 18%,var(--yellow) 66%,#d5a700);box-shadow:0 0 18px rgba(255,214,10,.36),inset 0 -4px 8px rgba(0,0,0,.2)}
+.token.red{background:radial-gradient(circle at 32% 26%,#ffc4cf 0 9%,#ff6f88 18%,var(--red) 66%,#bd1538);box-shadow:0 0 18px rgba(255,45,85,.36),inset 0 -4px 8px rgba(0,0,0,.2)}
+.ghost-token{
+  position:absolute;
+  left:calc(50% - 25px);
+  top:-82px;
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 26%,#bff8ff 0 10%,var(--cyan) 22%,#38b6d4 68%,#1a718b);
+  box-shadow:0 0 28px rgba(133,235,255,.64);
+  animation:drop 2.8s cubic-bezier(.2,.86,.18,1) infinite;
 }
-
-/* Colonne cible clignotante */
-.col-indicator {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 64px;
-  height: 100vh;
-  background: linear-gradient(to bottom, rgba(255,45,85,0.06), transparent 60%);
-  z-index: 2;
-  pointer-events: none;
+.ghost-token::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:44px;
+  width:4px;
+  height:120px;
+  transform:translateX(-50%);
+  border-radius:4px;
+  background:linear-gradient(to top,rgba(133,235,255,.46),transparent);
 }
-
-/* Onde d'impact */
-.impact-ring {
-  position: fixed;
-  left: 50%;
-  width: 0; height: 0;
-  border-radius: 50%;
-  border: 2px solid rgba(255,45,85,0.6);
-  transform: translateX(-50%);
-  z-index: 8;
-  animation: impact 2.8s ease-out infinite;
+.impact{
+  position:absolute;
+  left:50%;
+  top:174px;
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  border:2px solid rgba(133,235,255,.58);
+  transform:translate(-50%,-50%);
+  animation:impact 2.8s ease-out infinite;
 }
-
-@keyframes impact {
-  0%, 70% { width: 0; height: 0; opacity: 0; top: calc(100vh - 374px); }
-  72%     { width: 0; height: 0; opacity: 1; top: calc(100vh - 374px); }
-  90%     { width: 100px; height: 100px; opacity: 0; top: calc(100vh - 424px); margin-left: -50px; }
-  100%    { width: 100px; height: 100px; opacity: 0; }
+.status-panel{
+  position:absolute;
+  right:-18px;
+  bottom:-74px;
+  min-width:230px;
+  padding:14px 16px;
+  border-radius:14px;
+  background:rgba(17,17,35,.78);
+  border:1px solid rgba(255,255,255,.09);
+  backdrop-filter:blur(18px);
+  box-shadow:0 18px 46px rgba(0,0,0,.34);
+}
+.status-label{
+  font-family:"Barlow Condensed",sans-serif;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.status-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:7px;font-weight:800}
+.status-line span:last-child{color:var(--green)}
+.orb{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  box-shadow:0 0 20px currentColor;
+  opacity:.84;
+}
+.orb.one{left:8%;top:16%;background:var(--red);color:rgba(255,45,85,.65);animation:orbit-a 7s ease-in-out infinite}
+.orb.two{right:10%;top:6%;background:var(--yellow);color:rgba(255,214,10,.55);animation:orbit-b 8s ease-in-out infinite}
+.orb.three{right:3%;bottom:21%;background:var(--cyan);color:rgba(133,235,255,.55);animation:orbit-c 6.6s ease-in-out infinite}
+@keyframes grid-drift{to{background-position:44px 44px}}
+@keyframes scan{0%,100%{transform:translateY(-45%);opacity:0}18%,72%{opacity:1}50%{transform:translateY(245%)}}
+@keyframes pulse{50%{transform:scale(1.35);box-shadow:0 0 22px var(--cyan)}}
+@keyframes headline-shift{50%{background-position:100% 0;filter:drop-shadow(0 0 42px rgba(255,214,10,.18))}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes board-float{0%,100%{transform:rotateX(8deg) rotateY(-10deg) translateY(0)}50%{transform:rotateX(11deg) rotateY(-7deg) translateY(-14px)}}
+@keyframes drop{
+  0%{transform:translateY(-20px) scale(.92);opacity:0}
+  14%{opacity:1}
+  68%{transform:translateY(230px) scale(1)}
+  75%{transform:translateY(210px) scale(1.12,.84)}
+  83%{transform:translateY(225px) scale(.92,1.08)}
+  100%{transform:translateY(230px) scale(1);opacity:0}
+}
+@keyframes impact{
+  0%,66%{opacity:0;transform:translate(-50%,-50%) scale(.25)}
+  72%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(2.2)}
+}
+@keyframes orbit-a{50%{transform:translate(34px,22px) scale(1.25)}}
+@keyframes orbit-b{50%{transform:translate(-42px,38px) scale(.78)}}
+@keyframes orbit-c{50%{transform:translate(-26px,-46px) scale(1.14)}}
+@media (max-width:900px){
+  html,body{overflow:auto}
+  body{padding:22px 14px;place-items:start center}
+  .shell{grid-template-columns:1fr;gap:22px;min-height:auto}
+  .copy{text-align:center;margin:0 auto}
+  .eyebrow,.actions,.hint{justify-content:center}
+  .subtitle{margin-left:auto;margin-right:auto}
+  .arena{min-height:440px;order:-1}
+  .board-wrap{transform:none}
+  .board{grid-template-columns:repeat(7,34px);grid-template-rows:repeat(6,34px);gap:6px;padding:10px}
+  .slot{width:34px;height:34px}
+  .ghost-token{width:40px;height:40px;left:calc(50% - 20px)}
+  .status-panel{position:relative;right:auto;bottom:auto;margin:18px auto 0}
+  @keyframes board-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes drop{0%{transform:translateY(-16px);opacity:0}14%{opacity:1}68%{transform:translateY(184px)}75%{transform:translateY(170px) scale(1.1,.86)}100%{transform:translateY(184px);opacity:0}}
+  .impact{top:137px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
 }
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css">
 </head>
 <body>
-<div class="bg-grid"></div>
-<div class="col-indicator"></div>
+<div class="grid"></div>
+<div class="noise"></div>
+<div class="scan"></div>
+<div class="orb one"></div>
+<div class="orb two"></div>
+<div class="orb three"></div>
 
-<!-- Pion qui tombe -->
-<div class="falling-token"></div>
-<div class="impact-ring"></div>
+<main class="shell">
+  <section class="copy" aria-label="Page introuvable">
+    <div class="eyebrow">Erreur de trajectoire</div>
+    <h1>404</h1>
+    <div class="title">La page est tombee hors du plateau.</div>
+    <p class="subtitle">
+      Le coup etait ambitieux, mais cette colonne n'existe pas. Retourne a l'arene ou consulte le classement pendant que le jeton cherche sa case.
+    </p>
+    <div class="actions">
+      <a class="btn primary" href="/">Retour a l'accueil</a>
+      <a class="btn" href="/leaderboard">Voir le classement</a>
+      <a class="btn" href="/regles">Regles du jeu</a>
+    </div>
+    <div class="hint"><kbd>R</kbd><span>relance le jeton perdu</span></div>
+  </section>
 
-<!-- Plateau décoratif -->
-<div class="board-scene">
-  <div class="board" id="board"></div>
-</div>
-
-<!-- Contenu -->
-<div class="content">
-  <div class="error-code">404</div>
-  <div class="error-title">Colonne introuvable !</div>
-  <div class="error-sub">
-    Tu as joué dans une colonne qui <em>n'existe pas</em>.<br>
-    Cette page s'est perdue quelque part entre la rangée 4 et le vide.
-  </div>
-  <a class="btn-home" href="/">⚡ Retour à l'arène</a>
-</div>
+  <section class="arena" aria-label="Animation Puissance 4">
+    <div class="halo"></div>
+    <div class="board-wrap">
+      <div class="ghost-token" id="ghostToken"></div>
+      <div class="impact"></div>
+      <div class="board" id="board"></div>
+      <div class="status-panel">
+        <div class="status-label">Diagnostic</div>
+        <div class="status-line"><span>Route trouvee</span><span>0 / 4</span></div>
+        <div class="status-line"><span>Jeton recupere</span><span id="counter">3 essais</span></div>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
-// Générer un plateau décoratif avec des pions semi-aléatoires
 const board = document.getElementById('board');
-// Grille 6 rangées × 7 colonnes — colonne du milieu (index 3) libre pour l'animation
+const token = document.getElementById('ghostToken');
+const counter = document.getElementById('counter');
 const pattern = [
-  [0,1,0,0,0,2,0],
-  [2,0,1,0,2,0,1],
+  [0,0,1,0,2,0,0],
   [0,2,0,0,0,1,0],
   [1,0,2,0,1,0,2],
-  [0,1,0,0,2,1,0],
-  [2,0,1,0,0,2,1],
+  [2,1,1,0,2,2,1],
+  [1,2,2,0,1,1,2],
+  [2,1,1,0,2,1,1],
 ];
+let drops = 3;
 
-for (let r = 0; r < 6; r++) {
-  for (let c = 0; c < 7; c++) {
+function renderBoard() {
+  board.textContent = '';
+  pattern.flat().forEach(value => {
     const cell = document.createElement('div');
-    cell.className = 'cell';
-    const v = pattern[r][c];
-    if (v === 1) cell.classList.add('red');
-    if (v === 2) cell.classList.add('yellow');
+    cell.className = 'slot';
+    if (value === 1) cell.classList.add('token', 'red');
+    if (value === 2) cell.classList.add('token');
     board.appendChild(cell);
-  }
+  });
 }
 
-// Petite touche : au clic sur le pion, relancer l'animation
-document.querySelector('.falling-token').addEventListener('click', function() {
-  this.style.animation = 'none';
-  void this.offsetWidth;
-  this.style.animation = '';
+function restartDrop() {
+  drops += 1;
+  counter.textContent = `${drops} essais`;
+  token.style.animation = 'none';
+  void token.offsetWidth;
+  token.style.animation = '';
+}
+
+renderBoard();
+token.addEventListener('click', restartDrop);
+window.addEventListener('keydown', event => {
+  if (event.key && event.key.toLowerCase() === 'r') restartDrop();
 });
 </script>
 <script src="/theme.js"></script>
