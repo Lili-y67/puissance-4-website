@@ -15,9 +15,11 @@ const {
   MessageFlags,
 } = require('discord.js');
 const crypto = require('crypto');
+const { getAllRankRoleNames, RANKS } = require('./rank');
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
+const CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
   'admin-player': 'player',
@@ -37,6 +39,7 @@ const ADMIN_COMMAND_ACTIONS = {
   'admin-backups': 'backups',
   'admin-maintenance-on': 'maintenance-on',
   'admin-maintenance-off': 'maintenance-off',
+  'admin-role-generator': 'role-generator',
   'admin-reload': 'reload',
 };
 
@@ -96,6 +99,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     adminCommand('backups', 'Afficher les backups disponibles'),
     adminCommand('maintenance-on', 'Activer l alerte maintenance', [reasonOption('Message affiche aux joueurs')]),
     adminCommand('maintenance-off', 'Desactiver l alerte maintenance'),
+    { ...adminCommand('role-generator', 'Creer ou verifier les roles Discord de rang ELO'), default_member_permissions: '8' },
     adminCommand('reload', 'Recharger les commandes Discord'),
   ];
 }
@@ -789,6 +793,85 @@ function startDiscordBot(ctx) {
     await rest.put(route, { body: buildDiscordCommandDefinitions(ctx.SHOP_ITEMS) });
   }
 
+  function rankRoleColor(rankName) {
+    const base = String(rankName || '').split(/\s+/)[0];
+    const rank = RANKS.find(r => r.name === base);
+    return rank ? Number.parseInt(rank.color.replace('#', ''), 16) : 0x8b9cf4;
+  }
+
+  async function generateRankRoles(interaction) {
+    if (!ctx.DISCORD_GUILD) {
+      return interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Serveur Discord manquant',
+        subtitle: 'DISCORD_GUILD_ID doit etre configure pour creer les roles.',
+      }));
+    }
+
+    const guild = await bot.guilds.fetch(ctx.DISCORD_GUILD);
+    const roles = await guild.roles.fetch();
+    const expected = getAllRankRoleNames();
+    const utilityRoles = [CONNECTED_ROLE_NAME];
+    const byName = new Map();
+    roles.forEach(role => byName.set(role.name, role));
+
+    const found = [];
+    const created = [];
+    const failed = [];
+
+    for (const name of expected) {
+      if (byName.has(name)) {
+        found.push(name);
+        continue;
+      }
+      try {
+        const role = await guild.roles.create({
+          name,
+          color: rankRoleColor(name),
+          reason: `Puissance 4 rank role generator (${interaction.user.tag || interaction.user.id})`,
+        });
+        byName.set(name, role);
+        created.push(name);
+      } catch (error) {
+        failed.push(`${name} (${error.message || 'erreur'})`);
+      }
+    }
+
+    const utilityFound = [];
+    const utilityCreated = [];
+    const utilityFailed = [];
+    for (const name of utilityRoles) {
+      if (byName.has(name)) {
+        utilityFound.push(name);
+        continue;
+      }
+      try {
+        const role = await guild.roles.create({
+          name,
+          color: 0x30d158,
+          reason: `Puissance 4 utility role generator (${interaction.user.tag || interaction.user.id})`,
+        });
+        byName.set(name, role);
+        utilityCreated.push(name);
+      } catch (error) {
+        utilityFailed.push(`${name} (${error.message || 'erreur'})`);
+      }
+    }
+
+    const missing = expected.filter(name => !byName.has(name));
+    return interaction.editReply(containerMessage({
+      color: failed.length || utilityFailed.length ? 0xff9f0a : 0x30d158,
+      title: 'Roles ELO verifies',
+      subtitle: `${expected.length} roles ELO | ${found.length} deja presents | ${created.length} crees | ${missing.length} manquants`,
+      sections: [
+        created.length ? `### Crees\n${created.map(name => `- ${name}`).join('\n')}` : '### Crees\nAucun role cree.',
+        found.length ? `### Deja presents\n${found.slice(0, 30).map(name => `- ${name}`).join('\n')}` : '',
+        failed.length ? `### Erreurs\n${failed.map(name => `- ${name}`).join('\n')}` : '',
+        `### Presence\n${utilityFound.length ? `Deja present : ${utilityFound.join(', ')}` : ''}${utilityCreated.length ? `Cree : ${utilityCreated.join(', ')}` : ''}${utilityFailed.length ? `Erreur : ${utilityFailed.join(', ')}` : ''}`.trim(),
+      ].filter(Boolean),
+    }));
+  }
+
   async function autocomplete(interaction) {
     const focused = interaction.options.getFocused(true);
     if (focused.name !== 'pseudo') return interaction.respond([]);
@@ -896,7 +979,7 @@ function startDiscordBot(ctx) {
     const reason = optionString(interaction, 'raison', '') || '';
     const resourceId = optionString(interaction, 'id');
     const itemKey = optionString(interaction, 'item');
-    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
+    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
     const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
@@ -904,6 +987,7 @@ function startDiscordBot(ctx) {
       await registerCommands();
       return interaction.editReply(containerMessage({ color: 0x30d158, title: 'Commandes rechargees', subtitle: `Role confirme: ${role}` }));
     }
+    if (action === 'role-generator') return generateRankRoles(interaction);
     if (action === 'stats') return interaction.editReply(statsPayload());
     if (action === 'backups') {
       return interaction.editReply(containerMessage({
@@ -993,6 +1077,7 @@ function startDiscordBot(ctx) {
       const nextElo = Math.max(0, Number(target.elo || 0) + delta);
       ctx.pQ.setElo.run({ elo: nextElo, id: target.id });
       ctx.WH.wlogAdminAction('ELO Discord', target.pseudo, target.id, [['Delta', delta, true], ['Nouveau', nextElo, true]]);
+      if (typeof ctx.syncPlayerDiscordRankRole === 'function') ctx.syncPlayerDiscordRankRole(target.id).catch(() => {});
       if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `ELO modifie via Discord : ${nextElo}.`);
       return interaction.editReply(containerMessage({ color: 0xffd60a, title: 'ELO modifie', subtitle: `${target.pseudo}: ${nextElo} ELO (${delta >= 0 ? '+' : ''}${delta})` }));
     }

@@ -641,7 +641,7 @@ function render() {
     let rankImgEl = '';
     if (p.rank && currentTab === 'elo') {
       const ri = document.createElement('img');
-      ri.src = p.rank.image; ri.alt = p.rank.label; ri.title = p.rank.label;
+      ri.src = p.rank.image; ri.alt = p.rank.displayLabel || p.rank.label; ri.title = p.rank.displayLabel || p.rank.label;
       ri.className = 'podium-rank-img';
       card.append(rankEl, av, pseudo, val, ri, lbl);
     } else {
@@ -693,7 +693,7 @@ function render() {
     right.append(valWrap);
     if (p.rank && currentTab === 'elo') {
       const ri = document.createElement('img');
-      ri.src = p.rank.image; ri.alt = p.rank.label; ri.title = p.rank.label;
+      ri.src = p.rank.image; ri.alt = p.rank.displayLabel || p.rank.label; ri.title = p.rank.displayLabel || p.rank.label;
       ri.className = 'rank-img';
       right.append(ri);
     }
@@ -759,7 +759,7 @@ function renderBots() {
     right.append(status, valWrap);
     if (p.rank) {
       const ri = document.createElement('img');
-      ri.src = p.rank.image; ri.alt = p.rank.label; ri.title = p.rank.label;
+      ri.src = p.rank.image; ri.alt = p.rank.displayLabel || p.rank.label; ri.title = p.rank.displayLabel || p.rank.label;
       ri.className = 'rank-img';
       right.append(ri);
     }

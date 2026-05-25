@@ -3908,12 +3908,12 @@ function escapeHtml(value) {
 function getQueueRank(elo) {
   const value = Number(elo || 0);
   const ranks = [
-    { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
-    { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
-    { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
-    { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
-    { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
-    { name:'Amethyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+    { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699,  emoji:'🟢' },
+    { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299, emoji:'💎' },
+    { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799, emoji:'🟠' },
+    { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299, emoji:'🟩' },
+    { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799, emoji:'🔷' },
+    { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500, emoji:'🔮' },
   ];
   const safe = Math.max(100, Math.min(value || 1000, 3500));
   const rank = ranks.find(r => safe >= r.min && safe <= r.max) || ranks[0];
@@ -3924,6 +3924,7 @@ function getQueueRank(elo) {
     ...rank,
     level,
     label: `${rank.name} ${roman}`,
+    displayLabel: `${rank.emoji} ${rank.name} ${roman}`,
     image: `/ranks/${rank.key}_${level}.png`,
   };
 }
@@ -4915,7 +4916,7 @@ function showQueueView(position) {
         rankEl.style.color = rank.color;
         rankEl.style.borderColor = `${rank.color}55`;
         rankEl.style.background = `${rank.color}18`;
-        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.label)} · ${Number(myPlayer.elo || 0)} ELO</span>`;
+        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.displayLabel || rank.label)} · ${Number(myPlayer.elo || 0)} ELO</span>`;
       }
       renderQueuePiecePreview(myPlayer);
       if (winrateEl) {

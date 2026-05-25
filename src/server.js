@@ -7,7 +7,7 @@ const path       = require('path');
 const crypto     = require('crypto');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
-const { getRank } = require('./rank');
+const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
 const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
@@ -537,6 +537,8 @@ gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
   } catch (e) {
     console.error('[TOURNOI] result hook:', e.message);
   }
+  syncPlayerDiscordRankRole(player1Id).catch(() => {});
+  syncPlayerDiscordRankRole(player2Id).catch(() => {});
   setTimeout(() => {
     try { io.to('live').emit('live_update'); } catch (_) {}
   }, 6500);
@@ -2110,6 +2112,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
   db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(Number(elo) || 1000, Number(req.params.id));
+  syncPlayerDiscordRankRole(Number(req.params.id)).catch(() => {});
   notifyPlayerProfileChanged(Number(req.params.id), `ELO modifie par le staff : ${Number(elo) || 1000}.`);
   res.json({ ok: true });
 });
@@ -2166,6 +2169,7 @@ const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
+const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const CUSTOM_ROLE_MAX_LENGTH = 8;
 const SHOP_ITEMS = Object.freeze({
   vip_1m: { key: 'vip_1m', category: 'ranks', label: 'VIP 1 mois', price: 100 },
@@ -2710,6 +2714,85 @@ async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false
       headers: { 'Authorization': 'Bot ' + botToken },
     });
   }
+  await syncDiscordRankRole(discordId, null, botToken);
+}
+
+async function fetchGuildRankRoleMap(botToken) {
+  const names = new Set(getAllRankRoleNames());
+  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+    headers: { 'Authorization': 'Bot ' + botToken },
+  });
+  if (!res.ok) return new Map();
+  const roles = await res.json();
+  const map = new Map();
+  for (const role of Array.isArray(roles) ? roles : []) {
+    if (names.has(role.name)) map.set(role.name, role.id);
+  }
+  return map;
+}
+
+async function syncDiscordRankRole(discordId, rank, botToken = null) {
+  const token = botToken || discordConfig().botToken;
+  if (!token || !discordId) return;
+  const currentRank = rank || getRank(rQ.getByDiscord.get(discordId)?.elo || 1000);
+  const targetName = currentRank?.discordRoleName || currentRank?.label || '';
+  const rankRoles = await fetchGuildRankRoleMap(token);
+  if (!rankRoles.size) return;
+
+  for (const [name, roleId] of rankRoles.entries()) {
+    const shouldHave = name === targetName;
+    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${roleId}`, {
+      method: shouldHave ? 'PUT' : 'DELETE',
+      headers: { 'Authorization': 'Bot ' + token },
+    });
+  }
+}
+
+async function syncPlayerDiscordRankRole(playerOrId) {
+  const player = typeof playerOrId === 'object' && playerOrId
+    ? playerOrId
+    : pQ.getById.get(Number(playerOrId));
+  if (!player?.discord_id) return;
+  return syncDiscordRankRole(player.discord_id, getRank(Number(player.elo || 0)));
+}
+
+async function findGuildRoleByName(roleName, botToken = null) {
+  const token = botToken || discordConfig().botToken;
+  if (!token || !roleName) return null;
+  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+    headers: { 'Authorization': 'Bot ' + token },
+  });
+  if (!res.ok) return null;
+  const roles = await res.json();
+  return (Array.isArray(roles) ? roles : []).find(role => role.name === roleName) || null;
+}
+
+async function syncPlayerDiscordConnectedRole(playerOrId, connected) {
+  const player = typeof playerOrId === 'object' && playerOrId
+    ? playerOrId
+    : pQ.getById.get(Number(playerOrId));
+  if (!player?.discord_id) return;
+  const { botToken } = discordConfig();
+  const role = await findGuildRoleByName(DISCORD_CONNECTED_ROLE_NAME, botToken);
+  if (!role?.id) return;
+  await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${role.id}`, {
+    method: connected ? 'PUT' : 'DELETE',
+    headers: { 'Authorization': 'Bot ' + botToken },
+  });
+}
+
+async function clearAllDiscordConnectedRoles() {
+  const { botToken } = discordConfig();
+  if (!botToken) return;
+  const role = await findGuildRoleByName(DISCORD_CONNECTED_ROLE_NAME, botToken);
+  if (!role?.id) return;
+  const linked = db.prepare(`SELECT discord_id FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
+  for (const player of linked) {
+    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${role.id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bot ' + botToken },
+    }).catch(() => {});
+  }
 }
 
 async function getDiscordRole(discordUserId, botToken) {
@@ -2990,6 +3073,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
       const linkedPlayer = pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
+      try { await syncPlayerDiscordRankRole(linkedPlayer); } catch(e) {}
       const token = createSession(linkedPlayer.id);
       const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer), created: createdNewPlayer }));
       return res.redirect('/#discord-auth=' + payload);
@@ -3054,6 +3138,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       claimDiscordIdentity(discordUser.id, discordInfo, playerId);
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
       try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
+      try { await syncPlayerDiscordRankRole(pQ.getById.get(playerId)); } catch(e) {}
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
@@ -3092,6 +3177,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     }
     if (!freshPlayer.discord_id) {
       rQ.setDiscord.run(discordUser.id, null, playerId);
+      try { await syncPlayerDiscordRankRole(pQ.getById.get(playerId)); } catch(e) {}
     }
 
     // GAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAnAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le code AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  6 chiffres (15 min)
@@ -5521,6 +5607,8 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
 
     // Marquer la partie comme revertAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe
     db.prepare(`UPDATE games SET reverted = 1 WHERE id = ?`).run(gameId);
+    syncPlayerDiscordRankRole(game.player1_id).catch(() => {});
+    syncPlayerDiscordRankRole(game.player2_id).catch(() => {});
 
     // Log admin
     const adminId = validateSession(req.headers['x-token']);
@@ -5978,8 +6066,10 @@ io.on('connection', socket => {
     if (!ipToPlayers.has(clientIp)) ipToPlayers.set(clientIp, new Set());
     ipToPlayers.get(clientIp).add(socket.playerId);
     // Marquer en ligne
+    const wasOffline = !onlineSockets.has(socket.playerId) || onlineSockets.get(socket.playerId).size === 0;
     if (!onlineSockets.has(socket.playerId)) onlineSockets.set(socket.playerId, new Set());
     onlineSockets.get(socket.playerId).add(socket.id);
+    if (wasOffline && !isAnonymousPlayerId(socket.playerId)) syncPlayerDiscordConnectedRole(player, true).catch(() => {});
     if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
     socket.emit('identified', sanitize(player));
     broadcastPresenceCounts();
@@ -6223,11 +6313,15 @@ io.on('connection', socket => {
     unregisterVisitorSocket(socket);
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
+      const disconnectedPlayerId = socket.playerId;
       if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
       const socks = onlineSockets.get(socket.playerId);
       if (socks) {
         socks.delete(socket.id);
-        if (socks.size === 0) onlineSockets.delete(socket.playerId);
+        if (socks.size === 0) {
+          onlineSockets.delete(socket.playerId);
+          if (!isAnonymousPlayerId(disconnectedPlayerId)) syncPlayerDiscordConnectedRole(disconnectedPlayerId, false).catch(() => {});
+        }
       }
     }
     const afterCounts = getPresenceCounts();
@@ -6426,6 +6520,7 @@ function buildDiscordBotContext() {
     getRank,
     hashPwd,
     notifyPlayerProfileChanged,
+    syncPlayerDiscordRankRole,
     getPresenceCounts,
     getBoostDisplayName,
     gm,
@@ -6450,6 +6545,7 @@ function buildDiscordBotContext() {
 initDb().then(() => {
   server.listen(PORT, () => {
     console.log(`[HTTP] http://localhost:${PORT}`);
+    clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
     startDiscordBot(buildDiscordBotContext());
   });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });

@@ -1836,11 +1836,11 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
           <!-- ELO + badge côte à côte -->
           <div style="display:flex;align-items:center;gap:10px">
-            ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.label}" title="${player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
+            ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.displayLabel || player.rank.label}" title="${player.rank.displayLabel || player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
             <div style="text-align:right">
               <div class="profile-elo" style="${player.rank ? `color:${player.rank.color};text-shadow:0 0 20px ${player.rank.color}66` : ``}">${player.elo}</div>
               <div class="profile-elo-lbl">ELO</div>
-              ${player.rank ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.label}</div>` : ''}
+              ${player.rank ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.displayLabel || player.rank.label}</div>` : ''}
             </div>
           </div>
           <!-- Barre de progression -->
@@ -4863,12 +4863,12 @@ function startProfileLivePolling(playerId) {
 // ── Simulateur ELO ───────────────────────────────────────────────────────────
 // Table des rangs (miroir de rank.js côté client)
 const RANKS_SIM = [
-  { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699  },
-  { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
-  { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
-  { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
-  { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
-  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
+  { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699,  emoji:'🟢' },
+  { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299, emoji:'💎' },
+  { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799, emoji:'🟠' },
+  { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299, emoji:'🟩' },
+  { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799, emoji:'🔷' },
+  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500, emoji:'🔮' },
 ];
 const LEVEL_NAMES = ['I','II','III','IV','V'];
 
@@ -4880,7 +4880,8 @@ function getSimRank(elo) {
   const level  = Math.min(4, Math.floor((elo - r.min) / perLvl));
   const prog   = Math.round(((elo - r.min - level * perLvl) / perLvl) * 100);
   const next   = r.max < 3500 ? r.max + 1 : null;
-  return { ...r, level, levelName: LEVEL_NAMES[level], label: r.name + ' ' + LEVEL_NAMES[level], progress: Math.min(100, prog), next };
+  const label = r.name + ' ' + LEVEL_NAMES[level];
+  return { ...r, level, levelName: LEVEL_NAMES[level], label, displayLabel: r.emoji + ' ' + label, progress: Math.min(100, prog), next };
 }
 
 function openEloSim() {
@@ -4927,7 +4928,7 @@ function updateEloSim(elo) {
 
   // Nom rang
   const nameEl = document.getElementById('elo-sim-rank-name');
-  if (nameEl) { nameEl.textContent = rank.label; nameEl.style.color = rank.color; }
+  if (nameEl) { nameEl.textContent = rank.displayLabel || rank.label; nameEl.style.color = rank.color; }
 
   // Tranche ELO
   const rangeEl = document.getElementById('elo-sim-range');
