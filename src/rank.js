@@ -3,20 +3,18 @@
  * 6 rangs x 5 niveaux = 30 grades (100 -> 3500 ELO)
  */
 const RANKS = [
-  { name: 'Malachite',  key: 'Malachite', color: '#2ecc71', min: 100,  max: 699,  emoji: '\uD83D\uDFE2' },
-  { name: 'Quartz',     key: 'Quartz',    color: '#b0bec5', min: 700,  max: 1299, emoji: '\uD83D\uDC8E' },
-  { name: 'Ambre',      key: 'Ambre',     color: '#cd7f32', min: 1300, max: 1799, emoji: '\uD83D\uDFE0' },
-  { name: 'Jade',       key: 'Jade',      color: '#1abc9c', min: 1800, max: 2299, emoji: '\uD83D\uDFE9' },
-  { name: 'Saphir',     key: 'Saphir',    color: '#3498db', min: 2300, max: 2799, emoji: '\uD83D\uDD37' },
-  { name: 'Am\u00e9thyste', key: 'Amethiste', color: '#9b59b6', min: 2800, max: 3500, emoji: '\uD83D\uDD2E' },
+  { name: 'Malachite',  key: 'Malachite', color: '#2ecc71', min: 100,  max: 699 },
+  { name: 'Quartz',     key: 'Quartz',    color: '#b0bec5', min: 700,  max: 1299 },
+  { name: 'Ambre',      key: 'Ambre',     color: '#cd7f32', min: 1300, max: 1799 },
+  { name: 'Jade',       key: 'Jade',      color: '#1abc9c', min: 1800, max: 2299 },
+  { name: 'Saphir',     key: 'Saphir',    color: '#3498db', min: 2300, max: 2799 },
+  { name: 'Am\u00e9thyste', key: 'Amethiste', color: '#9b59b6', min: 2800, max: 3500 },
 ];
 
 const ROMAN_LEVELS = ['I', 'II', 'III', 'IV', 'V'];
 
 function formatRankLabel(rank) {
-  const label = String(rank?.label || '');
-  const emoji = String(rank?.emoji || '').trim();
-  return emoji ? `${emoji} ${label}` : label;
+  return String(rank?.label || '');
 }
 
 function getAllRankRoleNames() {
@@ -35,8 +33,8 @@ function getRank(elo) {
     level,
     label,
     discordRoleName: label,
-    emoji:  rank.emoji,
-    displayLabel: formatRankLabel({ label, emoji: rank.emoji }),
+    emoji:  '',
+    displayLabel: label,
     color:  rank.color,
     image:  '/ranks/' + rank.key + '_' + level + '.png',
     elo:    e,

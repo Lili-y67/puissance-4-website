@@ -956,7 +956,7 @@ function applyColors(c1, c2, s1 = '', s2 = '') {
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   // Lire depuis sessionStorage OU localStorage
-  const pData = sessionStorage.getItem('player') || localStorage.getItem('player');
+  const pData = sessionStorage.getItem('player') || sessionStorage.getItem('duel_guest_player') || localStorage.getItem('player');
   const mData = sessionStorage.getItem('match');
 
   if (!pData) return location.href = '/';
@@ -1000,7 +1000,7 @@ function connectSocket(pendingMatch) {
 
   socket.on('connect', () => {
     localStorage.setItem('last_active', Date.now());
-    socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
+    socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || sessionStorage.getItem('token') });
   });
 
   socket.on('identified', (p) => {

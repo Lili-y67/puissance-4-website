@@ -7,10 +7,7 @@
 
   function getStoredAuth() {
     const token = localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || '';
-    const playerRaw = localStorage.getItem('player')
-      || sessionStorage.getItem('duel_guest_player')
-      || sessionStorage.getItem('player')
-      || '';
+    const playerRaw = getStoredPlayerRaw();
     let player = null;
     try {
       player = playerRaw ? JSON.parse(playerRaw) : null;
@@ -22,6 +19,13 @@
       player,
       playerId: Number(player?.id || 0) || null,
     };
+  }
+
+  function getStoredPlayerRaw() {
+    return localStorage.getItem('player')
+      || sessionStorage.getItem('duel_guest_player')
+      || sessionStorage.getItem('player')
+      || '';
   }
 
   function getVisitorId() {
@@ -167,7 +171,7 @@
     socket.on('match_found', (data) => {
       try {
         sessionStorage.setItem('match', JSON.stringify(data));
-        sessionStorage.setItem('player', localStorage.getItem('player') || sessionStorage.getItem('player') || '');
+        sessionStorage.setItem('player', getStoredPlayerRaw());
       } catch (e) {}
       window.location.href = '/game';
     });

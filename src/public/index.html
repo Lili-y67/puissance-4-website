@@ -1610,7 +1610,7 @@ html, body {
 .queue-player-card{
   width:min(390px,100%);
   display:grid;
-  grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-columns:1fr;
   align-items:center;
   gap:12px;
   margin:4px auto 8px;
@@ -1620,7 +1620,16 @@ html, body {
   background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025));
   box-shadow:0 18px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
 }
-.queue-player-main{min-width:0;text-align:left;align-self:center}
+.queue-player-top{
+  width:100%;
+  min-width:0;
+  display:grid;
+  grid-template-columns:56px minmax(0,1fr) 56px;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+}
+.queue-player-main{min-width:0;text-align:center;align-self:center}
 .queue-player-name{
   font-family:'Barlow Condensed',sans-serif;
   font-size:23px;
@@ -1631,6 +1640,7 @@ html, body {
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
+  text-align:center;
 }
 .queue-player-sub{
   margin-top:5px;
@@ -1727,6 +1737,7 @@ html, body {
 .queue-piece-preview img{width:28px;height:28px;object-fit:contain;display:block;filter:drop-shadow(0 0 10px var(--queue-piece-glow, rgba(255,255,255,.25)))}
 @media (max-width: 420px){
   .queue-player-card{width:100%;padding:11px;gap:10px}
+  .queue-player-top{grid-template-columns:50px minmax(0,1fr) 50px;gap:12px}
   .queue-avatar-shell,.queue-avatar-core{width:50px;height:50px}
   .queue-avatar-deco{inset:-8px}
   .queue-player-name{font-size:21px}
@@ -3399,15 +3410,17 @@ html, body {
 
       <!-- Avatar joueur dans la queue -->
       <div id="queue-avatar-wrap" class="queue-player-card" style="display:none">
-        <div class="queue-avatar-shell" id="queue-avatar-shell">
-          <div class="queue-avatar-deco" id="queue-avatar-deco"></div>
-          <div class="queue-avatar-core" id="queue-avatar"></div>
+        <div class="queue-player-top">
+          <div class="queue-avatar-shell" id="queue-avatar-shell">
+            <div class="queue-avatar-deco" id="queue-avatar-deco"></div>
+            <div class="queue-avatar-core" id="queue-avatar"></div>
+          </div>
+          <div class="queue-player-main">
+            <div id="queue-pseudo" class="queue-player-name"></div>
+            <div id="queue-winrate" class="queue-player-sub">Winrate --</div>
+          </div>
+          <div class="queue-piece-preview" id="queue-piece-preview" aria-hidden="true"></div>
         </div>
-        <div class="queue-player-main">
-          <div id="queue-pseudo" class="queue-player-name"></div>
-          <div id="queue-winrate" class="queue-player-sub">Winrate --</div>
-        </div>
-        <div class="queue-piece-preview" id="queue-piece-preview" aria-hidden="true"></div>
         <span class="queue-pill" id="queue-rank-pill">Rang</span>
         <div class="queue-mini-stats">
           <div class="queue-mini-stat"><b id="queue-mini-games">0</b><span>Parties</span></div>
@@ -3908,12 +3921,12 @@ function escapeHtml(value) {
 function getQueueRank(elo) {
   const value = Number(elo || 0);
   const ranks = [
-    { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699,  emoji:'🟢' },
-    { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299, emoji:'💎' },
-    { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799, emoji:'🟠' },
-    { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299, emoji:'🟩' },
-    { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799, emoji:'🔷' },
-    { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500, emoji:'🔮' },
+    { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699 },
+    { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
+    { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
+    { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
+    { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
+    { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
   ];
   const safe = Math.max(100, Math.min(value || 1000, 3500));
   const rank = ranks.find(r => safe >= r.min && safe <= r.max) || ranks[0];
@@ -3924,7 +3937,7 @@ function getQueueRank(elo) {
     ...rank,
     level,
     label: `${rank.name} ${roman}`,
-    displayLabel: `${rank.emoji} ${rank.name} ${roman}`,
+    displayLabel: `${rank.name} ${roman}`,
     image: `/ranks/${rank.key}_${level}.png`,
   };
 }

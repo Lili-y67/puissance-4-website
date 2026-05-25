@@ -272,11 +272,16 @@ db.exec(`
     player_id       INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
     xp              INTEGER NOT NULL DEFAULT 0,
     level           INTEGER NOT NULL DEFAULT 0,
+    character_count INTEGER NOT NULL DEFAULT 0,
+    character_progress INTEGER NOT NULL DEFAULT 0,
     messages        INTEGER NOT NULL DEFAULT 0,
     last_reward_at  INTEGER NOT NULL DEFAULT 0,
     updated_at      INTEGER NOT NULL
   );
 `);
+
+try { db.exec(`ALTER TABLE discord_activity ADD COLUMN character_count INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE discord_activity ADD COLUMN character_progress INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 
 // ── Players ───────────────────────────────────────────────────────────────────
 const pQ = {

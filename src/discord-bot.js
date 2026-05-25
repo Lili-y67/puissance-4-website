@@ -112,7 +112,7 @@ function startDiscordBot(ctx) {
     return null;
   }
 
-  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages] });
+  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
   const api = String(process.env.BASE_URL || DEFAULT_API).replace(/\/+$/, '');
   const fmt = value => Number(value || 0).toLocaleString('fr-FR');
   const truncate = (value, max = 100) => String(value == null ? '' : value).slice(0, max);
@@ -305,36 +305,34 @@ function startDiscordBot(ctx) {
     return 100 + Math.max(0, Number(level || 0)) * 35;
   }
 
-  function awardDiscordActivityGem(message) {
+  const DISCORD_GEM_CHAR_THRESHOLD = 10_000;
+  const DISCORD_GEM_REWARD = 10;
+
+  function awardDiscordActivityGems(message) {
     if (!message?.guildId || message.author?.bot) return;
     const discordId = String(message.author?.id || '');
     const player = playerByDiscord(discordId);
     if (!player || Number(player.is_bot || 0) === 1) return;
+    const charCount = Array.from(String(message.content || '')).length;
+    if (charCount <= 0) return;
     const now = Date.now();
     const row = ctx.db.prepare(`SELECT * FROM discord_activity WHERE discord_id = ?`).get(discordId);
-    if (row && now - Number(row.last_reward_at || 0) < 60 * 1000) {
-      ctx.db.prepare(`UPDATE discord_activity SET messages = messages + 1, updated_at = ? WHERE discord_id = ?`).run(now, discordId);
-      return;
-    }
-    let xp = Number(row?.xp || 0) + 5 + Math.floor(Math.random() * 8);
-    let level = Number(row?.level || 0);
-    let gainedGems = 0;
-    while (xp >= xpNeededForLevel(level)) {
-      xp -= xpNeededForLevel(level);
-      level += 1;
-      gainedGems += 1;
-    }
+    const rawProgress = Number(row?.character_progress || 0) + charCount;
+    const rewardSteps = Math.floor(rawProgress / DISCORD_GEM_CHAR_THRESHOLD);
+    const gainedGems = rewardSteps * DISCORD_GEM_REWARD;
+    const nextProgress = rawProgress % DISCORD_GEM_CHAR_THRESHOLD;
+    const nextTotal = Number(row?.character_count || 0) + charCount;
     ctx.db.prepare(`
-      INSERT INTO discord_activity (discord_id, player_id, xp, level, messages, last_reward_at, updated_at)
-      VALUES (?, ?, ?, ?, 1, ?, ?)
+      INSERT INTO discord_activity (discord_id, player_id, xp, level, character_count, character_progress, messages, last_reward_at, updated_at)
+      VALUES (?, ?, 0, 0, ?, ?, 1, ?, ?)
       ON CONFLICT(discord_id) DO UPDATE SET
         player_id=excluded.player_id,
-        xp=excluded.xp,
-        level=excluded.level,
+        character_count=excluded.character_count,
+        character_progress=excluded.character_progress,
         messages=discord_activity.messages + 1,
         last_reward_at=excluded.last_reward_at,
         updated_at=excluded.updated_at
-    `).run(discordId, player.id, xp, level, now, now);
+    `).run(discordId, player.id, nextTotal, nextProgress, gainedGems > 0 ? now : Number(row?.last_reward_at || 0), now);
     if (gainedGems > 0 && Number(player.is_bot || 0) !== 1) {
       ctx.pQ.addGems.run({ delta: gainedGems, id: player.id });
     }
@@ -1266,7 +1264,7 @@ function startDiscordBot(ctx) {
 
   bot.on('messageCreate', message => {
     try {
-      awardDiscordActivityGem(message);
+      awardDiscordActivityGems(message);
     } catch (error) {
       console.warn('[BOT] Activite Discord:', error.message);
     }

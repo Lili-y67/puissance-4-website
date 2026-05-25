@@ -379,7 +379,7 @@ body{
                 <div class="coins-value" id="coins-value">0</div>
               </div>
             </div>
-            <div class="wallet-card gem-badge">
+            <div class="wallet-card gem-badge" style="display:none">
               <img class="gem-icon" src="/assets/gem.png" alt="gemme">
               <div>
                 <div class="coins-label">Mes gemmes</div>
@@ -391,7 +391,7 @@ body{
             <input id="currency-select" type="hidden" value="coins">
             <div class="currency-switch" aria-label="Choix de monnaie">
               <button type="button" id="currency-btn-coins" class="active coin" onclick="setShopCurrency('coins')">🪙 Coins</button>
-              <button type="button" id="currency-btn-gems" class="gem" onclick="setShopCurrency('gems')"><img src="/assets/gem.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Gemmes</button>
+              <button type="button" id="currency-btn-gems" class="gem" onclick="setShopCurrency('gems')" style="display:none"><img src="/assets/gem.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Gemmes</button>
             </div>
             <div class="promo-box">
               <div class="promo-line">
@@ -696,6 +696,7 @@ let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
 let shopLimitedOffer = null;
+let shopGemsUnlocked = false;
 let currentCategory = 'ranks';
 let customBoosterState = { elo: 0.1, coins: 1 };
 let previewDecorations = [];
@@ -824,7 +825,7 @@ function getCardStatSub(item, pack) {
 }
 
 function setShopCurrency(currency) {
-  const next = currency === 'gems' ? 'gems' : 'coins';
+  const next = currency === 'gems' && shopGemsUnlocked ? 'gems' : 'coins';
   const input = document.getElementById('currency-select');
   if (input) input.value = next;
   document.getElementById('currency-btn-coins')?.classList.toggle('active', next === 'coins');
@@ -905,9 +906,17 @@ function getDynamicBoosterItem(pack) {
 function setCoinsUi(coins, stateText) {
   const coinsEl = document.getElementById('coins-value');
   const gemsEl = document.getElementById('gems-value');
+  const gemCard = document.querySelector('.wallet-card.gem-badge');
+  const gemBtn = document.getElementById('currency-btn-gems');
   const stateEl = document.getElementById('coins-state');
   if (coinsEl) coinsEl.textContent = Number(coins || 0);
-  if (gemsEl) gemsEl.textContent = Number(shopPlayer?.gems || 0);
+  if (gemsEl) gemsEl.textContent = shopGemsUnlocked ? Number(shopPlayer?.gems || 0) : '';
+  if (gemCard) gemCard.style.display = shopGemsUnlocked ? '' : 'none';
+  if (gemBtn) gemBtn.style.display = shopGemsUnlocked ? '' : 'none';
+  if (!shopGemsUnlocked && getShopCurrency() === 'gems') {
+    const input = document.getElementById('currency-select');
+    if (input) input.value = 'coins';
+  }
   if (stateEl) stateEl.textContent = stateText || '';
 }
 
@@ -1023,6 +1032,7 @@ function getButtonState(pack) {
     : Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
 
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
+  if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
@@ -1561,6 +1571,7 @@ async function loadShop() {
   await loadPreviewAssets();
   const token = localStorage.getItem('token');
   if (!token) {
+    shopGemsUnlocked = false;
     setCoinsUi(0, 'Connecte-toi pour acheter.');
     renderShop();
     switchShopCategory(currentCategory);
@@ -1574,10 +1585,12 @@ async function loadShop() {
     shopStock = data.stock || {};
     shopInventory = data.inventory || {};
     shopLimitedOffer = data.limitedOffer || null;
+    shopGemsUnlocked = !!data.gemsUnlocked;
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, 'Solde actuel disponible dans la boutique.');
+    setCoinsUi(shopPlayer?.coins || 0, shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
   } catch (e) {
+    shopGemsUnlocked = false;
     setCoinsUi(0, 'Impossible de charger ton solde.');
   }
   renderShop();
@@ -1633,6 +1646,7 @@ async function buyPack(pack) {
       return;
     }
     shopPlayer = data.player || shopPlayer;
+    if (typeof data.gemsUnlocked !== 'undefined') shopGemsUnlocked = !!data.gemsUnlocked;
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
     if (pack === 'limited_offer' && shopLimitedOffer) {

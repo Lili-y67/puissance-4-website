@@ -720,7 +720,6 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   text-transform:uppercase
 }
 .discord-role-chip.rank-role{font-size:10px;padding:4px 8px;letter-spacing:.6px;opacity:.92}
-.discord-role-chip .rank-mini-emoji{font-size:12px;line-height:1;opacity:.95;margin-right:-1px}
 .discord-role-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:currentColor}
 .discord-role-chip.connected-role{color:#30d158!important;background:rgba(48,209,88,.12)!important;border-color:rgba(48,209,88,.35)!important}
 .discord-role-chip.connected-role .discord-role-dot{background:#30d158;box-shadow:0 0 0 0 rgba(48,209,88,.55);animation:discordConnectedPulse 1.45s ease-in-out infinite}
@@ -938,10 +937,10 @@ body.search-open .profile-side{
 .image-editor-stage{position:relative;border-radius:22px;overflow:hidden;background:radial-gradient(circle at top,rgba(76,110,245,0.18),transparent 50%),var(--surface2);border:1px solid rgba(255,255,255,0.06);}
 .image-editor-canvas{display:block;width:100%;height:auto;touch-action:none;cursor:grab;}
 .image-editor-canvas.dragging{cursor:grabbing;}
-.image-editor-frame{position:absolute;inset:24px;border:2px solid rgba(255,255,255,0.85);box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 26px rgba(255,255,255,0.18);pointer-events:none;}
-.image-editor-frame.avatar{border-radius:50%;aspect-ratio:1/1;width:min(calc(100% - 48px),380px);height:auto;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);box-shadow:none;}
-.image-editor-frame.banner{border-radius:22px;inset:38px 28px;aspect-ratio:3/1;}
-.image-editor-frame.token{border-radius:18px;aspect-ratio:1/1;width:min(calc(100% - 56px),240px);height:auto;top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);box-shadow:none;}
+.image-editor-frame{position:absolute;left:0;top:0;width:0;height:0;border:2px solid rgba(255,255,255,0.85);box-shadow:0 0 0 9999px rgba(0,0,0,0.45),0 0 26px rgba(255,255,255,0.18);pointer-events:none;}
+.image-editor-frame.avatar{border-radius:50%;box-shadow:none;}
+.image-editor-frame.banner{border-radius:22px;}
+.image-editor-frame.token{border-radius:18px;box-shadow:none;}
 .image-editor-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
 .image-editor-zoom{display:flex;align-items:center;gap:10px;flex:1;min-width:220px;padding:12px 14px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);}
 .image-editor-zoom label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
@@ -972,7 +971,6 @@ body.search-open .profile-side{
   .image-editor-modal{padding:18px;}
   .image-editor-head{align-items:flex-start;flex-direction:column;}
   .image-editor-close{align-self:flex-end;}
-  .image-editor-frame.banner{inset:26px 16px;}
   .image-editor-actions{width:100%;}
   .image-editor-btn{flex:1;}
   .upload-chooser-grid{grid-template-columns:1fr}
@@ -3340,13 +3338,43 @@ function getStageMetrics(mode) {
   return { width: 640, height: 420, cropWidth: 560, cropHeight: 186, outputWidth: 1500, outputHeight: 500 };
 }
 
+function getImageEditorCropRect(metrics = getStageMetrics(IMAGE_EDITOR.mode)) {
+  return {
+    left: (metrics.width - IMAGE_EDITOR.cropWidth) / 2,
+    top: (metrics.height - IMAGE_EDITOR.cropHeight) / 2,
+    width: IMAGE_EDITOR.cropWidth,
+    height: IMAGE_EDITOR.cropHeight,
+  };
+}
+
+function getImageEditorCanvasScale(canvas, metrics = getStageMetrics(IMAGE_EDITOR.mode)) {
+  const rect = canvas?.getBoundingClientRect?.();
+  return {
+    x: rect?.width ? rect.width / metrics.width : 1,
+    y: rect?.height ? rect.height / metrics.height : 1,
+  };
+}
+
+function syncImageEditorFrame(metrics = getStageMetrics(IMAGE_EDITOR.mode)) {
+  const { canvas, frame } = getImageEditorElements();
+  if (!canvas || !frame) return;
+  const crop = getImageEditorCropRect(metrics);
+  const scale = getImageEditorCanvasScale(canvas, metrics);
+  frame.className = 'image-editor-frame ' + IMAGE_EDITOR.mode;
+  frame.style.left = `${crop.left * scale.x}px`;
+  frame.style.top = `${crop.top * scale.y}px`;
+  frame.style.width = `${crop.width * scale.x}px`;
+  frame.style.height = `${crop.height * scale.y}px`;
+}
+
 function clampImageEditorOffsets() {
   if (!IMAGE_EDITOR.img) return;
   const metrics = getStageMetrics(IMAGE_EDITOR.mode);
   const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom;
   const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom;
-  const cropLeft = (metrics.width - IMAGE_EDITOR.cropWidth) / 2;
-  const cropTop = (metrics.height - IMAGE_EDITOR.cropHeight) / 2;
+  const crop = getImageEditorCropRect(metrics);
+  const cropLeft = crop.left;
+  const cropTop = crop.top;
   const cropRight = cropLeft + IMAGE_EDITOR.cropWidth;
   const cropBottom = cropTop + IMAGE_EDITOR.cropHeight;
 
@@ -3373,7 +3401,7 @@ function syncImageEditorZoomLabel() {
 }
 
 function drawImageEditor() {
-  const { canvas, frame } = getImageEditorElements();
+  const { canvas } = getImageEditorElements();
   if (!canvas || !IMAGE_EDITOR.img) return;
   const ctx = canvas.getContext('2d');
   const metrics = getStageMetrics(IMAGE_EDITOR.mode);
@@ -3384,8 +3412,9 @@ function drawImageEditor() {
   ctx.fillStyle = '#0b0b18';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const cropLeft = (canvas.width - IMAGE_EDITOR.cropWidth) / 2;
-  const cropTop = (canvas.height - IMAGE_EDITOR.cropHeight) / 2;
+  const crop = getImageEditorCropRect(metrics);
+  const cropLeft = crop.left;
+  const cropTop = crop.top;
   const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom;
   const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom;
   ctx.drawImage(IMAGE_EDITOR.img, IMAGE_EDITOR.offsetX, IMAGE_EDITOR.offsetY, drawWidth, drawHeight);
@@ -3403,14 +3432,23 @@ function drawImageEditor() {
   ctx.fill('evenodd');
   ctx.restore();
 
-  if (frame) frame.className = 'image-editor-frame ' + IMAGE_EDITOR.mode;
+  requestAnimationFrame(() => syncImageEditorFrame(metrics));
   syncImageEditorZoomLabel();
 }
 
 function updateImageEditorZoom(value) {
   const sliderValue = Math.max(0, Math.min(100, Number(value)));
   const ratio = sliderValue / 100;
+  const previousZoom = IMAGE_EDITOR.zoom || IMAGE_EDITOR.minZoom || 1;
+  const metrics = getStageMetrics(IMAGE_EDITOR.mode);
+  const crop = getImageEditorCropRect(metrics);
+  const focusX = crop.left + crop.width / 2;
+  const focusY = crop.top + crop.height / 2;
+  const imageFocusX = (focusX - IMAGE_EDITOR.offsetX) / previousZoom;
+  const imageFocusY = (focusY - IMAGE_EDITOR.offsetY) / previousZoom;
   IMAGE_EDITOR.zoom = IMAGE_EDITOR.minZoom + (IMAGE_EDITOR.maxActualZoom - IMAGE_EDITOR.minZoom) * ratio;
+  IMAGE_EDITOR.offsetX = focusX - imageFocusX * IMAGE_EDITOR.zoom;
+  IMAGE_EDITOR.offsetY = focusY - imageFocusY * IMAGE_EDITOR.zoom;
   clampImageEditorOffsets();
   drawImageEditor();
 }
@@ -3429,12 +3467,13 @@ function openImageEditor(dataUrl, mode) {
   const img = new Image();
   img.onload = () => {
     IMAGE_EDITOR.img = img;
-    IMAGE_EDITOR.minZoom = Math.min((metrics.width - 40) / img.width, (metrics.height - 40) / img.height, 1);
     IMAGE_EDITOR.coverZoom = Math.max(metrics.cropWidth / img.width, metrics.cropHeight / img.height);
-    IMAGE_EDITOR.maxActualZoom = Math.max(IMAGE_EDITOR.coverZoom * 1.9, IMAGE_EDITOR.minZoom * 3, 1);
-    IMAGE_EDITOR.zoom = IMAGE_EDITOR.minZoom;
-    IMAGE_EDITOR.offsetX = (metrics.width - img.width * IMAGE_EDITOR.zoom) / 2;
-    IMAGE_EDITOR.offsetY = (metrics.height - img.height * IMAGE_EDITOR.zoom) / 2;
+    IMAGE_EDITOR.minZoom = IMAGE_EDITOR.coverZoom;
+    IMAGE_EDITOR.maxActualZoom = Math.max(IMAGE_EDITOR.coverZoom * 3, IMAGE_EDITOR.coverZoom + 1, 1);
+    IMAGE_EDITOR.zoom = IMAGE_EDITOR.coverZoom;
+    const crop = getImageEditorCropRect(metrics);
+    IMAGE_EDITOR.offsetX = crop.left + (crop.width - img.width * IMAGE_EDITOR.zoom) / 2;
+    IMAGE_EDITOR.offsetY = crop.top + (crop.height - img.height * IMAGE_EDITOR.zoom) / 2;
     clampImageEditorOffsets();
 
     if (els.zoom) {
@@ -3462,6 +3501,10 @@ function openImageEditor(dataUrl, mode) {
     }
     drawImageEditor();
   };
+  img.onerror = () => {
+    PROFIL_SFX.error();
+    alert('Image illisible. Essaie avec un autre fichier.');
+  };
   img.src = dataUrl;
 }
 
@@ -3482,14 +3525,20 @@ function exportImageEditor() {
   canvas.width = IMAGE_EDITOR.outputWidth;
   canvas.height = IMAGE_EDITOR.outputHeight;
   const ctx = canvas.getContext('2d');
-  const scale = IMAGE_EDITOR.outputWidth / IMAGE_EDITOR.cropWidth;
-  const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom * scale;
-  const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom * scale;
   const metrics = getStageMetrics(IMAGE_EDITOR.mode);
-  const cropLeft = (metrics.width - IMAGE_EDITOR.cropWidth) / 2;
-  const cropTop = (metrics.height - IMAGE_EDITOR.cropHeight) / 2;
-  const offsetX = (IMAGE_EDITOR.offsetX - cropLeft) * scale;
-  const offsetY = (IMAGE_EDITOR.offsetY - cropTop) * scale;
+  const crop = getImageEditorCropRect(metrics);
+  const scaleX = IMAGE_EDITOR.outputWidth / IMAGE_EDITOR.cropWidth;
+  const scaleY = IMAGE_EDITOR.outputHeight / IMAGE_EDITOR.cropHeight;
+  const drawWidth = IMAGE_EDITOR.img.width * IMAGE_EDITOR.zoom * scaleX;
+  const drawHeight = IMAGE_EDITOR.img.height * IMAGE_EDITOR.zoom * scaleY;
+  const offsetX = (IMAGE_EDITOR.offsetX - crop.left) * scaleX;
+  const offsetY = (IMAGE_EDITOR.offsetY - crop.top) * scaleY;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (IMAGE_EDITOR.mode === 'banner') {
+    ctx.fillStyle = '#0b0b18';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   if (IMAGE_EDITOR.mode === 'avatar' || IMAGE_EDITOR.mode === 'decoration') {
     ctx.beginPath();
@@ -3791,8 +3840,10 @@ function handleAvatarDecorationUpload(input) {
   const moveDrag = (event) => {
     if (!IMAGE_EDITOR.dragging) return;
     const point = getPoint(event);
-    IMAGE_EDITOR.offsetX = IMAGE_EDITOR.startOffsetX + (point.x - IMAGE_EDITOR.dragStartX);
-    IMAGE_EDITOR.offsetY = IMAGE_EDITOR.startOffsetY + (point.y - IMAGE_EDITOR.dragStartY);
+    const metrics = getStageMetrics(IMAGE_EDITOR.mode);
+    const scale = getImageEditorCanvasScale(canvas, metrics);
+    IMAGE_EDITOR.offsetX = IMAGE_EDITOR.startOffsetX + (point.x - IMAGE_EDITOR.dragStartX) / (scale.x || 1);
+    IMAGE_EDITOR.offsetY = IMAGE_EDITOR.startOffsetY + (point.y - IMAGE_EDITOR.dragStartY) / (scale.y || 1);
     clampImageEditorOffsets();
     drawImageEditor();
     event.preventDefault();
@@ -3809,6 +3860,9 @@ function handleAvatarDecorationUpload(input) {
   window.addEventListener('touchmove', moveDrag, { passive: false });
   window.addEventListener('mouseup', stopDrag);
   window.addEventListener('touchend', stopDrag);
+  window.addEventListener('resize', () => {
+    if (IMAGE_EDITOR.img) syncImageEditorFrame();
+  });
 
   bg.addEventListener('click', (event) => {
     if (event.target === bg) closeImageEditor();
@@ -4879,12 +4933,12 @@ function startProfileLivePolling(playerId) {
 // ── Simulateur ELO ───────────────────────────────────────────────────────────
 // Table des rangs (miroir de rank.js côté client)
 const RANKS_SIM = [
-  { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699,  emoji:'🟢' },
-  { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299, emoji:'💎' },
-  { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799, emoji:'🟠' },
-  { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299, emoji:'🟩' },
-  { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799, emoji:'🔷' },
-  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500, emoji:'🔮' },
+  { name:'Malachite', key:'Malachite', color:'#2ecc71', min:100,  max:699 },
+  { name:'Quartz',    key:'Quartz',    color:'#b0bec5', min:700,  max:1299 },
+  { name:'Ambre',     key:'Ambre',     color:'#cd7f32', min:1300, max:1799 },
+  { name:'Jade',      key:'Jade',      color:'#1abc9c', min:1800, max:2299 },
+  { name:'Saphir',    key:'Saphir',    color:'#3498db', min:2300, max:2799 },
+  { name:'Améthyste', key:'Amethiste', color:'#9b59b6', min:2800, max:3500 },
 ];
 const LEVEL_NAMES = ['I','II','III','IV','V'];
 
@@ -4897,7 +4951,7 @@ function getSimRank(elo) {
   const prog   = Math.round(((elo - r.min - level * perLvl) / perLvl) * 100);
   const next   = r.max < 3500 ? r.max + 1 : null;
   const label = r.name + ' ' + LEVEL_NAMES[level];
-  return { ...r, level, levelName: LEVEL_NAMES[level], label, displayLabel: r.emoji + ' ' + label, progress: Math.min(100, prog), next };
+  return { ...r, level, levelName: LEVEL_NAMES[level], label, displayLabel: label, progress: Math.min(100, prog), next };
 }
 
 function openEloSim() {
@@ -5082,15 +5136,6 @@ async function refreshDiscordState(player) {
   return player;
 }
 
-const DISCORD_RANK_ROLE_EMOJIS = {
-  Malachite: '🟢',
-  Quartz: '💎',
-  Ambre: '🟠',
-  Jade: '🟩',
-  Saphir: '🔷',
-  Améthyste: '🔮',
-  Amethyste: '🔮',
-};
 const DISCORD_RANK_ROLE_RE = /^(Malachite|Quartz|Ambre|Jade|Saphir|Améthyste|Amethyste) (I|II|III|IV|V)$/i;
 const DISCORD_CONNECTED_ROLE_RE = /^connect[eé]e$/i;
 
@@ -5107,8 +5152,6 @@ function discordServerRoleChip(role) {
   const normalizedName = normalizeDiscordRoleName(name);
   const isConnected = DISCORD_CONNECTED_ROLE_RE.test(normalizedName);
   const rankMatch = name.match(DISCORD_RANK_ROLE_RE);
-  const rankBase = rankMatch ? rankMatch[1] : '';
-  const rankEmoji = role?.rankEmoji || (rankBase ? (DISCORD_RANK_ROLE_EMOJIS[rankBase] || '') : '');
   const classes = ['discord-role-chip'];
   if (rankMatch || role?.isSiteRank) classes.push('rank-role');
   if (isConnected) classes.push('connected-role');
@@ -5116,7 +5159,6 @@ function discordServerRoleChip(role) {
   const style = isConnected ? '' : `style="background:${col}22;color:${col};border:1px solid ${col}55"`;
   return `<span class="${classes.join(' ')}" ${style}>
     <span class="discord-role-dot" ${dotStyle}></span>
-    ${rankEmoji ? `<span class="rank-mini-emoji">${rankEmoji}</span>` : ''}
     ${escapeHtml(name)}
   </span>`;
 }

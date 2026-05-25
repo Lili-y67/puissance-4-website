@@ -3519,8 +3519,10 @@ app.get('/api/shop/me', (req, res) => {
   const limitedOfferEndsAt = Number(getConfigValue('shop_limited_offer_ends_at', '0') || 0);
   const limitedCoupon = limitedOfferCode && limitedOfferEndsAt > Date.now() ? getUsableCoupon(limitedOfferCode, playerId) : null;
   const limitedStock = Number(getConfigValue('shop_limited_offer_stock', '0') || 0);
+  const gemsUnlocked = !!String(player.discord_id || '').trim();
   res.json({
     player: sanitize(player),
+    gemsUnlocked,
     items: SHOP_ITEMS,
     prices: SHOP_PRICES,
     gemPrices: SHOP_GEM_PRICES,
@@ -3626,6 +3628,9 @@ app.post('/api/shop/buy', async (req, res) => {
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
   const currency = String(req.body?.currency || 'coins').toLowerCase() === 'gems' ? 'gems' : 'coins';
+  if (currency === 'gems' && !String(player.discord_id || '').trim()) {
+    return res.status(403).json({ error: 'Lie ton compte Discord pour utiliser les gemmes.' });
+  }
   const requestedCoupon = normalizeCouponCode(req.body?.coupon);
   const coupon = getUsableCoupon(requestedCoupon, playerId);
   if (requestedCoupon && !coupon) {
@@ -3747,6 +3752,7 @@ app.post('/api/shop/buy', async (req, res) => {
     items: SHOP_ITEMS,
     stock,
     inventory,
+    gemsUnlocked: !!String(fresh?.discord_id || '').trim(),
     player: sanitize(pQ.getById.get(playerId)),
   });
 });
@@ -6261,7 +6267,9 @@ io.on('connection', socket => {
   socket.on('color_update', ({ color }) => {
     if (!socket.playerData || !color) return;
     if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
-    pQ.updateColor.run({ color, id: socket.playerData.id });
+    if (!isAnonymousPlayerId(socket.playerData.id)) {
+      pQ.updateColor.run({ color, id: socket.playerData.id });
+    }
     socket.playerData.color = color;
     const game = gm.getBySocket(socket.id);
     if (game) {
