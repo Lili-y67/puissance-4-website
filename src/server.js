@@ -17,6 +17,9 @@ const playerToIp   = new Map();
 const onlineSockets = new Map();
 const visitorSockets = new Map();
 const connectedRoleRemoveTimers = new Map();
+const connectedRoleKnownState = new Map();
+const connectedRolePendingState = new Map();
+const apiAuditRecent = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
@@ -1563,13 +1566,28 @@ function buildApiAuditMedia(req) {
   };
 }
 
+function shouldSkipApiAuditEvent(req, event) {
+  if (String(req.method || '').toUpperCase() !== 'GET') return false;
+  const now = Date.now();
+  const actorKey = event.actorId ? `p:${event.actorId}` : `a:${event.actor || 'anon'}`;
+  const key = `${actorKey}:${event.path}:${event.status}`;
+  const previous = apiAuditRecent.get(key) || 0;
+  apiAuditRecent.set(key, now);
+  if (apiAuditRecent.size > 500) {
+    for (const [entryKey, at] of apiAuditRecent) {
+      if (now - at > 30000) apiAuditRecent.delete(entryKey);
+    }
+  }
+  return now - previous < 10000;
+}
+
 app.use((req, res, next) => {
   if (!shouldAuditApiRequest(req)) return next();
   const startedAt = Date.now();
   const actorMeta = getApiAuditActorMeta(req);
   res.on('finish', () => {
     try {
-      WH.wlogApiEvent({
+      const event = {
         method: req.method,
         path: String(req.originalUrl || req.path || '').split('?')[0].slice(0, 180),
         status: res.statusCode,
@@ -1582,7 +1600,8 @@ app.use((req, res, next) => {
         kind: classifyApiAuditEvent(req),
         changes: buildApiAuditChanges(req),
         ...buildApiAuditMedia(req),
-      });
+      };
+      if (!shouldSkipApiAuditEvent(req, event)) WH.wlogApiEvent(event);
     } catch(e) {}
   });
   next();
@@ -1687,6 +1706,52 @@ function discordConfig() {
     botToken:     process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || DISCORD_FALLBACK_BOT_TOKEN,
     baseUrl:      process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app',
   };
+}
+
+function normalizeReferralId(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return 0;
+  const match = raw.match(/\d+/);
+  const id = match ? Number(match[0]) : Number(raw);
+  return Number.isFinite(id) && id > 0 ? Math.floor(id) : 0;
+}
+
+function getEligibleReferrer(referrerId, playerId = 0) {
+  const id = normalizeReferralId(referrerId);
+  if (!id || Number(id) === Number(playerId || 0)) return null;
+  const referrer = pQ.getById.get(id);
+  if (!referrer || Number(referrer.deleted || 0) === 1 || Number(referrer.is_guest || 0) === 1 || Number(referrer.is_bot || 0) === 1) return null;
+  return referrer;
+}
+
+function assignReferrerIfPossible(playerId, referrerId) {
+  const id = Number(playerId || 0);
+  if (!id) return null;
+  const player = pQ.getById.get(id);
+  if (!player || Number(player.referred_by || 0)) return null;
+  const referrer = getEligibleReferrer(referrerId, id);
+  if (!referrer) return null;
+  const result = pQ.setReferrer.run({ id, referrerId: referrer.id, referredAt: Date.now() });
+  return result.changes ? referrer : null;
+}
+
+function getReferralInfo(player) {
+  const referrerId = Number(player?.referred_by || 0);
+  const referrer = referrerId ? pQ.getById.get(referrerId) : null;
+  return {
+    code: player?.id ? `P4-${player.id}` : '',
+    discountPercent: REFERRAL_SHOP_DISCOUNT_PERCENT,
+    referrer: referrer && Number(referrer.deleted || 0) !== 1 ? {
+      id: referrer.id,
+      pseudo: referrer.pseudo,
+    } : null,
+  };
+}
+
+function applyReferralDiscountPrice(basePrice, player, coupon = null) {
+  const afterCoupon = applyCouponPrice(basePrice, coupon);
+  if (!Number(player?.referred_by || 0) || afterCoupon <= 0) return afterCoupon;
+  return Math.max(0, Math.ceil(afterCoupon * (1 - REFERRAL_SHOP_DISCOUNT_PERCENT / 100)));
 }
 
 // Page mot de passe oubliAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
@@ -2365,6 +2430,9 @@ const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
 const DISCORD_CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
+const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
+const discordRestQueues = new Map();
+const REFERRAL_SHOP_DISCOUNT_PERCENT = 5;
 const CUSTOM_ROLE_MAX_LENGTH = 8;
 const SHOP_ITEMS = Object.freeze({
   vip_1m: { key: 'vip_1m', category: 'ranks', label: 'VIP 1 mois', price: 100 },
@@ -2384,6 +2452,34 @@ const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITE
 const SHOP_STOCK_KEYS = Object.freeze(
   Object.fromEntries(Object.values(SHOP_ITEMS).filter(v => Number.isFinite(v.defaultStock)).map(v => [v.key, `shop_stock_${v.key}`]))
 );
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
+}
+
+async function discordRestFetch(bucket, url, options = {}) {
+  const key = bucket || url;
+  const previous = discordRestQueues.get(key) || Promise.resolve();
+  let release;
+  const current = new Promise(resolve => { release = resolve; });
+  discordRestQueues.set(key, previous.then(() => current, () => current));
+  await previous.catch(() => {});
+  try {
+    let res = await fetch(url, options);
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({}));
+      const waitMs = Math.ceil(Number(body.retry_after || 1) * 1000) + 200;
+      console.warn('[DISCORD REST]', `rate limited, retry in ${waitMs}ms`);
+      await wait(waitMs);
+      res = await fetch(url, options);
+    }
+    await wait(DISCORD_REST_DELAY_MS);
+    return res;
+  } finally {
+    release();
+    if (discordRestQueues.get(key) === current) discordRestQueues.delete(key);
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS player_shop_items (
@@ -2888,9 +2984,10 @@ async function renameOnServer(discordId, nickname) {
 }
 
 // Synchroniser le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord d'un membre (ajoute/retire les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles)
-async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false, isPerso = false) {
+async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false, isPerso = false, currentRoleIds = null) {
   const { botToken } = discordConfig();
   if (!botToken) return;
+  const currentRoles = Array.isArray(currentRoleIds) ? new Set(currentRoleIds) : null;
   const STAFF_ROLES = [DISCORD_ROLE_ADM, DISCORD_ROLE_MOD];
   const STAFF_TARGET = role === 'admin' ? DISCORD_ROLE_ADM
                     : role === 'moderator' ? DISCORD_ROLE_MOD
@@ -2903,18 +3000,19 @@ async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false
       : rid === DISCORD_ROLE_CUSTOM
         ? !!isPerso
         : rid === STAFF_TARGET;
+    if (currentRoles && currentRoles.has(rid) === shouldHave) continue;
     const method = shouldHave ? 'PUT' : 'DELETE';
-    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
+    await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
       method,
       headers: { 'Authorization': 'Bot ' + botToken },
     });
   }
-  await syncDiscordRankRole(discordId, null, botToken);
+  await syncDiscordRankRole(discordId, null, botToken, currentRoleIds);
 }
 
 async function fetchGuildRankRoleMap(botToken) {
   const names = new Set(getAllRankRoleNames());
-  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+  const res = await discordRestFetch('guild-roles', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
     headers: { 'Authorization': 'Bot ' + botToken },
   });
   if (!res.ok) return new Map();
@@ -2926,17 +3024,19 @@ async function fetchGuildRankRoleMap(botToken) {
   return map;
 }
 
-async function syncDiscordRankRole(discordId, rank, botToken = null) {
+async function syncDiscordRankRole(discordId, rank, botToken = null, currentRoleIds = null) {
   const token = botToken || discordConfig().botToken;
   if (!token || !discordId) return;
   const currentRank = rank || getRank(rQ.getByDiscord.get(discordId)?.elo || 1000);
   const targetName = currentRank?.discordRoleName || currentRank?.label || '';
   const rankRoles = await fetchGuildRankRoleMap(token);
   if (!rankRoles.size) return;
+  const currentRoles = Array.isArray(currentRoleIds) ? new Set(currentRoleIds) : null;
 
   for (const [name, roleId] of rankRoles.entries()) {
     const shouldHave = name === targetName;
-    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${roleId}`, {
+    if (currentRoles && currentRoles.has(roleId) === shouldHave) continue;
+    await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${roleId}`, {
       method: shouldHave ? 'PUT' : 'DELETE',
       headers: { 'Authorization': 'Bot ' + token },
     });
@@ -2954,7 +3054,7 @@ async function syncPlayerDiscordRankRole(playerOrId) {
 async function findGuildRoleByName(roleName, botToken = null) {
   const token = botToken || discordConfig().botToken;
   if (!token || !roleName) return null;
-  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+  const res = await discordRestFetch('guild-roles', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
     headers: { 'Authorization': 'Bot ' + token },
   });
   if (!res.ok) return null;
@@ -2976,14 +3076,16 @@ async function syncPlayerDiscordConnectedRole(playerOrId, connected) {
   const { botToken } = discordConfig();
   const roleId = await getDiscordConnectedRoleId(botToken);
   if (!roleId) return;
-  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
+  const res = await discordRestFetch(`member-role:${player.discord_id}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
     method: connected ? 'PUT' : 'DELETE',
     headers: { 'Authorization': 'Bot ' + botToken },
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     console.warn(`[DISCORD CONNECTED ROLE] ${connected ? 'add' : 'remove'} failed for player ${player.id} / ${player.discord_id}: ${res.status} ${body.slice(0, 180)}`);
+    return false;
   }
+  return true;
 }
 
 function cancelConnectedRoleRemoval(playerId) {
@@ -2996,7 +3098,7 @@ function cancelConnectedRoleRemoval(playerId) {
 function markDiscordConnectedRealtime(player) {
   if (!player?.id || !player.discord_id) return;
   cancelConnectedRoleRemoval(player.id);
-  syncPlayerDiscordConnectedRole(player, true).catch(() => {});
+  setDiscordConnectedRoleState(player, true);
 }
 
 function scheduleDiscordConnectedRemoval(playerId) {
@@ -3007,8 +3109,25 @@ function scheduleDiscordConnectedRemoval(playerId) {
     connectedRoleRemoveTimers.delete(id);
     const sockets = onlineSockets.get(id);
     if (sockets && sockets.size > 0) return;
-    syncPlayerDiscordConnectedRole(id, false).catch(() => {});
+    setDiscordConnectedRoleState(id, false);
   }, 3500));
+}
+
+function setDiscordConnectedRoleState(playerOrId, connected) {
+  const playerId = Number(typeof playerOrId === 'object' ? playerOrId?.id : playerOrId);
+  if (!playerId) return;
+  if (connectedRoleKnownState.get(playerId) === connected) return;
+  if (connectedRolePendingState.get(playerId) === connected) return;
+  connectedRolePendingState.set(playerId, connected);
+  syncPlayerDiscordConnectedRole(playerOrId, connected)
+    .then(ok => {
+      if (connectedRolePendingState.get(playerId) !== connected) return;
+      connectedRolePendingState.delete(playerId);
+      if (ok) connectedRoleKnownState.set(playerId, connected);
+    })
+    .catch(() => {
+      if (connectedRolePendingState.get(playerId) === connected) connectedRolePendingState.delete(playerId);
+    });
 }
 
 function syncOnlineDiscordConnectedRoles() {
@@ -3026,7 +3145,7 @@ async function clearAllDiscordConnectedRoles() {
   if (!roleId) return;
   const linked = db.prepare(`SELECT discord_id FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
-    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
+    await discordRestFetch(`member-role:${player.discord_id}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bot ' + botToken },
     }).catch(() => {});
@@ -3118,7 +3237,7 @@ setInterval(async () => {
       }), player.id);
     } catch(e) {}
     try {
-      await syncDiscordRole(player.discord_id, newRole, vipNow === 1, vipPlusNow === 1, persoNow === 1);
+      await syncDiscordRole(player.discord_id, newRole, vipNow === 1, vipPlusNow === 1, persoNow === 1, roles);
     } catch(e) {}
   }
 }, 60 * 1000);
@@ -3153,7 +3272,7 @@ app.get('/auth/discord/link', (req, res) => {
 
 app.get('/auth/discord/signin', (req, res) => {
   const { clientId, baseUrl } = discordConfig();
-  const state = Buffer.from(JSON.stringify({ mode: 'signin' })).toString('base64');
+  const state = Buffer.from(JSON.stringify({ mode: 'signin', referrer: normalizeReferralId(req.query.ref || req.query.referrer) })).toString('base64');
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: baseUrl + '/auth/discord/callback',
@@ -3309,6 +3428,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       }
 
       claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
+      assignReferrerIfPossible(targetPlayer.id, stateData?.referrer);
       const linkedPlayer = pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       try { await syncPlayerDiscordRankRole(linkedPlayer); } catch(e) {}
@@ -3716,6 +3836,7 @@ app.get('/api/shop/me', (req, res) => {
   res.json({
     player: sanitize(player),
     gemsUnlocked,
+    referral: getReferralInfo(player),
     items: SHOP_ITEMS,
     prices: SHOP_PRICES,
     gemPrices: SHOP_GEM_PRICES,
@@ -3796,6 +3917,31 @@ app.post('/api/shop/boosters/activate', (req, res) => {
   res.json({ ok: true, itemKey, active: activeBoosters[item.boostType], inventory, activeBoosters });
 });
 
+app.get('/api/referral/me', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!player || Number(player.deleted || 0) === 1 || Number(player.is_guest || 0) === 1 || Number(player.is_bot || 0) === 1) {
+    return res.status(404).json({ error: 'Compte non eligible.' });
+  }
+  const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
+  const referredCount = Number(db.prepare(`
+    SELECT COUNT(*) AS c
+    FROM players
+    WHERE referred_by = ? AND deleted = 0 AND is_guest = 0 AND is_bot = 0
+  `).get(playerId)?.c || 0);
+  const info = getReferralInfo(player);
+  res.json({
+    ok: true,
+    referral: {
+      ...info,
+      url: `${baseUrl}/?ref=${player.id}`,
+      referredCount,
+    },
+  });
+});
+
 app.post('/api/shop/buy', async (req, res) => {
   const token = String(req.body?.token || '');
   const playerId = validateSession(token);
@@ -3826,6 +3972,9 @@ app.post('/api/shop/buy', async (req, res) => {
     return res.status(404).json({ error: 'Joueur destinataire introuvable.' });
   }
   const recipientId = Number(recipient.id || playerId);
+  if (giftTo && recipientId === Number(playerId)) {
+    return res.status(400).json({ error: 'Tu ne peux pas t offrir un cadeau a toi-meme.' });
+  }
   const isGift = recipientId !== Number(playerId);
   const currency = String(req.body?.currency || 'coins').toLowerCase() === 'gems' ? 'gems' : 'coins';
   if (currency === 'gems' && !String(player.discord_id || '').trim()) {
@@ -3841,7 +3990,7 @@ app.post('/api/shop/buy', async (req, res) => {
     : currency === 'gems'
       ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
       : Number(item.price || 0);
-  const price = applyCouponPrice(basePrice, coupon);
+  const price = applyReferralDiscountPrice(basePrice, player, coupon);
   const balance = currency === 'gems' ? Number(player.gems || 0) : Number(player.coins || 0);
 
   if (balance < price) {
@@ -3930,6 +4079,7 @@ app.post('/api/shop/buy', async (req, res) => {
       currency,
       paid: price,
       basePrice,
+      referralDiscount: Number(player.referred_by || 0) ? REFERRAL_SHOP_DISCOUNT_PERCENT : 0,
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     });
   } catch(e) {}
@@ -3954,6 +4104,7 @@ app.post('/api/shop/buy', async (req, res) => {
     inventory,
     gemsUnlocked: !!String(pQ.getById.get(playerId)?.discord_id || '').trim(),
     player: sanitize(pQ.getById.get(playerId)),
+    referral: getReferralInfo(pQ.getById.get(playerId)),
     target: isGift ? sanitize(pQ.getById.get(recipientId)) : null,
     gifted: isGift,
     giftTo: isGift ? recipient.pseudo : '',
@@ -4115,6 +4266,7 @@ app.post('/api/auth/register', security.routeGuard('register'), (req, res) => {
       player = pQ.getById.get(player.id);
     }
     grantWelcomeRewards(player.id);
+    assignReferrerIfPossible(player.id, req.body.referrer || req.body.referrerId || req.body.ref);
     player = pQ.getById.get(player.id);
     const token = createSession(player.id);
     security.recordRegistration(req, player.pseudo, player.id);
@@ -4149,9 +4301,11 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
     });
   }
 
+  const referrer = assignReferrerIfPossible(player.id, req.body.referrer || req.body.referrerId || req.body.ref);
+  const freshPlayer = referrer ? pQ.getById.get(player.id) : player;
   const token = createSession(player.id);
   security.recordLoginSuccess(req, player.id);
-  res.json({ ...sanitize(player), token });
+  res.json({ ...sanitize(freshPlayer), token, referralLinked: !!referrer });
 });
 
 // Ne jamais renvoyer le hash du mot de passe au client
@@ -4650,6 +4804,7 @@ app.get('/api/players/search', (req, res) => {
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
         AND is_guest = 0
+        AND is_bot = 0
       ORDER BY elo DESC LIMIT 8
     `).all(q.replace(/%/g, '') + '%');
     res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '' })));

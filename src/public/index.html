@@ -3661,6 +3661,7 @@ async function handleAuth() {
       body: JSON.stringify({
         pseudo,
         password,
+        referrer: getPendingReferrer(),
         ...(authMode === 'register' ? { color: selectedRegisterColor } : {}),
       }),
     });
@@ -3675,6 +3676,7 @@ async function handleAuth() {
     const { token, ...playerData } = data;
     myPlayer = playerData;
     if (token) localStorage.setItem('token', token);
+    try { localStorage.removeItem('p4_referrer'); } catch {}
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
     redirectAfterAuthOrQueue({ welcome: authMode === 'register' });
@@ -3692,7 +3694,22 @@ function decodeBase64Url(input) {
 }
 
 function loginWithDiscord() {
-  window.location.href = '/auth/discord/signin';
+  const ref = getPendingReferrer();
+  window.location.href = '/auth/discord/signin' + (ref ? `?ref=${encodeURIComponent(ref)}` : '');
+}
+
+function getPendingReferrer() {
+  try { return localStorage.getItem('p4_referrer') || ''; }
+  catch { return ''; }
+}
+
+function captureReferralLink() {
+  const params = new URLSearchParams(location.search);
+  const ref = String(params.get('ref') || params.get('parrain') || '').trim();
+  const id = (ref.match(/\d+/) || [''])[0];
+  if (id) {
+    try { localStorage.setItem('p4_referrer', id); } catch {}
+  }
 }
 
 function showDiscordQueryError() {
@@ -3723,6 +3740,7 @@ function tryCompleteDiscordAuth() {
     localStorage.setItem('token', payload.token);
     localStorage.setItem('player', JSON.stringify(payload.player));
     sessionStorage.setItem('player', JSON.stringify(payload.player));
+    try { localStorage.removeItem('p4_referrer'); } catch {}
     history.replaceState(null, '', location.pathname + location.search);
     redirectAfterAuthOrQueue({ welcome: Boolean(payload.created || payload.newAccount || payload.isNew) });
     return true;
@@ -5020,6 +5038,7 @@ document.addEventListener('keydown', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
   initRegisterColorPicker();
   startSiteStatsPolling();
+  captureReferralLink();
   showDiscordQueryError();
   if (tryCompleteDiscordAuth()) return;
   // Auto-login depuis localStorage

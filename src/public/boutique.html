@@ -176,10 +176,27 @@ body{
 .preview-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:30;padding:18px;align-items:center;justify-content:center}
 .preview-modal-bg.show{display:flex}
 .preview-modal{width:min(760px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:26px;background:linear-gradient(180deg, rgba(17,18,31,.98), rgba(10,11,22,.98));border:1px solid var(--border);box-shadow:0 30px 90px rgba(0,0,0,.45)}
+.gift-modal{width:min(520px,100%);max-height:90vh;overflow:auto;padding:22px;border-radius:24px;background:linear-gradient(180deg, rgba(17,18,31,.98), rgba(10,11,22,.98));border:1px solid rgba(133,235,255,.18);box-shadow:0 30px 90px rgba(0,0,0,.45)}
 .preview-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
 .preview-title{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-copy{font-size:14px;color:var(--muted);line-height:1.7;margin-top:10px}
 .preview-close{width:38px;height:38px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:20px}
+.gift-search{position:relative;display:flex;flex-direction:column;gap:10px}
+.gift-input{width:100%;padding:14px 15px;border-radius:16px;border:1px solid rgba(133,235,255,.20);background:rgba(8,9,18,.76);color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;outline:none}
+.gift-input:focus{border-color:rgba(133,235,255,.55);box-shadow:0 0 0 4px rgba(133,235,255,.08)}
+.gift-results{display:flex;flex-direction:column;gap:8px;min-height:44px}
+.gift-result{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:16px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.035);color:var(--text);cursor:pointer;text-align:left;transition:.18s}
+.gift-result:hover,.gift-result.selected{border-color:rgba(133,235,255,.36);background:rgba(133,235,255,.09)}
+.gift-result-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.08);border:2px solid var(--blue);font-family:'Barlow Condensed',sans-serif;font-weight:900}
+.gift-result-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.gift-result-main{min-width:0;flex:1}
+.gift-result-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gift-result-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.gift-selected{display:none;padding:11px 12px;border-radius:16px;background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.24);color:#30d158;font-size:13px;font-weight:700}
+.gift-selected.show{display:block}
+.gift-actions{display:flex;gap:10px;margin-top:16px}
+.gift-actions button{flex:1}
+.referral-chip{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;border-radius:999px;background:rgba(48,209,88,.10);border:1px solid rgba(48,209,88,.26);color:#30d158;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .preview-side{padding:18px;border-radius:20px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .preview-showcase{min-height:220px;border-radius:22px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -545,6 +562,28 @@ body{
   </section>
 </div>
 
+<div class="preview-modal-bg" id="gift-modal-bg" onclick="if(event.target===this)closeGiftModal()">
+  <div class="gift-modal">
+    <div class="preview-head">
+      <div>
+        <div class="preview-title" id="gift-title">🎁 Offrir</div>
+        <div class="preview-copy" id="gift-copy">Cherche un joueur, selectionne-le, puis confirme le cadeau.</div>
+      </div>
+      <button class="preview-close" type="button" onclick="closeGiftModal()">×</button>
+    </div>
+    <div class="gift-search">
+      <input id="gift-player-input" class="gift-input" placeholder="Pseudo du membre" autocomplete="off" oninput="onGiftSearchInput()">
+      <div id="gift-selected" class="gift-selected"></div>
+      <div id="gift-results" class="gift-results"></div>
+      <div id="gift-error" class="promo-help error"></div>
+    </div>
+    <div class="gift-actions">
+      <button class="preview-btn" type="button" onclick="closeGiftModal()">Annuler</button>
+      <button class="gift-btn" id="gift-confirm-btn" type="button" onclick="confirmGift()" disabled>🎁 Offrir</button>
+    </div>
+  </div>
+</div>
+
 <div class="preview-modal-bg" id="preview-modal-bg" onclick="if(event.target===this)closePreview()">
   <div class="preview-modal">
     <div class="preview-head">
@@ -700,6 +739,7 @@ let shopStock = {};
 let shopInventory = {};
 let shopLimitedOffer = null;
 let shopGemsUnlocked = false;
+let shopReferral = null;
 let currentCategory = 'ranks';
 let customBoosterState = { elo: 0.1, coins: 1 };
 let previewDecorations = [];
@@ -708,6 +748,9 @@ let previewAnimTimer = null;
 let appliedCouponCode = '';
 let appliedCoupon = null;
 let offerTimerInterval = null;
+let giftPackKey = '';
+let giftSelectedPlayer = null;
+let giftSearchTimer = null;
 const PREVIEW_NAME_PARTS = ['li', 'na', 'shi', 'ka', 'yo', 'mi', 'sa', 'ly', 'no', 'ra', 'el', 'ia', 'zu', 'ko', 'ri', 'ta', 'ma', 'ne', 'cy', 'va'];
 const PREVIEW_AVATAR_STYLES = ['adventurer', 'adventurer-neutral', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'pixel-art'];
 
@@ -741,27 +784,35 @@ function getCurrencyIcon() {
 function getDiscountedPrice(price) {
   const basePrice = Math.max(0, Number(price || 0));
   const coupon = appliedCoupon && appliedCouponCode ? appliedCoupon : null;
-  if (!coupon || basePrice <= 0) {
+  const hasReferral = !!shopReferral?.referrer && Number(shopReferral.discountPercent || 0) > 0;
+  if ((!coupon && !hasReferral) || basePrice <= 0) {
     return { basePrice, finalPrice: basePrice, hasDiscount: false, label: '' };
   }
 
-  const value = Number(coupon.value || 0);
   let finalPrice = basePrice;
-  let label = '';
-  if (String(coupon.type || '').toLowerCase() === 'flat') {
-    finalPrice = Math.max(0, basePrice - Math.max(0, value));
-    label = `-${Math.max(0, value)} ${getCurrencyLabel()}`;
-  } else {
-    const percent = Math.max(0, Math.min(95, value));
-    finalPrice = Math.max(0, Math.ceil(basePrice * (1 - percent / 100)));
-    label = `-${percent}%`;
+  const labels = [];
+  if (coupon) {
+    const value = Number(coupon.value || 0);
+    if (String(coupon.type || '').toLowerCase() === 'flat') {
+      finalPrice = Math.max(0, finalPrice - Math.max(0, value));
+      labels.push(`-${Math.max(0, value)} ${getCurrencyLabel()}`);
+    } else {
+      const percent = Math.max(0, Math.min(95, value));
+      finalPrice = Math.max(0, Math.ceil(finalPrice * (1 - percent / 100)));
+      labels.push(`-${percent}%`);
+    }
+  }
+  if (hasReferral) {
+    const percent = Math.max(0, Math.min(95, Number(shopReferral.discountPercent || 0)));
+    finalPrice = Math.max(0, Math.ceil(finalPrice * (1 - percent / 100)));
+    labels.push(`-${percent}% parrain`);
   }
 
   return {
     basePrice,
     finalPrice,
     hasDiscount: finalPrice < basePrice,
-    label,
+    label: labels.join(' + '),
   };
 }
 
@@ -1464,7 +1515,7 @@ function renderCustomBoosterCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
-        <button class="gift-btn" type="button" onclick="giftPack('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">Offrir</button>
+        <button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           Acheter ${item.title}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1509,7 +1560,7 @@ function renderCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
-        <button class="gift-btn" type="button" onclick="giftPack('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">Offrir</button>
+        <button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1609,11 +1660,16 @@ async function loadShop() {
     shopInventory = data.inventory || {};
     shopLimitedOffer = data.limitedOffer || null;
     shopGemsUnlocked = !!data.gemsUnlocked;
+    shopReferral = data.referral || null;
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
+    if (shopReferral?.referrer && !appliedCouponCode) {
+      setCouponStatus(`Parrain actif : -${shopReferral.discountPercent || 5}% boutique grace a ${shopReferral.referrer.pseudo}.`, 'ok');
+    }
   } catch (e) {
     shopGemsUnlocked = false;
+    shopReferral = null;
     setCoinsUi(0, 'Impossible de charger ton solde.');
   }
   renderShop();
@@ -1639,7 +1695,7 @@ async function purchasePack(pack, giftTo = '') {
     return;
   }
   const coupon = appliedCouponCode;
-  const promoText = coupon && priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
+  const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
@@ -1672,6 +1728,7 @@ async function purchasePack(pack, giftTo = '') {
     }
     shopPlayer = data.player || shopPlayer;
     if (typeof data.gemsUnlocked !== 'undefined') shopGemsUnlocked = !!data.gemsUnlocked;
+    shopReferral = data.referral || shopReferral;
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
     if (pack === 'limited_offer' && shopLimitedOffer) {
@@ -1692,11 +1749,116 @@ async function buyPack(pack) {
   return purchasePack(pack, '');
 }
 
-async function giftPack(pack) {
-  const pseudo = prompt('Pseudo du joueur a qui offrir ce pack :');
-  const giftTo = String(pseudo || '').trim();
-  if (!giftTo) return;
-  return purchasePack(pack, giftTo);
+function renderGiftResults(players = []) {
+  const box = document.getElementById('gift-results');
+  if (!box) return;
+  if (!players.length) {
+    box.innerHTML = '<div class="promo-help">Tape au moins 3 lettres pour chercher un membre.</div>';
+    return;
+  }
+  box.innerHTML = players.map(player => {
+    const avatar = String(player.avatar || '').trim()
+      ? `<img src="${escapeHtml(player.avatar)}" alt="">`
+      : escapeHtml(String(player.pseudo || '?').charAt(0).toUpperCase());
+    const disabled = Number(player.id) === Number(shopPlayer?.id || 0);
+    return `
+      <button class="gift-result ${disabled ? 'selected' : ''}" type="button" onclick="${disabled ? '' : `selectGiftPlayer(${Number(player.id)})`}" ${disabled ? 'disabled' : ''}>
+        <span class="gift-result-avatar" style="border-color:${escapeHtml(player.color || '#85EBFF')}">${avatar}</span>
+        <span class="gift-result-main">
+          <span class="gift-result-name">${escapeHtml(player.pseudo)}</span>
+          <span class="gift-result-meta">${disabled ? 'Impossible de s offrir a soi-meme' : `${Number(player.elo || 1000)} ELO`}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+  box._giftPlayers = players;
+}
+
+function selectGiftPlayer(id) {
+  const players = document.getElementById('gift-results')?._giftPlayers || [];
+  const player = players.find(p => Number(p.id) === Number(id));
+  if (!player) return;
+  giftSelectedPlayer = player;
+  const selected = document.getElementById('gift-selected');
+  const btn = document.getElementById('gift-confirm-btn');
+  const err = document.getElementById('gift-error');
+  if (selected) {
+    selected.textContent = `Cadeau pour ${player.pseudo} - ${Number(player.elo || 1000)} ELO`;
+    selected.classList.add('show');
+  }
+  if (btn) btn.disabled = false;
+  if (err) err.textContent = '';
+}
+
+function openGiftModal(pack) {
+  const state = getGiftButtonState(pack);
+  if (state.disabled) return;
+  giftPackKey = pack;
+  giftSelectedPlayer = null;
+  const item = getDisplayItem(pack);
+  const bg = document.getElementById('gift-modal-bg');
+  const input = document.getElementById('gift-player-input');
+  const title = document.getElementById('gift-title');
+  const copy = document.getElementById('gift-copy');
+  const selected = document.getElementById('gift-selected');
+  const btn = document.getElementById('gift-confirm-btn');
+  const err = document.getElementById('gift-error');
+  if (title) title.textContent = `🎁 Offrir ${item?.title || pack}`;
+  if (copy) copy.textContent = renderPriceNote(pack, ' · selectionne le membre qui recevra le cadeau.');
+  if (input) input.value = '';
+  if (selected) {
+    selected.textContent = '';
+    selected.classList.remove('show');
+  }
+  if (btn) btn.disabled = true;
+  if (err) err.textContent = '';
+  renderGiftResults([]);
+  bg?.classList.add('show');
+  setTimeout(() => input?.focus(), 80);
+}
+
+function closeGiftModal() {
+  document.getElementById('gift-modal-bg')?.classList.remove('show');
+  giftPackKey = '';
+  giftSelectedPlayer = null;
+  clearTimeout(giftSearchTimer);
+}
+
+function onGiftSearchInput() {
+  clearTimeout(giftSearchTimer);
+  giftSelectedPlayer = null;
+  const selected = document.getElementById('gift-selected');
+  const btn = document.getElementById('gift-confirm-btn');
+  const err = document.getElementById('gift-error');
+  if (selected) selected.classList.remove('show');
+  if (btn) btn.disabled = true;
+  if (err) err.textContent = '';
+  const q = String(document.getElementById('gift-player-input')?.value || '').trim();
+  if (q.length < 3) {
+    renderGiftResults([]);
+    return;
+  }
+  giftSearchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`/api/players/search?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
+      const players = await res.json();
+      renderGiftResults(Array.isArray(players) ? players : []);
+    } catch {
+      const box = document.getElementById('gift-results');
+      if (box) box.innerHTML = '<div class="promo-help error">Recherche impossible pour le moment.</div>';
+    }
+  }, 220);
+}
+
+async function confirmGift() {
+  const err = document.getElementById('gift-error');
+  if (!giftPackKey || !giftSelectedPlayer?.pseudo) return;
+  if (Number(giftSelectedPlayer.id) === Number(shopPlayer?.id || 0)) {
+    if (err) err.textContent = 'Tu ne peux pas t offrir un cadeau a toi-meme.';
+    return;
+  }
+  await purchasePack(giftPackKey, giftSelectedPlayer.pseudo);
+  closeGiftModal();
 }
 
 repairDomText();

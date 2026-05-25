@@ -131,6 +131,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER 
 try { db.exec(`ALTER TABLE players ADD COLUMN queue_music TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN referred_by INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN referred_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_token_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_token_preview TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_description TEXT NOT NULL DEFAULT ''`); } catch(e) {}
@@ -319,6 +321,7 @@ const pQ = {
   addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),
   updateGems:   db.prepare(`UPDATE players SET gems = @gems WHERE id = @id`),
   addGems:      db.prepare(`UPDATE players SET gems = gems + @delta WHERE id = @id`),
+  setReferrer:  db.prepare(`UPDATE players SET referred_by = @referrerId, referred_at = @referredAt WHERE id = @id AND (referred_by IS NULL OR referred_by = 0)`),
   updateTokenEmojiChangedAt: db.prepare(`UPDATE players SET token_emoji_changed_at = @changedAt WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   setElo:       db.prepare(`UPDATE players SET elo = @elo WHERE id = @id`),

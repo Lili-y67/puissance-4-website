@@ -10,6 +10,7 @@ const BASE = (process.env.BASE_URL || 'https://puissance-4-website-production.up
 const MEMBER_FORUM_CHANNEL_ID = process.env.DISCORD_MEMBER_FORUM_CHANNEL_ID || '1508534889153036461';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
 const MEMBER_THREAD_STORE = path.join(__dirname, '..', 'data', 'discord-member-forum-threads.json');
+const DISCORD_REQUEST_DELAY_MS = Number(process.env.DISCORD_REQUEST_DELAY_MS || 450);
 const WEBHOOKS = Object.freeze({
   get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
   post: process.env.DISCORD_WEBHOOK_POST || 'https://discord.com/api/webhooks/1508532434008801351/EdesEHSTzRz5xlDEYpa9fRIHTBNrFuE1ch-lm9vNubPKqa8Nerch36lvqumJHmmKuWp5',
@@ -17,6 +18,36 @@ const WEBHOOKS = Object.freeze({
   global: process.env.DISCORD_WEBHOOK_GLOBAL || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
   default: process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
 });
+
+const discordQueues = new Map();
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, Math.max(0, Number(ms || 0))));
+}
+
+async function queuedDiscordFetch(bucket, url, options = {}) {
+  const key = bucket || url;
+  const previous = discordQueues.get(key) || Promise.resolve();
+  let release;
+  const current = new Promise(resolve => { release = resolve; });
+  discordQueues.set(key, previous.then(() => current, () => current));
+  await previous.catch(() => {});
+  try {
+    let res = await fetch(url, options);
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({}));
+      const waitMs = Math.ceil(Number(body.retry_after || 1) * 1000) + 150;
+      console.warn('[WEBHOOK]', `rate limited, retry in ${waitMs}ms`);
+      await sleep(waitMs);
+      res = await fetch(url, options);
+    }
+    await sleep(DISCORD_REQUEST_DELAY_MS);
+    return res;
+  } finally {
+    release();
+    if (discordQueues.get(key) === current) discordQueues.delete(key);
+  }
+}
 
 const EMOJI = Object.freeze({
   replay: '\uD83C\uDFAC',
@@ -74,7 +105,7 @@ async function ensureMemberForumThread(player = {}) {
   const store = readMemberThreadStore();
   if (store[id]?.threadId) return store[id].threadId;
   try {
-    const res = await fetch(`https://discord.com/api/v10/channels/${MEMBER_FORUM_CHANNEL_ID}/threads`, {
+    const res = await queuedDiscordFetch(`forum:${MEMBER_FORUM_CHANNEL_ID}`, `https://discord.com/api/v10/channels/${MEMBER_FORUM_CHANNEL_ID}/threads`, {
       method: 'POST',
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -108,7 +139,7 @@ async function ensureMemberForumThread(player = {}) {
 async function postForumThreadMessage(threadId, payload) {
   if (!threadId || !DISCORD_BOT_TOKEN) return false;
   try {
-    const res = await fetch(`https://discord.com/api/v10/channels/${threadId}/messages`, {
+    const res = await queuedDiscordFetch(`thread:${threadId}`, `https://discord.com/api/v10/channels/${threadId}/messages`, {
       method: 'POST',
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -129,7 +160,7 @@ async function postWebhook(payload, target = 'global') {
   const url = webhookUrl(target);
   if (!url) return;
   try {
-    const res = await fetch(url, {
+    const res = await queuedDiscordFetch(`webhook:${target}`, url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

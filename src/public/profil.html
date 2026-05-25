@@ -1697,6 +1697,9 @@ async function load() {
     if (isOwnProfile && freshPlayer.discord_id) {
       loadDiscordInfo();
     }
+    if (isOwnProfile && Number(freshPlayer.is_bot || 0) !== 1) {
+      loadReferralInfo();
+    }
 
     // Notif discord_linked
     const params = new URLSearchParams(location.search);
@@ -2199,6 +2202,43 @@ function render(player, games, following, followers, followStatus, tournaments =
     ` : ''}
     </div>
     </section>
+
+    ${isOwnProfile && Number(player.is_bot || 0) !== 1 ? `
+    <section class="profile-section" id="section-referral">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Parrainage</div>
+        <div class="profile-section-sub">Invite un joueur avec ton lien. Le filleul obtient -5% boutique quand le lien est utilise a la connexion.</div>
+      </div>
+    </div>
+    <div class="color-card" style="margin-top:0;border-color:rgba(48,209,88,0.22);background:rgba(48,209,88,0.045)">
+      <div class="card-label">Lien Puissance 4 Parrain</div>
+      <div class="discord-link-panel">
+        <div class="discord-bubbles">
+          <div class="discord-bubble">
+            <span class="icon">🎁</span>
+            <div class="meta">
+              <span class="label">Avantage filleul</span>
+              <span class="value">-5% automatique sur la boutique</span>
+            </div>
+          </div>
+          <div class="discord-bubble">
+            <span class="icon">🔗</span>
+            <div class="meta">
+              <span class="label">Condition</span>
+              <span class="value">Le joueur doit se connecter ou s'inscrire depuis ton lien</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-top:12px">
+          <input id="referral-link-input" class="search-input" style="width:100%;max-width:none;margin:0" readonly value="Chargement...">
+          <button class="btn-save-color" onclick="copyReferralLink()" style="background:rgba(48,209,88,0.10);border-color:rgba(48,209,88,0.30);color:#30d158">Copier</button>
+        </div>
+        <div id="referral-status" style="font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px">Chargement du parrainage...</div>
+      </div>
+    </div>
+    </section>
+    ` : ''}
 
     <section class="profile-section" id="section-bot">
     <div class="profile-section-head">
@@ -5080,6 +5120,39 @@ async function copyTextToClipboard(text) {
   input.select();
   document.execCommand('copy');
   input.remove();
+}
+
+async function loadReferralInfo() {
+  const token = getStoredSessionToken();
+  const input = document.getElementById('referral-link-input');
+  const status = document.getElementById('referral-status');
+  if (!token || !input || !status) return;
+  try {
+    const res = await fetch('/api/referral/me', { headers: { 'x-session-token': token } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de charger le parrainage.');
+    const referral = data.referral || {};
+    input.value = referral.url || `${location.origin}/?ref=${currentPlayer?.id || ''}`;
+    const referrerText = referral.referrer
+      ? `Tu es parraine par ${referral.referrer.pseudo} : -${referral.discountPercent || 5}% boutique actif.`
+      : `Code ${referral.code || 'P4'} · ${Number(referral.referredCount || 0)} filleul(s) · le filleul gagne -${referral.discountPercent || 5}% boutique.`;
+    status.textContent = referrerText;
+    status.style.color = referral.referrer ? '#30d158' : 'var(--muted)';
+  } catch (e) {
+    input.value = `${location.origin}/?ref=${currentPlayer?.id || ''}`;
+    status.textContent = e.message || 'Parrainage indisponible.';
+    status.style.color = '#ff6b81';
+  }
+}
+
+async function copyReferralLink() {
+  const value = document.getElementById('referral-link-input')?.value || '';
+  await copyTextToClipboard(value);
+  const status = document.getElementById('referral-status');
+  if (status) {
+    status.textContent = 'Lien parrain copie.';
+    status.style.color = '#30d158';
+  }
 }
 
 async function copyBotToken() {
