@@ -138,6 +138,24 @@ input[type=password],input[type=text],input[type=number],select{
   transition:border-color .2s,box-shadow .2s,background .2s,transform .2s;
   margin-bottom:12px;
 }
+select{
+  color-scheme:dark;
+  appearance:none;
+  background:
+    linear-gradient(45deg,transparent 50%,var(--cyan) 50%) calc(100% - 18px) 50%/6px 6px no-repeat,
+    linear-gradient(135deg,var(--cyan) 50%,transparent 50%) calc(100% - 13px) 50%/6px 6px no-repeat,
+    linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025)),rgba(18,19,34,.98);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 12px 28px rgba(0,0,0,.18);
+  padding-right:38px;
+}
+select option{
+  background:#17192d;
+  color:#eeeef5;
+}
+select option:checked{
+  background:#24314d;
+  color:#85EBFF;
+}
 input:focus,select:focus{
   border-color:rgba(133,235,255,.48);
   box-shadow:0 0 0 4px rgba(133,235,255,.10),0 0 28px rgba(133,235,255,.08);

@@ -1441,6 +1441,79 @@ setInterval(archiveOldGames, 60 * 60 * 1000);
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
 app.use(express.static(path.join(__dirname, 'public')));
 
+const API_AUDIT_EXCLUDED = [
+  /^\/api\/system-status$/,
+  /^\/api\/live$/,
+  /^\/api\/stats$/,
+  /^\/api\/bot\/ping$/,
+  /^\/api\/bot\/move$/,
+];
+
+function shouldAuditApiRequest(req) {
+  const pathOnly = String(req.path || '').split('?')[0];
+  if (!pathOnly.startsWith('/api/')) return false;
+  if (API_AUDIT_EXCLUDED.some(pattern => pattern.test(pathOnly))) return false;
+  return req.method !== 'GET' || pathOnly.startsWith('/api/admin/');
+}
+
+function inferApiAuditActor(req) {
+  try {
+    const adminToken = String(req.headers['x-admin-token'] || '').trim();
+    const adminSession = adminToken ? adminSessions.get(adminToken) : null;
+    if (adminSession?.playerId) {
+      const admin = pQ.getById.get(Number(adminSession.playerId));
+      return admin ? `${admin.pseudo} (#${admin.id}) [admin:${adminSession.role}]` : `Admin #${adminSession.playerId}`;
+    }
+    const token = String(
+      req.headers['x-session-token']
+      || req.body?.token
+      || req.query?.token
+      || ''
+    ).trim();
+    const playerId = token ? validateSession(token) : null;
+    if (playerId) {
+      const player = pQ.getById.get(Number(playerId));
+      return player ? `${player.pseudo} (#${player.id})` : `Joueur #${playerId}`;
+    }
+    const pseudo = String(req.body?.pseudo || req.body?.username || '').trim().slice(0, 40);
+    if (pseudo) return `${pseudo} (non verifie)`;
+  } catch {}
+  return '';
+}
+
+function classifyApiAuditEvent(req) {
+  const pathOnly = String(req.path || '').split('?')[0];
+  if (/\/auth\/login$/.test(pathOnly)) return 'connexion';
+  if (/\/auth\/register$/.test(pathOnly)) return 'inscription';
+  if (/\/admin\//.test(pathOnly)) return 'admin';
+  if (/\/shop\//.test(pathOnly)) return 'boutique';
+  if (/\/discord\//.test(pathOnly)) return 'discord';
+  if (/\/duels?\//.test(pathOnly)) return 'duel';
+  if (/\/clans?\//.test(pathOnly)) return 'clan';
+  if (/\/tournaments?\//.test(pathOnly)) return 'tournoi';
+  if (/\/players?\//.test(pathOnly)) return 'profil';
+  if (/\/bot\//.test(pathOnly)) return 'bot-api';
+  return 'site';
+}
+
+app.use((req, res, next) => {
+  if (!shouldAuditApiRequest(req)) return next();
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    try {
+      WH.wlogApiEvent({
+        method: req.method,
+        path: String(req.originalUrl || req.path || '').split('?')[0].slice(0, 180),
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+        actor: inferApiAuditActor(req),
+        kind: classifyApiAuditEvent(req),
+      });
+    } catch(e) {}
+  });
+  next();
+});
+
 app.get('/api/system-status', (_, res) => {
   res.json(readSystemStatus());
 });
@@ -3673,6 +3746,13 @@ app.post('/api/shop/buy', async (req, res) => {
 
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const giftTo = String(req.body?.giftTo || '').trim().slice(0, 32);
+  const recipient = giftTo ? pQ.getByPseudo.get(giftTo) : player;
+  if (giftTo && (!recipient || Number(recipient.deleted || 0) === 1 || Number(recipient.is_guest || 0) === 1 || Number(recipient.is_bot || 0) === 1)) {
+    return res.status(404).json({ error: 'Joueur destinataire introuvable.' });
+  }
+  const recipientId = Number(recipient.id || playerId);
+  const isGift = recipientId !== Number(playerId);
   const currency = String(req.body?.currency || 'coins').toLowerCase() === 'gems' ? 'gems' : 'coins';
   if (currency === 'gems' && !String(player.discord_id || '').trim()) {
     return res.status(403).json({ error: 'Lie ton compte Discord pour utiliser les gemmes.' });
@@ -3693,14 +3773,14 @@ app.post('/api/shop/buy', async (req, res) => {
   if (balance < price) {
     return res.status(400).json({ error: currency === 'gems' ? 'Pas assez de gemmes.' : 'Pas assez de coins.' });
   }
-  if (pack === 'vip_plus' && Number(player.is_vip_plus || 0) === 1) {
-    return res.status(400).json({ error: 'VIP+ deja actif.' });
+  if (pack === 'vip_plus' && Number(recipient.is_vip_plus || 0) === 1) {
+    return res.status(400).json({ error: isGift ? 'Ce joueur a deja VIP+.' : 'VIP+ deja actif.' });
   }
-  if (pack === 'perso' && Number(player.is_perso || 0) === 1) {
-    return res.status(400).json({ error: 'Pack Perso deja actif.' });
+  if (pack === 'perso' && Number(recipient.is_perso || 0) === 1) {
+    return res.status(400).json({ error: isGift ? 'Ce joueur a deja le pack Perso.' : 'Pack Perso deja actif.' });
   }
-  if ((pack === 'vip_1m' || pack === 'vip_1y') && Number(player.is_vip_plus || 0) === 1) {
-    return res.status(400).json({ error: 'VIP+ est deja actif a vie.' });
+  if ((pack === 'vip_1m' || pack === 'vip_1y') && Number(recipient.is_vip_plus || 0) === 1) {
+    return res.status(400).json({ error: isGift ? 'Ce joueur a deja VIP+ a vie.' : 'VIP+ est deja actif a vie.' });
   }
   if (pack === 'limited_offer' && Number(item.defaultStock || 0) <= 0) {
     return res.status(400).json({ error: 'Rupture de stock.' });
@@ -3710,7 +3790,7 @@ app.post('/api/shop/buy', async (req, res) => {
   }
 
   const now = Date.now();
-  const currentVipExpiry = Number(player.vip_expires_at || 0);
+  const currentVipExpiry = Number(recipient.vip_expires_at || 0);
   const baseExpiry = currentVipExpiry > now ? currentVipExpiry : now;
 
   if (currency === 'gems') pQ.updateGems.run({ gems: balance - price, id: playerId });
@@ -3721,30 +3801,30 @@ app.post('/api/shop/buy', async (req, res) => {
   }
 
   if (pack === 'vip_1m') {
-    pQ.updateVip.run({ is_vip: 1, id: playerId });
-    pQ.updateVipPlus.run({ is_vip_plus: 0, id: playerId });
-    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (30 * 24 * 60 * 60 * 1000), id: playerId });
+    pQ.updateVip.run({ is_vip: 1, id: recipientId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: recipientId });
+    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (30 * 24 * 60 * 60 * 1000), id: recipientId });
   } else if (pack === 'vip_1y') {
-    pQ.updateVip.run({ is_vip: 1, id: playerId });
-    pQ.updateVipPlus.run({ is_vip_plus: 0, id: playerId });
-    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (365 * 24 * 60 * 60 * 1000), id: playerId });
+    pQ.updateVip.run({ is_vip: 1, id: recipientId });
+    pQ.updateVipPlus.run({ is_vip_plus: 0, id: recipientId });
+    pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (365 * 24 * 60 * 60 * 1000), id: recipientId });
   } else if (pack === 'vip_plus') {
-    pQ.updateVip.run({ is_vip: 1, id: playerId });
-    pQ.updateVipPlus.run({ is_vip_plus: 1, id: playerId });
-    pQ.updateVipExpiry.run({ vip_expires_at: null, id: playerId });
+    pQ.updateVip.run({ is_vip: 1, id: recipientId });
+    pQ.updateVipPlus.run({ is_vip_plus: 1, id: recipientId });
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: recipientId });
   } else if (pack === 'perso') {
-    pQ.updatePerso.run({ is_perso: 1, id: playerId });
+    pQ.updatePerso.run({ is_perso: 1, id: recipientId });
   } else if (pack === 'elo_reset') {
-    pQ.setElo.run({ elo: 1000, id: playerId });
+    pQ.setElo.run({ elo: 1000, id: recipientId });
   } else if (pack === 'limited_offer' && Array.isArray(item.grants)) {
-    for (const grant of item.grants) applyLimitedPackEntry(playerId, grant, { now, player });
+    for (const grant of item.grants) applyLimitedPackEntry(recipientId, grant, { now, player: recipient });
   } else if (Array.isArray(item.grants)) {
-    for (const grant of item.grants) applyShopGrant(playerId, grant, { now, player });
+    for (const grant of item.grants) applyShopGrant(recipientId, grant, { now, player: recipient });
   } else {
     if (item.isCustom) {
-      shopItemQ.addOne.run(playerId, item.key);
+      shopItemQ.addOne.run(recipientId, item.key);
     } else {
-      shopItemQ.addOne.run(playerId, pack);
+      shopItemQ.addOne.run(recipientId, pack);
     }
   }
   const stockKey = SHOP_STOCK_KEYS[pack];
@@ -3758,7 +3838,7 @@ app.post('/api/shop/buy', async (req, res) => {
     `).run();
   }
 
-  const fresh = pQ.getById.get(playerId);
+  const fresh = pQ.getById.get(recipientId);
   if (fresh?.discord_id) {
     try {
       await syncDiscordRole(
@@ -3772,7 +3852,7 @@ app.post('/api/shop/buy', async (req, res) => {
   }
 
   try {
-    WH.wlogShopPurchase(player.pseudo, playerId, item.label || item.name || pack, {
+    WH.wlogShopPurchase(player.pseudo, playerId, `${item.label || item.name || pack}${isGift ? ` -> ${recipient.pseudo}` : ''}`, {
       currency,
       paid: price,
       basePrice,
@@ -3798,8 +3878,11 @@ app.post('/api/shop/buy', async (req, res) => {
     items: SHOP_ITEMS,
     stock,
     inventory,
-    gemsUnlocked: !!String(fresh?.discord_id || '').trim(),
+    gemsUnlocked: !!String(pQ.getById.get(playerId)?.discord_id || '').trim(),
     player: sanitize(pQ.getById.get(playerId)),
+    target: isGift ? sanitize(pQ.getById.get(recipientId)) : null,
+    gifted: isGift,
+    giftTo: isGift ? recipient.pseudo : '',
   });
 });
 

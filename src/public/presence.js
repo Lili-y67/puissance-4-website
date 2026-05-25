@@ -50,13 +50,12 @@
     el.style.cssText = [
       'display:none',
       'position:fixed',
-      'left:50%',
-      'top:16px',
-      'transform:translateX(-50%)',
+      'left:12px',
+      'bottom:12px',
       'z-index:99999',
-      'width:min(760px,calc(100vw - 24px))',
-      'padding:14px 16px',
-      'border-radius:18px',
+      'width:min(330px,calc(100vw - 24px))',
+      'padding:10px 12px',
+      'border-radius:14px',
       'backdrop-filter:blur(18px)',
       'color:#fff',
       'font-family:Barlow,Segoe UI,Arial,sans-serif'
@@ -68,9 +67,9 @@
       style.textContent = `
         @keyframes codexSystemPulse{0%,100%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 0 var(--p4-alert-halo)}50%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 10px rgba(255,255,255,0)}}
         @keyframes codexSystemGlow{0%,100%{filter:saturate(1);box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 24px var(--p4-alert-halo)}50%{filter:saturate(1.25);box-shadow:0 18px 58px rgba(0,0,0,.52),0 0 46px var(--p4-alert-halo)}}
-        @keyframes codexSystemShake{0%,100%{transform:translateX(-50%)}20%{transform:translateX(calc(-50% - 5px))}40%{transform:translateX(calc(-50% + 5px))}60%{transform:translateX(calc(-50% - 3px))}80%{transform:translateX(calc(-50% + 3px))}}
-        @keyframes codexSystemSlide{0%{transform:translate(-50%,-22px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}
-        @media (max-width:640px){#global-system-status{top:10px!important;border-radius:14px!important;padding:12px!important}}
+        @keyframes codexSystemShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+        @keyframes codexSystemSlide{0%{transform:translateX(-18px);opacity:0}100%{transform:translateX(0);opacity:1}}
+        @media (max-width:640px){#global-system-status{left:10px!important;bottom:10px!important;border-radius:13px!important;padding:9px 10px!important}}
       `;
       document.head.appendChild(style);
     }
@@ -134,10 +133,10 @@
     el.style.animation = systemAlertAnimationCss(animation);
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:${hexToRgba(color, .18)};border:1px solid ${hexToRgba(color, .42)};box-shadow:inset 0 0 18px ${hexToRgba(color, .12)};font-size:22px;flex-shrink:0;">${emoji}</div>
+        <div style="width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:${hexToRgba(color, .18)};border:1px solid ${hexToRgba(color, .42)};box-shadow:inset 0 0 18px ${hexToRgba(color, .12)};font-size:17px;flex-shrink:0;">${emoji}</div>
         <div style="min-width:0;flex:1;">
-          <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:${color};">Alerte serveur</div>
-          <div style="font-size:13px;line-height:1.45;color:rgba(255,255,255,.88);margin-top:2px;word-break:break-word;">${message}</div>
+          <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:14px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase;color:${color};">Alerte serveur</div>
+          <div style="font-size:12px;line-height:1.32;color:rgba(255,255,255,.86);margin-top:1px;word-break:break-word;">${message}</div>
         </div>
       </div>`;
     el.style.display = 'block';

@@ -21,6 +21,7 @@ const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
 const CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
+const GIVEAWAY_MINUTES_MAX = 10080;
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
   'admin-player': 'player',
@@ -65,6 +66,18 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'cosmetiques', description: 'Lister les collections de cosmetiques', options: [{ type: 3, name: 'type', description: 'Collection', required: true, choices: [{ name: 'Decorations', value: 'decorations' }, { name: 'Bannieres', value: 'banners' }, { name: 'Musiques', value: 'musics' }] }] },
     { name: 'replay', description: 'Afficher le resume d une partie', options: [{ type: 4, name: 'id', description: 'ID de partie', required: true }] },
     { name: 'duel-lien', description: 'Generer un lien de duel 15 minutes', options: [{ type: 3, name: 'type', description: 'Type de duel', required: true, choices: [{ name: 'Ranked', value: 'ranked' }, { name: 'Amical', value: 'friendly' }] }] },
+    { name: 'giveaway', description: 'Creer un giveaway Discord avec recompense auto si le gagnant est lie', options: [
+      { type: 3, name: 'titre', description: 'Titre du giveaway', required: true },
+      { type: 4, name: 'duree', description: 'Duree en minutes', required: true },
+      { type: 3, name: 'recompense', description: 'coins, gems ou code item boutique', required: true },
+      { type: 4, name: 'quantite', description: 'Quantite ou montant', required: false },
+      { type: 4, name: 'gagnants', description: 'Nombre de gagnants', required: false },
+    ] },
+    { name: 'drop', description: 'Creer un drop instantane: premier clic, premier servi', options: [
+      { type: 3, name: 'titre', description: 'Titre du drop', required: true },
+      { type: 3, name: 'recompense', description: 'coins, gems ou code item boutique', required: true },
+      { type: 4, name: 'quantite', description: 'Quantite ou montant', required: false },
+    ] },
     { name: 'tournois', description: 'Lister les tournois officiels' },
     { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne', required: true }] },
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
@@ -121,6 +134,8 @@ function startDiscordBot(ctx) {
   const rankOf = elo => ctx.getRank(Number(elo || 0)) || { label: 'Non classe', color: '#8b9cf4' };
   const discordEmojiCache = new Map();
   const staffSessions = new Map();
+  const activeGiveaways = new Map();
+  const activeDrops = new Map();
   const STAFF_SESSION_TTL_MS = 10 * 60 * 1000;
 
   function normalizeCouponCode(value) {
@@ -266,6 +281,53 @@ function startDiscordBot(ctx) {
       };
     }
     return null;
+  }
+
+  function normalizeRewardKey(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function rewardLabel(rewardKey, quantity = 1) {
+    const key = normalizeRewardKey(rewardKey);
+    if (key === 'coins') return `${fmt(quantity)} coins`;
+    if (key === 'gems' || key === 'gemmes') return `${fmt(quantity)} gemmes`;
+    const item = resolveGiveItem(key);
+    return item ? `${fmt(quantity)} x ${item.label || item.key}` : `${fmt(quantity)} x ${key}`;
+  }
+
+  function grantRewardToDiscordUser(discordId, rewardKey, quantity = 1, reason = '') {
+    const player = playerByDiscord(discordId);
+    if (!player || Number(player.is_bot || 0) === 1) return { ok: false, reason: 'Compte non lie' };
+    const key = normalizeRewardKey(rewardKey);
+    const qty = Math.max(1, Math.min(999999, Math.trunc(Number(quantity || 1))));
+    if (key === 'coins') {
+      ctx.pQ.addCoins.run({ delta: qty, id: player.id });
+      try { ctx.WH?.wlogCoins?.(player.pseudo, player.id, qty, reason); } catch {}
+      return { ok: true, player, label: rewardLabel(key, qty) };
+    }
+    if (key === 'gems' || key === 'gemmes') {
+      ctx.pQ.addGems.run({ delta: qty, id: player.id });
+      try { ctx.WH?.wlogGems?.(player.pseudo, player.id, qty, reason); } catch {}
+      return { ok: true, player, label: rewardLabel('gems', qty) };
+    }
+    const item = resolveGiveItem(key);
+    if (!item) return { ok: false, reason: 'Recompense invalide' };
+    ctx.shopItemQ.addQty.run({ player_id: player.id, item_key: item.key, quantity: qty });
+    try { ctx.WH?.wlogAdminAction?.(reason || 'Giveaway Discord', player.pseudo, player.id, [['Item', item.label || item.key, true], ['Quantite', qty, true]]); } catch {}
+    return { ok: true, player, label: rewardLabel(item.key, qty) };
+  }
+
+  async function requireDiscordAdmin(interaction) {
+    const staff = await getLinkedStaffContext(interaction.user.id);
+    if (staff.error) {
+      await replyError(interaction, 'Acces refuse', staff.error);
+      return null;
+    }
+    if ((STAFF_ORDER[staff.effectiveRole] || 0) < STAFF_ORDER.admin) {
+      await replyError(interaction, 'Acces admin requis');
+      return null;
+    }
+    return staff;
   }
 
   function roleBadges(player) {
@@ -781,7 +843,7 @@ function startDiscordBot(ctx) {
       sections: [
         '### Joueurs\n`/profil`, `/moi`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
         '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
-        `### Staff\n\`/login\`, puis commandes dediees: ${adminNames}\nCoupon: \`/admin-coupon\`. Session 10 min + verification du role Discord.`,
+        `### Staff\n\`/login\`, puis commandes dediees: ${adminNames}\nEvents: \`/giveaway\`, \`/drop\`. Coupon: \`/admin-coupon\`. Session 10 min + verification du role Discord.`,
       ],
       buttons: [linkButton('Ouvrir le site', api, '🎮'), linkButton('Doc API', `${api}/api-doc`, '🧪')],
     });
@@ -1161,7 +1223,7 @@ function startDiscordBot(ctx) {
         { text: `⏳・${queueCount} en file`, type: ActivityType.Competing },
         { text: `🖥️・${registered} comptes`, type: ActivityType.Watching },
         { text: `🤖・${bots} bots API`, type: ActivityType.Watching },
-        {text :`💾・Version 3.1.0`,type:ActivityType.Watching}
+        {text :`💾・Version 3.1.2`,type:ActivityType.Watching}
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
       bot.user.setStatus('idle')
@@ -1183,6 +1245,129 @@ function startDiscordBot(ctx) {
     } catch (error) {
       console.warn('[BOT] Emojis serveur indisponibles:', error.message);
     }
+  }
+
+  function publicRewardRow(customId, label, emoji) {
+    return rowButtons([
+      new ButtonBuilder()
+        .setCustomId(customId)
+        .setLabel(label)
+        .setEmoji(emoji)
+        .setStyle(ButtonStyle.Primary),
+    ]);
+  }
+
+  async function handleGiveaway(interaction) {
+    const staff = await requireDiscordAdmin(interaction);
+    if (!staff) return;
+    const title = truncate(optionString(interaction, 'titre', 'Giveaway Puissance 4'), 90);
+    const minutes = Math.max(1, Math.min(GIVEAWAY_MINUTES_MAX, optionInteger(interaction, 'duree', 10)));
+    const reward = normalizeRewardKey(optionString(interaction, 'recompense', 'coins'));
+    const quantity = Math.max(1, Math.min(999999, optionInteger(interaction, 'quantite', 1)));
+    const winnersCount = Math.max(1, Math.min(10, optionInteger(interaction, 'gagnants', 1)));
+    if (reward !== 'coins' && reward !== 'gems' && reward !== 'gemmes' && !resolveGiveItem(reward)) {
+      return replyError(interaction, 'Recompense invalide', 'Utilise coins, gems ou un code item boutique.');
+    }
+    const id = crypto.randomBytes(5).toString('hex');
+    const endsAt = Date.now() + minutes * 60 * 1000;
+    const message = await interaction.channel.send({
+      content: [
+        `## 🎉 ${title}`,
+        `Prix : **${rewardLabel(reward, quantity)}**`,
+        `Fin : <t:${Math.floor(endsAt / 1000)}:R>`,
+        `Gagnants : **${winnersCount}**`,
+        `Clique sur le bouton pour participer.`,
+      ].join('\n'),
+      components: [publicRewardRow(`p4_giveaway_join:${id}`, 'Participer', '🎉')],
+    });
+    activeGiveaways.set(id, {
+      id,
+      title,
+      reward,
+      quantity,
+      winnersCount,
+      entrants: new Set(),
+      channelId: interaction.channelId,
+      messageId: message.id,
+      endsAt,
+    });
+    setTimeout(() => finalizeGiveaway(id).catch(error => console.warn('[BOT] Giveaway:', error.message)), minutes * 60 * 1000);
+    return interaction.editReply(containerMessage({
+      color: 0xffd60a,
+      title: 'Giveaway publie',
+      subtitle: `${title} | ${rewardLabel(reward, quantity)} | ${minutes} min`,
+    }));
+  }
+
+  async function finalizeGiveaway(id) {
+    const giveaway = activeGiveaways.get(id);
+    if (!giveaway) return;
+    activeGiveaways.delete(id);
+    const channel = await bot.channels.fetch(giveaway.channelId).catch(() => null);
+    const entrants = [...giveaway.entrants];
+    const winners = entrants.sort(() => Math.random() - .5).slice(0, giveaway.winnersCount);
+    const lines = [];
+    for (const discordId of winners) {
+      const result = grantRewardToDiscordUser(discordId, giveaway.reward, giveaway.quantity, `Giveaway Discord: ${giveaway.title}`);
+      lines.push(result.ok
+        ? `<@${discordId}> gagne **${result.label}** sur le compte **${result.player.pseudo}**.`
+        : `<@${discordId}> gagne, mais son compte Discord n'est pas lie: recompense non attribuee automatiquement.`);
+    }
+    const finalContent = winners.length
+      ? `## 🎉 Giveaway termine: ${giveaway.title}\n${lines.join('\n')}`
+      : `## 🎉 Giveaway termine: ${giveaway.title}\nAucun participant.`;
+    const message = channel ? await channel.messages.fetch(giveaway.messageId).catch(() => null) : null;
+    if (message) await message.edit({ content: finalContent, components: [] }).catch(() => {});
+    else if (channel) await channel.send(finalContent).catch(() => {});
+  }
+
+  async function handleDrop(interaction) {
+    const staff = await requireDiscordAdmin(interaction);
+    if (!staff) return;
+    const title = truncate(optionString(interaction, 'titre', 'Drop Puissance 4'), 90);
+    const reward = normalizeRewardKey(optionString(interaction, 'recompense', 'coins'));
+    const quantity = Math.max(1, Math.min(999999, optionInteger(interaction, 'quantite', 1)));
+    if (reward !== 'coins' && reward !== 'gems' && reward !== 'gemmes' && !resolveGiveItem(reward)) {
+      return replyError(interaction, 'Recompense invalide', 'Utilise coins, gems ou un code item boutique.');
+    }
+    const id = crypto.randomBytes(5).toString('hex');
+    const message = await interaction.channel.send({
+      content: [
+        `## ⚡ ${title}`,
+        `Prix : **${rewardLabel(reward, quantity)}**`,
+        `Premier clic = gagnant.`,
+      ].join('\n'),
+      components: [publicRewardRow(`p4_drop_claim:${id}`, 'Claim', '⚡')],
+    });
+    activeDrops.set(id, { id, title, reward, quantity, channelId: interaction.channelId, messageId: message.id, claimed: false });
+    return interaction.editReply(containerMessage({
+      color: 0x85ebff,
+      title: 'Drop publie',
+      subtitle: `${title} | ${rewardLabel(reward, quantity)}`,
+    }));
+  }
+
+  async function handleGiveawayButton(interaction, id) {
+    const giveaway = activeGiveaways.get(id);
+    if (!giveaway || Date.now() >= Number(giveaway.endsAt || 0)) {
+      return interaction.reply({ content: 'Ce giveaway est termine.', flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+    giveaway.entrants.add(interaction.user.id);
+    return interaction.reply({ content: `Participation validee. Participants: ${giveaway.entrants.size}`, flags: MessageFlags.Ephemeral }).catch(() => {});
+  }
+
+  async function handleDropButton(interaction, id) {
+    const drop = activeDrops.get(id);
+    if (!drop || drop.claimed) {
+      return interaction.reply({ content: 'Drop deja reclame.', flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+    drop.claimed = true;
+    activeDrops.delete(id);
+    const result = grantRewardToDiscordUser(interaction.user.id, drop.reward, drop.quantity, `Drop Discord: ${drop.title}`);
+    const content = result.ok
+      ? `## ⚡ Drop reclame: ${drop.title}\n<@${interaction.user.id}> gagne **${result.label}** sur le compte **${result.player.pseudo}**.`
+      : `## ⚡ Drop reclame: ${drop.title}\n<@${interaction.user.id}> a clique en premier, mais son compte Discord n'est pas lie: recompense non attribuee automatiquement.`;
+    await interaction.update({ content, components: [] }).catch(() => {});
   }
 
   bot.once('clientReady', async () => {
@@ -1208,6 +1393,12 @@ function startDiscordBot(ctx) {
         const payload = replayPayload(Number(value.slice(5)));
         if (!payload) return replyError(interaction, 'Partie introuvable');
         return interaction.editReply(payload);
+      }
+      if (interaction.isButton?.() && interaction.customId.startsWith('p4_giveaway_join:')) {
+        return handleGiveawayButton(interaction, interaction.customId.split(':')[1]);
+      }
+      if (interaction.isButton?.() && interaction.customId.startsWith('p4_drop_claim:')) {
+        return handleDropButton(interaction, interaction.customId.split(':')[1]);
       }
       if (!interaction.isChatInputCommand()) return;
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -1252,6 +1443,8 @@ function startDiscordBot(ctx) {
           buttons: [linkButton('Ouvrir le duel', url, '⚔️')],
         }));
       }
+      if (interaction.commandName === 'giveaway') return handleGiveaway(interaction);
+      if (interaction.commandName === 'drop') return handleDrop(interaction);
       if (interaction.commandName === 'tournois') return interaction.editReply(tournamentsPayload());
       if (interaction.commandName === 'tournoi') {
         const payload = tournamentPayload(interaction.options.getString('id', true));

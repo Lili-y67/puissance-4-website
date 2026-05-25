@@ -147,6 +147,9 @@ body{
 .card-actions{display:flex;gap:10px;margin-top:auto}
 .preview-btn{flex:1;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,255,255,.09);cursor:pointer;transition:.2s;background:rgba(255,255,255,.03);color:var(--text)}
 .preview-btn:hover{background:rgba(255,255,255,.06)}
+.gift-btn{flex:1;padding:13px 16px;border-radius:14px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(133,235,255,.22);cursor:pointer;transition:.2s;background:rgba(133,235,255,.07);color:var(--blue)}
+.gift-btn:hover{background:rgba(133,235,255,.13)}
+.gift-btn:disabled{cursor:not-allowed;opacity:.42;filter:saturate(.7)}
 .config-shell{display:flex;flex-direction:column;gap:14px}
 .config-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .config-value{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:900;letter-spacing:1px;line-height:.95}
@@ -1049,6 +1052,22 @@ function getButtonState(pack) {
   return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
 }
 
+function getGiftButtonState(pack) {
+  const price = getDisplayPrice(pack);
+  const currency = getShopCurrency();
+  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
+  const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
+  if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour offrir' };
+  if (!item) return { disabled: true, note: 'Pack indisponible' };
+  if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
+  const stock = pack === 'limited_offer'
+    ? Number(shopLimitedOffer?.stock ?? 0)
+    : Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
+  if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
+  if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
+  return { disabled: false, note: `Offrir pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
+}
+
 function getDisplayItem(pack) {
   if (pack === 'limited_offer' && shopLimitedOffer?.expiresAt) {
     const items = Array.isArray(shopLimitedOffer.items) ? shopLimitedOffer.items : [];
@@ -1399,6 +1418,7 @@ function renderCustomBoosterCard(pack) {
   const item = getDisplayItem(pack);
   const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
+  const giftState = getGiftButtonState(pack);
   const isElo = pack === 'elo_custom';
   const currentValue = getCustomBoosterValue(pack);
   const totalText = isElo ? `x${(1 + currentValue).toFixed(2)}` : `x${currentValue}`;
@@ -1444,6 +1464,7 @@ function renderCustomBoosterCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
+        <button class="gift-btn" type="button" onclick="giftPack('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">Offrir</button>
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           Acheter ${item.title}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1457,6 +1478,7 @@ function renderCard(pack) {
   const item = getDisplayItem(pack);
   const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
+  const giftState = getGiftButtonState(pack);
   const stock = Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
   const inv = item.type === 'booster' ? getInventoryQty(pack) : null;
   const bundleStockHtml = item.type === 'bundle'
@@ -1487,6 +1509,7 @@ function renderCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
+        <button class="gift-btn" type="button" onclick="giftPack('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">Offrir</button>
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1598,10 +1621,10 @@ async function loadShop() {
   switchShopCategory(currentCategory);
 }
 
-async function buyPack(pack) {
+async function purchasePack(pack, giftTo = '') {
   const token = localStorage.getItem('token');
   if (!token) return alert('Connecte-toi d abord.');
-  const state = getButtonState(pack);
+  const state = giftTo ? getGiftButtonState(pack) : getButtonState(pack);
   if (state.disabled) return;
 
   const item = getDisplayItem(pack);
@@ -1617,7 +1640,8 @@ async function buyPack(pack) {
   }
   const coupon = appliedCouponCode;
   const promoText = coupon && priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
-  if (!confirm(`Confirmer l achat de ${packLabel} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
+  const giftText = giftTo ? ` pour ${giftTo}` : '';
+  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
   if (btn) {
@@ -1638,6 +1662,7 @@ async function buyPack(pack) {
             : undefined,
         currency,
         coupon: coupon || undefined,
+        giftTo: giftTo || undefined,
       }),
     });
     const data = await res.json();
@@ -1654,13 +1679,24 @@ async function buyPack(pack) {
     }
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
+    setCoinsUi(shopPlayer?.coins || 0, giftTo ? `Cadeau envoye a ${data.giftTo || giftTo}.` : item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
   } catch (e) {
     alert('Erreur reseau.');
   } finally {
     renderShop();
     switchShopCategory(currentCategory);
   }
+}
+
+async function buyPack(pack) {
+  return purchasePack(pack, '');
+}
+
+async function giftPack(pack) {
+  const pseudo = prompt('Pseudo du joueur a qui offrir ce pack :');
+  const giftTo = String(pseudo || '').trim();
+  if (!giftTo) return;
+  return purchasePack(pack, giftTo);
 }
 
 repairDomText();

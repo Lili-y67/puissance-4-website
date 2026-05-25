@@ -433,6 +433,18 @@ module.exports = {
     ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.sword)] })]);
   },
 
+  wlogApiEvent(event = {}) {
+    const status = Number(event.status || 0);
+    const color = status >= 500 ? 0xff3b30 : status >= 400 ? 0xff9f0a : 0x4c6ef5;
+    send([mkContainer(color, 'API site', [
+      ['Route', `${clean(event.method)} ${clean(event.path)}`, false],
+      ['Statut', `${status || '-'} - ${Number(event.durationMs || 0)}ms`, true],
+      ['Acteur', clean(event.actor, 'Visiteur/Anonyme'), true],
+      ['Type', clean(event.kind, 'api'), true],
+      event.note ? ['Note', event.note, false] : null,
+    ], { subtitle: 'Journal site sans IP, token, mot de passe ni contenu prive', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.link)] })]);
+  },
+
   wlogSystem(status, message, details = {}) {
     const hasSnapshot = Object.prototype.hasOwnProperty.call(details, 'totalPresent');
     const siteLines = hasSnapshot ? [
