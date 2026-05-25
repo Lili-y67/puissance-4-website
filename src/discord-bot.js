@@ -1153,13 +1153,15 @@ function startDiscordBot(ctx) {
       const registered = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(ctx.BOT_PLAYER_ID)?.c || 0);
       const bots = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=1`).get()?.c || 0);
       const statuses = [
-        { text: `${presence.totalPresent || 0} presents`, type: ActivityType.Watching },
-        { text: `${activeGames} parties live`, type: ActivityType.Watching },
-        { text: `${queueCount} en file`, type: ActivityType.Competing },
-        { text: `${registered} comptes`, type: ActivityType.Watching },
-        { text: `${bots} bots API`, type: ActivityType.Watching },
+        { text: `🟢・${presence.totalPresent || 0} présents`, type: ActivityType.Watching },
+        { text: `🎬・${activeGames} parties live`, type: ActivityType.Watching },
+        { text: `⏳・${queueCount} en file`, type: ActivityType.Competing },
+        { text: `🖥️・${registered} comptes`, type: ActivityType.Watching },
+        { text: `🤖・${bots} bots API`, type: ActivityType.Watching },
+        {text :`💾・Version 3.1.0`,type:ActivityType.Watching}
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
+      bot.user.setStatus('idle')
       bot.user.setActivity(status.text, { type: status.type });
     } catch (_) {}
   }

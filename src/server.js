@@ -2677,7 +2677,7 @@ async function renameOnServer(discordId, nickname) {
   });
   const guild = await guildRes.json();
   if (guild.owner_id === discordId) {
-    console.log(`[RENAME] Impossible : ${discordId} est le propriAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtaire du serveur.`);
+    console.log(`[RENAME] Impossible : ${discordId} est le propriétaire du serveur.`);
     return;
   }
 
@@ -2690,7 +2690,7 @@ async function renameOnServer(discordId, nickname) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     // 403 = hiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArarchie insuffisante (rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle du membre >= bot)
-    console.log(`[RENAME] AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAchec pour ${discordId} : ${res.status} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA ${err.message || 'permission refusAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe'}`);
+    console.log(`[RENAME] Echec pour ${discordId} : ${res.status} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA ${err.message || 'permission refusAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe'}`);
   }
 }
 
@@ -3278,19 +3278,19 @@ app.get('/auth/discord/callback', async (req, res) => {
 // AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAtape 3 AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA Valider le code et changer le mot de passe
 app.post('/api/reset-password', security.routeGuard('reset'), (req, res) => {
   const { playerId, code, newPassword } = req.body;
-  if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'DonnAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAes manquantes.' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres min).' });
+  if (!playerId || !code || !newPassword) return res.status(400).json({ error: 'Données manquantes.' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min).' });
 
   const row = rQ.getValid.get(Number(playerId), String(code), Date.now());
-  if (!row) return res.status(400).json({ error: 'Code invalide ou expirAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA.' });
+  if (!row) return res.status(400).json({ error: 'Code invalide ou expirée.' });
 
   // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier que c'est la mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme IP qui a demandAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA le reset
   if (row.ip_hash) {
     const clientIp   = getClientIp(req);
     const clientHash = hashIp(clientIp);
     if (clientHash !== row.ip_hash) {
-      console.warn(`[reset-password] IP mismatch AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA demande: ${row.ip_hash.slice(0,8)}AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAAAasAA...AAAaAAasAA soumission: ${clientHash.slice(0,8)}AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAAAasAA...AAAaAAasAA`);
-      return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinitialisation refusAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe : adresse IP diffAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArente de celle de la demande. Recommence depuis le dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAbut.' });
+      console.warn(`[reset-password] IP mismatch demande: ${row.ip_hash.slice(0,8)}AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAAAasAA...AAAaAAasAA soumission: ${clientHash.slice(0,8)}AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAAAasAA...AAAaAAasAA`);
+      return res.status(403).json({ error: 'Réinitialisation refusée : adresse IP différente de celle de la demande. Recommence depuis le début.' });
     }
   }
 
