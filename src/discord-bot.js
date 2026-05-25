@@ -19,6 +19,7 @@ const { getAllRankRoleNames, RANKS } = require('./rank');
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
+const CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
@@ -811,9 +812,10 @@ function startDiscordBot(ctx) {
     const guild = await bot.guilds.fetch(ctx.DISCORD_GUILD);
     const roles = await guild.roles.fetch();
     const expected = getAllRankRoleNames();
-    const utilityRoles = [CONNECTED_ROLE_NAME];
     const byName = new Map();
+    const byId = new Map();
     roles.forEach(role => byName.set(role.name, role));
+    roles.forEach(role => byId.set(role.id, role));
 
     const found = [];
     const created = [];
@@ -840,21 +842,28 @@ function startDiscordBot(ctx) {
     const utilityFound = [];
     const utilityCreated = [];
     const utilityFailed = [];
-    for (const name of utilityRoles) {
-      if (byName.has(name)) {
+    const connectedRole = CONNECTED_ROLE_ID ? byId.get(CONNECTED_ROLE_ID) : byName.get(CONNECTED_ROLE_NAME);
+    if (connectedRole) {
+      utilityFound.push(`${connectedRole.name} (${connectedRole.id})`);
+    } else {
+      const name = CONNECTED_ROLE_NAME;
+      if (CONNECTED_ROLE_ID) {
+        utilityFailed.push(`${name} (ID ${CONNECTED_ROLE_ID} introuvable sur ce serveur)`);
+      } else if (byName.has(name)) {
         utilityFound.push(name);
-        continue;
-      }
-      try {
-        const role = await guild.roles.create({
-          name,
-          color: 0x30d158,
-          reason: `Puissance 4 utility role generator (${interaction.user.tag || interaction.user.id})`,
-        });
-        byName.set(name, role);
-        utilityCreated.push(name);
-      } catch (error) {
-        utilityFailed.push(`${name} (${error.message || 'erreur'})`);
+      } else {
+        try {
+          const role = await guild.roles.create({
+            name,
+            color: 0x30d158,
+            reason: `Puissance 4 utility role generator (${interaction.user.tag || interaction.user.id})`,
+          });
+          byName.set(name, role);
+          byId.set(role.id, role);
+          utilityCreated.push(`${role.name} (${role.id})`);
+        } catch (error) {
+          utilityFailed.push(`${name} (${error.message || 'erreur'})`);
+        }
       }
     }
     if (typeof ctx.syncOnlineDiscordConnectedRoles === 'function') ctx.syncOnlineDiscordConnectedRoles();

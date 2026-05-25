@@ -2170,6 +2170,7 @@ const DISCORD_ROLE_MOD = '1480180483613655181';
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
+const DISCORD_CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const CUSTOM_ROLE_MAX_LENGTH = 8;
 const SHOP_ITEMS = Object.freeze({
@@ -2768,18 +2769,28 @@ async function findGuildRoleByName(roleName, botToken = null) {
   return (Array.isArray(roles) ? roles : []).find(role => role.name === roleName) || null;
 }
 
+async function getDiscordConnectedRoleId(botToken = null) {
+  if (DISCORD_CONNECTED_ROLE_ID) return DISCORD_CONNECTED_ROLE_ID;
+  const role = await findGuildRoleByName(DISCORD_CONNECTED_ROLE_NAME, botToken);
+  return role?.id || null;
+}
+
 async function syncPlayerDiscordConnectedRole(playerOrId, connected) {
   const player = typeof playerOrId === 'object' && playerOrId
     ? playerOrId
     : pQ.getById.get(Number(playerOrId));
   if (!player?.discord_id) return;
   const { botToken } = discordConfig();
-  const role = await findGuildRoleByName(DISCORD_CONNECTED_ROLE_NAME, botToken);
-  if (!role?.id) return;
-  await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${role.id}`, {
+  const roleId = await getDiscordConnectedRoleId(botToken);
+  if (!roleId) return;
+  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
     method: connected ? 'PUT' : 'DELETE',
     headers: { 'Authorization': 'Bot ' + botToken },
   });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    console.warn(`[DISCORD CONNECTED ROLE] ${connected ? 'add' : 'remove'} failed for player ${player.id} / ${player.discord_id}: ${res.status} ${body.slice(0, 180)}`);
+  }
 }
 
 function cancelConnectedRoleRemoval(playerId) {
@@ -2818,11 +2829,11 @@ function syncOnlineDiscordConnectedRoles() {
 async function clearAllDiscordConnectedRoles() {
   const { botToken } = discordConfig();
   if (!botToken) return;
-  const role = await findGuildRoleByName(DISCORD_CONNECTED_ROLE_NAME, botToken);
-  if (!role?.id) return;
+  const roleId = await getDiscordConnectedRoleId(botToken);
+  if (!roleId) return;
   const linked = db.prepare(`SELECT discord_id FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
   for (const player of linked) {
-    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${role.id}`, {
+    await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${player.discord_id}/roles/${roleId}`, {
       method: 'DELETE',
       headers: { 'Authorization': 'Bot ' + botToken },
     }).catch(() => {});
