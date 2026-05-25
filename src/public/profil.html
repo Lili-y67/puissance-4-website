@@ -285,6 +285,10 @@ input[type="file"]{display:none;}
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
 .profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;}
+.profile-discord-roles{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;max-width:100%}
+.profile-discord-roles .discord-role-chip{font-size:9px;padding:3px 7px;letter-spacing:.55px;gap:5px}
+.profile-discord-roles .discord-role-dot{width:6px;height:6px}
+.profile-discord-more{font-size:10px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.7px;text-transform:uppercase}
 .vip-tier-badge{font-size:11px;padding:2px 8px 2px 5px;border-radius:6px;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;text-transform:uppercase;box-shadow:0 0 16px var(--vip-glow, rgba(255,214,10,.22)), inset 0 0 10px rgba(255,255,255,.04);}
 .vip-tier-badge img{width:17px;height:17px;object-fit:contain;display:block;filter:drop-shadow(0 0 5px var(--vip-glow, rgba(255,214,10,.55)));}
 .profile-since{font-size:13px;color:var(--muted);margin-top:10px;text-align:left;}
@@ -1767,6 +1771,7 @@ function render(player, games, following, followers, followStatus, tournaments =
   const marqueeHtml = [...marqueeItems, ...marqueeItems]
     .map(item => `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`)
     .join('');
+  const profileDiscordRolesHtml = renderProfileDiscordRoles(player);
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
@@ -1833,6 +1838,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
             ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoRoleAccent(player).bg};color:${getPersoRoleAccent(player).color};border:1px solid ${getPersoRoleAccent(player).border};box-shadow:0 0 14px ${getPersoRoleAccent(player).color}55,inset 0 0 10px ${getPersoRoleAccent(player).bg};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${getPersoRoleAccent(player).emoji ? `<span style="margin-right:4px">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
+          ${profileDiscordRolesHtml}
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
           ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
@@ -5104,6 +5110,30 @@ function discordServerRoleChip(role) {
     ${rankEmoji ? `<span class="rank-mini-emoji">${rankEmoji}</span>` : ''}
     ${escapeHtml(name)}
   </span>`;
+}
+
+function getDiscordServerRolesFromPlayer(player) {
+  if (!player?.discord_id) return [];
+  let info = null;
+  try {
+    info = typeof player.discord_info === 'string' ? JSON.parse(player.discord_info || '{}') : player.discord_info;
+  } catch (_) {
+    info = null;
+  }
+  return Array.isArray(info?.server_roles)
+    ? info.server_roles.filter(role => role && role.name && role.name !== '@everyone')
+    : [];
+}
+
+function renderProfileDiscordRoles(player) {
+  const roles = getDiscordServerRolesFromPlayer(player);
+  if (!roles.length) return '';
+  const visible = roles.slice(0, 6);
+  const hidden = Math.max(0, roles.length - visible.length);
+  return `<div class="profile-discord-roles" title="Roles Discord lies au compte">
+    ${visible.map(discordServerRoleChip).join('')}
+    ${hidden ? `<span class="profile-discord-more">+${hidden}</span>` : ''}
+  </div>`;
 }
 
 async function loadDiscordInfo() {
