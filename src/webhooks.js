@@ -3,7 +3,13 @@
  * Never send private network data such as IP addresses to Discord.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 const BASE = (process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app').replace(/\/+$/, '');
+const MEMBER_FORUM_CHANNEL_ID = process.env.DISCORD_MEMBER_FORUM_CHANNEL_ID || '1508534889153036461';
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
+const MEMBER_THREAD_STORE = path.join(__dirname, '..', 'data', 'discord-member-forum-threads.json');
 const WEBHOOKS = Object.freeze({
   get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
   post: process.env.DISCORD_WEBHOOK_POST || 'https://discord.com/api/webhooks/1508532434008801351/EdesEHSTzRz5xlDEYpa9fRIHTBNrFuE1ch-lm9vNubPKqa8Nerch36lvqumJHmmKuWp5',
@@ -35,6 +41,88 @@ const EMOJI = Object.freeze({
 
 function webhookUrl(target = 'global') {
   return WEBHOOKS[target] || WEBHOOKS.default || WEBHOOKS.global || WEBHOOKS.get;
+}
+
+function readMemberThreadStore() {
+  try {
+    if (!fs.existsSync(MEMBER_THREAD_STORE)) return {};
+    return JSON.parse(fs.readFileSync(MEMBER_THREAD_STORE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeMemberThreadStore(store) {
+  try {
+    fs.mkdirSync(path.dirname(MEMBER_THREAD_STORE), { recursive: true });
+    fs.writeFileSync(MEMBER_THREAD_STORE, JSON.stringify(store, null, 2), 'utf8');
+  } catch (error) {
+    console.error('[WEBHOOK FORUM]', error.message);
+  }
+}
+
+function forumThreadName(pseudo, id) {
+  return clean(pseudo, `Joueur ${id}`)
+    .replace(/[^\p{L}\p{N}_. -]/gu, '')
+    .trim()
+    .slice(0, 80) || `Joueur ${id}`;
+}
+
+async function ensureMemberForumThread(player = {}) {
+  const id = Number(player.id || player.actorId || 0);
+  if (!id || !DISCORD_BOT_TOKEN || !MEMBER_FORUM_CHANNEL_ID) return '';
+  const store = readMemberThreadStore();
+  if (store[id]?.threadId) return store[id].threadId;
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${MEMBER_FORUM_CHANNEL_ID}/threads`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: forumThreadName(player.pseudo || player.actorPseudo, id),
+        auto_archive_duration: 10080,
+        message: {
+          content: `# ${clean(player.pseudo || player.actorPseudo, `Joueur ${id}`)}\nFil automatique des GET site du membre. Aucun token, mot de passe ou IP n'est journalise.`,
+        },
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('[WEBHOOK FORUM]', `HTTP ${res.status}`, text.slice(0, 240));
+      return '';
+    }
+    const thread = await res.json();
+    if (!thread?.id) return '';
+    store[id] = {
+      threadId: thread.id,
+      pseudo: player.pseudo || player.actorPseudo || '',
+      createdAt: Date.now(),
+    };
+    writeMemberThreadStore(store);
+    return thread.id;
+  } catch (error) {
+    console.error('[WEBHOOK FORUM]', error.message);
+    return '';
+  }
+}
+
+async function postForumThreadMessage(threadId, payload) {
+  if (!threadId || !DISCORD_BOT_TOKEN) return false;
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${threadId}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('[WEBHOOK FORUM MESSAGE]', `HTTP ${res.status}`, text.slice(0, 240));
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('[WEBHOOK FORUM MESSAGE]', error.message);
+    return false;
+  }
 }
 
 async function postWebhook(payload, target = 'global') {
@@ -246,6 +334,7 @@ module.exports = {
   },
 
   wlogRegister(pseudo, id) {
+    ensureMemberForumThread({ id, pseudo }).catch(() => {});
     send([mkContainer(0x30d158, 'Nouveau compte', [
       ['Pseudo', pseudo, true],
       ['ID', id, true],
@@ -462,15 +551,24 @@ module.exports = {
   wlogApiEvent(event = {}) {
     const status = Number(event.status || 0);
     const color = status >= 500 ? 0xff3b30 : status >= 400 ? 0xff9f0a : 0x4c6ef5;
-    const target = String(event.method || '').toUpperCase() === 'GET' ? 'get' : 'post';
-    send([mkContainer(color, 'API site', [
+    const method = String(event.method || '').toUpperCase();
+    const isAdmin = !!event.admin || String(event.kind || '').toLowerCase() === 'admin';
+    const target = method === 'GET' ? 'get' : 'post';
+    const card = mkContainer(color, isAdmin ? 'ADMIN - API site' : 'API site', [
       ['Route', `${clean(event.method)} ${clean(event.path)}`, false],
       ['Statut', `${status || '-'} - ${Number(event.durationMs || 0)}ms`, true],
       ['Acteur', clean(event.actor, 'Visiteur/Anonyme'), true],
       ['Type', clean(event.kind, 'api'), true],
       event.changes ? ['Changements', event.changes, false] : null,
       event.note ? ['Note', event.note, false] : null,
-    ], { thumbnail: event.thumbnail, image: event.image, buttons: [linkButton('Ouvrir le site', BASE, EMOJI.link)] })], target);
+    ], { thumbnail: event.thumbnail, image: event.image, buttons: [linkButton('Ouvrir le site', BASE, EMOJI.link)] });
+    if (method === 'GET' && event.actorId && !isAdmin && !event.bot) {
+      ensureMemberForumThread({ id: event.actorId, pseudo: event.actorPseudo })
+        .then(threadId => threadId ? postForumThreadMessage(threadId, cardToPayload(card)) : send([card], target))
+        .catch(() => send([card], target));
+      return;
+    }
+    send([card], isAdmin ? 'global' : target);
   },
 
   wlogSystem(status, message, details = {}) {

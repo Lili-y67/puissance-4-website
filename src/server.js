@@ -1471,12 +1471,21 @@ function shouldAuditApiRequest(req) {
 }
 
 function inferApiAuditActor(req) {
+  return getApiAuditActorMeta(req).label;
+}
+
+function getApiAuditActorMeta(req) {
   try {
     const adminToken = String(req.headers['x-admin-token'] || '').trim();
     const adminSession = adminToken ? adminSessions.get(adminToken) : null;
     if (adminSession?.playerId) {
       const admin = pQ.getById.get(Number(adminSession.playerId));
-      return admin ? `${admin.pseudo} (#${admin.id}) [admin:${adminSession.role}]` : `Admin #${adminSession.playerId}`;
+      return {
+        label: admin ? `${admin.pseudo} (#${admin.id}) [admin:${adminSession.role}]` : `Admin #${adminSession.playerId}`,
+        id: Number(adminSession.playerId),
+        pseudo: admin?.pseudo || '',
+        admin: true,
+      };
     }
     const token = String(
       req.headers['x-session-token']
@@ -1487,12 +1496,18 @@ function inferApiAuditActor(req) {
     const playerId = token ? validateSession(token) : null;
     if (playerId) {
       const player = pQ.getById.get(Number(playerId));
-      return player ? `${player.pseudo} (#${player.id})` : `Joueur #${playerId}`;
+      return {
+        label: player ? `${player.pseudo} (#${player.id})` : `Joueur #${playerId}`,
+        id: Number(playerId),
+        pseudo: player?.pseudo || '',
+        admin: false,
+        bot: Number(player?.is_bot || 0) === 1,
+      };
     }
     const pseudo = String(req.body?.pseudo || req.body?.username || '').trim().slice(0, 40);
-    if (pseudo) return `${pseudo} (non verifie)`;
+    if (pseudo) return { label: `${pseudo} (non verifie)`, id: 0, pseudo, admin: false };
   } catch {}
-  return '';
+  return { label: '', id: 0, pseudo: '', admin: false };
 }
 
 function classifyApiAuditEvent(req) {
@@ -1551,6 +1566,7 @@ function buildApiAuditMedia(req) {
 app.use((req, res, next) => {
   if (!shouldAuditApiRequest(req)) return next();
   const startedAt = Date.now();
+  const actorMeta = getApiAuditActorMeta(req);
   res.on('finish', () => {
     try {
       WH.wlogApiEvent({
@@ -1558,7 +1574,11 @@ app.use((req, res, next) => {
         path: String(req.originalUrl || req.path || '').split('?')[0].slice(0, 180),
         status: res.statusCode,
         durationMs: Date.now() - startedAt,
-        actor: inferApiAuditActor(req),
+        actor: actorMeta.label,
+        actorId: actorMeta.id,
+        actorPseudo: actorMeta.pseudo,
+        admin: actorMeta.admin,
+        bot: actorMeta.bot,
         kind: classifyApiAuditEvent(req),
         changes: buildApiAuditChanges(req),
         ...buildApiAuditMedia(req),
