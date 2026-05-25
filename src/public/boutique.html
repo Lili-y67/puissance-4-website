@@ -373,7 +373,7 @@ body{
         <div class="coins-panel">
           <div class="wallet-row">
             <div class="wallet-card coin-badge">
-              <img class="coin-icon" src="/coin.png" alt="coin">
+              <img class="coin-icon" src="assets/coin.png" alt="coin">
               <div>
                 <div class="coins-label">Mes coins</div>
                 <div class="coins-value" id="coins-value">0</div>
@@ -390,7 +390,7 @@ body{
           <div class="shop-controls">
             <input id="currency-select" type="hidden" value="coins">
             <div class="currency-switch" aria-label="Choix de monnaie">
-              <button type="button" id="currency-btn-coins" class="active coin" onclick="setShopCurrency('coins')">🪙 Coins</button>
+              <button type="button" id="currency-btn-coins" class="active coin" onclick="setShopCurrency('coins')"style="display:none"><img src="assets/coin.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Coins</button>
               <button type="button" id="currency-btn-gems" class="gem" onclick="setShopCurrency('gems')" style="display:none"><img src="/assets/gem.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Gemmes</button>
             </div>
             <div class="promo-box">
@@ -685,7 +685,7 @@ Object.keys(SHOP_ITEMS).forEach((key) => {
 });
 
 const SHOP_PRICES = {
-  vip_1m: 100, vip_1y: 1000, vip_plus: 5000, perso: 15000,
+  vip_1m: 500, vip_1y: 5000, vip_plus: 10000, perso: 25000,
   elo_reset: 2500,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
@@ -732,7 +732,7 @@ function getCurrencyLabel() {
 }
 
 function getCurrencyIcon() {
-  return getShopCurrency() === 'gems' ? '/assets/gem.png' : '/coin.png';
+  return getShopCurrency() === 'gems' ? '/assets/gem.png' : 'assets/coin.png';
 }
 
 function getDiscountedPrice(price) {
@@ -842,7 +842,7 @@ function getCustomBoosterPrice(pack) {
       : Number(shopLimitedOffer?.priceCoins || 0);
   }
   if (pack === 'elo_custom') {
-    const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 750);
+    const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 700);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
   }
   if (pack === 'coin_custom') {
