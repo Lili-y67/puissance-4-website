@@ -335,6 +335,9 @@ function startDiscordBot(ctx) {
     `).run(discordId, player.id, nextTotal, nextProgress, gainedGems > 0 ? now : Number(row?.last_reward_at || 0), now);
     if (gainedGems > 0 && Number(player.is_bot || 0) !== 1) {
       ctx.pQ.addGems.run({ delta: gainedGems, id: player.id });
+      try {
+        ctx.WH?.wlogGems?.(player.pseudo, player.id, gainedGems, `Activite Discord (${DISCORD_GEM_CHAR_THRESHOLD} caracteres)`);
+      } catch {}
     }
   }
 

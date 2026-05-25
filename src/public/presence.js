@@ -1,6 +1,6 @@
 /**
  * presence.js - presence socket leger + alerte systeme globale
- * Inclus sur toutes les pages (sauf game.html)
+ * Inclus sur toutes les pages publiques.
  */
 (function () {
   const visitorStorageKey = 'p4_visitor_id';
@@ -50,26 +50,97 @@
     el.style.cssText = [
       'display:none',
       'position:fixed',
-      'right:16px',
-      'bottom:16px',
+      'left:50%',
+      'top:16px',
+      'transform:translateX(-50%)',
       'z-index:99999',
-      'max-width:min(360px,calc(100vw - 24px))',
+      'width:min(760px,calc(100vw - 24px))',
       'padding:14px 16px',
-      'border-radius:16px',
-      'background:linear-gradient(180deg,rgba(42,20,8,.96),rgba(26,11,6,.96))',
-      'border:1px solid rgba(255,159,10,.28)',
-      'box-shadow:0 16px 40px rgba(0,0,0,.42),0 0 20px rgba(255,159,10,.12)',
-      'color:#fff4de',
+      'border-radius:18px',
+      'backdrop-filter:blur(18px)',
+      'color:#fff',
       'font-family:Barlow,Segoe UI,Arial,sans-serif'
     ].join(';');
     document.body.appendChild(el);
     if (!document.getElementById('global-system-status-style')) {
       const style = document.createElement('style');
       style.id = 'global-system-status-style';
-      style.textContent = '@keyframes codexSystemPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(255,159,10,.45)}50%{opacity:.7;box-shadow:0 0 0 8px rgba(255,159,10,0)}}';
+      style.textContent = `
+        @keyframes codexSystemPulse{0%,100%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 0 var(--p4-alert-halo)}50%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 10px rgba(255,255,255,0)}}
+        @keyframes codexSystemGlow{0%,100%{filter:saturate(1);box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 24px var(--p4-alert-halo)}50%{filter:saturate(1.25);box-shadow:0 18px 58px rgba(0,0,0,.52),0 0 46px var(--p4-alert-halo)}}
+        @keyframes codexSystemShake{0%,100%{transform:translateX(-50%)}20%{transform:translateX(calc(-50% - 5px))}40%{transform:translateX(calc(-50% + 5px))}60%{transform:translateX(calc(-50% - 3px))}80%{transform:translateX(calc(-50% + 3px))}}
+        @keyframes codexSystemSlide{0%{transform:translate(-50%,-22px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}
+        @media (max-width:640px){#global-system-status{top:10px!important;border-radius:14px!important;padding:12px!important}}
+      `;
       document.head.appendChild(style);
     }
     return el;
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[ch]));
+  }
+
+  function safeAlertColor(value) {
+    const color = String(value || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(color) ? color : '#ff9f0a';
+  }
+
+  function hexToRgba(hex, alpha) {
+    const color = safeAlertColor(hex).slice(1);
+    const r = parseInt(color.slice(0, 2), 16);
+    const g = parseInt(color.slice(2, 4), 16);
+    const b = parseInt(color.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function safeAlertAnimation(value) {
+    const animation = String(value || '').trim().toLowerCase();
+    return ['pulse', 'glow', 'shake', 'slide', 'none'].includes(animation) ? animation : 'pulse';
+  }
+
+  function systemAlertAnimationCss(animation) {
+    if (animation === 'none') return 'none';
+    const map = {
+      pulse: 'codexSystemPulse 1.5s ease-in-out infinite',
+      glow: 'codexSystemGlow 1.8s ease-in-out infinite',
+      shake: 'codexSystemShake .46s ease-in-out infinite',
+      slide: 'codexSystemSlide .38s cubic-bezier(.2,.8,.2,1) both',
+    };
+    return map[animation] || map.pulse;
+  }
+
+  function renderSystemStatus(data = {}) {
+    const el = ensureSystemBanner();
+    if (!data.restarting) {
+      el.style.display = 'none';
+      return;
+    }
+    const color = safeAlertColor(data.color);
+    const halo = hexToRgba(color, .34);
+    const animation = safeAlertAnimation(data.animation);
+    const emoji = escapeHtml(data.emoji || '⚠️');
+    const message = escapeHtml(data.message || 'Attention : redemarrage serveur en cours. Les parties et stats en cours peuvent etre interrompues.');
+    el.style.setProperty('--p4-alert-halo', halo);
+    el.style.background = `linear-gradient(135deg,${hexToRgba(color, .24)},rgba(12,10,24,.96) 58%,${hexToRgba(color, .14)})`;
+    el.style.border = `1px solid ${hexToRgba(color, .38)}`;
+    el.style.boxShadow = `0 18px 48px rgba(0,0,0,.42),0 0 30px ${hexToRgba(color, .16)}`;
+    el.style.animation = systemAlertAnimationCss(animation);
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:${hexToRgba(color, .18)};border:1px solid ${hexToRgba(color, .42)};box-shadow:inset 0 0 18px ${hexToRgba(color, .12)};font-size:22px;flex-shrink:0;">${emoji}</div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:${color};">Alerte serveur</div>
+          <div style="font-size:13px;line-height:1.45;color:rgba(255,255,255,.88);margin-top:2px;word-break:break-word;">${message}</div>
+        </div>
+      </div>`;
+    el.style.display = 'block';
   }
 
   function ensureDuelToast() {
@@ -111,21 +182,7 @@
       const res = await fetch('/api/system-status', { cache: 'no-store' });
       if (!res.ok) return;
       const data = await res.json();
-      const el = ensureSystemBanner();
-      if (!data.restarting) {
-        el.style.display = 'none';
-        return;
-      }
-      const message = data.message || 'Attention : redemarrage serveur en cours. Les parties et stats en cours peuvent etre interrompues.';
-      el.innerHTML = `
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <div style="width:12px;height:12px;border-radius:50%;background:#ff9f0a;box-shadow:0 0 0 0 rgba(255,159,10,.45);animation:codexSystemPulse 1.2s ease-in-out infinite;margin-top:4px;flex-shrink:0;"></div>
-          <div>
-            <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ffb84d;">Attention</div>
-            <div style="font-size:13px;line-height:1.45;color:#fff4de;margin-top:4px;">${message}</div>
-          </div>
-        </div>`;
-      el.style.display = 'block';
+      renderSystemStatus(data);
     } catch (e) {}
   }
 
@@ -176,7 +233,7 @@
       window.location.href = '/game';
     });
 
-    socket.on('system_status_update', refreshSystemStatus);
+    socket.on('system_status_update', renderSystemStatus);
 
     socket.on('profile_changed', ({ reason } = {}) => {
       const message = `Votre profil a change.${reason ? `\nMotif : ${reason}` : ''}\nActualise la page pour appliquer les changements.`;

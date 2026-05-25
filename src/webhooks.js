@@ -86,10 +86,16 @@ function actionRow(buttons = []) {
   return { type: 1, components: buttons.filter(Boolean).slice(0, 5) };
 }
 
+function webhookColor(value, fallback = 0xff3b30) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  const normalized = String(value || '').trim().replace('#', '');
+  return /^[0-9a-f]{6}$/i.test(normalized) ? parseInt(normalized, 16) : fallback;
+}
+
 function mkContainer(color, title, fields = [], options = {}) {
   return {
     kind: 'p4-webhook-card',
-    embed: mkEmbed(color, title, fields, {
+    embed: mkEmbed(webhookColor(color), title, fields, {
       description: options.subtitle,
       url: options.url,
       footer: options.footer,
@@ -356,6 +362,23 @@ module.exports = {
     ], { subtitle: 'Boutique - promotion limitee', buttons: [linkButton('Boutique', `${BASE}/boutique`, EMOJI.ticket)] })]);
   },
 
+  wlogLimitedPack(offer = {}, createdBy = 'Staff') {
+    const items = Array.isArray(offer.items) ? offer.items : [];
+    const itemLines = items.map(item => {
+      const key = clean(item.key || item.itemKey);
+      const qty = Number(item.qty || item.quantity || 1);
+      return `- ${key} x${qty}`;
+    }).join('\n') || 'Aucun contenu';
+    send([mkContainer(0xffd60a, `${EMOJI.ticket} Pack limite publie`, [
+      ['Nom', clean(offer.label, 'Offre limitee'), true],
+      ['Prix', `${offer.priceCoins || 0} coins / ${offer.priceGems || 0} gemmes`, true],
+      ['Stock', String(offer.stock || 0), true],
+      ['Expiration', offer.expiresAt ? new Date(Number(offer.expiresAt)).toLocaleString('fr-FR') : 'Aucune', true],
+      ['Cree par', clean(createdBy, 'Staff'), true],
+      ['Contenu', itemLines, false],
+    ], { subtitle: 'Nouvelle offre boutique', buttons: [linkButton('Voir boutique', `${BASE}/boutique`, EMOJI.cart)] })]);
+  },
+
   wlogClan(action, clan = {}, actor = {}, details = []) {
     const color = action === 'delete' ? 0xff3b30 : action === 'join' ? 0x30d158 : action === 'update' ? 0x85ebff : 0x8b5cf6;
     const titleMap = {
@@ -410,10 +433,24 @@ module.exports = {
     ], { subtitle: 'Defi cree', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.sword)] })]);
   },
 
-  wlogSystem(status, message) {
-    send([mkContainer(0xff3b30, 'Etat serveur', [
+  wlogSystem(status, message, details = {}) {
+    const hasSnapshot = Object.prototype.hasOwnProperty.call(details, 'totalPresent');
+    const siteLines = hasSnapshot ? [
+      `Presents: **${Number(details.totalPresent || 0)}**`,
+      `Joueurs: **${Number(details.onlinePlayers || 0)}**`,
+      `Bots: **${Number(details.onlineBots || 0)}**`,
+      `Visiteurs: **${Number(details.visitors || 0)}**`,
+      `Parties actives: **${Number(details.activeGames || 0)}**`,
+      `Comptes: **${Number(details.players || 0)}**`,
+      `Comptes Discord lies: **${Number(details.linkedDiscord || 0)}**`,
+      `Parties finies: **${Number(details.finishedGames || 0)}**`,
+      `Tournois actifs: **${Number(details.activeTournaments || 0)}**`,
+    ] : [];
+    send([mkContainer(details.color || 0xff3b30, `${clean(details.emoji, EMOJI.warning)} Etat serveur`, [
       ['Statut', status, true],
+      details.animation ? ['Animation', details.animation, true] : null,
       ['Message', message || '-', false],
+      hasSnapshot ? ['Snapshot site', siteLines.join('\n'), false] : null,
     ], { subtitle: 'Alerte systeme', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.warning)] })]);
   },
 };

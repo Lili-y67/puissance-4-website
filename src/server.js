@@ -129,6 +129,25 @@ function getActiveGameCount() {
   return Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'active'`).get()?.c || 0);
 }
 
+function getWebhookSiteSnapshot() {
+  const presence = getPresenceCounts();
+  const count = (sql, params = []) => {
+    try { return Number(db.prepare(sql).get(...params)?.c || 0); } catch { return 0; }
+  };
+  return {
+    totalPresent: presence.totalPresent,
+    onlinePlayers: presence.onlinePlayers,
+    onlineBots: presence.onlineBots,
+    visitors: presence.visitors,
+    activeGames: getActiveGameCount(),
+    players: count(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0`),
+    bots: count(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1`),
+    finishedGames: count(`SELECT COUNT(*) AS c FROM games WHERE status = 'finished'`),
+    activeTournaments: count(`SELECT COUNT(*) AS c FROM tournaments WHERE status IN ('pending','active','paused')`),
+    linkedDiscord: count(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND COALESCE(discord_id, '') != ''`),
+  };
+}
+
 function getBoostDisplayName(rawName) {
   const name = String(rawName || '').trim();
   if (!name) return 'Puissance4-Booster';
@@ -1442,11 +1461,30 @@ app.get('/spec/:id', (req, res) => {
 
 const DATA_DIR = path.join(__dirname, 'data');
 const SYSTEM_STATUS_PATH = path.join(DATA_DIR, 'system-status.json');
+const SYSTEM_ALERT_ANIMATIONS = new Set(['pulse', 'glow', 'shake', 'slide', 'none']);
 const DEFAULT_SYSTEM_STATUS = {
   restarting: false,
   message: '',
+  emoji: '\u26A0\uFE0F',
+  color: '#ff9f0a',
+  animation: 'pulse',
   updated_at: 0,
 };
+
+function normalizeSystemAlertColor(value) {
+  const color = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? color : DEFAULT_SYSTEM_STATUS.color;
+}
+
+function normalizeSystemAlertEmoji(value) {
+  const emoji = String(value || '').trim();
+  return emoji ? [...emoji].slice(0, 4).join('') : DEFAULT_SYSTEM_STATUS.emoji;
+}
+
+function normalizeSystemAlertAnimation(value) {
+  const animation = String(value || '').trim().toLowerCase();
+  return SYSTEM_ALERT_ANIMATIONS.has(animation) ? animation : DEFAULT_SYSTEM_STATUS.animation;
+}
 
 function ensureSystemStatusFile() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -1461,7 +1499,10 @@ function readSystemStatus() {
     const parsed = JSON.parse(fs.readFileSync(SYSTEM_STATUS_PATH, 'utf8'));
     return {
       restarting: Boolean(parsed?.restarting),
-      message: String(parsed?.message || ''),
+      message: String(parsed?.message || '').slice(0, 180),
+      emoji: normalizeSystemAlertEmoji(parsed?.emoji),
+      color: normalizeSystemAlertColor(parsed?.color),
+      animation: normalizeSystemAlertAnimation(parsed?.animation),
       updated_at: Number(parsed?.updated_at || 0),
     };
   } catch {
@@ -1473,7 +1514,10 @@ function writeSystemStatus(nextStatus) {
   ensureSystemStatusFile();
   const payload = {
     restarting: Boolean(nextStatus?.restarting),
-    message: String(nextStatus?.message || ''),
+    message: String(nextStatus?.message || '').slice(0, 180),
+    emoji: normalizeSystemAlertEmoji(nextStatus?.emoji),
+    color: normalizeSystemAlertColor(nextStatus?.color),
+    animation: normalizeSystemAlertAnimation(nextStatus?.animation),
     updated_at: Date.now(),
   };
   fs.writeFileSync(SYSTEM_STATUS_PATH, JSON.stringify(payload, null, 2), 'utf8');
@@ -1894,7 +1938,9 @@ app.post('/api/admin/limited-pack', (req, res) => {
   setConfigValue('shop_limited_offer_gem_price', priceGems);
   setConfigValue('shop_limited_offer_stock', stock);
 
-  res.json({ ok: true, offer: { label, priceCoins, priceGems, stock, expiresAt, items: rawItems } });
+  const offer = { label, priceCoins, priceGems, stock, expiresAt, items: rawItems };
+  try { WH.wlogLimitedPack(offer, req.headers['x-admin-identity'] || 'Admin'); } catch(e) {}
+  res.json({ ok: true, offer });
 });
 
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
@@ -5685,10 +5731,14 @@ app.get('/api/admin/games', (req, res) => {
   const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
+  const kind = String(req.query.kind || 'human') === 'bot' ? 'bot' : 'human';
 
+  const botFilter = kind === 'bot'
+    ? `COALESCE(p1.is_bot,0)=1 AND COALESCE(p2.is_bot,0)=1`
+    : `COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`;
   const where  = search
-    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished' AND COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`
-    : `WHERE g.status='finished' AND COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`;
+    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished' AND ${botFilter}`
+    : `WHERE g.status='finished' AND ${botFilter}`;
   const params = search ? [search, search, limit, offset] : [limit, offset];
 
   const games = db.prepare(`
@@ -5736,6 +5786,7 @@ app.post('/api/admin/boost', (req, res) => {
       expires_at: expiresAt,
     });
   }
+  try { WH.wlogBoost('elo', m, req.headers['x-admin-identity'] || 'Admin panel', expiresAt ? `${durationMinutes} min` : 'desactive'); } catch(e) {}
   res.json({ ok: true, multiplier: m, expiresAt });
 });
 
@@ -5767,12 +5818,14 @@ app.post('/api/admin/coin-boost', (req, res) => {
     db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', '1') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
     db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', '0') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
     db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', '') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+    try { WH.wlogBoost('coins', 1, req.headers['x-admin-identity'] || 'Admin panel', 'desactive'); } catch(e) {}
     return res.json({ ok: true, multiplier: 1, expiresAt: null });
   }
   const expiresAt = Date.now() + durationMinutes * 60 * 1000;
   db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
   db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(expiresAt));
   db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', 'Puissance4-Booster') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+  try { WH.wlogBoost('coins', multiplier, req.headers['x-admin-identity'] || 'Admin panel', `${durationMinutes} min`); } catch(e) {}
   res.json({ ok: true, multiplier, expiresAt });
 });
 
@@ -5783,8 +5836,19 @@ app.post('/api/admin/system-status', (req, res) => {
   const status = writeSystemStatus({
     restarting,
     message: restarting ? message : '',
+    emoji: req.body?.emoji,
+    color: req.body?.color,
+    animation: req.body?.animation,
   });
   io.emit('system_status_update', status);
+  try {
+    WH.wlogSystem(restarting ? 'alerte active' : 'alerte retiree', status.message, {
+      ...getWebhookSiteSnapshot(),
+      emoji: status.emoji,
+      color: status.color,
+      animation: status.animation,
+    });
+  } catch(e) {}
   res.json({ ok: true, status });
 });
 
