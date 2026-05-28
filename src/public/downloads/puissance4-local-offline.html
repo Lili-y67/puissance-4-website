@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PUISSANCE 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.07);
+    --p1: #ff3c6e;
+    --p1-glow: rgba(255,60,110,0.5);
+    --p2: #00d4ff;
+    --p2-glow: rgba(0,212,255,0.5);
+    --text: #f0f0f8;
+    --muted: rgba(240,240,248,0.4);
+    --accent: #7b61ff;
+    --grid-bg: #0d0d1a;
+    --cell-bg: #08080f;
+  }
+  .theme-neon {
+    --bg: #050510;
+    --surface: #0a0a20;
+    --surface2: #10102e;
+    --p1: #ff00aa;
+    --p1-glow: rgba(255,0,170,0.6);
+    --p2: #00ffaa;
+    --p2-glow: rgba(0,255,170,0.6);
+    --accent: #aa00ff;
+  }
+  .theme-fire {
+    --bg: #0f0800;
+    --surface: #1a1000;
+    --surface2: #251800;
+    --p1: #ff6600;
+    --p1-glow: rgba(255,102,0,0.6);
+    --p2: #ffdd00;
+    --p2-glow: rgba(255,221,0,0.6);
+    --accent: #ff3300;
+  }
+  .theme-ocean {
+    --bg: #000d1a;
+    --surface: #001428;
+    --surface2: #001e3c;
+    --p1: #0066ff;
+    --p1-glow: rgba(0,102,255,0.6);
+    --p2: #00ffee;
+    --p2-glow: rgba(0,255,238,0.6);
+    --accent: #0044cc;
+  }
+  .theme-pastel {
+    --bg: #f0eef8;
+    --surface: #e8e4f4;
+    --surface2: #ddd8f0;
+    --border: rgba(0,0,0,0.08);
+    --p1: #e05b8a;
+    --p1-glow: rgba(224,91,138,0.4);
+    --p2: #5b9ee0;
+    --p2-glow: rgba(91,158,224,0.4);
+    --accent: #9b5be0;
+    --text: #2a2040;
+    --muted: rgba(42,32,64,0.5);
+    --grid-bg: #ddd8f0;
+    --cell-bg: #c8c0e8;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 900px;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* Header */
+  header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px var(--p1-glow));
+  }
+
+  .header-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { background: var(--surface); border-color: var(--accent); transform: translateY(-1px); }
+  .btn.active { border-color: var(--accent); background: rgba(123,97,255,0.15); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--p1), var(--accent));
+    border: none;
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* Mode selector */
+  .mode-bar {
+    display: flex;
+    gap: 8px;
+    background: var(--surface);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+  .mode-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: var(--surface2);
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Players info */
+  .players-row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .player-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .player-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .player-card.p1::before { background: linear-gradient(135deg, var(--p1-glow), transparent); }
+  .player-card.p2::before { background: linear-gradient(225deg, var(--p2-glow), transparent); }
+  .player-card.active::before { opacity: 0.15; }
+  .player-card.active { border-color: transparent; }
+  .player-card.p1.active { border-color: var(--p1); box-shadow: 0 0 20px var(--p1-glow); }
+  .player-card.p2.active { border-color: var(--p2); box-shadow: 0 0 20px var(--p2-glow); }
+
+  .player-dot {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .p1 .player-dot { background: var(--p1); box-shadow: 0 0 10px var(--p1-glow); }
+  .p2 .player-dot { background: var(--p2); box-shadow: 0 0 10px var(--p2-glow); }
+
+  .player-info { flex: 1; }
+  .player-name {
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .player-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .p1 .player-score { color: var(--p1); }
+  .p2 .player-score { color: var(--p2); }
+
+  .turn-indicator {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .vs-badge {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  /* AI level selector */
+  .ai-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .ai-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .level-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .level-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Board */
+  .board-wrap {
+    position: relative;
+  }
+
+  .board-cols {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .col-btn {
+    width: 70px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .col-btn::after {
+    content: '▼';
+    font-size: 12px;
+    color: var(--muted);
+    transition: all 0.2s;
+    opacity: 0;
+  }
+  .col-btn:hover::after { opacity: 1; color: var(--text); transform: translateY(2px); }
+  .col-btn:hover { background: rgba(255,255,255,0.04); }
+
+  .board {
+    background: var(--grid-bg);
+    border-radius: 20px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    display: grid;
+    grid-template-columns: repeat(7, 70px);
+    grid-template-rows: repeat(6, 70px);
+    gap: 6px;
+  }
+
+  .cell {
+    border-radius: 50%;
+    background: var(--cell-bg);
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    transition: box-shadow 0.2s;
+  }
+
+  .cell .token {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .cell.drop .token { transform: scale(1); }
+  .cell.p1 .token { background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--p1) 70%, white), var(--p1)); box-shadow: 0 0 16px var(--p1-glow), inset 0 -2px 4px rgba(0,0,0,0.3); }
+  .cell.p2 .token { background: radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--p2) 70%, white), var(--p2)); box-shadow: 0 0 16px var(--p2-glow), inset 0 -2px 4px rgba(0,0,0,0.3); }
+
+  .cell.winning .token {
+    animation: pulse-win 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse-win {
+    from { transform: scale(1); box-shadow: 0 0 16px var(--p1-glow); }
+    to { transform: scale(1.08); box-shadow: 0 0 32px var(--p1-glow), 0 0 60px var(--p1-glow); }
+  }
+  .cell.p2.winning .token {
+    animation: pulse-win2 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse-win2 {
+    from { transform: scale(1); box-shadow: 0 0 16px var(--p2-glow); }
+    to { transform: scale(1.08); box-shadow: 0 0 32px var(--p2-glow), 0 0 60px var(--p2-glow); }
+  }
+
+  /* Preview token hover */
+  .col-hover-0 .cell[data-col="0"][data-row="0"],
+  .col-hover-1 .cell[data-col="1"][data-row="0"],
+  .col-hover-2 .cell[data-col="2"][data-row="0"],
+  .col-hover-3 .cell[data-col="3"][data-row="0"],
+  .col-hover-4 .cell[data-col="4"][data-row="0"],
+  .col-hover-5 .cell[data-col="5"][data-row="0"],
+  .col-hover-6 .cell[data-col="6"][data-row="0"] { box-shadow: inset 0 2px 6px rgba(0,0,0,0.5), 0 0 0 2px rgba(255,255,255,0.1); }
+
+  /* Result overlay */
+  .result-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    border-radius: 20px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    backdrop-filter: blur(6px);
+  }
+  .result-overlay.show { display: flex; }
+  .result-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    letter-spacing: 4px;
+    text-align: center;
+    line-height: 1;
+  }
+  .result-sub { color: var(--muted); font-size: 14px; }
+
+  /* Themes */
+  .theme-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .theme-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .theme-dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .theme-dot:hover, .theme-dot.active { transform: scale(1.2); border-color: var(--text); }
+  .theme-dot.t-default { background: linear-gradient(135deg, #ff3c6e, #00d4ff); }
+  .theme-dot.t-neon    { background: linear-gradient(135deg, #ff00aa, #00ffaa); }
+  .theme-dot.t-fire    { background: linear-gradient(135deg, #ff6600, #ffdd00); }
+  .theme-dot.t-ocean   { background: linear-gradient(135deg, #0066ff, #00ffee); }
+  .theme-dot.t-pastel  { background: linear-gradient(135deg, #e05b8a, #5b9ee0); }
+
+  /* Color picker */
+  .color-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .color-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .color-picker-wrap label { font-size: 12px; color: var(--muted); }
+  .color-picker-wrap .dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  input[type="color"] { width: 30px; height: 24px; border: none; background: none; cursor: pointer; border-radius: 4px; padding: 0; }
+
+  /* History panel */
+  .history-panel {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .history-header {
+    padding: 14px 18px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .history-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .history-item {
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    gap: 8px;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-winner { font-weight: 600; }
+  .history-winner.p1 { color: var(--p1); }
+  .history-winner.p2 { color: var(--p2); }
+  .history-winner.draw { color: var(--muted); }
+  .history-time { color: var(--muted); font-size: 11px; }
+  .history-moves { color: var(--muted); font-size: 11px; }
+  .empty-history { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Status bar */
+  .status-bar {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    min-height: 20px;
+    transition: all 0.3s;
+  }
+  .status-bar.thinking { color: var(--accent); }
+
+  /* Thinking dots */
+  .dots span { animation: blink 1.2s infinite; }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+
+  /* Drop animation */
+  @keyframes drop {
+    0% { transform: translateY(-300px); }
+    60% { transform: translateY(8px); }
+    80% { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
+  }
+
+  footer {
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+    padding-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">PUISSANCE 4</div>
+    <div class="header-controls">
+      <div class="mode-bar">
+        <button class="mode-btn active" onclick="setMode('pvp')">👥 2 Joueurs</button>
+        <button class="mode-btn" onclick="setMode('pva')">🤖 vs IA</button>
+      </div>
+      <button class="btn btn-primary" onclick="newGame()">Nouvelle partie</button>
+    </div>
+  </header>
+
+  <!-- AI controls -->
+  <div class="ai-controls" id="ai-controls" style="display:none">
+    <span class="ai-label">Niveau IA :</span>
+    <button class="level-btn active" onclick="setLevel('easy',this)">😌 Facile</button>
+    <button class="level-btn" onclick="setLevel('medium',this)">🧠 Moyen</button>
+    <button class="level-btn" onclick="setLevel('hard',this)">💀 Difficile</button>
+  </div>
+
+  <!-- Players row -->
+  <div class="players-row">
+    <div class="player-card p1 active" id="card-p1">
+      <div class="player-dot"></div>
+      <div class="player-info">
+        <div class="player-name" id="name-p1">Joueur 1</div>
+        <div class="player-score" id="score-p1">0</div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="vs-badge">VS</div>
+      <div class="turn-indicator" id="turn-label">À toi de jouer</div>
+    </div>
+    <div class="player-card p2" id="card-p2">
+      <div class="player-dot"></div>
+      <div class="player-info">
+        <div class="player-name" id="name-p2">Joueur 2</div>
+        <div class="player-score" id="score-p2">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="status"></div>
+
+  <!-- Board -->
+  <div class="board-wrap" id="board-wrap">
+    <div class="board-cols" id="col-btns"></div>
+    <div class="board" id="board"></div>
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-title" id="result-title">VICTOIRE !</div>
+      <div class="result-sub" id="result-sub"></div>
+      <button class="btn btn-primary" onclick="newGame()">Rejouer</button>
+    </div>
+  </div>
+
+  <!-- Themes & colors -->
+  <div style="display:flex; flex-direction:column; gap:10px; align-items:center; width:100%">
+    <div class="theme-row">
+      <span class="theme-label">Thème :</span>
+      <div class="theme-dot t-default active" title="Défaut" onclick="setTheme('',this)"></div>
+      <div class="theme-dot t-neon" title="Néon" onclick="setTheme('neon',this)"></div>
+      <div class="theme-dot t-fire" title="Feu" onclick="setTheme('fire',this)"></div>
+      <div class="theme-dot t-ocean" title="Océan" onclick="setTheme('ocean',this)"></div>
+      <div class="theme-dot t-pastel" title="Pastel" onclick="setTheme('pastel',this)"></div>
+    </div>
+    <div class="color-row">
+      <div class="color-picker-wrap">
+        <div class="dot" id="dot-p1" style="background:var(--p1)"></div>
+        <label>Joueur 1</label>
+        <input type="color" id="color-p1" value="#ff3c6e" onchange="setPlayerColor(1,this.value)">
+      </div>
+      <div class="color-picker-wrap">
+        <div class="dot" id="dot-p2" style="background:var(--p2)"></div>
+        <label>Joueur 2</label>
+        <input type="color" id="color-p2" value="#00d4ff" onchange="setPlayerColor(2,this.value)">
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="history-panel">
+    <div class="history-header">
+      <span>📋 Historique des parties</span>
+      <button class="btn" onclick="clearHistory()" style="padding:4px 10px;font-size:11px">Effacer</button>
+    </div>
+    <div class="history-list" id="history-list">
+      <div class="empty-history">Aucune partie jouée</div>
+    </div>
+  </div>
+
+  <footer>PUISSANCE 4 — Fait avec ❤️</footer>
+</div>
+
+<script>
+// ========== STATE ==========
+const ROWS = 6, COLS = 7;
+let board = [], current = 1, gameOver = false;
+let mode = 'pvp', aiLevel = 'easy';
+let scores = {1: 0, 2: 0}, history = [];
+let moveCount = 0, startTime = null;
+let aiThinking = false;
+let hoveredCol = -1;
+
+// ========== INIT ==========
+function initBoard() {
+  board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  current = 1;
+  gameOver = false;
+  moveCount = 0;
+  startTime = Date.now();
+  aiThinking = false;
+  renderBoard();
+  updatePlayers();
+  hideResult();
+  setStatus('');
+}
+
+function renderBoard() {
+  const b = document.getElementById('board');
+  const cols = document.getElementById('col-btns');
+  b.innerHTML = '';
+  cols.innerHTML = '';
+
+  for (let c = 0; c < COLS; c++) {
+    const btn = document.createElement('button');
+    btn.className = 'col-btn';
+    btn.onclick = () => drop(c);
+    btn.onmouseenter = () => { hoveredCol = c; };
+    btn.onmouseleave = () => { hoveredCol = -1; };
+    cols.appendChild(btn);
+  }
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.onclick = () => drop(c);
+      const token = document.createElement('div');
+      token.className = 'token';
+      cell.appendChild(token);
+      if (board[r][c]) {
+        cell.classList.add('p' + board[r][c]);
+        setTimeout(() => cell.classList.add('drop'), 10);
+      }
+      b.appendChild(cell);
+    }
+  }
+}
+
+function getCell(r, c) {
+  return document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+}
+
+// ========== GAMEPLAY ==========
+function drop(col) {
+  if (gameOver || aiThinking) return;
+  if (mode === 'pva' && current === 2) return;
+
+  const row = getLowestEmpty(col);
+  if (row === -1) return;
+
+  placeToken(row, col, current);
+  const win = checkWin(row, col, current);
+  if (win) { endGame(current, win); return; }
+  if (isDraw()) { endGame(0, []); return; }
+
+  current = current === 1 ? 2 : 1;
+  updatePlayers();
+
+  if (mode === 'pva' && current === 2) {
+    aiThinking = true;
+    setStatus('<span class="dots">IA réfléchit<span>.</span><span>.</span><span>.</span></span>', true);
+    setTimeout(() => {
+      const aiCol = aiMove();
+      const aiRow = getLowestEmpty(aiCol);
+      placeToken(aiRow, aiCol, 2);
+      aiThinking = false;
+      setStatus('');
+      const aiWin = checkWin(aiRow, aiCol, 2);
+      if (aiWin) { endGame(2, aiWin); return; }
+      if (isDraw()) { endGame(0, []); return; }
+      current = 1;
+      updatePlayers();
+    }, 400 + Math.random() * 300);
+  }
+}
+
+function placeToken(row, col, player) {
+  board[row][col] = player;
+  moveCount++;
+  const cell = getCell(row, col);
+  cell.classList.add('p' + player);
+  void cell.offsetWidth;
+  cell.classList.add('drop');
+}
+
+function getLowestEmpty(col) {
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (board[r][col] === 0) return r;
+  }
+  return -1;
+}
+
+function isDraw() {
+  return board[0].every(v => v !== 0);
+}
+
+// ========== WIN CHECK ==========
+function checkWin(row, col, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr, dc] of dirs) {
+    const line = getLine(row, col, player, dr, dc);
+    if (line.length >= 4) return line;
+  }
+  return null;
+}
+
+function getLine(row, col, player, dr, dc) {
+  const pos = [];
+  for (let s = 1; s < 4; s++) {
+    const r1 = row + dr*s, c1 = col + dc*s;
+    if (r1>=0&&r1<ROWS&&c1>=0&&c1<COLS&&board[r1][c1]===player) pos.push([r1,c1]);
+    else break;
+  }
+  const neg = [];
+  for (let s = 1; s < 4; s++) {
+    const r1 = row - dr*s, c1 = col - dc*s;
+    if (r1>=0&&r1<ROWS&&c1>=0&&c1<COLS&&board[r1][c1]===player) neg.push([r1,c1]);
+    else break;
+  }
+  const all = [...neg.reverse(), [row,col], ...pos];
+  if (all.length >= 4) return all.slice(0, 4);
+  return [];
+}
+
+function endGame(winner, winCells) {
+  gameOver = true;
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  if (winCells && winCells.length) {
+    winCells.forEach(([r,c]) => {
+      const cell = getCell(r, c);
+      cell.classList.add('winning');
+    });
+  }
+  if (winner) {
+    scores[winner]++;
+    document.getElementById('score-p' + winner).textContent = scores[winner];
+    const name = winner === 1 ? document.getElementById('name-p1').textContent : document.getElementById('name-p2').textContent;
+    showResult(`🏆 ${name.toUpperCase()} GAGNE !`, `${moveCount} coups • ${elapsed}s`, winner);
+    addHistory(winner, moveCount, elapsed);
+  } else {
+    showResult('ÉGALITÉ !', `${moveCount} coups • ${elapsed}s`, 0);
+    addHistory(0, moveCount, elapsed);
+  }
+}
+
+// ========== AI ==========
+function aiMove() {
+  if (aiLevel === 'easy') return aiEasy();
+  if (aiLevel === 'medium') return aiMedium();
+  return aiHard();
+}
+
+function aiEasy() {
+  // Check if AI can win, else random
+  for (let c = 0; c < COLS; c++) {
+    const r = getLowestEmpty(c);
+    if (r === -1) continue;
+    board[r][c] = 2;
+    const win = checkWin(r, c, 2);
+    board[r][c] = 0;
+    if (win) return c;
+  }
+  const valid = [];
+  for (let c = 0; c < COLS; c++) if (getLowestEmpty(c) !== -1) valid.push(c);
+  return valid[Math.floor(Math.random() * valid.length)];
+}
+
+function aiMedium() {
+  // Win or block, else center-biased random
+  for (let c = 0; c < COLS; c++) {
+    const r = getLowestEmpty(c);
+    if (r === -1) continue;
+    board[r][c] = 2;
+    if (checkWin(r, c, 2)) { board[r][c] = 0; return c; }
+    board[r][c] = 0;
+  }
+  for (let c = 0; c < COLS; c++) {
+    const r = getLowestEmpty(c);
+    if (r === -1) continue;
+    board[r][c] = 1;
+    if (checkWin(r, c, 1)) { board[r][c] = 0; return c; }
+    board[r][c] = 0;
+  }
+  const pref = [3,2,4,1,5,0,6].filter(c => getLowestEmpty(c) !== -1);
+  return pref[0];
+}
+
+function aiHard() {
+  return minimax(board, 6, -Infinity, Infinity, true).col;
+}
+
+function minimax(b, depth, alpha, beta, maximizing) {
+  const draw = b[0].every(v => v !== 0);
+  if (draw) return { score: 0 };
+  if (depth === 0) return { score: scoreBoard(b, 2) };
+
+  const valid = [];
+  for (let c = 0; c < COLS; c++) {
+    for (let r = ROWS-1; r >= 0; r--) {
+      if (b[r][c] === 0) { valid.push({c, r}); break; }
+    }
+  }
+
+  // Check terminal
+  for (const {c, r} of valid) {
+    b[r][c] = maximizing ? 2 : 1;
+    const win = checkWinBoard(b, r, c, maximizing ? 2 : 1);
+    b[r][c] = 0;
+    if (win) return { score: maximizing ? 100000 + depth : -(100000 + depth), col: c };
+  }
+
+  if (maximizing) {
+    let best = { score: -Infinity, col: valid[0].c };
+    for (const {c, r} of valid) {
+      b[r][c] = 2;
+      const res = minimax(b, depth-1, alpha, beta, false);
+      b[r][c] = 0;
+      if (res.score > best.score) best = { score: res.score, col: c };
+      alpha = Math.max(alpha, best.score);
+      if (alpha >= beta) break;
+    }
+    return best;
+  } else {
+    let best = { score: Infinity, col: valid[0].c };
+    for (const {c, r} of valid) {
+      b[r][c] = 1;
+      const res = minimax(b, depth-1, alpha, beta, true);
+      b[r][c] = 0;
+      if (res.score < best.score) best = { score: res.score, col: c };
+      beta = Math.min(beta, best.score);
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+}
+
+function checkWinBoard(b, row, col, player) {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (const [dr,dc] of dirs) {
+    let count = 1;
+    for (let s=1;s<4;s++) { const r=row+dr*s,c=col+dc*s; if(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player)count++;else break; }
+    for (let s=1;s<4;s++) { const r=row-dr*s,c=col-dc*s; if(r>=0&&r<ROWS&&c>=0&&c<COLS&&b[r][c]===player)count++;else break; }
+    if (count >= 4) return true;
+  }
+  return false;
+}
+
+function scoreBoard(b, player) {
+  let score = 0;
+  // Center column preference
+  for (let r=0;r<ROWS;r++) if(b[r][3]===player) score += 3;
+  // Horizontal
+  for (let r=0;r<ROWS;r++) for(let c=0;c<=COLS-4;c++) score += scoreWindow([b[r][c],b[r][c+1],b[r][c+2],b[r][c+3]], player);
+  // Vertical
+  for (let c=0;c<COLS;c++) for(let r=0;r<=ROWS-4;r++) score += scoreWindow([b[r][c],b[r+1][c],b[r+2][c],b[r+3][c]], player);
+  // Diagonals
+  for (let r=0;r<=ROWS-4;r++) for(let c=0;c<=COLS-4;c++) score += scoreWindow([b[r][c],b[r+1][c+1],b[r+2][c+2],b[r+3][c+3]], player);
+  for (let r=3;r<ROWS;r++) for(let c=0;c<=COLS-4;c++) score += scoreWindow([b[r][c],b[r-1][c+1],b[r-2][c+2],b[r-3][c+3]], player);
+  return score;
+}
+
+function scoreWindow(w, player) {
+  const opp = player === 2 ? 1 : 2;
+  const pc = w.filter(v=>v===player).length;
+  const oc = w.filter(v=>v===opp).length;
+  const ec = w.filter(v=>v===0).length;
+  if (pc===4) return 100;
+  if (pc===3&&ec===1) return 5;
+  if (pc===2&&ec===2) return 2;
+  if (oc===3&&ec===1) return -4;
+  return 0;
+}
+
+// ========== UI ==========
+function updatePlayers() {
+  document.getElementById('card-p1').classList.toggle('active', current === 1);
+  document.getElementById('card-p2').classList.toggle('active', current === 2);
+  if (mode === 'pvp') {
+    document.getElementById('turn-label').textContent = current === 1 ? '← Tour de J1' : 'Tour de J2 →';
+  } else {
+    document.getElementById('turn-label').textContent = current === 1 ? '← Ton tour' : 'IA réfléchit...';
+  }
+}
+
+function showResult(title, sub, winner) {
+  const ov = document.getElementById('result-overlay');
+  const ti = document.getElementById('result-title');
+  ti.textContent = title;
+  ti.style.background = winner === 1 ? 'linear-gradient(135deg, var(--p1), var(--accent))' :
+                         winner === 2 ? 'linear-gradient(135deg, var(--p2), var(--accent))' :
+                         'linear-gradient(135deg, var(--muted), var(--text))';
+  ti.style.webkitBackgroundClip = 'text';
+  ti.style.webkitTextFillColor = 'transparent';
+  document.getElementById('result-sub').textContent = sub;
+  ov.classList.add('show');
+}
+
+function hideResult() {
+  document.getElementById('result-overlay').classList.remove('show');
+}
+
+function setStatus(html, thinking = false) {
+  const s = document.getElementById('status');
+  s.innerHTML = html;
+  s.className = 'status-bar' + (thinking ? ' thinking' : '');
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach((b,i) => b.classList.toggle('active', (i===0&&m==='pvp')||(i===1&&m==='pva')));
+  document.getElementById('ai-controls').style.display = m === 'pva' ? 'flex' : 'none';
+  document.getElementById('name-p2').textContent = m === 'pva' ? '🤖 IA' : 'Joueur 2';
+  newGame();
+}
+
+function setLevel(l, btn) {
+  aiLevel = l;
+  document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function newGame() {
+  initBoard();
+}
+
+// ========== THEMES ==========
+function setTheme(theme, el) {
+  document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+  document.body.className = theme ? 'theme-' + theme : '';
+  // Reset custom color inputs to match new theme vars
+  setTimeout(() => {
+    const style = getComputedStyle(document.body);
+    // Let CSS variables handle it
+  }, 0);
+}
+
+function setPlayerColor(player, color) {
+  const hex = color;
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  if (player === 1) {
+    document.body.style.setProperty('--p1', hex);
+    document.body.style.setProperty('--p1-glow', `rgba(${r},${g},${b},0.5)`);
+    document.getElementById('dot-p1').style.background = hex;
+  } else {
+    document.body.style.setProperty('--p2', hex);
+    document.body.style.setProperty('--p2-glow', `rgba(${r},${g},${b},0.5)`);
+    document.getElementById('dot-p2').style.background = hex;
+  }
+}
+
+// ========== HISTORY ==========
+function addHistory(winner, moves, elapsed) {
+  const names = {
+    1: document.getElementById('name-p1').textContent,
+    2: document.getElementById('name-p2').textContent,
+  };
+  history.unshift({ winner, name: names[winner] || null, moves, elapsed, time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) });
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!history.length) { list.innerHTML = '<div class="empty-history">Aucune partie jouée</div>'; return; }
+  list.innerHTML = history.slice(0,15).map((h, i) => `
+    <div class="history-item">
+      <span class="history-winner ${h.winner ? 'p'+h.winner : 'draw'}">
+        ${h.winner ? '🏆 ' + h.name : '🤝 Égalité'}
+      </span>
+      <span>
+        <span class="history-moves">${h.moves} coups</span>
+        &nbsp;·&nbsp;
+        <span class="history-time">${h.elapsed}s · ${h.time}</span>
+      </span>
+    </div>
+  `).join('');
+}
+
+function clearHistory() {
+  history = [];
+  scores = {1: 0, 2: 0};
+  document.getElementById('score-p1').textContent = '0';
+  document.getElementById('score-p2').textContent = '0';
+  renderHistory();
+}
+
+// ========== START ==========
+initBoard();
+</script>
+</body>
+</html>

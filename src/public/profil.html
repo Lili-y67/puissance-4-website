@@ -353,12 +353,6 @@ input[type="file"]{display:none;}
   box-shadow:0 0 10px rgba(133,235,255,.22)
 }
 @keyframes profile-marquee-slide{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.rank-badge{display:flex;align-items:center;gap:8px;margin-top:6px;}
-.rank-badge img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,255,255,0.2));}
-.rank-badge-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
-.rank-progress{width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:4px;overflow:hidden;}
-.rank-progress-fill{height:100%;border-radius:2px;transition:width 0.6s ease;}
-
 /* Follow button */
 .btn-follow{
   font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;
@@ -628,13 +622,6 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   background:var(--red);
   transition:all 0.2s;
 }
-.shape-preview.s-circle  {border-radius:50%;}
-.shape-preview.s-triangle{border-radius:0;clip-path:polygon(50% 8%,95% 92%,5% 92%);}
-.shape-preview.s-diamond {border-radius:0;clip-path:polygon(50% 5%,95% 50%,50% 95%,5% 50%);}
-.shape-preview.s-star    {border-radius:0;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);}
-.shape-preview.s-heart   {border-radius:0;clip-path:polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%);}
-.shape-preview.s-emoji   {border-radius:50%;background:transparent;font-size:22px;display:flex;align-items:center;justify-content:center;}
-.shape-label{font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
 .emoji-input-wrap{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;display:none;}
 .emoji-input-wrap.visible{display:flex;}
 .emoji-input{background:transparent;border:none;color:var(--text);font-size:22px;width:40px;text-align:center;outline:none;}
@@ -686,7 +673,6 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .avatar-decoration-modal-actions{display:flex;flex-direction:column;gap:10px}
 .profile-banner-choice-preview{position:relative;width:100%;max-width:360px;height:96px;border-radius:16px;overflow:hidden;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;padding:14px}
 .profile-banner-choice-preview img{width:100%;height:100%;object-fit:cover;display:block}
-.profile-banner-choice-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-size:18px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 @media (max-width: 760px){
   .avatar-decoration-modal{padding:18px 16px}
   .avatar-decoration-modal-layout{grid-template-columns:1fr}
@@ -833,7 +819,6 @@ body.search-open .profile-side{
   .color-card,
   .shape-card { padding: 14px 12px; }
   .btn-save-color,
-  .btn-save-shape,
   .btn-follow { width: 100%; justify-content: center; }
   .profile-pill-row { justify-content: center; }
   .profile-pill { width: 100%; justify-content: center; }
@@ -903,7 +888,6 @@ body.search-open .profile-side{
     padding: 18px 16px 20px;
   }
   .profile-info { width: 100%; min-width: 0; align-items: center; text-align: center; }
-  .rank-badge { justify-content: center; }
   .profile-pseudo { font-size: 26px; text-align: center; }
   .profile-badges { justify-content: center; }
   .profile-since, .profile-media-note, .profile-elo, .profile-elo-lbl { text-align: center; }
@@ -1395,11 +1379,11 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
 }
 
 function isVipPlus(player = currentPlayer) {
-  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isVip(player = currentPlayer) {
-  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
 }
 
 function isPerso(player = currentPlayer) {
@@ -1412,6 +1396,7 @@ function canUseGradient(player = currentPlayer) {
 
 function getPremiumTier(player = currentPlayer) {
   if (Number(player?.is_bot) === 1) return 'bot';
+  if (Number(player?.is_crystal) === 1) return 'crystal';
   if (isPerso(player)) return 'perso';
   if (isVipPlus(player)) return 'vip_plus';
   if (Number(player?.is_vip) === 1) return 'vip';
@@ -1441,6 +1426,11 @@ function getVipBadgeTier(player = currentPlayer) {
 
 function renderVipBadge(player = currentPlayer) {
   if (Number(player?.is_bot) === 1) return '';
+  if (Number(player?.is_crystal) === 1) {
+    return `<span class="vip-tier-badge" title="Crystal" style="background:transparent;color:#dffaff;border:0;box-shadow:none;padding:0;width:26px;height:26px;display:inline-grid;place-items:center">
+      <img src="/assets/crystal-badge.png" alt="Crystal" style="width:24px;height:24px;object-fit:contain;filter:none">
+    </span>`;
+  }
   if (!isVip(player)) return '';
   const accent = getVipAccent(player);
   const tier = getVipBadgeTier(player);
@@ -1947,6 +1937,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             <button class="elo-history-range" type="button" onclick="applyEloHistoryDateRange()">Plage</button>
           </div>
           <div class="elo-history-export">
+            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryImage()">PNG</button>
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
           </div>
@@ -2099,6 +2090,26 @@ function render(player, games, following, followers, followStatus, tournaments =
         <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 8 caractères.</div>
+    </div>` : ''}
+    ${Number(player.is_crystal || 0) === 1 ? `
+    <div class="color-card" id="crystal-alert-card" style="border-color:rgba(133,235,255,.28);background:rgba(133,235,255,.045)">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#85EBFF;display:inline-flex;align-items:center;gap:6px"><img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;object-fit:contain"> Crystal</span>
+        <span class="save-confirm" id="crystal-alert-confirm">✓ Enregistré !</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input id="crystal-alert-message-input" class="search-input" style="flex:1;min-width:220px;margin:0" type="text" maxlength="90" placeholder="${player.pseudo} s'est connecté au site" value="${String(player.crystal_alert_message || '').replace(/"/g, '&quot;')}">
+        <input id="crystal-alert-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="💠" value="${String(player.crystal_alert_emoji || '💠').replace(/"/g, '&quot;')}">
+        <div class="color-picker-inline" style="min-width:132px">
+          <input type="color" id="crystal-alert-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.crystal_alert_color || '')) ? player.crystal_alert_color : '#85EBFF'}">
+          <span>Couleur</span>
+        </div>
+        <select id="crystal-alert-animation-input" class="search-input" style="max-width:140px;margin:0">
+          ${['glow','pulse','slide','shake','none'].map(anim => `<option value="${anim}" ${String(player.crystal_alert_animation || 'glow') === anim ? 'selected' : ''}>${anim}</option>`).join('')}
+        </select>
+        <button class="btn-save-color" onclick="saveCrystalAlert()" style="background:rgba(133,235,255,.12);border-color:rgba(133,235,255,.32);color:#85EBFF">Enregistrer</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">Ce message apparait en bas a gauche chez tout le monde quand tu te connectes.</div>
     </div>` : ''}
     <div class="shape-card" id="shape-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2917,6 +2928,45 @@ function getEloHistoryExportFilename(format) {
   return `elo-history-${pseudo}-${days}j.${format === 'json' ? 'json' : 'csv'}`;
 }
 
+function getEloHistoryImageFilename() {
+  const pseudo = String(lastEloHistoryData?.player?.pseudo || currentPlayer?.pseudo || 'joueur')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40) || 'joueur';
+  const days = lastEloHistoryData?.days || eloHistoryDays || 7;
+  return `elo-history-${pseudo}-${days}j.png`;
+}
+
+function downloadEloHistoryImage() {
+  const canvas = document.getElementById('elo-history-canvas');
+  if (!canvas || !lastEloHistoryData) {
+    alert('Aucun graphique ELO a telecharger pour le moment.');
+    return;
+  }
+  if (canvas.toBlob) {
+    canvas.toBlob(blob => {
+      if (!blob) return alert('Export image impossible.');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = getEloHistoryImageFilename();
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }, 'image/png');
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = getEloHistoryImageFilename();
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 async function downloadEloHistoryExport(format = 'csv') {
   if (!currentPlayer?.id) {
     alert('Aucun joueur charge pour exporter le graphique ELO.');
@@ -2957,22 +3007,6 @@ async function downloadEloHistoryExport(format = 'csv') {
   }
 }
 
-async function copyEloHistoryExport(format = 'csv') {
-  const rows = buildEloHistoryExportRows();
-  if (!rows.length) {
-    alert('Aucune donnee ELO a exporter pour le moment.');
-    return;
-  }
-  const payload = format === 'json'
-    ? JSON.stringify({
-        player: lastEloHistoryData?.player || null,
-        days: lastEloHistoryData?.days || eloHistoryDays,
-        stats: lastEloHistoryData?.stats || {},
-        points: rows,
-      }, null, 2)
-    : eloHistoryRowsToCsv(rows);
-  downloadBlob(getEloHistoryExportFilename(format), payload, format === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8');
-}
 
 function formatEloPointDate(ms) {
   if (!ms) return '';
@@ -3213,10 +3247,6 @@ function renderGameRow(g, me) {
     </a>`;
 }
 
-function renderGames(games, me) {
-  // Compatibilité — redirige vers le système paginé
-  initGames(games, me);
-}
 
 function renderPlayers(players, emptyMsg) {
   if (!players.length) return `<div class="empty-state">${emptyMsg}</div>`;
@@ -3924,21 +3954,6 @@ function handleAvatarDecorationUpload(input) {
   });
 })();
 
-function resizeImage(dataUrl, maxSize) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let w = img.width, h = img.height;
-      if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
-      else        { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
-    };
-    img.src = dataUrl;
-  });
-}
 
 // ── Déconnexion ───────────────────────────────────────────────────────────────
 // ── Fermeture de compte ───────────────────────────────────────────────────────
@@ -5592,6 +5607,40 @@ async function removeProfileCustomRole() {
   } finally {
     btn.disabled = false;
     btn.textContent = '- Retirer';
+  }
+}
+
+async function saveCrystalAlert() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token');
+  const message = (document.getElementById('crystal-alert-message-input')?.value || '').trim();
+  const emoji = (document.getElementById('crystal-alert-emoji-input')?.value || '💠').trim();
+  const color = document.getElementById('crystal-alert-color-input')?.value || '#85EBFF';
+  const animation = document.getElementById('crystal-alert-animation-input')?.value || 'glow';
+  if (!me.id || !token) return alert('Connecte-toi pour modifier Crystal.');
+  try {
+    const res = await fetch('/api/crystal/alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, message, emoji, color, animation }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de sauvegarder Crystal.');
+    const patch = {
+      crystal_alert_message: data.alert?.message || message,
+      crystal_alert_emoji: data.alert?.emoji || emoji,
+      crystal_alert_color: data.alert?.color || color,
+      crystal_alert_animation: data.alert?.animation || animation,
+    };
+    syncStoredPlayerPatch(patch);
+    currentPlayer = { ...(currentPlayer || {}), ...patch };
+    const confirm = document.getElementById('crystal-alert-confirm');
+    if (confirm) {
+      confirm.classList.add('show');
+      setTimeout(() => confirm.classList.remove('show'), 1600);
+    }
+  } catch (e) {
+    alert(e.message || 'Erreur Crystal.');
   }
 }
 

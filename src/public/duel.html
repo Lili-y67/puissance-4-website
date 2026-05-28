@@ -111,10 +111,6 @@ function isInvalidSessionMessage(message) {
   return /session/i.test(String(message || '')) && /invalide|invite invalide/i.test(String(message || ''));
 }
 
-function formatDate(ts) {
-  const d = new Date(Number(ts || Date.now()));
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-}
 
 function formatCountdown(ts) {
   const remaining = Math.max(0, Number(ts || 0) - Date.now());

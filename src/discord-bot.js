@@ -34,6 +34,7 @@ const ADMIN_COMMAND_ACTIONS = {
   'admin-boost-elo': 'boost-elo',
   'admin-boost-coins': 'boost-coins',
   'admin-give-item': 'give-item',
+  'admin-crystal': 'crystal',
   'admin-tournoi-finish': 'tournoi-finish',
   'admin-tournoi-pause': 'tournoi-pause',
   'admin-tournoi-resume': 'tournoi-resume',
@@ -105,6 +106,10 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       pseudoOption(true),
       { type: 3, name: 'item', description: 'Code item: elo_custom_0_2, coin_custom_05, vip_1m...', required: true },
       optionalValueOption('Quantite, defaut 1'),
+    ]),
+    adminCommand('crystal', 'Donner le rang Crystal a un joueur', [
+      pseudoOption(true),
+      optionalValueOption('Duree en jours, defaut 30'),
     ]),
     adminCommand('tournoi-finish', 'Terminer un tournoi', [idOption('ID public ou interne du tournoi')]),
     adminCommand('tournoi-pause', 'Mettre un tournoi en pause', [idOption('ID public ou interne du tournoi')]),
@@ -333,6 +338,7 @@ function startDiscordBot(ctx) {
   function roleBadges(player) {
     const badges = [];
     const push = (name, fallback) => badges.push(`${badgeEmoji(name, fallback)} **${name}**`.trim());
+    if (Number(player?.is_crystal) === 1) push('CRYSTAL', '💠');
     if (Number(player?.is_perso) === 1) push('PERSO', '✨');
     if (Number(player?.is_vip_plus) === 1) push('VIP+', '💎');
     else if (Number(player?.is_vip) === 1) push('VIP', '⭐');
@@ -363,9 +369,6 @@ function startDiscordBot(ctx) {
     return ctx.db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
   }
 
-  function xpNeededForLevel(level) {
-    return 100 + Math.max(0, Number(level || 0)) * 35;
-  }
 
   const DISCORD_GEM_CHAR_THRESHOLD = 10_000;
   const DISCORD_GEM_REWARD = 10;
@@ -1052,7 +1055,7 @@ function startDiscordBot(ctx) {
     const reason = optionString(interaction, 'raison', '') || '';
     const resourceId = optionString(interaction, 'id');
     const itemKey = optionString(interaction, 'item');
-    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
+    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'crystal', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
     const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
@@ -1162,6 +1165,16 @@ function startDiscordBot(ctx) {
       ctx.WH.wlogAdminAction('Item boutique Discord', target.pseudo, target.id, [['Item', item.label, true], ['Quantite', quantity, true]]);
       if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `Item ajoute via Discord : ${item.label} x${quantity}.`);
       return interaction.editReply(containerMessage({ color: 0xbf5af2, title: 'Item donne', subtitle: `${target.pseudo} recoit ${quantity} x ${item.label}` }));
+    }
+    if (action === 'crystal') {
+      const days = Math.max(1, Math.min(3650, Math.ceil(Number(value || 30))));
+      const fresh = typeof ctx.grantCrystal === 'function'
+        ? ctx.grantCrystal(target.id, { durationMs: days * 24 * 60 * 60 * 1000, autoRenew: true })
+        : null;
+      if (!fresh) return replyError(interaction, 'Crystal impossible', 'Ce joueur ne peut pas recevoir Crystal.');
+      ctx.WH.wlogAdminAction('Crystal Discord', target.pseudo, target.id, [['Duree', `${days} jour(s)`, true], ['Par', interaction.user.tag || interaction.user.id, true]]);
+      if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, `Crystal accorde via Discord (${days}j).`);
+      return interaction.editReply(containerMessage({ color: 0x85ebff, title: 'Crystal accorde', subtitle: `${fresh.pseudo} recoit Crystal pendant ${days} jour(s). Renouvellement auto actif.` }));
     }
     return interaction.editReply(containerMessage({ color: 0xff3b30, title: 'Action inconnue', subtitle: action }));
   }

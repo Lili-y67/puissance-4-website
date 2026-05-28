@@ -473,13 +473,6 @@ input:focus,select:focus{
   text-transform:uppercase;
   white-space:nowrap;
 }
-.limited-pack-items{
-  grid-column:1 / -1;
-  min-height:74px;
-  resize:vertical;
-  border-radius:20px;
-  white-space:pre-wrap;
-}
 .pack-builder-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
 .pack-builder-actions button{
   border:1px solid rgba(255,255,255,.10);
@@ -545,10 +538,7 @@ tr:last-child td{border-bottom:none}
 tbody tr{transition:background .18s ease,transform .18s ease}
 tbody tr:hover td{background:rgba(255,255,255,.04)}
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
-.badge-user{background:rgba(255,255,255,.07);color:var(--muted)}
 .badge-vip{background:rgba(255,214,10,.14);color:var(--yellow);border:1px solid rgba(255,214,10,.34)}
-.badge-moderator{background:rgba(108,125,255,.16);color:#aeb8ff;border:1px solid rgba(108,125,255,.34)}
-.badge-admin{background:rgba(255,45,85,.16);color:#ff6b89;border:1px solid rgba(255,45,85,.36)}
 .badge-custom{border:1px solid currentColor;background:rgba(255,255,255,.04);text-transform:uppercase;font-weight:900;letter-spacing:1px;box-shadow:0 0 14px currentColor,inset 0 0 10px rgba(255,255,255,.04)}
 .badge-banned{background:rgba(255,45,85,.16);color:#ff6b89;border:1px solid rgba(255,45,85,.30)}
 .badge-muted{background:rgba(255,159,10,.16);color:var(--orange);border:1px solid rgba(255,159,10,.30)}
@@ -1128,17 +1118,6 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function parseAdminPackItems(value) {
-  return String(value || '')
-    .split(/[\n,;]/)
-    .map(part => part.trim())
-    .filter(Boolean)
-    .map(part => {
-      const [key, qty] = part.split(/[:x*]/).map(v => v.trim());
-      return { key, qty: Math.max(1, Math.trunc(Number(qty || 1))) };
-    })
-    .filter(entry => entry.key);
-}
 
 async function loadActiveCoupons() {
   const el = document.getElementById('active-coupons-list');
@@ -1201,6 +1180,7 @@ function renderStats() {
   const vip      = allPlayers.filter(p => p.is_vip && !p.is_vip_plus).length;
   const vipPlus  = allPlayers.filter(p => p.is_vip_plus).length;
   const perso    = allPlayers.filter(p => p.is_perso).length;
+  const crystal  = allPlayers.filter(p => p.is_crystal).length;
   const banned   = allPlayers.filter(p => p.banned).length;
   const muted    = allPlayers.filter(p => p.muted_until && p.muted_until > Date.now()).length;
   const suspect  = allPlayers.filter(p => p.suspicious).length;
@@ -1209,7 +1189,7 @@ function renderStats() {
   document.getElementById('stats-row').innerHTML = [
     { val: total,   lbl: 'Joueurs',   color: 'var(--text)' },
     { val: mods,    lbl: 'Staff',     color: '#8b9cf4' },
-    { val: vip + vipPlus + perso, lbl: 'Premium', color: 'var(--yellow)' },
+    { val: vip + vipPlus + perso + crystal, lbl: 'Premium', color: 'var(--yellow)' },
     { val: suspect, lbl: 'Suspects',  color: 'var(--orange)' },
     { val: muted,   lbl: 'Mutés',     color: 'var(--yellow)' },
     { val: banned,  lbl: 'Bannis',    color: 'var(--red)' },
@@ -1247,6 +1227,9 @@ function customRoleBadge(player) {
 }
 
 function vipBadge(player, compact = false) {
+  if (player.is_crystal) {
+    return `<span class="badge" title="Crystal" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.10);color:#85EBFF;border:1px solid rgba(133,235,255,0.36);display:inline-flex;align-items:center;gap:5px"><img src="/assets/crystal-badge.png" alt="" style="width:14px;height:14px;object-fit:contain">Crystal</span>`;
+  }
   if (player.is_vip_plus) {
     return `<span class="badge" style="font-size:${compact ? '10px' : '11px'};background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.42);box-shadow:0 0 14px rgba(133,235,255,0.22)">VIP+</span>`;
   }
@@ -1331,6 +1314,7 @@ function renderPlayers(players) {
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
+          ${myRole === 'admin' && !p.is_crystal ? `<button class="btn-sm" style="background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.3)" onclick="giveCrystal(${p.id})">Crystal</button>` : ''}
           ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${p.id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${p.id},'vip','1y')">VIP 1A</button>` : ''}
           ${myRole === 'admin' && !p.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${p.id},'vipplus')">VIP+</button>` : ''}
           ${myRole === 'admin' && !p.is_perso ? `<button class="btn-sm" style="background:rgba(255,122,69,0.16);color:#ff7a45;border:1px solid rgba(255,122,69,0.3)" onclick="changeRole(${p.id},'perso')">Perso</button>` : ''}
@@ -1375,6 +1359,7 @@ function openModal(id) {
     ? `
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${roleButtons}
+        ${!player.is_crystal ? `<button class="btn-sm" style="background:rgba(133,235,255,0.14);color:#85EBFF;border:1px solid rgba(133,235,255,0.3)" onclick="giveCrystal(${id})">Crystal</button>` : `<button class="btn-sm" style="background:rgba(255,45,85,0.10);color:var(--red);border:1px solid rgba(255,45,85,0.24)" onclick="removeCrystal(${id})">Retirer Crystal</button>`}
         ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow)" onclick="changeRole(${id},'vip','1m')">VIP 1M</button><button class="btn-sm" style="background:rgba(255,214,10,0.12);color:var(--yellow);border:1px solid rgba(255,214,10,0.25)" onclick="changeRole(${id},'vip','1y')">VIP 1A</button>` : ''}
         ${!player.is_vip_plus ? `<button class="btn-sm" style="background:rgba(133,235,255,0.16);color:#85EBFF;border:1px solid rgba(133,235,255,0.35)" onclick="changeRole(${id},'vipplus')">VIP+</button>` : ''}
         ${!player.is_perso ? `<button class="btn-sm" style="background:rgba(255,122,69,0.16);color:#ff7a45;border:1px solid rgba(255,122,69,0.3)" onclick="changeRole(${id},'perso')">Perso</button>` : ''}
@@ -1509,6 +1494,19 @@ async function changeRole(id, role, vipDuration = null) {
   if (vipDuration) body.vipDuration = vipDuration;
   const data = await api('PATCH', `/api/admin/players/${id}/role`, body);
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur role.');
+}
+
+async function giveCrystal(id) {
+  const days = Math.max(1, Math.min(3650, Number(prompt('Durée Crystal en jours :', '30') || 30)));
+  const autoRenew = confirm('Activer le renouvellement automatique mensuel si le joueur a assez de coins ?');
+  const data = await api('PATCH', `/api/admin/players/${id}/crystal`, { enabled: true, days, autoRenew });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur Crystal.');
+}
+
+async function removeCrystal(id) {
+  if (!confirm('Retirer Crystal a ce joueur ?')) return;
+  const data = await api('PATCH', `/api/admin/players/${id}/crystal`, { enabled: false });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur Crystal.');
 }
 
 async function saveCustomRole(id) {

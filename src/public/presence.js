@@ -142,6 +142,50 @@
     el.style.display = 'block';
   }
 
+  function renderCrystalLoginToast(data = {}) {
+    const color = safeAlertColor(data.color || '#85EBFF');
+    const halo = hexToRgba(color, .34);
+    const animation = safeAlertAnimation(data.animation || 'glow');
+    const emoji = escapeHtml(data.emoji || '💠');
+    const pseudo = escapeHtml(data.pseudo || 'Crystal');
+    const message = escapeHtml(data.message || `${data.pseudo || 'Un membre Crystal'} s'est connecte au site.`);
+    let el = document.getElementById('global-crystal-login');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'global-crystal-login';
+      el.style.cssText = [
+        'position:fixed',
+        'left:12px',
+        'bottom:12px',
+        'z-index:99998',
+        'width:min(330px,calc(100vw - 24px))',
+        'padding:10px 12px',
+        'border-radius:14px',
+        'backdrop-filter:blur(18px)',
+        'color:#fff',
+        'font-family:Barlow,Segoe UI,Arial,sans-serif',
+        'display:none'
+      ].join(';');
+      document.body.appendChild(el);
+    }
+    el.style.setProperty('--p4-alert-halo', halo);
+    el.style.background = `linear-gradient(135deg,${hexToRgba(color, .22)},rgba(12,10,24,.96) 62%,rgba(118,139,255,.12))`;
+    el.style.border = `1px solid ${hexToRgba(color, .42)}`;
+    el.style.boxShadow = `0 18px 48px rgba(0,0,0,.42),0 0 30px ${hexToRgba(color, .18)}`;
+    el.style.animation = systemAlertAnimationCss(animation);
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:${hexToRgba(color, .18)};border:1px solid ${hexToRgba(color, .44)};font-size:18px;flex-shrink:0;">${emoji}</div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:14px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase;color:${color};">Crystal · ${pseudo}</div>
+          <div style="font-size:12px;line-height:1.32;color:rgba(255,255,255,.86);margin-top:1px;word-break:break-word;">${message}</div>
+        </div>
+      </div>`;
+    el.style.display = 'block';
+    clearTimeout(el._hideTimer);
+    el._hideTimer = setTimeout(() => { el.style.display = 'none'; }, 6500);
+  }
+
   function ensureDuelToast() {
     let el = document.getElementById('global-duel-toast');
     if (el) return el;
@@ -233,6 +277,7 @@
     });
 
     socket.on('system_status_update', renderSystemStatus);
+    socket.on('crystal_login', renderCrystalLoginToast);
 
     socket.on('profile_changed', ({ reason } = {}) => {
       const message = `Votre profil a change.${reason ? `\nMotif : ${reason}` : ''}\nActualise la page pour appliquer les changements.`;

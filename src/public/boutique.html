@@ -130,7 +130,6 @@ body{
 .price-discount-badge{position:absolute;right:-10px;top:-14px;padding:4px 8px;border-radius:999px;background:linear-gradient(135deg, var(--red), #ff9f0a);border:1px solid rgba(255,255,255,.20);color:white;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:.8px;box-shadow:0 8px 22px rgba(255,45,85,.26);transform:rotate(4deg)}
 .offer-timer{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:8px 11px;border-radius:999px;background:rgba(255,214,10,.10);border:1px solid rgba(255,214,10,.26);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;box-shadow:0 0 24px rgba(255,214,10,.08)}
 .offer-timer strong{font-size:16px}
-.auto-coupon-chip{display:inline-flex;align-items:center;gap:7px;margin-top:8px;padding:7px 10px;border-radius:999px;background:rgba(48,209,88,.10);border:1px solid rgba(48,209,88,.26);color:var(--green);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .price.gems .price-new{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.22)}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
@@ -196,7 +195,6 @@ body{
 .gift-selected.show{display:block}
 .gift-actions{display:flex;gap:10px;margin-top:16px}
 .gift-actions button{flex:1}
-.referral-chip{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:7px 10px;border-radius:999px;background:rgba(48,209,88,.10);border:1px solid rgba(48,209,88,.26);color:#30d158;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .preview-side{padding:18px;border-radius:20px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .preview-showcase{min-height:220px;border-radius:22px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
@@ -240,10 +238,8 @@ body{
 .preview-rank-badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
 .preview-rank-badge.vipplus{background:var(--blue-soft);border:1px solid rgba(133,235,255,.36);color:var(--blue)}
 .preview-rank-badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
-.preview-booster-stat{font-family:'Barlow Condensed',sans-serif;font-size:72px;font-weight:900;letter-spacing:1px}
 .preview-mini-note{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
 .preview-subline{font-size:12px;color:var(--muted);margin-top:6px}
-.preview-random-pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);margin-top:10px}
 .preview-booster-demo{width:min(100%,340px);display:flex;flex-direction:column;gap:14px;align-items:stretch}
 .preview-demo-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .preview-demo-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
@@ -317,7 +313,6 @@ body{
   .section-title{font-size:32px}
   .card{min-height:auto;padding:18px 16px;border-radius:22px}
   .coins-panel{align-items:flex-start;flex-direction:column}
-  .coins-left{width:100%}
   .wallet-row{grid-template-columns:1fr}
   .wallet-card{justify-content:center}
   .shop-controls{width:100%;max-width:none;min-width:0}
@@ -635,6 +630,16 @@ function repairDomText(root = document.body) {
 }
 
 const SHOP_ITEMS = {
+  crystal: {
+    key: 'crystal', type: 'rank', theme: 'vipplus', badge: '<img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal', duration: 'Mensuel', title: 'Crystal',
+    stat: '20', statSub: 'gemmes par semaine',
+    meta: 'Rang premium mensuel avec renouvellement automatique et avantages VIP/VIP+ inclus.',
+    features: [
+      ['💠', 'Badge Crystal', 'Badge image exclusif visible sans couleur de role.'],
+      ['💎', '20 gemmes / semaine', 'Bonus hebdomadaire automatique tant que le rang est actif.'],
+      ['📣', 'Alerte connexion', 'Message custom en bas a gauche quand tu te connectes au site.']
+    ]
+  },
   vip_1m: {
     key: 'vip_1m', type: 'rank', theme: 'vip', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
     stat: '+20%', statSub: 'sur le boost ELO quotidien',
@@ -727,6 +732,7 @@ Object.keys(SHOP_ITEMS).forEach((key) => {
 });
 
 const SHOP_PRICES = {
+  crystal: 5000,
   vip_1m: 500, vip_1y: 5000, vip_plus: 10000, perso: 25000,
   elo_reset: 2500,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
@@ -982,18 +988,6 @@ function setCouponStatus(message, type = '') {
   el.classList.toggle('error', type === 'error');
 }
 
-function applyAutoCoupon(coupon, label = '') {
-  if (!coupon?.code || appliedCouponCode) return;
-  appliedCouponCode = coupon.code;
-  appliedCoupon = coupon;
-  const input = document.getElementById('coupon-input');
-  const btn = document.getElementById('coupon-validate-btn');
-  if (input) input.value = coupon.code;
-  if (btn) btn.disabled = true;
-  const value = `${coupon.value}${coupon.type === 'flat' ? '' : '%'}`;
-  setCouponStatus(`${label || 'Coupon automatique'} actif : ${coupon.code} (-${value}).`, 'ok');
-}
-
 function onCouponInput() {
   appliedCouponCode = '';
   appliedCoupon = null;
@@ -1056,6 +1050,7 @@ async function validateCoupon() {
 
 function packOwned(pack) {
   if (!shopPlayer) return false;
+  if (pack === 'crystal') return Number(shopPlayer.is_crystal || 0) === 1;
   if (pack === 'vip_plus') return Number(shopPlayer.is_vip_plus || 0) === 1;
   if (pack === 'perso') return Number(shopPlayer.is_perso || 0) === 1;
   if (pack === 'vip_1m' || pack === 'vip_1y') {
@@ -1153,6 +1148,18 @@ function getDisplayItem(pack) {
   }
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return null;
+  if (pack === 'crystal') {
+    return {
+      ...item,
+      badge: '<img src="/assets/crystal-badge.png" alt="" title="Crystal" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal',
+      features: [
+        ['💠', 'Badge Crystal', 'Badge exclusif avec info au survol.'],
+        ['💎', '20 gemmes par semaine', 'Gemmes donnees automatiquement chaque semaine.'],
+        ['📣', 'Message connexion', 'Alerte custom globale quand tu arrives sur le site.'],
+        ['✨', 'Avantages VIP+', 'Acces VIP/VIP+ sans limite de temps pendant le mois Crystal.']
+      ],
+    };
+  }
   if (pack === 'vip_1m') {
     return {
       ...item,
@@ -1571,7 +1578,7 @@ function renderCard(pack) {
 }
 
 function renderShop() {
-  document.getElementById('shop-ranks-section').innerHTML = ['vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-ranks-section').innerHTML = ['crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
   document.getElementById('shop-offers-section').innerHTML = shopLimitedOffer?.expiresAt && Number(shopLimitedOffer.stock || 0) > 0
     ? renderCard('limited_offer')
     : `<div class="card perso" style="grid-column:1/-1"><h2>Aucun pack limité</h2><div class="meta">Le staff n'a pas encore activé d'offre temporaire.</div></div>`;

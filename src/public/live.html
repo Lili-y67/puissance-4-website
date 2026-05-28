@@ -456,10 +456,6 @@ function parseShape(raw) {
   return { shape: raw, emoji: null };
 }
 
-function tokenFill(color, secondary) {
-  if (secondary) return `linear-gradient(135deg, ${color} 0%, ${secondary} 100%)`;
-  return `radial-gradient(circle at 35% 30%, ${color}cc, ${color})`;
-}
 
 function lightenHex(hex, amount) {
   const safe = /^#[0-9a-f]{6}$/i.test(String(hex || '')) ? String(hex) : '#ff2d55';
@@ -975,21 +971,6 @@ function renderList(games) {
   prevIds = newIds;
 }
 
-async function startPreconfiguredBotMatch() {
-  const btn = document.getElementById('bot-match-btn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Creation...'; }
-  try {
-    const res = await fetch('/api/bots/preconfigured/match', { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Impossible de lancer un match bot.');
-    await refresh();
-    if (data.game?.gameId) goToSpec(data.game.gameId);
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🤖 Lancer bots'; }
-  }
-}
 
 function renderSpec(game) {
   const p1 = game.players[1], p2 = game.players[2];

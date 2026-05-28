@@ -111,6 +111,14 @@ try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip_plus INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_perso INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_crystal INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_expires_at INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_auto_renew INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_weekly_gems_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_alert_message TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_alert_color TEXT NOT NULL DEFAULT '#85EBFF'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_alert_emoji TEXT NOT NULL DEFAULT '💠'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN crystal_alert_animation TEXT NOT NULL DEFAULT 'glow'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_expires_at INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -301,6 +309,9 @@ const pQ = {
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
   updateVipPlus:  db.prepare(`UPDATE players SET is_vip_plus = @is_vip_plus WHERE id = @id`),
   updatePerso:    db.prepare(`UPDATE players SET is_perso = @is_perso WHERE id = @id`),
+  updateCrystal:  db.prepare(`UPDATE players SET is_crystal = @is_crystal, crystal_expires_at = @crystal_expires_at, crystal_auto_renew = @crystal_auto_renew WHERE id = @id`),
+  updateCrystalWeeklyGems: db.prepare(`UPDATE players SET crystal_weekly_gems_at = @crystal_weekly_gems_at WHERE id = @id`),
+  updateCrystalAlert: db.prepare(`UPDATE players SET crystal_alert_message = @message, crystal_alert_color = @color, crystal_alert_emoji = @emoji, crystal_alert_animation = @animation WHERE id = @id`),
   updateVipExpiry: db.prepare(`UPDATE players SET vip_expires_at = @vip_expires_at WHERE id = @id`),
   updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_emoji = @emoji WHERE id = @id`),
   updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),

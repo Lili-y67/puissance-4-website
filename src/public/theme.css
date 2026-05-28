@@ -124,13 +124,10 @@ pre {
 }
 
 :root[data-theme="light"] .panel,
-:root[data-theme="light"] .profile-card,
 :root[data-theme="light"] .game-card,
 :root[data-theme="light"] .spec-card,
 :root[data-theme="light"] .analysis-card,
 :root[data-theme="light"] .elo-history-card,
-:root[data-theme="light"] .section-card,
-:root[data-theme="light"] .shop-card,
 :root[data-theme="light"] .admin-card {
   background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,244,255,.80)) !important;
   border-color: rgba(38,31,62,.14) !important;

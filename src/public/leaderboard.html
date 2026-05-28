@@ -570,12 +570,6 @@ function mkAvatar(player, size = 36) {
   return el;
 }
 
-function medalForRank(rank) {
-  if (rank === 1) return '🥇';
-  if (rank === 2) return '🥈';
-  if (rank === 3) return '🥉';
-  return '';
-}
 
 function addMedalBadge(avatarEl, rank) {
   const medal = TROPHIES[rank] || '';

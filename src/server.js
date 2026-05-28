@@ -10,7 +10,6 @@ const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('.
 const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
-const { Client, GatewayIntentBits, EmbedBuilder, ActivityType, REST, Routes, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const ipToPlayers  = new Map(); 
 const playerToIp   = new Map(); 
@@ -600,6 +599,12 @@ function isPersoPlayer(player) {
   return !!player && (Number(player.is_perso) === 1 || Number(player.is_bot) === 1);
 }
 
+function isCrystalPlayer(player) {
+  if (!player) return false;
+  const expiresAt = Number(player.crystal_expires_at || 0);
+  return Number(player.is_crystal || 0) === 1 && (!expiresAt || expiresAt > Date.now());
+}
+
 function isAdminPlayer(player) {
   return !!player && String(player.role || '') === 'admin';
 }
@@ -609,6 +614,7 @@ function canUseGradientPlayer(player) {
 }
 
 function getPremiumTier(player) {
+  if (isCrystalPlayer(player)) return 'crystal';
   if (isPersoPlayer(player)) return 'perso';
   if (isVipPlusPlayer(player)) return 'vip_plus';
   if (isVipPlayer(player)) return 'vip';
@@ -617,6 +623,7 @@ function getPremiumTier(player) {
 
 function getPremiumBoostConfig(player) {
   const tier = getPremiumTier(player);
+  if (tier === 'crystal') return { tier, multiplier: 1.3, durationMs: 60 * 60 * 1000, daily: true, label: 'CRYSTAL' };
   if (tier === 'vip') return { tier, multiplier: 1.2, durationMs: 60 * 60 * 1000, daily: true, label: 'VIP' };
   if (tier === 'vip_plus') return { tier, multiplier: 1.3, durationMs: 60 * 60 * 1000, daily: true, label: 'VIP+' };
   if (tier === 'perso') return { tier, multiplier: 1.3, durationMs: 2 * 60 * 60 * 1000, daily: false, label: 'PERSO' };
@@ -628,11 +635,11 @@ function isVipPlayer(player) {
   if (Number(player.is_bot) === 1) return true;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
   if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1 && Number(player.is_perso) !== 1) return false;
-  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isAdminPlayer(player);
+  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isCrystalPlayer(player) || isAdminPlayer(player);
 }
 
 function isVipPlusPlayer(player) {
-  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || Number(player.is_bot) === 1 || isAdminPlayer(player));
+  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || Number(player.is_bot) === 1 || isCrystalPlayer(player) || isAdminPlayer(player));
 }
 
 let canvasFontsRegistered = false;
@@ -1473,10 +1480,6 @@ function shouldAuditApiRequest(req) {
   return true;
 }
 
-function inferApiAuditActor(req) {
-  return getApiAuditActorMeta(req).label;
-}
-
 function getApiAuditActorMeta(req) {
   try {
     const adminToken = String(req.headers['x-admin-token'] || '').trim();
@@ -1773,6 +1776,9 @@ app.delete('/api/players/:id', (req, res) => {
     is_vip = 0,
     is_vip_plus = 0,
     is_perso = 0,
+    is_crystal = 0,
+    crystal_expires_at = NULL,
+    crystal_auto_renew = 0,
     discord_id = NULL,
     suspicious = 0
   WHERE id = ?`).run(pseudo, id);
@@ -2002,7 +2008,7 @@ app.get('/api/admin/security', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, role, is_vip, is_vip_plus, is_perso, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, role, is_vip, is_vip_plus, is_perso, is_crystal, crystal_expires_at, crystal_auto_renew, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const enriched = players.map(p => ({
@@ -2187,12 +2193,36 @@ app.patch('/api/admin/players/:id/shop-item', (req, res) => {
   res.json({ ok: true, itemKey, quantity, total: nextQty });
 });
 
+app.patch('/api/admin/players/:id/crystal', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent modifier Crystal.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const enabled = req.body?.enabled !== false;
+  if (!enabled) {
+    removeCrystal(id);
+    notifyPlayerProfileChanged(id, 'Crystal retire par le staff.');
+    return res.json({ ok: true, crystal: null });
+  }
+  const days = Math.max(1, Math.min(3650, Math.trunc(Number(req.body?.days || 30))));
+  const autoRenew = req.body?.autoRenew !== false;
+  const fresh = grantCrystal(id, { durationMs: days * 24 * 60 * 60 * 1000, autoRenew });
+  try {
+    WH.wlogAdminAction('Crystal accorde', target.pseudo, id, [
+      ['Duree', `${days} jour(s)`, true],
+      ['Renouvellement', autoRenew ? 'auto' : 'non', true],
+    ]);
+  } catch(e) {}
+  notifyPlayerProfileChanged(id, `Crystal accorde par le staff (${days}j).`);
+  res.json({ ok: true, crystal: sanitize(fresh) });
+});
+
 // Changer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle
 app.patch('/api/admin/players/:id/role', async (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent changer les rôles.' });
   const { role } = req.body;
   const vipDuration = String(req.body?.vipDuration || '').trim();
-  if (!['user','vip','vipplus','perso','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Role invalide.' });
+  if (!['user','vip','vipplus','perso','crystal','moderator','admin'].includes(role)) return res.status(400).json({ error: 'Role invalide.' });
   const targetId = Number(req.params.id);
   const session = getAdminSession(req);
   const target = pQ.getById.get(targetId);
@@ -2206,7 +2236,11 @@ app.patch('/api/admin/players/:id/role', async (req, res) => {
   const oldVipPlus = Number(target.is_vip_plus) === 1;
   const oldPerso = Number(target.is_perso) === 1;
   const vipExpiryMap = { '1m': 30 * 24 * 60 * 60 * 1000, '1y': 365 * 24 * 60 * 60 * 1000 };
-  if (role === 'vip') {
+  if (role === 'crystal') {
+    const days = Math.max(1, Math.min(3650, Math.trunc(Number(req.body?.crystalDays || req.body?.days || 30))));
+    grantCrystal(targetId, { durationMs: days * 24 * 60 * 60 * 1000, autoRenew: req.body?.autoRenew !== false });
+    WH.wlogAdminAction('Crystal accorde', target.pseudo, req.params.id, [['Duree', `${days} jour(s)`, true]]);
+  } else if (role === 'vip') {
     if (!vipExpiryMap[vipDuration]) return res.status(400).json({ error: 'Choisis une duree VIP valide.' });
     WH.wlogAdminAction('VIP accordée', target.pseudo, req.params.id, [['VIP avant', oldVip ? 'oui' : 'non', true], ['VIP après', 'oui', true]]);
     pQ.updateVip.run({ is_vip: 1, id: targetId });
@@ -2433,8 +2467,12 @@ const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || '
 const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
 const discordRestQueues = new Map();
 const REFERRAL_SHOP_DISCOUNT_PERCENT = 5;
+const CRYSTAL_PRICE_COINS = 5000;
+const CRYSTAL_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+const CRYSTAL_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const CUSTOM_ROLE_MAX_LENGTH = 8;
 const SHOP_ITEMS = Object.freeze({
+  crystal: { key: 'crystal', category: 'ranks', label: 'Crystal', price: CRYSTAL_PRICE_COINS },
   vip_1m: { key: 'vip_1m', category: 'ranks', label: 'VIP 1 mois', price: 100 },
   vip_1y: { key: 'vip_1y', category: 'ranks', label: 'VIP 1 an', price: 1000 },
   vip_plus: { key: 'vip_plus', category: 'ranks', label: 'VIP+', price: 5000 },
@@ -3244,6 +3282,7 @@ setInterval(async () => {
 
 setInterval(() => {
   const now = Date.now();
+  processCrystalMemberships(now);
   const expiredVip = db.prepare(`SELECT id, discord_id, role, is_perso FROM players WHERE deleted = 0 AND is_vip = 1 AND is_vip_plus = 0 AND vip_expires_at IS NOT NULL AND vip_expires_at > 0 AND vip_expires_at <= ?`).all(now);
   for (const player of expiredVip) {
     pQ.updateVip.run({ is_vip: 0, id: player.id });
@@ -3253,6 +3292,56 @@ setInterval(() => {
     }
   }
 }, 60 * 1000);
+
+function grantCrystal(playerId, options = {}) {
+  const player = pQ.getById.get(Number(playerId));
+  if (!player || Number(player.deleted || 0) === 1 || Number(player.is_guest || 0) === 1 || Number(player.is_bot || 0) === 1) return null;
+  const now = Date.now();
+  const durationMs = Math.max(1, Number(options.durationMs || CRYSTAL_MONTH_MS));
+  const currentExpiry = Number(player.crystal_expires_at || 0);
+  const base = currentExpiry > now ? currentExpiry : now;
+  const expiresAt = options.expiresAt ? Number(options.expiresAt) : base + durationMs;
+  pQ.updateCrystal.run({
+    id: player.id,
+    is_crystal: 1,
+    crystal_expires_at: expiresAt,
+    crystal_auto_renew: options.autoRenew === false ? 0 : 1,
+  });
+  return pQ.getById.get(player.id);
+}
+
+function removeCrystal(playerId) {
+  pQ.updateCrystal.run({ id: Number(playerId), is_crystal: 0, crystal_expires_at: null, crystal_auto_renew: 0 });
+}
+
+function processCrystalMemberships(now = Date.now()) {
+  const due = db.prepare(`
+    SELECT id, pseudo, coins, gems, crystal_expires_at, crystal_auto_renew, crystal_weekly_gems_at
+    FROM players
+    WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0 AND is_crystal = 1
+  `).all();
+  for (const player of due) {
+    const expiresAt = Number(player.crystal_expires_at || 0);
+    if (expiresAt && expiresAt <= now) {
+      if (Number(player.crystal_auto_renew || 0) === 1 && Number(player.coins || 0) >= CRYSTAL_PRICE_COINS) {
+        pQ.updateCoins.run({ id: player.id, coins: Number(player.coins || 0) - CRYSTAL_PRICE_COINS });
+        grantCrystal(player.id, { durationMs: CRYSTAL_MONTH_MS, autoRenew: true });
+        try { WH.wlogShopPurchase(player.pseudo, player.id, 'Crystal - renouvellement automatique', { currency: 'coins', paid: CRYSTAL_PRICE_COINS, basePrice: CRYSTAL_PRICE_COINS }); } catch(e) {}
+      } else {
+        removeCrystal(player.id);
+        notifyPlayerProfileChanged(player.id, 'Crystal expire : renouvellement impossible.');
+      }
+      continue;
+    }
+    const lastGemsAt = Number(player.crystal_weekly_gems_at || 0);
+    if (!lastGemsAt || now - lastGemsAt >= CRYSTAL_WEEK_MS) {
+      pQ.addGems.run({ id: player.id, delta: 20 });
+      pQ.updateCrystalWeeklyGems.run({ id: player.id, crystal_weekly_gems_at: now });
+      try { WH.wlogGems(player.pseudo, player.id, 20, 'Bonus hebdomadaire Crystal'); } catch(e) {}
+      notifyPlayerProfileChanged(player.id, 'Bonus Crystal : +20 gemmes hebdomadaires.');
+    }
+  }
+}
 
 // Liaison Discord depuis le profil (sans reset)
 app.get('/auth/discord/link', (req, res) => {
@@ -3917,6 +4006,44 @@ app.post('/api/shop/boosters/activate', (req, res) => {
   res.json({ ok: true, itemKey, active: activeBoosters[item.boostType], inventory, activeBoosters });
 });
 
+function normalizeCrystalAlertPayload(body = {}) {
+  const message = String(body.message || '').trim().replace(/\s+/g, ' ').slice(0, 90);
+  const color = /^#[0-9a-fA-F]{6}$/.test(String(body.color || '')) ? String(body.color).toUpperCase() : '#85EBFF';
+  const emoji = String(body.emoji || '💠').trim().slice(0, 4) || '💠';
+  const animation = ['pulse', 'glow', 'shake', 'slide', 'none'].includes(String(body.animation || '').toLowerCase())
+    ? String(body.animation || '').toLowerCase()
+    : 'glow';
+  return { message, color, emoji, animation };
+}
+
+app.get('/api/crystal/alert', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!isCrystalPlayer(player)) return res.status(403).json({ error: 'Reserve au rang Crystal.' });
+  res.json({
+    ok: true,
+    alert: {
+      message: player.crystal_alert_message || '',
+      color: player.crystal_alert_color || '#85EBFF',
+      emoji: player.crystal_alert_emoji || '💠',
+      animation: player.crystal_alert_animation || 'glow',
+    },
+  });
+});
+
+app.post('/api/crystal/alert', (req, res) => {
+  const token = String(req.body?.token || req.headers['x-session-token'] || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!isCrystalPlayer(player)) return res.status(403).json({ error: 'Reserve au rang Crystal.' });
+  const alert = normalizeCrystalAlertPayload(req.body || {});
+  pQ.updateCrystalAlert.run({ id: playerId, ...alert });
+  res.json({ ok: true, alert });
+});
+
 app.get('/api/referral/me', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = validateSession(token);
@@ -3999,6 +4126,9 @@ app.post('/api/shop/buy', async (req, res) => {
   if (pack === 'vip_plus' && Number(recipient.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: isGift ? 'Ce joueur a deja VIP+.' : 'VIP+ deja actif.' });
   }
+  if (pack === 'crystal' && isCrystalPlayer(recipient)) {
+    return res.status(400).json({ error: isGift ? 'Ce joueur a deja Crystal actif.' : 'Crystal deja actif.' });
+  }
   if (pack === 'perso' && Number(recipient.is_perso || 0) === 1) {
     return res.status(400).json({ error: isGift ? 'Ce joueur a deja le pack Perso.' : 'Pack Perso deja actif.' });
   }
@@ -4023,7 +4153,9 @@ app.post('/api/shop/buy', async (req, res) => {
     db.prepare(`INSERT OR IGNORE INTO coupon_uses (code, player_id, used_at) VALUES (?, ?, ?)`).run(coupon.code, playerId, Date.now());
   }
 
-  if (pack === 'vip_1m') {
+  if (pack === 'crystal') {
+    grantCrystal(recipientId, { durationMs: CRYSTAL_MONTH_MS, autoRenew: true });
+  } else if (pack === 'vip_1m') {
     pQ.updateVip.run({ is_vip: 1, id: recipientId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: recipientId });
     pQ.updateVipExpiry.run({ vip_expires_at: baseExpiry + (30 * 24 * 60 * 60 * 1000), id: recipientId });
@@ -4328,6 +4460,9 @@ function sanitize(p) {
       is_vip:     0,
       is_vip_plus: 0,
       is_perso: 0,
+      is_crystal: 0,
+      crystal_expires_at: null,
+      crystal_auto_renew: 0,
       vip_expires_at: null,
     };
   }
@@ -4338,6 +4473,9 @@ function sanitize(p) {
     is_vip: isVipPlayer(rest) ? 1 : 0,
     is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
     is_perso: isPersoPlayer(rest) ? 1 : 0,
+    is_crystal: isCrystalPlayer(rest) ? 1 : 0,
+    crystal_expires_at: Number(rest.crystal_expires_at || 0) || null,
+    crystal_auto_renew: Number(rest.crystal_auto_renew || 0) === 1 ? 1 : 0,
     vip_expires_at: Number(rest.vip_expires_at || 0) || null,
   };
 }
@@ -4351,6 +4489,7 @@ app.get('/api/players', (req, res) => {
   let rows = db.prepare(`
     SELECT id, pseudo, elo, wins, losses, draws, color, color_secondary, shape, avatar,
            avatar_decoration, profile_banner, role, is_vip, is_vip_plus, is_perso,
+           is_crystal, crystal_expires_at, crystal_auto_renew, crystal_alert_message, crystal_alert_color, crystal_alert_emoji, crystal_alert_animation,
            custom_role_text, custom_role_color, custom_role_emoji,
            is_bot, bot_skill, bot_description, bot_enabled, bot_last_seen, last_seen
     FROM players
@@ -4577,6 +4716,9 @@ app.delete('/api/players/:id', (req, res) => {
     is_vip = 0,
     is_vip_plus = 0,
     is_perso = 0,
+    is_crystal = 0,
+    crystal_expires_at = NULL,
+    crystal_auto_renew = 0,
     discord_id = NULL,
     deleted    = 1
   WHERE id = ?`).run(id);
@@ -6499,6 +6641,19 @@ io.on('connection', socket => {
     onlineSockets.get(socket.playerId).add(socket.id);
     if (!isAnonymousPlayerId(socket.playerId)) markDiscordConnectedRealtime(player);
     if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
+    if (!isAnonymousPlayerId(socket.playerId) && isCrystalPlayer(player)) {
+      const alert = normalizeCrystalAlertPayload({
+        message: player.crystal_alert_message || `${player.pseudo} s'est connecte au site.`,
+        color: player.crystal_alert_color || '#85EBFF',
+        emoji: player.crystal_alert_emoji || '💠',
+        animation: player.crystal_alert_animation || 'glow',
+      });
+      io.emit('crystal_login', {
+        pseudo: player.pseudo,
+        avatar: player.avatar || '',
+        ...alert,
+      });
+    }
     socket.emit('identified', sanitize(player));
     broadcastPresenceCounts();
   });
@@ -6950,6 +7105,7 @@ function buildDiscordBotContext() {
     getRank,
     hashPwd,
     notifyPlayerProfileChanged,
+    grantCrystal,
     syncPlayerDiscordRankRole,
     syncOnlineDiscordConnectedRoles,
     getPresenceCounts,
@@ -6982,1234 +7138,3 @@ initDb().then(() => {
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Bot Discord intAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAgrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-function startBot() {
-  const { botToken } = discordConfig();
-  if (!botToken) {
-    console.log('[BOT] Token manquant - bot Discord desactive');
-    return;
-  }
-
-  const bot = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
-  });
-
-  const BOT_API = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
-
-  function botFmt(value) {
-    return Number(value || 0).toLocaleString('fr-FR');
-  }
-
-  function botPlayerByPseudo(pseudo) {
-    const q = String(pseudo || '').trim();
-    if (!q) return null;
-    return db.prepare(`SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`).get(q);
-  }
-
-  function botPlayerByDiscord(discordId) {
-    const id = String(discordId || '').trim();
-    if (!id) return null;
-    return db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
-  }
-
-  function botRoleBadges(player) {
-    const badges = [];
-    if (Number(player?.is_perso) === 1) badges.push('PERSO');
-    if (Number(player?.is_vip_plus) === 1) badges.push('VIP+');
-    else if (Number(player?.is_vip) === 1) badges.push('VIP');
-    if (player?.role === 'admin') badges.push('ADMIN');
-    else if (player?.role === 'moderator') badges.push('MODO');
-    return badges.length ? badges.join(' / ') : 'Joueur';
-  }
-
-  function botRankText(elo) {
-    return getRank(Number(elo || 0))?.label || 'Non classe';
-  }
-
-  function botWinRate(player) {
-    const total = Number(player?.wins || 0) + Number(player?.losses || 0) + Number(player?.draws || 0);
-    return total ? `${Math.round((Number(player?.wins || 0) / total) * 100)}%` : '--';
-  }
-
-  function botProfileEmbed(player) {
-    const total = Number(player.wins || 0) + Number(player.losses || 0) + Number(player.draws || 0);
-    const follows = db.prepare(
-      'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
-    ).get(player.id, player.id);
-    const lastGame = db.prepare(`
-      SELECT id, move_count, elo_p1, elo_p2, player1_id, player2_id
-      FROM games
-      WHERE status='finished' AND (player1_id=? OR player2_id=?) AND player1_id != ? AND player2_id != ?
-      ORDER BY id DESC
-      LIMIT 1
-    `).get(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID);
-    const delta = lastGame
-      ? (Number(lastGame.player1_id) === Number(player.id) ? Number(lastGame.elo_p1 || 0) : Number(lastGame.elo_p2 || 0))
-      : null;
-    const memberDate = player.created_at ? new Date(player.created_at).toLocaleDateString('fr-FR') : '--';
-    const embed = new EmbedBuilder()
-      .setColor(player.color || '#ff2d55')
-      .setTitle(`${player.pseudo} - ${botFmt(player.elo)} ELO`)
-      .setURL(`${BOT_API}/profil?id=${player.id}`)
-      .setDescription(`Rang: **${botRankText(player.elo)}**\nBadges: **${botRoleBadges(player)}**\nCoins: **${botFmt(player.coins || 0)}**`)
-      .addFields(
-        { name: 'Stats', value: `Victoires: **${player.wins || 0}**\nDefaites: **${player.losses || 0}**\nNuls: **${player.draws || 0}**`, inline: true },
-        { name: 'Performance', value: `Parties: **${total}**\nWinrate: **${botWinRate(player)}**\nRang: **${botRankText(player.elo)}**`, inline: true },
-        { name: 'Social', value: `Suivis: **${follows?.following || 0}**\nAbonnes: **${follows?.followers || 0}**\nMembre: **${memberDate}**`, inline: true },
-        { name: 'Derniere partie', value: lastGame ? `#${lastGame.id} / ${delta >= 0 ? '+' : ''}${delta} ELO / ${lastGame.move_count || 0} coups` : 'Aucune partie recente', inline: false },
-      )
-      .setFooter({ text: `ID ${player.id} - Puissance 4 Ranked` });
-    if (/^https?:\/\//i.test(String(player.avatar || ''))) embed.setThumbnail(player.avatar);
-    if (/^https?:\/\//i.test(String(player.banner || ''))) embed.setImage(player.banner);
-    return embed;
-  }
-
-  function botLinkRow(player) {
-    return new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setLabel('Voir profil').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/profil?id=${player.id}`),
-      new ButtonBuilder().setLabel('Boutique').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/boutique`),
-      new ButtonBuilder().setLabel('Live').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/live`)
-    );
-  }
-
-  function botCommandDefinitions() {
-    return [
-      { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
-      { name: 'classement', description: 'Afficher le top ELO Puissance 4' },
-      { name: 'stats', description: 'Afficher les statistiques du site' },
-      { name: 'live', description: 'Afficher les parties en direct' },
-      { name: 'boutique', description: 'Afficher la boutique Puissance 4' },
-      { name: 'api', description: 'Afficher la documentation API officielle du site' },
-      { name: 'systeme', description: 'Afficher l etat serveur public' },
-      { name: 'boosts', description: 'Afficher les boosts ELO, coins et VIP actifs' },
-      { name: 'cosmetiques', description: 'Lister les bibliotheques publiques de cosmetiques', options: [{ type: 3, name: 'type', description: 'Type de bibliotheque', required: true, choices: [{ name: 'decorations', value: 'decorations' }, { name: 'bannieres', value: 'banners' }, { name: 'musiques', value: 'musics' }] }] },
-      { name: 'leaderboard', description: 'Afficher un classement officiel', options: [{ type: 3, name: 'type', description: 'Type de classement', required: false, choices: [{ name: 'elo', value: 'elo' }, { name: 'victoires', value: 'wins' }] }] },
-      { name: 'replay', description: 'Afficher le resume d une partie', options: [{ type: 4, name: 'id', description: 'ID de partie', required: true }] },
-      { name: 'duel-lien', description: 'Generer un lien de duel officiel', options: [{ type: 3, name: 'type', description: 'Type de duel', required: true, choices: [{ name: 'ranked', value: 'ranked' }, { name: 'amical', value: 'friendly' }] }] },
-      { name: 'tournois', description: 'Lister les tournois officiels' },
-      { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne du tournoi', required: true }] },
-      { name: 'aide', description: 'Afficher les commandes Discord disponibles' },
-      {
-        name: 'admin',
-        description: 'Commandes staff Puissance 4',
-        options: [
-          {
-            type: 3,
-            name: 'action',
-            description: 'Action a executer',
-            required: true,
-            choices: [
-              { name: 'stats', value: 'stats' },
-              { name: 'player', value: 'player' },
-              { name: 'mute', value: 'mute' },
-              { name: 'unmute', value: 'unmute' },
-              { name: 'ban', value: 'ban' },
-              { name: 'unban', value: 'unban' },
-              { name: 'coins', value: 'coins' },
-              { name: 'elo', value: 'elo' },
-              { name: 'boost-elo', value: 'boost-elo' },
-              { name: 'boost-coins', value: 'boost-coins' },
-              { name: 'give-item', value: 'give-item' },
-              { name: 'tournoi-finish', value: 'tournoi-finish' },
-              { name: 'tournoi-pause', value: 'tournoi-pause' },
-              { name: 'tournoi-resume', value: 'tournoi-resume' },
-              { name: 'tournoi-delete', value: 'tournoi-delete' },
-              { name: 'backups', value: 'backups' },
-              { name: 'maintenance-on', value: 'maintenance-on' },
-              { name: 'maintenance-off', value: 'maintenance-off' },
-              { name: 'reload', value: 'reload' },
-            ],
-          },
-          { type: 3, name: 'password', description: 'Mot de passe admin', required: true },
-          { type: 3, name: 'pseudo', description: 'Joueur cible si besoin', required: false, autocomplete: true },
-          { type: 3, name: 'id', description: 'ID de tournoi, partie ou ressource si besoin', required: false },
-          { type: 3, name: 'item', description: 'Item boutique si besoin', required: false, choices: Object.values(SHOP_ITEMS).map(item => ({ name: item.label.slice(0, 100), value: item.key })).slice(0, 25) },
-          { type: 10, name: 'valeur', description: 'Nombre, minutes, ELO, coins ou multiplicateur', required: false },
-          { type: 3, name: 'raison', description: 'Raison ou duree minutes pour boost coins', required: false },
-        ],
-      },
-    ];
-  }
-
-  async function botRegisterCommands() {
-    const rest = new REST({ version: '10' }).setToken(botToken);
-    const route = DISCORD_GUILD ? Routes.applicationGuildCommands(bot.user.id, DISCORD_GUILD) : Routes.applicationCommands(bot.user.id);
-    await rest.put(route, { body: botCommandDefinitions() });
-  }
-
-  async function botAutocomplete(interaction) {
-    const focused = interaction.options.getFocused(true);
-    if (focused.name !== 'pseudo') return interaction.respond([]);
-    const query = String(focused.value || '').replace(/[%_]/g, '').trim();
-    const rows = db.prepare(`
-      SELECT pseudo, elo
-      FROM players
-      WHERE deleted=0 AND id != ? AND pseudo LIKE ?
-      ORDER BY elo DESC
-      LIMIT 25
-    `).all(BOT_PLAYER_ID, `${query}%`);
-    return interaction.respond(rows.map(p => ({ name: `${p.pseudo} - ${p.elo} ELO`.slice(0, 100), value: p.pseudo })));
-  }
-
-  async function botRequireStaff(interaction, password, minimum = 'moderator') {
-    if (String(password || '') !== String(ADMIN_PASSWORD || '')) {
-      await interaction.editReply({ content: 'Mot de passe admin invalide.' });
-      return null;
-    }
-    const role = await getDiscordRole(interaction.user.id, botToken).catch(() => 'user');
-    const ok = minimum === 'admin' ? role === 'admin' : ['admin', 'moderator'].includes(role);
-    if (!ok) {
-      await interaction.editReply({ content: 'Role Discord insuffisant pour cette commande.' });
-      return null;
-    }
-    return role;
-  }
-
-  function botStatsEmbed() {
-    const presence = getPresenceCounts();
-    const activeGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
-    const finishedGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='finished'`).get()?.c || 0);
-    const registered = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-    const vip = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND (is_vip=1 OR is_vip_plus=1 OR is_perso=1)`).get()?.c || 0);
-    const coins = Number(db.prepare(`SELECT COALESCE(SUM(coins),0) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-    const boost = bQ.getActive.get(Date.now());
-    const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
-    const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
-    const coinBoostActive = coinBoostMultiplier > 1 && coinBoostExpiresAt > Date.now();
-    return new EmbedBuilder()
-      .setColor('#85ebff')
-      .setTitle('Stats Puissance 4')
-      .setURL(`${BOT_API}/stats`)
-      .addFields(
-        { name: 'Presence', value: `Connectes: **${presence.onlinePlayers}**\nVisiteurs: **${presence.visitors}**\nTotal: **${presence.totalPresent}**`, inline: true },
-        { name: 'Parties', value: `En cours: **${activeGames}**\nTerminees: **${finishedGames}**`, inline: true },
-        { name: 'Economie', value: `Joueurs: **${registered}**\nPremium: **${vip}**\nCoins: **${botFmt(coins)}**`, inline: true },
-        { name: 'Boosts', value: `ELO: **x${boost?.multiplier || 1}**\nCoins: **x${coinBoostActive ? coinBoostMultiplier : 1}**`, inline: false },
-      );
-  }
-
-  function botBoostsEmbed() {
-    const activeBoost = bQ.getActive.get(Date.now());
-    const coinBoostMultiplier = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_multiplier'`).get()?.value || 1);
-    const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key='coin_boost_expires_at'`).get()?.value || 0);
-    const coinBoostBy = getBoostDisplayName(db.prepare(`SELECT value FROM config WHERE key='coin_boost_applied_by'`).get()?.value || '');
-    const coinActive = coinBoostMultiplier > 1 && coinBoostExpiresAt > Date.now();
-    const vipActive = Number(db.prepare(`SELECT COUNT(*) AS c FROM vip_boosts WHERE active=1 AND expires_at > ?`).get(Date.now())?.c || 0);
-    return new EmbedBuilder()
-      .setColor('#ffd60a')
-      .setTitle('Boosts officiels')
-      .setURL(`${BOT_API}/stats`)
-      .addFields(
-        { name: 'Boost ELO global', value: activeBoost ? `x${activeBoost.multiplier} par ${getBoostDisplayName(activeBoost.applied_by)}` : 'Aucun boost actif', inline: false },
-        { name: 'Boost coins global', value: coinActive ? `x${coinBoostMultiplier} par ${coinBoostBy}\nExpire dans ${Math.ceil((coinBoostExpiresAt - Date.now()) / 60000)} min` : 'Aucun boost actif', inline: false },
-        { name: 'Boosts premium individuels', value: `${vipActive} actif${vipActive > 1 ? 's' : ''}`, inline: false },
-      );
-  }
-
-  function botSystemEmbed() {
-    const status = readSystemStatus();
-    const presence = getPresenceCounts();
-    return new EmbedBuilder()
-      .setColor(status.restarting ? '#ff9f0a' : '#30d158')
-      .setTitle('Etat serveur')
-      .setURL(`${BOT_API}/api-doc`)
-      .addFields(
-        { name: 'Serveur', value: status.restarting ? 'Maintenance / redemarrage annonce' : 'Operationnel', inline: true },
-        { name: 'Message', value: status.message || '-', inline: true },
-        { name: 'Presence', value: `${presence.onlinePlayers} joueurs / ${presence.visitors} visiteurs`, inline: false },
-      );
-  }
-
-  function botReplayEmbed(gameId) {
-    const game = gQ.getById.get(Number(gameId));
-    if (!game) return null;
-    const moves = mQ.getByGame.all(Number(gameId));
-    const winner = game.winner_pseudo || (game.winner_id ? `Joueur #${game.winner_id}` : 'Nul');
-    const p1Delta = Number(game.elo_p1 || 0);
-    const p2Delta = Number(game.elo_p2 || 0);
-    return new EmbedBuilder()
-      .setColor('#8b9cf4')
-      .setTitle(`Replay #${game.id}`)
-      .setURL(`${BOT_API}/replay/${game.id}`)
-      .addFields(
-        { name: 'Joueur 1', value: `**${game.p1_pseudo || game.player1_id}**\n${p1Delta >= 0 ? '+' : ''}${p1Delta} ELO`, inline: true },
-        { name: 'Joueur 2', value: `**${game.p2_pseudo || game.player2_id}**\n${p2Delta >= 0 ? '+' : ''}${p2Delta} ELO`, inline: true },
-        { name: 'Resultat', value: winner, inline: true },
-        { name: 'Partie', value: `${moves.length || game.move_count || 0} coups / ${game.duration || 0}s / ${game.status || 'inconnu'}`, inline: false },
-      );
-  }
-
-  function botTournamentListEmbed() {
-    finalizeExpiredTournaments();
-    const rows = tQ.listAll.all().slice(0, 8);
-    const lines = rows.map(t => {
-      const starts = Number(t.starts_at || 0) > Date.now()
-        ? `commence dans ${Math.ceil((Number(t.starts_at) - Date.now()) / 60000)} min`
-        : String(t.status || 'actif');
-      return `**${t.name}** (${t.public_id || t.id}) - ${t.participants || 0} joueurs - ${starts}`;
-    });
-    return new EmbedBuilder()
-      .setColor('#85ebff')
-      .setTitle('Tournois officiels')
-      .setURL(`${BOT_API}/tournoi`)
-      .setDescription(lines.join('\n') || 'Aucun tournoi disponible.');
-  }
-
-  function botTournamentEmbed(ref) {
-    finalizeExpiredTournaments();
-    const tournament = findTournamentByRef(ref);
-    if (!tournament) return null;
-    const standings = tQ.standings.all(Number(tournament.id)).slice(0, 5);
-    const top = standings.map((entry, index) => `#${index + 1} **${entry.pseudo}** - ${entry.score || 0} pts (${entry.wins || 0}V)`).join('\n') || 'Aucun participant.';
-    return new EmbedBuilder()
-      .setColor('#85ebff')
-      .setTitle(tournament.name)
-      .setURL(`${BOT_API}/tournoi/${tournament.public_id || tournament.id}`)
-      .addFields(
-        { name: 'ID', value: String(tournament.public_id || tournament.id), inline: true },
-        { name: 'Statut', value: String(tournament.status || '-'), inline: true },
-        { name: 'Cadence', value: `${tournament.duration_minutes || 0} min / ${tournament.move_time_seconds || 0}s par coup`, inline: true },
-        { name: 'Recompenses', value: `1er: ${tournament.reward_1 || 0} coins\n2e: ${tournament.reward_2 || 0} coins\n3e: ${tournament.reward_3 || 0} coins`, inline: true },
-        { name: 'Top actuel', value: top, inline: false },
-      );
-  }
-
-  function botCosmeticsEmbed(type) {
-    const paths = type === 'decorations'
-      ? getAvatarDecorationPaths()
-      : type === 'banners'
-        ? getProfileBannerPaths()
-        : getQueueMusicPaths().map(music => `${music.themeLabel} - ${music.label}`);
-    const files = paths.slice(0, 12);
-    const title = type === 'decorations' ? 'Decorations avatar' : type === 'banners' ? 'Bannieres pseudo' : 'Musiques de file';
-    return new EmbedBuilder()
-      .setColor(type === 'musics' ? '#ff9f0a' : '#85ebff')
-      .setTitle(title)
-      .setURL(`${BOT_API}/profil`)
-      .setDescription(files.length ? files.map(file => `- ${file}`).join('\n') : 'Aucun fichier trouve.')
-      .setFooter({ text: `${files.length} affiche(s), catalogue complet cote site` });
-  }
-
-  async function botHandleAdmin(interaction) {
-    const action = interaction.options.getString('action', true);
-    const password = interaction.options.getString('password', true);
-    const pseudo = interaction.options.getString('pseudo');
-    const value = interaction.options.getNumber('valeur');
-    const reason = interaction.options.getString('raison') || '';
-    const resourceId = interaction.options.getString('id');
-    const itemKey = interaction.options.getString('item');
-    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'reload'];
-    const role = await botRequireStaff(interaction, password, adminOnly.includes(action) ? 'admin' : 'moderator');
-    if (!role) return;
-
-    if (action === 'reload') {
-      await botRegisterCommands();
-      WH.wlogAdminAction('Discord reload', interaction.user.tag || interaction.user.id, 'discord', [['Role', role, true]]);
-      return interaction.editReply({ content: 'Commandes Discord rechargees.' });
-    }
-    if (action === 'stats') return interaction.editReply({ embeds: [botStatsEmbed()] });
-    if (action === 'backups') {
-      const files = [
-        ['main', 'Base principale p4.db'],
-        ['wal', 'Journal p4.db-wal'],
-        ['shm', 'Memoire partagee p4.db-shm'],
-      ];
-      return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#ff9f0a').setTitle('Backups disponibles').setDescription(files.map(([key, label]) => `\`${key}\` - ${label}`).join('\n')).setFooter({ text: 'Telechargement depuis le panel admin uniquement.' })] });
-    }
-    if (action === 'maintenance-on' || action === 'maintenance-off') {
-      const status = writeSystemStatus({ restarting: action === 'maintenance-on', message: action === 'maintenance-on' ? (reason || 'Redemarrage ou maintenance en cours.') : '' });
-      io.emit('system_status_update', status);
-      WH.wlogSystem(action === 'maintenance-on' ? 'maintenance' : 'normal', status.message);
-      return interaction.editReply({ content: action === 'maintenance-on' ? 'Maintenance activee.' : 'Maintenance desactivee.' });
-    }
-    if (action === 'boost-elo') {
-      const multiplier = Math.max(1, Math.min(2, Number(value || 1)));
-      bQ.deactivateAll.run();
-      if (multiplier > 1) bQ.create.run({ multiplier, applied_by: 'Puissance4-Booster', expires_at: 0 });
-      WH.wlogBoost('elo', multiplier, 'Puissance4-Booster', 'global');
-      return interaction.editReply({ content: `Boost ELO regle sur x${multiplier}.` });
-    }
-    if (action === 'boost-coins') {
-      const multiplier = Math.max(1, Math.min(10, Math.ceil(Number(value || 1))));
-      const minutes = Math.max(0, Math.min(1440, Math.ceil(Number(reason || 60))));
-      const expiresAt = multiplier > 1 && minutes > 0 ? Date.now() + minutes * 60 * 1000 : 0;
-      db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
-      db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_expires_at', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(expiresAt));
-      db.prepare(`INSERT INTO config (key, value) VALUES ('coin_boost_applied_by', 'Puissance4-Booster') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
-      WH.wlogBoost('coins', multiplier, 'Puissance4-Booster', expiresAt ? `${minutes} min` : 'desactive');
-      return interaction.editReply({ content: expiresAt ? `Boost coins active: x${multiplier} pendant ${minutes} min.` : 'Boost coins desactive.' });
-    }
-
-    if (action.startsWith('tournoi-')) {
-      const tournament = findTournamentByRef(resourceId || '');
-      if (!tournament) return interaction.editReply({ content: 'Tournoi introuvable.' });
-      const id = Number(tournament.id);
-      if (action === 'tournoi-finish') {
-        const result = finalizeTournament(id, Date.now());
-        if (!result) return interaction.editReply({ content: 'Tournoi deja termine ou introuvable.' });
-        clearTournamentQueue(id);
-      } else if (action === 'tournoi-pause') {
-        if (tournament.status !== 'active') return interaction.editReply({ content: 'Tournoi non actif.' });
-        tQ.markPaused.run({ id, paused_at: Date.now() });
-        clearTournamentQueue(id);
-      } else if (action === 'tournoi-resume') {
-        if (tournament.status !== 'paused') return interaction.editReply({ content: 'Tournoi non en pause.' });
-        const pausedAt = Number(tournament.paused_at || 0);
-        const delta = pausedAt > 0 ? Math.max(0, Date.now() - pausedAt) : 0;
-        tQ.resumePaused.run({ id, ends_at: Number(tournament.ends_at || 0) + delta });
-      } else if (action === 'tournoi-delete') {
-        db.prepare(`DELETE FROM tournaments WHERE id = ?`).run(id);
-        tournamentQueues.delete(id);
-      }
-      WH.wlogTournament(tournament.name, tournament.public_id || id, action);
-      return interaction.editReply({ content: `Action ${action} appliquee sur ${tournament.name}.` });
-    }
-
-    const target = botPlayerByPseudo(pseudo);
-    if (!target) return interaction.editReply({ content: 'Joueur introuvable.' });
-    if (action === 'player') return interaction.editReply({ embeds: [botProfileEmbed(target)], components: [botLinkRow(target)] });
-    if (action === 'mute') {
-      const minutes = Math.max(1, Math.min(1440, Math.ceil(Number(value || 60))));
-      pQ.setMute.run({ until: Date.now() + minutes * 60 * 1000, id: target.id });
-      WH.wlogMute(target.pseudo, target.id, minutes / 60);
-      return interaction.editReply({ content: `${target.pseudo} mute pendant ${minutes} min.` });
-    }
-    if (action === 'unmute') {
-      pQ.setMute.run({ until: 0, id: target.id });
-      WH.wlogMute(target.pseudo, target.id, 0);
-      return interaction.editReply({ content: `${target.pseudo} unmute.` });
-    }
-    if (action === 'ban' || action === 'unban') {
-      const banned = action === 'ban' ? 1 : 0;
-      pQ.setBanned.run({ banned, id: target.id });
-      WH.wlogBan(target.pseudo, target.id, banned);
-      return interaction.editReply({ content: banned ? `${target.pseudo} banni.` : `${target.pseudo} debanni.` });
-    }
-    if (action === 'coins') {
-      const delta = Math.trunc(Number(value || 0));
-      const nextCoins = Math.max(0, Number(target.coins || 0) + delta);
-      pQ.updateCoins.run({ coins: nextCoins, id: target.id });
-      WH.wlogCoins(target.pseudo, target.id, delta, reason || 'Commande Discord admin');
-      return interaction.editReply({ content: `${target.pseudo}: ${botFmt(nextCoins)} coins (${delta >= 0 ? '+' : ''}${delta}).` });
-    }
-    if (action === 'give-item') {
-      const item = SHOP_ITEMS[itemKey];
-      if (!item) return interaction.editReply({ content: 'Item boutique invalide.' });
-      const quantity = Math.max(1, Math.min(99, Math.trunc(Number(value || 1))));
-      shopItemQ.addQty.run({ player_id: target.id, item_key: item.key, quantity });
-      WH.wlogAdminAction('Item boutique Discord', target.pseudo, target.id, [['Item', item.label, true], ['Quantite', quantity, true]]);
-      return interaction.editReply({ content: `${target.pseudo} recoit ${quantity} x ${item.label}.` });
-    }
-    if (action === 'elo') {
-      const delta = Math.trunc(Number(value || 0));
-      const nextElo = Math.max(0, Number(target.elo || 0) + delta);
-      db.prepare(`UPDATE players SET elo=? WHERE id=?`).run(nextElo, target.id);
-      WH.wlogAdminAction('ELO Discord', target.pseudo, target.id, [['Delta', delta, true], ['Nouveau', nextElo, true]]);
-      return interaction.editReply({ content: `${target.pseudo}: ${nextElo} ELO (${delta >= 0 ? '+' : ''}${delta}).` });
-    }
-    return interaction.editReply({ content: 'Action inconnue.' });
-  }
-
-  function botUpdateStatus() {
-    try {
-      const presence = getPresenceCounts();
-      const activeGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
-      const queueCount = Number(mm?.queue?.length || mm?.q?.length || 0);
-      const registered = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted=0 AND is_guest=0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-      const statuses = [
-        { text: `${presence.totalPresent} presents sur le site`, type: ActivityType.Watching },
-        { text: `${activeGames} parties en direct`, type: ActivityType.Watching },
-        { text: `${queueCount} joueurs en file`, type: ActivityType.Competing },
-        { text: `${registered} comptes inscrits`, type: ActivityType.Watching },
-      ];
-      const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
-      bot.user.setActivity(status.text, { type: status.type });
-    } catch (e) {}
-  }
-
-  bot.once('clientReady', async () => {
-    console.log(`[BOT] Bot connecte : ${bot.user.tag}`);
-    try {
-      await botRegisterCommands();
-      console.log('[BOT] Commandes slash enregistrees');
-    } catch (e) {
-      console.error('[BOT] Register commands:', e.message);
-    }
-    botUpdateStatus();
-    setInterval(botUpdateStatus, 10000);
-  });
-
-  bot.on('interactionCreate', async interaction => {
-    try {
-      if (interaction.isAutocomplete()) return botAutocomplete(interaction);
-      if (!interaction.isChatInputCommand()) return;
-      const isAdminCommand = interaction.commandName === 'admin';
-      await interaction.deferReply({ ephemeral: isAdminCommand });
-
-      if (interaction.commandName === 'profil') {
-        const player = botPlayerByPseudo(interaction.options.getString('pseudo', true));
-        if (!player) return interaction.editReply({ content: 'Joueur introuvable.' });
-        return interaction.editReply({ embeds: [botProfileEmbed(player)], components: [botLinkRow(player)] });
-      }
-      if (interaction.commandName === 'classement') {
-        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
-        const lines = players.map((p, i) => `#${i + 1} **${p.pseudo}** - ${botFmt(p.elo)} ELO - ${botRankText(p.elo)}`);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#ffd60a').setTitle('Classement Puissance 4').setURL(`${BOT_API}/leaderboard`).setDescription(lines.join('\n') || 'Aucun joueur classe.')] });
-      }
-      if (interaction.commandName === 'stats') return interaction.editReply({ embeds: [botStatsEmbed()] });
-      if (interaction.commandName === 'api') {
-        return interaction.editReply({
-          embeds: [new EmbedBuilder().setColor('#85ebff').setTitle('API officielle Puissance 4').setURL(`${BOT_API}/api-doc`).setDescription('Documentation HTTP, endpoints admin, boutique, duels, tournois, stats et Socket.IO.')],
-          components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ouvrir la doc API').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/api-doc`))],
-        });
-      }
-      if (interaction.commandName === 'systeme') return interaction.editReply({ embeds: [botSystemEmbed()] });
-      if (interaction.commandName === 'boosts') return interaction.editReply({ embeds: [botBoostsEmbed()] });
-      if (interaction.commandName === 'cosmetiques') return interaction.editReply({ embeds: [botCosmeticsEmbed(interaction.options.getString('type', true))] });
-      if (interaction.commandName === 'leaderboard') {
-        const type = interaction.options.getString('type') || 'elo';
-        const players = type === 'wins'
-          ? db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY wins DESC, elo DESC LIMIT 10`).all()
-          : db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
-        const lines = players.map((p, i) => `#${i + 1} **${p.pseudo}** - ${type === 'wins' ? `${p.wins || 0} victoires` : `${botFmt(p.elo)} ELO`}`);
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor(type === 'wins' ? '#30d158' : '#ffd60a').setTitle(type === 'wins' ? 'Classement victoires' : 'Classement ELO').setURL(`${BOT_API}/leaderboard`).setDescription(lines.join('\n') || 'Aucun joueur classe.')] });
-      }
-      if (interaction.commandName === 'replay') {
-        const embed = botReplayEmbed(interaction.options.getInteger('id', true));
-        if (!embed) return interaction.editReply({ content: 'Partie introuvable.' });
-        return interaction.editReply({ embeds: [embed], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Voir le replay').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/replay/${interaction.options.getInteger('id', true)}`))] });
-      }
-      if (interaction.commandName === 'duel-lien') {
-        const player = botPlayerByDiscord(interaction.user.id);
-        if (!player) return interaction.editReply({ content: 'Ton compte Discord doit etre lie a un profil Puissance 4 pour generer un lien de duel.' });
-        const gameType = interaction.options.getString('type', true) === 'friendly' ? 'friendly' : 'ranked';
-        const challenge = createDuelChallenge({ senderId: player.id, mode: 'link', ttlMs: 15 * 60 * 1000, gameType });
-        const shareUrl = `${BOT_API}/duel/${challenge.id}`;
-        WH.wlogDuel(player.pseudo, 'Lien public', gameType);
-        return interaction.editReply({
-          embeds: [new EmbedBuilder().setColor(gameType === 'friendly' ? '#85ebff' : '#ffd60a').setTitle('Lien de duel cree').setDescription(`Type: **${gameType === 'friendly' ? 'Amical' : 'Ranked'}**\nExpire dans **15 minutes**.`).setURL(shareUrl)],
-          components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ouvrir le duel').setStyle(ButtonStyle.Link).setURL(shareUrl))],
-        });
-      }
-      if (interaction.commandName === 'tournois') return interaction.editReply({ embeds: [botTournamentListEmbed()], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Page tournois').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/tournoi`))] });
-      if (interaction.commandName === 'tournoi') {
-        const embed = botTournamentEmbed(interaction.options.getString('id', true));
-        if (!embed) return interaction.editReply({ content: 'Tournoi introuvable.' });
-        return interaction.editReply({ embeds: [embed] });
-      }
-      if (interaction.commandName === 'live') {
-        const active = [...(gm.games || new Map()).values()].filter(game => game.status === 'active');
-        const lines = active.slice(0, 10).map(game => {
-          const p1 = game.players?.[1];
-          const p2 = game.players?.[2];
-          if (!p1 || !p2) return null;
-          const current = game.current === 1 ? p1.pseudo : p2.pseudo;
-          return `#${game.id || '?'} **${p1.pseudo}** vs **${p2.pseudo}** - tour de **${current}**`;
-        }).filter(Boolean);
-        return interaction.editReply({
-          embeds: [new EmbedBuilder().setColor('#ff2d55').setTitle(`${active.length} partie${active.length > 1 ? 's' : ''} en direct`).setURL(`${BOT_API}/live`).setDescription(lines.join('\n') || 'Aucune partie en direct.')],
-          components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Voir le live').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/live`))],
-        });
-      }
-      if (interaction.commandName === 'boutique') {
-        return interaction.editReply({
-          embeds: [new EmbedBuilder().setColor('#ff9f0a').setTitle('Boutique Puissance 4').setURL(`${BOT_API}/boutique`).setDescription('Rangs premium, boosters ELO, boosters coins et cosmetiques sont disponibles avec les coins du site.')],
-          components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel('Ouvrir la boutique').setStyle(ButtonStyle.Link).setURL(`${BOT_API}/boutique`))],
-        });
-      }
-      if (interaction.commandName === 'aide') {
-        return interaction.editReply({ embeds: [new EmbedBuilder().setColor('#85ebff').setTitle('Commandes Puissance 4').setDescription([
-          '`/profil pseudo` - profil complet',
-          '`/classement` - top ELO',
-          '`/stats` - stats du site',
-          '`/api` - documentation API officielle',
-          '`/systeme` - etat serveur',
-          '`/boosts` - boosts actifs',
-          '`/leaderboard type` - classement ELO ou victoires',
-          '`/replay id` - resume replay',
-          '`/duel-lien type` - genere un lien duel 15 min',
-          '`/tournois` et `/tournoi id` - tournois',
-          '`/cosmetiques type` - decorations, bannieres, musiques',
-          '`/live` - parties en direct',
-          '`/boutique` - boutique coins',
-          '`/admin` - outils staff avec mot de passe + role Discord',
-        ].join('\n'))] });
-      }
-      if (interaction.commandName === 'admin') return botHandleAdmin(interaction);
-    } catch (e) {
-      console.error('[BOT ERROR]', e);
-      const payload = { content: 'Erreur bot Discord. Regarde les logs serveur pour le detail.' };
-      if (interaction.deferred || interaction.replied) return interaction.editReply(payload).catch(() => {});
-      return interaction.reply({ ...payload, ephemeral: true }).catch(() => {});
-    }
-  });
-
-  return bot.login(botToken).catch(e => console.error('[BOT] Login failed:', e.message));
-
-  // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Statuts rotatifs AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-  function updateStatus() {
-    try {
-      const onlineCount = Number(onlineSockets.size || 0);
-      const activeGames = Number(db.prepare(`SELECT COUNT(*) as c FROM games WHERE status='active'`).get()?.c || 0);
-      const queueCount = Number(mm?.q?.length || 0);
-      const statuses = [
-        { text: `${onlineCount} connecte${onlineCount > 1 ? 's' : ''}`, type: ActivityType.Watching },
-        { text: `${activeGames} partie${activeGames > 1 ? 's' : ''} en cours`, type: ActivityType.Playing },
-        { text: `${queueCount} en file`, type: ActivityType.Competing },
-      ];
-      const s = statuses[Math.floor(Date.now() / 10000) % statuses.length];
-      bot.user.setActivity(s.text, { type: s.type });
-    } catch(e) {}
-  }
-
-  // Cache des emojis de rang (chargAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA au dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmarrage)
-  const rankEmojiCache = {};
-
-  bot.once('clientReady', async () => {
-    console.log(`[BOT] Bot connecte : ${bot.user.tag}`);
-    updateStatus();
-    setInterval(updateStatus, 10000);
-
-    // Charger les emojis de rang depuis le guild
-    try {
-      const guild = await bot.guilds.fetch(DISCORD_GUILD);
-      const emojis = await guild.emojis.fetch();
-      const rankNames = ['Malachite','Quartz','Ambre','Jade','Saphir','Amethiste'];
-      emojis.forEach(e => {
-        const name = e.name; // ex: "Malachite_1", "Quartz_3"
-        const base = rankNames.find(r => name.startsWith(r));
-        if (base) rankEmojiCache[name] = `<:${name}:${e.id}>`;
-      });
-      console.log(`[BOT] ${Object.keys(rankEmojiCache).length} emojis de rang charges`);
-    } catch(e) {
-      console.error('[BOT] Emojis rang:', e.message);
-    }
-
-    console.log('[BOT] Commandes slash desactivees sur cette version');
-  });
-
-  // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Commandes slash AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-  const API = process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app';
-
-  function eloRank(elo) {
-    const r = getRank(elo);
-    const fallbacks = { Malachite:'AAA...AA...AAA', Quartz:'AAA...AAA', Ambre:'AAA...AA...AAA', Jade:'AAA...AAaAAA', Saphir:'AAA...AAaAAA', Amethyste:'AAA...AA...AAA' };
-    // Chercher l'emoji spAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcifique au niveau (ex: Quartz_3)
-    const key = r.key + '_' + (r.level || 1);
-    const emoji = rankEmojiCache[key] || fallbacks[r.key] || 'AAA...AA...AAA';
-    return { label: r.label, emoji, color: r.color, level: r.level, key: r.key };
-  }
-  function winRate(p) {
-    const t = (p.wins||0)+(p.losses||0)+(p.draws||0);
-    return t ? Math.round((p.wins/t)*100)+'%' : 'AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA';
-  }
-
-  // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA GAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAnAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAration avatar initiale (SVG AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA Buffer PNG via canvas si dispo) AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-  function generateAvatarSvg(initial, color) {
-    // SVG 128x128 avec cercle colorAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA + initiale blanche
-    const bg  = color || '#ff2d55';
-    const hex = bg.replace('#','');
-    const r   = parseInt(hex.slice(0,2),16);
-    const g   = parseInt(hex.slice(2,4),16);
-    const b   = parseInt(hex.slice(4,6),16);
-    // Couleur de fond lAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAgAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArement assombrie pour lisibilitAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
-    const dr  = Math.round(r*0.7), dg = Math.round(g*0.7), db = Math.round(b*0.7);
-    const dark = '#' + [dr,dg,db].map(v=>v.toString(16).padStart(2,'0')).join('');
-    return Buffer.from(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">` +
-      `<defs><radialGradient id="g" cx="40%" cy="35%"><stop offset="0%" stop-color="${bg}"/><stop offset="100%" stop-color="${dark}"/></radialGradient></defs>` +
-      `<circle cx="64" cy="64" r="64" fill="url(#g)"/>` +
-      `<text x="64" y="64" text-anchor="middle" dominant-baseline="central" font-family="Arial,sans-serif" font-size="56" font-weight="bold" fill="white" opacity="0.95">${initial}</text>` +
-      `</svg>`
-    );
-  }
-
-  async function getAvatarAttachment(data) {
-    const initial = (data.pseudo || '?')[0].toUpperCase();
-    const color   = data.color || '#ff2d55';
-
-    // Cas 1 : avatar URL HTTP directe
-    if (data.avatar && data.avatar.startsWith('http')) {
-      return { url: data.avatar, attachment: null };
-    }
-
-    // Cas 2 : avatar base64 (data:image/...;base64,...)
-    if (data.avatar && data.avatar.startsWith('data:')) {
-      try {
-        const matches = data.avatar.match(/^data:([^;]+);base64,(.+)$/);
-        if (matches) {
-          const mime   = matches[1]; // ex: image/jpeg
-          const b64    = matches[2];
-          const buf    = Buffer.from(b64, 'base64');
-          const ext    = mime.split('/')[1] || 'jpg';
-          return { url: null, attachment: { name: 'avatar.' + ext, buffer: buf } };
-        }
-      } catch(e) {
-        console.error('[BOT] avatar base64 parse error:', e.message);
-      }
-    }
-
-    // Cas 3 : pas d'avatar AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA gAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAnAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer initiale avec canvas ou SVG
-    try {
-      const { createCanvas } = require('canvas');
-      const size = 128;
-      const cv   = createCanvas(size, size);
-      const ctx  = cv.getContext('2d');
-      const grd  = ctx.createRadialGradient(size*0.4, size*0.35, 0, size/2, size/2, size/2);
-      grd.addColorStop(0, color);
-      const hex = color.replace('#','');
-      const dr  = Math.round(parseInt(hex.slice(0,2),16)*0.75).toString(16).padStart(2,'0');
-      const dg  = Math.round(parseInt(hex.slice(2,4),16)*0.75).toString(16).padStart(2,'0');
-      const db2 = Math.round(parseInt(hex.slice(4,6),16)*0.75).toString(16).padStart(2,'0');
-      grd.addColorStop(1, '#'+dr+dg+db2);
-      ctx.beginPath();
-      ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
-      ctx.fillStyle = grd;
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.font      = 'bold 56px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(initial, size/2, size/2);
-      return { url: null, attachment: { name: 'avatar.png', buffer: cv.toBuffer('image/png') } };
-    } catch(e) {
-      // Fallback SVG si canvas absent
-      const svgBuf = generateAvatarSvg(initial, color);
-      return { url: null, attachment: { name: 'avatar.svg', buffer: svgBuf } };
-    }
-  }
-
-  function roundRectBot(ctx, x, y, w, h, r) {
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
-  }
-
-  function hexToRgbaBot(hex, alpha) {
-    const safe = String(hex || '#ffffff').replace('#', '');
-    const full = safe.length === 3 ? safe.split('').map(c => c + c).join('') : safe.padEnd(6, 'f');
-    const r = parseInt(full.slice(0, 2), 16);
-    const g = parseInt(full.slice(2, 4), 16);
-    const b = parseInt(full.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  async function loadImageSafeBot(loadImage, src) {
-    try { return src ? await loadImage(src) : null; } catch { return null; }
-  }
-
-  async function generateProfileCardAttachment(data) {
-    try {
-      const { createCanvas, loadImage } = require('canvas');
-      ensureCanvasFonts();
-      const rank = data.rank || getRank(data.elo);
-      const canvas = createCanvas(1100, 680);
-      const ctx = canvas.getContext('2d');
-      const totalGames = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
-      const bg = await loadImageSafeBot(loadImage, 'https://i.pinimg.com/736x/40/65/a2/4065a24c58246a208cc7057db8b0286c.jpg');
-      const avatar = await loadImageSafeBot(loadImage, data.avatar && data.avatar.startsWith('http') ? data.avatar : null);
-      const rankImage = await loadImageSafeBot(loadImage, path.join(__dirname, 'public', rank.image.replace(/^\//, '')));
-      const latestGames = Array.isArray(data.latestGames) ? data.latestGames.slice(0, 3) : [];
-      const rawShape = data.shape || 'circle';
-      const shapeDisplay = rawShape.startsWith('emoji:')
-        ? (rawShape.slice(6).trim() || '●')
-        : ({ circle: '●', diamond: '◆', triangle: '▲', star: '★', heart: '♥' }[rawShape] || '●');
-      const shapeLabel = rawShape.startsWith('emoji:') ? 'emoji perso' : rawShape;
-      const colorHex = String(data.color || '#ff2d55').toUpperCase();
-
-      const fontHero = '400 64px "Bebas Neue"';
-      const fontSub = '700 24px "Barlow Condensed"';
-      const fontSmall = '600 18px "Barlow"';
-      const fontMeta = '400 17px "Barlow"';
-
-      const drawGlowText = (text, x, y, color, font, blur = 18, align = 'start') => {
-        ctx.save();
-        ctx.font = font;
-        ctx.textAlign = align;
-        ctx.fillStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = blur;
-        ctx.fillText(String(text || ''), x, y);
-        ctx.restore();
-      };
-
-      const drawPanel = (x, y, w, h, color, radius = 18, fillAlpha = 0.58) => {
-        ctx.save();
-        roundRectBot(ctx, x, y, w, h, radius);
-        ctx.fillStyle = `rgba(16,18,32,${fillAlpha})`;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = hexToRgbaBot(color, 0.98);
-        ctx.stroke();
-        ctx.restore();
-      };
-
-      const drawMiniLogo = (x, y, scale = 1) => {
-        const cols = 7;
-        const rows = 6;
-        const gap = 4 * scale;
-        const cell = 12 * scale;
-        const w = cols * cell + (cols - 1) * gap + 18 * scale;
-        const h = rows * cell + (rows - 1) * gap + 18 * scale;
-        drawPanel(x, y, w, h, '#6edbff', 16 * scale, 0.72);
-        const pieces = new Map([
-          ['2:3', '#ff4d6d'],
-          ['3:2', '#ff4d6d'],
-          ['3:3', '#ffd44d'],
-          ['4:3', '#ff4d6d'],
-          ['2:2', '#ffd44d'],
-          ['4:2', '#ffd44d'],
-        ]);
-        for (let row = 0; row < rows; row++) {
-          for (let col = 0; col < cols; col++) {
-            const cx = x + 9 * scale + col * (cell + gap) + cell / 2;
-            const cy = y + 9 * scale + row * (cell + gap) + cell / 2;
-            ctx.beginPath();
-            ctx.arc(cx, cy, cell / 2, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.fillStyle = pieces.get(`${col}:${rows - 1 - row}`) || 'rgba(12,16,30,0.82)';
-            ctx.fill();
-            ctx.lineWidth = 1.5 * scale;
-            ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-            ctx.stroke();
-          }
-        }
-      };
-
-      if (bg) ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
-      else {
-        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        grad.addColorStop(0, '#170b2c');
-        grad.addColorStop(0.5, '#273372');
-        grad.addColorStop(1, '#090d1f');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      const overlay = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      overlay.addColorStop(0, 'rgba(7,9,22,0.22)');
-      overlay.addColorStop(1, 'rgba(7,9,22,0.78)');
-      ctx.fillStyle = overlay;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      drawMiniLogo(38, 30, 1.05);
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(110, 136, 62, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      if (avatar) {
-        ctx.drawImage(avatar, 48, 74, 124, 124);
-      } else {
-        ctx.fillStyle = hexToRgbaBot(data.color || '#ff2d55', 0.34);
-        ctx.fillRect(48, 74, 124, 124);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 52px "Barlow Condensed"';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText((data.pseudo || '?')[0].toUpperCase(), 110, 136);
-      }
-      ctx.restore();
-      ctx.textAlign = 'start';
-      ctx.textBaseline = 'alphabetic';
-      ctx.lineWidth = 5;
-      ctx.strokeStyle = hexToRgbaBot(data.color || '#ff2d55', 0.95);
-      ctx.beginPath();
-      ctx.arc(110, 136, 64, 0, Math.PI * 2);
-      ctx.stroke();
-
-      const badges = [];
-      if (data.is_vip_plus) badges.push('VIP+');
-      else if (data.is_vip) badges.push('VIP');
-      if (data.role === 'admin') badges.push('ADMIN');
-      else if (data.role === 'moderator') badges.push('MODO');
-      const badgeText = badges.length ? ` / ${badges.join(' / ')}` : '';
-
-      drawGlowText(data.pseudo || 'Joueur', 204, 118, '#f5f4ff', fontHero, 20);
-      ctx.fillStyle = '#ffe27a';
-      ctx.font = fontSub;
-      ctx.fillText(`${rank.label}${badgeText}`, 206, 162);
-      ctx.fillStyle = '#d7d5ef';
-      ctx.font = fontMeta;
-      ctx.fillText(`Suivis ${data.following || 0} / Abonnes ${data.followers || 0}`, 206, 196);
-
-      const infoX = 42;
-      const infoY = 244;
-      const infoLines = [
-        `Cosmetiques`,
-        `Forme`,
-      ];
-      drawGlowText('PROFIL', infoX, infoY, '#f5f4ff', '400 30px "Bebas Neue"', 12);
-      ctx.fillStyle = '#d7d5ef';
-      ctx.font = fontMeta;
-      infoLines.forEach((line, i) => ctx.fillText(line, infoX, infoY + 38 + i * 28));
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(infoX + 168, infoY + 52, 13, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.fillStyle = colorHex;
-      ctx.shadowColor = colorHex;
-      ctx.shadowBlur = 16;
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.font = '28px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#f5f4ff';
-      ctx.fillText(shapeDisplay, infoX + 92, infoY + 88);
-      ctx.restore();
-
-      const rankX = 744;
-      const rankY = 58;
-      const rankW = 302;
-      const rankH = 214;
-      ctx.save();
-      roundRectBot(ctx, rankX, rankY, rankW, rankH, 24);
-      ctx.fillStyle = 'rgba(18,20,34,0.62)';
-      ctx.shadowColor = rank.color || '#ffffff';
-      ctx.shadowBlur = 24;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
-      ctx.stroke();
-      ctx.restore();
-      drawGlowText('RANG', rankX + rankW / 2, rankY + 36, '#f5f4ff', '400 32px "Bebas Neue"', 14, 'center');
-      if (rankImage) ctx.drawImage(rankImage, rankX + 56, rankY + 60, 78, 78);
-      else {
-        ctx.save();
-        ctx.font = '700 40px "Barlow Condensed"';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#f5f4ff';
-        ctx.fillText('[]', rankX + 96, rankY + 120);
-        ctx.restore();
-      }
-      drawGlowText(rank.label, rankX + 148, rankY + 106, '#ffe27a', '400 38px "Bebas Neue"', 14);
-      ctx.fillStyle = '#d7d5ef';
-      ctx.font = fontSmall;
-      ctx.fillText(`${data.elo} ELO`, rankX + 148, rankY + 142);
-      ctx.fillText(`${rank.progress || 0}% de progression`, rankX + 82, rankY + 166);
-      roundRectBot(ctx, rankX + 52, rankY + 176, rankW - 104, 22, 11);
-      ctx.fillStyle = 'rgba(255,255,255,0.18)';
-      ctx.fill();
-      roundRectBot(ctx, rankX + 52, rankY + 176, Math.max(24, Math.round((rankW - 104) * ((rank.progress || 0) / 100))), 22, 11);
-      ctx.fillStyle = hexToRgbaBot(rank.color || '#ffffff', 0.98);
-      ctx.fill();
-      ctx.fillStyle = '#f5f4ff';
-      ctx.font = '600 18px "Barlow"';
-      ctx.fillText(rank.next ? `Prochain palier : ${rank.next} ELO` : 'Rang maximum atteint', rankX + 54, rankY + 214);
-
-      const stats = [
-        { label: 'Victoires', value: String(data.wins || 0), color: '#9be15d' },
-        { label: 'Defaites', value: String(data.losses || 0), color: '#ff7aa2' },
-        { label: 'Nuls', value: String(data.draws || 0), color: '#8dd7ff' },
-        { label: 'Parties', value: String(totalGames), color: '#7cf0ff' },
-        { label: 'Win rate', value: data.winRate || '-', color: '#c38bff' },
-        { label: 'Precision', value: data.avg_accuracy != null ? String(data.avg_accuracy) : '-', color: '#33a1ff' },
-      ];
-      const statW = 304;
-      const statH = 96;
-      const startX = 42;
-      const statStartY = 352;
-      const gapX = 24;
-      const gapY = 24;
-      stats.forEach((stat, index) => {
-        const row = Math.floor(index / 3);
-        const col = index % 3;
-        const x = startX + col * (statW + gapX);
-        const y = statStartY + row * (statH + gapY);
-        drawPanel(x, y, statW, statH, stat.color);
-        drawGlowText(stat.label, x + statW / 2, y + 34, hexToRgbaBot(stat.color, 0.98), '400 28px "Bebas Neue"', 10, 'center');
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#f5f4ff';
-        ctx.font = '400 44px "Bebas Neue"';
-        ctx.fillText(stat.value, x + statW / 2, y + 78);
-        ctx.restore();
-      });
-
-      return new AttachmentBuilder(canvas.toBuffer('image/png'), { name: `profil-${data.id}.png` });
-    } catch (e) {
-      console.error('[BOT] generateProfileCardAttachment:', e.message);
-      return null;
-    }
-  }
-  bot.on('interactionCreate', async interaction => {
-    try {
-      if (typeof interaction.reply === 'function' && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'Les commandes Discord sont desactivees sur cette version.', ephemeral: true });
-      }
-    } catch (_) {}
-    return;
-    // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-    if (interaction.isAutocomplete() && interaction.commandName === 'profil') {
-      try {
-        const q = interaction.options.getFocused();
-        if (q.length < 2) return interaction.respond([]);
-        const rows = db.prepare(`
-          SELECT pseudo, elo FROM players
-          WHERE pseudo LIKE ? COLLATE NOCASE AND deleted = 0 AND id != ?
-          ORDER BY elo DESC LIMIT 10
-        `).all(q.replace(/%/g,'') + '%', BOT_PLAYER_ID);
-        await interaction.respond(rows.map(r => ({
-          name: `${r.pseudo} - ${r.elo} ELO`,
-          value: r.pseudo
-        })));
-      } catch(e) {
-        console.error('[BOT autocomplete]', e.message);
-        try { await interaction.respond([]); } catch(_) {}
-      }
-      return;
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-
-    // Defer visible pour tous sauf si ephemeral forcAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
-    try { await interaction.deferReply(); } catch(e) { return; }
-
-    try {
-      // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA /profil AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-      if (interaction.commandName === 'profil') {
-        const pseudo = interaction.options.getString('pseudo');
-        console.log(`[BOT /profil] recherche: "${pseudo}"`);
-
-        const data = db.prepare(
-          `SELECT * FROM players WHERE LOWER(pseudo)=LOWER(?) AND deleted=0`
-        ).get(pseudo);
-
-        if (!data) {
-          return interaction.editReply({ content: `Joueur **${pseudo}** introuvable.` });
-        }
-
-        console.log(`[BOT /profil] joueur trouve id=${data.id}`);
-
-        const games = gQ.getForPlayer.all(data.id, data.id, BOT_PLAYER_ID, BOT_PLAYER_ID).slice(0, 5);
-        const rank = eloRank(data.elo);
-        const total = (data.wins || 0) + (data.losses || 0) + (data.draws || 0);
-        const wr = total ? Math.round((data.wins / total) * 100) + '%' : '--';
-
-        const accRow = db.prepare(`
-          SELECT
-            AVG(CASE WHEN player1_id=? AND p1_accuracy IS NOT NULL THEN p1_accuracy END) AS as_p1,
-            AVG(CASE WHEN player2_id=? AND p2_accuracy IS NOT NULL THEN p2_accuracy END) AS as_p2
-          FROM games WHERE (player1_id=? OR player2_id=?) AND status='finished'
-        `).get(data.id, data.id, data.id, data.id);
-        const prec = (() => {
-          const vals = [accRow?.as_p1, accRow?.as_p2].filter(v => v != null);
-          return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) + '%' : '--';
-        })();
-
-        const di = (() => {
-          try { return data.discord_info ? JSON.parse(data.discord_info) : null; }
-          catch { return null; }
-        })();
-
-        const rankInfo = getRank(data.elo);
-        const followCounts = db.prepare(
-          'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
-        ).get(data.id, data.id);
-        const memberDate = data.created_at
-          ? new Date(data.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-          : '--';
-
-        const safe = value => {
-          const textValue = value == null ? '' : String(value).trim();
-          return textValue ? textValue : '--';
-        };
-
-        const menuRows = [];
-        if (games.length > 0) {
-          const options = games.slice(0, 25).map(g => {
-            const isP1 = g.player1_id === data.id;
-            const opp = safe(isP1 ? g.p2_pseudo : g.p1_pseudo);
-            const won = g.winner_id === data.id;
-            const draw = g.winner_id === null;
-            const icon = draw ? 'DRAW' : (won ? 'WIN' : 'LOSE');
-            const delta = isP1 ? (g.elo_p1 || 0) : (g.elo_p2 || 0);
-            const date = g.finished_at ? g.finished_at.slice(0, 10) : '--';
-            return new StringSelectMenuOptionBuilder()
-              .setLabel(`${icon} vs ${opp} / ${(delta >= 0 ? '+' : '') + delta} ELO`.slice(0, 100))
-              .setDescription(`${date} / ${g.move_count || 0} coups / ${g.duration || 0}s`.slice(0, 100))
-              .setValue('game:' + g.id);
-          });
-          const menu = new StringSelectMenuBuilder()
-            .setCustomId('prof_games:' + data.id)
-            .setPlaceholder('Voir le detail d une partie')
-            .addOptions(options);
-          menuRows.push(new ActionRowBuilder().addComponents(menu));
-        } else {
-          const emptyMenu = new StringSelectMenuBuilder()
-            .setCustomId('prof_games:' + data.id)
-            .setPlaceholder('Aucune partie')
-            .setDisabled(true)
-            .addOptions(
-              new StringSelectMenuOptionBuilder()
-                .setLabel('Aucune partie')
-                .setDescription('Ce joueur n a pas encore de partie enregistree.')
-                .setValue('none')
-            );
-          menuRows.push(new ActionRowBuilder().addComponents(emptyMenu));
-        }
-
-        const roleBadges = [];
-        if (Number(data.is_vip_plus) === 1) roleBadges.push('VIP+');
-        else if (Number(data.is_vip) === 1) roleBadges.push('VIP');
-        if (data.role === 'admin') roleBadges.push('ADMIN');
-        else if (data.role === 'moderator') roleBadges.push('MODO');
-
-        const profileEmbed = new EmbedBuilder()
-          .setColor(data.color || '#ff2d55')
-          .setTitle(`${rank.emoji} ${data.pseudo}`)
-          .setURL(`${API}/profil?id=${data.id}`)
-          .setDescription([
-            `**${data.elo} ELO**`,
-            `Rang : **${rankInfo.label}**`,
-            roleBadges.length ? `Badges : **${roleBadges.join(' / ')}**` : null,
-          ].filter(Boolean).join('\n'))
-          .setThumbnail(data.avatar || null)
-          .addFields(
-            { name: 'Statistiques', value: `Victoires: **${data.wins || 0}**\nDefaites: **${data.losses || 0}**\nNuls: **${data.draws || 0}**`, inline: true },
-            { name: 'Performance', value: `Parties: **${total}**\nWin rate: **${wr}**\nPrecision: **${prec}**`, inline: true },
-            { name: 'Profil', value: `Suivis: **${followCounts?.following || 0}**\nAbonnes: **${followCounts?.followers || 0}**\nMembre: **${memberDate}**`, inline: true },
-          )
-          .setFooter({ text: `ID ${data.id} • Puissance 4 Ranked` });
-
-        if (data.banner) profileEmbed.setImage(data.banner);
-
-        const buttonRow = new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setLabel('Voir profil')
-            .setStyle(ButtonStyle.Link)
-            .setURL(`${API}/profil?id=${data.id}`)
-        );
-
-        console.log(`[BOT /profil] embed OK pour ${data.pseudo}`);
-        return interaction.editReply({ embeds: [profileEmbed], components: [...menuRows, buttonRow] });
-      }
-      if (interaction.commandName === 'classement') {
-        const players = db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=0 ORDER BY elo DESC LIMIT 10`).all();
-        if (!players.length) return interaction.editReply({ content: 'Aucun joueur.' });
-        const medals = ['🥇', '🥈', '🥉'];
-        const lines  = players.map((p,i) => {
-          const r = eloRank(p.elo);
-          return `${medals[i]||`**#${i+1}**`} ${r.emoji} **${p.pseudo}** - ${p.elo} ELO - ${p.wins}V/${p.losses}D`;
-        });
-        const embed = new EmbedBuilder()
-          .setColor('#ffd60a')
-          .setTitle('Classement Puissance 4')
-          .setURL(`${API}/leaderboard`)
-          .setDescription(lines.join('\n'))
-          .setFooter({ text: 'Top 10 Puissance 4 Ranked' });
-        return interaction.editReply({ embeds: [embed] });
-      }
-
-      // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA /live AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-      if (interaction.commandName === 'live') {
-        const activeGames = [...(gm.games || new Map()).values()].filter(g => g.status === 'active');
-        if (!activeGames.length) return interaction.editReply({ content: 'Aucune partie en cours.' });
-        const lines = activeGames.map(g => {
-          const p1 = g.players?.[1], p2 = g.players?.[2];
-          if (!p1 || !p2) return null;
-          const cur = g.current === 1 ? p1.pseudo : p2.pseudo;
-          return `Partie: **${p1.pseudo}** (${p1.elo}) vs **${p2.pseudo}** (${p2.elo}) - ${g.moveCount||0} coups - Tour de **${cur}**`;
-        }).filter(Boolean);
-        const embed = new EmbedBuilder()
-          .setColor('#ff2d55')
-          .setTitle(`${activeGames.length} partie${activeGames.length>1?'s':''} en cours`)
-          .setURL(`${API}/live`)
-          .setDescription(lines.join('\n') || '--')
-          .setFooter({ text: 'Puissance 4 Ranked Live' });
-        return interaction.editReply({ embeds: [embed] });
-      }
-
-    // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA SelectMenu dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtail d'une partie AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('prof_games:')) {
-      await interaction.deferReply({ ephemeral: true });
-      try {
-        const val = interaction.values[0];
-        if (!val.startsWith('game:')) return interaction.editReply({ content: 'Valeur invalide.' });
-        const gameId = Number(val.split(':')[1]);
-        const game = gQ.getById.get(gameId);
-        if (!game) return interaction.editReply({ content: 'Partie introuvable.' });
-
-        const moves = mQ.getByGame.all(gameId);
-        const playerId = Number(interaction.customId.split(':')[1]);
-        const isP1  = game.player1_id === playerId;
-        const opp   = isP1 ? game.p2_pseudo : game.p1_pseudo;
-        const oppElo= isP1 ? game.p2_elo    : game.p1_elo;
-        const won   = game.winner_id === playerId;
-        const draw  = game.winner_id === null;
-        const icon  = draw ? '🤝' : (won ? '🏆' : '❌');
-        const delta = isP1 ? (game.elo_p1 || 0) : (game.elo_p2 || 0);
-        const myElo = isP1 ? game.p1_elo    : game.p2_elo;
-        const myRank= eloRank(myElo);
-        const oppRank=eloRank(oppElo);
-        const date  = game.finished_at
-          ? new Date(game.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
-          : '--';
-
-        const gameEmbed = new EmbedBuilder()
-          .setColor(isP1 ? (game.p1_color || '#ff2d55') : (game.p2_color || '#ffd60a'))
-          .setTitle(icon + ' Partie #' + gameId)
-          .setURL(API + '/replay/' + gameId)
-          .addFields(
-            { name: 'Adversaire', value: myRank.emoji + ' vs ' + oppRank.emoji + ' **' + (opp||'?') + '** (' + (oppElo||'?') + ' ELO)', inline: false },
-            { name: 'Delta ELO',  value: (delta >= 0 ? '+' : '') + delta + ' ELO', inline: true },
-            { name: 'Coups',      value: String(game.move_count || 0), inline: true },
-            { name: 'Duree',      value: (game.duration || 0) + 's', inline: true },
-            { name: 'Date',       value: date, inline: false },
-          );
-
-        // PrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision si analysAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe
-        const myAccuracy = isP1 ? game.p1_accuracy : game.p2_accuracy;
-        const oppAccuracy= isP1 ? game.p2_accuracy : game.p1_accuracy;
-        if (myAccuracy != null) {
-          gameEmbed.addFields(
-            { name: 'Ma precision', value: myAccuracy + '%', inline: true },
-            { name: 'Precision adverse', value: (oppAccuracy || '--') + (oppAccuracy ? '%' : ''), inline: true },
-          );
-        }
-
-        // Replay link button
-        const replayBtn = new ActionRowBuilder().addComponents(
-          new (require('discord.js').ButtonBuilder)()
-            .setLabel('Voir le replay')
-            .setURL(API + '/replay/' + gameId)
-            .setStyle(require('discord.js').ButtonStyle.Link)
-        );
-
-        return interaction.editReply({ embeds: [gameEmbed], components: [replayBtn] });
-      } catch(e) {
-        console.error('[BOT SelectMenu game]', e.message);
-        return interaction.editReply({ content: 'Erreur : ' + e.message });
-      }
-    }
-
-    } catch(e) {
-      // Log complet de l'erreur
-      console.error('[BOT ERROR]', e.constructor.name, e.message);
-      console.error(e.stack);
-      // Envoyer l'erreur en ephemeral pour debug
-      const errMsg = `**Erreur** : \`${e.constructor.name}: ${e.message}\``;
-      try {
-        if (interaction.deferred) await interaction.editReply({ content: errMsg });
-        else await interaction.reply({ content: errMsg, ephemeral: true });
-      } catch(_) {}
-    }
-  });
-
-  bot.login(botToken).catch(e => console.error('[BOT] Login failed:', e));
-}

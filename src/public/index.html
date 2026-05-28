@@ -4181,15 +4181,6 @@ async function createDuelLink() {
 //  SOCKET & QUEUE
 // ═══════════════════════════════════════════════════════════════════
 // ── Noms aléatoires pour le robot ────────────────────────────────────────────
-const BOT_NAMES = [
-  'GalaxBot','NéonRex','CirKuit','PlasmaZen','VortexOS',
-  'NovaByte','CryptoKid','OmégaDrift','SynthWave','TurboNul',
-  'ZéroMiss','ByteStorm','QuasarBot','GlitchMod','NeuroPix',
-  'PulseCore','DataWraith','XenonBot','CosmoNerd','ArcFlash',
-];
-function randomBotName() {
-  return BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + Math.floor(Math.random()*99+1);
-}
 function randomColor(excludeHex) {
   let h, tries = 0;
   do {
@@ -4794,10 +4785,6 @@ function startSiteStatsPolling() {
   siteStatsInterval = setInterval(refreshSiteStats, 30000);
 }
 
-function stopSiteStatsPolling() {
-  clearInterval(siteStatsInterval);
-  siteStatsInterval = null;
-}
 
 window.addEventListener('p4:presence-counts', (event) => {
   applySitePresenceCounts(event.detail || {});
