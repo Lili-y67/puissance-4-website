@@ -2,7 +2,7 @@
  * Central Discord webhook logger.
  * Never send private network data such as IP addresses to Discord.
  */
-
+/*
 const fs = require('fs');
 const path = require('path');
 
@@ -623,3 +623,4 @@ module.exports = {
     ], { subtitle: 'Alerte systeme', buttons: [linkButton('Ouvrir le site', BASE, EMOJI.warning)] })]);
   },
 };
+*/
