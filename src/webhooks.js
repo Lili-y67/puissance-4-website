@@ -12,7 +12,7 @@ const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN
 const MEMBER_THREAD_STORE = path.join(__dirname, '..', 'data', 'discord-member-forum-threads.json');
 const DISCORD_REQUEST_DELAY_MS = Number(process.env.DISCORD_REQUEST_DELAY_MS || 450);
 const WEBHOOKS = Object.freeze({
-  get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
+  //get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
   post: process.env.DISCORD_WEBHOOK_POST || 'https://discord.com/api/webhooks/1508532434008801351/EdesEHSTzRz5xlDEYpa9fRIHTBNrFuE1ch-lm9vNubPKqa8Nerch36lvqumJHmmKuWp5',
   games: process.env.DISCORD_WEBHOOK_GAMES || 'https://discord.com/api/webhooks/1508532437549060268/SKY1sUhOfMrXJHWSygRovS821KoRyBjpJu_yLzOJl1XaRSWcoIBNIfR82NJHlqiIwugy',
   global: process.env.DISCORD_WEBHOOK_GLOBAL || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
