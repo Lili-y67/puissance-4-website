@@ -369,7 +369,7 @@ function startDiscordBot(ctx) {
     return ctx.db.prepare(`SELECT * FROM players WHERE discord_id=? AND deleted=0`).get(id);
   }
 
-
+  
   const DISCORD_GEM_CHAR_THRESHOLD = 10_000;
   const DISCORD_GEM_REWARD = 10;
 
