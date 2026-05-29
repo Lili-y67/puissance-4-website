@@ -4443,6 +4443,7 @@ app.get('/api/live', (_, res) => {
       current: state.current,
       moves:   state.moveCount,
       gameType: state.gameType || 'ranked',
+      botGame: Number(state.players[1].is_bot || 0) === 1 || Number(state.players[2].is_bot || 0) === 1,
       botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
       winCells: Array.isArray(state.winCells) ? state.winCells : [],
     };

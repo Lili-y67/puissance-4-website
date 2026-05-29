@@ -42,10 +42,18 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
 .game-kind{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.18);color:#ffd60a;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .view{display:none}
 .view.show{display:block}
+.live-groups{display:flex;flex-direction:column;gap:22px}
+.live-group{display:flex;flex-direction:column;gap:12px}
+.live-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px}
+.live-group-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.live-group-title.bot{color:#85EBFF}
+.live-group-count{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
 .game-card{background:linear-gradient(180deg,rgba(18,18,38,.96),rgba(12,12,28,.96));border:1px solid var(--border);border-radius:18px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:border-color .2s,transform .2s,box-shadow .2s;animation:card-in .35s cubic-bezier(.22,1,.36,1) both}
 .game-card:hover{border-color:rgba(255,255,255,.12);transform:translateY(-2px);box-shadow:0 16px 36px rgba(0,0,0,.4)}
 .game-card.finished{border-color:rgba(255,214,10,.35);box-shadow:0 0 0 1px rgba(255,214,10,.08),0 18px 42px rgba(255,214,10,.08)}
+.game-card.bot-match{border-color:rgba(133,235,255,.22);background:linear-gradient(180deg,rgba(17,22,42,.96),rgba(10,13,28,.96));box-shadow:0 18px 42px rgba(0,0,0,.30),0 0 30px rgba(133,235,255,.05)}
+.game-card.bot-match:hover{border-color:rgba(133,235,255,.42);box-shadow:0 20px 48px rgba(0,0,0,.38),0 0 34px rgba(133,235,255,.10)}
 @keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .card-players{display:flex;align-items:center;gap:8px}
 .card-player{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
@@ -195,8 +203,23 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Ba
   </div>
 
   <div class="view show" id="list-view">
-    <div class="games-grid" id="games-grid">
-      <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
+    <div class="live-groups">
+      <section class="live-group">
+        <div class="live-group-head">
+          <div class="live-group-title">Parties joueurs</div>
+          <div class="live-group-count" id="human-live-count">0 active</div>
+        </div>
+        <div class="games-grid" id="games-grid">
+          <div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">Chargement...</div></div>
+        </div>
+      </section>
+      <section class="live-group">
+        <div class="live-group-head">
+          <div class="live-group-title bot">Parties bot</div>
+          <div class="live-group-count" id="bot-live-count">0 active</div>
+        </div>
+        <div class="games-grid" id="bot-games-grid"></div>
+      </section>
     </div>
   </div>
 
@@ -878,37 +901,29 @@ function renderBoardInto(board, game, large = true) {
 
 function renderList(games) {
   const container = document.getElementById('games-grid');
+  const botContainer = document.getElementById('bot-games-grid');
   const activeCount = games.filter(g => g.status === 'active').length;
+  const humanGames = games.filter(g => !g.botMatch);
+  const botGames = games.filter(g => g.botMatch);
   document.getElementById('count').textContent = activeCount;
+  document.getElementById('human-live-count').textContent = `${humanGames.filter(g => g.status === 'active').length} active`;
+  document.getElementById('bot-live-count').textContent = `${botGames.filter(g => g.status === 'active').length} active`;
   if (!games.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
+    botContainer.innerHTML = '';
     prevIds = new Set();
     return;
   }
 
   const newIds = new Set(games.map(g => g.id));
-  container.querySelectorAll('.game-card').forEach(c => { if (!newIds.has(Number(c.dataset.id))) c.remove(); });
+  container.innerHTML = humanGames.length ? '' : `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie joueur</div><div>Les ranked et amicaux actifs arriveront ici.</div></div>`;
+  botContainer.innerHTML = botGames.length ? '' : `<div class="empty-state"><div class="empty-icon">🤖</div><div class="empty-title">Aucune partie bot</div><div>Les matchs bot vs bot actifs seront listés ici.</div></div>`;
 
   games.forEach((game, i) => {
-    const existing = container.querySelector(`.game-card[data-id="${game.id}"]`);
     const p1 = game.players[1], p2 = game.players[2];
-    const signature = JSON.stringify({
-      status: game.status,
-      current: game.current,
-      moves: game.moves,
-      grid: game.grid,
-      result: game.result || null,
-      p1: tokenStyleKey(p1),
-      p2: tokenStyleKey(p2),
-      p1Seen: p1.last_seen || p1.lastSeen || 0,
-      p2Seen: p2.last_seen || p2.lastSeen || 0
-    });
-    if (existing && existing.dataset.signature === signature) return;
-
     const card = document.createElement('div');
-    card.className = 'game-card' + (game.status === 'finished' ? ' finished' : '');
+    card.className = 'game-card' + (game.status === 'finished' ? ' finished' : '') + (game.botMatch ? ' bot-match' : '');
     card.dataset.id = game.id;
-    card.dataset.signature = signature;
     card.onclick = () => goToSpec(game.id);
 
     const row = document.createElement('div');
@@ -964,8 +979,7 @@ function renderList(games) {
     card.append(row, board, footer);
     if (prevIds.has(game.id)) card.style.animation = 'none';
     else card.style.animationDelay = `${i * 35}ms`;
-    if (existing) existing.replaceWith(card);
-    else container.appendChild(card);
+    (game.botMatch ? botContainer : container).appendChild(card);
   });
 
   prevIds = newIds;
