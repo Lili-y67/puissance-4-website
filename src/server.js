@@ -2499,7 +2499,9 @@ const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
 const DISCORD_CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
+const DISCORD_GUILD_OWNER_ID = process.env.DISCORD_GUILD_OWNER_ID || '1147963951989149796';
 const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
+const DISCORD_REST_LOG_RATELIMIT = String(process.env.DISCORD_REST_LOG_RATELIMIT || '0') === '1';
 const discordRestQueues = new Map();
 const DISCORD_MEMBER_CACHE_TTL_MS = Number(process.env.DISCORD_MEMBER_CACHE_TTL_MS || 5 * 60 * 1000);
 const DISCORD_ROLE_CACHE_TTL_MS = Number(process.env.DISCORD_ROLE_CACHE_TTL_MS || 10 * 60 * 1000);
@@ -2507,6 +2509,8 @@ const DISCORD_ROLE_SYNC_BATCH_SIZE = Math.max(1, Number(process.env.DISCORD_ROLE
 const DISCORD_ROLE_SYNC_INTERVAL_MS = Math.max(60 * 1000, Number(process.env.DISCORD_ROLE_SYNC_INTERVAL_MS || 10 * 60 * 1000));
 const discordMemberSnapshotCache = new Map();
 let discordGuildRolesCache = { expiresAt: 0, roles: null };
+let discordGuildOwnerCache = { expiresAt: 0, ownerId: DISCORD_GUILD_OWNER_ID || null };
+const discordRenameBlockedUntil = new Map();
 const REFERRAL_SHOP_DISCOUNT_PERCENT = 5;
 const CRYSTAL_PRICE_COINS = 5000;
 const CRYSTAL_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -2550,7 +2554,7 @@ async function discordRestFetch(bucket, url, options = {}) {
       if (res.status !== 429) break;
       const body = await res.json().catch(() => ({}));
       const waitMs = Math.ceil(Number(body.retry_after || 1) * 1000) + 200;
-      console.warn('[DISCORD REST]', `rate limited, retry in ${waitMs}ms`);
+      if (DISCORD_REST_LOG_RATELIMIT) console.warn('[DISCORD REST]', `rate limited, retry in ${waitMs}ms`);
       await wait(waitMs);
     }
     await wait(DISCORD_REST_DELAY_MS);
@@ -2585,6 +2589,31 @@ async function fetchDiscordGuildRolesCached(botToken, { force = false } = {}) {
     expiresAt: now + DISCORD_ROLE_CACHE_TTL_MS,
   };
   return discordGuildRolesCache.roles;
+}
+
+async function fetchDiscordGuildOwnerIdCached(botToken) {
+  if (!botToken) return null;
+  const now = Date.now();
+  if (discordGuildOwnerCache.ownerId && discordGuildOwnerCache.expiresAt > now) {
+    return discordGuildOwnerCache.ownerId;
+  }
+  if (DISCORD_GUILD_OWNER_ID) {
+    discordGuildOwnerCache = {
+      ownerId: DISCORD_GUILD_OWNER_ID,
+      expiresAt: now + 24 * 60 * 60 * 1000,
+    };
+    return DISCORD_GUILD_OWNER_ID;
+  }
+  const res = await discordRestFetch('guild-info', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}`, {
+    headers: { 'Authorization': 'Bot ' + botToken },
+  });
+  if (!res.ok) return discordGuildOwnerCache.ownerId || null;
+  const guild = await res.json().catch(() => ({}));
+  discordGuildOwnerCache = {
+    ownerId: guild.owner_id || null,
+    expiresAt: now + 60 * 60 * 1000,
+  };
+  return discordGuildOwnerCache.ownerId;
 }
 
 db.exec(`
@@ -3064,29 +3093,37 @@ async function sendDM(discordId, text) {
 // Renommer un membre sur le serveur Discord
 async function renameOnServer(discordId, nickname) {
   const { botToken } = discordConfig();
-  if (!botToken) return;
+  const did = String(discordId || '').trim();
+  const nick = String(nickname || '').trim().slice(0, 32);
+  if (!botToken || !did || !nick) return;
 
-  // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier si c'est le propriAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAtaire du serveur (impossible AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  renommer)
-  const guildRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}`, {
-    headers: { 'Authorization': 'Bot ' + botToken },
-  });
-  const guild = await guildRes.json();
-  if (guild.owner_id === discordId) {
-    console.log(`[RENAME] Impossible : ${discordId} est le propriétaire du serveur.`);
+  const blockedUntil = Number(discordRenameBlockedUntil.get(did) || 0);
+  if (blockedUntil > Date.now()) return;
+
+  const ownerId = await fetchDiscordGuildOwnerIdCached(botToken);
+  if (ownerId && String(ownerId) === did) {
+    discordRenameBlockedUntil.set(did, Date.now() + 24 * 60 * 60 * 1000);
     return;
   }
 
-  const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}`, {
+  const res = await discordRestFetch(`member-rename:${did}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${did}`, {
     method: 'PATCH',
     headers: { 'Authorization': 'Bot ' + botToken, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nick: nickname }),
+    body: JSON.stringify({ nick }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (res.status === 403 || res.status === 429) {
+      discordRenameBlockedUntil.set(did, Date.now() + (res.status === 403 ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000));
+    }
     // 403 = hiAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArarchie insuffisante (rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle du membre >= bot)
-    console.log(`[RENAME] Echec pour ${discordId} : ${res.status} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA ${err.message || 'permission refusAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe'}`);
+    if (res.status !== 403) {
+      console.log(`[RENAME] Echec pour ${did} : ${res.status} ${err.message || 'permission refusee'}`);
+    }
+    return;
   }
+  invalidateDiscordMemberCache(did);
 }
 
 // Synchroniser le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle Discord d'un membre (ajoute/retire les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles)
@@ -3148,12 +3185,12 @@ async function syncDiscordRankRole(discordId, rank, botToken = null, currentRole
   }
 }
 
-async function syncPlayerDiscordRankRole(playerOrId) {
+async function syncPlayerDiscordRankRole(playerOrId, currentRoleIds = null) {
   const player = typeof playerOrId === 'object' && playerOrId
     ? playerOrId
     : pQ.getById.get(Number(playerOrId));
   if (!player?.discord_id) return;
-  return syncDiscordRankRole(player.discord_id, getRank(Number(player.elo || 0)));
+  return syncDiscordRankRole(player.discord_id, getRank(Number(player.elo || 0)), null, currentRoleIds);
 }
 
 async function findGuildRoleByName(roleName, botToken = null) {
@@ -3518,35 +3555,9 @@ app.get('/auth/discord/callback', async (req, res) => {
     const freshPlayer = pQ.getById.get(playerId);
 
     if (mode === 'signin') {
-      let memberInfo = null;
-      let guildRolesMap = {};
-      try {
-        const { botToken: bt } = discordConfig();
-        const mRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUser.id}`, {
-          headers: { Authorization: 'Bot ' + bt }
-        });
-        if (mRes.ok) memberInfo = await mRes.json();
-      } catch(e) {}
-      try {
-        const { botToken: bt2 } = discordConfig();
-        const rolesRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
-          headers: { Authorization: 'Bot ' + bt2 }
-        });
-        if (rolesRes.ok) {
-          const roles = await rolesRes.json();
-          roles.forEach(r => { guildRolesMap[r.id] = { name: r.name, color: r.color }; });
-        }
-      } catch(e) {}
-      const memberRoleIds = memberInfo?.roles || [];
-      const server_roles_rich = memberRoleIds
-        .map(id => ({
-          id,
-          name: guildRolesMap[id]?.name || id,
-          color: guildRolesMap[id]?.color
-            ? '#' + guildRolesMap[id].color.toString(16).padStart(6, '0')
-            : null,
-        }))
-        .filter(r => r.name !== '@everyone' && r.color !== '#000000');
+      const memberSnapshot = await fetchDiscordMemberSnapshot(discordUser.id, botToken);
+      const memberInfo = memberSnapshot?.memberInfo || null;
+      const server_roles_rich = memberSnapshot?.server_roles_rich || [];
       const discordInfo = {
         id: discordUser.id,
         username: discordUser.username,
@@ -3597,7 +3608,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       assignReferrerIfPossible(targetPlayer.id, stateData?.referrer);
       const linkedPlayer = pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
-      try { await syncPlayerDiscordRankRole(linkedPlayer); } catch(e) {}
+      try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const token = createSession(linkedPlayer.id);
       const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer), created: createdNewPlayer }));
       return res.redirect('/#discord-auth=' + payload);
@@ -3606,38 +3617,9 @@ app.get('/auth/discord/callback', async (req, res) => {
     if (mode === 'link') {
       // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer les infos du membre sur le serveur Discord
       const { botToken: bt, baseUrl: bu } = discordConfig();
-      let memberInfo = null;
-      try {
-        const mRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUser.id}`, {
-          headers: { Authorization: 'Bot ' + bt }
-        });
-        if (mRes.ok) memberInfo = await mRes.json();
-      } catch(e) {}
-
-      // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles du guild avec noms et couleurs
-      let guildRolesMap = {};
-      try {
-        const { botToken: bt2 } = discordConfig();
-        const rolesRes = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
-          headers: { Authorization: 'Bot ' + bt2 }
-        });
-        if (rolesRes.ok) {
-          const roles = await rolesRes.json();
-          roles.forEach(r => { guildRolesMap[r.id] = { name: r.name, color: r.color }; });
-        }
-      } catch(e) {}
-
-      // Construire les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles enrichis (id, nom, couleur hex)
-      const memberRoleIds = memberInfo?.roles || [];
-      const server_roles_rich = memberRoleIds
-        .map(id => ({
-          id,
-          name:  guildRolesMap[id]?.name  || id,
-          color: guildRolesMap[id]?.color
-            ? '#' + guildRolesMap[id].color.toString(16).padStart(6, '0')
-            : null,
-        }))
-        .filter(r => r.name !== '@everyone' && r.color !== '#000000');
+      const memberSnapshot = await fetchDiscordMemberSnapshot(discordUser.id, bt);
+      const memberInfo = memberSnapshot?.memberInfo || null;
+      const server_roles_rich = memberSnapshot?.server_roles_rich || [];
 
       // Construire l'objet discord_info enrichi
       const discordInfo = {
@@ -3662,7 +3644,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       claimDiscordIdentity(discordUser.id, discordInfo, playerId);
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
       try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
-      try { await syncPlayerDiscordRankRole(pQ.getById.get(playerId)); } catch(e) {}
+      try { await syncPlayerDiscordRankRole(pQ.getById.get(playerId), memberInfo?.roles || []); } catch(e) {}
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
