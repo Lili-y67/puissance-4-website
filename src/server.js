@@ -1857,7 +1857,7 @@ app.get('/api/admin/password', async (req, res) => {
     const { botToken } = discordConfig();
     const discordRole = await getDiscordRole(player.discord_id, botToken);
     if (discordRole !== player.role) {
-      pQ.updateRole.run({ role: discordRole, id: playerId });
+      pQ.updateRole.run({ role: discordRole, id: player.id });
       role = discordRole;
     }
   } catch(e) {}
@@ -1959,7 +1959,7 @@ async function resolveAdminLoginContext(password, playerToken, adminIdentity) {
     const { botToken } = discordConfig();
     const discordRole = await getDiscordRole(player.discord_id, botToken);
     if (discordRole !== player.role) {
-      pQ.updateRole.run({ role: discordRole, id: playerId });
+      pQ.updateRole.run({ role: discordRole, id: player.id });
       role = discordRole;
     }
   } catch(e) {}
@@ -3360,6 +3360,45 @@ async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
+function applyDiscordSnapshotToPlayer(playerOrId, snapshot) {
+  const player = typeof playerOrId === 'object' && playerOrId
+    ? playerOrId
+    : pQ.getById.get(Number(playerOrId));
+  if (!player || !snapshot?.memberInfo) return player || null;
+
+  const roles = Array.isArray(snapshot.memberInfo.roles) ? snapshot.memberInfo.roles : [];
+  const newRole = snapshot.newRole || 'user';
+  const vipNow = hasVipRoleIds(roles) ? 1 : 0;
+  const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : 0;
+  const persoNow = hasPersoRoleIds(roles) ? 1 : 0;
+
+  if (newRole !== player.role) {
+    pQ.updateRole.run({ role: newRole, id: player.id });
+    revokeAdminSessionsForPlayer(player.id);
+  }
+  if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id: player.id });
+  if (vipPlusNow !== Number(player.is_vip_plus || 0)) pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id: player.id });
+  if (persoNow !== Number(player.is_perso || 0)) pQ.updatePerso.run({ is_perso: persoNow, id: player.id });
+  if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) {
+    pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
+  }
+
+  if (player.discord_id) {
+    try {
+      const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
+      rQ.setDiscord.run(player.discord_id, JSON.stringify({
+        ...existing,
+        server_roles: snapshot.server_roles_rich || existing.server_roles || [],
+        server_nick: snapshot.memberInfo.nick || existing.server_nick || null,
+        server_joined: snapshot.memberInfo.joined_at || existing.server_joined || null,
+        boosting_since: snapshot.memberInfo.premium_since || null,
+      }), player.id);
+    } catch(e) {}
+  }
+
+  return pQ.getById.get(player.id);
+}
+
 let discordRoleSyncOffset = 0;
 setInterval(async () => {
   const { botToken } = discordConfig();
@@ -3630,7 +3669,7 @@ app.get('/auth/discord/callback', async (req, res) => {
 
       claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
       assignReferrerIfPossible(targetPlayer.id, stateData?.referrer);
-      const linkedPlayer = pQ.getById.get(targetPlayer.id);
+      const linkedPlayer = applyDiscordSnapshotToPlayer(pQ.getById.get(targetPlayer.id), memberSnapshot) || pQ.getById.get(targetPlayer.id);
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const token = createSession(linkedPlayer.id);
@@ -3666,9 +3705,10 @@ app.get('/auth/discord/callback', async (req, res) => {
 
       // Liaison depuis le profil AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA lier + envoyer DM de confirmation
       claimDiscordIdentity(discordUser.id, discordInfo, playerId);
+      const linkedPlayer = applyDiscordSnapshotToPlayer(pQ.getById.get(playerId), memberSnapshot) || pQ.getById.get(playerId);
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
-      try { await renameOnServer(discordUser.id, freshPlayer.pseudo); } catch(e) {}
-      try { await syncPlayerDiscordRankRole(pQ.getById.get(playerId), memberInfo?.roles || []); } catch(e) {}
+      try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
+      try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {

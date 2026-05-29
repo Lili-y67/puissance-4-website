@@ -284,9 +284,28 @@ input[type="file"]{display:none;}
 .profile-pseudo{
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
-.profile-badges{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-start;margin-top:10px;}
-.vip-tier-badge{font-size:11px;padding:2px 8px 2px 5px;border-radius:6px;font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;display:inline-flex;align-items:center;gap:5px;text-transform:uppercase;box-shadow:0 0 16px var(--vip-glow, rgba(255,214,10,.22)), inset 0 0 10px rgba(255,255,255,.04);}
-.vip-tier-badge img{width:17px;height:17px;object-fit:contain;display:block;filter:drop-shadow(0 0 5px var(--vip-glow, rgba(255,214,10,.55)));}
+.profile-badges{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px;min-height:34px}
+.profile-badge{
+  --badge-color:#eeeef5;--badge-bg:rgba(255,255,255,.06);--badge-border:rgba(255,255,255,.12);--badge-glow:rgba(255,255,255,.12);
+  position:relative;display:inline-flex;align-items:center;gap:7px;min-height:30px;padding:5px 10px 5px 7px;
+  border-radius:9px;border:1px solid var(--badge-border);background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.025)),var(--badge-bg);
+  color:var(--badge-color);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;
+  font-size:12px;font-weight:900;letter-spacing:1.15px;text-transform:uppercase;line-height:1;
+  box-shadow:0 0 18px var(--badge-glow),inset 0 1px 0 rgba(255,255,255,.08),0 10px 24px rgba(0,0,0,.16);
+  overflow:hidden;isolation:isolate;
+}
+.profile-badge::before{content:'';position:absolute;inset:-1px;z-index:-1;background:linear-gradient(120deg,transparent 0 22%,rgba(255,255,255,.14) 36%,transparent 52%);opacity:.7;transform:translateX(-58%);animation:profile-badge-sheen 4.6s ease-in-out infinite}
+.profile-badge img{width:20px;height:20px;object-fit:contain;display:block;filter:drop-shadow(0 0 7px var(--badge-glow));flex-shrink:0}
+.profile-badge .badge-icon{font-size:15px;line-height:1;filter:drop-shadow(0 0 6px var(--badge-glow))}
+.profile-badge.vip{--badge-color:#ffe66b;--badge-bg:rgba(255,214,10,.12);--badge-border:rgba(255,214,10,.36);--badge-glow:rgba(255,214,10,.32)}
+.profile-badge.vip-plus{--badge-color:#baf5ff;--badge-bg:rgba(133,235,255,.12);--badge-border:rgba(133,235,255,.42);--badge-glow:rgba(133,235,255,.34)}
+.profile-badge.crystal{--badge-color:#e9fbff;--badge-bg:rgba(125,190,255,.13);--badge-border:rgba(170,228,255,.46);--badge-glow:rgba(125,190,255,.38);padding-left:6px}
+.profile-badge.perso{--badge-color:#ffb28a;--badge-bg:rgba(255,122,69,.12);--badge-border:rgba(255,122,69,.38);--badge-glow:rgba(255,122,69,.28)}
+.profile-badge.staff{--badge-color:#ff6b8a;--badge-bg:rgba(255,45,85,.12);--badge-border:rgba(255,45,85,.38);--badge-glow:rgba(255,45,85,.28)}
+.profile-badge.modo{--badge-color:#aeb8ff;--badge-bg:rgba(76,110,245,.13);--badge-border:rgba(76,110,245,.36);--badge-glow:rgba(76,110,245,.26)}
+.profile-badge.bot{--badge-color:#cfd2dd;--badge-bg:rgba(142,142,147,.14);--badge-border:rgba(184,187,199,.36);--badge-glow:rgba(184,187,199,.20)}
+.profile-badge.clan{--badge-color:#dffaff;--badge-bg:rgba(133,235,255,.10);--badge-border:rgba(133,235,255,.28);--badge-glow:rgba(133,235,255,.18)}
+@keyframes profile-badge-sheen{0%,48%{transform:translateX(-70%);opacity:0}58%{opacity:.7}76%,100%{transform:translateX(95%);opacity:0}}
 .profile-since{font-size:13px;color:var(--muted);margin-top:10px;text-align:left;}
 .profile-media-note{font-size:12px;color:var(--muted);margin-top:4px;text-align:left;}
 .profile-pill-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
@@ -709,6 +728,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .discord-role-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;background:currentColor}
 .discord-role-chip.connected-role{color:#30d158!important;background:rgba(48,209,88,.12)!important;border-color:rgba(48,209,88,.35)!important}
 .discord-role-chip.connected-role .discord-role-dot{background:#30d158;box-shadow:0 0 0 0 rgba(48,209,88,.55);animation:discordConnectedPulse 1.45s ease-in-out infinite}
+.discord-badge-chip{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:10px;
+  background:linear-gradient(135deg,rgba(88,101,242,.17),rgba(133,235,255,.07));
+  border:1px solid rgba(139,156,244,.32);color:#aeb8ff;
+  font-family:'Barlow Condensed',Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;
+  font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;
+  box-shadow:0 0 16px rgba(88,101,242,.16),inset 0 1px 0 rgba(255,255,255,.08)
+}
+.discord-badge-chip::before{content:'◆';font-size:9px;color:#85EBFF;filter:drop-shadow(0 0 6px rgba(133,235,255,.45))}
 @keyframes discordConnectedPulse{
   0%{transform:scale(.92);box-shadow:0 0 0 0 rgba(48,209,88,.48)}
   55%{transform:scale(1.12);box-shadow:0 0 0 6px rgba(48,209,88,0)}
@@ -1427,14 +1455,16 @@ function getVipBadgeTier(player = currentPlayer) {
 function renderVipBadge(player = currentPlayer) {
   if (Number(player?.is_bot) === 1) return '';
   if (Number(player?.is_crystal) === 1) {
-    return `<span class="vip-tier-badge" title="Crystal" style="background:transparent;color:#dffaff;border:0;box-shadow:none;padding:0;width:26px;height:26px;display:inline-grid;place-items:center">
-      <img src="/assets/crystal-badge.png" alt="Crystal" style="width:24px;height:24px;object-fit:contain;filter:none">
+    return `<span class="profile-badge crystal" title="Crystal">
+      <img src="/assets/crystal-badge.png" alt="Crystal" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'badge-icon',textContent:'◆'}))">
+      Crystal
     </span>`;
   }
   if (!isVip(player)) return '';
   const accent = getVipAccent(player);
   const tier = getVipBadgeTier(player);
-  return `<span class="vip-tier-badge" style="background:${accent.bg};color:${accent.color};border:1px solid ${accent.border};--vip-glow:${tier.glow}" title="${escapeHtml(tier.title)}">
+  const cls = isVipPlus(player) ? 'vip-plus' : 'vip';
+  return `<span class="profile-badge ${cls}" style="--badge-color:${accent.color};--badge-bg:${accent.bg};--badge-border:${accent.border};--badge-glow:${tier.glow}" title="${escapeHtml(tier.title)}">
     <img src="${tier.src}" alt="${escapeHtml(tier.title)}">${accent.label}
   </span>`;
 }
@@ -1442,9 +1472,8 @@ function renderVipBadge(player = currentPlayer) {
 function renderBotBadge(player = currentPlayer) {
   if (Number(player?.is_bot) !== 1) return '';
   const enabled = Number(player?.bot_enabled ?? 1) === 1;
-  const color = enabled ? '#b8bbc7' : '#ff7a45';
   const label = enabled ? 'BOT' : 'BOT SUSPENDU';
-  return `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(142,142,147,0.16);color:${color};border:1px solid rgba(184,187,199,0.38);box-shadow:0 0 14px rgba(184,187,199,0.18);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">🤖 ${label}</span>`;
+  return `<span class="profile-badge bot" title="${escapeHtml(label)}"><span class="badge-icon">🤖</span>${label}</span>`;
 }
 
 function renderResultMiniStats(wins = 0, losses = 0, draws = 0, wr = 0) {
@@ -1526,7 +1555,7 @@ function clanAccentStyle(clan) {
 
 function renderClanBadge(clan) {
   if (!clan) return '';
-  return `<span class="clan-chip" style="${clanAccentStyle(clan)};background:var(--clan-bg);border:1px solid var(--clan-border);color:var(--clan-color)" title="Clan ${escapeHtml(clan.name)}">
+  return `<span class="profile-badge clan" style="${clanAccentStyle(clan)};--badge-color:var(--clan-color);--badge-bg:var(--clan-bg);--badge-border:var(--clan-border);--badge-glow:var(--clan-glow)" title="Clan ${escapeHtml(clan.name)}">
     <span>${escapeHtml(clan.blason || '🛡️')}</span> ${escapeHtml(clan.tag || 'CLAN')}
   </span>`;
 }
@@ -1817,10 +1846,10 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${renderBotBadge(player)}
             ${renderVipBadge(player)}
             ${renderClanBadge(player.clan)}
-            ${player.is_perso && !hasCustomPersoRole(player) ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoAccent().bg};color:${getPersoAccent().color};border:1px solid ${getPersoAccent().border};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#10024; ${getPersoAccent().label}</span>` : ''}
-            ${player.role === 'moderator' ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(76,110,245,0.15);color:#8b9cf4;border:1px solid rgba(76,110,245,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#128737;&#65039; MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:rgba(255,45,85,0.15);color:#ff2d55;border:1px solid rgba(255,45,85,0.3);font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:700;letter-spacing:1px">&#9889; ADMIN</span>' : ''}
-            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span style="font-size:11px;padding:2px 8px;border-radius:5px;background:${getPersoRoleAccent(player).bg};color:${getPersoRoleAccent(player).color};border:1px solid ${getPersoRoleAccent(player).border};box-shadow:0 0 14px ${getPersoRoleAccent(player).color}55,inset 0 0 10px ${getPersoRoleAccent(player).bg};font-family:Barlow Condensed,Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">${getPersoRoleAccent(player).emoji ? `<span style="margin-right:4px">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+            ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
+            ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
+            ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
+            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).color}44">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -5248,7 +5277,7 @@ async function loadDiscordInfo() {
     const nitroLabel = d.nitro_label || 'Aucun';
 
     const badgesHtml = d.badges?.length
-      ? d.badges.map(b => `<span class="discord-role-chip" style="background:rgba(88,101,242,0.12);border:1px solid rgba(88,101,242,0.28);color:#8b9cf4">${escapeHtml(b)}</span>`).join('')
+      ? d.badges.map(b => `<span class="discord-badge-chip">${escapeHtml(b)}</span>`).join('')
       : '<span style="font-size:11px;color: var(--muted)">Aucun badge</span>';
 
     const bubble = (icon, label, value, color) =>
