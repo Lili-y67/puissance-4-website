@@ -113,7 +113,7 @@
     panel.innerHTML = `
       <div class="p4-global-menu-head">
         <div class="p4-global-menu-brand">
-          <img class="p4-global-menu-logo" src="/assets/site-logo.png" alt="Puissance 4">
+          <img class="p4-global-menu-logo" src="/assets/site-logo-small.png" alt="Puissance 4">
           <div>
             <div class="p4-global-menu-eyebrow">Arena Ranked</div>
             <div class="p4-global-menu-title">Puissance <span>4</span></div>

@@ -1480,7 +1480,17 @@ archiveOldGames();
 setInterval(archiveOldGames, 60 * 60 * 1000);
 
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\.(?:png|jpe?g|webp|gif|svg|ico|mp3|wav|ogg|m4a|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    } else if (/\.(?:css|js)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+    }
+  },
+}));
 
 const API_AUDIT_EXCLUDED = [
   /^\/api\/system-status$/,
@@ -3869,14 +3879,17 @@ app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cg
 app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
 app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/stats.html')));
 app.get('/api/decorations', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
   res.json({ decorations: getAvatarDecorationPaths() });
 });
 
 app.get('/api/profile-banners', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
   res.json({ banners: getProfileBannerPaths() });
 });
 
 app.get('/api/musics', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
   const musics = getQueueMusicPaths();
   const themes = Object.entries(QUEUE_MUSIC_THEMES)
     .map(([id, label]) => ({

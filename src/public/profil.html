@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
-<link rel="icon" type="image/png" href="/assets/site-logo.png">
+<link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -192,7 +192,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* Nav */
 .nav{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));border:1px solid var(--border);box-shadow:0 24px 60px rgba(0,0,0,.28);}
 .logo-sm{font-family:Barlow Condensed,sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;text-decoration:none;color:var(--text);display:inline-flex;align-items:center;gap:10px;}
-.logo-sm::before{content:"";width:40px;height:40px;border-radius:12px;background:url('/assets/site-logo.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
+.logo-sm::before{content:"";width:40px;height:40px;border-radius:12px;background:url('/assets/site-logo-small.png') center/cover no-repeat;border:1px solid rgba(255,255,255,.1)}
 .logo-sm span{color:var(--red);}
 .nav-btns{display:flex;gap:8px;}
 .btn-nav{font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 16px;border-radius:14px;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);cursor:pointer;text-decoration:none;transition:all 0.2s;}
@@ -1259,9 +1259,12 @@ let isOwnProfile  = false;
 let uploadChooserTarget = null;
 const GIF_URL_CACHE = new Map();
 let avatarDecorationLibrary = [];
+let avatarDecorationLibraryLoaded = false;
 let profileBannerLibrary = [];
+let profileBannerLibraryLoaded = false;
 let queueMusicLibrary = [];
 let queueMusicThemes = [];
+let queueMusicLibraryLoaded = false;
 let queueMusicPreviewAudio = null;
 let queueMusicPreviewTimer = null;
 let eloHistoryDays = 7;
@@ -1302,26 +1305,33 @@ function getRenderableMediaSrc(src) {
 }
 
 async function loadAvatarDecorationLibrary() {
+  if (avatarDecorationLibraryLoaded) return;
   try {
     const res = await fetch('/api/decorations');
     const data = await res.json();
     avatarDecorationLibrary = Array.isArray(data?.decorations) ? data.decorations : [];
   } catch {
     avatarDecorationLibrary = [];
+  } finally {
+    avatarDecorationLibraryLoaded = true;
   }
 }
 
 async function loadProfileBannerLibrary() {
+  if (profileBannerLibraryLoaded) return;
   try {
     const res = await fetch('/api/profile-banners');
     const data = await res.json();
     profileBannerLibrary = Array.isArray(data?.banners) ? data.banners : [];
   } catch {
     profileBannerLibrary = [];
+  } finally {
+    profileBannerLibraryLoaded = true;
   }
 }
 
 async function loadQueueMusicLibrary() {
+  if (queueMusicLibraryLoaded) return;
   try {
     const res = await fetch('/api/musics');
     const data = await res.json();
@@ -1330,6 +1340,8 @@ async function loadQueueMusicLibrary() {
   } catch {
     queueMusicLibrary = [];
     queueMusicThemes = [];
+  } finally {
+    queueMusicLibraryLoaded = true;
   }
 }
 
@@ -1653,9 +1665,6 @@ function formatRemainingTime(ms) {
 }
 
 async function load() {
-  await loadAvatarDecorationLibrary();
-  await loadProfileBannerLibrary();
-  await loadQueueMusicLibrary();
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
   viewerPlayer   = saved ? JSON.parse(saved) : null;
@@ -3774,7 +3783,7 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
     const active = selectedValue === src ? 'active' : '';
     const locked = !canEdit ? 'locked' : '';
     cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="Décoration">
-      <img src="${src}" alt="décoration">
+      <img src="${src}" alt="décoration" loading="lazy" decoding="async">
     </button>`);
   }
   gallery.innerHTML = cards.join('');
@@ -3783,6 +3792,7 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
 function selectAvatarDecoration(src) {
   pendingAvatarDecoration = String(src || '');
   refreshAvatarDecorationPreview(currentPlayer);
+  renderAvatarDecorationGallery(currentPlayer);
 }
 
 async function saveSelectedAvatarDecoration() {
@@ -4642,7 +4652,6 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
           ? 'Enregistrer la décoration choisie'
           : 'Choisis une autre décoration pour appliquer un changement';
   }
-  renderAvatarDecorationGallery(player);
 }
 
 function extractYouTubeId(value) {
@@ -4722,7 +4731,7 @@ function normalizeQueueMusicEntry(entry) {
   };
 }
 
-function renderQueueMusicPicker(player = currentPlayer) {
+async function renderQueueMusicPicker(player = currentPlayer) {
   const card = document.getElementById('queue-music-card');
   const select = document.getElementById('queue-music-select');
   const themeSelect = document.getElementById('queue-music-theme-select');
@@ -4733,6 +4742,7 @@ function renderQueueMusicPicker(player = currentPlayer) {
   const currentValue = String(player?.queue_music || '');
   card.style.display = canEdit ? 'flex' : 'none';
   if (!canEdit) return;
+  if (!queueMusicLibraryLoaded) await loadQueueMusicLibrary();
   const entries = queueMusicLibrary
     .map(normalizeQueueMusicEntry)
     .filter(Boolean);
@@ -4909,10 +4919,11 @@ async function saveQueueMusicChoice() {
   }
 }
 
-function openAvatarDecorationPicker() {
+async function openAvatarDecorationPicker() {
   const bg = document.getElementById('avatar-decoration-modal-bg');
   if (!bg) return;
   PROFIL_SFX.popupOpen();
+  await loadAvatarDecorationLibrary();
   bg.classList.add('show');
   renderAvatarDecorationGallery(currentPlayer);
   refreshAvatarDecorationPreview(currentPlayer);
