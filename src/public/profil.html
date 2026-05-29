@@ -1658,9 +1658,7 @@ async function load() {
     const totalGames = Number(games_total ?? player.games_total ?? (games || []).length);
     const tournamentData = tournamentsRes.ok ? await tournamentsRes.json() : { tournaments: [] };
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
-    const freshPlayer = (isOwnProfile && player.discord_id)
-      ? await refreshDiscordState(player)
-      : player;
+    const freshPlayer = player;
     currentPlayer = freshPlayer;
     currentGamesCache = games || [];
     currentFollowingCache = following || [];
@@ -5194,34 +5192,6 @@ function syncStoredPlayerPatch(patch) {
     const sessionVal = sessionStorage.getItem('player');
     if (sessionVal) sessionStorage.setItem('player', JSON.stringify({ ...JSON.parse(sessionVal), ...patch }));
   } catch(e) {}
-}
-
-async function refreshDiscordState(player) {
-  const token = localStorage.getItem('token');
-  if (!token || !player?.id || !player.discord_id) return player;
-  try {
-    const res = await fetch('/api/players/' + player.id + '/refresh-discord', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    const data = await res.json();
-    if (data?.unlinked) {
-      syncStoredPlayerPatch({ role: 'user', is_vip: 0, is_vip_plus: 0, is_perso: 0, discord_id: null });
-      return { ...player, role: 'user', is_vip: 0, is_vip_plus: 0, is_perso: 0, discord_id: null };
-    }
-    if ((data?.role && data.role !== player.role) || typeof data?.is_vip === 'number' || typeof data?.is_vip_plus === 'number' || typeof data?.is_perso === 'number' || 'vip_expires_at' in (data || {})) {
-      const patch = {};
-      if (data?.role) patch.role = data.role;
-      if (typeof data?.is_vip === 'number') patch.is_vip = data.is_vip;
-      if (typeof data?.is_vip_plus === 'number') patch.is_vip_plus = data.is_vip_plus;
-      if (typeof data?.is_perso === 'number') patch.is_perso = data.is_perso;
-      if ('vip_expires_at' in (data || {})) patch.vip_expires_at = data.vip_expires_at;
-      syncStoredPlayerPatch(patch);
-      return { ...player, ...patch };
-    }
-  } catch(e) {}
-  return player;
 }
 
 const DISCORD_RANK_ROLE_RE = /^(Malachite|Quartz|Ambre|Jade|Saphir|Améthyste|Amethyste) (I|II|III|IV|V)$/i;

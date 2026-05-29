@@ -19,6 +19,8 @@ const visitorSockets = new Map();
 const connectedRoleRemoveTimers = new Map();
 const connectedRoleKnownState = new Map();
 const connectedRolePendingState = new Map();
+const crystalLoginAnnounced = new Set();
+const crystalLoginClearTimers = new Map();
 const apiAuditRecent = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
@@ -81,6 +83,34 @@ function notifyPlayerProfileChanged(playerId, reason, details = {}) {
   getOnlineSocketIds(id).forEach(socketId => {
     io.to(socketId).emit('profile_changed', payload);
   });
+}
+
+function cancelCrystalLoginClear(playerId) {
+  const id = Number(playerId || 0);
+  const timer = crystalLoginClearTimers.get(id);
+  if (!timer) return;
+  clearTimeout(timer);
+  crystalLoginClearTimers.delete(id);
+}
+
+function shouldBroadcastCrystalLogin(playerId) {
+  const id = Number(playerId || 0);
+  if (!id || crystalLoginAnnounced.has(id)) return false;
+  crystalLoginAnnounced.add(id);
+  return true;
+}
+
+function scheduleCrystalLoginClear(playerId) {
+  const id = Number(playerId || 0);
+  if (!id) return;
+  cancelCrystalLoginClear(id);
+  const timer = setTimeout(() => {
+    crystalLoginClearTimers.delete(id);
+    const sockets = onlineSockets.get(id);
+    if (sockets && sockets.size > 0) return;
+    crystalLoginAnnounced.delete(id);
+  }, 2 * 60 * 1000);
+  crystalLoginClearTimers.set(id, timer);
 }
 
 function registerVisitorSocket(socket, visitorIdRaw) {
@@ -2471,6 +2501,12 @@ const DISCORD_CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508
 const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
 const discordRestQueues = new Map();
+const DISCORD_MEMBER_CACHE_TTL_MS = Number(process.env.DISCORD_MEMBER_CACHE_TTL_MS || 5 * 60 * 1000);
+const DISCORD_ROLE_CACHE_TTL_MS = Number(process.env.DISCORD_ROLE_CACHE_TTL_MS || 10 * 60 * 1000);
+const DISCORD_ROLE_SYNC_BATCH_SIZE = Math.max(1, Number(process.env.DISCORD_ROLE_SYNC_BATCH_SIZE || 5));
+const DISCORD_ROLE_SYNC_INTERVAL_MS = Math.max(60 * 1000, Number(process.env.DISCORD_ROLE_SYNC_INTERVAL_MS || 10 * 60 * 1000));
+const discordMemberSnapshotCache = new Map();
+let discordGuildRolesCache = { expiresAt: 0, roles: null };
 const REFERRAL_SHOP_DISCOUNT_PERCENT = 5;
 const CRYSTAL_PRICE_COINS = 5000;
 const CRYSTAL_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
@@ -2508,13 +2544,14 @@ async function discordRestFetch(bucket, url, options = {}) {
   discordRestQueues.set(key, previous.then(() => current, () => current));
   await previous.catch(() => {});
   try {
-    let res = await fetch(url, options);
-    if (res.status === 429) {
+    let res = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      res = await fetch(url, options);
+      if (res.status !== 429) break;
       const body = await res.json().catch(() => ({}));
       const waitMs = Math.ceil(Number(body.retry_after || 1) * 1000) + 200;
       console.warn('[DISCORD REST]', `rate limited, retry in ${waitMs}ms`);
       await wait(waitMs);
-      res = await fetch(url, options);
     }
     await wait(DISCORD_REST_DELAY_MS);
     return res;
@@ -2522,6 +2559,32 @@ async function discordRestFetch(bucket, url, options = {}) {
     release();
     if (discordRestQueues.get(key) === current) discordRestQueues.delete(key);
   }
+}
+
+function validDiscordRoleId(roleId) {
+  return !!String(roleId || '').trim() && String(roleId || '').trim().toLowerCase() !== 'undefined';
+}
+
+function invalidateDiscordMemberCache(discordUserId) {
+  if (discordUserId) discordMemberSnapshotCache.delete(String(discordUserId));
+}
+
+async function fetchDiscordGuildRolesCached(botToken, { force = false } = {}) {
+  if (!botToken) return [];
+  const now = Date.now();
+  if (!force && discordGuildRolesCache.roles && discordGuildRolesCache.expiresAt > now) {
+    return discordGuildRolesCache.roles;
+  }
+  const res = await discordRestFetch('guild-roles', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
+    headers: { 'Authorization': 'Bot ' + botToken },
+  });
+  if (!res.ok) return discordGuildRolesCache.roles || [];
+  const roles = await res.json().catch(() => []);
+  discordGuildRolesCache = {
+    roles: Array.isArray(roles) ? roles : [],
+    expiresAt: now + DISCORD_ROLE_CACHE_TTL_MS,
+  };
+  return discordGuildRolesCache.roles;
 }
 
 db.exec(`
@@ -3035,7 +3098,7 @@ async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false
   const STAFF_TARGET = role === 'admin' ? DISCORD_ROLE_ADM
                     : role === 'moderator' ? DISCORD_ROLE_MOD
                     : null;
-  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP, DISCORD_ROLE_VIP_PLUS, DISCORD_ROLE_CUSTOM]) {
+  for (const rid of [...STAFF_ROLES, DISCORD_ROLE_VIP, DISCORD_ROLE_VIP_PLUS, DISCORD_ROLE_CUSTOM].filter(validDiscordRoleId)) {
     const shouldHave = rid === DISCORD_ROLE_VIP
       ? (!!isVip && !isVipPlus)
       : rid === DISCORD_ROLE_VIP_PLUS
@@ -3045,21 +3108,18 @@ async function syncDiscordRole(discordId, role, isVip = false, isVipPlus = false
         : rid === STAFF_TARGET;
     if (currentRoles && currentRoles.has(rid) === shouldHave) continue;
     const method = shouldHave ? 'PUT' : 'DELETE';
-    await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
+    const res = await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${rid}`, {
       method,
       headers: { 'Authorization': 'Bot ' + botToken },
     });
+    if (res.ok) invalidateDiscordMemberCache(discordId);
   }
   await syncDiscordRankRole(discordId, null, botToken, currentRoleIds);
 }
 
 async function fetchGuildRankRoleMap(botToken) {
   const names = new Set(getAllRankRoleNames());
-  const res = await discordRestFetch('guild-roles', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
-    headers: { 'Authorization': 'Bot ' + botToken },
-  });
-  if (!res.ok) return new Map();
-  const roles = await res.json();
+  const roles = await fetchDiscordGuildRolesCached(botToken);
   const map = new Map();
   for (const role of Array.isArray(roles) ? roles : []) {
     if (names.has(role.name)) map.set(role.name, role.id);
@@ -3079,10 +3139,12 @@ async function syncDiscordRankRole(discordId, rank, botToken = null, currentRole
   for (const [name, roleId] of rankRoles.entries()) {
     const shouldHave = name === targetName;
     if (currentRoles && currentRoles.has(roleId) === shouldHave) continue;
-    await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${roleId}`, {
+    if (!validDiscordRoleId(roleId)) continue;
+    const res = await discordRestFetch(`member-role:${discordId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordId}/roles/${roleId}`, {
       method: shouldHave ? 'PUT' : 'DELETE',
       headers: { 'Authorization': 'Bot ' + token },
     });
+    if (res.ok) invalidateDiscordMemberCache(discordId);
   }
 }
 
@@ -3097,11 +3159,7 @@ async function syncPlayerDiscordRankRole(playerOrId) {
 async function findGuildRoleByName(roleName, botToken = null) {
   const token = botToken || discordConfig().botToken;
   if (!token || !roleName) return null;
-  const res = await discordRestFetch('guild-roles', `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
-    headers: { 'Authorization': 'Bot ' + token },
-  });
-  if (!res.ok) return null;
-  const roles = await res.json();
+  const roles = await fetchDiscordGuildRolesCached(token);
   return (Array.isArray(roles) ? roles : []).find(role => role.name === roleName) || null;
 }
 
@@ -3128,6 +3186,7 @@ async function syncPlayerDiscordConnectedRole(playerOrId, connected) {
     console.warn(`[DISCORD CONNECTED ROLE] ${connected ? 'add' : 'remove'} failed for player ${player.id} / ${player.discord_id}: ${res.status} ${body.slice(0, 180)}`);
     return false;
   }
+  invalidateDiscordMemberCache(player.discord_id);
   return true;
 }
 
@@ -3197,7 +3256,8 @@ async function clearAllDiscordConnectedRoles() {
 
 async function getDiscordRole(discordUserId, botToken) {
   try {
-    const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
+    if (!botToken || !discordUserId) return 'user';
+    const res = await discordRestFetch(`guild-member:${discordUserId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
       headers: { 'Authorization': 'Bot ' + botToken },
     });
     if (!res.ok) return 'user';
@@ -3211,17 +3271,18 @@ async function getDiscordRole(discordUserId, botToken) {
 
 async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
   try {
-    const [memberRes, rolesRes] = await Promise.all([
-      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
+    if (!botToken || !discordUserId) return null;
+    const cacheKey = String(discordUserId || '');
+    const cached = discordMemberSnapshotCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.snapshot;
+    const [memberRes, guildRoles] = await Promise.all([
+      discordRestFetch(`guild-member:${discordUserId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
         headers: { 'Authorization': 'Bot ' + botToken },
       }),
-      fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD}/roles`, {
-        headers: { 'Authorization': 'Bot ' + botToken },
-      }),
+      fetchDiscordGuildRolesCached(botToken),
     ]);
     if (!memberRes.ok) return null;
     const memberInfo = await memberRes.json();
-    const guildRoles = rolesRes.ok ? await rolesRes.json() : [];
     const rolesMap = {};
     guildRoles.forEach(r => {
       rolesMap[r.id] = {
@@ -3237,17 +3298,28 @@ async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
       : Array.isArray(memberInfo.roles) && memberInfo.roles.includes(DISCORD_ROLE_MOD)
         ? 'moderator'
         : 'user';
-    return { memberInfo, server_roles_rich, newRole };
+    const snapshot = { memberInfo, server_roles_rich, newRole };
+    discordMemberSnapshotCache.set(cacheKey, { snapshot, expiresAt: Date.now() + DISCORD_MEMBER_CACHE_TTL_MS });
+    return snapshot;
   } catch(e) {
     return null;
   }
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Job toutes les minutes AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA sync rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAles Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
+let discordRoleSyncOffset = 0;
 setInterval(async () => {
   const { botToken } = discordConfig();
-  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, is_perso, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0`).all();
-  for (const player of linked) {
+  if (!botToken) return;
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, is_perso, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0 ORDER BY id ASC`).all();
+  if (!linked.length) return;
+  const batchSize = Math.min(DISCORD_ROLE_SYNC_BATCH_SIZE, linked.length);
+  const batch = [];
+  for (let i = 0; i < batchSize; i++) {
+    batch.push(linked[(discordRoleSyncOffset + i) % linked.length]);
+  }
+  discordRoleSyncOffset = (discordRoleSyncOffset + batch.length) % linked.length;
+  for (const player of batch) {
     const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
     if (!snapshot) continue;
     const { memberInfo, server_roles_rich, newRole } = snapshot;
@@ -3283,7 +3355,7 @@ setInterval(async () => {
       await syncDiscordRole(player.discord_id, newRole, vipNow === 1, vipPlusNow === 1, persoNow === 1, roles);
     } catch(e) {}
   }
-}, 60 * 1000);
+}, DISCORD_ROLE_SYNC_INTERVAL_MS);
 
 setInterval(() => {
   const now = Date.now();
@@ -6644,9 +6716,10 @@ io.on('connection', socket => {
     // Marquer en ligne
     if (!onlineSockets.has(socket.playerId)) onlineSockets.set(socket.playerId, new Set());
     onlineSockets.get(socket.playerId).add(socket.id);
+    cancelCrystalLoginClear(socket.playerId);
     if (!isAnonymousPlayerId(socket.playerId)) markDiscordConnectedRealtime(player);
     if (!isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
-    if (!isAnonymousPlayerId(socket.playerId) && isCrystalPlayer(player)) {
+    if (!isAnonymousPlayerId(socket.playerId) && isCrystalPlayer(player) && shouldBroadcastCrystalLogin(socket.playerId)) {
       const alert = normalizeCrystalAlertPayload({
         message: player.crystal_alert_message || `${player.pseudo} s'est connecte au site.`,
         color: player.crystal_alert_color || '#85EBFF',
@@ -6910,7 +6983,10 @@ io.on('connection', socket => {
         socks.delete(socket.id);
         if (socks.size === 0) {
           onlineSockets.delete(socket.playerId);
-          if (!isAnonymousPlayerId(disconnectedPlayerId)) scheduleDiscordConnectedRemoval(disconnectedPlayerId);
+          if (!isAnonymousPlayerId(disconnectedPlayerId)) {
+            scheduleDiscordConnectedRemoval(disconnectedPlayerId);
+            scheduleCrystalLoginClear(disconnectedPlayerId);
+          }
         }
       }
     }
@@ -7137,9 +7213,9 @@ function buildDiscordBotContext() {
 initDb().then(() => {
   server.listen(PORT, () => {
     console.log(`[HTTP] http://localhost:${PORT}`);
-    clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
+    if (String(process.env.DISCORD_CLEAR_CONNECTED_ON_BOOT || '0') === '1') {
+      clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
+    }
     startDiscordBot(buildDiscordBotContext());
   });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });
-
-// AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Bot Discord intAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAgrAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
