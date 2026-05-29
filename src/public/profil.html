@@ -1358,6 +1358,8 @@ function getProfileBoosterMeta(key) {
   if (key === 'elo_princess') return { label: 'Princess Boost ELO', multiplier: 1.50, type: 'elo' };
   if (key === 'coin_boost') return { label: 'Coin Boost', multiplier: 5, type: 'coins' };
   if (key === 'coin_boost_plus') return { label: 'Coin Boost +', multiplier: 10, type: 'coins' };
+  if (key === 'global_elo_boost') return { label: 'Boost Global ELO', multiplier: 1.20, type: 'global' };
+  if (key === 'global_coin_boost') return { label: 'Boost Global Coins', multiplier: 2, type: 'global' };
   const elo = String(key).match(/^elo_custom_(\d+)_(\d+)$/);
   if (elo) {
     const bonus = Number(`${elo[1]}.${elo[2]}`);
@@ -1386,7 +1388,10 @@ function getProfileBoosterCounts() {
   const coins = entries
     .filter(([key]) => key === 'coin_boost' || key === 'coin_boost_plus' || key.startsWith('coin_custom_'))
     .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
-  return { elo, coins };
+  const global = entries
+    .filter(([key]) => key === 'global_elo_boost' || key === 'global_coin_boost')
+    .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
+  return { elo, coins, global };
 }
 
 function getVipMediaRemainingMs() {
@@ -1902,6 +1907,10 @@ function render(player, games, following, followers, followStatus, tournaments =
               style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.35)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.coins > 0 ? '#ff9f0a' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.coins > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
               🪙 Booster Coins${boosterCounts.coins > 0 ? ` · ${boosterCounts.coins}` : ''}
             </button>
+            <button id="profile-global-booster-btn" onclick="openOwnedBooster('global')" ${boosterCounts.global <= 0 ? 'disabled' : ''}
+              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.global > 0 ? 'rgba(133,235,255,0.35)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.global > 0 ? 'rgba(133,235,255,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.global > 0 ? '#85EBFF' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.global > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
+              🌍 Booster Global${boosterCounts.global > 0 ? ` · ${boosterCounts.global}` : ''}
+            </button>
           </div>` : ''}
           ${isOwnProfile ? `
           <label class="toggle-wrap" style="margin-top:4px;">
@@ -2246,7 +2255,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     <div class="profile-section-head">
       <div>
         <div class="profile-section-title">Parrainage</div>
-        <div class="profile-section-sub">Invite un joueur avec ton lien. Le filleul obtient -5% boutique quand le lien est utilise a la connexion.</div>
+        <div class="profile-section-sub">Invite un joueur avec ton lien. Le filleul obtient -5%, et toi -10% boutique quand tu as au moins un filleul.</div>
       </div>
     </div>
     <div class="color-card" style="margin-top:0;border-color:rgba(48,209,88,0.22);background:rgba(48,209,88,0.045)">
@@ -2258,6 +2267,13 @@ function render(player, games, following, followers, followStatus, tournaments =
             <div class="meta">
               <span class="label">Avantage filleul</span>
               <span class="value">-5% automatique sur la boutique</span>
+            </div>
+          </div>
+          <div class="discord-bubble">
+            <span class="icon">🏅</span>
+            <div class="meta">
+              <span class="label">Avantage parrain</span>
+              <span class="value">-10% boutique avec au moins un filleul</span>
             </div>
           </div>
           <div class="discord-bubble">
@@ -4185,6 +4201,7 @@ async function openOwnedBooster(kind) {
   const counts = getProfileBoosterCounts();
   if (kind === 'elo' && counts.elo <= 0) return;
   if (kind === 'coins' && counts.coins <= 0) return;
+  if (kind === 'global' && counts.global <= 0) return;
   const entries = getProfileBoosterEntries(kind);
   if (!entries.length) return;
   const active = profileActiveBoosters?.[kind];
@@ -4194,7 +4211,8 @@ async function openOwnedBooster(kind) {
   const list = entries
     .map((entry, index) => `${index + 1}. ${entry.meta.label} (${entry.qty} dispo)`)
     .join('\n');
-  const picked = prompt(`${kind === 'elo' ? 'Booster ELO' : 'Booster Coins'} disponible(s) :\n${list}${activeText}\n\nTape le numero du booster a activer pendant 2h :`);
+  const title = kind === 'elo' ? 'Booster ELO' : kind === 'coins' ? 'Booster Coins' : 'Booster Global';
+  const picked = prompt(`${title} disponible(s) :\n${list}${activeText}\n\nTape le numero du booster a activer pendant 2h :`);
   if (picked === null) return;
   const index = Math.trunc(Number(picked)) - 1;
   const entry = entries[index];
@@ -5175,9 +5193,12 @@ async function loadReferralInfo() {
     if (!res.ok) throw new Error(data.error || 'Impossible de charger le parrainage.');
     const referral = data.referral || {};
     input.value = referral.url || `${location.origin}/?ref=${currentPlayer?.id || ''}`;
+    const filleulPercent = Number(referral.filleulDiscountPercent || 5);
+    const parrainPercent = Number(referral.referrerDiscountPercent || 10);
+    const referredCount = Number(referral.referredCount || 0);
     const referrerText = referral.referrer
-      ? `Tu es parraine par ${referral.referrer.pseudo} : -${referral.discountPercent || 5}% boutique actif.`
-      : `Code ${referral.code || 'P4'} · ${Number(referral.referredCount || 0)} filleul(s) · le filleul gagne -${referral.discountPercent || 5}% boutique.`;
+      ? `Tu es parraine par ${referral.referrer.pseudo} : -${filleulPercent}% boutique actif.`
+      : `Code ${referral.code || 'P4'} · ${referredCount} filleul(s) · filleul -${filleulPercent}% · parrain ${referredCount > 0 ? `-${parrainPercent}% actif` : `-${parrainPercent}% apres ton premier filleul`}.`;
     status.textContent = referrerText;
     status.style.color = referral.referrer ? '#30d158' : 'var(--muted)';
   } catch (e) {

@@ -1776,9 +1776,23 @@ function assignReferrerIfPossible(playerId, referrerId) {
 function getReferralInfo(player) {
   const referrerId = Number(player?.referred_by || 0);
   const referrer = referrerId ? pQ.getById.get(referrerId) : null;
+  const referredCount = player?.id ? Number(db.prepare(`
+    SELECT COUNT(*) AS c
+    FROM players
+    WHERE referred_by = ? AND deleted = 0 AND is_guest = 0 AND is_bot = 0
+  `).get(player.id)?.c || 0) : 0;
+  const discountPercent = referredCount > 0
+    ? REFERRAL_REFERRER_DISCOUNT_PERCENT
+    : referrerId
+      ? REFERRAL_FILLEUL_DISCOUNT_PERCENT
+      : 0;
   return {
     code: player?.id ? `P4-${player.id}` : '',
-    discountPercent: REFERRAL_SHOP_DISCOUNT_PERCENT,
+    discountPercent,
+    filleulDiscountPercent: REFERRAL_FILLEUL_DISCOUNT_PERCENT,
+    referrerDiscountPercent: REFERRAL_REFERRER_DISCOUNT_PERCENT,
+    referredCount,
+    discountKind: referredCount > 0 ? 'parrain' : referrerId ? 'filleul' : '',
     referrer: referrer && Number(referrer.deleted || 0) !== 1 ? {
       id: referrer.id,
       pseudo: referrer.pseudo,
@@ -1788,8 +1802,10 @@ function getReferralInfo(player) {
 
 function applyReferralDiscountPrice(basePrice, player, coupon = null) {
   const afterCoupon = applyCouponPrice(basePrice, coupon);
-  if (!Number(player?.referred_by || 0) || afterCoupon <= 0) return afterCoupon;
-  return Math.max(0, Math.ceil(afterCoupon * (1 - REFERRAL_SHOP_DISCOUNT_PERCENT / 100)));
+  if (afterCoupon <= 0) return afterCoupon;
+  const percent = Number(getReferralInfo(player).discountPercent || 0);
+  if (percent <= 0) return afterCoupon;
+  return Math.max(0, Math.ceil(afterCoupon * (1 - percent / 100)));
 }
 
 // Page mot de passe oubliAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
@@ -2512,7 +2528,9 @@ const discordMemberSnapshotCache = new Map();
 let discordGuildRolesCache = { expiresAt: 0, roles: null };
 let discordGuildOwnerCache = { expiresAt: 0, ownerId: DISCORD_GUILD_OWNER_ID || null };
 const discordRenameBlockedUntil = new Map();
-const REFERRAL_SHOP_DISCOUNT_PERCENT = 5;
+const REFERRAL_FILLEUL_DISCOUNT_PERCENT = 5;
+const REFERRAL_REFERRER_DISCOUNT_PERCENT = 10;
+const REFERRAL_SHOP_DISCOUNT_PERCENT = REFERRAL_FILLEUL_DISCOUNT_PERCENT;
 const CRYSTAL_PRICE_COINS = 5000;
 const CRYSTAL_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 const CRYSTAL_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -2530,6 +2548,8 @@ const SHOP_ITEMS = Object.freeze({
   elo_princess: { key: 'elo_princess', category: 'elo_boosters', label: 'Princess Boost', price: 5000, boostType: 'elo', multiplier: 1.50, defaultStock: 1 },
   coin_boost: { key: 'coin_boost', category: 'coin_boosters', label: 'Coin Boost', price: 3000, boostType: 'coins', multiplier: 5, defaultStock: 5 },
   coin_boost_plus: { key: 'coin_boost_plus', category: 'coin_boosters', label: 'Coin Boost +', price: 6000, boostType: 'coins', multiplier: 10, defaultStock: 3 },
+  global_elo_boost: { key: 'global_elo_boost', category: 'global_boosters', label: 'Boost Global ELO', price: 5000, boostType: 'global_elo', multiplier: 1.20, defaultStock: 3 },
+  global_coin_boost: { key: 'global_coin_boost', category: 'global_boosters', label: 'Boost Global Coins', price: 5000, boostType: 'global_coins', multiplier: 2, defaultStock: 3 },
 });
 const SHOP_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, v.price])));
 const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, Math.max(1, Math.ceil(Number(v.price || 0) * 0.45))])));
@@ -4089,6 +4109,16 @@ app.post('/api/shop/boosters/activate', (req, res) => {
   const tx = db.transaction(() => {
     const result = shopItemQ.consumeOne.run(playerId, itemKey);
     if (!result.changes) throw new Error('Booster deja utilise.');
+    if (item.boostType === 'global_elo') {
+      bQ.deactivateAll.run();
+      bQ.create.run({ multiplier: Number(item.multiplier || 1), applied_by: playerId, expires_at: now + durationMs });
+      return;
+    }
+    if (item.boostType === 'global_coins') {
+      setConfigValue('coin_boost_multiplier', String(Number(item.multiplier || 1)));
+      setConfigValue('coin_boost_expires_at', String(now + durationMs));
+      return;
+    }
     db.prepare(`
       INSERT INTO player_active_boosters (player_id, boost_type, item_key, label, multiplier, activated_at, expires_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -4126,7 +4156,20 @@ app.post('/api/shop/boosters/activate', (req, res) => {
     WH.wlogBoost(item.boostType, Number(item.multiplier || 1), player?.pseudo || `ID ${playerId}`, '2h');
   } catch(e) {}
 
-  res.json({ ok: true, itemKey, active: activeBoosters[item.boostType], inventory, activeBoosters });
+  res.json({
+    ok: true,
+    itemKey,
+    active: activeBoosters[item.boostType] || (String(item.boostType).startsWith('global_') ? {
+      itemKey: item.key,
+      label: item.label,
+      multiplier: Number(item.multiplier || 1),
+      activatedAt: now,
+      expiresAt: now + durationMs,
+      global: true,
+    } : null),
+    inventory,
+    activeBoosters,
+  });
 });
 
 function normalizeCrystalAlertPayload(body = {}) {
@@ -4334,7 +4377,7 @@ app.post('/api/shop/buy', async (req, res) => {
       currency,
       paid: price,
       basePrice,
-      referralDiscount: Number(player.referred_by || 0) ? REFERRAL_SHOP_DISCOUNT_PERCENT : 0,
+      referralDiscount: Number(getReferralInfo(player).discountPercent || 0),
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     });
   } catch(e) {}

@@ -448,11 +448,11 @@ body{
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
     <div class="boosters-row">
       <div class="booster-column">
-        <div class="subsection-label">Boosters Elo</div>
+        <div class="subsection-label">Boosters Perso</div>
         <div class="grid" id="shop-elo-boosters-grid"></div>
       </div>
       <div class="booster-column">
-        <div class="subsection-label">Boosters Coins</div>
+        <div class="subsection-label">Boosters Globaux</div>
         <div class="grid" id="shop-coin-boosters-grid"></div>
       </div>
     </div>
@@ -725,6 +725,18 @@ const SHOP_ITEMS = {
     stat: '6000', statSub: 'coins pour x10',
     meta: 'La version maximale pour les gains de coins, avec stock très réduit.',
     features: [['📦','Stock global','3 unités au lancement.'],['🪙','Effet','Booster Coins x10.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  global_elo_boost: {
+    key: 'global_elo_boost', type: 'booster', family: 'elo', theme: 'booster-elo', badge: '🌍 ELO', duration: 'x0.20', title: 'Boost Global ELO',
+    stat: '5000', statSub: 'coins pour x1.20 serveur',
+    meta: 'Active un boost ELO pour tout le site pendant 2 heures.',
+    features: [['🌍','Global','Tous les joueurs profitent du multiplicateur.'],['⏱️','Durée','Activation de 2 heures après utilisation.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  global_coin_boost: {
+    key: 'global_coin_boost', type: 'booster', family: 'coins', theme: 'booster-coin', badge: '🌍 COINS', duration: 'x2', title: 'Boost Global Coins',
+    stat: '5000', statSub: 'coins pour x2 serveur',
+    meta: 'Active un boost coins pour tout le site pendant 2 heures.',
+    features: [['🌍','Global','Tous les gains de coins sont multipliés.'],['⏱️','Durée','Activation de 2 heures après utilisation.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   }
 };
 Object.keys(SHOP_ITEMS).forEach((key) => {
@@ -737,6 +749,7 @@ const SHOP_PRICES = {
   elo_reset: 2500,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
+  global_elo_boost: 5000, global_coin_boost: 5000,
 };
 let SHOP_GEM_PRICES = Object.fromEntries(Object.entries(SHOP_PRICES).map(([key, price]) => [key, Math.max(1, Math.ceil(Number(price || 0) * 0.45))]));
 
@@ -790,7 +803,7 @@ function getCurrencyIcon() {
 function getDiscountedPrice(price) {
   const basePrice = Math.max(0, Number(price || 0));
   const coupon = appliedCoupon && appliedCouponCode ? appliedCoupon : null;
-  const hasReferral = !!shopReferral?.referrer && Number(shopReferral.discountPercent || 0) > 0;
+  const hasReferral = Number(shopReferral?.discountPercent || 0) > 0;
   if ((!coupon && !hasReferral) || basePrice <= 0) {
     return { basePrice, finalPrice: basePrice, hasDiscount: false, label: '' };
   }
@@ -811,7 +824,7 @@ function getDiscountedPrice(price) {
   if (hasReferral) {
     const percent = Math.max(0, Math.min(95, Number(shopReferral.discountPercent || 0)));
     finalPrice = Math.max(0, Math.ceil(finalPrice * (1 - percent / 100)));
-    labels.push(`-${percent}% parrain`);
+    labels.push(`-${percent}% ${shopReferral?.discountKind === 'filleul' ? 'filleul' : 'parrain'}`);
   }
 
   return {
@@ -1582,8 +1595,14 @@ function renderShop() {
   document.getElementById('shop-offers-section').innerHTML = shopLimitedOffer?.expiresAt && Number(shopLimitedOffer.stock || 0) > 0
     ? renderCard('limited_offer')
     : `<div class="card perso" style="grid-column:1/-1"><h2>Aucun pack limité</h2><div class="meta">Le staff n'a pas encore activé d'offre temporaire.</div></div>`;
-  document.getElementById('shop-elo-boosters-grid').innerHTML = [renderCustomBoosterCard('elo_custom')].join('');
-  document.getElementById('shop-coin-boosters-grid').innerHTML = [renderCustomBoosterCard('coin_custom')].join('');
+  document.getElementById('shop-elo-boosters-grid').innerHTML = [
+    renderCustomBoosterCard('elo_custom'),
+    renderCustomBoosterCard('coin_custom'),
+  ].join('');
+  document.getElementById('shop-coin-boosters-grid').innerHTML = [
+    renderCard('global_elo_boost'),
+    renderCard('global_coin_boost'),
+  ].join('');
 }
 
 function switchShopCategory(category) {
@@ -1671,8 +1690,12 @@ async function loadShop() {
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
-    if (shopReferral?.referrer && !appliedCouponCode) {
-      setCouponStatus(`Parrain actif : -${shopReferral.discountPercent || 5}% boutique grace a ${shopReferral.referrer.pseudo}.`, 'ok');
+    if (Number(shopReferral?.discountPercent || 0) > 0 && !appliedCouponCode) {
+      const percent = Number(shopReferral.discountPercent || 0);
+      const message = shopReferral.discountKind === 'filleul' && shopReferral.referrer
+        ? `Filleul actif : -${percent}% boutique grace a ${shopReferral.referrer.pseudo}.`
+        : `Parrain actif : -${percent}% boutique grace a tes filleuls.`;
+      setCouponStatus(message, 'ok');
     }
   } catch (e) {
     shopGemsUnlocked = false;
