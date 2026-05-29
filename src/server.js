@@ -2503,6 +2503,7 @@ const DISCORD_GUILD_OWNER_ID = process.env.DISCORD_GUILD_OWNER_ID || '1147963951
 const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
 const DISCORD_REST_LOG_RATELIMIT = String(process.env.DISCORD_REST_LOG_RATELIMIT || '0') === '1';
 const discordRestQueues = new Map();
+const DISCORD_CONNECTED_RECONCILE_INTERVAL_MS = Math.max(10_000, Number(process.env.DISCORD_CONNECTED_RECONCILE_INTERVAL_MS || 10_000));
 const DISCORD_MEMBER_CACHE_TTL_MS = Number(process.env.DISCORD_MEMBER_CACHE_TTL_MS || 5 * 60 * 1000);
 const DISCORD_ROLE_CACHE_TTL_MS = Number(process.env.DISCORD_ROLE_CACHE_TTL_MS || 10 * 60 * 1000);
 const DISCORD_ROLE_SYNC_BATCH_SIZE = Math.max(1, Number(process.env.DISCORD_ROLE_SYNC_BATCH_SIZE || 5));
@@ -3277,6 +3278,21 @@ function syncOnlineDiscordConnectedRoles() {
   }
 }
 
+function reconcileDiscordConnectedRoles() {
+  for (const playerId of onlineSockets.keys()) {
+    if (isAnonymousPlayerId(playerId)) continue;
+    const player = pQ.getById.get(Number(playerId));
+    if (player?.discord_id) markDiscordConnectedRealtime(player);
+  }
+
+  for (const [playerId, knownConnected] of connectedRoleKnownState.entries()) {
+    if (!knownConnected || isAnonymousPlayerId(playerId)) continue;
+    const sockets = onlineSockets.get(Number(playerId));
+    if (sockets && sockets.size > 0) continue;
+    setDiscordConnectedRoleState(Number(playerId), false);
+  }
+}
+
 async function clearAllDiscordConnectedRoles() {
   const { botToken } = discordConfig();
   if (!botToken) return;
@@ -3393,6 +3409,14 @@ setInterval(async () => {
     } catch(e) {}
   }
 }, DISCORD_ROLE_SYNC_INTERVAL_MS);
+
+setInterval(() => {
+  try {
+    reconcileDiscordConnectedRoles();
+  } catch(e) {
+    console.warn('[DISCORD CONNECTED ROLE] reconcile failed:', e.message);
+  }
+}, DISCORD_CONNECTED_RECONCILE_INTERVAL_MS);
 
 setInterval(() => {
   const now = Date.now();
