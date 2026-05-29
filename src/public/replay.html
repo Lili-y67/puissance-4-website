@@ -17,6 +17,8 @@
   /* Couleurs dynamiques des joueurs (injectées par JS) */
   --p1-color:#ff2d55;--p1-glow:rgba(255,45,85,0.4);
   --p2-color:#ffd60a;--p2-glow:rgba(255,214,10,0.4);
+  --board-a:hsl(12 82% 58%);--board-b:hsl(198 82% 58%);--board-c:hsl(286 82% 58%);
+  --board-a-soft:hsl(12 88% 60% / .30);--board-b-soft:hsl(198 88% 60% / .28);--board-c-soft:hsl(286 88% 60% / .16);
 }
 html,body{min-height:100%;background:var(--bg); background-attachment: fixed;color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden;}
 .bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;}
@@ -81,32 +83,42 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* ── Board ── */
 .board-wrap{position:relative;}
 .board{
-  background:var(--grid);border-radius:18px;padding:10px;
-  border:1px solid var(--border);
-  box-shadow:0 24px 64px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.04);
+  position:relative;isolation:isolate;overflow:hidden;
+  background:
+    radial-gradient(circle at 7% 80%,var(--board-a-soft),transparent 30%),
+    radial-gradient(circle at 94% 18%,var(--board-b-soft),transparent 32%),
+    conic-gradient(from var(--board-spin,210deg) at 50% 50%,var(--board-a-soft),rgba(22,21,48,.98),var(--board-c-soft),rgba(9,17,35,.98),var(--board-b-soft));
+  border-radius:18px;padding:10px;
+  border:1px solid color-mix(in srgb,var(--board-b) 18%,rgba(255,255,255,.06));
+  box-shadow:0 24px 64px rgba(0,0,0,0.6),-18px 14px 44px color-mix(in srgb,var(--board-a) 18%,transparent),18px -12px 44px color-mix(in srgb,var(--board-b) 18%,transparent),inset 0 1px 0 rgba(255,255,255,0.08);
   display:grid;
   grid-template-columns:repeat(7,68px);
   grid-template-rows:repeat(6,68px);
   gap:6px;
 }
+.board::before{content:"";position:absolute;inset:8px;border-radius:14px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.032) 0 1px,transparent 1px 38px),repeating-linear-gradient(0deg,rgba(255,255,255,.026) 0 1px,transparent 1px 38px);opacity:.32;pointer-events:none;z-index:0}
+.board::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,color-mix(in srgb,var(--board-a) 16%,transparent),transparent 30%,transparent 70%,color-mix(in srgb,var(--board-b) 16%,transparent));mix-blend-mode:screen;opacity:.75;pointer-events:none;z-index:0}
 .cell{
+  z-index:1;
   border-radius:50%;
-  background:radial-gradient(circle at 35% 35%, rgba(255,255,255,0.06), rgba(7,7,26,0.96) 72%);
+  background:radial-gradient(circle at 50% 65%,rgba(0,0,0,.30),transparent 36%),radial-gradient(circle at 35% 35%, rgba(255,255,255,0.06), rgba(7,7,26,0.96) 70%);
   box-shadow:
-    inset 0 3px 10px rgba(0,0,0,0.7),
+    inset 0 4px 12px rgba(0,0,0,0.75),
     inset 0 1px 3px rgba(0,0,0,0.5),
     inset 0 0 0 1px rgba(255,255,255,0.07),
     0 0 0 1px rgba(255,255,255,0.08);
   position:relative;
   overflow:hidden;
 }
-.cell .token{position:absolute;inset:4px;border-radius:50%;transform:scale(0);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.cell::before{content:"";position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--board-a) 13%,transparent),transparent 35%),radial-gradient(circle at 72% 72%,color-mix(in srgb,var(--board-b) 15%,transparent),transparent 42%);opacity:.55;animation:cell-element 3.2s ease-in-out infinite alternate;pointer-events:none}
+.cell .token{position:absolute;z-index:2;inset:4px;border-radius:50%;transform:scale(0);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);}
 .cell.drop .token{transform:scale(1);}
 .cell.p1 .token{background:linear-gradient(135deg,var(--p1-secondary,var(--p1-light,#ff6b85)),var(--p1-color,#ff2d55));box-shadow:0 0 18px var(--p1-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
 .cell.p2 .token{background:linear-gradient(135deg,var(--p2-secondary,var(--p2-light,#ffe566)),var(--p2-color,#ffd60a));box-shadow:0 0 18px var(--p2-glow),inset 0 -3px 6px rgba(0,0,0,0.3);}
 .cell.highlight{box-shadow:inset 0 3px 8px rgba(0,0,0,0.6),inset 0 0 0 1px rgba(255,255,255,0.12),0 0 0 2px rgba(255,255,255,0.15);}
 .cell.winning .token{animation:win-pulse 0.7s ease-in-out infinite alternate;}
 @keyframes win-pulse{from{transform:scale(1)}to{transform:scale(1.1);filter:brightness(1.4);}}
+@keyframes cell-element{from{transform:scale(.88) rotate(-4deg);opacity:.34}to{transform:scale(1.08) rotate(4deg);opacity:.66}}
 
 /* ── End screen ── */
 .end-card{
@@ -380,6 +392,48 @@ function applyPlayerColors() {
   root.style.setProperty('--p2-glow',  hexToRgba(c2, 0.4));
 }
 
+const BOARD_PALETTES = [
+  [12, 198, 286],
+  [168, 284, 42],
+  [224, 318, 28],
+  [190, 258, 336],
+  [34, 152, 244],
+  [272, 16, 202],
+];
+
+function hashSeed(seed) {
+  const str = String(seed || 'replay-board');
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function hslColor(h, s = 82, l = 58) {
+  return `hsl(${Math.round(h % 360)} ${s}% ${l}%)`;
+}
+
+function hslSoft(h, a = .26) {
+  return `hsl(${Math.round(h % 360)} 88% 60% / ${a})`;
+}
+
+function applyBoardPalette(seed = '') {
+  const hash = hashSeed(seed);
+  const base = BOARD_PALETTES[hash % BOARD_PALETTES.length];
+  const drift = ((hash >>> 8) % 25) - 12;
+  const hues = base.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 9 - 4) + 360) % 360);
+  const root = document.documentElement;
+  root.style.setProperty('--board-a', hslColor(hues[0]));
+  root.style.setProperty('--board-b', hslColor(hues[1]));
+  root.style.setProperty('--board-c', hslColor(hues[2]));
+  root.style.setProperty('--board-a-soft', hslSoft(hues[0], .32));
+  root.style.setProperty('--board-b-soft', hslSoft(hues[1], .30));
+  root.style.setProperty('--board-c-soft', hslSoft(hues[2], .18));
+  root.style.setProperty('--board-spin', `${190 + (hash % 80)}deg`);
+}
+
 // ── Shapes ───────────────────────────────────────────────────────────────────
 let p1Shape = 'circle', p2Shape = 'circle';
 let p1EmojiImage = '', p2EmojiImage = '';
@@ -471,6 +525,7 @@ const SHAPE_CLIPS = {
 function renderShell() {
   const g = gameData;
   applyPlayerColors();
+  applyBoardPalette(`replay-${g.id || getGameId()}-${g.player1_id || g.p1_pseudo}-${g.player2_id || g.p2_pseudo}`);
   initShapes();
   const p1Won = g.winner_id === g.player1_id;
   const p2Won = g.winner_id === g.player2_id;
@@ -667,11 +722,14 @@ function downloadReplayHtml() {
 <title>Replay Puissance 4</title>
 <style>
 body{margin:0;background:#0a0a14;color:#f5f5fb;font-family:Segoe UI,Arial,sans-serif;padding:24px}
+:root{--board-a:hsl(12 82% 58%);--board-b:hsl(198 82% 58%);--board-c:hsl(286 82% 58%);--board-a-soft:hsl(12 88% 60% / .30);--board-b-soft:hsl(198 88% 60% / .28);--board-c-soft:hsl(286 88% 60% / .16);--board-spin:210deg}
 .wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .card{background:#121426;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px}
-.board{display:grid;grid-template-columns:repeat(7,64px);gap:6px;background:#0d1020;padding:10px;border-radius:18px;width:max-content}
-.cell{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 35% 35%, rgba(255,255,255,.06), rgba(6,8,20,.96) 72%);box-shadow:inset 0 2px 8px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.08)}
-.token{width:100%;height:100%;border-radius:50%;transform:scale(0);transition:transform .28s cubic-bezier(.22,1,.36,1), filter .28s}
+.board{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:repeat(7,64px);gap:6px;background:radial-gradient(circle at 7% 80%,var(--board-a-soft),transparent 30%),radial-gradient(circle at 94% 18%,var(--board-b-soft),transparent 32%),conic-gradient(from var(--board-spin) at 50% 50%,var(--board-a-soft),rgba(22,21,48,.98),var(--board-c-soft),rgba(9,17,35,.98),var(--board-b-soft));padding:10px;border-radius:18px;width:max-content}
+.board::before{content:"";position:absolute;inset:8px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--board-a) 16%,transparent),transparent 30%,transparent 70%,color-mix(in srgb,var(--board-b) 16%,transparent));opacity:.75;pointer-events:none}
+.cell{position:relative;z-index:1;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 50% 65%,rgba(0,0,0,.30),transparent 36%),radial-gradient(circle at 35% 35%, rgba(255,255,255,.06), rgba(6,8,20,.96) 70%);box-shadow:inset 0 3px 10px rgba(0,0,0,.72), inset 0 0 0 1px rgba(255,255,255,.08)}
+.cell::before{content:"";position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--board-a) 13%,transparent),transparent 35%),radial-gradient(circle at 72% 72%,color-mix(in srgb,var(--board-b) 15%,transparent),transparent 42%);opacity:.55}
+.token{position:relative;z-index:2;width:100%;height:100%;border-radius:50%;transform:scale(0);transition:transform .28s cubic-bezier(.22,1,.36,1), filter .28s}
 .token.show{transform:scale(1)}
 .token.last{animation:replayPop .45s cubic-bezier(.22,1,.36,1)}
 .winner{box-shadow:inset 0 2px 8px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 2px rgba(255,214,10,.45)}
@@ -706,6 +764,9 @@ let board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 let idx = 0;
 let autoTimer = null;
 let autoPlaying = true;
+const PALETTES=[[12,198,286],[168,284,42],[224,318,28],[190,258,336],[34,152,244],[272,16,202]];
+function hashSeed(seed){let h=2166136261;String(seed||'replay').split('').forEach(ch=>{h^=ch.charCodeAt(0);h=Math.imul(h,16777619)});return h>>>0}
+function setBoardPalette(){const h=hashSeed('replay-'+(DATA.game.id||'')+'-'+DATA.game.player1_id+'-'+DATA.game.player2_id);const base=PALETTES[h%PALETTES.length];const drift=((h>>>8)%25)-12;const root=document.documentElement;const hs=base.map((v,i)=>(v+drift+i*((h>>>(12+i*3))%9-4)+360)%360);root.style.setProperty('--board-a','hsl('+Math.round(hs[0])+' 82% 58%)');root.style.setProperty('--board-b','hsl('+Math.round(hs[1])+' 82% 58%)');root.style.setProperty('--board-c','hsl('+Math.round(hs[2])+' 82% 58%)');root.style.setProperty('--board-a-soft','hsl('+Math.round(hs[0])+' 88% 60% / .32)');root.style.setProperty('--board-b-soft','hsl('+Math.round(hs[1])+' 88% 60% / .30)');root.style.setProperty('--board-c-soft','hsl('+Math.round(hs[2])+' 88% 60% / .18)');root.style.setProperty('--board-spin',(190+(h%80))+'deg')}
 function render(){
   const el=document.getElementById('board');
   el.innerHTML='';
@@ -785,6 +846,7 @@ function toggleAuto(){
   clearTimeout(autoTimer);
   if(autoPlaying && idx<DATA.moves.length) autoTimer=setTimeout(nextMove, 420);
 }
+setBoardPalette();
 render();
 autoTimer=setTimeout(nextMove, 420);
 \u003C/script>

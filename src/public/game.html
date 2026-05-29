@@ -29,6 +29,12 @@
   --cyan:     #85EBFF;
   --violet:   #9b7cff;
   --shadow:   0 28px 90px rgba(0,0,0,0.42);
+  --board-a:  #ff4f35;
+  --board-b:  #32c4ff;
+  --board-c:  #9b7cff;
+  --board-a-soft: rgba(255,79,53,.34);
+  --board-b-soft: rgba(50,196,255,.32);
+  --board-c-soft: rgba(155,124,255,.16);
 }
 html, body { height: 100%; background: var(--bg); background-attachment: fixed; color: var(--text); font-family: 'Barlow', sans-serif; overflow-x: hidden; }
 body {
@@ -594,14 +600,14 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
   isolation:isolate;
   outline:1px solid color-mix(in srgb,var(--mode,#85EBFF) 18%, transparent);
   background:
-    radial-gradient(circle at 5% 78%, rgba(255,79,53,.34), transparent 30%),
-    radial-gradient(circle at 95% 22%, rgba(50,196,255,.32), transparent 32%),
-    conic-gradient(from 210deg at 50% 50%, rgba(255,76,49,.16), rgba(28,25,51,.95), rgba(34,193,255,.16), rgba(10,17,36,.96), rgba(255,76,49,.16)),
+    radial-gradient(circle at 5% 78%, var(--board-a-soft), transparent 30%),
+    radial-gradient(circle at 95% 22%, var(--board-b-soft), transparent 32%),
+    conic-gradient(from var(--board-spin, 210deg) at 50% 50%, var(--board-a-soft), rgba(28,25,51,.95), var(--board-c-soft), rgba(10,17,36,.96), var(--board-b-soft)),
     linear-gradient(180deg, #11112a, #070716);
   box-shadow:
     0 28px 88px rgba(0,0,0,0.56),
-    -22px 18px 54px rgba(255,45,85,.13),
-    22px -14px 58px rgba(0,183,255,.13),
+    -22px 18px 54px color-mix(in srgb, var(--board-a) 22%, transparent),
+    22px -14px 58px color-mix(in srgb, var(--board-b) 22%, transparent),
     inset 0 1px 0 rgba(255,255,255,.12),
     inset 0 -18px 38px rgba(0,0,0,.24);
 }
@@ -624,13 +630,13 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
   pointer-events:none;
   z-index:0;
   background:
-    radial-gradient(circle at 12% 86%, rgba(255,92,49,.22), transparent 28%),
-    radial-gradient(circle at 88% 14%, rgba(94,214,255,.20), transparent 30%),
-    linear-gradient(90deg, rgba(255,91,66,.16), transparent 28%, transparent 72%, rgba(57,190,255,.17)),
+    radial-gradient(circle at 12% 86%, color-mix(in srgb, var(--board-a) 24%, transparent), transparent 28%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--board-b) 24%, transparent), transparent 30%),
+    linear-gradient(90deg, color-mix(in srgb, var(--board-a) 18%, transparent), transparent 28%, transparent 72%, color-mix(in srgb, var(--board-b) 18%, transparent)),
     linear-gradient(180deg, rgba(255,255,255,.08), transparent 22%, transparent 78%, rgba(0,0,0,.18));
   box-shadow:
-    inset 20px 0 44px rgba(255,45,85,.13),
-    inset -20px 0 44px rgba(0,183,255,.15),
+    inset 20px 0 44px color-mix(in srgb, var(--board-a) 15%, transparent),
+    inset -20px 0 44px color-mix(in srgb, var(--board-b) 17%, transparent),
     inset 0 1px 0 rgba(255,255,255,.10);
   opacity:.74;
   mix-blend-mode:screen;
@@ -653,8 +659,8 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
   inset:18%;
   border-radius:50%;
   background:
-    radial-gradient(circle at 32% 28%,rgba(255,104,72,.12),transparent 32%),
-    radial-gradient(circle at 72% 70%,rgba(111,221,255,.14),transparent 40%);
+    radial-gradient(circle at 32% 28%,color-mix(in srgb, var(--board-a) 14%, transparent),transparent 32%),
+    radial-gradient(circle at 72% 70%,color-mix(in srgb, var(--board-b) 16%, transparent),transparent 40%);
   opacity:.58;
   animation:cell-element 3.2s ease-in-out infinite alternate;
 }
@@ -909,6 +915,50 @@ function getGameModeLabel() {
 }
 
 setGameMode('ranked');
+
+const BOARD_PALETTES = [
+  [12, 198, 286],   // braise, eau, arcane
+  [168, 284, 42],   // jade, violet, or
+  [224, 318, 28],   // cobalt, rose, lave
+  [190, 258, 336],  // lagon, indigo, rubis
+  [34, 152, 244],   // ambre, menthe, azur
+  [272, 16, 202],   // cristal, corail, cyan
+];
+
+function hashSeed(seed) {
+  const str = String(seed || `${Date.now()}-${Math.random()}`);
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function hslColor(h, s = 82, l = 58) {
+  return `hsl(${Math.round(h % 360)} ${s}% ${l}%)`;
+}
+
+function hslSoft(h, a = .26) {
+  return `hsl(${Math.round(h % 360)} 88% 60% / ${a})`;
+}
+
+function applyBoardPalette(seed = '') {
+  const hash = hashSeed(seed);
+  const base = BOARD_PALETTES[hash % BOARD_PALETTES.length];
+  const drift = ((hash >>> 8) % 25) - 12;
+  const root = document.documentElement;
+  const hues = base.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 9 - 4) + 360) % 360);
+  root.style.setProperty('--board-a', hslColor(hues[0]));
+  root.style.setProperty('--board-b', hslColor(hues[1]));
+  root.style.setProperty('--board-c', hslColor(hues[2]));
+  root.style.setProperty('--board-a-soft', hslSoft(hues[0], .32));
+  root.style.setProperty('--board-b-soft', hslSoft(hues[1], .30));
+  root.style.setProperty('--board-c-soft', hslSoft(hues[2], .18));
+  root.style.setProperty('--board-spin', `${190 + (hash % 80)}deg`);
+}
+
+applyBoardPalette();
 
 function getRenderableMediaSrc(src) {
   return typeof src === 'string' ? src.trim() : '';
@@ -1264,6 +1314,7 @@ function connectSocket(pendingMatch) {
     data.startsIn = 0;
     gameId = data.gameId;
     mySide = data.side;
+    applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
 
     // Appliquer couleurs et shapes
     applyColors(
@@ -1400,6 +1451,7 @@ function setupLobby(data) {
   lobbyData = data;
   gameId    = data.gameId;
   mySide    = data.yourSide;
+  applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
   setGameMode(String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : 'ranked');
   applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
 
@@ -1895,6 +1947,7 @@ function replayBotViaHome() {
 async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
   setGameMode('bot');
+  applyBoardPalette(`bot-${Date.now()}-${Math.random()}`);
   mySide = 1;
   currentTurn = 1;
   gameOver = false;
