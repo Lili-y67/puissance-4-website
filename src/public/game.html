@@ -590,8 +590,26 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
   position:absolute;
   inset:0;
   pointer-events:none;
-  overflow:hidden;
+  overflow:visible;
   border-radius:42px;
+  z-index:0;
+}
+.board-stage-deco::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:min(1080px,126vw);
+  height:min(720px,84vw);
+  transform:translate(-50%,-50%);
+  background:url('/assets/game/elemental-frame.png') center/contain no-repeat;
+  filter:drop-shadow(0 28px 58px rgba(0,0,0,.42)) drop-shadow(0 0 26px var(--mode-soft,rgba(133,235,255,.20)));
+  opacity:.92;
+  animation:elemental-frame-breathe 3.8s ease-in-out infinite alternate;
+}
+@keyframes elemental-frame-breathe{from{transform:translate(-50%,-50%) scale(.992);filter:drop-shadow(0 26px 54px rgba(0,0,0,.42)) drop-shadow(0 0 18px var(--mode-soft,rgba(133,235,255,.15)))}to{transform:translate(-50%,-50%) scale(1.012);filter:drop-shadow(0 30px 62px rgba(0,0,0,.45)) drop-shadow(0 0 34px var(--mode-soft,rgba(133,235,255,.26)))}}
+.deco-reef,.deco-glyph{
+  display:none;
 }
 .deco-reef{
   position:absolute;
