@@ -673,6 +673,14 @@ let activeMoveTimeSeconds = 0;
 let turnTimerInterval = null;
 let turnDeadline = 0;
 
+function setStatus(message = '', allowHtml = false) {
+  const el = document.getElementById('status');
+  if (!el) return;
+  if (allowHtml) el.innerHTML = String(message || '');
+  else el.textContent = String(message || '');
+  el.classList.toggle('thinking', !!message && allowHtml);
+}
+
 function getRenderableMediaSrc(src) {
   return typeof src === 'string' ? src.trim() : '';
 }
