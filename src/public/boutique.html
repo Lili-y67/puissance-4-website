@@ -97,8 +97,14 @@ body{
 .category-tab:hover::before{transform:translateX(120%)}
 .category-tab.active{background:linear-gradient(135deg, rgba(255,45,85,.22), rgba(133,235,255,.10));border-color:rgba(255,45,85,.36);color:#fff;box-shadow:0 0 24px rgba(255,45,85,.13)}
 .subsection-label{margin:4px 0 2px;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
-.boosters-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start}
-.booster-column{display:flex;flex-direction:column;gap:10px}
+.boosters-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}
+.booster-column{position:relative;display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:26px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);box-shadow:0 22px 60px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.04)}
+.booster-column::before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(circle at 16% 0%,var(--boost-glow,rgba(255,214,10,.12)),transparent 45%)}
+.booster-column>*{position:relative;z-index:1}
+.booster-column.personal{--boost-glow:rgba(255,214,10,.14)}
+.booster-column.global{--boost-glow:rgba(133,235,255,.14)}
+.booster-column.global .subsection-label{color:#85EBFF}
+.booster-column .grid{grid-template-columns:repeat(2,minmax(260px,1fr));gap:18px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .card{position:relative;overflow:hidden;min-height:470px;padding:22px;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 58px rgba(0,0,0,.30);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.14);box-shadow:0 36px 82px rgba(0,0,0,.38)}
@@ -154,9 +160,11 @@ body{
 .config-value{font-family:'Barlow Condensed',sans-serif;font-size:58px;font-weight:900;letter-spacing:1px;line-height:.95}
 .config-value.elo{color:var(--yellow)}
 .config-value.coins{color:var(--orange)}
+.config-value.global{color:var(--blue)}
 .config-slider-wrap{padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
 .config-slider{width:100%;accent-color:var(--yellow);cursor:pointer}
 .config-slider.coins{accent-color:var(--orange)}
+.config-slider.global{accent-color:var(--blue)}
 .config-scale{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 .config-price-note{font-size:12px;color:var(--muted)}
 .config-bullets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -287,6 +295,7 @@ body{
 .faq-grid .feature{min-height:96px}
 @media (max-width:980px){
   .hero-inner,.grid,.boosters-row,.shop-guide-grid,.faq-grid{grid-template-columns:1fr}
+  .booster-column .grid{grid-template-columns:1fr}
   .hero-title{font-size:54px}
 }
 @media (max-width:760px){
@@ -447,11 +456,11 @@ body{
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
     <div class="boosters-row">
-      <div class="booster-column">
+      <div class="booster-column personal">
         <div class="subsection-label">Boosters Perso</div>
         <div class="grid" id="shop-elo-boosters-grid"></div>
       </div>
-      <div class="booster-column">
+      <div class="booster-column global">
         <div class="subsection-label">Boosters Globaux</div>
         <div class="grid" id="shop-coin-boosters-grid"></div>
       </div>
@@ -760,7 +769,7 @@ let shopLimitedOffer = null;
 let shopGemsUnlocked = false;
 let shopReferral = null;
 let currentCategory = 'ranks';
-let customBoosterState = { elo: 0.1, coins: 1 };
+let customBoosterState = { elo: 0.1, coins: 1, globalElo: 0.2, globalCoins: 2 };
 let previewDecorations = [];
 let previewProfileBanners = [];
 let previewAnimTimer = null;
@@ -785,7 +794,11 @@ function setStoredPlayer(player) {
 }
 
 function getCustomBoosterValue(pack) {
-  return pack === 'elo_custom' ? Number(customBoosterState.elo || 0.1) : Number(customBoosterState.coins || 1);
+  if (pack === 'elo_custom') return Number(customBoosterState.elo || 0.1);
+  if (pack === 'coin_custom') return Number(customBoosterState.coins || 1);
+  if (pack === 'global_elo_custom') return Number(customBoosterState.globalElo || 0.2);
+  if (pack === 'global_coin_custom') return Number(customBoosterState.globalCoins || 2);
+  return 1;
 }
 
 function getShopCurrency() {
@@ -922,6 +935,14 @@ function getCustomBoosterPrice(pack) {
     const coins = Math.round(getCustomBoosterValue(pack) * 600);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
   }
+  if (pack === 'global_elo_custom') {
+    const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 2500);
+    return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
+  }
+  if (pack === 'global_coin_custom') {
+    const coins = Math.round(getCustomBoosterValue(pack) * 2500);
+    return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
+  }
   return Number((currency === 'gems' ? SHOP_GEM_PRICES : SHOP_PRICES)[pack] || 0);
 }
 
@@ -970,6 +991,49 @@ function getDynamicBoosterItem(pack) {
         ['🪙', 'Multiplicateur libre', 'De x1 jusqu’à x10 selon le niveau voulu.'],
         ['📈', 'Prix dynamique', 'Base : x1 = 600 coins, puis adaptation automatique.'],
         ['🎒', 'Inventaire', 'Ajout immédiat dans ton inventaire après validation.']
+      ]
+    };
+  }
+  if (pack === 'global_elo_custom') {
+    const bonus = Number(customBoosterState.globalElo || 0.2);
+    const total = 1 + bonus;
+    return {
+      key: 'global_elo_custom',
+      type: 'booster',
+      family: 'elo',
+      theme: 'booster-elo',
+      badge: '🌍 ELO',
+      duration: `x${bonus.toFixed(1)}`,
+      title: 'Boost Global ELO',
+      stat: `x${total.toFixed(2)}`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${total.toFixed(2)} serveur`,
+      meta: 'Choisis la puissance du boost ELO global. Une fois activé depuis le profil, tout le site en profite pendant 2 heures.',
+      features: [
+        ['🌍', 'Global', 'Tous les joueurs profitent du multiplicateur ELO.'],
+        ['🎚️', 'Puissance libre', 'De +0.1 jusqu’à +1.0 sur les gains ELO du serveur.'],
+        ['⏱️', 'Durée', 'Activation de 2 heures après utilisation.'],
+        ['🎒', 'Inventaire', 'Ajouté à ton inventaire après achat.']
+      ]
+    };
+  }
+  if (pack === 'global_coin_custom') {
+    const multiplier = Number(customBoosterState.globalCoins || 2);
+    return {
+      key: 'global_coin_custom',
+      type: 'booster',
+      family: 'coins',
+      theme: 'booster-coin',
+      badge: '🌍 COINS',
+      duration: `x${multiplier}`,
+      title: 'Boost Global Coins',
+      stat: `x${multiplier}`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier} serveur`,
+      meta: 'Choisis le multiplicateur coins global. Une fois activé depuis le profil, tous les gains de coins du site sont boostés pendant 2 heures.',
+      features: [
+        ['🌍', 'Global', 'Tous les gains de coins sont multipliés.'],
+        ['🎚️', 'Multiplicateur libre', 'De x2 jusqu’à x10 selon le niveau voulu.'],
+        ['⏱️', 'Durée', 'Activation de 2 heures après utilisation.'],
+        ['🎒', 'Inventaire', 'Ajouté à ton inventaire après achat.']
       ]
     };
   }
@@ -1104,7 +1168,11 @@ function getButtonState(pack) {
       ? getCustomInventoryQty('elo_custom_')
       : pack === 'coin_custom'
         ? getCustomInventoryQty('coin_custom_')
-        : getInventoryQty(pack);
+        : pack === 'global_elo_custom'
+          ? getCustomInventoryQty('global_elo_custom_')
+          : pack === 'global_coin_custom'
+            ? getCustomInventoryQty('global_coin_custom_')
+            : getInventoryQty(pack);
     const stockNote = stock === null ? 'Stock libre' : `Stock ${stock}`;
     return { disabled: false, note: `${stockNote} · Inventaire ${inv}` };
   }
@@ -1224,7 +1292,9 @@ function getDisplayItem(pack) {
   if (String(item.type) === 'booster') {
     return {
       ...item,
-      badge: item.family === 'coins' ? '🪙 COINS' : '⚡ ELO'
+      badge: String(pack).startsWith('global_')
+        ? (item.family === 'coins' ? '🌍 COINS' : '🌍 ELO')
+        : item.family === 'coins' ? '🪙 COINS' : '⚡ ELO'
     };
   }
   return item;
@@ -1478,8 +1548,12 @@ async function startBoosterPreviewAnimation(item, showcase) {
 function updateCustomBooster(type, value) {
   if (type === 'elo') {
     customBoosterState.elo = Math.max(0.1, Math.min(1.0, Math.round(Number(value || 0.1) * 10) / 10));
-  } else {
+  } else if (type === 'coins') {
     customBoosterState.coins = Math.max(1, Math.min(10, Math.round(Number(value || 1))));
+  } else if (type === 'globalElo') {
+    customBoosterState.globalElo = Math.max(0.1, Math.min(1.0, Math.round(Number(value || 0.2) * 10) / 10));
+  } else if (type === 'globalCoins') {
+    customBoosterState.globalCoins = Math.max(2, Math.min(10, Math.round(Number(value || 2))));
   }
   renderShop();
   switchShopCategory(currentCategory);
@@ -1490,10 +1564,25 @@ function renderCustomBoosterCard(pack) {
   const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
   const giftState = getGiftButtonState(pack);
-  const isElo = pack === 'elo_custom';
+  const isElo = pack === 'elo_custom' || pack === 'global_elo_custom';
+  const isGlobal = pack === 'global_elo_custom' || pack === 'global_coin_custom';
   const currentValue = getCustomBoosterValue(pack);
   const totalText = isElo ? `x${(1 + currentValue).toFixed(2)}` : `x${currentValue}`;
-  const inv = isElo ? getCustomInventoryQty('elo_custom_') : getCustomInventoryQty('coin_custom_');
+  const inv = pack === 'elo_custom'
+    ? getCustomInventoryQty('elo_custom_')
+    : pack === 'coin_custom'
+      ? getCustomInventoryQty('coin_custom_')
+      : pack === 'global_elo_custom'
+        ? getCustomInventoryQty('global_elo_custom_')
+        : getCustomInventoryQty('global_coin_custom_');
+  const updateType = pack === 'elo_custom' ? 'elo' : pack === 'coin_custom' ? 'coins' : pack === 'global_elo_custom' ? 'globalElo' : 'globalCoins';
+  const min = pack === 'global_coin_custom' ? '2' : isElo ? '0.1' : '1';
+  const max = isElo ? '1.0' : '10';
+  const step = isElo ? '0.1' : '1';
+  const sliderClass = isGlobal ? 'global' : (isElo ? '' : 'coins');
+  const valueClass = isGlobal ? 'global' : (isElo ? 'elo' : 'coins');
+  const leftScale = isElo ? '+0.1' : pack === 'global_coin_custom' ? 'x2' : 'x1';
+  const rightScale = isElo ? '+1.0' : 'x10';
   return `
     <article class="card ${item.theme}">
       <div class="tier">
@@ -1505,29 +1594,29 @@ function renderCustomBoosterCard(pack) {
       <div class="config-shell">
         <div class="config-topline">
           <div>
-            <div class="config-value ${isElo ? 'elo' : 'coins'}">${isElo ? '+' + currentValue.toFixed(1) : 'x' + currentValue}</div>
-            <div class="config-price-note">${isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
+            <div class="config-value ${valueClass}">${isElo ? '+' + currentValue.toFixed(1) : 'x' + currentValue}</div>
+            <div class="config-price-note">${isGlobal ? 'Puissance globale choisie pour le serveur' : isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
           </div>
           ${renderPriceHtml(price)}
         </div>
         <div class="config-slider-wrap">
           <input
-            class="config-slider ${isElo ? '' : 'coins'}"
+            class="config-slider ${sliderClass}"
             type="range"
-            min="${isElo ? '0.1' : '1'}"
-            max="${isElo ? '1.0' : '10'}"
-            step="${isElo ? '0.1' : '1'}"
+            min="${min}"
+            max="${max}"
+            step="${step}"
             value="${currentValue}"
-            oninput="updateCustomBooster('${isElo ? 'elo' : 'coins'}', this.value)">
+            oninput="updateCustomBooster('${updateType}', this.value)">
           <div class="config-scale">
-            <span>${isElo ? '+0.1' : 'x1'}</span>
+            <span>${leftScale}</span>
             <span>${isElo ? 'Prix dynamique' : 'Prix dynamique'}</span>
-            <span>${isElo ? '+1.0' : 'x10'}</span>
+            <span>${rightScale}</span>
           </div>
         </div>
         <div class="config-bullets">
-          <div class="config-bullet"><strong>Base tarifaire</strong><span>${isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
-          <div class="config-bullet"><strong>Inventaire actuel</strong><span>${inv} booster(s) personnalisés déjà possédés</span></div>
+          <div class="config-bullet"><strong>Base tarifaire</strong><span>${isGlobal ? (isElo ? '+0.1 = 2500 coins' : 'x2 = 5000 coins') : isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
+          <div class="config-bullet"><strong>Inventaire actuel</strong><span>${inv} booster(s) ${isGlobal ? 'globaux' : 'personnalisés'} déjà possédés</span></div>
         </div>
       </div>
       <div class="feature-list">
@@ -1600,8 +1689,8 @@ function renderShop() {
     renderCustomBoosterCard('coin_custom'),
   ].join('');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [
-    renderCard('global_elo_boost'),
-    renderCard('global_coin_boost'),
+    renderCustomBoosterCard('global_elo_custom'),
+    renderCustomBoosterCard('global_coin_custom'),
   ].join('');
 }
 
@@ -1631,7 +1720,7 @@ function openPreview(pack) {
   showcase.className = `preview-showcase ${item.theme}`;
   showcase.innerHTML = renderPreviewShowcase(item);
   note.textContent = item.type === 'booster'
-    ? renderPriceNote(pack, ` · ${pack === 'elo_custom' || pack === 'coin_custom' ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
+    ? renderPriceNote(pack, ` · ${pack.includes('_custom') ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
     : renderPriceNote(pack, ` · Aperçu uniquement, rien n'est sauvegardé`);
   features.innerHTML = item.features.map(([emoji, t, text]) => `
     <div class="feature">
@@ -1745,7 +1834,11 @@ async function purchasePack(pack, giftTo = '') {
           ? Number(customBoosterState.elo || 0.1)
           : pack === 'coin_custom'
             ? Number(customBoosterState.coins || 1)
-            : undefined,
+            : pack === 'global_elo_custom'
+              ? Number(customBoosterState.globalElo || 0.2)
+              : pack === 'global_coin_custom'
+                ? Number(customBoosterState.globalCoins || 2)
+                : undefined,
         currency,
         coupon: coupon || undefined,
         giftTo: giftTo || undefined,

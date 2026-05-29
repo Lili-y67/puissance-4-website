@@ -2724,6 +2724,14 @@ function normalizeCustomCoinMultiplier(value) {
   return stepped;
 }
 
+function normalizeGlobalCoinMultiplier(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  const stepped = Math.round(numeric);
+  if (stepped < 2 || stepped > 10) return null;
+  return stepped;
+}
+
 function buildCustomShopItem(pack, body = {}) {
   if (pack === 'elo_custom') {
     const bonus = normalizeCustomEloBonus(body.customMultiplier);
@@ -2750,6 +2758,35 @@ function buildCustomShopItem(pack, body = {}) {
       label: `Booster Coins x${multiplier}`,
       price: multiplier * 600,
       boostType: 'coins',
+      multiplier,
+      isCustom: true,
+    };
+  }
+  if (pack === 'global_elo_custom') {
+    const bonus = normalizeCustomEloBonus(body.customMultiplier);
+    if (bonus === null) return null;
+    return {
+      key: `global_elo_custom_${bonus.toFixed(1).replace('.', '_')}`,
+      displayKey: 'global_elo_custom',
+      category: 'global_boosters',
+      label: `Boost Global ELO x${(1 + bonus).toFixed(2)}`,
+      price: Math.round((bonus / 0.1) * 2500),
+      boostType: 'global_elo',
+      multiplier: Number((1 + bonus).toFixed(2)),
+      bonus,
+      isCustom: true,
+    };
+  }
+  if (pack === 'global_coin_custom') {
+    const multiplier = normalizeGlobalCoinMultiplier(body.customMultiplier);
+    if (multiplier === null) return null;
+    return {
+      key: `global_coin_custom_${String(multiplier).padStart(2, '0')}`,
+      displayKey: 'global_coin_custom',
+      category: 'global_boosters',
+      label: `Boost Global Coins x${multiplier}`,
+      price: multiplier * 2500,
+      boostType: 'global_coins',
       multiplier,
       isCustom: true,
     };
@@ -2783,6 +2820,32 @@ function resolveInventoryShopItem(itemKey) {
       category: 'coin_boosters',
       label: `Booster Coins x${multiplier}`,
       boostType: 'coins',
+      multiplier,
+      isCustom: true,
+    };
+  }
+  const globalEloMatch = key.match(/^global_elo_custom_(\d+)_(\d+)$/);
+  if (globalEloMatch) {
+    const bonus = normalizeCustomEloBonus(Number(`${globalEloMatch[1]}.${globalEloMatch[2]}`));
+    if (bonus === null) return null;
+    return {
+      key,
+      category: 'global_boosters',
+      label: `Boost Global ELO x${(1 + bonus).toFixed(2)}`,
+      boostType: 'global_elo',
+      multiplier: Number((1 + bonus).toFixed(2)),
+      isCustom: true,
+    };
+  }
+  const globalCoinMatch = key.match(/^global_coin_custom_(\d{1,2})$/);
+  if (globalCoinMatch) {
+    const multiplier = normalizeGlobalCoinMultiplier(Number(globalCoinMatch[1]));
+    if (multiplier === null) return null;
+    return {
+      key,
+      category: 'global_boosters',
+      label: `Boost Global Coins x${multiplier}`,
+      boostType: 'global_coins',
       multiplier,
       isCustom: true,
     };

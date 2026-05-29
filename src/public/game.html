@@ -490,6 +490,195 @@ body {
 .btn-action.ghost { background: rgba(255,255,255,.035); border: 1.5px solid var(--border); color: var(--muted); }
 .btn-action.ghost:hover { border-color: var(--muted); color: var(--text); }
 
+/* ── Abyss Grove theme layer ── */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background:
+    linear-gradient(115deg, transparent 0 18%, rgba(48,209,88,.055) 18.5%, transparent 20% 47%, rgba(133,235,255,.045) 47.5%, transparent 49%),
+    radial-gradient(circle at 50% 22%, rgba(133,235,255,.12), transparent 34%),
+    radial-gradient(circle at 50% 82%, rgba(48,209,88,.08), transparent 38%);
+  opacity:.75;
+  animation:bg-drift 12s ease-in-out infinite alternate;
+}
+@keyframes bg-drift{from{filter:hue-rotate(0deg);transform:translateY(0)}to{filter:hue-rotate(10deg);transform:translateY(-10px)}}
+body[data-game-mode="friendly"]{--mode:#30d158;--mode-soft:rgba(48,209,88,.16);--mode-name:"AMICAL"}
+body[data-game-mode="ranked"]{--mode:#ffd60a;--mode-soft:rgba(255,214,10,.16);--mode-name:"RANKED"}
+body[data-game-mode="tournament"]{--mode:#9b7cff;--mode-soft:rgba(155,124,255,.18);--mode-name:"TOURNOI"}
+body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mode-name:"BOT"}
+.top-bar,.players-row,.status-bar,.board-wrap{position:relative}
+.top-bar::after{
+  content:var(--mode-name, "PARTIE");
+  padding:7px 11px;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb, var(--mode,#ffd60a) 48%, transparent);
+  background:var(--mode-soft,rgba(255,214,10,.12));
+  color:var(--mode,#ffd60a);
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  box-shadow:0 0 22px color-mix(in srgb, var(--mode,#ffd60a) 18%, transparent);
+}
+.players-row::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:min(780px,92vw);
+  height:120px;
+  transform:translate(-50%,-50%);
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--p1-dim),var(--mode-soft,rgba(255,214,10,.12)),var(--p2-dim));
+  filter:blur(26px);
+  opacity:.62;
+  pointer-events:none;
+}
+.player-card{
+  isolation:isolate;
+}
+.player-card::before{
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.10),transparent 34%),
+    radial-gradient(circle at 20% 50%,rgba(255,255,255,.08),transparent 46%);
+}
+.player-card.active{
+  animation:card-breathe 1.25s ease-in-out infinite alternate;
+}
+@keyframes card-breathe{from{filter:brightness(1)}to{filter:brightness(1.08)}}
+.turn-mid{
+  position:relative;
+  overflow:hidden;
+}
+.turn-mid::before{
+  content:"";
+  position:absolute;
+  inset:-50%;
+  background:conic-gradient(from 180deg,transparent, var(--mode-soft,rgba(255,214,10,.12)), transparent 35%);
+  animation:turn-orbit 5s linear infinite;
+  opacity:.9;
+}
+.turn-mid>*{position:relative;z-index:1}
+@keyframes turn-orbit{to{transform:rotate(360deg)}}
+.turn-badge.show{
+  border-color:color-mix(in srgb,var(--mode,#ffd60a) 42%, transparent);
+  background:var(--mode-soft,rgba(255,214,10,.12));
+  color:var(--mode,#ffd60a);
+}
+.board-wrap{
+  max-width:820px;
+  margin-top:4px;
+  padding:32px min(4vw,34px) 22px;
+}
+.board-wrap::before{
+  content:"";
+  position:absolute;
+  inset:18px 0 0;
+  border-radius:42px;
+  background:
+    radial-gradient(circle at 50% 0%,var(--mode-soft,rgba(133,235,255,.13)),transparent 44%),
+    linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  border:1px solid rgba(255,255,255,.07);
+  box-shadow:0 28px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.05);
+  pointer-events:none;
+}
+.board-stage-deco{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  overflow:hidden;
+  border-radius:42px;
+}
+.deco-reef{
+  position:absolute;
+  bottom:8px;
+  width:170px;
+  height:190px;
+  opacity:.72;
+  filter:drop-shadow(0 12px 26px rgba(0,0,0,.36));
+}
+.deco-reef.left{left:-42px;background:
+  radial-gradient(ellipse at 42% 92%,rgba(48,209,88,.28),transparent 45%),
+  linear-gradient(105deg,transparent 0 38%,rgba(48,209,88,.28) 39% 43%,transparent 44%),
+  linear-gradient(78deg,transparent 0 52%,rgba(133,235,255,.22) 53% 57%,transparent 58%),
+  linear-gradient(118deg,transparent 0 58%,rgba(48,209,88,.24) 59% 63%,transparent 64%);
+  animation:reef-sway 4.8s ease-in-out infinite alternate;
+}
+.deco-reef.right{right:-48px;background:
+  radial-gradient(ellipse at 48% 92%,rgba(133,235,255,.24),transparent 45%),
+  linear-gradient(255deg,transparent 0 38%,rgba(133,235,255,.25) 39% 43%,transparent 44%),
+  linear-gradient(282deg,transparent 0 52%,rgba(48,209,88,.22) 53% 57%,transparent 58%),
+  linear-gradient(242deg,transparent 0 58%,rgba(133,235,255,.22) 59% 63%,transparent 64%);
+  animation:reef-sway 5.2s ease-in-out infinite alternate-reverse;
+}
+@keyframes reef-sway{from{transform:rotate(-2deg) translateY(4px)}to{transform:rotate(3deg) translateY(-4px)}}
+.deco-stream{
+  position:absolute;
+  width:140px;
+  height:420px;
+  top:-140px;
+  border-radius:999px;
+  background:linear-gradient(180deg,transparent,rgba(133,235,255,.13),transparent);
+  filter:blur(3px);
+  opacity:.55;
+  animation:water-fall 5s linear infinite;
+}
+.deco-stream.s1{left:12%;animation-delay:-1.4s}
+.deco-stream.s2{right:14%;animation-duration:6.2s;animation-delay:-3s}
+@keyframes water-fall{from{transform:translateY(-110px)}to{transform:translateY(210px)}}
+.deco-glyph{
+  position:absolute;
+  width:68px;
+  height:68px;
+  border-radius:20px;
+  border:1px solid color-mix(in srgb,var(--mode,#85EBFF) 34%, transparent);
+  background:linear-gradient(135deg,var(--mode-soft,rgba(133,235,255,.12)),rgba(255,255,255,.018));
+  opacity:.55;
+  transform:rotate(45deg);
+  animation:glyph-float 3.4s ease-in-out infinite alternate;
+}
+.deco-glyph::before,.deco-glyph::after{content:"";position:absolute;inset:18px;border:1px solid currentColor;color:var(--mode,#85EBFF);border-radius:10px;opacity:.45}
+.deco-glyph.g1{top:38px;left:6%}
+.deco-glyph.g2{right:7%;bottom:36px;animation-delay:-1.2s}
+@keyframes glyph-float{from{transform:rotate(45deg) translateY(0)}to{transform:rotate(45deg) translateY(-10px)}}
+.board{
+  position:relative;
+  z-index:1;
+  outline:1px solid color-mix(in srgb,var(--mode,#85EBFF) 18%, transparent);
+}
+.board::before{
+  content:"";
+  position:absolute;
+  inset:-9px;
+  z-index:-1;
+  border-radius:34px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 34%, transparent),color-mix(in srgb,var(--mode,#85EBFF) 28%, transparent),color-mix(in srgb,var(--p2) 30%, transparent));
+  filter:blur(16px);
+  opacity:.48;
+}
+.cell{
+  background:
+    radial-gradient(circle at 50% 62%,rgba(0,0,0,.18),transparent 34%),
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.11), rgba(7,7,26,0.98) 70%);
+}
+.cell:not(.p1):not(.p2)::before{
+  content:"";
+  position:absolute;
+  inset:20%;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(133,235,255,.10),transparent 70%);
+  opacity:.6;
+  animation:cell-water 2.8s ease-in-out infinite alternate;
+}
+@keyframes cell-water{from{transform:scale(.88);opacity:.35}to{transform:scale(1.08);opacity:.68}}
+.result-overlay.show{
+  border-color:color-mix(in srgb,var(--mode,#85EBFF) 28%, rgba(255,255,255,.10));
+}
+
 /* ── Responsive mobile ── */
 @media (max-width: 600px) {
   .page { padding: 10px 8px 20px; gap: 10px; }
@@ -499,6 +688,7 @@ body {
     flex-direction: column;
     align-items: stretch;
   }
+  .top-bar::after { width: 100%; text-align: center; justify-content: center; }
   .top-bar > * { width: 100%; }
   .logo-sm { font-size: 18px; }
   .btn-quit { padding: 9px 12px; font-size: 11px; width: 100%; }
@@ -643,6 +833,14 @@ body {
   <div class="status-bar" id="status"></div>
 
   <div class="board-wrap">
+    <div class="board-stage-deco" aria-hidden="true">
+      <div class="deco-reef left"></div>
+      <div class="deco-reef right"></div>
+      <div class="deco-stream s1"></div>
+      <div class="deco-stream s2"></div>
+      <div class="deco-glyph g1"></div>
+      <div class="deco-glyph g2"></div>
+    </div>
     <div class="col-buttons" id="col-btns"></div>
     <div class="board" id="board"></div>
     <div class="result-overlay" id="result-overlay">
@@ -710,6 +908,7 @@ let tournamentMeta = null;
 let activeMoveTimeSeconds = 0;
 let turnTimerInterval = null;
 let turnDeadline = 0;
+let currentGameMode = 'ranked';
 
 function setStatus(message = '', allowHtml = false) {
   const el = document.getElementById('status');
@@ -718,6 +917,21 @@ function setStatus(message = '', allowHtml = false) {
   else el.textContent = String(message || '');
   el.classList.toggle('thinking', !!message && allowHtml);
 }
+
+function setGameMode(mode = 'ranked') {
+  const safeMode = ['ranked', 'friendly', 'tournament', 'bot'].includes(String(mode)) ? String(mode) : 'ranked';
+  currentGameMode = safeMode;
+  document.body.dataset.gameMode = safeMode;
+}
+
+function getGameModeLabel() {
+  if (currentGameMode === 'friendly') return 'Amical';
+  if (currentGameMode === 'tournament') return 'Tournoi';
+  if (currentGameMode === 'bot') return 'Bot';
+  return 'Ranked';
+}
+
+setGameMode('ranked');
 
 function getRenderableMediaSrc(src) {
   return typeof src === 'string' ? src.trim() : '';
@@ -900,6 +1114,7 @@ function applyTournamentMeta(meta, moveTimeSeconds = 0) {
     name: String(meta.name || 'Tournoi'),
     moveTimeSeconds: Number(meta.moveTimeSeconds || 0),
   } : null;
+  if (tournamentMeta) setGameMode('tournament');
   activeMoveTimeSeconds = Number(moveTimeSeconds || tournamentMeta?.moveTimeSeconds || 0) || 0;
   const badge = document.getElementById('turn-badge');
   if (!badge) return;
@@ -907,8 +1122,8 @@ function applyTournamentMeta(meta, moveTimeSeconds = 0) {
     badge.textContent = `${tournamentMeta.name} · ${tournamentMeta.moveTimeSeconds}s`;
     badge.classList.add('show');
   } else {
-    badge.textContent = 'Tournoi';
-    badge.classList.remove('show');
+    badge.textContent = getGameModeLabel();
+    badge.classList.add('show');
   }
 }
 
@@ -1105,6 +1320,7 @@ function connectSocket(pendingMatch) {
     setCardElo(1, data.players[1].elo);
     document.getElementById('name-p2').textContent = data.players[2].pseudo;
     setCardElo(2, data.players[2].elo);
+    setGameMode(data.tournament ? 'tournament' : String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : 'ranked');
     applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
     applyPlayerCardVisual(1, data.players[1]);
     applyPlayerCardVisual(2, data.players[2]);
@@ -1207,6 +1423,7 @@ function setupLobby(data) {
   lobbyData = data;
   gameId    = data.gameId;
   mySide    = data.yourSide;
+  setGameMode(String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : 'ranked');
   applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
 
   // Fix couleur similaire : si les deux couleurs sont trop proches, décaler celle du p2
@@ -1274,6 +1491,7 @@ function setupLobby(data) {
 // ── Game start ────────────────────────────────────────────────────────────────
 function startGame(data) {
   document.getElementById('lobby-overlay').classList.add('hidden');
+  setGameMode(data.tournament ? 'tournament' : String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : currentGameMode);
 
   document.getElementById('name-p1').textContent = data.players[1].pseudo;
   setCardElo(1, data.players[1].elo);
@@ -1699,6 +1917,7 @@ function replayBotViaHome() {
 
 async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
+  setGameMode('bot');
   mySide = 1;
   currentTurn = 1;
   gameOver = false;

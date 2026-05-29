@@ -1372,6 +1372,16 @@ function getProfileBoosterMeta(key) {
   if (key === 'coin_boost_plus') return { label: 'Coin Boost +', multiplier: 10, type: 'coins' };
   if (key === 'global_elo_boost') return { label: 'Boost Global ELO', multiplier: 1.20, type: 'global' };
   if (key === 'global_coin_boost') return { label: 'Boost Global Coins', multiplier: 2, type: 'global' };
+  const globalElo = String(key).match(/^global_elo_custom_(\d+)_(\d+)$/);
+  if (globalElo) {
+    const bonus = Number(`${globalElo[1]}.${globalElo[2]}`);
+    return { label: `Boost Global ELO x${(1 + bonus).toFixed(2)}`, multiplier: Number((1 + bonus).toFixed(2)), type: 'global' };
+  }
+  const globalCoins = String(key).match(/^global_coin_custom_(\d{1,2})$/);
+  if (globalCoins) {
+    const multiplier = Number(globalCoins[1]);
+    return { label: `Boost Global Coins x${multiplier}`, multiplier, type: 'global' };
+  }
   const elo = String(key).match(/^elo_custom_(\d+)_(\d+)$/);
   if (elo) {
     const bonus = Number(`${elo[1]}.${elo[2]}`);
@@ -1401,7 +1411,7 @@ function getProfileBoosterCounts() {
     .filter(([key]) => key === 'coin_boost' || key === 'coin_boost_plus' || key.startsWith('coin_custom_'))
     .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
   const global = entries
-    .filter(([key]) => key === 'global_elo_boost' || key === 'global_coin_boost')
+    .filter(([key]) => key === 'global_elo_boost' || key === 'global_coin_boost' || key.startsWith('global_elo_custom_') || key.startsWith('global_coin_custom_'))
     .reduce((sum, [, qty]) => sum + Number(qty || 0), 0);
   return { elo, coins, global };
 }
