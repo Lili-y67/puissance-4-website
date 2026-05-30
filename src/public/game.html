@@ -916,13 +916,15 @@ function getGameModeLabel() {
 
 setGameMode('ranked');
 
-const BOARD_PALETTES = [
-  [12, 198, 286],   // braise, eau, arcane
-  [168, 284, 42],   // jade, violet, or
-  [224, 318, 28],   // cobalt, rose, lave
-  [190, 258, 336],  // lagon, indigo, rubis
-  [34, 152, 244],   // ambre, menthe, azur
-  [272, 16, 202],   // cristal, corail, cyan
+const BOARD_THEMES = [
+  { name: 'flamme', hues: [8, 32, 48], sat: 90, light: 58 },
+  { name: 'ocean', hues: [196, 214, 178], sat: 84, light: 58 },
+  { name: 'terre', hues: [138, 92, 38], sat: 68, light: 52 },
+  { name: 'cristal', hues: [188, 226, 272], sat: 82, light: 64 },
+  { name: 'orage', hues: [226, 252, 198], sat: 74, light: 58 },
+  { name: 'aurore', hues: [318, 266, 198], sat: 86, light: 61 },
+  { name: 'poison', hues: [126, 286, 82], sat: 82, light: 55 },
+  { name: 'solaire', hues: [42, 24, 350], sat: 88, light: 59 },
 ];
 
 function hashSeed(seed) {
@@ -939,22 +941,23 @@ function hslColor(h, s = 82, l = 58) {
   return `hsl(${Math.round(h % 360)} ${s}% ${l}%)`;
 }
 
-function hslSoft(h, a = .26) {
-  return `hsl(${Math.round(h % 360)} 88% 60% / ${a})`;
+function hslSoft(h, s = 88, l = 60, a = .26) {
+  return `hsl(${Math.round(h % 360)} ${s}% ${l}% / ${a})`;
 }
 
 function applyBoardPalette(seed = '') {
   const hash = hashSeed(seed);
-  const base = BOARD_PALETTES[hash % BOARD_PALETTES.length];
-  const drift = ((hash >>> 8) % 25) - 12;
+  const theme = BOARD_THEMES[hash % BOARD_THEMES.length];
+  const drift = ((hash >>> 8) % 17) - 8;
   const root = document.documentElement;
-  const hues = base.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 9 - 4) + 360) % 360);
-  root.style.setProperty('--board-a', hslColor(hues[0]));
-  root.style.setProperty('--board-b', hslColor(hues[1]));
-  root.style.setProperty('--board-c', hslColor(hues[2]));
-  root.style.setProperty('--board-a-soft', hslSoft(hues[0], .32));
-  root.style.setProperty('--board-b-soft', hslSoft(hues[1], .30));
-  root.style.setProperty('--board-c-soft', hslSoft(hues[2], .18));
+  const hues = theme.hues.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 7 - 3) + 360) % 360);
+  root.style.setProperty('--board-theme', theme.name);
+  root.style.setProperty('--board-a', hslColor(hues[0], theme.sat, theme.light));
+  root.style.setProperty('--board-b', hslColor(hues[1], theme.sat, theme.light));
+  root.style.setProperty('--board-c', hslColor(hues[2], theme.sat, Math.min(68, theme.light + 4)));
+  root.style.setProperty('--board-a-soft', hslSoft(hues[0], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .32));
+  root.style.setProperty('--board-b-soft', hslSoft(hues[1], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .30));
+  root.style.setProperty('--board-c-soft', hslSoft(hues[2], Math.min(92, theme.sat + 6), Math.min(68, theme.light + 6), .18));
   root.style.setProperty('--board-spin', `${190 + (hash % 80)}deg`);
 }
 
@@ -1949,7 +1952,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   setGameMode('bot');
   applyBoardPalette(`bot-${Date.now()}-${Math.random()}`);
   mySide = 1;
-  currentTurn = 1;
+  currentTurn = Math.random() < 0.5 ? 1 : 2;
   gameOver = false;
   iaDifficulty = difficulty;
   iaTargetElo  = targetElo || (difficulty === 'easy' ? 500 : difficulty === 'medium' ? 1200 : 3500);
@@ -2032,6 +2035,9 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       setTimeout(() => boardEl.classList.remove('locked'), 400);
       iaStartTime = Date.now();
       updateTurnUI();
+      if (currentTurn === 2) {
+        setTimeout(iaPlayBot, 520 + Math.random() * 420);
+      }
     } else { cdEl.textContent = n; SFX.tick(); }
   }, 1000);
 }

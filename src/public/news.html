@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>News 3.1.6 | Puissance 4 Ranked</title>
+<link rel="icon" type="image/png" href="/assets/site-logo-small.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
+<link rel="stylesheet" href="/theme.css">
+<style>
+:root{--bg:#070711;--surface:#111123;--surface2:#191930;--line:rgba(255,255,255,.09);--text:#f5f3ff;--muted:rgba(245,243,255,.62);--pink:#ff2d55;--cyan:#71ddff;--yellow:#ffd60a;--green:#30d158;--violet:#b36bff;--orange:#ff9f0a}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden}
+body{background:radial-gradient(circle at 12% 10%,rgba(255,45,85,.16),transparent 30%),radial-gradient(circle at 86% 18%,rgba(113,221,255,.13),transparent 28%),radial-gradient(circle at 55% 105%,rgba(179,107,255,.14),transparent 34%),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),var(--bg);background-size:auto,auto,auto,48px 48px,48px 48px,auto}
+.page{position:relative;z-index:1;width:min(1240px,100%);margin:0 auto;padding:28px 18px 70px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--text)}
+.brand img{width:50px;height:50px;border-radius:15px;border:1px solid rgba(255,255,255,.12);object-fit:cover}
+.brand strong{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
+.brand strong span{color:var(--pink)}
+.nav{display:flex;gap:10px;flex-wrap:wrap}
+.nav a{min-height:42px;display:inline-flex;align-items:center;gap:9px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);text-decoration:none;font-weight:800;transition:.22s ease}
+.nav a:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.07)}
+.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:34px;padding:34px;min-height:350px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:26px;align-items:stretch;background:linear-gradient(135deg,rgba(255,45,85,.14),rgba(113,221,255,.09) 56%,rgba(255,214,10,.06)),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)),var(--surface);box-shadow:0 28px 90px rgba(0,0,0,.34)}
+.hero::before{content:"";position:absolute;inset:-35% auto auto -12%;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(255,45,85,.28),transparent 65%);animation:floatGlow 8s ease-in-out infinite}
+.hero-copy,.version-card{position:relative;z-index:1}
+.kicker{display:inline-flex;align-items:center;gap:8px;margin-bottom:16px;color:var(--cyan);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:3px}
+h1{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:clamp(54px,9vw,104px);line-height:.86;text-transform:uppercase}
+h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
+.hero p{max-width:760px;margin:18px 0 0;color:var(--muted);font-size:16px;line-height:1.7}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.btn-main,.btn-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:15px;text-decoration:none;font-weight:900;text-transform:uppercase;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif}
+.btn-main{color:#18050b;background:linear-gradient(135deg,#ffd60a,#ff6d8b);box-shadow:0 18px 34px rgba(255,45,85,.2)}
+.btn-ghost{color:var(--text);border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.version-card{border-radius:28px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.025));padding:22px;display:flex;flex-direction:column;justify-content:space-between;min-height:280px}
+.version-orb{width:96px;height:96px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(113,221,255,.2),rgba(255,45,85,.18));border:1px solid rgba(255,255,255,.11);font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:900;animation:versionPulse 2.8s ease-in-out infinite}
+.version-card h2{margin:18px 0 8px;font-family:'Barlow Condensed',sans-serif;font-size:44px;line-height:.9;text-transform:uppercase}
+.version-card p{margin:0;color:var(--muted);font-size:14px}
+.version-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.meta-box{border-radius:18px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);padding:13px}
+.meta-box span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.5px}
+.meta-box strong{display:block;margin-top:5px;font-family:'Barlow Condensed',sans-serif;font-size:24px;text-transform:uppercase}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:30px 0 14px;flex-wrap:wrap}
+.section-head h2{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:42px;line-height:.9;text-transform:uppercase}
+.section-head p{margin:0;color:var(--muted);max-width:560px;line-height:1.55}
+.update-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.update-card{position:relative;overflow:hidden;min-height:250px;border-radius:26px;border:1px solid var(--line);background:linear-gradient(150deg,var(--soft,rgba(255,255,255,.04)),transparent 50%),linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.24);transition:.24s ease}
+.update-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.16)}
+.update-card::after{content:"";position:absolute;inset:auto -44px -48px auto;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,var(--soft,rgba(113,221,255,.16)),transparent 70%)}
+.card-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.icon{width:48px;height:48px;border-radius:17px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);font-size:22px;animation:iconFloat 3.4s ease-in-out infinite}
+.tag{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
+.update-card h3{position:relative;z-index:1;margin:0;font-family:'Barlow Condensed',sans-serif;font-size:31px;line-height:.96;text-transform:uppercase}
+.update-card ul{position:relative;z-index:1;margin:14px 0 0;padding:0;list-style:none;display:grid;gap:9px}
+.update-card li{display:flex;gap:9px;color:var(--muted);font-size:14px;line-height:1.42}
+.update-card li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--accent,#71ddff);box-shadow:0 0 14px var(--accent,#71ddff);flex:0 0 auto}
+.timeline{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);gap:16px}
+.release-panel,.timeline-panel{border-radius:28px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);padding:22px}
+.release-panel h2,.timeline-panel h2{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:34px;text-transform:uppercase}
+.release-list,.timeline-list{display:grid;gap:10px;margin-top:16px}
+.release-item{display:flex;justify-content:space-between;gap:12px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);padding:12px}
+.release-item span{color:var(--muted);font-size:13px}.release-item strong{font-family:'Barlow Condensed',sans-serif;font-size:20px;text-transform:uppercase}
+.timeline-item{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:start;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);padding:14px}
+.timeline-date{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;text-transform:uppercase;color:var(--cyan)}
+.timeline-item strong{display:block;font-size:15px;margin-bottom:4px}.timeline-item span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
+.footer-note{margin-top:24px;border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:16px 18px;color:var(--muted);line-height:1.55}
+@keyframes floatGlow{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(24px,18px,0) scale(1.08)}}@keyframes versionPulse{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-5px) rotate(-2deg)}}@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@media (max-width:980px){.hero,.timeline{grid-template-columns:1fr}.update-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:680px){.page{padding:18px 12px 54px}.topbar{align-items:stretch}.brand{width:100%;justify-content:center;text-align:center}.nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.nav a{justify-content:center}.hero{padding:22px;border-radius:26px;min-height:auto}h1{font-size:48px}.hero p{font-size:14px}.hero-actions{display:grid;grid-template-columns:1fr;width:100%}.update-grid{grid-template-columns:1fr}.section-head h2{font-size:34px}.timeline-item{grid-template-columns:1fr}.version-meta{grid-template-columns:1fr}}
+@media (max-width:420px){.nav{grid-template-columns:1fr}.brand strong{font-size:27px}h1{font-size:40px}.update-card{padding:17px;min-height:auto}.update-card h3{font-size:27px}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="topbar">
+    <a class="brand" href="/"><img src="/assets/site-logo-small.png" alt="Puissance 4"><strong>Puissance <span>4</span></strong></a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="/"><span>&#127968;</span><span>Accueil</span></a>
+      <a href="/stats"><span>&#128200;</span><span>Stats</span></a>
+      <a href="/live"><span>&#128308;</span><span>Live</span></a>
+      <a href="/boutique"><span>&#128722;</span><span>Boutique</span></a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
+      <h1>Mise a jour <span>3.1.6</span></h1>
+      <p>Une page dediee pour suivre les changements importants du site: Discord, boutique, Crystal, analyse, live, replay, stats, admin et confort mobile. L'objectif de cette version est simple: rendre les nouveautes visibles, propres et faciles a retrouver.</p>
+      <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
+    </div>
+    <aside class="version-card">
+      <div><div class="version-orb">3.1.6</div><h2>Grosse passe de polish</h2><p>Rangs, logs, boosts, bot, live et interfaces ont recu une vraie couche de finition.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>31 mai</strong></div><div class="meta-box"><span>Focus</span><strong>Qualite</strong></div><div class="meta-box"><span>Type</span><strong>Feature</strong></div></div>
+    </aside>
+  </section>
+
+  <section>
+    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs de la 3.1.6, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
+    <div class="update-grid">
+      <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128279;</div><div class="tag">Discord</div></div><h3>Roles et synchro</h3><ul><li>Generation admin des roles de rang ELO sans doublons.</li><li>Attribution automatique du role de rang quand le compte est lie.</li><li>Role Connectee synchronise par presence, avec limitation anti rate-limit.</li><li>Permissions Discord prises en compte pour les roles admin.</li></ul></article>
+      <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#128142;</div><div class="tag">Crystal</div></div><h3>Nouveau rang mensuel</h3><ul><li>Rang Crystal renouvelable automatiquement pour 5000 coins.</li><li>Badge dedie avec infobulle, sans couleur forcee sur le pseudo.</li><li>20 gemmes par semaine et avantages VIP/VIP+ hors Perso.</li><li>Message de connexion customisable pour les membres Crystal.</li></ul></article>
+      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.14)"><div class="card-top"><div class="icon">&#128722;</div><div class="tag">Boutique</div></div><h3>Boosts et cadeaux</h3><ul><li>Boosters personnels separes des boosters globaux.</li><li>Puissance modifiable avec prix dynamique.</li><li>Bouton Offrir avec recherche joueur et controle anti auto-cadeau.</li><li>Parrainage boutique avec reductions filleul et parrain.</li></ul></article>
+      <article class="update-card" style="--accent:#ff2d55;--soft:rgba(255,45,85,.15)"><div class="card-top"><div class="icon">&#128240;</div><div class="tag">Logs</div></div><h3>Webhooks propres</h3><ul><li>Webhooks distincts GET, POST, Games et Globaux.</li><li>Logs plus complets, sans texte inutile avant les infos.</li><li>Images Discord branchees en thumbnail ou image selon avatar/banniere.</li><li>File d'attente et ralentissement pour reduire les HTTP 429.</li></ul></article>
+      <article class="update-card" style="--accent:#b36bff;--soft:rgba(179,107,255,.16)"><div class="card-top"><div class="icon">&#129302;</div><div class="tag">Jeu</div></div><h3>Bot, live et replay</h3><ul><li>Les parties contre bot peuvent apparaitre dans le live.</li><li>Le bot peut commencer aleatoirement, connecte ou non.</li><li>Replay et live ameliores avec cartes, grille et variations.</li><li>Themes de plateau avec degrades coherents et ambiance elementaire.</li></ul></article>
+      <article class="update-card" style="--accent:#ff9f0a;--soft:rgba(255,159,10,.16)"><div class="card-top"><div class="icon">&#129504;</div><div class="tag">Analyse</div></div><h3>Evaluation des coups</h3><ul><li>Worker d'analyse rendu plus precis.</li><li>Affichage des variantes possibles en live.</li><li>Evaluation en centipions pour mieux lire les choix.</li><li>Base plus fiable pour les conseils de coups.</li></ul></article>
+      <article class="update-card" style="--accent:#85ebff;--soft:rgba(133,235,255,.16)"><div class="card-top"><div class="icon">&#128200;</div><div class="tag">Profil</div></div><h3>Profil et badges</h3><ul><li>Badges de profil remis en place et rendus plus propres.</li><li>Rangs affiches avec assets custom cote site.</li><li>Graphique du profil telechargeable en image.</li><li>Avatars et bannieres mieux recadres.</li></ul></article>
+      <article class="update-card" style="--accent:#ff7bb0;--soft:rgba(255,123,176,.15)"><div class="card-top"><div class="icon">&#127873;</div><div class="tag">Events</div></div><h3>Giveaway et drop</h3><ul><li>Commande Discord /giveaway avec duree, prix et vainqueur.</li><li>Commande /drop instantanee au premier clic.</li><li>Recompense automatique si le gagnant est lie au site.</li><li>Gestion des lots compatible coins, gemmes et avantages.</li></ul></article>
+      <article class="update-card" style="--accent:#8cff9e;--soft:rgba(140,255,158,.13)"><div class="card-top"><div class="icon">&#128176;</div><div class="tag">Gemmes</div></div><h3>Activite Discord</h3><ul><li>Le bot compte les discussions des membres Discord.</li><li>10 gemmes donnees tous les 10000 caracteres.</li><li>Stockage seulement si le membre est lie au site.</li><li>Gemmes masquees en boutique sans liaison Discord.</li></ul></article>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><div><h2>Suivi 3.1.6</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
+    <div class="timeline">
+      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>Discord</span><strong>Roles, logs, events</strong></div><div class="release-item"><span>Site</span><strong>Profil, stats, news</strong></div><div class="release-item"><span>Jeu</span><strong>Live, replay, bot</strong></div><div class="release-item"><span>Admin</span><strong>Recherche, packs, alertes</strong></div></div></aside>
+      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">Discord</div><div><strong>Les noms de roles restent propres.</strong><span>Les emojis et visuels riches restent cote site, pour eviter les limites Discord liees aux boosts.</span></div></div><div class="timeline-item"><div class="timeline-date">Privacy</div><div><strong>Les webhooks gardent une logique de moderation.</strong><span>Les evenements sont journalises avec les infos utiles, sans exposer plus que necessaire.</span></div></div><div class="timeline-item"><div class="timeline-date">Mobile</div><div><strong>Les nouvelles vues restent responsives.</strong><span>La page news se replie en une colonne et garde des boutons lisibles sur telephone.</span></div></div><div class="timeline-item"><div class="timeline-date">Stats</div><div><strong>Les nouveautes quittent la page stats.</strong><span>Les stats restent concentrees sur les chiffres, tandis que cette page porte les notes de version.</span></div></div></div></div>
+    </div>
+  </section>
+
+  <div class="footer-note">Version 3.1.6: cette page sert de journal lisible pour les joueurs. Les changements techniques restent branches dans les pages dediees, mais le recap public vit maintenant ici.</div>
+</main>
+<script src="/theme.js"></script>
+</body>
+</html>

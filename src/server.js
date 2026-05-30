@@ -3941,6 +3941,9 @@ app.get('/duel-auth/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
 app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
 app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/stats.html')));
+app.get('/news',        (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
+app.get('/news.html',   (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
+app.get('/nouveautes',  (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
 app.get('/api/decorations', (_, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json({ decorations: getAvatarDecorationPaths() });
@@ -6427,16 +6430,18 @@ app.get('/api/admin/games', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const limit  = Math.min(parseInt(req.query.limit) || 50, 200);
   const offset = parseInt(req.query.offset) || 0;
-  const search = req.query.search ? '%' + req.query.search.replace(/%/g,'') + '%' : null;
+  const rawSearch = req.query.search ? String(req.query.search).trim().replace(/%/g,'') : '';
+  const search = rawSearch ? '%' + rawSearch + '%' : null;
+  const searchId = rawSearch && /^\d+$/.test(rawSearch) ? Number(rawSearch) : null;
   const kind = String(req.query.kind || 'human') === 'bot' ? 'bot' : 'human';
 
   const botFilter = kind === 'bot'
-    ? `COALESCE(p1.is_bot,0)=1 AND COALESCE(p2.is_bot,0)=1`
+    ? `(COALESCE(p1.is_bot,0)=1 OR COALESCE(p2.is_bot,0)=1)`
     : `COALESCE(p1.is_bot,0)=0 AND COALESCE(p2.is_bot,0)=0`;
   const where  = search
-    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ?) AND g.status='finished' AND ${botFilter}`
+    ? `WHERE (p1.pseudo LIKE ? OR p2.pseudo LIKE ? OR g.id = ? OR p1.id = ? OR p2.id = ?) AND g.status='finished' AND ${botFilter}`
     : `WHERE g.status='finished' AND ${botFilter}`;
-  const params = search ? [search, search, limit, offset] : [limit, offset];
+  const params = search ? [search, search, searchId || -1, searchId || -1, searchId || -1, limit, offset] : [limit, offset];
 
   const games = db.prepare(`
     SELECT g.id, g.winner_id, g.status, g.move_count, g.duration, g.finished_at,

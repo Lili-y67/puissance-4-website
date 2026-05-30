@@ -1,11 +1,11 @@
 /**
- * analyse-worker.js v3 - Puissance 4, Minimax Alpha-Beta profondeur 10
+ * analyse-worker.js v4 - Puissance 4, analyse tactique + alpha-beta profond
  * Score ABSOLU : positif = avantage J1, negatif = avantage J2
  */
 
 const ROWS = 6, COLS = 7;
-const DEFAULT_DEPTH = 10;
-const DEFAULT_SEQ_DEPTH = 8;
+const DEFAULT_DEPTH = 12;
+const DEFAULT_SEQ_DEPTH = 10;
 const WIN_SCORE = 100000;
 let ACTIVE_DEPTH = DEFAULT_DEPTH;
 let ACTIVE_SEQ_DEPTH = DEFAULT_SEQ_DEPTH;
@@ -48,6 +48,16 @@ function checkWin(board, player) {
   return false;
 }
 function isFull(board) { return board[0].every(c => c !== 0); }
+function countEmpty(board) {
+  let n = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (board[r][c] === 0) n++;
+  return n;
+}
+function resolveDepth(board, requested = DEFAULT_DEPTH) {
+  const base = Math.max(1, Math.min(16, Number(requested || DEFAULT_DEPTH)));
+  const empty = countEmpty(board);
+  return empty <= 16 ? Math.min(16, empty) : base;
+}
 
 //  Evaluation 
 function scoreWindow(w, p) {
@@ -57,10 +67,10 @@ function scoreWindow(w, p) {
   const emp  = w.filter(c => c === 0).length;
   if (mine === 4) return  20000;
   if (opp  === 4) return -20000;
-  if (mine === 3 && emp === 1) return   240;
-  if (opp  === 3 && emp === 1) return  -260;
-  if (mine === 2 && emp === 2) return    28;
-  if (opp  === 2 && emp === 2) return   -32;
+  if (mine === 3 && emp === 1) return   360;
+  if (opp  === 3 && emp === 1) return  -390;
+  if (mine === 2 && emp === 2) return    44;
+  if (opp  === 2 && emp === 2) return   -50;
   if (mine === 1 && emp === 3) return     3;
   if (opp  === 1 && emp === 3) return    -4;
   return 0;
@@ -87,7 +97,7 @@ function orderedCols(board, player) {
     const forks = win ? 0 : countImmediateWins(board, player);
     undrop(board, col);
     const centerBonus = 7 - Math.abs(3 - col);
-    return { col, score: (win ? 10000 : 0) + forks * 900 - oppWins * 1200 + centerBonus };
+    return { col, score: (win ? 100000 : 0) + forks * 1800 - oppWins * 2600 + centerBonus };
   }).sort((a, b) => b.score - a.score).map(entry => entry.col);
 }
 
@@ -115,10 +125,10 @@ function evaluate(board) {
       score += scoreWindow([board[r][c],board[r+1][c+1],board[r+2][c+2],board[r+3][c+3]], 1);
   const p1Wins = countImmediateWins(board, 1);
   const p2Wins = countImmediateWins(board, 2);
-  score += p1Wins * 900;
-  score -= p2Wins * 950;
-  if (p1Wins >= 2) score += 3500;
-  if (p2Wins >= 2) score -= 3700;
+  score += p1Wins * 1600;
+  score -= p2Wins * 1700;
+  if (p1Wins >= 2) score += 8500;
+  if (p2Wins >= 2) score -= 9000;
   return score;
 }
 
@@ -143,7 +153,7 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
       alpha = Math.max(alpha, best);
       if (beta <= alpha) { exact = false; break; }
     }
-    if (exact && TT.size < 120000) TT.set(key, best);
+    if (exact && TT.size < 240000) TT.set(key, best);
     return best;
   } else {
     let best = Infinity;
@@ -154,7 +164,7 @@ function minimax(board, depth, alpha, beta, isP1Turn) {
       beta = Math.min(beta, best);
       if (beta <= alpha) { exact = false; break; }
     }
-    if (exact && TT.size < 120000) TT.set(key, best);
+    if (exact && TT.size < 240000) TT.set(key, best);
     return best;
   }
 }
@@ -300,23 +310,18 @@ function classifyMove(player, playedScore, bestScore, availableCols, context, pl
   const bestAllowsOppImmediateWins = playedState.bestAllowsOppImmediateWins || 0;
   const playedAllowsDoubleThreat = oppImmediateWins >= 2 && bestAllowsOppImmediateWins < 2;
 
-  if (oppImmediateWins > bestAllowsOppImmediateWins) {
-    if (playedAllowsDoubleThreat) return 'blunder';
-    if (oppImmediateWins >= 2) return 'blunder';
-    if (swing >= 18) return 'blunder';
-    return 'mistake';
-  }
+  if (oppImmediateWins > bestAllowsOppImmediateWins) return 'blunder';
 
   if (context.type === 'must_block' && swing >= 28) return 'blunder';
   if (context.type === 'win_available' && swing >= 20) return 'blunder';
-  if (swing >= 42) return 'blunder';
-  if (swing >= 24) return 'mistake';
+  if (swing >= 34) return 'blunder';
+  if (swing >= 20) return 'mistake';
 
-  if (swing <= 1.2 && loss <= 25) return 'best';
-  if (swing <= 3.5 && loss <= 85) return 'excellent';
-  if (swing <= 8) return 'good';
-  if (swing <= 15) return 'inaccuracy';
-  if (swing <= 28) return 'mistake';
+  if (swing <= 0.8 && loss <= 18) return 'best';
+  if (swing <= 2.8 && loss <= 70) return 'excellent';
+  if (swing <= 6.5) return 'good';
+  if (swing <= 13) return 'inaccuracy';
+  if (swing <= 24) return 'mistake';
   return 'blunder';
 }
 
@@ -350,8 +355,14 @@ function moveAccuracyScore(cls, loss, forced, swing = 0) {
 
 function calcAccuracy(scores) {
   if (!scores.length) return 100;
-  const total = scores.reduce((a, s) => a + s.accScore, 0);
-  const value = Number(total / scores.length);
+  const weights = { best: .85, excellent: 1, good: 1.05, inaccuracy: 1.15, mistake: 1.35, blunder: 1.7, forced: .65 };
+  let total = 0, totalWeight = 0;
+  scores.forEach(s => {
+    const w = weights[s.classification] || 1;
+    total += s.accScore * w;
+    totalWeight += w;
+  });
+  const value = Number(total / Math.max(1, totalWeight));
   return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 100;
 }
 
@@ -363,11 +374,11 @@ function currentAbsScore(board) {
 }
 
 function analyzePosition(boardInput, player, depth = DEFAULT_DEPTH, variantCount = 3) {
-  ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
-  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  const board = boardInput.map(row => Int8Array.from(row));
+  ACTIVE_DEPTH = resolveDepth(board, depth);
+  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(12, ACTIVE_DEPTH - 1));
   TT = new Map();
   NODE_COUNT = 0;
-  const board = boardInput.map(row => Int8Array.from(row));
   const currentScore = currentAbsScore(board);
   const analysis = bestMove(board, player, ACTIVE_DEPTH, variantCount);
   const p1WinPct = scoreToWinPct(currentScore);
@@ -424,8 +435,8 @@ function generateCommentV2(cls, moveIndex, bestCol, playedCol, loss, context, av
 //  Analyse principale 
 self.onmessage = function(e) {
   const { moves, depth = DEFAULT_DEPTH, variantCount = 3, mode, board: boardInput, player: positionPlayer } = e.data;
-  ACTIVE_DEPTH = Math.max(1, Math.min(14, Number(depth || DEFAULT_DEPTH)));
-  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(10, ACTIVE_DEPTH - 1));
+  ACTIVE_DEPTH = Math.max(1, Math.min(16, Number(depth || DEFAULT_DEPTH)));
+  ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(12, ACTIVE_DEPTH - 1));
   TT = new Map();
   NODE_COUNT = 0;
   if (mode === 'position') {
@@ -440,8 +451,10 @@ self.onmessage = function(e) {
     const player    = (i % 2 === 0) ? 1 : 2;
     const playedCol = moves[i];
     const boardBefore = cloneBoard(board);
+    const moveDepth = resolveDepth(boardBefore, ACTIVE_DEPTH);
+    ACTIVE_SEQ_DEPTH = Math.max(1, Math.min(12, moveDepth - 1));
     const cols = validCols(board);
-    const analysis = bestMove(boardBefore, player, ACTIVE_DEPTH, variantCount);
+    const analysis = bestMove(boardBefore, player, moveDepth, variantCount);
     const context  = getPositionContext(boardBefore, player);
 
     let result;
@@ -457,7 +470,7 @@ self.onmessage = function(e) {
             drop(board, playedCol, player);
             const s = checkWin(board, player)
               ? (player === 1 ? 100000 : -100000)
-              : minimax(board, Math.max(0, ACTIVE_DEPTH-2), -Infinity, Infinity, player !== 1);
+              : minimax(board, Math.max(0, moveDepth-2), -Infinity, Infinity, player !== 1);
             undrop(board, playedCol);
             return s;
           })();
@@ -502,7 +515,7 @@ self.onmessage = function(e) {
 
       result = { moveIndex:i, player, playedCol, bestCol, bestScore, playedScore,
         classification, forced, loss, accScore, evalScore:evalBar, evalCP, optimalSeq, comment, context,
-        bestWinPct, playedWinPct, swing, variants: analysis.variants || [], depth: ACTIVE_DEPTH };
+        bestWinPct, playedWinPct, swing, variants: analysis.variants || [], depth: moveDepth };
 
       if (player === 1) p1Scores.push({ classification, loss, accScore });
       else              p2Scores.push({ classification, loss, accScore });

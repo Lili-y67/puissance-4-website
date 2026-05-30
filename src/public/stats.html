@@ -603,6 +603,7 @@ body{
     <div class="top-actions">
       <a class="nav-btn" href="/"><span>&#127968;</span><span>Accueil</span></a>
       <a class="nav-btn" href="/profil"><span>&#128100;</span><span>Profil</span></a>
+      <a class="nav-btn" href="/news"><span>&#128240;</span><span>News</span></a>
       <a class="nav-btn" href="/leaderboard"><span>&#127942;</span><span>Classement</span></a>
     </div>
   </div>
@@ -708,6 +709,7 @@ body{
         <div class="metric"><div class="top"><span class="name">Duree moyenne</span><span class="emoji">&#9200;</span></div><div class="num" id="averageDuration">-</div><div class="hint">Temps moyen par partie.</div></div>
         <div class="metric"><div class="top"><span class="name">Coups moyens</span><span class="emoji">&#128202;</span></div><div class="num" id="averageMoves">-</div><div class="hint">Longueur moyenne des matchs.</div></div>
         <div class="metric"><div class="top"><span class="name">Parties bot</span><span class="emoji">&#129302;</span></div><div class="num" id="botGames">-</div><div class="hint">Combats contre l IA.</div></div>
+        <div class="metric"><div class="top"><span class="name">Parties humaines</span><span class="emoji">&#128101;</span></div><div class="num" id="humanGames">-</div><div class="hint">Total estime hors parties bot.</div></div>
       </div>
     </article>
 
@@ -786,6 +788,7 @@ body{
         <div class="metric"><div class="top"><span class="name">Boosts VIP actifs</span><span class="emoji">&#9889;</span></div><div class="num" id="activeVipBoosts">-</div><div class="hint">Boosts individuels en cours.</div></div>
         <div class="metric"><div class="top"><span class="name">Suivis</span><span class="emoji">&#128106;</span></div><div class="num" id="follows">-</div><div class="hint">Liens sociaux crees.</div></div>
         <div class="metric"><div class="top"><span class="name">Tournois</span><span class="emoji">&#127967;&#65039;</span></div><div class="num" id="tournaments">-</div><div class="hint">Evenements generes.</div></div>
+        <div class="metric"><div class="top"><span class="name">Crystal</span><span class="emoji">&#128142;</span></div><div class="num" id="crystalCount">-</div><div class="hint">Abonnements Crystal actifs.</div></div>
       </div>
     </article>
   </section>
@@ -904,6 +907,7 @@ function populate(data, weekly) {
   setText('averageDuration', data.averageDuration, ' s');
   setText('averageMoves', data.averageMoves);
   setText('botGames', data.botGames);
+  setText('humanGames', Math.max(0, Number(data.totalGames || 0) - Number(data.botGames || 0)));
   setText('averageElo', data.averageElo);
   setText('analysedGames', data.analysedGames);
   setText('averageAccuracy', data.averageAccuracy, '%');
@@ -917,6 +921,7 @@ function populate(data, weekly) {
   setText('vipCount', data.vipCount);
   setText('vipPlusCount', data.vipPlusCount);
   setText('persoCount', data.persoCount);
+  setText('crystalCount', data.crystalCount || 0);
   setText('activeVipBoosts', data.activeVipBoosts);
   setText('follows', data.follows);
   setText('tournaments', data.tournaments);

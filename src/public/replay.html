@@ -24,7 +24,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .bg-grid{position:fixed;inset:0;z-index:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:48px 48px;}
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
 
-.page{position:relative;z-index:2;max-width:600px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+.page{position:relative;z-index:2;max-width:720px;margin:0 auto;padding:24px 18px 44px;display:flex;flex-direction:column;align-items:center;gap:18px;}
 
 /* ── Nav ── */
 .nav{width:100%;display:flex;align-items:center;justify-content:space-between;}
@@ -36,14 +36,15 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 
 /* ── Replay header ── */
 .replay-header{
-  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 20px;
+  width:100%;background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.015)),var(--surface);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:18px 20px;
   display:flex;flex-direction:column;gap:10px;
+  box-shadow:0 24px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.06);
   animation:slide-in 0.5s cubic-bezier(0.22,1,0.36,1) both;
 }
 @keyframes slide-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
 .replay-vs{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.rp{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;}
+.rp{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.055);}
 .rp-dot{width:14px;height:14px;border-radius:50%;}
 .rp.p1 .rp-dot{background:var(--p1-color);box-shadow:0 0 8px var(--p1-glow);}
 .rp.p2 .rp-dot{background:var(--p2-color);box-shadow:0 0 8px var(--p2-glow);}
@@ -61,7 +62,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .rmeta strong{color:var(--text);font-weight:600;}
 
 /* ── Progress bar ── */
-.progress-wrap{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.progress-wrap{width:100%;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015)),var(--surface);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 18px 46px rgba(0,0,0,.25);}
 .progress-top{display:flex;justify-content:space-between;align-items:center;}
 .progress-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);}
 .progress-count{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;}
@@ -71,8 +72,9 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 /* ── Think timer ── */
 .think-box{
   display:flex;align-items:center;justify-content:center;gap:12px;
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 20px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:12px 20px;
   min-height:44px;width:100%;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
 }
 .think-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:all 0.3s;}
 .think-dot.p1{background:var(--p1-color);box-shadow:0 0 8px var(--p1-glow);}
@@ -81,7 +83,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .think-timer{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--text);min-width:48px;text-align:right;}
 
 /* ── Board ── */
-.board-wrap{position:relative;}
+.board-wrap{position:relative;padding:18px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.012));border:1px solid rgba(255,255,255,.07);box-shadow:0 26px 78px rgba(0,0,0,.30)}
 .board{
   position:relative;isolation:isolate;overflow:hidden;
   background:
@@ -122,8 +124,9 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 
 /* ── End screen ── */
 .end-card{
-  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;
+  width:100%;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)),var(--surface);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:22px;
   display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;
+  box-shadow:0 24px 70px rgba(0,0,0,.32);
 }
 .end-card.show{display:flex;}
 .end-title{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:4px;line-height:1;}
@@ -190,12 +193,12 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .analyse-progress-bar-fill{height:100%;background:linear-gradient(90deg,#4c6ef5,#8b9cf4);border-radius:2px;width:0%;transition:width 0.3s;}
 .analyse-progress-text{font-size:11px;color:var(--muted);text-align:right;}
 
-.analyse-panel{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;display:none;flex-direction:column;gap:16px;}
+.analyse-panel{width:100%;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.016)),var(--surface);border:1px solid rgba(255,255,255,.09);border-radius:22px;padding:22px;display:none;flex-direction:column;gap:16px;box-shadow:0 24px 70px rgba(0,0,0,.30);}
 .analyse-panel.show{display:flex;}
 
 /* Précision globale */
 .accuracy-row{display:flex;gap:12px;}
-.accuracy-card{flex:1;padding:14px 12px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;text-align:center;}
+.accuracy-card{flex:1;padding:16px 12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,.075);border-radius:16px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
 .accuracy-pct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;line-height:1;}
 .accuracy-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:4px;}
 .accuracy-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle;}
@@ -210,7 +213,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 
 /* Liste des coups analysés */
 .analyse-moves{display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;}
-.analyse-move{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid transparent;cursor:pointer;transition:all 0.15s;}
+.analyse-move{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;border-radius:16px;background:rgba(255,255,255,0.024);border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:all 0.15s;}
 .analyse-move:hover{background:rgba(255,255,255,0.05);border-color:var(--border);}
 .analyse-move.highlighted{background:rgba(76,110,245,0.1);border-color:rgba(76,110,245,0.3);}
 .am-num{font-size:11px;color:var(--muted);width:24px;flex-shrink:0;text-align:center;}
@@ -249,7 +252,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   .replay-meta{justify-content:flex-start;gap:8px 14px}
   .progress-wrap,.think-box,.end-card,.analyse-panel{padding:14px 12px}
   .analyse-controls{grid-template-columns:1fr}
-  .board{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));width:min(100vw - 20px,560px);aspect-ratio:7/6;gap:5px;padding:8px}
+  .board-wrap{padding:10px;border-radius:22px}
+  .board{grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));width:min(100vw - 42px,560px);aspect-ratio:7/6;gap:5px;padding:8px}
   .cell .token{inset:3px}
   .accuracy-row{flex-direction:column}
   .analyse-moves{max-height:none}
@@ -262,7 +266,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   .rmeta{font-size:11px}
   .progress-top{flex-direction:column;align-items:flex-start;gap:4px}
   .think-box{flex-wrap:wrap;justify-content:flex-start}
-  .board{width:min(100vw - 16px,420px);gap:4px;padding:6px;border-radius:14px}
+  .board-wrap{padding:8px}
+  .board{width:min(100vw - 34px,420px);gap:4px;padding:6px;border-radius:14px}
   .analyse-move{padding:10px}
   .am-head{gap:6px}
   .am-metrics{gap:4px}
@@ -392,13 +397,15 @@ function applyPlayerColors() {
   root.style.setProperty('--p2-glow',  hexToRgba(c2, 0.4));
 }
 
-const BOARD_PALETTES = [
-  [12, 198, 286],
-  [168, 284, 42],
-  [224, 318, 28],
-  [190, 258, 336],
-  [34, 152, 244],
-  [272, 16, 202],
+const BOARD_THEMES = [
+  { name: 'flamme', hues: [8, 32, 48], sat: 90, light: 58 },
+  { name: 'ocean', hues: [196, 214, 178], sat: 84, light: 58 },
+  { name: 'terre', hues: [138, 92, 38], sat: 68, light: 52 },
+  { name: 'cristal', hues: [188, 226, 272], sat: 82, light: 64 },
+  { name: 'orage', hues: [226, 252, 198], sat: 74, light: 58 },
+  { name: 'aurore', hues: [318, 266, 198], sat: 86, light: 61 },
+  { name: 'poison', hues: [126, 286, 82], sat: 82, light: 55 },
+  { name: 'solaire', hues: [42, 24, 350], sat: 88, light: 59 },
 ];
 
 function hashSeed(seed) {
@@ -415,22 +422,23 @@ function hslColor(h, s = 82, l = 58) {
   return `hsl(${Math.round(h % 360)} ${s}% ${l}%)`;
 }
 
-function hslSoft(h, a = .26) {
-  return `hsl(${Math.round(h % 360)} 88% 60% / ${a})`;
+function hslSoft(h, s = 88, l = 60, a = .26) {
+  return `hsl(${Math.round(h % 360)} ${s}% ${l}% / ${a})`;
 }
 
 function applyBoardPalette(seed = '') {
   const hash = hashSeed(seed);
-  const base = BOARD_PALETTES[hash % BOARD_PALETTES.length];
-  const drift = ((hash >>> 8) % 25) - 12;
-  const hues = base.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 9 - 4) + 360) % 360);
+  const theme = BOARD_THEMES[hash % BOARD_THEMES.length];
+  const drift = ((hash >>> 8) % 17) - 8;
+  const hues = theme.hues.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 7 - 3) + 360) % 360);
   const root = document.documentElement;
-  root.style.setProperty('--board-a', hslColor(hues[0]));
-  root.style.setProperty('--board-b', hslColor(hues[1]));
-  root.style.setProperty('--board-c', hslColor(hues[2]));
-  root.style.setProperty('--board-a-soft', hslSoft(hues[0], .32));
-  root.style.setProperty('--board-b-soft', hslSoft(hues[1], .30));
-  root.style.setProperty('--board-c-soft', hslSoft(hues[2], .18));
+  root.style.setProperty('--board-theme', theme.name);
+  root.style.setProperty('--board-a', hslColor(hues[0], theme.sat, theme.light));
+  root.style.setProperty('--board-b', hslColor(hues[1], theme.sat, theme.light));
+  root.style.setProperty('--board-c', hslColor(hues[2], theme.sat, Math.min(68, theme.light + 4)));
+  root.style.setProperty('--board-a-soft', hslSoft(hues[0], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .32));
+  root.style.setProperty('--board-b-soft', hslSoft(hues[1], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .30));
+  root.style.setProperty('--board-c-soft', hslSoft(hues[2], Math.min(92, theme.sat + 6), Math.min(68, theme.light + 6), .18));
   root.style.setProperty('--board-spin', `${190 + (hash % 80)}deg`);
 }
 
@@ -610,10 +618,10 @@ function renderShell() {
       <div>
         <div class="analyse-depth-label">Puissance de calcul</div>
         <select class="analyse-depth-select" id="analyse-depth">
-          <option value="8">Rapide - profondeur 8</option>
-          <option value="10" selected>Standard - profondeur 10</option>
-          <option value="12">Forte - profondeur 12</option>
-          <option value="14">Max - profondeur 14</option>
+          <option value="10">Rapide - profondeur 10</option>
+          <option value="12" selected>Standard - profondeur 12</option>
+          <option value="14">Forte - profondeur 14</option>
+          <option value="16">Max - profondeur 16</option>
         </select>
         <div class="analyse-mini-note">Plus la profondeur est haute, plus l'analyse est fiable, mais plus elle prend du temps.</div>
       </div>
@@ -764,9 +772,9 @@ let board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 let idx = 0;
 let autoTimer = null;
 let autoPlaying = true;
-const PALETTES=[[12,198,286],[168,284,42],[224,318,28],[190,258,336],[34,152,244],[272,16,202]];
+const THEMES=[{n:'flamme',h:[8,32,48],s:90,l:58},{n:'ocean',h:[196,214,178],s:84,l:58},{n:'terre',h:[138,92,38],s:68,l:52},{n:'cristal',h:[188,226,272],s:82,l:64},{n:'orage',h:[226,252,198],s:74,l:58},{n:'aurore',h:[318,266,198],s:86,l:61},{n:'poison',h:[126,286,82],s:82,l:55},{n:'solaire',h:[42,24,350],s:88,l:59}];
 function hashSeed(seed){let h=2166136261;String(seed||'replay').split('').forEach(ch=>{h^=ch.charCodeAt(0);h=Math.imul(h,16777619)});return h>>>0}
-function setBoardPalette(){const h=hashSeed('replay-'+(DATA.game.id||'')+'-'+DATA.game.player1_id+'-'+DATA.game.player2_id);const base=PALETTES[h%PALETTES.length];const drift=((h>>>8)%25)-12;const root=document.documentElement;const hs=base.map((v,i)=>(v+drift+i*((h>>>(12+i*3))%9-4)+360)%360);root.style.setProperty('--board-a','hsl('+Math.round(hs[0])+' 82% 58%)');root.style.setProperty('--board-b','hsl('+Math.round(hs[1])+' 82% 58%)');root.style.setProperty('--board-c','hsl('+Math.round(hs[2])+' 82% 58%)');root.style.setProperty('--board-a-soft','hsl('+Math.round(hs[0])+' 88% 60% / .32)');root.style.setProperty('--board-b-soft','hsl('+Math.round(hs[1])+' 88% 60% / .30)');root.style.setProperty('--board-c-soft','hsl('+Math.round(hs[2])+' 88% 60% / .18)');root.style.setProperty('--board-spin',(190+(h%80))+'deg')}
+function setBoardPalette(){const h=hashSeed('replay-'+(DATA.game.id||'')+'-'+DATA.game.player1_id+'-'+DATA.game.player2_id);const t=THEMES[h%THEMES.length];const drift=((h>>>8)%17)-8;const root=document.documentElement;const hs=t.h.map((v,i)=>(v+drift+i*((h>>>(12+i*3))%7-3)+360)%360);root.style.setProperty('--board-theme',t.n);root.style.setProperty('--board-a','hsl('+Math.round(hs[0])+' '+t.s+'% '+t.l+'%)');root.style.setProperty('--board-b','hsl('+Math.round(hs[1])+' '+t.s+'% '+t.l+'%)');root.style.setProperty('--board-c','hsl('+Math.round(hs[2])+' '+t.s+'% '+Math.min(68,t.l+4)+'%)');root.style.setProperty('--board-a-soft','hsl('+Math.round(hs[0])+' '+Math.min(92,t.s+6)+'% '+Math.min(66,t.l+4)+'% / .32)');root.style.setProperty('--board-b-soft','hsl('+Math.round(hs[1])+' '+Math.min(92,t.s+6)+'% '+Math.min(66,t.l+4)+'% / .30)');root.style.setProperty('--board-c-soft','hsl('+Math.round(hs[2])+' '+Math.min(92,t.s+6)+'% '+Math.min(68,t.l+6)+'% / .18)');root.style.setProperty('--board-spin',(190+(h%80))+'deg')}
 function render(){
   const el=document.getElementById('board');
   el.innerHTML='';
@@ -1095,7 +1103,7 @@ function startAnalysis() {
   const controls = document.getElementById('analyse-controls');
   const progWrap = document.getElementById('analyse-progress');
   const depthSel = document.getElementById('analyse-depth');
-  const depth    = Math.max(1, Math.min(14, Number(depthSel?.value || 10)));
+  const depth    = Math.max(1, Math.min(16, Number(depthSel?.value || 12)));
   const variantCount = 3;
   btn.style.display = 'none';
   controls?.classList.remove('show');

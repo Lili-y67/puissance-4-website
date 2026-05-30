@@ -870,7 +870,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   <!-- Section Parties -->
   <div id="admin-games-section" style="display:none;margin-bottom:20px;">
     <div class="games-toolbar">
-      <input class="search-input" id="games-search" placeholder="Rechercher par pseudo..." style="flex:1;"
+      <input class="search-input" id="games-search" placeholder="Rechercher par joueur, bot ou ID..." style="flex:1;"
         oninput="loadAdminGames()">
       <div class="games-kind-tabs">
         <button id="games-kind-human" class="active" type="button" onclick="switchAdminGamesKind('human')">Parties joueurs</button>
@@ -1737,6 +1737,10 @@ function switchAdminGamesKind(kind) {
   currentGamesKind = kind === 'bot' ? 'bot' : 'human';
   document.getElementById('games-kind-human')?.classList.toggle('active', currentGamesKind === 'human');
   document.getElementById('games-kind-bot')?.classList.toggle('active', currentGamesKind === 'bot');
+  const search = document.getElementById('games-search');
+  if (search) search.placeholder = currentGamesKind === 'bot'
+    ? 'Rechercher par nom de bot, joueur ou ID...'
+    : 'Rechercher par pseudo joueur ou ID...';
   loadAdminGames();
 }
 
