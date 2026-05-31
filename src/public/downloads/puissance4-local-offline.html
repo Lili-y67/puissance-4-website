@@ -477,6 +477,19 @@
   .history-winner.draw { color: var(--muted); }
   .history-time { color: var(--muted); font-size: 11px; }
   .history-moves { color: var(--muted); font-size: 11px; }
+  .history-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .replay-btn {
+    padding: 5px 10px;
+    border-radius: 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .18s ease;
+  }
+  .replay-btn:hover { transform: translateY(-1px); border-color: var(--accent); }
   .empty-history { padding: 20px; text-align: center; color: var(--muted); font-size: 13px; }
 
   /* Scrollbar */
@@ -621,13 +634,18 @@ let scores = {1: 0, 2: 0}, history = [];
 let moveCount = 0, startTime = null;
 let aiThinking = false;
 let hoveredCol = -1;
+let gameMoves = [];
+let replayTimer = null;
+let replaying = false;
 
 // ========== INIT ==========
 function initBoard() {
+  stopReplay();
   board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
   current = 1;
   gameOver = false;
   moveCount = 0;
+  gameMoves = [];
   startTime = Date.now();
   aiThinking = false;
   renderBoard();
@@ -676,7 +694,7 @@ function getCell(r, c) {
 
 // ========== GAMEPLAY ==========
 function drop(col) {
-  if (gameOver || aiThinking) return;
+  if (gameOver || aiThinking || replaying) return;
   if (mode === 'pva' && current === 2) return;
 
   const row = getLowestEmpty(col);
@@ -708,9 +726,10 @@ function drop(col) {
   }
 }
 
-function placeToken(row, col, player) {
+function placeToken(row, col, player, record = true) {
   board[row][col] = player;
   moveCount++;
+  if (record) gameMoves.push({ row, col, player });
   const cell = getCell(row, col);
   cell.classList.add('p' + player);
   void cell.offsetWidth;
@@ -770,10 +789,10 @@ function endGame(winner, winCells) {
     document.getElementById('score-p' + winner).textContent = scores[winner];
     const name = winner === 1 ? document.getElementById('name-p1').textContent : document.getElementById('name-p2').textContent;
     showResult(`🏆 ${name.toUpperCase()} GAGNE !`, `${moveCount} coups • ${elapsed}s`, winner);
-    addHistory(winner, moveCount, elapsed);
+    addHistory(winner, moveCount, elapsed, winCells);
   } else {
     showResult('ÉGALITÉ !', `${moveCount} coups • ${elapsed}s`, 0);
-    addHistory(0, moveCount, elapsed);
+    addHistory(0, moveCount, elapsed, []);
   }
 }
 
@@ -957,6 +976,14 @@ function newGame() {
   initBoard();
 }
 
+function stopReplay() {
+  if (replayTimer) {
+    clearTimeout(replayTimer);
+    replayTimer = null;
+  }
+  replaying = false;
+}
+
 // ========== THEMES ==========
 function setTheme(theme, el) {
   document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
@@ -986,12 +1013,23 @@ function setPlayerColor(player, color) {
 }
 
 // ========== HISTORY ==========
-function addHistory(winner, moves, elapsed) {
+function addHistory(winner, moves, elapsed, winCells = []) {
   const names = {
     1: document.getElementById('name-p1').textContent,
     2: document.getElementById('name-p2').textContent,
   };
-  history.unshift({ winner, name: names[winner] || null, moves, elapsed, time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) });
+  history.unshift({
+    winner,
+    name: names[winner] || null,
+    names,
+    moves,
+    elapsed,
+    winCells: Array.isArray(winCells) ? winCells.map(cell => [...cell]) : [],
+    sequence: gameMoves.map(move => ({ ...move })),
+    mode,
+    time: new Date().toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}),
+  });
+  history = history.slice(0, 15);
   renderHistory();
 }
 
@@ -1003,8 +1041,9 @@ function renderHistory() {
       <span class="history-winner ${h.winner ? 'p'+h.winner : 'draw'}">
         ${h.winner ? '🏆 ' + h.name : '🤝 Égalité'}
       </span>
-      <span>
+      <span class="history-actions">
         <span class="history-moves">${h.moves} coups</span>
+        <button class="replay-btn" type="button" onclick="playReplay(${i})">Replay</button>
         &nbsp;·&nbsp;
         <span class="history-time">${h.elapsed}s · ${h.time}</span>
       </span>
@@ -1012,7 +1051,47 @@ function renderHistory() {
   `).join('');
 }
 
+function playReplay(index) {
+  const replay = history[index];
+  if (!replay || !Array.isArray(replay.sequence) || !replay.sequence.length) return;
+  stopReplay();
+  hideResult();
+  board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+  current = replay.sequence[0]?.player || 1;
+  gameOver = true;
+  aiThinking = false;
+  replaying = true;
+  moveCount = 0;
+  renderBoard();
+  updatePlayers();
+  setStatus('Replay en cours...', true);
+  let step = 0;
+
+  const next = () => {
+    const move = replay.sequence[step];
+    if (!move) {
+      replaying = false;
+      moveCount = replay.moves;
+      if (replay.winCells?.length) {
+        replay.winCells.forEach(([r,c]) => getCell(r, c)?.classList.add('winning'));
+      }
+      const title = replay.winner ? `${replay.names?.[replay.winner] || 'Joueur'} gagne !` : 'Egalite !';
+      setStatus('Replay termine');
+      showResult(title, `${replay.moves} coups - ${replay.elapsed}s`, replay.winner || 0);
+      return;
+    }
+    placeToken(move.row, move.col, move.player, false);
+    current = move.player === 1 ? 2 : 1;
+    updatePlayers();
+    setStatus(`Replay: coup ${step + 1} / ${replay.sequence.length}`, true);
+    step++;
+    replayTimer = setTimeout(next, 420);
+  };
+  replayTimer = setTimeout(next, 250);
+}
+
 function clearHistory() {
+  stopReplay();
   history = [];
   scores = {1: 0, 2: 0};
   document.getElementById('score-p1').textContent = '0';

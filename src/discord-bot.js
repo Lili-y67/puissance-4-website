@@ -57,6 +57,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
   return [
     { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
     { name: 'moi', description: 'Afficher ton profil lie Discord' },
+    { name: 'ui', description: 'Afficher les informations Discord d un membre', options: [{ type: 6, name: 'utilisateur', description: 'Membre a inspecter', required: false }] },
     { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'stats', description: 'Afficher les statistiques du site' },
     { name: 'systeme', description: 'Afficher l etat public du serveur' },
@@ -346,6 +347,105 @@ function startDiscordBot(ctx) {
     else if (player?.role === 'moderator') push('MODO', '🛡️');
     if (Number(player?.is_bot) === 1) push('BOT', '🤖');
     return badges.join(' / ') || 'JOUEUR';
+  }
+
+  function escapeDiscordMarkdown(value) {
+    return String(value == null ? '' : value).replace(/([\\*_~`>|])/g, '\\$1');
+  }
+
+  function formatDiscordActivity(member) {
+    const activities = member?.presence?.activities || [];
+    const spotify = activities.find(activity => activity.type === ActivityType.Listening && activity.name === 'Spotify');
+    const playing = activities.find(activity => activity.type === ActivityType.Playing);
+    const custom = activities.find(activity => activity.type === ActivityType.Custom);
+    if (spotify) {
+      const title = escapeDiscordMarkdown(spotify.details || 'Titre inconnu');
+      const artists = escapeDiscordMarkdown(spotify.state || 'Artiste inconnu');
+      const album = escapeDiscordMarkdown(spotify.assets?.largeText || 'Album inconnu');
+      const lines = [`Spotify: **${title}**`, `Artiste(s): **${artists}**`, `Album: **${album}**`];
+      if (spotify.timestamps?.start && spotify.timestamps?.end) {
+        const elapsed = Math.max(0, Date.now() - spotify.timestamps.start.getTime());
+        const total = Math.max(1, spotify.timestamps.end.getTime() - spotify.timestamps.start.getTime());
+        const fmtTime = ms => {
+          const seconds = Math.floor(ms / 1000);
+          return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+        };
+        lines.push(`Duree: ${fmtTime(elapsed)} / ${fmtTime(total)}`);
+      }
+      if (spotify.syncId) lines.push(`[Ouvrir sur Spotify](https://open.spotify.com/track/${spotify.syncId})`);
+      return lines.join('\n');
+    }
+    if (playing) return `Joue a: **${escapeDiscordMarkdown(playing.name)}**`;
+    if (custom) return `Statut perso: **${escapeDiscordMarkdown(custom.state || custom.name || 'Aucun texte')}**`;
+    return 'Aucune activite detectee.';
+  }
+
+  async function userInfoPayload(interaction) {
+    if (!interaction.guild) {
+      return containerMessage({ color: 0xff3b30, title: 'Serveur requis', subtitle: 'La commande /ui doit etre utilisee dans un serveur Discord.' });
+    }
+    const user = interaction.options.getUser('utilisateur', false) || interaction.user;
+    const member = await interaction.guild.members.fetch({ user: user.id, force: true }).catch(() => null);
+    if (!member) {
+      return containerMessage({ color: 0xff3b30, title: 'Membre introuvable', subtitle: 'Impossible de retrouver ce membre sur le serveur.' });
+    }
+    const fullUser = await user.fetch(true).catch(() => user);
+    const avatar = fullUser.displayAvatarURL({ size: 1024 });
+    const banner = typeof fullUser.bannerURL === 'function' ? fullUser.bannerURL({ size: 1024 }) : null;
+    const decoration = typeof fullUser.avatarDecorationURL === 'function' ? fullUser.avatarDecorationURL() : null;
+    const statusMap = {
+      online: 'En ligne',
+      idle: 'Inactif',
+      dnd: 'Ne pas deranger',
+      offline: 'Hors ligne / Invisible',
+      invisible: 'Hors ligne / Invisible',
+    };
+    const roles = member.roles.cache
+      .filter(role => role.id !== interaction.guild.id)
+      .sort((a, b) => b.position - a.position)
+      .map(role => role.toString());
+    const rolesText = roles.length
+      ? roles.length > 8 ? `${roles.slice(0, 8).join(', ')} et **${roles.length - 8}** autre(s)` : roles.join(', ')
+      : 'Aucun role';
+    const boostText = member.premiumSinceTimestamp ? `Oui, depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:F>` : 'Non';
+    const ownerText = interaction.guild.ownerId === member.id ? 'Oui' : 'Non';
+    const linked = playerByDiscord(user.id);
+    const sections = [
+      [
+        '### Identite',
+        `Pseudo principal: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}** (${escapeDiscordMarkdown(fullUser.username)})`,
+        `ID Discord: ${code(fullUser.id)}`,
+        `Compte cree: <t:${Math.floor(fullUser.createdTimestamp / 1000)}:F>`,
+        `Bot: **${fullUser.bot ? 'Oui' : 'Non'}**`,
+      ],
+      [
+        '### Serveur',
+        `Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
+        `Arrivee: <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`,
+        `Owner: **${ownerText}**`,
+        `Boost serveur: **${boostText}**`,
+        `Roles: ${rolesText}`,
+      ],
+      [
+        '### Activite',
+        `Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
+        formatDiscordActivity(member),
+      ],
+      [
+        '### Puissance 4',
+        linked ? `Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ${fmt(linked.elo)} ELO | ${roleBadges(linked)}` : 'Compte lie: **Non**',
+      ],
+    ];
+    const buttons = [linkButton('Avatar', avatar, '👤')];
+    if (banner) buttons.push(linkButton('Banniere', banner, '🖼️'));
+    if (decoration) buttons.push(linkButton('Decoration', decoration, '✨'));
+    return containerMessage({
+      color: Number.parseInt(String(member.displayHexColor || '#85ebff').replace('#', ''), 16) || 0x85ebff,
+      title: `UI Discord - ${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}`,
+      subtitle: 'Informations utilisateur, serveur, activite et liaison Puissance 4.',
+      sections,
+      buttons,
+    });
   }
 
   function totalGames(player) {
@@ -844,7 +944,7 @@ function startDiscordBot(ctx) {
       title: 'Centre de commandes',
       subtitle: 'Puissance 4 Ranked sur Discord',
       sections: [
-        '### Joueurs\n`/profil`, `/moi`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
+        '### Joueurs\n`/profil`, `/moi`, `/ui`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
         '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
         `### Staff\n\`/login\`, puis commandes dediees: ${adminNames}\nEvents: \`/giveaway\`, \`/drop\`. Coupon: \`/admin-coupon\`. Session 10 min + verification du role Discord.`,
       ],
@@ -1426,6 +1526,7 @@ function startDiscordBot(ctx) {
         if (!player) return replyError(interaction, 'Compte non lie', `Lie ton compte depuis ${api}/profil`);
         return interaction.editReply(profilePayload(player));
       }
+      if (interaction.commandName === 'ui') return interaction.editReply(await userInfoPayload(interaction));
       if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
       if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
       if (interaction.commandName === 'stats') return interaction.editReply(statsPayload());
