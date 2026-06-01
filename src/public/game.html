@@ -247,6 +247,138 @@ body {
 .dots span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
 
+/* ── Tchat & actions ── */
+.game-social {
+  width: 100%;
+  max-width: 880px ;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+  gap: 12px;
+}
+.game-panel {
+  min-width: 0;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.09);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.06), transparent 36%),
+    rgba(12,12,28,.72);
+  box-shadow: 0 18px 52px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(16px);
+}
+.game-chat { display: grid; grid-template-rows: auto minmax(110px, 150px) auto; overflow: hidden; }
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 14px 8px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 15px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;
+}
+.panel-chip {
+  font-size: 10px; letter-spacing: 1px; color: var(--cyan);
+  border: 1px solid rgba(133,235,255,.22); background: rgba(133,235,255,.08);
+  border-radius: 999px; padding: 4px 8px;
+}
+.chat-log {
+  padding: 6px 14px 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  scrollbar-width: thin;
+}
+.chat-line {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.055);
+}
+.chat-line.mine { background: color-mix(in srgb, var(--p1-dim) 72%, rgba(255,255,255,.035)); border-color: color-mix(in srgb, var(--p1) 24%, transparent); }
+.chat-line.system { background: rgba(133,235,255,.06); border-color: rgba(133,235,255,.14); }
+.chat-author {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+.chat-text { color: rgba(238,238,245,.84); font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; }
+.chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.chat-form input {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 11px 12px;
+  outline: none;
+  font: inherit;
+}
+.chat-form input:focus { border-color: rgba(133,235,255,.34); box-shadow: 0 0 0 3px rgba(133,235,255,.07); }
+.mini-btn {
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  transition: transform .16s, border-color .16s, background .16s;
+}
+.mini-btn:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(133,235,255,.32); background: rgba(133,235,255,.08); }
+.mini-btn:disabled { opacity: .42; cursor: not-allowed; }
+.game-actions { padding: 12px; display: grid; gap: 10px; align-content: start; }
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.action-btn {
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  transition: transform .16s, border-color .16s, background .16s, opacity .16s;
+}
+.action-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.action-btn.draw { color: #ffd60a; border-color: rgba(255,214,10,.20); }
+.action-btn.draw:hover:not(:disabled) { background: rgba(255,214,10,.08); }
+.action-btn.resign { color: #ff8198; border-color: rgba(255,45,85,.22); }
+.action-btn.resign:hover:not(:disabled) { background: rgba(255,45,85,.09); }
+.action-btn.rematch { color: var(--cyan); border-color: rgba(133,235,255,.22); }
+.action-btn.rematch:hover:not(:disabled) { background: rgba(133,235,255,.08); }
+.action-btn:disabled { opacity: .38; cursor: not-allowed; }
+.action-offer {
+  display: none;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255,214,10,.07);
+  border: 1px solid rgba(255,214,10,.18);
+}
+.action-offer.show { display: grid; }
+.offer-text { font-size: 13px; color: rgba(238,238,245,.82); line-height: 1.25; }
+.offer-buttons { display: flex; gap: 8px; }
+.offer-buttons .mini-btn { flex: 1; }
+@media (max-width: 760px) {
+  .game-social { grid-template-columns: 1fr; }
+  .game-chat { grid-template-rows: auto minmax(90px, 130px) auto; }
+}
+
 /* ── Board ── */
 .board-wrap { position: relative; width:100%; display:flex; flex-direction:column; align-items:center; }
 .col-buttons { display: flex; gap: 8px; margin: 0 auto 8px; width: fit-content; padding:0 12px; }
@@ -823,6 +955,36 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
 
   <div class="status-bar" id="status"></div>
 
+  <div class="game-social" id="game-social">
+    <section class="game-panel game-chat" aria-label="Tchat de partie">
+      <div class="panel-head">
+        <span>Tchat duel</span>
+        <span class="panel-chip" id="chat-state">Temps reel</span>
+      </div>
+      <div class="chat-log" id="game-chat-log"></div>
+      <form class="chat-form" id="game-chat-form">
+        <input id="game-chat-input" maxlength="240" autocomplete="off" placeholder="Message a l'adversaire...">
+        <button class="mini-btn" id="game-chat-send" type="submit">Envoyer</button>
+      </form>
+    </section>
+    <section class="game-panel game-actions" aria-label="Actions de partie">
+      <div class="panel-head">
+        <span>Actions</span>
+        <span class="panel-chip" id="action-state">En partie</span>
+      </div>
+      <div class="action-grid">
+        <button class="action-btn draw" id="btn-draw-offer" type="button" onclick="offerDraw()">Nulle</button>
+        <button class="action-btn resign" id="btn-resign" type="button" onclick="resignGame()">Abandonner</button>
+        <button class="action-btn rematch" id="btn-rematch" type="button" onclick="requestRematch()" disabled>Revanche</button>
+        <button class="action-btn" type="button" onclick="copyGameLink()">Copier lien</button>
+      </div>
+      <div class="action-offer" id="action-offer">
+        <div class="offer-text" id="offer-text"></div>
+        <div class="offer-buttons" id="offer-buttons"></div>
+      </div>
+    </section>
+  </div>
+
   <div class="board-wrap">
     <div class="col-buttons" id="col-btns"></div>
     <div class="board" id="board"></div>
@@ -892,6 +1054,7 @@ let activeMoveTimeSeconds = 0;
 let turnTimerInterval = null;
 let turnDeadline = 0;
 let currentGameMode = 'ranked';
+let pendingActionOffer = null;
 
 function setStatus(message = '', allowHtml = false) {
   const el = document.getElementById('status');
@@ -915,6 +1078,132 @@ function getGameModeLabel() {
 }
 
 setGameMode('ranked');
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  })[ch]);
+}
+
+function appendChatMessage({ pseudo = 'Systeme', message = '', side = 0, system = false } = {}) {
+  const log = document.getElementById('game-chat-log');
+  if (!log) return;
+  const line = document.createElement('div');
+  line.className = `chat-line ${system ? 'system' : side === mySide ? 'mine' : ''}`;
+  line.innerHTML = `
+    <div class="chat-author">${escapeHtml(system ? 'Partie' : pseudo)}</div>
+    <div class="chat-text">${escapeHtml(message)}</div>
+  `;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setGameActionState(state = 'playing') {
+  const isBot = iaMode || currentGameMode === 'bot';
+  const playing = state === 'playing' && !isBot && !gameOver;
+  const ended = state === 'ended' && !isBot;
+  document.getElementById('btn-draw-offer')?.toggleAttribute('disabled', !playing);
+  document.getElementById('btn-resign')?.toggleAttribute('disabled', !playing);
+  document.getElementById('game-chat-input')?.toggleAttribute('disabled', !playing);
+  document.getElementById('game-chat-send')?.toggleAttribute('disabled', !playing);
+  document.getElementById('btn-rematch')?.toggleAttribute('disabled', !ended);
+  const actionState = document.getElementById('action-state');
+  if (actionState) actionState.textContent = isBot ? 'Bot' : ended ? 'Terminee' : 'En partie';
+  const chatState = document.getElementById('chat-state');
+  if (chatState) chatState.textContent = isBot ? 'Desactive' : playing ? 'Temps reel' : 'Ferme';
+}
+
+function resetGameComms() {
+  pendingActionOffer = null;
+  const log = document.getElementById('game-chat-log');
+  if (log) log.innerHTML = '';
+  closeActionOffer();
+  setGameActionState('playing');
+}
+
+function closeActionOffer() {
+  const box = document.getElementById('action-offer');
+  if (box) box.classList.remove('show');
+  const text = document.getElementById('offer-text');
+  const buttons = document.getElementById('offer-buttons');
+  if (text) text.textContent = '';
+  if (buttons) buttons.innerHTML = '';
+}
+
+function showActionOffer(offer) {
+  pendingActionOffer = offer;
+  const box = document.getElementById('action-offer');
+  const text = document.getElementById('offer-text');
+  const buttons = document.getElementById('offer-buttons');
+  if (!box || !text || !buttons) return;
+  text.textContent = offer.message || 'Proposition recue.';
+  if (offer.type === 'draw') {
+    buttons.innerHTML = `
+      <button class="mini-btn" type="button" onclick="respondDraw(true)">Accepter</button>
+      <button class="mini-btn" type="button" onclick="respondDraw(false)">Refuser</button>
+    `;
+  } else if (offer.type === 'rematch') {
+    buttons.innerHTML = `
+      <button class="mini-btn" type="button" onclick="respondRematch(true)">Accepter</button>
+      <button class="mini-btn" type="button" onclick="respondRematch(false)">Refuser</button>
+    `;
+  }
+  box.classList.add('show');
+}
+
+function offerDraw() {
+  if (!socket || gameOver || iaMode) return;
+  socket.emit('game_draw_offer');
+  appendChatMessage({ system: true, message: 'Tu proposes une nulle par accord.' });
+}
+
+function respondDraw(accept) {
+  if (!socket || !pendingActionOffer || pendingActionOffer.type !== 'draw') return;
+  socket.emit('game_draw_response', { accept: !!accept });
+  appendChatMessage({ system: true, message: accept ? 'Tu acceptes la nulle.' : 'Tu refuses la nulle.' });
+  closeActionOffer();
+}
+
+function resignGame() {
+  if (!socket || gameOver || iaMode) return;
+  if (!confirm('Abandonner la partie ? Le resultat et l ELO seront appliques.')) return;
+  socket.emit('game_resign');
+}
+
+function requestRematch() {
+  if (!socket || iaMode) return;
+  socket.emit('game_rematch_request');
+}
+
+function respondRematch(accept) {
+  if (!socket || !pendingActionOffer || pendingActionOffer.type !== 'rematch') return;
+  socket.emit('game_rematch_response', { requestId: pendingActionOffer.requestId, accept: !!accept });
+  closeActionOffer();
+}
+
+async function copyGameLink() {
+  const url = `${location.origin}/game/${gameId || ''}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    appendChatMessage({ system: true, message: 'Lien de partie copie.' });
+  } catch (e) {
+    setStatus(url);
+  }
+}
+
+document.addEventListener('submit', (event) => {
+  if (event.target?.id !== 'game-chat-form') return;
+  event.preventDefault();
+  const input = document.getElementById('game-chat-input');
+  const message = String(input?.value || '').trim();
+  if (!message || !socket || gameOver || iaMode) return;
+  socket.emit('game_chat_send', { message });
+  input.value = '';
+});
 
 const BOARD_THEMES = [
   { name: 'flamme', hues: [8, 32, 48], sat: 90, light: 58 },
@@ -1347,6 +1636,7 @@ function connectSocket(pendingMatch) {
       p2EmojiImage = '';
     }
     document.getElementById('lobby-overlay').classList.add('hidden');
+    resetGameComms();
     document.getElementById('name-p1').textContent = data.players[1].pseudo;
     setCardElo(1, data.players[1].elo);
     document.getElementById('name-p2').textContent = data.players[2].pseudo;
@@ -1387,6 +1677,18 @@ function connectSocket(pendingMatch) {
 
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
+  socket.on('game_chat_message', (msg) => appendChatMessage(msg));
+  socket.on('game_action_offer', (offer) => {
+    if (!offer || offer.fromSide === mySide || Number(offer.fromId) === Number(myPlayer?.id)) return;
+    showActionOffer(offer);
+    appendChatMessage({ system: true, message: offer.message || 'Nouvelle proposition recue.' });
+  });
+  socket.on('game_action_notice', ({ message } = {}) => {
+    if (message) appendChatMessage({ system: true, message });
+  });
+  socket.on('game_action_error', ({ message } = {}) => {
+    if (message) appendChatMessage({ system: true, message });
+  });
   socket.on('color_updated', ({ playerId, color }) => {
     // Adversaire a changé sa couleur en cours de partie
     if (!lobbyData) return;
@@ -1524,6 +1826,7 @@ function setupLobby(data) {
 function startGame(data) {
   document.getElementById('lobby-overlay').classList.add('hidden');
   setGameMode(data.tournament ? 'tournament' : String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : currentGameMode);
+  resetGameComms();
 
   document.getElementById('name-p1').textContent = data.players[1].pseudo;
   setCardElo(1, data.players[1].elo);
@@ -1772,6 +2075,8 @@ function getCardElo(side) {
 function onGameOver(data) {
   gameOver = true;
   stopTurnTimer();
+  setGameActionState('ended');
+  closeActionOffer();
 
   const dcBanner = document.getElementById('disconnect-banner');
   if (dcBanner) {
@@ -1845,10 +2150,16 @@ function onGameOver(data) {
   animateDeltaText(eloEl, myDelta, ' ELO', 1200);
 
   const reasonEl = document.getElementById('result-reason');
-  if (data.reason === 'disconnect') {
+  if (data.reason === 'resign') {
+    reasonEl.textContent = isWinner ? 'Victoire par abandon adverse.' : 'Defaite par abandon.';
+  } else if (data.reason === 'agreement_draw') {
+    reasonEl.textContent = 'Nulle par accord entre les deux joueurs.';
+  } else if (data.reason === 'position_draw') {
+    reasonEl.textContent = 'Nulle par position.';
+  } else if (data.reason === 'disconnect') {
     reasonEl.textContent = isWinner ? 'Victoire par deconnexion adverse.' : 'Defaite apres deconnexion.';
   } else if (isDraw) {
-    reasonEl.textContent = 'Partie nulle. Les ELO restent visibles et animes juste dessous.';
+    reasonEl.textContent = 'Position nulle. Les ELO restent visibles et animes juste dessous.';
   } else if (vipBoostApplied) {
     reasonEl.textContent = premiumBoostTier === 'vip_plus'
       ? 'Boost VIP+ applique sur ton gain Elo.'
@@ -1871,7 +2182,12 @@ function onGameOver(data) {
   if (metaEl) {
     const winnerLabel = isDraw ? 'Nul' : winnerLabelText;
     const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
+    const resultKind = data.reason === 'resign' ? 'Abandon'
+      : data.reason === 'agreement_draw' ? 'Nulle par accord'
+        : data.reason === 'draw' || data.reason === 'position_draw' ? 'Position nulle'
+          : 'Alignement';
     metaEl.innerHTML = `
+      <div class="result-meta-chip">Resultat<strong>${resultKind}</strong></div>
       <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
       <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
       <div class="result-meta-chip">Mon Elo<strong>${myTransition}</strong></div>
@@ -1950,6 +2266,7 @@ function replayBotViaHome() {
 async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
   setGameMode('bot');
+  setGameActionState('playing');
   applyBoardPalette(`bot-${Date.now()}-${Math.random()}`);
   mySide = 1;
   currentTurn = Math.random() < 0.5 ? 1 : 2;
@@ -2351,6 +2668,7 @@ async function saveBotReplay(winner, duration = 0) {
 function iaEnd(winner, winCells) {
   gameOver = true;
   stopTurnTimer();
+  setGameActionState('ended');
   winCells?.forEach(([r, c]) => {
     document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`)?.classList.add('winning');
   });

@@ -444,13 +444,26 @@ function startDiscordBot(ctx) {
     const guild = interaction.guild
       || (interaction.guildId ? await bot.guilds.fetch(interaction.guildId).catch(() => null) : null)
       || (ctx.DISCORD_GUILD ? await bot.guilds.fetch(ctx.DISCORD_GUILD).catch(() => null) : null);
-    if (!guild) {
-      return containerMessage({ color: 0xff3b30, title: 'Serveur requis', subtitle: 'La commande /ui doit etre utilisee dans un serveur Discord.' });
-    }
     const user = interaction.options.getUser('utilisateur', false) || interaction.user;
-    const member = await guild.members.fetch({ user: user.id, force: true }).catch(() => null);
+    let member = guild ? await guild.members.fetch({ user: user.id, force: true }).catch(() => null) : null;
+    const hasMemberContext = Boolean(member);
+    const memberContextWarning = !guild
+      ? '⚠️・Infos serveur limitees: serveur indisponible pour cette interaction.'
+      : !hasMemberContext
+        ? "⚠️・Infos serveur limitees: le bot n'est pas membre de ce serveur ou ne peut pas lire ce membre."
+        : '';
     if (!member) {
-      return containerMessage({ color: 0xff3b30, title: 'Membre introuvable', subtitle: 'Impossible de retrouver ce membre sur le serveur.' });
+      member = {
+        id: user.id,
+        displayName: 'Indisponible',
+        joinedTimestamp: 0,
+        presence: null,
+        displayHexColor: '#85ebff',
+        roles: null,
+        permissions: null,
+        premiumSinceTimestamp: null,
+        communicationDisabledUntilTimestamp: null,
+      };
     }
     const fullUser = await user.fetch(true).catch(() => user);
     const avatar = fullUser.displayAvatarURL({ size: 1024 });
@@ -464,25 +477,27 @@ function startDiscordBot(ctx) {
       offline: '⚫ Hors ligne / Invisible',
       invisible: '⚫ Hors ligne / Invisible',
     };
-    const clientStatus = member.presence?.clientStatus || {};
+    const clientStatus = member?.presence?.clientStatus || {};
     const clientText = compactList([
       clientStatus.desktop ? 'Desktop' : '',
       clientStatus.mobile ? 'Mobile' : '',
       clientStatus.web ? 'Web' : '',
     ]);
-    const roles = member.roles.cache
-      .filter(role => role.id !== interaction.guild.id)
+    const roles = member?.roles?.cache
+      ? member.roles.cache
+      .filter(role => role.id !== guild?.id)
       .sort((a, b) => b.position - a.position)
-      .map(role => role.toString());
-    const highestRole = member.roles.highest && member.roles.highest.id !== interaction.guild.id ? member.roles.highest.toString() : 'Aucun';
+      .map(role => role.toString())
+      : [];
+    const highestRole = member?.roles?.highest && member.roles.highest.id !== guild?.id ? member.roles.highest.toString() : 'Aucun';
     const rolesText = roles.length
       ? roles.length > 8 ? `${roles.slice(0, 8).join(', ')} et **${roles.length - 8}** autre(s)` : roles.join(', ')
       : 'Aucun role';
-    const boostText = member.premiumSinceTimestamp ? `Oui, depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:F>` : 'Non';
-    const ownerText = guild.ownerId === member.id ? 'Oui' : 'Non';
-    const timeoutText = member.communicationDisabledUntilTimestamp && member.communicationDisabledUntilTimestamp > Date.now()
+    const boostText = member?.premiumSinceTimestamp ? `Oui, depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:F>` : hasMemberContext ? 'Non' : 'Indisponible';
+    const ownerText = guild?.ownerId === member?.id ? 'Oui' : hasMemberContext ? 'Non' : 'Indisponible';
+    const timeoutText = member?.communicationDisabledUntilTimestamp && member.communicationDisabledUntilTimestamp > Date.now()
       ? `Oui, jusqu'a ${formatDiscordTimestamp(member.communicationDisabledUntilTimestamp)}`
-      : 'Non';
+      : hasMemberContext ? 'Non' : 'Indisponible';
     const permissionLabels = {
       Administrator: 'ADMINISTRATOR',
       ManageGuild: 'MANAGE_GUILD',
@@ -493,7 +508,9 @@ function startDiscordBot(ctx) {
       ManageMessages: 'MANAGE_MESSAGES',
       ManageWebhooks: 'MANAGE_WEBHOOKS',
     };
-    const strongPerms = Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => `\`${permissionLabels[perm]}\``);
+    const strongPerms = hasMemberContext
+      ? Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => `\`${permissionLabels[perm]}\``)
+      : [];
     const rank = linked ? rankOf(linked.elo) : null;
     const linkedTotal = linked ? totalGames(linked) : 0;
     const linkedLastSeen = linked?.last_seen ? formatDiscordTimestamp(Number(linked.last_seen), 'R') : 'Inconnu';
@@ -501,6 +518,11 @@ function startDiscordBot(ctx) {
       ? `Actif${linked.crystal_expires_at ? ` jusqu'a ${formatDiscordTimestamp(Number(linked.crystal_expires_at))}` : ''}`
       : 'Non';
     const sections = [
+      memberContextWarning ? [
+        '### ⚠️ Contexte serveur',
+        memberContextWarning,
+        '🧩・Les roles, permissions et presences demandent que le bot soit present sur ce serveur.',
+      ] : null,
       [
         '### 👤 Identite Discord',
         `🔖・Mention: ${user}`,

@@ -539,6 +539,12 @@ function renderShell() {
   const p2Won = g.winner_id === g.player2_id;
   const isDraw = g.winner_id === null;
   const gameType = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
+  const reason = String(g.result_reason || '');
+  const resultLabel = (won) => isDraw
+    ? (reason === 'agreement_draw' ? 'NUL PAR ACCORD' : 'POSITION NULLE')
+    : won
+      ? (reason === 'resign' ? 'VICTOIRE PAR ABANDON' : 'VICTOIRE PAR ALIGNEMENT')
+      : (reason === 'resign' ? 'DÉFAITE PAR ABANDON' : 'DÉFAITE PAR ALIGNEMENT');
 
   const date = g.finished_at
     ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
@@ -551,14 +557,14 @@ function renderShell() {
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p1_pseudo}</div>
           <div class="rp-elo">${g.p1_elo_display ?? (g.p1_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p1Won?'VICTOIRE':'DÉFAITE')}</div>
+          <div class="rp-result">${resultLabel(p1Won)}</div>
         </div>
         <div class="vs-mid">VS</div>
         <div class="rp p2 ${isDraw?'draw':(p2Won?'winner':'loser')}">
           <div class="rp-dot"></div>
           <div class="rp-name">${g.p2_pseudo}</div>
           <div class="rp-elo">${g.p2_elo_display ?? (g.p2_elo + ' ELO')}</div>
-          <div class="rp-result">${isDraw?'NUL':(p2Won?'VICTOIRE':'DÉFAITE')}</div>
+          <div class="rp-result">${resultLabel(p2Won)}</div>
         </div>
       </div>
       <div class="replay-meta">

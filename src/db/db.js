@@ -151,6 +151,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN bot_ip_hash TEXT NOT NULL DEFAULT 
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN result_reason TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 // Table boost VIP individuel
 db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -376,6 +377,7 @@ const gQ = {
       elo_p1=@elo_p1, elo_p2=@elo_p2,
       p1_color=@p1_color, p2_color=@p2_color,
       p1_shape=@p1_shape, p2_shape=@p2_shape,
+      result_reason=@result_reason,
       finished_at=strftime('%Y-%m-%dT%H:%M:%fZ','now')
     WHERE id=@id
   `),
@@ -581,7 +583,7 @@ function getActiveShopBooster(playerId, boostType) {
   `).get(playerId, boostType, Date.now());
 }
 
-const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false) => {
+const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false, resultReason = '') => {
   const game = gQ.getById.get(gameId);
   const player1 = pQ.getById.get(game.player1_id);
   const player2 = pQ.getById.get(game.player2_id);
@@ -651,6 +653,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     p2_color: game.p2_color || '#ffd60a',
     p1_shape: game.p1_shape || 'circle',
     p2_shape: game.p2_shape || 'circle',
+    result_reason: String(resultReason || ''),
   });
 
   // Marquer la partie comme suspecte en DB

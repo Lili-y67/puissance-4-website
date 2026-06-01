@@ -118,6 +118,27 @@ class GameManager {
     };
   }
 
+  resign(socketId) {
+    const gameId = this.socketToGame.get(socketId);
+    if (!gameId) return { error: 'Aucune partie en cours.' };
+    const state = this.games.get(gameId);
+    if (!state || state.status !== 'active') return { error: 'Partie inactive.' };
+    const side = this._side(state, socketId);
+    if (!side) return { error: 'Joueur introuvable dans cette partie.' };
+    const winnerSide = side === 1 ? 2 : 1;
+    return this._end(state, winnerSide, [], 'resign');
+  }
+
+  agreedDraw(socketId) {
+    const gameId = this.socketToGame.get(socketId);
+    if (!gameId) return { error: 'Aucune partie en cours.' };
+    const state = this.games.get(gameId);
+    if (!state || state.status !== 'active') return { error: 'Partie inactive.' };
+    const side = this._side(state, socketId);
+    if (!side) return { error: 'Joueur introuvable dans cette partie.' };
+    return this._end(state, null, [], 'agreement_draw');
+  }
+
   disconnect(socketId) {
     const gameId = this.socketToGame.get(socketId);
     if (!gameId) return null;
@@ -144,7 +165,7 @@ class GameManager {
   _end(state, winnerSide, winCells, reason, lastMove = null) {
     state.status = 'finished';
     const duration = Math.round((Date.now() - state.startedAt) / 1000);
-    const isDraw = reason === 'draw';
+    const isDraw = reason === 'draw' || reason === 'agreement_draw' || reason === 'position_draw';
 
     const winnerId = winnerSide ? state.players[winnerSide].id : state.players[1].id;
     const loserId = winnerSide ? state.players[winnerSide === 1 ? 2 : 1].id : state.players[2].id;
@@ -162,7 +183,7 @@ class GameManager {
     const p1IsWinner = winnerSide === 1;
     const p2IsWinner = winnerSide === 2;
     const elo = state.persisted
-      ? finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw, isSuspect)
+      ? finishGame(state.id, winnerId, loserId, state.moveCount, duration, isDraw, isSuspect, reason)
       : {
           dW: 0,
           dL: 0,

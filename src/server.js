@@ -46,6 +46,7 @@ const security = createSecurity({
 });
 const tournamentQueues = new Map();
 const duelChallenges = new Map();
+const gameRematchRequests = new Map();
 const anonymousSessions = new Map();
 const anonymousPlayers = new Map();
 const botApiQueue = [];
@@ -61,6 +62,45 @@ const BOT_ARENA_REST_MS = Math.max(15_000, Number(process.env.BOT_ARENA_REST_MS 
 const BOT_SEARCH_TIME_MS = Math.max(80, Number(process.env.BOT_SEARCH_TIME_MS || 520));
 const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 let nextAnonymousPlayerId = -1;
+
+function cleanGameChatMessage(message) {
+  return String(message || '')
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 240);
+}
+
+function getSocketGameState(socket) {
+  const state = gm.getBySocket(socket.id);
+  if (!state || state.status !== 'active') return null;
+  const side = gm._side(state, socket.id);
+  if (!side) return null;
+  return { state, side, opponentSide: side === 1 ? 2 : 1 };
+}
+
+function rememberFinishedGameSockets(result) {
+  if (!result?.players) return;
+  const p1 = result.players[1];
+  const p2 = result.players[2];
+  for (const socket of io.sockets.sockets.values()) {
+    if (Number(socket.playerId) !== Number(p1?.id) && Number(socket.playerId) !== Number(p2?.id)) continue;
+    socket.lastFinishedGame = {
+      gameId: result.gameId,
+      gameType: String(result.gameType || 'ranked'),
+      players: result.players,
+      finishedAt: Date.now(),
+    };
+  }
+}
+
+function emitGameOver(result) {
+  if (!result || result.error) return result;
+  io.to('game:' + result.gameId).emit('game_over', result);
+  rememberFinishedGameSockets(result);
+  io.to('live').emit('live_update');
+  return result;
+}
 
 function getTournamentQueue(tournamentId) {
   const id = Number(tournamentId);
@@ -579,8 +619,7 @@ function acceptDuelChallenge(challenge, accepterId) {
 
 gm._onAfkEnd = (result) => {
   if (!result) return;
-  io.to('game:' + result.gameId).emit('game_over', result);
-  io.to('live').emit('live_update');
+  emitGameOver(result);
   console.log(`[AFK] Partie ${result.gameId} terminee : winner side ${result.winner}`);
 };
 gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
@@ -1349,7 +1388,8 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
     if (col === null) return;
     const result = gm.playMove(player.socketId, col);
     if (result?.gameId) {
-      io.to('game:' + result.gameId).emit(result.type === 'game_over' ? 'game_over' : 'move_played', result);
+      if (result.type === 'game_over') emitGameOver(result);
+      else io.to('game:' + result.gameId).emit('move_played', result);
       if (result.type === 'game_over') {
         const now = Date.now();
         for (const sideId of [state.players?.[1]?.id, state.players?.[2]?.id]) {
@@ -1357,7 +1397,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
         }
       }
     }
-    io.to('live').emit('live_update');
+    if (result?.type !== 'game_over') io.to('live').emit('live_update');
     scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
   }, delayMs);
 }
@@ -7035,13 +7075,128 @@ io.on('connection', socket => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
     if (result.type === 'move')      io.to('game:' + result.gameId).emit('move_played', result);
-    if (result.type === 'game_over') io.to('game:' + result.gameId).emit('game_over',   result);
+    if (result.type === 'game_over') emitGameOver(result);
     const activeState = result.gameId ? gm.games.get(result.gameId) : null;
     if (result.type === 'move' && activeState && builtinBotIds.has(Number(activeState.players?.[activeState.current]?.id))) {
       scheduleBuiltinBotTurn(result.gameId, 500);
     }
-    // Notifier les spectateurs live
-    io.to('live').emit('live_update');
+    // Notifier les spectateurs live. Les fins de partie le font via emitGameOver().
+    if (result.type !== 'game_over') io.to('live').emit('live_update');
+  });
+
+  socket.on('game_chat_send', ({ message } = {}) => {
+    const ctxGame = getSocketGameState(socket);
+    if (!ctxGame) return socket.emit('game_action_error', { message: 'Tchat indisponible hors partie active.' });
+    const cleanMessage = cleanGameChatMessage(message);
+    if (!cleanMessage) return;
+    const player = ctxGame.state.players[ctxGame.side] || socket.playerData || {};
+    io.to('game:' + ctxGame.state.id).emit('game_chat_message', {
+      gameId: ctxGame.state.id,
+      playerId: player.id,
+      side: ctxGame.side,
+      pseudo: player.pseudo || 'Joueur',
+      message: cleanMessage,
+      createdAt: Date.now(),
+    });
+  });
+
+  socket.on('game_draw_offer', () => {
+    const ctxGame = getSocketGameState(socket);
+    if (!ctxGame) return socket.emit('game_action_error', { message: 'Aucune partie active.' });
+    if (ctxGame.state.drawOfferSide && ctxGame.state.drawOfferSide !== ctxGame.side) {
+      return socket.emit('game_action_error', { message: 'Une proposition de nulle adverse est deja en attente.' });
+    }
+    ctxGame.state.drawOfferSide = ctxGame.side;
+    ctxGame.state.drawOfferAt = Date.now();
+    io.to('game:' + ctxGame.state.id).emit('game_action_offer', {
+      gameId: ctxGame.state.id,
+      type: 'draw',
+      fromSide: ctxGame.side,
+      fromPseudo: ctxGame.state.players[ctxGame.side]?.pseudo || 'Joueur',
+      message: 'Proposition de nulle par accord.',
+    });
+  });
+
+  socket.on('game_draw_response', ({ accept } = {}) => {
+    const ctxGame = getSocketGameState(socket);
+    if (!ctxGame) return socket.emit('game_action_error', { message: 'Aucune partie active.' });
+    if (!ctxGame.state.drawOfferSide || ctxGame.state.drawOfferSide === ctxGame.side) {
+      return socket.emit('game_action_error', { message: 'Aucune proposition de nulle adverse.' });
+    }
+    const proposerSide = ctxGame.state.drawOfferSide;
+    ctxGame.state.drawOfferSide = null;
+    ctxGame.state.drawOfferAt = null;
+    if (accept) {
+      const result = gm.agreedDraw(socket.id);
+      if (result.error) return socket.emit('game_action_error', { message: result.error });
+      return emitGameOver(result);
+    }
+    io.to('game:' + ctxGame.state.id).emit('game_action_notice', {
+      gameId: ctxGame.state.id,
+      type: 'draw_declined',
+      fromSide: ctxGame.side,
+      toSide: proposerSide,
+      message: `${ctxGame.state.players[ctxGame.side]?.pseudo || 'L adversaire'} refuse la nulle.`,
+    });
+  });
+
+  socket.on('game_resign', () => {
+    const result = gm.resign(socket.id);
+    if (result.error) return socket.emit('game_action_error', { message: result.error });
+    emitGameOver(result);
+  });
+
+  socket.on('game_rematch_request', () => {
+    const last = socket.lastFinishedGame;
+    if (!last || Date.now() - Number(last.finishedAt || 0) > 5 * 60 * 1000) {
+      return socket.emit('game_action_error', { message: 'Revanche expiree.' });
+    }
+    const myId = Number(socket.playerId);
+    const p1Id = Number(last.players?.[1]?.id);
+    const p2Id = Number(last.players?.[2]?.id);
+    const targetId = myId === p1Id ? p2Id : p1Id;
+    if (!targetId || targetId === myId) return socket.emit('game_action_error', { message: 'Adversaire introuvable.' });
+    const id = `${last.gameId}:${myId}:${targetId}`;
+    const request = { id, gameId: last.gameId, fromId: myId, targetId, gameType: last.gameType, createdAt: Date.now() };
+    gameRematchRequests.set(id, request);
+    const from = getPlayerRecord(myId) || socket.playerData || {};
+    socket.emit('game_action_notice', { type: 'rematch_sent', message: 'Demande de revanche envoyee.' });
+    getOnlineSocketsForPlayer(targetId).forEach(s => s.emit('game_action_offer', {
+      gameId: last.gameId,
+      type: 'rematch',
+      requestId: id,
+      fromId: myId,
+      fromPseudo: from.pseudo || 'Adversaire',
+      message: 'Demande de revanche.',
+    }));
+  });
+
+  socket.on('game_rematch_response', ({ requestId, accept } = {}) => {
+    const request = gameRematchRequests.get(String(requestId || ''));
+    if (!request || request.targetId !== Number(socket.playerId)) {
+      return socket.emit('game_action_error', { message: 'Demande de revanche introuvable.' });
+    }
+    gameRematchRequests.delete(request.id);
+    const requesterSockets = getOnlineSocketsForPlayer(request.fromId);
+    if (!accept) {
+      requesterSockets.forEach(s => s.emit('game_action_notice', { type: 'rematch_declined', message: 'Revanche refusee.' }));
+      socket.emit('game_action_notice', { type: 'rematch_declined', message: 'Tu as refuse la revanche.' });
+      return;
+    }
+    const s1 = requesterSockets[0];
+    const s2 = socket;
+    const p1 = getPlayerRecord(request.fromId);
+    const p2 = getPlayerRecord(request.targetId);
+    if (!s1 || !s2 || !p1 || !p2) {
+      return socket.emit('game_action_error', { message: 'Impossible de lancer la revanche.' });
+    }
+    s1.lastFinishedGame = null;
+    s2.lastFinishedGame = null;
+    _startMatch(
+      { ...sanitize(p1), socketId: s1.id },
+      { ...sanitize(p2), socketId: s2.id },
+      { gameType: String(request.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked' }
+    );
   });
 
   socket.on('color_update', ({ color }) => {
@@ -7097,8 +7252,10 @@ io.on('connection', socket => {
         moveCount: moves.length, status: 'active',
         tournamentId: gameRow.tournament_id || null,
         tournamentName: tournamentRow?.name || '',
+        gameType: String(gameRow.game_type || 'ranked') === 'friendly' ? 'friendly' : 'ranked',
         moveTimeSeconds: Number(gameRow.tournament_move_time_seconds || 0) || 60,
         turnTimeLimitMs: (Number(gameRow.tournament_move_time_seconds || 0) || 60) * 1000,
+        persisted: true,
       };
       gm.games.set(gameId, state);
     }
@@ -7117,6 +7274,7 @@ io.on('connection', socket => {
       socket.emit('game_rejoined', {
         gameId,
         side,
+        gameType: String(state.gameType || 'ranked'),
         moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
         tournament: state.tournamentId ? {
           id: Number(state.tournamentId),
@@ -7195,7 +7353,7 @@ io.on('connection', socket => {
             // Toujours dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAconnectAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA forfait
             const winner = side === 1 ? 2 : 1;
             const result = gm._end(state, winner, [], 'disconnect');
-            io.to('game:' + gameId).emit('game_over', result);
+            emitGameOver(result);
           }
         }, 30000);
       }
@@ -7227,7 +7385,7 @@ io.on('connection', socket => {
             if (!p.socketId || !io.sockets.sockets.get(p.socketId)) {
               // Toujours dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAconnectAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA forfait
               const result = gm._end(st, side === 1 ? 2 : 1, [], 'disconnect');
-              io.to('game:' + gameId).emit('game_over', result);
+              emitGameOver(result);
             }
           }, 30000);
           return;
@@ -7235,7 +7393,7 @@ io.on('connection', socket => {
       }
     }
     const result = gm.disconnect(socket.id);
-    if (result?.type === 'game_over') io.to('game:' + result.gameId).emit('game_over', result);
+    if (result?.type === 'game_over') emitGameOver(result);
   });
 });
 

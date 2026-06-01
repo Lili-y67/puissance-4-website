@@ -3289,6 +3289,13 @@ function renderGameRow(g, me) {
     const eloStr    = (eloChange >= 0 ? '+' : '') + eloChange + ' ELO';
     const typeLabel = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
     const typeBadge = `<div title="Type de partie" style="font-size:10px;letter-spacing:1px;background:${typeLabel === 'Amical' ? 'rgba(133,235,255,0.12)' : 'rgba(255,216,77,0.12)'};border:1px solid ${typeLabel === 'Amical' ? 'rgba(133,235,255,0.28)' : 'rgba(255,216,77,0.24)'};color:${typeLabel === 'Amical' ? '#85EBFF' : '#FFD84D'};padding:2px 7px;border-radius:5px;white-space:nowrap;">${typeLabel}</div>`;
+    const reason = String(g.result_reason || '');
+    const reasonText = isDraw
+      ? (reason === 'agreement_draw' ? 'Nulle par accord' : 'Position nulle')
+      : won
+        ? (reason === 'resign' ? 'Victoire par abandon' : 'Victoire par alignement')
+        : (reason === 'resign' ? 'Défaite par abandon' : 'Défaite par alignement');
+    const reasonBadge = `<div title="Resultat detaille" style="font-size:10px;letter-spacing:1px;background:rgba(255,255,255,0.055);border:1px solid rgba(255,255,255,0.12);color:rgba(238,238,245,0.74);padding:2px 7px;border-radius:5px;white-space:nowrap;">${reasonText}</div>`;
     const date      = g.finished_at
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '-';
@@ -3300,6 +3307,7 @@ function renderGameRow(g, me) {
       <div class="game-meta">
         <div class="game-elo-change ${eloClass}">${g.suspicious ? '±0 ELO' : eloStr}</div>
         ${typeBadge}
+        ${reasonBadge}
         <div>${g.move_count} coups · ${g.duration}s</div>
         <div>${date}</div>
         ${suspBadge}
