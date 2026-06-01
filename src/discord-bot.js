@@ -355,35 +355,59 @@ function startDiscordBot(ctx) {
 
   function formatDiscordActivity(member) {
     const activities = member?.presence?.activities || [];
-    const spotify = activities.find(activity => activity.type === ActivityType.Listening && activity.name === 'Spotify');
-    const playing = activities.find(activity => activity.type === ActivityType.Playing);
-    const custom = activities.find(activity => activity.type === ActivityType.Custom);
-    if (spotify) {
-      const title = escapeDiscordMarkdown(spotify.details || 'Titre inconnu');
-      const artists = escapeDiscordMarkdown(spotify.state || 'Artiste inconnu');
-      const album = escapeDiscordMarkdown(spotify.assets?.largeText || 'Album inconnu');
-      const lines = [`Spotify: **${title}**`, `Artiste(s): **${artists}**`, `Album: **${album}**`];
-      if (spotify.timestamps?.start && spotify.timestamps?.end) {
-        const elapsed = Math.max(0, Date.now() - spotify.timestamps.start.getTime());
-        const total = Math.max(1, spotify.timestamps.end.getTime() - spotify.timestamps.start.getTime());
-        const fmtTime = ms => {
-          const seconds = Math.floor(ms / 1000);
-          return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-        };
-        lines.push(`Duree: ${fmtTime(elapsed)} / ${fmtTime(total)}`);
+    if (!activities.length) return 'Aucune activite detectee.';
+    const activityIcon = activity => {
+      if (activity.type === ActivityType.Custom) return '💬';
+      if (activity.type === ActivityType.Playing) return '🎮';
+      if (activity.type === ActivityType.Streaming) return '📺';
+      if (activity.type === ActivityType.Listening) return activity.name === 'Spotify' ? '<:Spotify:1508052989645033612>' : '🎧';
+      if (activity.type === ActivityType.Watching) return '👀';
+      if (activity.type === ActivityType.Competing) return '⚔️';
+      return '✨';
+    };
+    const formatTime = ms => {
+      const seconds = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+      return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    };
+    const activityEmoji = activity => {
+      const emoji = activity.emoji;
+      if (!emoji) return '';
+      if (emoji.id) return `<${emoji.animated ? 'a' : ''}:${emoji.name}:${emoji.id}>`;
+      return emoji.name || '';
+    };
+    const assetUrl = (activity, key) => {
+      const asset = activity.assets?.[key];
+      if (!asset) return '';
+      if (/^https?:\/\//i.test(asset)) return asset;
+      if (String(asset).startsWith('mp:')) return `https://media.discordapp.net/${String(asset).slice(3)}`;
+      if (activity.applicationId) return `https://cdn.discordapp.com/app-assets/${activity.applicationId}/${asset}.png`;
+      return '';
+    };
+    return activities.slice(0, 6).map((activity, index) => {
+      const emoji = activityEmoji(activity);
+      const title = activity.type === ActivityType.Custom
+        ? `Statut perso ${emoji ? `${emoji} ` : ''}${escapeDiscordMarkdown(activity.state || activity.name || 'Aucun texte')}`
+        : `${activityIcon(activity)} ${escapeDiscordMarkdown(activity.name || 'Activite')}`;
+      const details = [];
+      if (activity.details) details.push(`details: **${escapeDiscordMarkdown(activity.details)}**`);
+      if (activity.state && activity.type !== ActivityType.Custom) details.push(`state: **${escapeDiscordMarkdown(activity.state)}**`);
+      if (activity.assets?.largeText) details.push(`large: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
+      if (activity.assets?.smallText) details.push(`small: **${escapeDiscordMarkdown(activity.assets.smallText)}**`);
+      if (activity.timestamps?.start && activity.timestamps?.end) {
+        const elapsed = Date.now() - activity.timestamps.start.getTime();
+        const total = activity.timestamps.end.getTime() - activity.timestamps.start.getTime();
+        details.push(`temps: **${formatTime(elapsed)} / ${formatTime(total)}**`);
+      } else if (activity.timestamps?.start) {
+        details.push(`depuis: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
       }
-      if (spotify.syncId) lines.push(`[Ouvrir sur Spotify](https://open.spotify.com/track/${spotify.syncId})`);
-      return lines.join('\n');
-    }
-    if (playing) return `Joue a: **${escapeDiscordMarkdown(playing.name)}**`;
-    if (custom) {
-      const emoji = custom.emoji?.id
-        ? `<${custom.emoji.animated ? 'a' : ''}:${custom.emoji.name}:${custom.emoji.id}>`
-        : custom.emoji?.name || '';
-      const text = escapeDiscordMarkdown(custom.state || custom.name || 'Aucun texte');
-      return `Statut perso: ${emoji ? `${emoji} ` : ''}**${text}**`;
-    }
-    return 'Aucune activite detectee.';
+      if (activity.url) details.push(`[ouvrir](${activity.url})`);
+      else if (activity.syncId && activity.name === 'Spotify') details.push(`[Spotify](https://open.spotify.com/track/${activity.syncId})`);
+      const largeUrl = assetUrl(activity, 'largeImage');
+      const smallUrl = assetUrl(activity, 'smallImage');
+      if (largeUrl) details.push(`[image](${largeUrl})`);
+      if (smallUrl) details.push(`[mini](${smallUrl})`);
+      return `**${index + 1}.** ${title}${details.length ? `\n${details.map(line => `   ・${line}`).join('\n')}` : ''}`;
+    }).join('\n');
   }
 
   function formatDiscordTimestamp(value, style = 'F') {
@@ -443,8 +467,6 @@ function startDiscordBot(ctx) {
       clientStatus.mobile ? 'Mobile' : '',
       clientStatus.web ? 'Web' : '',
     ]);
-    const flags = fullUser.flags?.toArray?.() || [];
-    const badgesText = flags.length ? flags.map(flag => `\`${flag}\``).slice(0, 8).join(', ') : 'Aucun badge public detecte';
     const roles = member.roles.cache
       .filter(role => role.id !== interaction.guild.id)
       .sort((a, b) => b.position - a.position)
@@ -484,7 +506,6 @@ function startDiscordBot(ctx) {
         `🆔・ID Discord: ${code(fullUser.id)}`,
         `📅・Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
         `🤖・Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
-        `🏅・Badges publics: ${badgesText}`,
       ],
       [
         '### 🏠 Serveur',
@@ -515,7 +536,7 @@ function startDiscordBot(ctx) {
               `🟢・Derniere presence site: **${linkedLastSeen}**`,
               `🌐・Lien utile: ${api}/profil?id=${linked.id}`,
             ].join('\n')
-          : `🔗・Compte lie: **Non**\n🌐・Lien utile: ${api}/profil?discord=${user.id}\n🆔・ID Discord: ${code(user.id)}`,
+          : `🔗・Compte lie: **Non**\n🌐・Lien utile: ${api}/profil\n🆔・ID Discord: ${code(user.id)}`,
       ],
       [
         '### 🎨 Medias',
