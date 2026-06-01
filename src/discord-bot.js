@@ -131,7 +131,7 @@ function startDiscordBot(ctx) {
     return null;
   }
 
-  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+  const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
   const api = String(process.env.BASE_URL || DEFAULT_API).replace(/\/+$/, '');
   const fmt = value => Number(value || 0).toLocaleString('fr-FR');
   const truncate = (value, max = 100) => String(value == null ? '' : value).slice(0, max);
@@ -424,13 +424,12 @@ function startDiscordBot(ctx) {
     const banner = typeof fullUser.bannerURL === 'function' ? fullUser.bannerURL({ size: 1024 }) : null;
     const decoration = typeof fullUser.avatarDecorationURL === 'function' ? fullUser.avatarDecorationURL() : null;
     const linked = playerByDiscord(user.id);
-    const discordInfo = parseJsonObject(linked?.discord_info);
     const statusMap = {
-      online: 'En ligne',
-      idle: 'Inactif',
-      dnd: 'Ne pas deranger',
-      offline: 'Hors ligne / Invisible',
-      invisible: 'Hors ligne / Invisible',
+      online: '🟢 En ligne',
+      idle: '🌙 Inactif',
+      dnd: '⛔ Ne pas deranger',
+      offline: '⚫ Hors ligne / Invisible',
+      invisible: '⚫ Hors ligne / Invisible',
     };
     const clientStatus = member.presence?.clientStatus || {};
     const clientText = compactList([
@@ -454,16 +453,16 @@ function startDiscordBot(ctx) {
       ? `Oui, jusqu'a ${formatDiscordTimestamp(member.communicationDisabledUntilTimestamp)}`
       : 'Non';
     const permissionLabels = {
-      Administrator: 'Administrateur',
-      ManageGuild: 'Gerer serveur',
-      ManageRoles: 'Gerer roles',
-      ManageChannels: 'Gerer salons',
-      BanMembers: 'Bannir',
-      KickMembers: 'Expulser',
-      ManageMessages: 'Gerer messages',
-      ManageWebhooks: 'Gerer webhooks',
+      Administrator: 'ADMINISTRATOR',
+      ManageGuild: 'MANAGE_GUILD',
+      ManageRoles: 'MANAGE_ROLES',
+      ManageChannels: 'MANAGE_CHANNELS',
+      BanMembers: 'BAN_MEMBERS',
+      KickMembers: 'KICK_MEMBERS',
+      ManageMessages: 'MANAGE_MESSAGES',
+      ManageWebhooks: 'MANAGE_WEBHOOKS',
     };
-    const strongPerms = Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => permissionLabels[perm]);
+    const strongPerms = Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => `\`${permissionLabels[perm]}\``);
     const rank = linked ? rankOf(linked.elo) : null;
     const linkedTotal = linked ? totalGames(linked) : 0;
     const linkedLastSeen = linked?.last_seen ? formatDiscordTimestamp(Number(linked.last_seen), 'R') : 'Inconnu';
@@ -473,50 +472,50 @@ function startDiscordBot(ctx) {
     const sections = [
       [
         '### 👤 Identite Discord',
-        `Mention: ${user}`,
-        `Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
-        `Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
-        `ID Discord: ${code(fullUser.id)}`,
-        `Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
-        `Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
-        `Badges publics: ${badgesText}`,
+        `・🔖 Mention: ${user}`,
+        `・👤 Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
+        `・🏷️ Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
+        `・🆔 ID Discord: ${code(fullUser.id)}`,
+        `・📅 Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
+        `・🤖 Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
+        `・🏅 Badges publics: ${badgesText}`,
       ],
       [
         '### 🏠 Serveur',
-        `Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
-        `Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
-        `Owner: **${ownerText}**`,
-        `Boost serveur: **${boostText}**`,
-        `Timeout: **${timeoutText}**`,
-        `Role le plus haut: ${highestRole}`,
-        `Roles (${roles.length}): ${rolesText}`,
-        `Permissions fortes: ${compactList(strongPerms, 'Aucune permission forte detectee')}`,
+        `・🪪 Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
+        `・📥 Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
+        `・👑 Owner: **${ownerText}**`,
+        `・🚀 Boost serveur: **${boostText}**`,
+        `・🔇 Timeout: **${timeoutText}**`,
+        `・🎚️ Role le plus haut: ${highestRole}`,
+        `・🎭 Roles (${roles.length}): ${rolesText}`,
+        `・🧱 Permissions fortes: ${strongPerms.length ? strongPerms.join(' ') : '`NONE`'}`,
       ],
       [
         '### 🟢 Activite',
-        `Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
-        `Client: **${clientText}** | Activites: **${member.presence?.activities?.length || 0}**`,
-        formatDiscordActivity(member),
+        `・📡 Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
+        `・💻 Client: **${clientText}** | Activites: **${member.presence?.activities?.length || 0}**`,
+        `・🎧 ${formatDiscordActivity(member)}`,
       ],
       [
         '### 🎮 Puissance 4',
         linked
           ? [
-              `Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ID joueur: ${code(linked.id)}`,
-              `Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
-              `Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
-              `Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
-              `Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
-              `Derniere presence site: **${linkedLastSeen}**`,
+              `・🔗 Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ID joueur: ${code(linked.id)}`,
+              `・🏆 Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
+              `・✨ Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
+              `・📊 Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
+              `・💰 Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
+              `・🟢 Derniere presence site: **${linkedLastSeen}**`,
+              `・🌐 Lien utile: ${api}/profil?id=${linked.id}`,
             ].join('\n')
-          : `Compte lie: **Non**\nLien utile: ${api}/profil`,
+          : `・🔗 Compte lie: **Non**\n・🌐 Lien utile: ${api}/profil?discord=${user.id}\n・🆔 ID Discord: ${code(user.id)}`,
       ],
       [
         '### 🎨 Medias',
-        `Avatar Discord: **${avatar ? 'Disponible' : 'Non'}**`,
-        `Banniere Discord: **${banner ? 'Disponible' : 'Aucune'}**`,
-        `Decoration avatar: **${decoration ? 'Disponible' : 'Aucune'}**`,
-        `Banniere couleur: **${discordInfo.banner_color || fullUser.hexAccentColor || 'Inconnue'}**`,
+        `・🖼️ Avatar Discord: **${avatar ? 'Disponible' : 'Non'}**`,
+        `・🌌 Banniere Discord: **${banner ? 'Disponible' : 'Aucune'}**`,
+        `・✨ Decoration avatar: **${decoration ? 'Disponible' : 'Aucune'}**`,
       ],
     ];
     const buttons = [linkButton('Avatar', avatar, '👤')];
