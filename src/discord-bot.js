@@ -380,6 +380,36 @@ function startDiscordBot(ctx) {
     return 'Aucune activite detectee.';
   }
 
+  function formatDiscordTimestamp(value, style = 'F') {
+    const ms = Number(value || 0);
+    if (!Number.isFinite(ms) || ms <= 0) return 'Inconnu';
+    return `<t:${Math.floor(ms / 1000)}:${style}>`;
+  }
+
+  function formatAgeDays(value) {
+    const ms = Number(value || 0);
+    if (!Number.isFinite(ms) || ms <= 0) return 'anciennete inconnue';
+    const days = Math.max(0, Math.floor((Date.now() - ms) / 86400000));
+    if (days >= 365) return `${Math.floor(days / 365)} an(s), ${days % 365} jour(s)`;
+    return `${days} jour(s)`;
+  }
+
+  function parseJsonObject(value) {
+    if (!value) return {};
+    if (typeof value === 'object') return value;
+    try {
+      const parsed = JSON.parse(String(value));
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function compactList(values, empty = 'Aucun') {
+    const list = values.filter(Boolean);
+    return list.length ? list.join(' | ') : empty;
+  }
+
   async function userInfoPayload(interaction) {
     if (!interaction.guild) {
       return containerMessage({ color: 0xff3b30, title: 'Serveur requis', subtitle: 'La commande /ui doit etre utilisee dans un serveur Discord.' });
@@ -393,6 +423,8 @@ function startDiscordBot(ctx) {
     const avatar = fullUser.displayAvatarURL({ size: 1024 });
     const banner = typeof fullUser.bannerURL === 'function' ? fullUser.bannerURL({ size: 1024 }) : null;
     const decoration = typeof fullUser.avatarDecorationURL === 'function' ? fullUser.avatarDecorationURL() : null;
+    const linked = playerByDiscord(user.id);
+    const discordInfo = parseJsonObject(linked?.discord_info);
     const statusMap = {
       online: 'En ligne',
       idle: 'Inactif',
@@ -400,49 +432,102 @@ function startDiscordBot(ctx) {
       offline: 'Hors ligne / Invisible',
       invisible: 'Hors ligne / Invisible',
     };
+    const clientStatus = member.presence?.clientStatus || {};
+    const clientText = compactList([
+      clientStatus.desktop ? 'Desktop' : '',
+      clientStatus.mobile ? 'Mobile' : '',
+      clientStatus.web ? 'Web' : '',
+    ]);
+    const flags = fullUser.flags?.toArray?.() || [];
+    const badgesText = flags.length ? flags.map(flag => `\`${flag}\``).slice(0, 8).join(', ') : 'Aucun badge public detecte';
     const roles = member.roles.cache
       .filter(role => role.id !== interaction.guild.id)
       .sort((a, b) => b.position - a.position)
       .map(role => role.toString());
+    const highestRole = member.roles.highest && member.roles.highest.id !== interaction.guild.id ? member.roles.highest.toString() : 'Aucun';
     const rolesText = roles.length
       ? roles.length > 8 ? `${roles.slice(0, 8).join(', ')} et **${roles.length - 8}** autre(s)` : roles.join(', ')
       : 'Aucun role';
     const boostText = member.premiumSinceTimestamp ? `Oui, depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:F>` : 'Non';
     const ownerText = interaction.guild.ownerId === member.id ? 'Oui' : 'Non';
-    const linked = playerByDiscord(user.id);
+    const timeoutText = member.communicationDisabledUntilTimestamp && member.communicationDisabledUntilTimestamp > Date.now()
+      ? `Oui, jusqu'a ${formatDiscordTimestamp(member.communicationDisabledUntilTimestamp)}`
+      : 'Non';
+    const permissionLabels = {
+      Administrator: 'Administrateur',
+      ManageGuild: 'Gerer serveur',
+      ManageRoles: 'Gerer roles',
+      ManageChannels: 'Gerer salons',
+      BanMembers: 'Bannir',
+      KickMembers: 'Expulser',
+      ManageMessages: 'Gerer messages',
+      ManageWebhooks: 'Gerer webhooks',
+    };
+    const strongPerms = Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => permissionLabels[perm]);
+    const rank = linked ? rankOf(linked.elo) : null;
+    const linkedTotal = linked ? totalGames(linked) : 0;
+    const linkedLastSeen = linked?.last_seen ? formatDiscordTimestamp(Number(linked.last_seen), 'R') : 'Inconnu';
+    const crystalText = linked && Number(linked.is_crystal || 0) === 1
+      ? `Actif${linked.crystal_expires_at ? ` jusqu'a ${formatDiscordTimestamp(Number(linked.crystal_expires_at))}` : ''}`
+      : 'Non';
     const sections = [
       [
-        '### Identite',
-        `Pseudo principal: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}** (${escapeDiscordMarkdown(fullUser.username)})`,
+        '### 👤 Identite Discord',
+        `Mention: ${user}`,
+        `Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
+        `Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
         `ID Discord: ${code(fullUser.id)}`,
-        `Compte cree: <t:${Math.floor(fullUser.createdTimestamp / 1000)}:F>`,
-        `Bot: **${fullUser.bot ? 'Oui' : 'Non'}**`,
+        `Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
+        `Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
+        `Badges publics: ${badgesText}`,
       ],
       [
-        '### Serveur',
+        '### 🏠 Serveur',
         `Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
-        `Arrivee: <t:${Math.floor(member.joinedTimestamp / 1000)}:F>`,
+        `Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
         `Owner: **${ownerText}**`,
         `Boost serveur: **${boostText}**`,
-        `Roles: ${rolesText}`,
+        `Timeout: **${timeoutText}**`,
+        `Role le plus haut: ${highestRole}`,
+        `Roles (${roles.length}): ${rolesText}`,
+        `Permissions fortes: ${compactList(strongPerms, 'Aucune permission forte detectee')}`,
       ],
       [
-        '### Activite',
+        '### 🟢 Activite',
         `Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
+        `Client: **${clientText}** | Activites: **${member.presence?.activities?.length || 0}**`,
         formatDiscordActivity(member),
       ],
       [
-        '### Puissance 4',
-        linked ? `Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ${fmt(linked.elo)} ELO | ${roleBadges(linked)}` : 'Compte lie: **Non**',
+        '### 🎮 Puissance 4',
+        linked
+          ? [
+              `Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ID joueur: ${code(linked.id)}`,
+              `Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
+              `Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
+              `Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
+              `Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
+              `Derniere presence site: **${linkedLastSeen}**`,
+            ].join('\n')
+          : `Compte lie: **Non**\nLien utile: ${api}/profil`,
+      ],
+      [
+        '### 🎨 Medias',
+        `Avatar Discord: **${avatar ? 'Disponible' : 'Non'}**`,
+        `Banniere Discord: **${banner ? 'Disponible' : 'Aucune'}**`,
+        `Decoration avatar: **${decoration ? 'Disponible' : 'Aucune'}**`,
+        `Banniere couleur: **${discordInfo.banner_color || fullUser.hexAccentColor || 'Inconnue'}**`,
       ],
     ];
     const buttons = [linkButton('Avatar', avatar, '👤')];
     if (banner) buttons.push(linkButton('Banniere', banner, '🖼️'));
     if (decoration) buttons.push(linkButton('Decoration', decoration, '✨'));
+    if (linked) buttons.push(linkButton('Profil P4', playerUrl(linked), '🎮'));
+    buttons.push(linkButton('Serveur', api, '🔗'));
     return containerMessage({
       color: Number.parseInt(String(member.displayHexColor || '#85ebff').replace('#', ''), 16) || 0x85ebff,
-      title: `UI Discord - ${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}`,
-      subtitle: 'Informations utilisateur, serveur, activite et liaison Puissance 4.',
+      title: `📌 UI Discord - ${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}`,
+      subtitle: 'Fiche complete: Discord, serveur, activite, medias et liaison Puissance 4.',
       sections,
       buttons,
     });
