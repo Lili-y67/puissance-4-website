@@ -441,11 +441,14 @@ function startDiscordBot(ctx) {
   }
 
   async function userInfoPayload(interaction) {
-    if (!interaction.guild) {
+    const guild = interaction.guild
+      || (interaction.guildId ? await bot.guilds.fetch(interaction.guildId).catch(() => null) : null)
+      || (ctx.DISCORD_GUILD ? await bot.guilds.fetch(ctx.DISCORD_GUILD).catch(() => null) : null);
+    if (!guild) {
       return containerMessage({ color: 0xff3b30, title: 'Serveur requis', subtitle: 'La commande /ui doit etre utilisee dans un serveur Discord.' });
     }
     const user = interaction.options.getUser('utilisateur', false) || interaction.user;
-    const member = await interaction.guild.members.fetch({ user: user.id, force: true }).catch(() => null);
+    const member = await guild.members.fetch({ user: user.id, force: true }).catch(() => null);
     if (!member) {
       return containerMessage({ color: 0xff3b30, title: 'Membre introuvable', subtitle: 'Impossible de retrouver ce membre sur le serveur.' });
     }
@@ -476,7 +479,7 @@ function startDiscordBot(ctx) {
       ? roles.length > 8 ? `${roles.slice(0, 8).join(', ')} et **${roles.length - 8}** autre(s)` : roles.join(', ')
       : 'Aucun role';
     const boostText = member.premiumSinceTimestamp ? `Oui, depuis <t:${Math.floor(member.premiumSinceTimestamp / 1000)}:F>` : 'Non';
-    const ownerText = interaction.guild.ownerId === member.id ? 'Oui' : 'Non';
+    const ownerText = guild.ownerId === member.id ? 'Oui' : 'Non';
     const timeoutText = member.communicationDisabledUntilTimestamp && member.communicationDisabledUntilTimestamp > Date.now()
       ? `Oui, jusqu'a ${formatDiscordTimestamp(member.communicationDisabledUntilTimestamp)}`
       : 'Non';
