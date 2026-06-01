@@ -376,7 +376,13 @@ function startDiscordBot(ctx) {
       return lines.join('\n');
     }
     if (playing) return `Joue a: **${escapeDiscordMarkdown(playing.name)}**`;
-    if (custom) return `Statut perso: **${escapeDiscordMarkdown(custom.state || custom.name || 'Aucun texte')}**`;
+    if (custom) {
+      const emoji = custom.emoji?.id
+        ? `<${custom.emoji.animated ? 'a' : ''}:${custom.emoji.name}:${custom.emoji.id}>`
+        : custom.emoji?.name || '';
+      const text = escapeDiscordMarkdown(custom.state || custom.name || 'Aucun texte');
+      return `Statut perso: ${emoji ? `${emoji} ` : ''}**${text}**`;
+    }
     return 'Aucune activite detectee.';
   }
 
@@ -472,50 +478,50 @@ function startDiscordBot(ctx) {
     const sections = [
       [
         '### 👤 Identite Discord',
-        `・🔖 Mention: ${user}`,
-        `・👤 Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
-        `・🏷️ Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
-        `・🆔 ID Discord: ${code(fullUser.id)}`,
-        `・📅 Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
-        `・🤖 Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
-        `・🏅 Badges publics: ${badgesText}`,
+        `🔖・Mention: ${user}`,
+        `👤・Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
+        `🏷️・Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
+        `🆔・ID Discord: ${code(fullUser.id)}`,
+        `📅・Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
+        `🤖・Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
+        `🏅・Badges publics: ${badgesText}`,
       ],
       [
         '### 🏠 Serveur',
-        `・🪪 Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
-        `・📥 Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
-        `・👑 Owner: **${ownerText}**`,
-        `・🚀 Boost serveur: **${boostText}**`,
-        `・🔇 Timeout: **${timeoutText}**`,
-        `・🎚️ Role le plus haut: ${highestRole}`,
-        `・🎭 Roles (${roles.length}): ${rolesText}`,
-        `・🧱 Permissions fortes: ${strongPerms.length ? strongPerms.join(' ') : '`NONE`'}`,
+        `🪪・Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
+        `📥・Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
+        `👑・Owner: **${ownerText}**`,
+        `🚀・Boost serveur: **${boostText}**`,
+        `🔇・Timeout: **${timeoutText}**`,
+        `🎚️・Role le plus haut: ${highestRole}`,
+        `🎭・Roles (${roles.length}): ${rolesText}`,
+        `🧱・Permissions fortes: ${strongPerms.length ? strongPerms.join(' ') : '`NONE`'}`,
       ],
       [
         '### 🟢 Activite',
-        `・📡 Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
-        `・💻 Client: **${clientText}** | Activites: **${member.presence?.activities?.length || 0}**`,
-        `・🎧 ${formatDiscordActivity(member)}`,
+        `📡・Statut: **${statusMap[member.presence?.status || 'offline'] || statusMap.offline}**`,
+        `💻・Client: **${clientText}** | Activites: **${member.presence?.activities?.length || 0}**`,
+        `🎧・${formatDiscordActivity(member)}`,
       ],
       [
         '### 🎮 Puissance 4',
         linked
           ? [
-              `・🔗 Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ID joueur: ${code(linked.id)}`,
-              `・🏆 Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
-              `・✨ Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
-              `・📊 Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
-              `・💰 Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
-              `・🟢 Derniere presence site: **${linkedLastSeen}**`,
-              `・🌐 Lien utile: ${api}/profil?id=${linked.id}`,
+              `🔗・Compte lie: **${escapeDiscordMarkdown(linked.pseudo)}** | ID joueur: ${code(linked.id)}`,
+              `🏆・Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
+              `✨・Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
+              `📊・Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
+              `💰・Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
+              `🟢・Derniere presence site: **${linkedLastSeen}**`,
+              `🌐・Lien utile: ${api}/profil?id=${linked.id}`,
             ].join('\n')
-          : `・🔗 Compte lie: **Non**\n・🌐 Lien utile: ${api}/profil?discord=${user.id}\n・🆔 ID Discord: ${code(user.id)}`,
+          : `🔗・Compte lie: **Non**\n🌐・Lien utile: ${api}/profil?discord=${user.id}\n🆔・ID Discord: ${code(user.id)}`,
       ],
       [
         '### 🎨 Medias',
-        `・🖼️ Avatar Discord: **${avatar ? 'Disponible' : 'Non'}**`,
-        `・🌌 Banniere Discord: **${banner ? 'Disponible' : 'Aucune'}**`,
-        `・✨ Decoration avatar: **${decoration ? 'Disponible' : 'Aucune'}**`,
+        `🖼️・Avatar Discord: **${avatar ? 'Disponible' : 'Non'}**`,
+        `🌌・Banniere Discord: **${banner ? 'Disponible' : 'Aucune'}**`,
+        `✨・Decoration avatar: **${decoration ? 'Disponible' : 'Aucune'}**`,
       ],
     ];
     const buttons = [linkButton('Avatar', avatar, '👤')];
