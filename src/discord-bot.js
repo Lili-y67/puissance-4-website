@@ -1065,9 +1065,7 @@ function startDiscordBot(ctx) {
 
   async function registerCommands() {
     const rest = new REST({ version: '10' }).setToken(botToken);
-    const route = ctx.DISCORD_GUILD
-      ? Routes.applicationGuildCommands(bot.user.id, ctx.DISCORD_GUILD)
-      : Routes.applicationCommands(bot.user.id);
+    const route = Routes.applicationCommands(bot.user.id);
     await rest.put(route, { body: buildDiscordCommandDefinitions(ctx.SHOP_ITEMS) });
   }
 

@@ -25,11 +25,12 @@ const commands = buildDiscordCommandDefinitions({
 async function main() {
   if (!botToken) throw new Error('DISCORD_BOT_TOKEN manquant.');
   const rest = new REST({ version: '10' }).setToken(botToken);
-  const route = DISCORD_GUILD
-    ? Routes.applicationGuildCommands(clientId, DISCORD_GUILD)
-    : Routes.applicationCommands(clientId);
+  const route = Routes.applicationCommands(clientId);
   await rest.put(route, { body: commands });
-  console.log(`Commandes Discord enregistrees (${commands.length}).`);
+  console.log(`Commandes Discord globales enregistrees (${commands.length}).`);
+  if (DISCORD_GUILD) {
+    console.log(`DISCORD_GUILD_ID conserve comme serveur cible interne: ${DISCORD_GUILD}`);
+  }
 }
 
 main().catch(error => {
