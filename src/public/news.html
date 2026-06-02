@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.8 | Puissance 4 Ranked</title>
+<title>News 3.1.9 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -86,18 +86,18 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.8</span></h1>
-      <p>Cette version ajoute une vraie couche sociale aux parties en ligne: tchat temps reel, propositions de nulle, abandon propre, revanche et resultats detailles. Le but est de rendre chaque duel plus vivant, plus clair et mieux archive dans le profil comme dans les replays.</p>
+      <h1>Mise a jour <span>3.1.9</span></h1>
+      <p>Cette version remet la documentation API au niveau du site actuel et clarifie le live spectateur: routes Crystal, parrainage, boutique, clans, admin, Discord, bots, Socket.IO, variantes d'analyse et spectateurs sont maintenant references proprement.</p>
       <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.8</div><h2>Duel social & fins propres</h2><p>Les parties gagnent un tchat, des demandes de nulle, l'abandon volontaire et la revanche apres match.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>1 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Duel</strong></div><div class="meta-box"><span>Type</span><strong>Gameplay</strong></div></div>
+      <div><div class="version-orb">3.1.9</div><h2>API complete & live clair</h2><p>La doc officielle couvre les dernieres features et le mode spectateur devient plus lisible.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>2 juin</strong></div><div class="meta-box"><span>Focus</span><strong>API</strong></div><div class="meta-box"><span>Type</span><strong>Changelog</strong></div></div>
     </aside>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs de la 3.1.8, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
+    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs de la 3.1.9, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
     <div class="update-grid">
       <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128279;</div><div class="tag">Discord</div></div><h3>Roles et synchro</h3><ul><li>Generation admin des roles de rang ELO sans doublons.</li><li>Attribution automatique du role de rang quand le compte est lie.</li><li>Role Connectee synchronise par presence, avec limitation anti rate-limit.</li><li>Permissions Discord prises en compte pour les roles admin.</li></ul></article>
       <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#128142;</div><div class="tag">Crystal</div></div><h3>Nouveau rang mensuel</h3><ul><li>Rang Crystal renouvelable automatiquement pour 5000 coins.</li><li>Badge dedie avec infobulle, sans couleur forcee sur le pseudo.</li><li>20 gemmes par semaine et avantages VIP/VIP+ hors Perso.</li><li>Message de connexion customisable pour les membres Crystal.</li></ul></article>
@@ -111,18 +111,21 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="update-card" style="--accent:#8cff9e;--soft:rgba(140,255,158,.13)"><div class="card-top"><div class="icon">&#128176;</div><div class="tag">Gemmes</div></div><h3>Activite Discord</h3><ul><li>Le bot compte les discussions des membres Discord.</li><li>10 gemmes donnees tous les 10000 caracteres.</li><li>Stockage seulement si le membre est lie au site.</li><li>Gemmes masquees en boutique sans liaison Discord.</li></ul></article>
       <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128172;</div><div class="tag">3.1.8</div></div><h3>Duel temps reel</h3><ul><li>Tchat direct entre les deux joueurs pendant une partie en ligne.</li><li>Proposition de nulle avec acceptation ou refus par l'adversaire.</li><li>Bouton Abandonner avec fin de partie et ELO applique proprement.</li><li>Bouton Revanche apres match, accepte ou refuse en temps reel.</li></ul></article>
       <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#9878;</div><div class="tag">Resultats</div></div><h3>Raisons de fin</h3><ul><li>Les nulles distinguent maintenant Nulle par accord et Position nulle.</li><li>Les defaites distinguent Abandon et Alignement.</li><li>Les victoires indiquent aussi si elles viennent d'un abandon ou d'un alignement.</li><li>Profil et replay affichent le type de resultat detaille.</li></ul></article>
+      <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128218;</div><div class="tag">3.1.9</div></div><h3>API enrichie</h3><ul><li>Documentation complete des routes Crystal, parrainage, cadeaux boutique et coupons.</li><li>Nouvelle section clans avec chat, membres, roles et leaderboard.</li><li>Endpoints admin ajoutes: gemmes, coupons, bot-enabled, Crystal et backups.</li><li>Bot API, Discord et commandes slash mieux relies aux routes du site.</li></ul></article>
+      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.14)"><div class="card-top"><div class="icon">&#128064;</div><div class="tag">Live</div></div><h3>Spectateur plus clair</h3><ul><li>Les parties live exposent les spectateurs connectes avec pseudo.</li><li>Les visiteurs hors connexion apparaissent en Anonyme.</li><li>Les parties contre bot restent visibles dans le live.</li><li>Les variantes d'analyse disposent d'un fallback si le moteur profond ne repond pas.</li></ul></article>
+      <article class="update-card" style="--accent:#ff9f0a;--soft:rgba(255,159,10,.16)"><div class="card-top"><div class="icon">&#128268;</div><div class="tag">Socket.IO</div></div><h3>Events documentes</h3><ul><li>Tchat, nulle, abandon et revanche sont maintenant listes dans l'API.</li><li>join_live_game et leave_live_game documentent le suivi spectateur.</li><li>Les events clan et Crystal login sont references.</li><li>La doc precise les raisons de fin utilisees par replay et profil.</li></ul></article>
     </div>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Suivi 3.1.8</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
+    <div class="section-head"><div><h2>Suivi 3.1.9</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
     <div class="timeline">
-      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>Game</span><strong>Tchat, nulle, abandon</strong></div><div class="release-item"><span>Socket</span><strong>Revanche et actions live</strong></div><div class="release-item"><span>Replay</span><strong>Resultats detailles</strong></div><div class="release-item"><span>Profil</span><strong>Historique enrichi</strong></div></div></aside>
-      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">Duel</div><div><strong>Les actions passent par Socket.IO.</strong><span>Le tchat, les propositions de nulle, les refus et les demandes de revanche arrivent en direct entre les deux joueurs.</span></div></div><div class="timeline-item"><div class="timeline-date">ELO</div><div><strong>Abandon et nulle utilisent le moteur officiel.</strong><span>Les gains, pertes, stats et webhooks passent par la meme fin de partie que les victoires classiques.</span></div></div><div class="timeline-item"><div class="timeline-date">Replay</div><div><strong>Les archives deviennent plus lisibles.</strong><span>Un replay peut maintenant dire si la partie s'est terminee par alignement, abandon, position nulle ou accord.</span></div></div><div class="timeline-item"><div class="timeline-date">3.1.8</div><div><strong>Chaque nouvelle mise a jour doit remonter ici.</strong><span>La page news sert de changelog vivant: on change le numero, puis on ajoute les cartes des nouveautes.</span></div></div></div></div>
+      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>API</span><strong>Doc complete</strong></div><div class="release-item"><span>Live</span><strong>Spectateurs et variantes</strong></div><div class="release-item"><span>Socket</span><strong>Events recenses</strong></div><div class="release-item"><span>News</span><strong>Changelog 3.1.9</strong></div></div></aside>
+      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">API</div><div><strong>La page API colle aux dernieres features.</strong><span>Crystal, parrainage, cadeaux, coupons, clans, admin, Discord, bot API et Socket.IO sont regroupes dans une reference unique.</span></div></div><div class="timeline-item"><div class="timeline-date">Live</div><div><strong>Le mode spectateur est plus explicite.</strong><span>Les spectateurs connectes sont nommes, les visiteurs restent anonymes, et les parties bot restent suivies sans etre confondues avec une ranked humaine.</span></div></div><div class="timeline-item"><div class="timeline-date">Analyse</div><div><strong>Les variantes restent affichables meme en fallback.</strong><span>Si le calcul profond n'est pas disponible, le front peut quand meme proposer une lecture rapide de la position.</span></div></div><div class="timeline-item"><div class="timeline-date">3.1.9</div><div><strong>Chaque nouvelle mise a jour doit remonter ici.</strong><span>La page news sert de changelog vivant: on change le numero, puis on ajoute les cartes des nouveautes.</span></div></div></div></div>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.1.8: les duels en ligne gagnent un tchat temps reel, une vraie logique de nulle par accord, l'abandon volontaire, la revanche et des resultats plus precis dans le profil et les replays.</div>
+  <div class="footer-note">Version 3.1.9: l'API officielle est enrichie avec toutes les dernieres briques du site, et le live clarifie spectateurs, variantes d'analyse, bots et events temps reel.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

@@ -102,6 +102,33 @@ function emitGameOver(result) {
   return result;
 }
 
+function leaveLiveSpectate(socket) {
+  if (!socket?.liveSpectateGameId) return;
+  socket.leave(`live:spectate:${socket.liveSpectateGameId}`);
+  socket.liveSpectateGameId = null;
+}
+
+function getLiveSpectators(gameId) {
+  const id = Number(gameId || 0);
+  if (!id) return [];
+  const viewers = [];
+  const seen = new Set();
+  for (const socket of io.sockets.sockets.values()) {
+    if (Number(socket.liveSpectateGameId || 0) !== id) continue;
+    const player = socket.playerData || null;
+    const key = player?.id ? `p:${player.id}` : `a:${socket.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    viewers.push({
+      id: player?.id || null,
+      pseudo: player?.pseudo || 'Anonyme',
+      anonymous: !player?.pseudo,
+    });
+  }
+  viewers.sort((a, b) => Number(a.anonymous) - Number(b.anonymous) || String(a.pseudo).localeCompare(String(b.pseudo), 'fr'));
+  return viewers.slice(0, 24);
+}
+
 function getTournamentQueue(tournamentId) {
   const id = Number(tournamentId);
   if (!tournamentQueues.has(id)) tournamentQueues.set(id, new Matchmaking());
@@ -4552,6 +4579,7 @@ app.get('/api/live', (_, res) => {
       botGame: Number(state.players[1].is_bot || 0) === 1 || Number(state.players[2].is_bot || 0) === 1,
       botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
       winCells: Array.isArray(state.winCells) ? state.winCells : [],
+      spectators: getLiveSpectators(id),
     };
     if (state.status === 'finished') {
       entry.result   = state.result   || null;  // { winner, eloChanges }
@@ -6897,6 +6925,21 @@ io.on('connection', socket => {
     socket.join('live');
   });
 
+  socket.on('join_live_game', ({ gameId } = {}) => {
+    const id = Number(gameId || 0);
+    leaveLiveSpectate(socket);
+    if (!id || !gm.games.has(id)) return;
+    socket.liveSpectateGameId = id;
+    socket.join(`live:spectate:${id}`);
+    io.to('live').emit('live_update');
+  });
+
+  socket.on('leave_live_game', () => {
+    const hadGame = socket.liveSpectateGameId;
+    leaveLiveSpectate(socket);
+    if (hadGame) io.to('live').emit('live_update');
+  });
+
   socket.on('visitor_presence', ({ visitorId } = {}) => {
     if (socket.playerId) return;
     const before = `${getPresenceCounts().onlinePlayers}:${getPresenceCounts().visitors}`;
@@ -6944,6 +6987,7 @@ io.on('connection', socket => {
       });
     }
     socket.emit('identified', sanitize(player));
+    if (socket.liveSpectateGameId) io.to('live').emit('live_update');
     broadcastPresenceCounts();
   });
 
@@ -7303,6 +7347,8 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     const before = `${getPresenceCounts().onlinePlayers}:${getPresenceCounts().visitors}`;
     unregisterVisitorSocket(socket);
+    const liveSpectatedGameId = socket.liveSpectateGameId;
+    leaveLiveSpectate(socket);
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour last_seen et nettoyer onlineSockets
     if (socket.playerId) {
       const disconnectedPlayerId = socket.playerId;
@@ -7322,6 +7368,7 @@ io.on('connection', socket => {
     const afterCounts = getPresenceCounts();
     const after = `${afterCounts.onlinePlayers}:${afterCounts.visitors}`;
     if (before !== after) broadcastPresenceCounts();
+    if (liveSpectatedGameId) io.to('live').emit('live_update');
     // Nettoyer la map IP si plus de socket actif pour ce joueur
     if (socket.playerId && socket.clientIp) {
       const sameIpSockets = [...io.sockets.sockets.values()]

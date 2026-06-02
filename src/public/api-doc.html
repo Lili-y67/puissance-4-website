@@ -82,7 +82,7 @@ ul{padding-left:18px}
       <div class="eyebrow">Documentation Complete</div>
       <img class="hero-logo" src="/assets/site-logo-small.png" alt="Puissance 4">
       <h1>Puissance <span>4</span> API</h1>
-      <p>Référence HTTP + Socket.IO du projet. Cette page décrit les routes disponibles, les erreurs probables, les headers attendus, des exemples JSON et des exemples <code>fetch</code> directement réutilisables.</p>
+      <p>Référence HTTP + Socket.IO du projet. Cette page décrit les routes disponibles, les erreurs probables, les headers attendus, des exemples JSON et des exemples <code>fetch</code> directement réutilisables. Mise à jour avec Crystal, parrainage, cadeaux boutique, duels sociaux, live spectateurs, clans, bot API, Discord et admin.</p>
       <div class="hero-actions">
         <a class="hero-back" href="/"><span>&larr;</span><span>Retour accueil</span></a>
         <a class="hero-profile" href="/profil"><span>&#128100;</span><span>Voir profil</span></a>
@@ -91,7 +91,7 @@ ul{padding-left:18px}
         <div class="mini"><div class="k">Base API</div><div class="v"><code>/api/...</code></div></div>
         <div class="mini"><div class="k">Session joueur</div><div class="v"><code>token</code> ou <code>x-session-token</code></div></div>
         <div class="mini"><div class="k">Session admin</div><div class="v"><code>x-admin-token</code></div></div>
-        <div class="mini"><div class="k">Transport live</div><div class="v">Socket.IO polling</div></div>
+        <div class="mini"><div class="k">Transport live</div><div class="v">Socket.IO websocket + polling</div></div>
       </div>
     </div>
     <div class="card">
@@ -103,6 +103,7 @@ ul{padding-left:18px}
         <a href="#shop">Boutique / Boosters <span>&rarr;</span></a>
         <a href="#duels">Duels <span>&rarr;</span></a>
         <a href="#tournaments">Tournois <span>&rarr;</span></a>
+        <a href="#clans">Clans <span>&rarr;</span></a>
         <a href="#discord">Discord <span>&rarr;</span></a>
         <a href="#bot-api">Bot API <span>&rarr;</span></a>
         <a href="#discord-commands">Commandes bot <span>&rarr;</span></a>
@@ -121,6 +122,7 @@ ul{padding-left:18px}
         <a href="#shop">Boutique, coins et boosters</a>
         <a href="#duels">Duels</a>
         <a href="#tournaments">Tournois</a>
+        <a href="#clans">Clans</a>
         <a href="#discord">Discord</a>
         <a href="#bot-api">Bot API</a>
         <a href="#discord-commands">Commandes bot</a>
@@ -219,17 +221,32 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/tournaments</span></div><p>Liste les tournois li&eacute;s &agrave; ce joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/vip-boost</span></div><p>Active le boost premium individuel du joueur courant selon son pack actif.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/vip-boost</span></div><p>Retourne l&rsquo;&eacute;tat du boost premium individuel : actif, multiplicateur, temps restant, cooldown.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/referral/me</span></div><p>Retourne le lien de parrainage du joueur, son parrain actif, ses filleuls et les bonus boutique disponibles.</p><div class="note ok">Le filleul obtient une remise boutique, et le parrain profite aussi de son avantage quand le lien a servi au login.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/crystal/alert</span></div><p>Lit le message de connexion Crystal du joueur courant : message, emoji, couleur, animation et &eacute;tat d&rsquo;activation.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/crystal/alert</span></div><p>Met &agrave; jour l&rsquo;alerte de connexion Crystal affich&eacute;e une fois &agrave; la connexion, pas &agrave; chaque changement de page.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/queue-music</span></div><p>S&eacute;lectionne la musique de file d&rsquo;attente active du joueur quand la collection est disponible.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/players/:id</span></div><p>Ferme / supprime un compte joueur (session obligatoire). Ce endpoint existe dans le backend et est utilis&eacute; par le profil.</p></article>
       </div></section>
       <section class="section" id="games"><div class="section-head"><div><h2>Parties, Live et Replay</h2><p>Donn&eacute;es live, reconstruction des coups, analyse, pr&eacute;cision et IA.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/live</span></div><p>Liste les parties actives visibles sur la page live et en spectateur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/live</span></div><p>Liste les parties actives visibles sur la page live, y compris les parties contre bots. Le payload expose aussi les spectateurs de la partie s&eacute;lectionn&eacute;e.</p><div class="subgrid"><pre><code>{
+  "games": [{
+    "id": 1165,
+    "moves": 6,
+    "botGame": true,
+    "spectators": [
+      { "name": "Lili_y", "anonymous": false },
+      { "name": "Anonyme", "anonymous": true }
+    ]
+  }]
+}</code></pre><pre><code>const live = await fetch('/api/live').then(r => r.json());</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id</span></div><p>Donn&eacute;es de base d&rsquo;une partie.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/moves</span></div><p>Liste ordonn&eacute;e des coups pour reconstruire la grille.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/replay-view</span></div><p>Payload enrichi pour <code>replay.html</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/analysis</span></div><p>Enregistre l&rsquo;analyse d&rsquo;une partie. Erreurs typiques : partie introuvable, payload vide.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/analysis</span></div><p>Relit l&rsquo;analyse enregistr&eacute;e.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/accuracy</span></div><p>Stocke la pr&eacute;cision finale c&ocirc;t&eacute; base.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot-replay</span></div><p>Calcul bot / ELO bot / r&eacute;sultat IA pour le mode contre l&rsquo;ordinateur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot-replay</span></div><p>Calcul bot / ELO bot / r&eacute;sultat IA pour le mode contre l&rsquo;ordinateur. Les parties bot peuvent &ecirc;tre enregistr&eacute;es comme replay sans polluer les stats des invit&eacute;s amicaux.</p></article>
+        <article class="endpoint"><div class="note ok">Les fins de partie distinguent maintenant <code>alignment</code>, <code>resignation</code>, <code>agreement_draw</code> et <code>position_draw</code>. Le profil et le replay utilisent <code>result_reason</code> pour afficher Victoire par abandon, Nulle par accord, etc.</div></article>
       </div></section>
       <section class="section" id="shop"><div class="section-head"><div><h2>Boutique, Coins et Boosters</h2><p>Inventaire joueur, achat de packs premium et gestion des boosters.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/shop/me</span></div><p>Retourne l&rsquo;&eacute;tat complet de la boutique pour le joueur courant.</p><div class="subgrid"><pre><code>{
@@ -246,13 +263,15 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
   }
 }</code></pre><pre><code>const shop = await fetch('/api/shop/me?token=' + token)
   .then(r => r.json());</code></pre></div><pre><code>curl "http://localhost:8080/api/shop/me?token=SESSION_TOKEN"</code></pre></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/buy</span></div><p>Ach&egrave;te un pack ou un booster avec des coins.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>pack</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">pas assez de coins, pack d&eacute;j&agrave; actif, rupture de stock, session invalide</div></div></div><div class="subgrid"><pre><code>await fetch('/api/shop/buy', {
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/buy</span></div><p>Ach&egrave;te un pack, un booster, le rang Crystal ou offre un item &agrave; un autre joueur.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>pack</code>, <code>giftTo</code> optionnel</div></div><div class="box"><div class="label">Erreurs</div><div class="value">pas assez de coins, pack d&eacute;j&agrave; actif, rupture de stock, session invalide, cadeau &agrave; soi-m&ecirc;me</div></div></div><div class="subgrid"><pre><code>await fetch('/api/shop/buy', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ token, pack: 'elo_mini' })
+  body: JSON.stringify({ token, pack: 'elo_mini', giftTo: 12 })
 });</code></pre><pre><code>curl -X POST http://localhost:8080/api/shop/buy ^
   -H "Content-Type: application/json" ^
-  -d "{\"token\":\"SESSION_TOKEN\",\"pack\":\"elo_mini\"}"</code></pre></div></article>
+  -d "{\"token\":\"SESSION_TOKEN\",\"pack\":\"elo_mini\",\"giftTo\":12}"</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/boosters/activate</span></div><p>Active un booster personnel depuis l&rsquo;inventaire joueur. Les boosts globaux restent g&eacute;r&eacute;s via l&rsquo;admin.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/shop/coupon/validate</span></div><p>Valide un coupon boutique avant achat : remise fixe ou pourcentage, expiration, usages restants et compatibilit&eacute; pack.</p></article>
         <article class="endpoint"><div class="note ok">Les coins sont gagn&eacute;s via les parties. Les gemmes compl&egrave;tent les coins pour certaines offres. Les boosters ELO / coins sont des items d&rsquo;inventaire, distincts des boosts globaux admin.</div></article>
         <article class="endpoint"><div class="note">Quand <code>limitedOffer</code> contient un coupon, la boutique peut l&rsquo;appliquer automatiquement en preview avant confirmation d&rsquo;achat. Les stocks, timers et coupons restent recalcul&eacute;s c&ocirc;t&eacute; serveur au moment de valider.</div></article>
       </div></section>
@@ -287,6 +306,21 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments</span></div><p>Cr&eacute;e un tournoi. Erreurs typiques : non autoris&eacute;, session invalide, param&egrave;tres invalides.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments/:id/join</span></div><p>Inscrit le joueur au tournoi. G&egrave;re aussi le mot de passe si tournoi priv&eacute;.</p></article>
       </div></section>
+      <section class="section" id="clans"><div class="section-head"><div><h2>Clans</h2><p>Gestion des clans, membres, salon interne et leaderboard de groupe.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip post">POST</span><span class="chip patch">PATCH</span><span class="chip delete">DELETE</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans</span></div><p>Liste publique des clans avec membres, ELO moyen et &eacute;tat de recrutement.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans/leaderboard</span></div><p>Classement des clans par activit&eacute;, victoires et niveau global.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/clan</span></div><p>Retourne le clan actuel d&rsquo;un joueur, son r&ocirc;le et les permissions associ&eacute;es.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans/:id</span></div><p>D&eacute;tail complet d&rsquo;un clan : profil, membres, stats et param&egrave;tres visibles.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans</span></div><p>Cr&eacute;e un clan. Session joueur obligatoire et contr&ocirc;les anti-spam via route guard.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/clans/:id</span></div><p>Modifie nom, description, visuel, recrutement ou options internes si le joueur poss&egrave;de les droits.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/clans/:id</span></div><p>Supprime un clan par son propri&eacute;taire ou un admin autoris&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans/:id/messages</span></div><p>Historique du chat de clan, pagin&eacute; et limit&eacute; aux membres.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans/:id/messages</span></div><p>Envoie un message dans le salon du clan, aussi relay&eacute; en Socket.IO.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans/:id/join</span></div><p>Rejoint un clan ouvert ou demande l&rsquo;acc&egrave;s selon sa configuration.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans/leave</span></div><p>Quitte le clan actuel du joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans/:id/members/:playerId/remove</span></div><p>Expulse un membre si le r&ocirc;le du demandeur le permet.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/clans/:id/members/:playerId/role</span></div><p>Modifie le r&ocirc;le interne d&rsquo;un membre du clan.</p></article>
+      </div></section>
       <section class="section" id="discord"><div class="section-head"><div><h2>Discord</h2><p>Liaison, connexion OAuth, refresh des r&ocirc;les et d&eacute;liaison s&eacute;curis&eacute;e.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/link</span></div><p>D&eacute;marre la liaison Discord d&rsquo;un compte existant.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/auth/discord/signin</span></div><p>Connexion ou cr&eacute;ation de compte directement via Discord.</p></article>
@@ -315,6 +349,7 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
       <section class="section" id="discord-commands"><div class="section-head"><div><h2>Commandes Bot Discord</h2><p>Commandes slash align&eacute;es avec l&rsquo;API officielle du site. Le bot ne renvoie jamais d&rsquo;IP ni de donn&eacute;es r&eacute;seau priv&eacute;es.</p></div><div class="legend"><span class="chip socket">Slash</span><span class="chip get">Public</span><span class="chip delete">Admin</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/api</span></div><p>Ouvre la documentation API officielle : endpoints HTTP, Socket.IO, erreurs et exemples.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/profil pseudo</span></div><p>Miroir Discord de <code>GET /api/players/by-pseudo/:pseudo</code> et <code>GET /api/players/:id</code>. Retourne rang, ELO, coins, badges, stats, follow et dernier match.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/ui utilisateur</span></div><p>Carte Discord enrichie : identit&eacute;, infos serveur, r&ocirc;les, permissions en briques, activit&eacute;s, m&eacute;dias Discord, lien site et ID joueur Puissance 4 si le compte est li&eacute;.</p><div class="note">La commande peut &ecirc;tre globale, mais les infos membre compl&egrave;tes demandent que le bot soit pr&eacute;sent sur le serveur concern&eacute;.</div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/classement</span></div><p>Top ELO rapide, compatible avec <code>GET /api/leaderboard</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/leaderboard type</span></div><p>Classement officiel par <code>elo</code> ou <code>victoires</code>, reli&eacute; &agrave; <code>/api/leaderboard</code> et <code>/api/leaderboard/wins</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/stats</span></div><p>Vue Discord des stats globales : pr&eacute;sence, parties, comptes, coins et boosts. Reli&eacute; &agrave; <code>/api/stats/overview</code> et <code>/api/site-stats</code>.</p></article>
@@ -323,11 +358,15 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/cosmetiques type</span></div><p>Liste rapide des biblioth&egrave;ques <code>/api/decorations</code>, <code>/api/profile-banners</code> ou <code>/api/musics</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/replay id</span></div><p>R&eacute;sum&eacute; d&rsquo;une partie officielle avec joueurs, deltas ELO, vainqueur, dur&eacute;e et lien vers <code>/replay/:id</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">Public</span><span class="route">/duel-lien type</span></div><p>G&eacute;n&egrave;re un lien de duel <code>ranked</code> ou <code>friendly</code> valable 15 minutes. Cette commande utilise la m&ecirc;me logique que <code>POST /api/duels/link</code> et demande un compte Discord li&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">Public</span><span class="route">/giveaway titre duree recompense</span></div><p>Cr&eacute;e un giveaway avec bouton de participation, tirage au sort et attribution automatique si le gagnant est li&eacute; &agrave; Puissance 4.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">Public</span><span class="route">/drop titre recompense</span></div><p>Cr&eacute;e un drop instantan&eacute; : le premier membre qui clique re&ccedil;oit la r&eacute;compense si son Discord est li&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/live</span></div><p>Affiche les parties actives, reli&eacute; &agrave; <code>GET /api/live</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/boutique</span></div><p>Lien vers la boutique coins / boosters.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournois</span></div><p>Liste les tournois officiels, reli&eacute; &agrave; <code>GET /api/tournaments</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournoi id</span></div><p>D&eacute;tail d&rsquo;un tournoi et top actuel, reli&eacute; &agrave; <code>GET /api/tournaments/:id</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin action password ...</span></div><p>Commandes staff prot&eacute;g&eacute;es par mot de passe admin + r&ocirc;le Discord. Actions disponibles : <code>stats</code>, <code>player</code>, <code>mute</code>, <code>unmute</code>, <code>ban</code>, <code>unban</code>, <code>coins</code>, <code>elo</code>, <code>give-item</code>, <code>boost-elo</code>, <code>boost-coins</code>, <code>tournoi-finish</code>, <code>tournoi-pause</code>, <code>tournoi-resume</code>, <code>tournoi-delete</code>, <code>backups</code>, <code>maintenance-on</code>, <code>maintenance-off</code>, <code>reload</code>.</p><div class="note">Les actions sensibles demandent le r&ocirc;le Admin Discord. Les actions de lecture/mod&eacute;ration simples acceptent Admin ou Modo selon le cas.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin-role-generator</span></div><p>G&eacute;n&egrave;re les r&ocirc;les Discord de rang ELO sans les recr&eacute;er s&rsquo;ils existent d&eacute;j&agrave;. Retourne un r&eacute;sum&eacute; trouv&eacute;s / manquants / cr&eacute;&eacute;s.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin-crystal</span></div><p>Give, retire ou prolonge le rang Crystal d&rsquo;un joueur depuis Discord avec dur&eacute;e optionnelle.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin action password ...</span></div><p>Commandes staff prot&eacute;g&eacute;es par mot de passe admin + r&ocirc;le Discord. Actions disponibles : <code>stats</code>, <code>player</code>, <code>mute</code>, <code>unmute</code>, <code>ban</code>, <code>unban</code>, <code>coins</code>, <code>gems</code>, <code>elo</code>, <code>give-item</code>, <code>crystal</code>, <code>boost-elo</code>, <code>boost-coins</code>, <code>tournoi-finish</code>, <code>tournoi-pause</code>, <code>tournoi-resume</code>, <code>tournoi-delete</code>, <code>backups</code>, <code>maintenance-on</code>, <code>maintenance-off</code>, <code>reload</code>.</p><div class="note">Les actions sensibles demandent le r&ocirc;le Admin Discord. Les actions de lecture/mod&eacute;ration simples acceptent Admin ou Modo selon le cas.</div></article>
       </div></section>
       <section class="section" id="admin"><div class="section-head"><div><h2>Administration</h2><p>Panel admin, joueurs, coins, boosters, boosts globaux, games et tournois.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/login</span></div><p>Connexion admin / mod&eacute;ration. Erreurs typiques : mot de passe invalide, droits insuffisants.</p></article>
@@ -336,6 +375,11 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/security</span></div><p>Retourne l&rsquo;&eacute;tat de la protection anti-raid : compteurs actifs, inscriptions r&eacute;centes et derniers &eacute;v&eacute;nements anonymis&eacute;s.</p><div class="note">Les IP ne sont jamais expos&eacute;es : le backend stocke uniquement des empreintes hash&eacute;es.</div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/password</span></div><p>Retourne le mot de passe du panel admin pour les comptes autoris&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/coins</span></div><p>Ajoute des coins &agrave; un joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/gems</span></div><p>Ajoute ou retire des gemmes au joueur. Les gemmes sont surtout visibles si le compte est li&eacute; Discord.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/bot-enabled</span></div><p>Active ou coupe la capacit&eacute; bot API d&rsquo;un compte robot.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/coupons</span></div><p>Cr&eacute;e un coupon boutique : code, type de remise, valeur, nombre d&rsquo;utilisations et expiration optionnelle.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/coupons</span></div><p>Liste les coupons existants avec leurs usages et leur statut.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/admin/coupons/:code</span></div><p>Supprime ou d&eacute;sactive un coupon boutique cibl&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/shop-item</span></div><p>Ajoute des boosters ELO / coins &agrave; l&rsquo;inventaire d&rsquo;un joueur.</p><div class="subgrid"><pre><code>await fetch('/api/admin/players/2/shop-item', {
   method: 'PATCH',
   headers: {
@@ -348,6 +392,7 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
   -H "x-admin-token: ADMIN_TOKEN" ^
   -d "{\"itemKey\":\"elo_classic\",\"quantity\":3}"</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/role</span></div><p>Modifie r&ocirc;le, VIP, VIP+, Perso et dur&eacute;e VIP.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/crystal</span></div><p>Attribue, prolonge ou retire le rang Crystal avec dur&eacute;e optionnelle. Synchronise les avantages Crystal c&ocirc;t&eacute; profil et boutique.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/custom-role</span></div><p>D&eacute;finit le badge custom d&rsquo;un profil Perso.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/pseudo</span></div><p>Force un changement de pseudo c&ocirc;t&eacute; admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/admin/players/:id/elo</span></div><p>Force / reset l&rsquo;ELO d&rsquo;un joueur.</p></article>
@@ -394,6 +439,7 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/stats/weekly</span></div><p>Rythme hebdomadaire sur 2 semaines : inscriptions, parties, parties termin&eacute;es, joueurs actifs et moyenne quotidienne.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard</span></div><p>Classement ELO principal.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard/wins</span></div><p>Classement alternatif par victoires.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard/bots</span></div><p>Classement sp&eacute;cifique des bots API et bots pr&eacute;configur&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot-id</span></div><p>Retourne l&rsquo;ID du bot joueur utilis&eacute; c&ocirc;t&eacute; site.</p></article>
       </div></section>
       <section class="section" id="socketio"><div class="section-head"><div><h2>Socket.IO</h2><p>&Eacute;v&eacute;nements utilis&eacute;s par la file d&rsquo;attente, les parties live, le tournoi et les alertes syst&egrave;me.</p></div><div class="legend"><span class="chip socket">SOCKET</span></div></div><div class="group">
@@ -404,7 +450,11 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">identified</span></div><p>R&eacute;ponse apr&egrave;s identification r&eacute;ussie. Contient le joueur sanitiz&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">visitor_presence</span></div><p>Annonce une pr&eacute;sence anonyme sur le site pour distinguer les visiteurs des comptes connect&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">presence_ping</span></div><p>Heartbeat de pr&eacute;sence utilis&eacute; hors partie pour maintenir le statut online / live.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">crystal_login</span></div><p>Alerte compacte en bas &agrave; gauche quand un membre Crystal vient de se connecter, avec message, emoji, couleur et animation.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">profile_changed</span></div><p>Notifie les pages ouvertes qu&rsquo;un profil ou un r&ocirc;le a chang&eacute; : ELO, rang, badges, Crystal, Discord ou cosm&eacute;tique.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">presence_counts</span></div><p>Push live des compteurs de pr&eacute;sence : joueurs identifi&eacute;s, visiteurs et total pr&eacute;sent sur le site.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">join_clan_chat / clan_message_send</span></div><p>Rejoint le salon temps r&eacute;el d&rsquo;un clan puis envoie un message interne.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">clan_message / clan_error</span></div><p>Push de message clan ou erreur cibl&eacute;e : permissions, clan introuvable ou message invalide.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">queue_join</span></div><p>Rejoint la file ranked classique.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">queue_joined</span></div><p>Confirmation d&rsquo;entr&eacute;e en file avec position.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">queue_left</span></div><p>Confirmation de sortie de file.</p></article>
@@ -419,6 +469,12 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_leave</span></div><p>Quitte la file tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">tournament_queue_left</span></div><p>Confirmation de sortie de file tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">play_move</span></div><p>Joue un coup en envoyant une colonne.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">game_chat_send</span></div><p>Envoie un message de tchat &agrave; l&rsquo;adversaire pendant la partie.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_chat_message</span></div><p>Message de tchat diffus&eacute; aux deux joueurs de la partie.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">game_draw_offer / game_draw_response</span></div><p>Propose une nulle puis accepte ou refuse. Si accept&eacute;, la partie finit avec <code>agreement_draw</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">game_resign</span></div><p>Abandon volontaire. La partie se termine avec ELO appliqu&eacute; et <code>result_reason = resignation</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">game_rematch_request / game_rematch_response</span></div><p>Demande de revanche apr&egrave;s la partie, accept&eacute;e ou refus&eacute;e en temps r&eacute;el.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_action_offer / game_action_notice / game_action_error</span></div><p>Notifications communes pour nulle, revanche, refus, abandon et erreurs d&rsquo;action.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">move_played</span></div><p>Un coup a &eacute;t&eacute; jou&eacute;. Sert &agrave; mettre &agrave; jour la grille.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_over</span></div><p>Partie termin&eacute;e. R&eacute;sultat final, deltas ELO, coins, boosts, etc.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">rejoin_game</span></div><p>Rejoint une partie active apr&egrave;s refresh ou reconnexion.</p></article>
@@ -426,6 +482,7 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">opponent_disconnected / opponent_reconnected</span></div><p>Signaux de pr&eacute;sence de l&rsquo;adversaire pendant une partie.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">color_updated</span></div><p>Mise &agrave; jour live d&rsquo;une couleur de pion.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">join_live</span></div><p>Inscrit la socket au salon live pour recevoir les refreshs de parties.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">join_live_game / leave_live_game</span></div><p>Inscrit ou retire un spectateur d&rsquo;une partie pr&eacute;cise. Les connect&eacute;s affichent leur pseudo, les autres apparaissent en Anonyme.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">live_update</span></div><p>Demande au client de relire <code>/api/live</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">system_status_update</span></div><p>Mise &agrave; jour push de l&rsquo;alerte syst&egrave;me / red&eacute;marrage.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">error</span></div><p>Erreur g&eacute;n&eacute;rique temps r&eacute;el.</p><pre><code>{ "message": "Session invalide. Reconnecte-toi." }</code></pre><div class="note warn">Cas fr&eacute;quents : session invalide, compte banni, d&eacute;j&agrave; en file, tournoi indisponible, coup invalide, game not found.</div></article>
