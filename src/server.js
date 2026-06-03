@@ -913,7 +913,14 @@ const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const VIP_MONTHLY_STYLE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-const PSEUDO_FONT_OPTIONS = new Set(['barlow', 'condensed', 'bebas', 'mono', 'serif', 'script']);
+const PSEUDO_FONT_OPTIONS = new Set([
+  'barlow', 'condensed', 'bebas',
+  'orbitron', 'audiowide', 'russo', 'chakra', 'rajdhani', 'oxanium', 'pressstart', 'bungee',
+  'playfair', 'cinzel', 'merriweather', 'cormorant', 'abril', 'prata', 'bodoni',
+  'pacifico', 'caveat', 'lobster', 'dancing', 'satisfy', 'permanent', 'shadows', 'luckiest',
+  'oswald', 'anton', 'teko', 'righteous',
+  'mono', 'serif', 'script',
+]);
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
@@ -1963,7 +1970,7 @@ function getOwnedBots(ownerId, viewer = null) {
       AND b.is_bot = 1
       AND (? = 1 OR b.bot_owner_id = ?)
     ORDER BY b.wins DESC, b.elo DESC, b.id ASC
-  `).all(adminMode ? 1 : 0, id).map(row => ({
+  `).all(adminMode ? 1 : 0, id).filter(row => !builtinBotIds.has(Number(row.id || 0))).map(row => ({
     ...sanitize(row),
     host: {
       active: Number(row.host_expires_at || 0) > Date.now(),

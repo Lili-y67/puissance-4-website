@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Caveat:wght@700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Cormorant+Garamond:wght@700&family=Dancing+Script:wght@700&family=Lobster&family=Luckiest+Guy&family=Merriweather:wght@700&family=Orbitron:wght@700;900&family=Oswald:wght@700&family=Oxanium:wght@700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Rajdhani:wght@700&family=Righteous&family=Russo+One&family=Satisfy&family=Shadows+Into+Light&family=Teko:wght@700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -681,6 +681,13 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;
   text-transform:uppercase;color:var(--muted);
 }
+.pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:2px}
+.pseudo-font-preview-title{width:100%;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:5px}
+.pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.032);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden}
+.pseudo-font-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.24);background:rgba(133,235,255,.055)}
+.pseudo-font-option.active{border-color:rgba(133,235,255,.58);background:rgba(133,235,255,.10);box-shadow:0 0 0 1px rgba(133,235,255,.16),0 0 20px rgba(133,235,255,.10)}
+.pseudo-font-option strong{display:block;font-size:18px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pseudo-font-option span{font:700 9px Barlow,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avatar-decoration-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:2200;padding:20px;align-items:center;justify-content:center}
 .avatar-decoration-modal-bg.show{display:flex}
 .avatar-decoration-modal{width:min(960px,100%);max-height:min(86vh,900px);overflow:auto;background:linear-gradient(180deg,rgba(16,16,26,0.98),rgba(12,12,22,0.98));border:1px solid rgba(133,235,255,0.16);border-radius:22px;box-shadow:0 20px 80px rgba(0,0,0,0.45),0 0 40px rgba(133,235,255,0.08);padding:22px}
@@ -1467,10 +1474,74 @@ function getPseudoFontFamily(font) {
   const key = String(font || '').trim().toLowerCase();
   if (key === 'condensed') return "'Barlow Condensed', sans-serif";
   if (key === 'bebas') return "'Bebas Neue', 'Barlow Condensed', sans-serif";
+  if (key === 'orbitron') return "'Orbitron', sans-serif";
+  if (key === 'audiowide') return "'Audiowide', sans-serif";
+  if (key === 'russo') return "'Russo One', sans-serif";
+  if (key === 'chakra') return "'Chakra Petch', sans-serif";
+  if (key === 'rajdhani') return "'Rajdhani', sans-serif";
+  if (key === 'oxanium') return "'Oxanium', sans-serif";
+  if (key === 'pressstart') return "'Press Start 2P', cursive";
+  if (key === 'bungee') return "'Bungee', cursive";
+  if (key === 'playfair') return "'Playfair Display', serif";
+  if (key === 'cinzel') return "'Cinzel', serif";
+  if (key === 'merriweather') return "'Merriweather', serif";
+  if (key === 'cormorant') return "'Cormorant Garamond', serif";
+  if (key === 'abril') return "'Abril Fatface', serif";
+  if (key === 'prata') return "'Prata', serif";
+  if (key === 'bodoni') return "'Bodoni Moda', serif";
+  if (key === 'pacifico') return "'Pacifico', cursive";
+  if (key === 'caveat') return "'Caveat', cursive";
+  if (key === 'lobster') return "'Lobster', cursive";
+  if (key === 'dancing') return "'Dancing Script', cursive";
+  if (key === 'satisfy') return "'Satisfy', cursive";
+  if (key === 'permanent') return "'Permanent Marker', cursive";
+  if (key === 'shadows') return "'Shadows Into Light', cursive";
+  if (key === 'luckiest') return "'Luckiest Guy', cursive";
+  if (key === 'oswald') return "'Oswald', sans-serif";
+  if (key === 'anton') return "'Anton', sans-serif";
+  if (key === 'teko') return "'Teko', sans-serif";
+  if (key === 'righteous') return "'Righteous', cursive";
   if (key === 'mono') return "Consolas, 'Courier New', monospace";
   if (key === 'serif') return "Georgia, 'Times New Roman', serif";
   if (key === 'script') return "'Segoe Script', 'Brush Script MT', cursive";
   return "'Barlow Condensed', sans-serif";
+}
+
+const PSEUDO_FONT_GROUPS = [
+  { label: 'Sport / clean', fonts: [
+    ['barlow','Barlow'], ['condensed','Barlow Condensee'], ['bebas','Bebas Neue'],
+    ['oswald','Oswald'], ['anton','Anton'], ['teko','Teko'], ['righteous','Righteous'],
+  ] },
+  { label: 'Gaming / futuriste', fonts: [
+    ['orbitron','Orbitron'], ['audiowide','Audiowide'], ['russo','Russo One'],
+    ['chakra','Chakra Petch'], ['rajdhani','Rajdhani'], ['oxanium','Oxanium'],
+    ['pressstart','Press Start'], ['bungee','Bungee'], ['mono','Mono Tech'],
+  ] },
+  { label: 'Classe / premium', fonts: [
+    ['playfair','Playfair Display'], ['cinzel','Cinzel'], ['merriweather','Merriweather'],
+    ['cormorant','Cormorant'], ['abril','Abril Fatface'], ['prata','Prata'],
+    ['bodoni','Bodoni Moda'], ['serif','Serif Classic'],
+  ] },
+  { label: 'Fantaisie / manuscrit', fonts: [
+    ['pacifico','Pacifico'], ['caveat','Caveat'], ['lobster','Lobster'],
+    ['dancing','Dancing Script'], ['satisfy','Satisfy'], ['permanent','Permanent Marker'],
+    ['shadows','Shadows Into Light'], ['luckiest','Luckiest Guy'], ['script','Script'],
+  ] },
+];
+
+function renderPseudoFontPreviewGrid(selected = 'barlow', previewText = 'Pseudo') {
+  const current = String(selected || 'barlow');
+  const sample = escapeHtml(String(previewText || 'Pseudo').slice(0, 16));
+  return `<input type="hidden" id="pseudo-style-font-input" value="${escapeHtml(current)}">
+    <div class="pseudo-font-preview-grid">
+      ${PSEUDO_FONT_GROUPS.map(group => `
+        <div class="pseudo-font-preview-title">${escapeHtml(group.label)}</div>
+        ${group.fonts.map(([value, label]) => `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''}" data-pseudo-font="${value}" onclick="selectPseudoFont('${value}')" title="${escapeHtml(label)}">
+          <strong style="font-family:${getPseudoFontFamily(value)}">${sample}</strong>
+          <span>${escapeHtml(label)}</span>
+        </button>`).join('')}
+      `).join('')}
+    </div>`;
 }
 
 function getPseudoDisplayStyle(player = currentPlayer) {
@@ -2039,17 +2110,32 @@ function render(player, games, following, followers, followStatus, tournaments =
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
           </div>
-          ${isOwnProfile && canUseEloCurveStyle(player) ? `<div class="elo-history-date-range">
-            <input type="color" id="elo-curve-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color || '')) ? player.elo_curve_color : (player.color || '#FF2D55')}" aria-label="Couleur courbe ELO">
-            <input type="color" id="elo-curve-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color_secondary || '')) ? player.elo_curve_color_secondary : '#85EBFF'}" aria-label="Couleur secondaire courbe ELO">
-            <button class="elo-history-range" type="button" id="btn-save-elo-curve" onclick="saveEloCurveStyle()">Couleurs</button>
-          </div>` : ''}
         </div>
       </div>
       <div class="elo-history-canvas-wrap">
         <canvas id="elo-history-canvas"></canvas>
         <div class="elo-history-tooltip" id="elo-history-tooltip"></div>
       </div>
+      ${isOwnProfile && canUseEloCurveStyle(player) ? `<div class="color-card" style="margin:12px 0 0;padding:14px;border-radius:16px;background:rgba(255,255,255,.028)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div>
+            <div class="card-label" style="margin:0 0 4px">Style courbe ELO</div>
+            <div style="font-size:11px;color:var(--muted)">VIP/VIP+ toutes les 24h, Perso sans limite.</div>
+          </div>
+          <span class="save-confirm" id="elo-curve-confirm">✓ Enregistré !</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <div class="color-picker-inline" style="min-width:132px">
+            <input type="color" id="elo-curve-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color || '')) ? player.elo_curve_color : (player.color || '#FF2D55')}">
+            <span>Courbe 1</span>
+          </div>
+          <div class="color-picker-inline" style="min-width:132px">
+            <input type="color" id="elo-curve-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color_secondary || '')) ? player.elo_curve_color_secondary : '#85EBFF'}">
+            <span>Courbe 2</span>
+          </div>
+          <button class="btn-save-color" type="button" id="btn-save-elo-curve" onclick="saveEloCurveStyle()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">🎨 Appliquer</button>
+        </div>
+      </div>` : ''}
       <div class="elo-history-stats" id="elo-history-stats">
         <div class="elo-history-stat"><strong>--</strong><span>Actuel</span></div>
         <div class="elo-history-stat"><strong>--</strong><span>Variation</span></div>
@@ -2134,7 +2220,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <span class="save-confirm" id="pseudo-confirm">✓ Enregistré !</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="profile-pseudo-input" class="search-input" style="max-width:260px;margin:0" type="text" maxlength="16" value="${player.pseudo.replace(/"/g, '&quot;')}">
+        <input id="profile-pseudo-input" class="search-input" style="max-width:260px;margin:0" type="text" maxlength="16" oninput="refreshPseudoFontPreviews()" value="${player.pseudo.replace(/"/g, '&quot;')}">
         <button class="btn-save-color" id="btn-save-pseudo" onclick="saveProfilePseudo()">✏️ Enregistrer</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">3 à 16 caractères. Changement possible une fois tous les 30 jours.</div>
@@ -2149,16 +2235,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <input type="color" id="pseudo-style-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color_secondary || '')) ? player.pseudo_color_secondary : '#85EBFF'}">
           <span>Pseudo 2</span>
         </div>` : ''}
-        <select id="pseudo-style-font-input" class="search-input" style="max-width:170px;margin:0">
-          ${[
-            ['barlow','Barlow'],
-            ['condensed','Condensée'],
-            ['bebas','Arcade'],
-            ['mono','Mono'],
-            ['serif','Serif'],
-            ['script','Script']
-          ].map(([value,label]) => `<option value="${value}" ${String(player.pseudo_font || 'barlow') === value ? 'selected' : ''}>${label}</option>`).join('')}
-        </select>
+        ${renderPseudoFontPreviewGrid(player.pseudo_font || 'barlow', player.pseudo)}
         <button class="btn-save-color" id="btn-save-pseudo-style" onclick="savePseudoStyle()">🎨 Style</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP tous les mois.</div>` : ''}
@@ -5886,6 +5963,21 @@ async function saveProfilePseudo() {
   }
 }
 
+function selectPseudoFont(font) {
+  const input = document.getElementById('pseudo-style-font-input');
+  if (input) input.value = String(font || 'barlow');
+  document.querySelectorAll('.pseudo-font-option').forEach(btn => {
+    btn.classList.toggle('active', String(btn.dataset.pseudoFont || '') === String(font || 'barlow'));
+  });
+}
+
+function refreshPseudoFontPreviews() {
+  const pseudo = String(document.getElementById('profile-pseudo-input')?.value || currentPlayer?.pseudo || 'Pseudo').trim() || 'Pseudo';
+  document.querySelectorAll('.pseudo-font-option strong').forEach(el => {
+    el.textContent = pseudo.slice(0, 16);
+  });
+}
+
 async function savePseudoStyle() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
@@ -5958,9 +6050,14 @@ async function saveEloCurveStyle() {
       lastEloHistoryData.player = { ...(lastEloHistoryData.player || {}), ...patch };
       drawEloHistory(lastEloHistoryData);
     }
+    const confirm = document.getElementById('elo-curve-confirm');
+    if (confirm) {
+      confirm.style.opacity = '1';
+      setTimeout(() => confirm.style.opacity = '0', 2000);
+    }
     PROFIL_SFX.success();
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Couleurs'; }
+    if (btn) { btn.disabled = false; btn.textContent = '🎨 Appliquer'; }
   }
 }
 
