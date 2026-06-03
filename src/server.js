@@ -5,6 +5,8 @@ const { Server } = require('socket.io');
 const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
+const os         = require('os');
+const { fork }   = require('child_process');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
 const { getRank, getAllRankRoleNames } = require('./rank');
@@ -51,6 +53,7 @@ const anonymousSessions = new Map();
 const anonymousPlayers = new Map();
 const botApiQueue = [];
 const botRuntime = new Map();
+const botHostProcesses = new Map();
 const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
@@ -867,9 +870,9 @@ function getBotFromRequest(req) {
   const tokenHash = hashBotToken(token);
   return db.prepare(`
     SELECT * FROM players
-    WHERE bot_token_hash = ? AND is_bot = 1 AND deleted = 0
+    WHERE (bot_token_hash = ? OR bot_host_token_hash = ?) AND is_bot = 1 AND deleted = 0
     LIMIT 1
-  `).get(tokenHash) || null;
+  `).get(tokenHash, tokenHash) || null;
 }
 
 function ensureBotEnabled(bot, res) {
@@ -1927,13 +1930,167 @@ function getBotHostForOwner(ownerId, botId) {
 function appendBotHostLog(botId, line) {
   const id = Number(botId || 0);
   if (!id) return;
-  const now = new Date().toISOString();
+  const now = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date()).replace(',', '');
   const entry = `[${now}] ${String(line || '').replace(/[\r\n]+/g, ' ').slice(0, 240)}`;
   const row = db.prepare(`SELECT logs FROM bot_hosts WHERE bot_id = ?`).get(id);
   const current = String(row?.logs || '');
   const next = `${current ? `${current}\n` : ''}${entry}`.split('\n').slice(-160).join('\n');
   db.prepare(`UPDATE bot_hosts SET logs = ?, updated_at = ? WHERE bot_id = ?`).run(next, Date.now(), id);
 }
+
+function botHostWorkDir(botId) {
+  const dir = path.join(os.tmpdir(), 'p4-bot-hosts');
+  try { fs.mkdirSync(dir, { recursive: true }); } catch(e) {}
+  return path.join(dir, `bot-${Number(botId || 0)}.js`);
+}
+
+function getBotHostRuntime(botId) {
+  const child = botHostProcesses.get(Number(botId || 0));
+  return child && !child.killed ? child : null;
+}
+
+function stopBotHostProcess(botId, reason = 'stop') {
+  const id = Number(botId || 0);
+  const child = getBotHostRuntime(id);
+  if (!child) return false;
+  child.__p4Stopping = true;
+  try { child.kill('SIGTERM'); } catch(e) {}
+  setTimeout(() => {
+    const current = botHostProcesses.get(id);
+    if (current === child && !child.killed) {
+      try { child.kill('SIGKILL'); } catch(e) {}
+    }
+  }, 4000).unref?.();
+  appendBotHostLog(id, `Process host arrete (${reason}).`);
+  return true;
+}
+
+function ensureBotHostToken(bot) {
+  const fresh = pQ.getById.get(Number(bot?.id || 0));
+  if (!fresh || Number(fresh.is_bot || 0) !== 1) return null;
+  if (String(fresh.bot_host_token || '').trim()) return String(fresh.bot_host_token);
+  const token = makeBotToken();
+  db.prepare(`UPDATE players SET bot_host_token = ?, bot_host_token_hash = ?, bot_host_token_preview = ? WHERE id = ?`).run(token, hashBotToken(token), token.slice(-8), fresh.id);
+  appendBotHostLog(fresh.id, `Token host dedie genere (preview ${token.slice(-8)}).`);
+  return token;
+}
+
+function resolveBotHostToken(bot) {
+  return ensureBotHostToken(bot);
+}
+
+function startBotHostProcess(bot, host, action = 'start') {
+  const id = Number(bot?.id || 0);
+  if (!id) throw new Error('Bot invalide.');
+  if (Number(bot.bot_enabled || 0) !== 1) throw new Error('Bot suspendu par le staff.');
+  if (!host || Number(host.expires_at || 0) <= Date.now()) throw new Error('Host inactif ou expire.');
+  const code = String(host.code || '');
+  if (!code.trim()) throw new Error('Aucun code host envoye.');
+  if (getBotHostRuntime(id)) {
+    if (action !== 'restart') throw new Error('Host deja demarre.');
+    stopBotHostProcess(id, 'restart');
+  }
+  const token = resolveBotHostToken(bot);
+  if (!token) throw new Error('Token host indisponible.');
+  const runPath = botHostWorkDir(id);
+  const wrappedCode = `
+process.title = 'p4-host-bot-${id}';
+process.env.P4_BOT_ID = ${JSON.stringify(String(id))};
+process.env.BOT_ID = ${JSON.stringify(String(id))};
+process.env.P4_BOT_NAME = ${JSON.stringify(String(bot.pseudo || 'Bot'))};
+globalThis.P4_BOT_ID = ${JSON.stringify(String(id))};
+globalThis.P4_BASE_URL = process.env.P4_BASE_URL;
+globalThis.P4_BOT_TOKEN = process.env.P4_BOT_TOKEN;
+process.on('unhandledRejection', err => { console.error('[unhandledRejection]', err && err.stack || err); });
+process.on('uncaughtException', err => { console.error('[uncaughtException]', err && err.stack || err); process.exitCode = 1; });
+;(async () => {
+${code}
+})().catch(err => { console.error('[host bootstrap]', err && err.stack || err); process.exitCode = 1; });
+`;
+  fs.writeFileSync(runPath, wrappedCode, 'utf8');
+  const baseUrl = String(discordConfig().baseUrl || process.env.PUBLIC_BASE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || `http://localhost:${PORT}`).replace(/\/+$/, '');
+  const child = fork(runPath, [], {
+    cwd: path.dirname(runPath),
+    silent: true,
+    env: {
+      ...process.env,
+      P4_BASE_URL: baseUrl,
+      P4_SITE_URL: baseUrl,
+      P4_BOT_TOKEN: token,
+      P4_BOT_ID: String(id),
+      BOT_ID: String(id),
+      P4_BOT_NAME: String(bot.pseudo || 'Bot'),
+      NODE_ENV: process.env.NODE_ENV || 'production',
+    },
+  });
+  botHostProcesses.set(id, child);
+  const startedAt = Date.now();
+  db.prepare(`UPDATE bot_hosts SET status = 'running', pid = ?, exit_code = NULL, exit_signal = '', started_at = ?, stopped_at = 0, updated_at = ?, last_action = ? WHERE bot_id = ?`)
+    .run(Number(child.pid || 0), startedAt, startedAt, action, id);
+  botRuntime.set(id, { status: 'hosted', lastSeen: Date.now(), hosted: true, pid: Number(child.pid || 0) });
+  appendBotHostLog(id, `${action === 'restart' ? 'Redemarrage' : 'Demarrage'} reel du process host PID ${child.pid || '?'}.`);
+  appendBotHostLog(id, `Token host injecte au process (preview ${token.slice(-8)}).`);
+  const logPipe = (type, chunk) => {
+    String(chunk || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(0, 8)
+      .forEach(line => appendBotHostLog(id, `${type}: ${line}`));
+  };
+  child.stdout?.on('data', chunk => logPipe('stdout', chunk));
+  child.stderr?.on('data', chunk => logPipe('stderr', chunk));
+  child.on('exit', (code, signal) => {
+    if (botHostProcesses.get(id) === child) botHostProcesses.delete(id);
+    const now = Date.now();
+    db.prepare(`UPDATE bot_hosts SET status = ?, pid = 0, exit_code = ?, exit_signal = ?, stopped_at = ?, updated_at = ?, last_action = 'exit' WHERE bot_id = ?`)
+      .run(child.__p4Stopping ? 'stopped' : 'crashed', Number.isInteger(code) ? code : null, signal || '', now, now, id);
+    botRuntime.set(id, { status: child.__p4Stopping ? 'host-stopped' : 'host-crashed', lastSeen: Date.now(), hosted: true });
+    appendBotHostLog(id, `Process host termine: code=${code ?? 'null'} signal=${signal || 'none'}.`);
+    broadcastPresenceCounts();
+  });
+  child.on('error', error => appendBotHostLog(id, `Erreur process host: ${error.message}`));
+  broadcastPresenceCounts();
+  return child;
+}
+
+function restartActiveBotHosts() {
+  const rows = db.prepare(`
+    SELECT h.*, p.id AS bot_id, p.pseudo, p.bot_enabled, p.is_bot, p.deleted
+    FROM bot_hosts h
+    JOIN players p ON p.id = h.bot_id
+    WHERE h.status = 'running' AND h.expires_at > ? AND p.deleted = 0 AND p.is_bot = 1 AND p.bot_enabled = 1
+  `).all(Date.now());
+  rows.forEach(row => {
+    try {
+      startBotHostProcess(row, row, 'start');
+      appendBotHostLog(row.bot_id, 'Host relance automatiquement apres demarrage serveur.');
+    } catch (error) {
+      db.prepare(`UPDATE bot_hosts SET status = 'crashed', pid = 0, updated_at = ?, last_action = 'boot-failed' WHERE bot_id = ?`).run(Date.now(), row.bot_id);
+      appendBotHostLog(row.bot_id, `Relance automatique impossible: ${error.message}`);
+    }
+  });
+}
+
+function stopAllBotHosts(reason = 'server-stop') {
+  for (const botId of [...botHostProcesses.keys()]) {
+    stopBotHostProcess(botId, reason);
+  }
+}
+
+process.once('SIGINT', () => {
+  stopAllBotHosts('SIGINT');
+  process.exit(0);
+});
+process.once('SIGTERM', () => {
+  stopAllBotHosts('SIGTERM');
+  process.exit(0);
+});
 
 function grantBotWinCrystals(botId) {
   const bot = pQ.getById.get(Number(botId || 0));
@@ -4782,13 +4939,24 @@ app.post('/api/bot-host/:botId/action', (req, res) => {
   const host = getBotHostForOwner(player.id, bot.id);
   if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Host inactif ou expire.' });
   const action = String(req.body?.action || '').toLowerCase();
-  const nextStatus = action === 'start' || action === 'restart' ? 'running' : action === 'stop' ? 'stopped' : '';
-  if (!nextStatus) return res.status(400).json({ error: 'Action invalide.' });
-  db.prepare(`UPDATE bot_hosts SET status = ?, updated_at = ?, last_action = ? WHERE bot_id = ?`).run(nextStatus, Date.now(), action, bot.id);
-  botRuntime.set(Number(bot.id), { status: nextStatus === 'running' ? 'hosted' : 'host-stopped', lastSeen: Date.now(), hosted: true });
-  appendBotHostLog(bot.id, action === 'restart' ? 'Redemarrage demande depuis le profil.' : `${action === 'start' ? 'Demarrage' : 'Arret'} demande depuis le profil.`);
-  broadcastPresenceCounts();
-  res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot), runtime: publicBotRuntime(bot.id) });
+  if (!['start', 'restart', 'stop'].includes(action)) return res.status(400).json({ error: 'Action invalide.' });
+  try {
+    if (action === 'stop') {
+      stopBotHostProcess(bot.id, 'profil');
+      const now = Date.now();
+      db.prepare(`UPDATE bot_hosts SET status = 'stopped', pid = 0, stopped_at = ?, updated_at = ?, last_action = 'stop' WHERE bot_id = ?`).run(now, now, bot.id);
+      botRuntime.set(Number(bot.id), { status: 'host-stopped', lastSeen: Date.now(), hosted: true });
+      appendBotHostLog(bot.id, 'Arret demande depuis le profil.');
+    } else {
+      const freshHost = getBotHostForOwner(player.id, bot.id);
+      startBotHostProcess(bot, freshHost, action);
+    }
+    broadcastPresenceCounts();
+    res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot), runtime: publicBotRuntime(bot.id) });
+  } catch (error) {
+    appendBotHostLog(bot.id, `Action ${action} impossible: ${error.message}`);
+    res.status(400).json({ error: error.message || 'Action impossible.' });
+  }
 });
 
 app.get('/api/live', (_, res) => {
@@ -4992,7 +5160,7 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
 
 // Ne jamais renvoyer le hash du mot de passe au client
 function sanitize(p) {
-  const { password, bot_token_hash, ...rest } = p;
+  const { password, bot_token_hash, bot_host_token, bot_host_token_hash, ...rest } = p;
   // Masquer les infos perso si compte supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
   if (rest.deleted) {
     return {
@@ -7838,6 +8006,7 @@ initDb().then(() => {
     if (String(process.env.DISCORD_CLEAR_CONNECTED_ON_BOOT || '0') === '1') {
       clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
     }
+    restartActiveBotHosts();
     startDiscordBot(buildDiscordBotContext());
   });
 }).catch(e => { console.error('DB init failed:', e); process.exit(1); });

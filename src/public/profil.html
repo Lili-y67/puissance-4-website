@@ -5339,9 +5339,9 @@ function renderBotHostPanel(data = {}) {
                 <a class="btn-save-color" href="/api/bot-host/${Number(bot.id)}/download?token=${encodeURIComponent(getStoredSessionToken())}" style="text-decoration:none;background:rgba(255,214,10,.08);border-color:rgba(255,214,10,.25);color:#ffd60a">Download code</a>
               </div>
             </div>
-            <textarea id="bot-host-code-${Number(bot.id)}" class="search-input" style="width:100%;max-width:none;min-height:120px;margin:12px 0 8px;font-family:Consolas,monospace;font-size:12px;text-transform:none;letter-spacing:0" placeholder="// Colle ici le code JS de ton bot"></textarea>
+            <textarea id="bot-host-code-${Number(bot.id)}" class="search-input" style="width:100%;max-width:none;min-height:120px;margin:12px 0 8px;font-family:Consolas,monospace;font-size:12px;text-transform:none;letter-spacing:0" placeholder="// Code execute sur le serveur avec P4_BASE_URL et P4_BOT_TOKEN&#10;setInterval(async () => {&#10;  await fetch(P4_BASE_URL + '/api/bot/ping?status=hosted', { method:'POST', headers:{ Authorization:'Bearer ' + P4_BOT_TOKEN } });&#10;}, 15000);"></textarea>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn-save-color" onclick="saveBotHostCode(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Envoyer le code</button>
+              <button class="btn-save-color" id="bot-host-transfer-${Number(bot.id)}" onclick="saveBotHostCode(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Transférer le code</button>
               <button class="btn-save-color" onclick="loadBotHostLogs(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--text)">Logs</button>
             </div>
             <pre id="bot-host-logs-${Number(bot.id)}" style="display:none;margin-top:10px;max-height:220px;overflow:auto;padding:12px;border-radius:12px;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);white-space:pre-wrap"></pre>
@@ -5370,15 +5370,39 @@ async function saveBotHostCode(botId) {
   const token = getStoredSessionToken();
   const code = document.getElementById(`bot-host-code-${botId}`)?.value || '';
   if (!code.trim()) return alert('Colle du code avant d envoyer.');
-  const res = await fetch(`/api/bot-host/${botId}/code`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-session-token': token },
-    body: JSON.stringify({ token, code }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return alert(data.error || 'Upload impossible.');
-  await loadBotHostLogs(botId);
-  alert('Code envoye.');
+  const btn = document.getElementById(`bot-host-transfer-${botId}`);
+  const previous = btn?.textContent || 'Transférer le code';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Transfert...';
+  }
+  try {
+    const res = await fetch(`/api/bot-host/${botId}/code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, code }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Transfert impossible.');
+    if (btn) btn.textContent = 'Transféré ✓';
+    await loadBotHostLogs(botId);
+    setTimeout(() => {
+      const freshBtn = document.getElementById(`bot-host-transfer-${botId}`);
+      if (freshBtn) freshBtn.textContent = previous;
+    }, 1200);
+  } catch (e) {
+    alert('Erreur réseau pendant le transfert.');
+  } finally {
+    if (btn) {
+      setTimeout(() => {
+        const freshBtn = document.getElementById(`bot-host-transfer-${botId}`);
+        if (freshBtn) {
+          freshBtn.disabled = false;
+          if (freshBtn.textContent === 'Transfert...') freshBtn.textContent = previous;
+        }
+      }, 250);
+    }
+  }
 }
 
 async function botHostAction(botId, action) {

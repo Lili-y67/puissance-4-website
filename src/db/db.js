@@ -150,6 +150,9 @@ try { db.exec(`ALTER TABLE players ADD COLUMN bot_last_seen INTEGER NOT NULL DEF
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_ip_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_owner_id INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_crystals INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_host_token_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_host_token_preview TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_host_token TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
@@ -287,12 +290,22 @@ db.exec(`
     status       TEXT    NOT NULL DEFAULT 'stopped',
     code         TEXT    NOT NULL DEFAULT '',
     logs         TEXT    NOT NULL DEFAULT '',
+    pid          INTEGER NOT NULL DEFAULT 0,
+    exit_code    INTEGER,
+    exit_signal  TEXT    NOT NULL DEFAULT '',
     created_at   INTEGER NOT NULL,
     updated_at   INTEGER NOT NULL,
+    started_at   INTEGER NOT NULL DEFAULT 0,
+    stopped_at   INTEGER NOT NULL DEFAULT 0,
     expires_at   INTEGER NOT NULL DEFAULT 0,
     last_action  TEXT    NOT NULL DEFAULT ''
   )
 `);
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN pid INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN exit_code INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN exit_signal TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN started_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN stopped_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS discord_activity (

@@ -1923,10 +1923,12 @@ async function purchasePack(pack, giftTo = '') {
   if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currencyLabel}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
+  const btnInitialHtml = btn?.innerHTML || '';
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = 'Achat...';
   }
+  let purchaseOk = false;
   try {
     const res = await fetch('/api/shop/buy', {
       method: 'POST',
@@ -1954,6 +1956,8 @@ async function purchasePack(pack, giftTo = '') {
       alert(data.error || 'Impossible d acheter cet objet.');
       return;
     }
+    purchaseOk = true;
+    if (btn) btn.innerHTML = giftTo ? 'Cadeau envoyé ✓' : 'Achat validé ✓';
     shopPlayer = data.player || shopPlayer;
     if (typeof data.gemsUnlocked !== 'undefined') shopGemsUnlocked = !!data.gemsUnlocked;
     if (typeof data.botHostEligible !== 'undefined') shopBotHostEligible = !!data.botHostEligible;
@@ -1973,6 +1977,11 @@ async function purchasePack(pack, giftTo = '') {
   } finally {
     renderShop();
     switchShopCategory(currentCategory);
+    const liveBtn = document.getElementById(`buy-${pack}`);
+    if (liveBtn && liveBtn.textContent.trim() === 'Achat...') {
+      liveBtn.disabled = false;
+      liveBtn.innerHTML = btnInitialHtml || `Acheter ${packLabel}<small id="buy-${pack}-note">${purchaseOk ? 'Achat valide' : state.note}</small>`;
+    }
   }
 }
 

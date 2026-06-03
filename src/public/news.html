@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.12 | Puissance 4 Ranked</title>
+<title>News 3.1.14 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -96,13 +96,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.12</span></h1>
-      <p>La page news devient plus lisible: uniquement les nouveautes recentes, rangees en bulles courtes. Le bouton Quitter en partie applique maintenant un abandon propre au lieu de ne rien faire.</p>
+      <h1>Mise a jour <span>3.1.14</span></h1>
+      <p>Petites finitions utiles: transfert de code plus clair sur le host bot, logs a l'heure locale et bouton boutique qui ne reste plus bloque sur Achat.</p>
       <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.12</div><h2>News & Quitter</h2><p>Changelog compact, bulles de nouveautes et correction du bouton Quitter en jeu.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>UI</strong></div><div class="meta-box"><span>Type</span><strong>Bugfix</strong></div></div>
+      <div><div class="version-orb">3.1.14</div><h2>Finitions host</h2><p>Le transfert de code, les logs et la confirmation boutique sont plus propres.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>UX</strong></div><div class="meta-box"><span>Type</span><strong>Correctifs</strong></div></div>
     </aside>
   </section>
 
@@ -113,9 +113,10 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
           <div class="news-bubble"><span>&#10022;</span>Admin bots disponible en fiche joueur.</div>
+          <div class="news-bubble"><span>&#10022;</span>Host bot execute vraiment le code cote serveur.</div>
+          <div class="news-bubble"><span>&#10022;</span>Bouton Transférer le code dans le panel host.</div>
           <div class="news-bubble"><span>&#10022;</span>Cristaux bot gerables par le staff.</div>
-          <div class="news-bubble"><span>&#10022;</span>News recentrees sur les nouveautes actuelles.</div>
-          <div class="news-bubble"><span>&#10022;</span>Version courante affichee en 3.1.12.</div>
+          <div class="news-bubble"><span>&#10022;</span>Version courante affichee en 3.1.14.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
@@ -123,6 +124,8 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
         <div class="bubble-list">
           <div class="news-bubble"><span>&#9679;</span>Les anciens gros blocs ne sont plus affiches ici.</div>
           <div class="news-bubble"><span>&#9679;</span>La page utilise des bulles compactes par categorie.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les logs host capturent stdout et stderr.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les timestamps host sont affiches en heure de Paris.</div>
           <div class="news-bubble"><span>&#9679;</span>Le statut bot actif ou suspendu est plus visible admin.</div>
           <div class="news-bubble"><span>&#9679;</span>La doc API conserve le detail des endpoints.</div>
         </div>
@@ -131,15 +134,15 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
           <div class="news-bubble"><span>&#10003;</span>Le bouton Quitter en jeu ne reste plus muet.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les hosts running sont relances apres reboot serveur.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le bouton boutique ne reste plus bloque sur Achat.</div>
           <div class="news-bubble"><span>&#10003;</span>Quitter une partie humaine lance un abandon avec ELO applique.</div>
-          <div class="news-bubble"><span>&#10003;</span>Quitter hors partie active revient simplement a l'accueil.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le bouton bloque l'auto-queue au retour accueil.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.1.12: news compacte en bulles et correction du bouton Quitter en partie.</div>
+  <div class="footer-note">Version 3.1.14: transfert de code plus clair, logs en heure locale et bouton achat restaure proprement.</div>
 </main>
 <script src="/theme.js"></script>
 </body>
