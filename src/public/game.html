@@ -1174,6 +1174,17 @@ function resignGame() {
   socket.emit('game_resign');
 }
 
+function quit() {
+  sessionStorage.setItem('no_auto_queue', '1');
+  if (!gameOver && !iaMode && socket && mySide) {
+    if (!confirm('Quitter la partie ? Cela comptera comme un abandon et l ELO sera applique.')) return;
+    socket.emit('game_resign');
+    setStatus('Abandon en cours...');
+    return;
+  }
+  location.href = '/';
+}
+
 function requestRematch() {
   if (!socket || iaMode) return;
   socket.emit('game_rematch_request');

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.11 | Puissance 4 Ranked</title>
+<title>News 3.1.12 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -65,8 +65,18 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
 .timeline-date{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;text-transform:uppercase;color:var(--cyan)}
 .timeline-item strong{display:block;font-size:15px;margin-bottom:4px}.timeline-item span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
 .footer-note{margin-top:24px;border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:16px 18px;color:var(--muted);line-height:1.55}
+.bubble-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.bubble-column{position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);background:linear-gradient(160deg,var(--soft,rgba(255,255,255,.05)),transparent 52%),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)),var(--surface);padding:20px;min-height:320px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
+.bubble-column::after{content:"";position:absolute;right:-60px;bottom:-60px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,var(--soft,rgba(113,221,255,.16)),transparent 70%);pointer-events:none}
+.bubble-title{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.bubble-title .icon{animation:none}
+.bubble-title h2{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.9;text-transform:uppercase}
+.bubble-list{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}
+.news-bubble{display:inline-flex;align-items:flex-start;gap:8px;max-width:100%;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);padding:10px 13px;color:var(--text);font-size:13px;font-weight:700;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.2s ease}
+.news-bubble:hover{transform:translateY(-2px);border-color:var(--accent,#71ddff);background:rgba(255,255,255,.065)}
+.news-bubble span{color:var(--accent,#71ddff);filter:drop-shadow(0 0 8px var(--accent,#71ddff));flex:0 0 auto}
 @keyframes floatGlow{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(24px,18px,0) scale(1.08)}}@keyframes versionPulse{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-5px) rotate(-2deg)}}@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@media (max-width:980px){.hero,.timeline{grid-template-columns:1fr}.update-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:980px){.hero,.timeline{grid-template-columns:1fr}.update-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bubble-board{grid-template-columns:1fr}}
 @media (max-width:680px){.page{padding:18px 12px 54px}.topbar{align-items:stretch}.brand{width:100%;justify-content:center;text-align:center}.nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.nav a{justify-content:center}.hero{padding:22px;border-radius:26px;min-height:auto}h1{font-size:48px}.hero p{font-size:14px}.hero-actions{display:grid;grid-template-columns:1fr;width:100%}.update-grid{grid-template-columns:1fr}.section-head h2{font-size:34px}.timeline-item{grid-template-columns:1fr}.version-meta{grid-template-columns:1fr}}
 @media (max-width:420px){.nav{grid-template-columns:1fr}.brand strong{font-size:27px}h1{font-size:40px}.update-card{padding:17px;min-height:auto}.update-card h3{font-size:27px}}
 </style>
@@ -86,48 +96,50 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.11</span></h1>
-      <p>Cette version complete l'administration des bots: suspension visible dans le panel, Cristaux ajoutables par le staff pour les createurs de bots et endpoint dedie cote API.</p>
+      <h1>Mise a jour <span>3.1.12</span></h1>
+      <p>La page news devient plus lisible: uniquement les nouveautes recentes, rangees en bulles courtes. Le bouton Quitter en partie applique maintenant un abandon propre au lieu de ne rien faire.</p>
       <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.11</div><h2>Admin bots</h2><p>Le staff peut couper un robot et gerer les Cristaux de son createur humain depuis le panel.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Admin</strong></div><div class="meta-box"><span>Type</span><strong>Bots</strong></div></div>
+      <div><div class="version-orb">3.1.12</div><h2>News & Quitter</h2><p>Changelog compact, bulles de nouveautes et correction du bouton Quitter en jeu.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>UI</strong></div><div class="meta-box"><span>Type</span><strong>Bugfix</strong></div></div>
     </aside>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs jusqu'a la 3.1.11, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
-    <div class="update-grid">
-      <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128279;</div><div class="tag">Discord</div></div><h3>Roles et synchro</h3><ul><li>Generation admin des roles de rang ELO sans doublons.</li><li>Attribution automatique du role de rang quand le compte est lie.</li><li>Role Connectee synchronise par presence, avec limitation anti rate-limit.</li><li>Permissions Discord prises en compte pour les roles admin.</li></ul></article>
-      <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#128142;</div><div class="tag">Crystal</div></div><h3>Nouveau rang mensuel</h3><ul><li>Rang Crystal renouvelable automatiquement pour 5000 coins.</li><li>Badge dedie avec infobulle, sans couleur forcee sur le pseudo.</li><li>20 gemmes par semaine et avantages VIP/VIP+ hors Perso.</li><li>Message de connexion customisable pour les membres Crystal.</li></ul></article>
-      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.14)"><div class="card-top"><div class="icon">&#128722;</div><div class="tag">Boutique</div></div><h3>Boosts et cadeaux</h3><ul><li>Boosters personnels separes des boosters globaux.</li><li>Puissance modifiable avec prix dynamique.</li><li>Bouton Offrir avec recherche joueur et controle anti auto-cadeau.</li><li>Parrainage boutique avec reductions filleul et parrain.</li></ul></article>
-      <article class="update-card" style="--accent:#ff2d55;--soft:rgba(255,45,85,.15)"><div class="card-top"><div class="icon">&#128240;</div><div class="tag">Logs</div></div><h3>Webhooks propres</h3><ul><li>Webhooks distincts GET, POST, Games et Globaux.</li><li>Logs plus complets, sans texte inutile avant les infos.</li><li>Images Discord branchees en thumbnail ou image selon avatar/banniere.</li><li>File d'attente et ralentissement pour reduire les HTTP 429.</li></ul></article>
-      <article class="update-card" style="--accent:#b36bff;--soft:rgba(179,107,255,.16)"><div class="card-top"><div class="icon">&#129302;</div><div class="tag">Jeu</div></div><h3>Bot, live et replay</h3><ul><li>Les parties contre bot peuvent apparaitre dans le live.</li><li>Le bot peut commencer aleatoirement, connecte ou non.</li><li>Replay et live ameliores avec cartes, grille et variations.</li><li>Themes de plateau avec degrades coherents et ambiance elementaire.</li></ul></article>
-      <article class="update-card" style="--accent:#ff9f0a;--soft:rgba(255,159,10,.16)"><div class="card-top"><div class="icon">&#129504;</div><div class="tag">Analyse</div></div><h3>Evaluation des coups</h3><ul><li>Worker d'analyse rendu plus precis.</li><li>Affichage des variantes possibles en live.</li><li>Evaluation en centipions pour mieux lire les choix.</li><li>Base plus fiable pour les conseils de coups.</li></ul></article>
-      <article class="update-card" style="--accent:#85ebff;--soft:rgba(133,235,255,.16)"><div class="card-top"><div class="icon">&#128200;</div><div class="tag">Profil</div></div><h3>Profil et badges</h3><ul><li>Badges de profil remis en place et rendus plus propres.</li><li>Rangs affiches avec assets custom cote site.</li><li>Graphique du profil telechargeable en image.</li><li>Avatars et bannieres mieux recadres.</li></ul></article>
-      <article class="update-card" style="--accent:#7b61ff;--soft:rgba(123,97,255,.16)"><div class="card-top"><div class="icon">&#128187;</div><div class="tag">3.1.7</div></div><h3>Offline & UI Discord</h3><ul><li>Le HTML Jouer hors connexion garde maintenant les coups complets.</li><li>L'historique du fichier telecharge dispose d'un bouton Replay.</li><li>La commande Discord /ui affiche infos membre, roles, activite et medias.</li><li>/ui indique aussi si le membre est lie a Puissance 4.</li></ul></article>
-      <article class="update-card" style="--accent:#ff7bb0;--soft:rgba(255,123,176,.15)"><div class="card-top"><div class="icon">&#127873;</div><div class="tag">Events</div></div><h3>Giveaway et drop</h3><ul><li>Commande Discord /giveaway avec duree, prix et vainqueur.</li><li>Commande /drop instantanee au premier clic.</li><li>Recompense automatique si le gagnant est lie au site.</li><li>Gestion des lots compatible coins, gemmes et avantages.</li></ul></article>
-      <article class="update-card" style="--accent:#8cff9e;--soft:rgba(140,255,158,.13)"><div class="card-top"><div class="icon">&#128176;</div><div class="tag">Gemmes</div></div><h3>Activite Discord</h3><ul><li>Le bot compte les discussions des membres Discord.</li><li>10 gemmes donnees tous les 10000 caracteres.</li><li>Stockage seulement si le membre est lie au site.</li><li>Gemmes masquees en boutique sans liaison Discord.</li></ul></article>
-      <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128172;</div><div class="tag">3.1.8</div></div><h3>Duel temps reel</h3><ul><li>Tchat direct entre les deux joueurs pendant une partie en ligne.</li><li>Proposition de nulle avec acceptation ou refus par l'adversaire.</li><li>Bouton Abandonner avec fin de partie et ELO applique proprement.</li><li>Bouton Revanche apres match, accepte ou refuse en temps reel.</li></ul></article>
-      <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#9878;</div><div class="tag">Resultats</div></div><h3>Raisons de fin</h3><ul><li>Les nulles distinguent maintenant Nulle par accord et Position nulle.</li><li>Les defaites distinguent Abandon et Alignement.</li><li>Les victoires indiquent aussi si elles viennent d'un abandon ou d'un alignement.</li><li>Profil et replay affichent le type de resultat detaille.</li></ul></article>
-      <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128218;</div><div class="tag">3.1.9</div></div><h3>API enrichie</h3><ul><li>Documentation complete des routes Crystal, parrainage, cadeaux boutique et coupons.</li><li>Nouvelle section clans avec chat, membres, roles et leaderboard.</li><li>Endpoints admin ajoutes: gemmes, coupons, bot-enabled, Crystal et backups.</li><li>Bot API, Discord et commandes slash mieux relies aux routes du site.</li></ul></article>
-      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.14)"><div class="card-top"><div class="icon">&#128064;</div><div class="tag">Live</div></div><h3>Spectateur plus clair</h3><ul><li>Les parties live exposent les spectateurs connectes avec pseudo.</li><li>Les visiteurs hors connexion apparaissent en Anonyme.</li><li>Les parties contre bot restent visibles dans le live.</li><li>Les variantes d'analyse disposent d'un fallback si le moteur profond ne repond pas.</li></ul></article>
-      <article class="update-card" style="--accent:#ff9f0a;--soft:rgba(255,159,10,.16)"><div class="card-top"><div class="icon">&#128268;</div><div class="tag">Socket.IO</div></div><h3>Events documentes</h3><ul><li>Tchat, nulle, abandon et revanche sont maintenant listes dans l'API.</li><li>join_live_game et leave_live_game documentent le suivi spectateur.</li><li>Les events clan et Crystal login sont references.</li><li>La doc precise les raisons de fin utilisees par replay et profil.</li></ul></article>
-      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.16)"><div class="card-top"><div class="icon">&#128994;</div><div class="tag">3.1.10</div></div><h3>Cristaux bot</h3><ul><li>Un compte bot peut maintenant etre associe a un createur humain.</li><li>Chaque victoire du robot donne 1 a 3 Cristaux a son createur.</li><li>La boutique affiche Host Bot 1 Mois pour 3000 Cristaux si un bot est associe.</li><li>Le profil ajoute un panel host: code, download, demarrer, redemarrer, arreter et logs.</li></ul></article>
-      <article class="update-card" style="--accent:#85ebff;--soft:rgba(133,235,255,.16)"><div class="card-top"><div class="icon">&#128737;</div><div class="tag">3.1.11</div></div><h3>Admin bots</h3><ul><li>Le panel affiche mieux les bots actifs ou suspendus.</li><li>Le staff peut suspendre ou reactiver un compte bot depuis la fiche joueur.</li><li>Les Cristaux bot peuvent etre ajoutes ou retires au createur humain.</li><li>L'API refuse les Cristaux si le joueur n'a aucun bot associe.</li></ul></article>
+    <div class="section-head"><div><h2>Nouveautes recentes</h2><p>Seulement les derniers changements utiles, presentes en bulles courtes pour scanner rapidement.</p></div></div>
+    <div class="bubble-board">
+      <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
+        <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
+        <div class="bubble-list">
+          <div class="news-bubble"><span>&#10022;</span>Admin bots disponible en fiche joueur.</div>
+          <div class="news-bubble"><span>&#10022;</span>Cristaux bot gerables par le staff.</div>
+          <div class="news-bubble"><span>&#10022;</span>News recentrees sur les nouveautes actuelles.</div>
+          <div class="news-bubble"><span>&#10022;</span>Version courante affichee en 3.1.12.</div>
+        </div>
+      </article>
+      <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
+        <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
+        <div class="bubble-list">
+          <div class="news-bubble"><span>&#9679;</span>Les anciens gros blocs ne sont plus affiches ici.</div>
+          <div class="news-bubble"><span>&#9679;</span>La page utilise des bulles compactes par categorie.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le statut bot actif ou suspendu est plus visible admin.</div>
+          <div class="news-bubble"><span>&#9679;</span>La doc API conserve le detail des endpoints.</div>
+        </div>
+      </article>
+      <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
+        <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
+        <div class="bubble-list">
+          <div class="news-bubble"><span>&#10003;</span>Le bouton Quitter en jeu ne reste plus muet.</div>
+          <div class="news-bubble"><span>&#10003;</span>Quitter une partie humaine lance un abandon avec ELO applique.</div>
+          <div class="news-bubble"><span>&#10003;</span>Quitter hors partie active revient simplement a l'accueil.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le bouton bloque l'auto-queue au retour accueil.</div>
+        </div>
+      </article>
     </div>
   </section>
 
-  <section>
-    <div class="section-head"><div><h2>Suivi 3.1.11</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
-    <div class="timeline">
-      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>Admin</span><strong>Cristaux bot</strong></div><div class="release-item"><span>Bots</span><strong>Suspension visible</strong></div><div class="release-item"><span>API</span><strong>Endpoint staff</strong></div><div class="release-item"><span>News</span><strong>3.1.11</strong></div></div></aside>
-      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">Admin</div><div><strong>Les Cristaux bot sont gerables depuis la fiche joueur.</strong><span>Le bouton est verrouille si le joueur n'est pas le createur d'au moins un bot.</span></div></div><div class="timeline-item"><div class="timeline-date">Bots</div><div><strong>La suspension reste reservee aux admins.</strong><span>Un bot suspendu est retire de la file API et renvoie l'erreur staff prevue.</span></div></div><div class="timeline-item"><div class="timeline-date">API</div><div><strong>La route bot-crystals garde les memes controles que le panel.</strong><span>Elle refuse les comptes robots, les joueurs sans bot et les montants invalides.</span></div></div><div class="timeline-item"><div class="timeline-date">3.1.11</div><div><strong>Chaque nouvelle mise a jour doit remonter ici.</strong><span>La page news sert de changelog vivant: on change le numero, puis on ajoute les cartes des nouveautes.</span></div></div></div></div>
-    </div>
-  </section>
-
-  <div class="footer-note">Version 3.1.11: l'admin peut suspendre les bots et ajuster les Cristaux des createurs humains de bots associes.</div>
+  <div class="footer-note">Version 3.1.12: news compacte en bulles et correction du bouton Quitter en partie.</div>
 </main>
 <script src="/theme.js"></script>
 </body>
