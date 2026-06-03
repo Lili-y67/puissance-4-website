@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Caveat:wght@700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Cormorant+Garamond:wght@700&family=Dancing+Script:wght@700&family=Lobster&family=Luckiest+Guy&family=Merriweather:wght@700&family=Orbitron:wght@700;900&family=Oswald:wght@700&family=Oxanium:wght@700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Rajdhani:wght@700&family=Righteous&family=Russo+One&family=Satisfy&family=Shadows+Into+Light&family=Teko:wght@700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Caveat:wght@700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Dancing+Script:wght@700&family=Lobster&family=Luckiest+Guy&family=Orbitron:wght@700;900&family=Oswald:wght@700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Teko:wght@700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -280,7 +280,7 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .elo-sim-progress-fill{height:100%;border-radius:2px;transition:width 0.3s,background 0.3s;}
 input[type="file"]{display:none;}
 .profile-info{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;}
-.profile-pseudo{font-family:Barlow Condensed,sans-serif;font-size:54px;font-weight:900;letter-spacing:1px;line-height:.9;text-align:left;text-transform:uppercase;}
+.profile-pseudo{font-family:Barlow Condensed,sans-serif;font-size:54px;font-weight:900;letter-spacing:1px;line-height:.95;text-align:left;text-transform:uppercase;max-width:100%;white-space:normal;overflow:visible;overflow-wrap:anywhere;text-wrap:balance;}
 .profile-pseudo{
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
@@ -681,7 +681,18 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;
   text-transform:uppercase;color:var(--muted);
 }
-.pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:2px}
+.pseudo-font-picker-row{width:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:2px}
+.pseudo-font-current{min-width:190px;flex:1;padding:11px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:3px;overflow:hidden}
+.pseudo-font-current strong{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pseudo-font-current span{font:800 10px Barlow,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);padding:18px;align-items:center;justify-content:center}
+.pseudo-font-modal-bg.show{display:flex}
+.pseudo-font-modal{width:min(980px,100%);max-height:min(86vh,920px);overflow:auto;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.98),rgba(10,10,19,.98));box-shadow:0 22px 90px rgba(0,0,0,.48),0 0 42px rgba(133,235,255,.08);padding:22px}
+.pseudo-font-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.pseudo-font-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
+.pseudo-font-modal-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px}
+.pseudo-font-modal-close{width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:20px;line-height:1}
+.pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin-top:2px}
 .pseudo-font-preview-title{width:100%;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-top:5px}
 .pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.032);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden}
 .pseudo-font-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.24);background:rgba(133,235,255,.055)}
@@ -1513,27 +1524,37 @@ const PSEUDO_FONT_GROUPS = [
     ['oswald','Oswald'], ['anton','Anton'], ['teko','Teko'], ['righteous','Righteous'],
   ] },
   { label: 'Gaming / futuriste', fonts: [
-    ['orbitron','Orbitron'], ['audiowide','Audiowide'], ['russo','Russo One'],
-    ['chakra','Chakra Petch'], ['rajdhani','Rajdhani'], ['oxanium','Oxanium'],
+    ['orbitron','Orbitron'], ['audiowide','Audiowide'], ['chakra','Chakra Petch'],
     ['pressstart','Press Start'], ['bungee','Bungee'], ['mono','Mono Tech'],
   ] },
   { label: 'Classe / premium', fonts: [
-    ['playfair','Playfair Display'], ['cinzel','Cinzel'], ['merriweather','Merriweather'],
-    ['cormorant','Cormorant'], ['abril','Abril Fatface'], ['prata','Prata'],
-    ['bodoni','Bodoni Moda'], ['serif','Serif Classic'],
+    ['playfair','Playfair Display'], ['cinzel','Cinzel'], ['abril','Abril Fatface'],
+    ['prata','Prata'], ['bodoni','Bodoni Moda'],
   ] },
   { label: 'Fantaisie / manuscrit', fonts: [
     ['pacifico','Pacifico'], ['caveat','Caveat'], ['lobster','Lobster'],
-    ['dancing','Dancing Script'], ['satisfy','Satisfy'], ['permanent','Permanent Marker'],
-    ['shadows','Shadows Into Light'], ['luckiest','Luckiest Guy'], ['script','Script'],
+    ['dancing','Dancing Script'], ['permanent','Permanent Marker'], ['luckiest','Luckiest Guy'],
   ] },
 ];
 
+function getPseudoFontLabel(font) {
+  const key = String(font || 'barlow');
+  for (const group of PSEUDO_FONT_GROUPS) {
+    const found = group.fonts.find(([value]) => value === key);
+    if (found) return found[1];
+  }
+  return 'Barlow';
+}
+
+function normalizePseudoPickerFont(font) {
+  const key = String(font || 'barlow');
+  return PSEUDO_FONT_GROUPS.some(group => group.fonts.some(([value]) => value === key)) ? key : 'barlow';
+}
+
 function renderPseudoFontPreviewGrid(selected = 'barlow', previewText = 'Pseudo') {
-  const current = String(selected || 'barlow');
+  const current = normalizePseudoPickerFont(selected);
   const sample = escapeHtml(String(previewText || 'Pseudo').slice(0, 16));
-  return `<input type="hidden" id="pseudo-style-font-input" value="${escapeHtml(current)}">
-    <div class="pseudo-font-preview-grid">
+  return `<div class="pseudo-font-preview-grid">
       ${PSEUDO_FONT_GROUPS.map(group => `
         <div class="pseudo-font-preview-title">${escapeHtml(group.label)}</div>
         ${group.fonts.map(([value, label]) => `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''}" data-pseudo-font="${value}" onclick="selectPseudoFont('${value}')" title="${escapeHtml(label)}">
@@ -1541,6 +1562,31 @@ function renderPseudoFontPreviewGrid(selected = 'barlow', previewText = 'Pseudo'
           <span>${escapeHtml(label)}</span>
         </button>`).join('')}
       `).join('')}
+    </div>`;
+}
+
+function renderPseudoFontPicker(selected = 'barlow', previewText = 'Pseudo') {
+  const current = normalizePseudoPickerFont(selected);
+  const sample = escapeHtml(String(previewText || 'Pseudo').slice(0, 16));
+  return `<input type="hidden" id="pseudo-style-font-input" value="${escapeHtml(current)}">
+    <div class="pseudo-font-picker-row">
+      <div class="pseudo-font-current" id="pseudo-font-current">
+        <strong style="font-family:${getPseudoFontFamily(current)}">${sample}</strong>
+        <span>${escapeHtml(getPseudoFontLabel(current))}</span>
+      </div>
+      <button class="btn-save-color" type="button" onclick="openPseudoFontPicker()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">🔠 Choisir une police</button>
+    </div>
+    <div class="pseudo-font-modal-bg" id="pseudo-font-modal-bg" onclick="if(event.target===this)closePseudoFontPicker()">
+      <div class="pseudo-font-modal">
+        <div class="pseudo-font-modal-head">
+          <div>
+            <div class="pseudo-font-modal-title">Choisir une police</div>
+            <div class="pseudo-font-modal-sub">Apercu direct avec ton pseudo. La selection reste en attente jusqu'au bouton Style.</div>
+          </div>
+          <button class="pseudo-font-modal-close" type="button" onclick="closePseudoFontPicker()">×</button>
+        </div>
+        ${renderPseudoFontPreviewGrid(current, previewText)}
+      </div>
     </div>`;
 }
 
@@ -2235,7 +2281,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <input type="color" id="pseudo-style-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color_secondary || '')) ? player.pseudo_color_secondary : '#85EBFF'}">
           <span>Pseudo 2</span>
         </div>` : ''}
-        ${renderPseudoFontPreviewGrid(player.pseudo_font || 'barlow', player.pseudo)}
+        ${renderPseudoFontPicker(player.pseudo_font || 'barlow', player.pseudo)}
         <button class="btn-save-color" id="btn-save-pseudo-style" onclick="savePseudoStyle()">🎨 Style</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP tous les mois.</div>` : ''}
@@ -5969,13 +6015,35 @@ function selectPseudoFont(font) {
   document.querySelectorAll('.pseudo-font-option').forEach(btn => {
     btn.classList.toggle('active', String(btn.dataset.pseudoFont || '') === String(font || 'barlow'));
   });
+  refreshPseudoFontPreviews();
+  closePseudoFontPicker();
+}
+
+function openPseudoFontPicker() {
+  refreshPseudoFontPreviews();
+  document.getElementById('pseudo-font-modal-bg')?.classList.add('show');
+}
+
+function closePseudoFontPicker() {
+  document.getElementById('pseudo-font-modal-bg')?.classList.remove('show');
 }
 
 function refreshPseudoFontPreviews() {
   const pseudo = String(document.getElementById('profile-pseudo-input')?.value || currentPlayer?.pseudo || 'Pseudo').trim() || 'Pseudo';
+  const currentFont = document.getElementById('pseudo-style-font-input')?.value || 'barlow';
   document.querySelectorAll('.pseudo-font-option strong').forEach(el => {
     el.textContent = pseudo.slice(0, 16);
   });
+  const current = document.getElementById('pseudo-font-current');
+  if (current) {
+    const strong = current.querySelector('strong');
+    const label = current.querySelector('span');
+    if (strong) {
+      strong.textContent = pseudo.slice(0, 16);
+      strong.style.fontFamily = getPseudoFontFamily(currentFont);
+    }
+    if (label) label.textContent = getPseudoFontLabel(currentFont);
+  }
 }
 
 async function savePseudoStyle() {
