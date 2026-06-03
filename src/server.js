@@ -381,6 +381,8 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       id: player.id,
       pseudo: player.pseudo,
       color: player.color || '#ff2d55',
+      elo_curve_color: player.elo_curve_color || '',
+      elo_curve_color_secondary: player.elo_curve_color_secondary || '',
       elo: currentElo,
       wins: Number(player.wins || 0),
       losses: Number(player.losses || 0),
@@ -910,6 +912,8 @@ const TOKEN_EMOJI_COOLDOWN_MS = 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+const VIP_MONTHLY_STYLE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+const PSEUDO_FONT_OPTIONS = new Set(['barlow', 'condensed', 'bebas', 'mono', 'serif', 'script']);
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
@@ -1058,6 +1062,26 @@ function getProfileBannerRemainingMs(player) {
   if (isAdminPlayer(player)) return 0;
   const lastChanged = Number(player?.profile_banner_changed_at || 0);
   const remaining = lastChanged + PROFILE_BANNER_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function normalizeHexColor(value) {
+  const raw = String(value || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(raw) ? raw.toUpperCase() : '';
+}
+
+function getPseudoStyleRemainingMs(player) {
+  if (isAdminPlayer(player) || isPersoPlayer(player)) return 0;
+  const lastChanged = Number(player?.pseudo_style_changed_at || 0);
+  const cooldown = isVipPlusPlayer(player) ? VIP_MEDIA_COOLDOWN_MS : VIP_MONTHLY_STYLE_COOLDOWN_MS;
+  const remaining = lastChanged + cooldown - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function getEloCurveRemainingMs(player) {
+  if (isAdminPlayer(player) || isPersoPlayer(player)) return 0;
+  const lastChanged = Number(player?.elo_curve_changed_at || 0);
+  const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -1827,17 +1851,48 @@ function discordConfig() {
 }
 
 function normalizeReferralId(value) {
-  const raw = String(value || '').trim();
+  const raw = String(value || '').trim().replace(/^https?:\/\/[^/?#]+\/?\?ref=/i, '');
   if (!raw) return 0;
-  const match = raw.match(/\d+/);
-  const id = match ? Number(match[0]) : Number(raw);
+  const match = raw.match(/^(?:p4-)?(\d+)$/i);
+  const id = match ? Number(match[1]) : 0;
   return Number.isFinite(id) && id > 0 ? Math.floor(id) : 0;
 }
 
-function getEligibleReferrer(referrerId, playerId = 0) {
-  const id = normalizeReferralId(referrerId);
-  if (!id || Number(id) === Number(playerId || 0)) return null;
-  const referrer = pQ.getById.get(id);
+function normalizeReferralSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\/[^/?#]+\/?\?ref=/i, '')
+    .replace(/^p4-/i, 'p4-')
+    .replace(/[^a-z0-9_.-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 32);
+}
+
+function resolveReferralTarget(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const id = normalizeReferralId(raw);
+  if (id) {
+    const byId = pQ.getById.get(id);
+    if (byId) return byId;
+  }
+  const normalized = normalizeReferralSlug(raw);
+  if (!normalized) return null;
+  const bySlug = db.prepare(`
+    SELECT * FROM players
+    WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0
+      AND LOWER(referral_slug) = LOWER(?)
+    LIMIT 1
+  `).get(normalized);
+  if (bySlug) return bySlug;
+  return pQ.getByPseudo.get(raw) || pQ.getByPseudo.get(normalized);
+}
+
+function getEligibleReferrer(referrerRef, playerId = 0) {
+  const referrer = resolveReferralTarget(referrerRef);
+  if (!referrer || Number(referrer.id) === Number(playerId || 0)) return null;
   if (!referrer || Number(referrer.deleted || 0) === 1 || Number(referrer.is_guest || 0) === 1 || Number(referrer.is_bot || 0) === 1) return null;
   return referrer;
 }
@@ -1867,7 +1922,9 @@ function getReferralInfo(player) {
       ? REFERRAL_FILLEUL_DISCOUNT_PERCENT
       : 0;
   return {
-    code: player?.id ? `P4-${player.id}` : '',
+    code: player?.id ? (String(player.referral_slug || '').trim() || `P4-${player.id}`) : '',
+    defaultCode: player?.id ? `P4-${player.id}` : '',
+    slug: String(player?.referral_slug || '').trim(),
     discountPercent,
     filleulDiscountPercent: REFERRAL_FILLEUL_DISCOUNT_PERCENT,
     referrerDiscountPercent: REFERRAL_REFERRER_DISCOUNT_PERCENT,
@@ -1888,22 +1945,25 @@ function applyReferralDiscountPrice(basePrice, player, coupon = null) {
   return Math.max(0, Math.ceil(afterCoupon * (1 - percent / 100)));
 }
 
-function getOwnedBots(ownerId) {
+function getOwnedBots(ownerId, viewer = null) {
   const id = Number(ownerId || 0);
   if (!id) return [];
+  const adminMode = isAdminPlayer(viewer);
   return db.prepare(`
     SELECT b.id, b.pseudo, b.elo, b.wins, b.losses, b.draws, b.avatar, b.color,
-           b.bot_enabled, b.bot_token_preview, b.bot_description, b.bot_skill,
+           b.bot_enabled, b.bot_token_preview, b.bot_description, b.bot_skill, b.bot_owner_id,
+           owner.pseudo AS bot_owner_pseudo,
            h.status AS host_status, h.expires_at AS host_expires_at, h.updated_at AS host_updated_at,
            LENGTH(COALESCE(h.code, '')) AS host_code_size
     FROM players b
     LEFT JOIN bot_hosts h ON h.bot_id = b.id
+    LEFT JOIN players owner ON owner.id = b.bot_owner_id
     WHERE b.deleted = 0
       AND b.is_guest = 0
       AND b.is_bot = 1
-      AND b.bot_owner_id = ?
+      AND (? = 1 OR b.bot_owner_id = ?)
     ORDER BY b.wins DESC, b.elo DESC, b.id ASC
-  `).all(id).map(row => ({
+  `).all(adminMode ? 1 : 0, id).map(row => ({
     ...sanitize(row),
     host: {
       active: Number(row.host_expires_at || 0) > Date.now(),
@@ -1915,16 +1975,17 @@ function getOwnedBots(ownerId) {
   }));
 }
 
-function getBotHostForOwner(ownerId, botId) {
+function getBotHostForOwner(ownerId, botId, viewer = null) {
   const owner = Number(ownerId || 0);
   const bot = Number(botId || 0);
   if (!owner || !bot) return null;
+  const adminMode = isAdminPlayer(viewer);
   return db.prepare(`
     SELECT h.*, b.pseudo, b.elo, b.wins, b.losses, b.draws, b.bot_token_preview
     FROM bot_hosts h
     JOIN players b ON b.id = h.bot_id
-    WHERE h.owner_id = ? AND h.bot_id = ? AND b.deleted = 0 AND b.is_bot = 1
-  `).get(owner, bot);
+    WHERE (? = 1 OR h.owner_id = ?) AND h.bot_id = ? AND b.deleted = 0 AND b.is_bot = 1
+  `).get(adminMode ? 1 : 0, owner, bot);
 }
 
 function appendBotHostLog(botId, line) {
@@ -2676,21 +2737,25 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
 
   const rawText = String(req.body?.text || '').trim();
   const rawColor = String(req.body?.color || '').trim();
+  const rawColorSecondary = String(req.body?.colorSecondary || '').trim();
   const rawEmoji = String(req.body?.emoji || '').trim();
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le role personnalise doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise pour le role personnalise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
+  if (rawColorSecondary && !/^#[0-9a-fA-F]{6}$/.test(rawColorSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
   const emoji = rawEmoji ? [...rawEmoji][0] : '';
 
   pQ.updateCustomRole.run({
     id,
     text: rawText,
     color: rawText ? rawColor.toUpperCase() : '',
+    colorSecondary: rawText ? rawColorSecondary.toUpperCase() : '',
     emoji: rawText ? emoji : '',
   });
   WH.wlogAdminAction('Role personnalise', target.pseudo, id, [
     ['Texte', rawText || 'aucun', true],
     ['Couleur', rawText ? rawColor.toUpperCase() : 'aucune', true],
+    ['Couleur 2', rawText && rawColorSecondary ? rawColorSecondary.toUpperCase() : 'aucune', true],
     ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
   ]);
   if (target.discord_id) {
@@ -2719,17 +2784,21 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
 
   const rawText = String(req.body?.text || '').trim();
   const rawColor = String(req.body?.color || '').trim();
+  const rawColorSecondary = String(req.body?.colorSecondary || '').trim();
   const rawEmoji = String(req.body?.emoji || '').trim();
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le badge perso doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
+  if (rawColorSecondary && !/^#[0-9a-fA-F]{6}$/.test(rawColorSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
   const emoji = rawEmoji ? [...rawEmoji][0] : '';
   const nextColor = rawText ? rawColor.toUpperCase() : '';
+  const nextColorSecondary = rawText && rawColorSecondary ? rawColorSecondary.toUpperCase() : '';
 
   pQ.updateCustomRole.run({
     id,
     text: rawText,
     color: nextColor,
+    colorSecondary: nextColorSecondary,
     emoji: rawText ? emoji : '',
   });
 
@@ -2737,11 +2806,12 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
     WH.wlogAdminAction('Badge perso profil', target.pseudo, id, [
       ['Texte', rawText || 'aucun', true],
       ['Couleur', nextColor || 'aucune', true],
+      ['Couleur 2', nextColorSecondary || 'aucune', true],
       ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
     ]);
   } catch(e) {}
 
-  res.json({ ok: true, text: rawText, color: nextColor, emoji: rawText ? emoji : '' });
+  res.json({ ok: true, text: rawText, color: nextColor, colorSecondary: nextColorSecondary, emoji: rawText ? emoji : '' });
 });
 
 // Changer le pseudo
@@ -3948,7 +4018,7 @@ app.get('/auth/discord/link', (req, res) => {
 
 app.get('/auth/discord/signin', (req, res) => {
   const { clientId, baseUrl } = discordConfig();
-  const state = Buffer.from(JSON.stringify({ mode: 'signin', referrer: normalizeReferralId(req.query.ref || req.query.referrer) })).toString('base64');
+  const state = Buffer.from(JSON.stringify({ mode: 'signin', referrer: String(req.query.ref || req.query.referrer || '').trim().slice(0, 80) })).toString('base64');
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: baseUrl + '/auth/discord/callback',
@@ -4630,8 +4700,53 @@ app.get('/api/referral/me', (req, res) => {
     ok: true,
     referral: {
       ...info,
-      url: `${baseUrl}/?ref=${player.id}`,
+      url: `${baseUrl}/?ref=${encodeURIComponent(info.code || `P4-${player.id}`)}`,
       referredCount,
+    },
+  });
+});
+
+app.patch('/api/referral/me', (req, res) => {
+  const token = String(req.body?.token || req.headers['x-session-token'] || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const player = pQ.getById.get(playerId);
+  if (!player || Number(player.deleted || 0) === 1 || Number(player.is_guest || 0) === 1 || Number(player.is_bot || 0) === 1) {
+    return res.status(404).json({ error: 'Compte non eligible.' });
+  }
+  const rawSlug = String(req.body?.slug || '').trim();
+  const slug = normalizeReferralSlug(rawSlug);
+  if (rawSlug && (slug.length < 3 || slug.length > 32)) {
+    return res.status(400).json({ error: 'Lien perso invalide : 3 a 32 caracteres.' });
+  }
+  if (/^p4-\d+$/i.test(slug) || /^\d+$/.test(slug)) {
+    const id = normalizeReferralId(slug);
+    if (id !== Number(playerId)) return res.status(409).json({ error: 'Ce lien pointe deja vers un autre profil.' });
+    pQ.updateReferralSlug.run({ id: playerId, slug: '' });
+  } else if (slug) {
+    const existingSlug = db.prepare(`
+      SELECT id FROM players
+      WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0
+        AND LOWER(referral_slug) = LOWER(?) AND id != ?
+      LIMIT 1
+    `).get(slug, playerId);
+    if (existingSlug) return res.status(409).json({ error: 'Ce lien de parrain est deja pris.' });
+    const existingPseudo = pQ.getByPseudo.get(slug);
+    if (existingPseudo && Number(existingPseudo.id) !== Number(playerId)) {
+      return res.status(409).json({ error: 'Ce lien correspond au pseudo d un autre joueur.' });
+    }
+    pQ.updateReferralSlug.run({ id: playerId, slug });
+  } else {
+    pQ.updateReferralSlug.run({ id: playerId, slug: '' });
+  }
+  const fresh = pQ.getById.get(playerId);
+  const info = getReferralInfo(fresh);
+  const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
+  res.json({
+    ok: true,
+    referral: {
+      ...info,
+      url: `${baseUrl}/?ref=${encodeURIComponent(info.code || `P4-${playerId}`)}`,
     },
   });
 });
@@ -4856,9 +4971,10 @@ function getHostOwnerFromRequest(req) {
   return player;
 }
 
-function getOwnedBotOrFail(ownerId, botId) {
+function getOwnedBotOrFail(ownerId, botId, viewer = null) {
   const bot = pQ.getById.get(Number(botId || 0));
-  if (!bot || Number(bot.deleted || 0) === 1 || Number(bot.is_bot || 0) !== 1 || Number(bot.bot_owner_id || 0) !== Number(ownerId || 0)) {
+  const adminMode = isAdminPlayer(viewer);
+  if (!bot || Number(bot.deleted || 0) === 1 || Number(bot.is_bot || 0) !== 1 || (!adminMode && Number(bot.bot_owner_id || 0) !== Number(ownerId || 0))) {
     return null;
   }
   return bot;
@@ -4883,7 +4999,7 @@ function serializeBotHost(row, bot = null) {
 app.get('/api/bot-host/me', (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
-  const bots = getOwnedBots(player.id);
+  const bots = getOwnedBots(player.id, player);
   res.json({
     ok: true,
     player: sanitize(pQ.getById.get(player.id)),
@@ -4896,24 +5012,24 @@ app.get('/api/bot-host/me', (req, res) => {
 app.post('/api/bot-host/:botId/code', (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
-  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
   if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
-  const host = getBotHostForOwner(player.id, bot.id);
+  const host = getBotHostForOwner(player.id, bot.id, player);
   if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Achete Host 1 mois avant d envoyer du code.' });
   const code = String(req.body?.code || '');
   if (!code.trim()) return res.status(400).json({ error: 'Code vide.' });
   if (Buffer.byteLength(code, 'utf8') > BOT_HOST_MAX_CODE_BYTES) return res.status(413).json({ error: 'Code trop lourd pour ce panel.' });
   db.prepare(`UPDATE bot_hosts SET code = ?, updated_at = ?, last_action = 'upload' WHERE bot_id = ?`).run(code, Date.now(), bot.id);
   appendBotHostLog(bot.id, `Code mis a jour (${Buffer.byteLength(code, 'utf8')} octets).`);
-  res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot) });
+  res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id, player), bot) });
 });
 
 app.get('/api/bot-host/:botId/download', (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
-  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
   if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
-  const host = getBotHostForOwner(player.id, bot.id);
+  const host = getBotHostForOwner(player.id, bot.id, player);
   if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
   const code = String(host.code || '');
   res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
@@ -4924,9 +5040,9 @@ app.get('/api/bot-host/:botId/download', (req, res) => {
 app.get('/api/bot-host/:botId/logs', (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
-  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
   if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
-  const host = getBotHostForOwner(player.id, bot.id);
+  const host = getBotHostForOwner(player.id, bot.id, player);
   if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
   res.json({ ok: true, logs: String(host.logs || ''), host: serializeBotHost(host, bot) });
 });
@@ -4934,9 +5050,9 @@ app.get('/api/bot-host/:botId/logs', (req, res) => {
 app.post('/api/bot-host/:botId/action', (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
-  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
   if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
-  const host = getBotHostForOwner(player.id, bot.id);
+  const host = getBotHostForOwner(player.id, bot.id, player);
   if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Host inactif ou expire.' });
   const action = String(req.body?.action || '').toLowerCase();
   if (!['start', 'restart', 'stop'].includes(action)) return res.status(400).json({ error: 'Action invalide.' });
@@ -4948,11 +5064,11 @@ app.post('/api/bot-host/:botId/action', (req, res) => {
       botRuntime.set(Number(bot.id), { status: 'host-stopped', lastSeen: Date.now(), hosted: true });
       appendBotHostLog(bot.id, 'Arret demande depuis le profil.');
     } else {
-      const freshHost = getBotHostForOwner(player.id, bot.id);
+      const freshHost = getBotHostForOwner(player.id, bot.id, player);
       startBotHostProcess(bot, freshHost, action);
     }
     broadcastPresenceCounts();
-    res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot), runtime: publicBotRuntime(bot.id) });
+    res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id, player), bot), runtime: publicBotRuntime(bot.id) });
   } catch (error) {
     appendBotHostLog(bot.id, `Action ${action} impossible: ${error.message}`);
     res.status(400).json({ error: error.message || 'Action impossible.' });
@@ -5519,6 +5635,55 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
   pQ.updatePseudo.run({ pseudo: nextPseudo, id });
   pQ.updatePseudoChangedAt.run({ changedAt: Date.now(), id });
   res.json({ ok: true, pseudo: nextPseudo });
+});
+
+app.patch('/api/players/:id/pseudo-style', (req, res) => {
+  const { color, colorSecondary = '', font = '', token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!isVipPlayer(player) && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Style de pseudo reserve au VIP, VIP+ ou Perso.' });
+  }
+  const nextColor = normalizeHexColor(color);
+  const nextColorSecondary = normalizeHexColor(colorSecondary);
+  const nextFont = String(font || '').trim().toLowerCase();
+  if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
+  if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
+  if (nextFont && !PSEUDO_FONT_OPTIONS.has(nextFont)) return res.status(400).json({ error: 'Police invalide.' });
+  if (nextColorSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade du pseudo est reserve au VIP+ ou Perso.' });
+  const remaining = getPseudoStyleRemainingMs(player);
+  if (remaining > 0) return res.status(429).json({ error: `Style pseudo disponible dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
+  const changedAt = Date.now();
+  pQ.updatePseudoStyle.run({
+    id,
+    color: nextColor,
+    colorSecondary: nextColorSecondary,
+    font: nextFont,
+    changedAt,
+  });
+  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, font: nextFont, changedAt });
+});
+
+app.patch('/api/players/:id/elo-curve-style', (req, res) => {
+  const { color, colorSecondary = '', token } = req.body;
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!isVipPlayer(player) && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Couleur de courbe reservee au VIP, VIP+ ou Perso.' });
+  }
+  const nextColor = normalizeHexColor(color);
+  const nextColorSecondary = normalizeHexColor(colorSecondary);
+  if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
+  if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
+  const remaining = getEloCurveRemainingMs(player);
+  if (remaining > 0) return res.status(429).json({ error: `Courbe ELO modifiable dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
+  const changedAt = Date.now();
+  pQ.updateEloCurveStyle.run({ id, color: nextColor, colorSecondary: nextColorSecondary, changedAt });
+  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, changedAt });
 });
 
 app.patch('/api/players/:id/banner', (req, res) => {

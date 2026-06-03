@@ -125,6 +125,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_image TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -134,6 +135,13 @@ try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFA
 try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN gems INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_color TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_font TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_style_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN queue_music TEXT NOT NULL DEFAULT ''`); } catch(e) {}
@@ -141,6 +149,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 
 try { db.exec(`ALTER TABLE players ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN referred_by INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN referred_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN referral_slug TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_token_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_token_preview TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_description TEXT NOT NULL DEFAULT ''`); } catch(e) {}
@@ -231,6 +240,7 @@ try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(disc
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_enabled ON players(is_bot, bot_enabled, deleted)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_ip_hash ON players(bot_ip_hash, is_bot, deleted)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_owner ON players(bot_owner_id, is_bot, deleted)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_referral_slug ON players(referral_slug COLLATE NOCASE)`); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS clans (
@@ -344,7 +354,7 @@ const pQ = {
   updateCrystalWeeklyGems: db.prepare(`UPDATE players SET crystal_weekly_gems_at = @crystal_weekly_gems_at WHERE id = @id`),
   updateCrystalAlert: db.prepare(`UPDATE players SET crystal_alert_message = @message, crystal_alert_color = @color, crystal_alert_emoji = @emoji, crystal_alert_animation = @animation WHERE id = @id`),
   updateVipExpiry: db.prepare(`UPDATE players SET vip_expires_at = @vip_expires_at WHERE id = @id`),
-  updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_emoji = @emoji WHERE id = @id`),
+  updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_color_secondary = @colorSecondary, custom_role_emoji = @emoji WHERE id = @id`),
   updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
   updateAvatarDecoration: db.prepare(`UPDATE players SET avatar_decoration = @image WHERE id = @id`),
@@ -356,6 +366,8 @@ const pQ = {
   updateGuest:    db.prepare(`UPDATE players SET is_guest = @is_guest WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
+  updatePseudoStyle: db.prepare(`UPDATE players SET pseudo_color = @color, pseudo_color_secondary = @colorSecondary, pseudo_font = @font, pseudo_style_changed_at = @changedAt WHERE id = @id`),
+  updateEloCurveStyle: db.prepare(`UPDATE players SET elo_curve_color = @color, elo_curve_color_secondary = @colorSecondary, elo_curve_changed_at = @changedAt WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
@@ -366,6 +378,7 @@ const pQ = {
   updateBotCrystals: db.prepare(`UPDATE players SET bot_crystals = @bot_crystals WHERE id = @id`),
   addBotCrystals: db.prepare(`UPDATE players SET bot_crystals = bot_crystals + @delta WHERE id = @id`),
   setReferrer:  db.prepare(`UPDATE players SET referred_by = @referrerId, referred_at = @referredAt WHERE id = @id AND (referred_by IS NULL OR referred_by = 0)`),
+  updateReferralSlug: db.prepare(`UPDATE players SET referral_slug = @slug WHERE id = @id`),
   updateTokenEmojiChangedAt: db.prepare(`UPDATE players SET token_emoji_changed_at = @changedAt WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
   setElo:       db.prepare(`UPDATE players SET elo = @elo WHERE id = @id`),

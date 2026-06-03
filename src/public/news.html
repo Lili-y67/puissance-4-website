@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.14 | Puissance 4 Ranked</title>
+<title>News 3.1.15 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -96,13 +96,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.14</span></h1>
-      <p>Petites finitions utiles: transfert de code plus clair sur le host bot, logs a l'heure locale et bouton boutique qui ne reste plus bloque sur Achat.</p>
-      <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
+      <h1>Mise a jour <span>3.1.15</span></h1>
+      <p>Personnalisation avancee du profil: lien de parrain modifiable, styles premium du pseudo, courbe ELO custom, decorations classees et permissions host admin.</p>
+      <div class="hero-actions"><a class="btn-main" href="/profil">Configurer le profil</a><a class="btn-ghost" href="/boutique">Voir la boutique</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.14</div><h2>Finitions host</h2><p>Le transfert de code, les logs et la confirmation boutique sont plus propres.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>UX</strong></div><div class="meta-box"><span>Type</span><strong>Correctifs</strong></div></div>
+      <div><div class="version-orb">3.1.15</div><h2>Profil premium</h2><p>Les options visibles du profil deviennent plus fines, avec des limites adaptees a VIP, VIP+ et Perso.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Profil</strong></div><div class="meta-box"><span>Type</span><strong>Modifs</strong></div></div>
     </aside>
   </section>
 
@@ -112,37 +112,36 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Admin bots disponible en fiche joueur.</div>
-          <div class="news-bubble"><span>&#10022;</span>Host bot execute vraiment le code cote serveur.</div>
-          <div class="news-bubble"><span>&#10022;</span>Bouton Transférer le code dans le panel host.</div>
-          <div class="news-bubble"><span>&#10022;</span>Cristaux bot gerables par le staff.</div>
-          <div class="news-bubble"><span>&#10022;</span>Version courante affichee en 3.1.14.</div>
+          <div class="news-bubble"><span>&#10022;</span>Lien de parrain personnalisable depuis le profil.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le parrainage accepte id, P4-id, pseudo ou slug perso.</div>
+          <div class="news-bubble"><span>&#10022;</span>Pseudo stylable avec couleur, degrade et police premium.</div>
+          <div class="news-bubble"><span>&#10022;</span>Courbe ELO configurable en couleur et export PNG inclus.</div>
+          <div class="news-bubble"><span>&#10022;</span>Badge Perso compatible degrade de couleurs.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
         <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Les anciens gros blocs ne sont plus affiches ici.</div>
-          <div class="news-bubble"><span>&#9679;</span>La page utilise des bulles compactes par categorie.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les logs host capturent stdout et stderr.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les timestamps host sont affiches en heure de Paris.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le statut bot actif ou suspendu est plus visible admin.</div>
-          <div class="news-bubble"><span>&#9679;</span>La doc API conserve le detail des endpoints.</div>
+          <div class="news-bubble"><span>&#9679;</span>Decorations avatar listees par rarete.</div>
+          <div class="news-bubble"><span>&#9679;</span>Admins autorises sur tous les hosts bot.</div>
+          <div class="news-bubble"><span>&#9679;</span>Perso peut modifier les styles sans attente.</div>
+          <div class="news-bubble"><span>&#9679;</span>VIP+ garde les changements rapides toutes les 24h.</div>
+          <div class="news-bubble"><span>&#9679;</span>VIP peut styliser le pseudo avec cooldown mensuel.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>Le bouton Quitter en jeu ne reste plus muet.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les hosts running sont relances apres reboot serveur.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le bouton boutique ne reste plus bloque sur Achat.</div>
-          <div class="news-bubble"><span>&#10003;</span>Quitter une partie humaine lance un abandon avec ELO applique.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les slugs avec chiffre ne sont plus confondus avec un id.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le login Discord conserve le lien parrain complet.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les champs vides reviennent proprement aux styles par defaut.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le panel host est aussi accessible depuis une session admin.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.1.14: transfert de code plus clair, logs en heure locale et bouton achat restaure proprement.</div>
+  <div class="footer-note">Version 3.1.15: parrainage personnalisable, styles premium du profil, decorations classees et hosting ouvert aux admins.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

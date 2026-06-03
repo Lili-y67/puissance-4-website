@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -665,6 +665,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .avatar-decoration-btn:hover{background:rgba(133,235,255,0.18)}
 .avatar-decoration-btn:disabled{opacity:.55;cursor:not-allowed}
 .avatar-decoration-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:10px}
+.avatar-decoration-tier{grid-column:1/-1;margin:8px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--tier-color,#85EBFF);display:flex;align-items:center;gap:8px}
+.avatar-decoration-tier::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--tier-color,#85EBFF),transparent);opacity:.35}
 .avatar-decoration-option{
   position:relative;display:flex;align-items:center;justify-content:center;
   aspect-ratio:1/1;border-radius:14px;background:rgba(255,255,255,0.03);
@@ -1449,6 +1451,38 @@ function canUseGradient(player = currentPlayer) {
   return isVipPlus(player) || isPerso(player);
 }
 
+function isAdminTier(player = currentPlayer) {
+  return String(player?.role || '') === 'admin';
+}
+
+function canUsePseudoStyle(player = currentPlayer) {
+  return isVip(player) || isPerso(player) || isAdminTier(player);
+}
+
+function canUseEloCurveStyle(player = currentPlayer) {
+  return isVip(player) || isPerso(player) || isAdminTier(player);
+}
+
+function getPseudoFontFamily(font) {
+  const key = String(font || '').trim().toLowerCase();
+  if (key === 'condensed') return "'Barlow Condensed', sans-serif";
+  if (key === 'bebas') return "'Bebas Neue', 'Barlow Condensed', sans-serif";
+  if (key === 'mono') return "Consolas, 'Courier New', monospace";
+  if (key === 'serif') return "Georgia, 'Times New Roman', serif";
+  if (key === 'script') return "'Segoe Script', 'Brush Script MT', cursive";
+  return "'Barlow Condensed', sans-serif";
+}
+
+function getPseudoDisplayStyle(player = currentPlayer) {
+  const color1 = /^#[0-9a-fA-F]{6}$/.test(String(player?.pseudo_color || '')) ? String(player.pseudo_color).toUpperCase() : '';
+  const color2 = /^#[0-9a-fA-F]{6}$/.test(String(player?.pseudo_color_secondary || '')) ? String(player.pseudo_color_secondary).toUpperCase() : '';
+  const font = getPseudoFontFamily(player?.pseudo_font);
+  const fontStyle = `font-family:${font}`;
+  if (color1 && color2) return `${fontStyle};background:linear-gradient(90deg,${color1},${color2});-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none`;
+  if (color1) return `${fontStyle};color:${color1}`;
+  return fontStyle;
+}
+
 function getPremiumTier(player = currentPlayer) {
   if (Number(player?.is_bot) === 1) return 'bot';
   if (Number(player?.is_crystal) === 1) return 'crystal';
@@ -1520,10 +1554,17 @@ function getPersoRoleAccent(player = currentPlayer) {
   const defaultAccent = getPersoAccent();
   const rawColor = String(player?.custom_role_color || '').trim();
   const color = /^#[0-9a-fA-F]{6}$/.test(rawColor) ? rawColor.toUpperCase() : defaultAccent.color;
+  const rawColorSecondary = String(player?.custom_role_color_secondary || '').trim();
+  const colorSecondary = /^#[0-9a-fA-F]{6}$/.test(rawColorSecondary) ? rawColorSecondary.toUpperCase() : '';
+  const badgeBg = colorSecondary
+    ? `linear-gradient(135deg,${color}22,${colorSecondary}22)`
+    : `${color}18`;
   return {
     color,
-    bg: `${color}18`,
+    colorSecondary,
+    bg: badgeBg,
     border: `${color}66`,
+    glow: colorSecondary ? `${colorSecondary}44` : `${color}44`,
     label: String(player?.custom_role_text || '').trim().toUpperCase() || defaultAccent.label,
     emoji: String(player?.custom_role_emoji || '').trim(),
   };
@@ -1738,7 +1779,7 @@ async function load() {
     if (isOwnProfile && freshPlayer.discord_id) {
       loadDiscordInfo();
     }
-    if (isOwnProfile && Number(freshPlayer.is_bot || 0) !== 1) {
+    if ((isOwnProfile || isAdminTier(viewerPlayer)) && Number(freshPlayer.is_bot || 0) !== 1) {
       loadReferralInfo();
       loadBotHostPanel();
     }
@@ -1816,7 +1857,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
     ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
     ...(isOwnProfile ? [{ href: '#section-bot', icon: '🤖', title: 'Mode bot', sub: 'API et token' }] : []),
-    ...(isOwnProfile && Number(player.is_bot || 0) !== 1 ? [{ href: '#section-bot-host', icon: '💚', title: 'Host bot', sub: 'Cristaux et panel' }] : []),
+    ...((isOwnProfile || isAdminTier(viewerPlayer)) && Number(player.is_bot || 0) !== 1 ? [{ href: '#section-bot-host', icon: '💚', title: 'Host bot', sub: 'Cristaux et panel' }] : []),
     { href: '#section-discord', icon: '💬', title: 'Discord', sub: 'Liaison et serveur' },
     { href: '#section-activity', icon: '🎮', title: 'Activite', sub: 'Parties et reseau' },
   ];
@@ -1867,7 +1908,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div class="profile-header-inner">
         ${avatarSection}
         <div class="profile-info">
-          <div class="profile-pseudo">${player.pseudo}</div>
+          <div class="profile-pseudo" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
           <div class="profile-badges">
             ${renderBotBadge(player)}
             ${renderVipBadge(player)}
@@ -1875,7 +1916,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
-            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).color}44">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -1998,6 +2039,11 @@ function render(player, games, following, followers, followStatus, tournaments =
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
             <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
           </div>
+          ${isOwnProfile && canUseEloCurveStyle(player) ? `<div class="elo-history-date-range">
+            <input type="color" id="elo-curve-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color || '')) ? player.elo_curve_color : (player.color || '#FF2D55')}" aria-label="Couleur courbe ELO">
+            <input type="color" id="elo-curve-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color_secondary || '')) ? player.elo_curve_color_secondary : '#85EBFF'}" aria-label="Couleur secondaire courbe ELO">
+            <button class="elo-history-range" type="button" id="btn-save-elo-curve" onclick="saveEloCurveStyle()">Couleurs</button>
+          </div>` : ''}
         </div>
       </div>
       <div class="elo-history-canvas-wrap">
@@ -2092,6 +2138,30 @@ function render(player, games, following, followers, followStatus, tournaments =
         <button class="btn-save-color" id="btn-save-pseudo" onclick="saveProfilePseudo()">✏️ Enregistrer</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">3 à 16 caractères. Changement possible une fois tous les 30 jours.</div>
+      ${canUsePseudoStyle(player) ? `
+      <div style="height:1px;background:rgba(255,255,255,.06);margin:4px 0"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div class="color-picker-inline" style="min-width:132px">
+          <input type="color" id="pseudo-style-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color || '')) ? player.pseudo_color : (player.color || '#FF2D55')}">
+          <span>Pseudo 1</span>
+        </div>
+        ${canUseGradient(player) ? `<div class="color-picker-inline" style="min-width:132px">
+          <input type="color" id="pseudo-style-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color_secondary || '')) ? player.pseudo_color_secondary : '#85EBFF'}">
+          <span>Pseudo 2</span>
+        </div>` : ''}
+        <select id="pseudo-style-font-input" class="search-input" style="max-width:170px;margin:0">
+          ${[
+            ['barlow','Barlow'],
+            ['condensed','Condensée'],
+            ['bebas','Arcade'],
+            ['mono','Mono'],
+            ['serif','Serif'],
+            ['script','Script']
+          ].map(([value,label]) => `<option value="${value}" ${String(player.pseudo_font || 'barlow') === value ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        <button class="btn-save-color" id="btn-save-pseudo-style" onclick="savePseudoStyle()">🎨 Style</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP tous les mois.</div>` : ''}
     </div>
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -2141,7 +2211,11 @@ function render(player, games, following, followers, followStatus, tournaments =
         <input id="perso-role-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="✨" value="${String(player.custom_role_emoji || '').replace(/"/g, '&quot;')}">
         <div class="color-picker-inline" style="min-width:132px">
           <input type="color" id="perso-role-color-input" value="${player.custom_role_color || '#FF7A45'}">
-          <span>Couleur</span>
+          <span>Couleur 1</span>
+        </div>
+        <div class="color-picker-inline" style="min-width:132px">
+          <input type="color" id="perso-role-color-secondary-input" value="${player.custom_role_color_secondary || '#85EBFF'}">
+          <span>Couleur 2</span>
         </div>
         <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
         <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
@@ -2309,6 +2383,10 @@ function render(player, games, following, followers, followStatus, tournaments =
           <input id="referral-link-input" class="search-input" style="width:100%;max-width:none;margin:0" readonly value="Chargement...">
           <button class="btn-save-color" onclick="copyReferralLink()" style="background:rgba(48,209,88,0.10);border-color:rgba(48,209,88,0.30);color:#30d158">Copier</button>
         </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-top:10px">
+          <input id="referral-slug-input" class="search-input" style="width:100%;max-width:none;margin:0" maxlength="32" placeholder="lili, P4-6, mon-lien...">
+          <button class="btn-save-color" id="btn-save-referral-slug" onclick="saveReferralSlug()" style="background:rgba(133,235,255,0.10);border-color:rgba(133,235,255,0.30);color:#85EBFF">Modifier</button>
+        </div>
         <div id="referral-status" style="font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px">Chargement du parrainage...</div>
       </div>
     </div>
@@ -2381,7 +2459,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     </div>
     </section>
 
-    ${isOwnProfile && Number(player.is_bot || 0) !== 1 ? `
+    ${(isOwnProfile || isAdminTier(viewerPlayer)) && Number(player.is_bot || 0) !== 1 ? `
     <section class="profile-section" id="section-bot-host">
       <div class="profile-section-head">
         <div>
@@ -2743,6 +2821,12 @@ function drawEloHistory(data) {
   const points = Array.isArray(data?.points) ? data.points : [];
   const stats = data?.stats || {};
   const playerColor = data?.player?.color || currentPlayer?.color || '#ff2d55';
+  const curveColor = /^#[0-9a-fA-F]{6}$/.test(String(data?.player?.elo_curve_color || currentPlayer?.elo_curve_color || ''))
+    ? String(data?.player?.elo_curve_color || currentPlayer?.elo_curve_color).toUpperCase()
+    : playerColor;
+  const curveColorSecondary = /^#[0-9a-fA-F]{6}$/.test(String(data?.player?.elo_curve_color_secondary || currentPlayer?.elo_curve_color_secondary || ''))
+    ? String(data?.player?.elo_curve_color_secondary || currentPlayer?.elo_curve_color_secondary).toUpperCase()
+    : '#85EBFF';
   const startTime = Number(stats.startTime || points[0]?.t || (Date.now() - 7 * 86400000));
   const endTime = Number(stats.endTime || Date.now());
   const rawMin = Number(stats.minElo || data?.player?.elo || 1000);
@@ -2841,8 +2925,8 @@ function drawEloHistory(data) {
   }));
   initEloHistoryHover();
   const fillGradient = ctx.createLinearGradient(0, top, 0, height - bottom);
-  fillGradient.addColorStop(0, `${playerColor}55`);
-  fillGradient.addColorStop(1, `${playerColor}00`);
+  fillGradient.addColorStop(0, `${curveColor}55`);
+  fillGradient.addColorStop(1, `${curveColor}00`);
   ctx.beginPath();
   drawSmoothPath(line);
   ctx.lineTo(line[line.length - 1].x, height - bottom);
@@ -2852,8 +2936,8 @@ function drawEloHistory(data) {
   ctx.fill();
 
   const strokeGradient = ctx.createLinearGradient(left, 0, width - right, 0);
-  strokeGradient.addColorStop(0, playerColor);
-  strokeGradient.addColorStop(0.55, '#85EBFF');
+  strokeGradient.addColorStop(0, curveColor);
+  strokeGradient.addColorStop(0.55, curveColorSecondary);
   strokeGradient.addColorStop(1, '#ffd60a');
   ctx.beginPath();
   drawSmoothPath(line);
@@ -2861,7 +2945,7 @@ function drawEloHistory(data) {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.strokeStyle = strokeGradient;
-  ctx.shadowColor = playerColor;
+  ctx.shadowColor = curveColor;
   ctx.shadowBlur = 12;
   ctx.stroke();
   ctx.shadowBlur = 0;
@@ -3823,17 +3907,39 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
   const canEdit = isVipPlus(player);
   const currentValue = String(player?.avatar_decoration || '');
   const selectedValue = pendingAvatarDecoration === null ? currentValue : String(pendingAvatarDecoration || '');
+  const tiers = [
+    { key: 'common', label: 'Commun', icon: '◆', color: '#8e8e93' },
+    { key: 'rare', label: 'Rare', icon: '✦', color: '#5ac8fa' },
+    { key: 'epic', label: 'Epique', icon: '✧', color: '#bf5af2' },
+    { key: 'legendary', label: 'Legendaire', icon: '✹', color: '#ffd60a' },
+    { key: 'mythic', label: 'Mythique', icon: '✺', color: '#ff2d55' },
+  ];
+  const tierForIndex = index => {
+    if (index % 17 === 0) return tiers[4];
+    if (index % 9 === 0) return tiers[3];
+    if (index % 5 === 0) return tiers[2];
+    if (index % 2 === 0) return tiers[1];
+    return tiers[0];
+  };
   const cards = [
+    `<div class="avatar-decoration-tier" style="--tier-color:#8e8e93"><span>◇</span>Aucune</div>`,
     `<button type="button" class="avatar-decoration-option ${selectedValue === '' ? 'active' : ''} ${!canEdit ? 'locked' : ''}" ${canEdit ? `onclick="selectAvatarDecoration('')"` : 'disabled'} title="Aucune décoration">
       <span class="avatar-decoration-option-none">Aucune</span>
     </button>`
   ];
-  for (const src of avatarDecorationLibrary) {
+  const grouped = new Map(tiers.map(tier => [tier.key, []]));
+  avatarDecorationLibrary.forEach((src, index) => grouped.get(tierForIndex(index + 1).key)?.push(src));
+  for (const tier of tiers) {
+    const items = grouped.get(tier.key) || [];
+    if (!items.length) continue;
+    cards.push(`<div class="avatar-decoration-tier" style="--tier-color:${tier.color}"><span>${tier.icon}</span>${tier.label}</div>`);
+    for (const src of items) {
     const active = selectedValue === src ? 'active' : '';
     const locked = !canEdit ? 'locked' : '';
-    cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="Décoration">
+      cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="${tier.label}">
       <img src="${src}" alt="décoration" loading="lazy" decoding="async">
     </button>`);
+    }
   }
   gallery.innerHTML = cards.join('');
 }
@@ -5253,6 +5359,7 @@ async function copyTextToClipboard(text) {
 async function loadReferralInfo() {
   const token = getStoredSessionToken();
   const input = document.getElementById('referral-link-input');
+  const slugInput = document.getElementById('referral-slug-input');
   const status = document.getElementById('referral-status');
   if (!token || !input || !status) return;
   try {
@@ -5261,6 +5368,7 @@ async function loadReferralInfo() {
     if (!res.ok) throw new Error(data.error || 'Impossible de charger le parrainage.');
     const referral = data.referral || {};
     input.value = referral.url || `${location.origin}/?ref=${currentPlayer?.id || ''}`;
+    if (slugInput) slugInput.value = referral.slug || referral.defaultCode || '';
     const filleulPercent = Number(referral.filleulDiscountPercent || 5);
     const parrainPercent = Number(referral.referrerDiscountPercent || 10);
     const referredCount = Number(referral.referredCount || 0);
@@ -5273,6 +5381,42 @@ async function loadReferralInfo() {
     input.value = `${location.origin}/?ref=${currentPlayer?.id || ''}`;
     status.textContent = e.message || 'Parrainage indisponible.';
     status.style.color = '#ff6b81';
+  }
+}
+
+async function saveReferralSlug() {
+  const token = getStoredSessionToken();
+  const input = document.getElementById('referral-slug-input');
+  const linkInput = document.getElementById('referral-link-input');
+  const status = document.getElementById('referral-status');
+  const btn = document.getElementById('btn-save-referral-slug');
+  if (!token || !input) return;
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    const res = await fetch('/api/referral/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, slug: input.value }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      PROFIL_SFX.error();
+      if (status) {
+        status.textContent = data.error || 'Lien de parrain invalide.';
+        status.style.color = '#ff6b88';
+      }
+      return;
+    }
+    const referral = data.referral || {};
+    if (linkInput) linkInput.value = referral.url || linkInput.value;
+    input.value = referral.slug || referral.defaultCode || '';
+    if (status) {
+      status.textContent = `Lien actif : ${referral.code || input.value || 'P4'}.`;
+      status.style.color = '#30d158';
+    }
+    PROFIL_SFX.success();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Modifier'; }
   }
 }
 
@@ -5742,16 +5886,96 @@ async function saveProfilePseudo() {
   }
 }
 
+async function savePseudoStyle() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  const btn = document.getElementById('btn-save-pseudo-style');
+  const color = document.getElementById('pseudo-style-color-input')?.value || '';
+  const colorSecondary = document.getElementById('pseudo-style-color-secondary-input')?.value || '';
+  const font = document.getElementById('pseudo-style-font-input')?.value || 'barlow';
+  PROFIL_SFX.click();
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    const res = await fetch(`/api/players/${me.id}/pseudo-style`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color, colorSecondary, font, token: localStorage.getItem('token') }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      PROFIL_SFX.error();
+      alert(data.error || 'Impossible de modifier le style du pseudo.');
+      return;
+    }
+    const patch = {
+      pseudo_color: data.color || '',
+      pseudo_color_secondary: data.colorSecondary || '',
+      pseudo_font: data.font || '',
+      pseudo_style_changed_at: data.changedAt || Date.now(),
+    };
+    Object.assign(me, patch);
+    if (currentPlayer) Object.assign(currentPlayer, patch);
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    const pseudoEl = document.querySelector('.profile-pseudo');
+    if (pseudoEl) pseudoEl.setAttribute('style', getPseudoDisplayStyle(currentPlayer || me));
+    PROFIL_SFX.success();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🎨 Style'; }
+  }
+}
+
+async function saveEloCurveStyle() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!me.id) return;
+  const btn = document.getElementById('btn-save-elo-curve');
+  const color = document.getElementById('elo-curve-color-input')?.value || '';
+  const colorSecondary = document.getElementById('elo-curve-color-secondary-input')?.value || '';
+  PROFIL_SFX.click();
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  try {
+    const res = await fetch(`/api/players/${me.id}/elo-curve-style`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ color, colorSecondary, token: localStorage.getItem('token') }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      PROFIL_SFX.error();
+      alert(data.error || 'Impossible de modifier la courbe ELO.');
+      return;
+    }
+    const patch = {
+      elo_curve_color: data.color || '',
+      elo_curve_color_secondary: data.colorSecondary || '',
+      elo_curve_changed_at: data.changedAt || Date.now(),
+    };
+    Object.assign(me, patch);
+    if (currentPlayer) Object.assign(currentPlayer, patch);
+    localStorage.setItem('player', JSON.stringify(me));
+    sessionStorage.setItem('player', JSON.stringify(me));
+    if (lastEloHistoryData) {
+      lastEloHistoryData.player = { ...(lastEloHistoryData.player || {}), ...patch };
+      drawEloHistory(lastEloHistoryData);
+    }
+    PROFIL_SFX.success();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Couleurs'; }
+  }
+}
+
 async function saveProfileCustomRole() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
   const textInput = document.getElementById('perso-role-text-input');
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
+  const colorSecondaryInput = document.getElementById('perso-role-color-secondary-input');
   const btn = document.getElementById('btn-save-perso-role');
   const text = String(textInput?.value || '').trim().slice(0, 8);
   const emoji = [...String(emojiInput?.value || '').trim()][0] || '';
   const color = String(colorInput?.value || '#FF7A45').toUpperCase();
+  const colorSecondary = String(colorSecondaryInput?.value || '').toUpperCase();
   PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
@@ -5759,7 +5983,7 @@ async function saveProfileCustomRole() {
     const res = await fetch(`/api/players/${me.id}/custom-role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, emoji, color, token: localStorage.getItem('token') }),
+      body: JSON.stringify({ text, emoji, color, colorSecondary, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5770,6 +5994,7 @@ async function saveProfileCustomRole() {
     const patch = {
       custom_role_text: data.text ?? text,
       custom_role_color: data.color ?? (text ? color : ''),
+      custom_role_color_secondary: data.colorSecondary ?? (text ? colorSecondary : ''),
       custom_role_emoji: data.emoji ?? (text ? emoji : ''),
     };
     if (currentPlayer) Object.assign(currentPlayer, patch);
@@ -5796,6 +6021,7 @@ async function removeProfileCustomRole() {
   const textInput = document.getElementById('perso-role-text-input');
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
+  const colorSecondaryInput = document.getElementById('perso-role-color-secondary-input');
   PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
@@ -5803,7 +6029,7 @@ async function removeProfileCustomRole() {
     const res = await fetch(`/api/players/${me.id}/custom-role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '', emoji: '', color: '', token: localStorage.getItem('token') }),
+      body: JSON.stringify({ text: '', emoji: '', color: '', colorSecondary: '', token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5811,7 +6037,7 @@ async function removeProfileCustomRole() {
       alert(data.error || 'Impossible de retirer le grade perso.');
       return;
     }
-    const patch = { custom_role_text: '', custom_role_color: '', custom_role_emoji: '' };
+    const patch = { custom_role_text: '', custom_role_color: '', custom_role_color_secondary: '', custom_role_emoji: '' };
     if (currentPlayer) Object.assign(currentPlayer, patch);
     Object.assign(me, patch);
     localStorage.setItem('player', JSON.stringify(me));
@@ -5819,6 +6045,7 @@ async function removeProfileCustomRole() {
     if (textInput) textInput.value = '';
     if (emojiInput) emojiInput.value = '';
     if (colorInput) colorInput.value = '#FF7A45';
+    if (colorSecondaryInput) colorSecondaryInput.value = '#85EBFF';
     PROFIL_SFX.success();
     await load();
   } finally {
