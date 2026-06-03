@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Caveat:wght@700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Dancing+Script:wght@700&family=Eagle+Lake&family=Lobster&family=Luckiest+Guy&family=MedievalSharp&family=Orbitron:wght@700;900&family=Oswald:wght@700&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Teko:wght@700&family=Uncial+Antiqua&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=MedievalSharp&family=Metal+Mania&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Uncial+Antiqua&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -685,9 +685,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-current{min-width:190px;flex:1;padding:11px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .pseudo-font-current strong{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pseudo-font-current span{font:800 10px Barlow,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
-.pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);padding:18px;align-items:center;justify-content:center}
+.pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);padding:18px;align-items:center;justify-content:center}
 .pseudo-font-modal-bg.show{display:flex}
-.pseudo-font-modal{width:min(1040px,100%);height:min(90vh,920px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.98),rgba(10,10,19,.98));box-shadow:0 22px 90px rgba(0,0,0,.48),0 0 42px rgba(133,235,255,.08);padding:22px}
+.pseudo-font-modal{width:min(1040px,100%);height:min(90vh,920px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid rgba(133,235,255,.24);background:linear-gradient(180deg,#10101d,#080810);box-shadow:0 22px 90px rgba(0,0,0,.72),0 0 42px rgba(133,235,255,.10);padding:22px}
 .pseudo-font-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
 .pseudo-font-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
 .pseudo-font-modal-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px}
@@ -698,11 +698,11 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-scroll{min-height:0;overflow:auto;padding-right:6px}
 .pseudo-font-scroll::-webkit-scrollbar{width:8px}.pseudo-font-scroll::-webkit-scrollbar-thumb{background:rgba(133,235,255,.22);border-radius:999px}.pseudo-font-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:999px}
 .pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin-top:2px}
-.pseudo-font-modal-actions{position:sticky;bottom:-22px;margin:14px -22px -22px;padding:12px 22px;background:linear-gradient(180deg,rgba(10,10,19,.72),rgba(10,10,19,.98));border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pseudo-font-modal-actions{position:sticky;bottom:-22px;margin:14px -22px -22px;padding:12px 22px;background:linear-gradient(180deg,rgba(8,8,16,.92),#080810);border-top:1px solid rgba(255,255,255,.09);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .pseudo-font-modal-actions span{font-size:12px;color:var(--muted)}
-.pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.032);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden}
-.pseudo-font-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.24);background:rgba(133,235,255,.055)}
-.pseudo-font-option.active{border-color:rgba(133,235,255,.58);background:rgba(133,235,255,.10);box-shadow:0 0 0 1px rgba(133,235,255,.16),0 0 20px rgba(133,235,255,.10)}
+.pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid rgba(255,255,255,.10);background:#141421;color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden}
+.pseudo-font-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.34);background:#172131}
+.pseudo-font-option.active{border-color:rgba(133,235,255,.70);background:#17293a;box-shadow:0 0 0 1px rgba(133,235,255,.20),0 0 20px rgba(133,235,255,.14)}
 .pseudo-font-option strong{display:block;font-size:18px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pseudo-font-option span{font:700 9px Barlow,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avatar-decoration-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:2200;padding:20px;align-items:center;justify-content:center}
@@ -1522,6 +1522,13 @@ function getPseudoFontFamily(font) {
   if (key === 'anton') return "'Anton', sans-serif";
   if (key === 'teko') return "'Teko', sans-serif";
   if (key === 'righteous') return "'Righteous', cursive";
+  if (key === 'silkscreen') return "'Silkscreen', cursive";
+  if (key === 'rubikglitch') return "'Rubik Glitch', cursive";
+  if (key === 'jacquard') return "'Jacquard 12', cursive";
+  if (key === 'metalmania') return "'Metal Mania', cursive";
+  if (key === 'creepster') return "'Creepster', cursive";
+  if (key === 'fredericka') return "'Fredericka the Great', cursive";
+  if (key === 'imfell') return "'IM Fell English SC', serif";
   if (key === 'mono') return "Consolas, 'Courier New', monospace";
   if (key === 'serif') return "Georgia, 'Times New Roman', serif";
   if (key === 'script') return "'Segoe Script', 'Brush Script MT', cursive";
@@ -1530,29 +1537,30 @@ function getPseudoFontFamily(font) {
 
 const PSEUDO_FONT_GROUPS = [
   { label: 'Sport / clean', fonts: [
-    ['barlow','Barlow'], ['condensed','Barlow Condensee'], ['bebas','Bebas Neue'],
-    ['oswald','Oswald'], ['anton','Anton'], ['teko','Teko'], ['righteous','Righteous'],
+    ['barlow','Barlow'], ['bebas','Bebas Neue'], ['anton','Anton'],
+    ['righteous','Righteous'], ['silkscreen','Silkscreen'],
   ] },
   { label: 'Gaming / futuriste', fonts: [
     ['orbitron','Orbitron'], ['audiowide','Audiowide'], ['chakra','Chakra Petch'],
-    ['pressstart','Press Start'], ['bungee','Bungee'], ['mono','Mono Tech'],
+    ['pressstart','Press Start'], ['bungee','Bungee'], ['rubikglitch','Rubik Glitch'],
   ] },
   { label: 'Classe / premium', fonts: [
     ['playfair','Playfair Display'], ['cinzel','Cinzel'], ['abril','Abril Fatface'],
-    ['prata','Prata'], ['bodoni','Bodoni Moda'], ['unifraktur','Unifraktur'], ['medieval','Medieval'],
+    ['prata','Prata'], ['bodoni','Bodoni Moda'], ['fredericka','Fredericka'],
   ] },
   { label: 'Fantaisie / manuscrit', fonts: [
-    ['pacifico','Pacifico'], ['caveat','Caveat'], ['lobster','Lobster'],
-    ['dancing','Dancing Script'], ['permanent','Permanent Marker'], ['luckiest','Luckiest Guy'],
-    ['eaglelake','Eagle Lake'], ['uncial','Uncial Antiqua'],
+    ['pacifico','Pacifico'], ['lobster','Lobster'], ['permanent','Permanent Marker'],
+    ['luckiest','Luckiest Guy'], ['eaglelake','Eagle Lake'], ['uncial','Uncial Antiqua'],
+    ['unifraktur','Unifraktur'], ['medieval','Medieval'], ['jacquard','Jacquard'],
+    ['metalmania','Metal Mania'], ['creepster','Creepster'], ['imfell','IM Fell'],
   ] },
 ];
 const PSEUDO_FONT_RARITIES = {
-  barlow: 'common', condensed: 'common', oswald: 'common', teko: 'common', mono: 'common',
-  bebas: 'rare', anton: 'rare', righteous: 'rare', chakra: 'rare', prata: 'rare', caveat: 'rare',
-  orbitron: 'epic', audiowide: 'epic', bungee: 'epic', playfair: 'epic', pacifico: 'epic', lobster: 'epic',
-  cinzel: 'legendary', abril: 'legendary', bodoni: 'legendary', pressstart: 'legendary', permanent: 'legendary', luckiest: 'legendary',
-  unifraktur: 'mythic', medieval: 'mythic', eaglelake: 'mythic', uncial: 'mythic', dancing: 'mythic',
+  barlow: 'common', bebas: 'common', anton: 'common', righteous: 'rare', silkscreen: 'rare',
+  orbitron: 'rare', audiowide: 'epic', chakra: 'rare', pressstart: 'legendary', bungee: 'epic', rubikglitch: 'legendary',
+  playfair: 'rare', cinzel: 'legendary', abril: 'legendary', prata: 'rare', bodoni: 'legendary', fredericka: 'epic',
+  pacifico: 'epic', lobster: 'epic', permanent: 'legendary', luckiest: 'legendary',
+  unifraktur: 'mythic', medieval: 'mythic', eaglelake: 'mythic', uncial: 'mythic', jacquard: 'mythic', metalmania: 'mythic', creepster: 'mythic', imfell: 'mythic',
 };
 const PSEUDO_FONT_RARITY_LABELS = {
   all: 'Toutes',

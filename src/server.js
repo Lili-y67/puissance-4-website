@@ -918,6 +918,7 @@ const PSEUDO_FONT_OPTIONS = new Set([
   'orbitron', 'audiowide', 'russo', 'chakra', 'rajdhani', 'oxanium', 'pressstart', 'bungee',
   'playfair', 'cinzel', 'merriweather', 'cormorant', 'abril', 'prata', 'bodoni',
   'unifraktur', 'medieval',
+  'silkscreen', 'rubikglitch', 'jacquard', 'metalmania', 'creepster', 'fredericka', 'imfell',
   'pacifico', 'caveat', 'lobster', 'dancing', 'satisfy', 'permanent', 'shadows', 'luckiest',
   'eaglelake', 'uncial',
   'oswald', 'anton', 'teko', 'righteous',
