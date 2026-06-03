@@ -687,12 +687,19 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-current span{font:800 10px Barlow,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
 .pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);padding:18px;align-items:center;justify-content:center}
 .pseudo-font-modal-bg.show{display:flex}
-.pseudo-font-modal{width:min(980px,100%);max-height:min(86vh,920px);overflow:auto;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.98),rgba(10,10,19,.98));box-shadow:0 22px 90px rgba(0,0,0,.48),0 0 42px rgba(133,235,255,.08);padding:22px}
+.pseudo-font-modal{width:min(1040px,100%);height:min(90vh,920px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.98),rgba(10,10,19,.98));box-shadow:0 22px 90px rgba(0,0,0,.48),0 0 42px rgba(133,235,255,.08);padding:22px}
 .pseudo-font-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
 .pseudo-font-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
 .pseudo-font-modal-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px}
 .pseudo-font-modal-close{width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:20px;line-height:1}
+.pseudo-font-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.pseudo-font-filter{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--muted);border-radius:999px;padding:8px 11px;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.16s}
+.pseudo-font-filter:hover,.pseudo-font-filter.active{color:#85EBFF;border-color:rgba(133,235,255,.38);background:rgba(133,235,255,.10)}
+.pseudo-font-scroll{min-height:0;overflow:auto;padding-right:6px}
+.pseudo-font-scroll::-webkit-scrollbar{width:8px}.pseudo-font-scroll::-webkit-scrollbar-thumb{background:rgba(133,235,255,.22);border-radius:999px}.pseudo-font-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:999px}
 .pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin-top:2px}
+.pseudo-font-modal-actions{position:sticky;bottom:-22px;margin:14px -22px -22px;padding:12px 22px;background:linear-gradient(180deg,rgba(10,10,19,.72),rgba(10,10,19,.98));border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pseudo-font-modal-actions span{font-size:12px;color:var(--muted)}
 .pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.032);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden}
 .pseudo-font-option:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.24);background:rgba(133,235,255,.055)}
 .pseudo-font-option.active{border-color:rgba(133,235,255,.58);background:rgba(133,235,255,.10);box-shadow:0 0 0 1px rgba(133,235,255,.16),0 0 20px rgba(133,235,255,.10)}
@@ -1540,6 +1547,21 @@ const PSEUDO_FONT_GROUPS = [
     ['eaglelake','Eagle Lake'], ['uncial','Uncial Antiqua'],
   ] },
 ];
+const PSEUDO_FONT_RARITIES = {
+  barlow: 'common', condensed: 'common', oswald: 'common', teko: 'common', mono: 'common',
+  bebas: 'rare', anton: 'rare', righteous: 'rare', chakra: 'rare', prata: 'rare', caveat: 'rare',
+  orbitron: 'epic', audiowide: 'epic', bungee: 'epic', playfair: 'epic', pacifico: 'epic', lobster: 'epic',
+  cinzel: 'legendary', abril: 'legendary', bodoni: 'legendary', pressstart: 'legendary', permanent: 'legendary', luckiest: 'legendary',
+  unifraktur: 'mythic', medieval: 'mythic', eaglelake: 'mythic', uncial: 'mythic', dancing: 'mythic',
+};
+const PSEUDO_FONT_RARITY_LABELS = {
+  all: 'Toutes',
+  common: 'Commun',
+  rare: 'Rare',
+  epic: 'Epique',
+  legendary: 'Legendaire',
+  mythic: 'Mythique',
+};
 
 function getPseudoFontLabel(font) {
   const key = String(font || 'barlow');
@@ -1559,11 +1581,16 @@ function renderPseudoFontPreviewGrid(selected = 'barlow', previewText = 'Pseudo'
   const current = normalizePseudoPickerFont(selected);
   const sample = escapeHtml(String(previewText || 'Pseudo').slice(0, 16));
   const fonts = PSEUDO_FONT_GROUPS.flatMap(group => group.fonts);
-  return `<div class="pseudo-font-preview-grid">
-      ${fonts.map(([value, label]) => `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''}" data-pseudo-font="${value}" onclick="selectPseudoFont('${value}')" title="${escapeHtml(label)}">
+  return `<div class="pseudo-font-filter-row">
+      ${Object.entries(PSEUDO_FONT_RARITY_LABELS).map(([key, label], index) => `<button type="button" class="pseudo-font-filter ${index === 0 ? 'active' : ''}" data-font-filter="${key}" onclick="filterPseudoFonts('${key}')">${escapeHtml(label)}</button>`).join('')}
+    </div>
+    <div class="pseudo-font-scroll">
+      <div class="pseudo-font-preview-grid">
+      ${fonts.map(([value, label]) => `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''}" data-pseudo-font="${value}" data-font-rarity="${PSEUDO_FONT_RARITIES[value] || 'common'}" onclick="selectPseudoFont('${value}')" title="${escapeHtml(label)}">
           <strong style="font-family:${getPseudoFontFamily(value)}">${sample}</strong>
-          <span>${escapeHtml(label)}</span>
+          <span>${escapeHtml(label)} · ${escapeHtml(PSEUDO_FONT_RARITY_LABELS[PSEUDO_FONT_RARITIES[value] || 'common'])}</span>
         </button>`).join('')}
+      </div>
     </div>`;
 }
 
@@ -1588,6 +1615,10 @@ function renderPseudoFontPicker(selected = 'barlow', previewText = 'Pseudo') {
           <button class="pseudo-font-modal-close" type="button" onclick="closePseudoFontPicker()">×</button>
         </div>
         ${renderPseudoFontPreviewGrid(current, previewText)}
+        <div class="pseudo-font-modal-actions">
+          <span>La police choisie sera sauvegardee avec le bouton Style.</span>
+          <button class="btn-save-color" type="button" onclick="closePseudoFontPicker()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">Valider le choix</button>
+        </div>
       </div>
     </div>`;
 }
@@ -6028,6 +6059,17 @@ function openPseudoFontPicker() {
 
 function closePseudoFontPicker() {
   document.getElementById('pseudo-font-modal-bg')?.classList.remove('show');
+}
+
+function filterPseudoFonts(rarity = 'all') {
+  const key = String(rarity || 'all');
+  document.querySelectorAll('.pseudo-font-filter').forEach(btn => {
+    btn.classList.toggle('active', String(btn.dataset.fontFilter || 'all') === key);
+  });
+  document.querySelectorAll('.pseudo-font-option').forEach(btn => {
+    const show = key === 'all' || String(btn.dataset.fontRarity || 'common') === key;
+    btn.style.display = show ? '' : 'none';
+  });
 }
 
 function refreshPseudoFontPreviews() {
