@@ -686,9 +686,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-current{min-width:190px;flex:1;padding:11px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .pseudo-font-current strong{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pseudo-font-current span{font:800 10px Barlow,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
-.pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);padding:18px;align-items:center;justify-content:center}
+.pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);padding:20px;align-items:center;justify-content:center}
 .pseudo-font-modal-bg.show{display:flex}
-.pseudo-font-modal{width:min(1040px,100%);height:min(90vh,920px);display:flex;flex-direction:column;overflow:hidden;border-radius:22px;border:1px solid rgba(133,235,255,.24);background:linear-gradient(180deg,#10101d,#080810);box-shadow:0 22px 90px rgba(0,0,0,.72),0 0 42px rgba(133,235,255,.10);padding:22px}
+.pseudo-font-modal{width:min(980px,100%);max-height:min(86vh,900px);overflow:auto;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.99),rgba(8,8,16,.99));box-shadow:0 24px 90px rgba(0,0,0,.76),0 0 42px rgba(133,235,255,.10);padding:22px}
 .pseudo-font-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
 .pseudo-font-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:30px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
 .pseudo-font-modal-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px}
@@ -696,10 +696,10 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .pseudo-font-filter{border:1px solid var(--rarity-border,rgba(255,255,255,.08));background:var(--rarity-bg,rgba(255,255,255,.04));color:var(--muted);border-radius:999px;padding:8px 11px;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.16s;box-shadow:0 0 14px var(--rarity-glow,transparent)}
 .pseudo-font-filter:hover,.pseudo-font-filter.active{color:var(--rarity-color,#85EBFF);border-color:var(--rarity-color,rgba(133,235,255,.38));background:var(--rarity-bg,rgba(133,235,255,.10))}
-.pseudo-font-scroll{min-height:0;overflow:auto;padding-right:6px}
+.pseudo-font-scroll{min-height:0;overflow:visible;padding-right:0}
 .pseudo-font-scroll::-webkit-scrollbar{width:8px}.pseudo-font-scroll::-webkit-scrollbar-thumb{background:rgba(133,235,255,.22);border-radius:999px}.pseudo-font-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,.04);border-radius:999px}
 .pseudo-font-preview-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:8px;margin-top:2px}
-.pseudo-font-modal-actions{position:sticky;bottom:-22px;margin:14px -22px -22px;padding:12px 22px;background:linear-gradient(180deg,rgba(8,8,16,.92),#080810);border-top:1px solid rgba(255,255,255,.09);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pseudo-font-modal-actions{position:sticky;bottom:-22px;margin:14px -22px -22px;padding:12px 22px;background:linear-gradient(180deg,rgba(8,8,16,.94),#080810);border-top:1px solid rgba(255,255,255,.09);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
 .pseudo-font-modal-actions span{font-size:12px;color:var(--muted)}
 .pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid var(--rarity-border,rgba(255,255,255,.10));background:linear-gradient(135deg,var(--rarity-bg,#141421),#141421);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 0 16px var(--rarity-glow,transparent)}
 .pseudo-font-option:hover{transform:translateY(-1px);border-color:var(--rarity-color,rgba(133,235,255,.34));background:linear-gradient(135deg,var(--rarity-bg,#172131),#172131)}
@@ -723,6 +723,20 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   .avatar-decoration-modal{padding:18px 16px}
   .avatar-decoration-modal-layout{grid-template-columns:1fr}
   .avatar-decoration-modal-head{align-items:center}
+  .pseudo-font-modal-bg{padding:10px}
+  .pseudo-font-modal{max-height:92vh;padding:18px 16px;border-radius:20px}
+  .pseudo-font-modal-head{align-items:center;margin-bottom:12px}
+  .pseudo-font-modal-title{font-size:25px}
+  .pseudo-font-filter-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+  .pseudo-font-filter{flex:0 0 auto}
+  .pseudo-font-preview-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .pseudo-font-option{min-height:62px;padding:8px}
+  .pseudo-font-option strong{font-size:16px}
+  .pseudo-font-modal-actions{margin:12px -16px -18px;padding:12px 16px}
+}
+@media (max-width: 420px){
+  .pseudo-font-preview-grid{grid-template-columns:1fr}
+  .pseudo-font-modal-title{font-size:22px}
 }
 
 /* ── Search bar ── */
@@ -1302,6 +1316,7 @@ let lastEloHistoryData = null;
 let eloHistoryHitPoints = [];
 let eloHistoryHoverReady = false;
 let eloHistoryActivePoint = null;
+let eloHistoryRgbFrame = 0;
 let queueMusicPreviewFrame = null;
 let profileShopInventory = {};
 let profileActiveBoosters = {};
@@ -2237,6 +2252,10 @@ function render(player, games, following, followers, followStatus, tournaments =
             <input type="color" id="elo-curve-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.elo_curve_color_secondary || '')) ? player.elo_curve_color_secondary : '#85EBFF'}">
             <span>Courbe 2</span>
           </div>
+          ${isPerso(player) || isAdminTier(player) ? `<label class="toggle-wrap" style="min-height:44px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)">
+            <input type="checkbox" id="elo-curve-rgb-input" ${Number(player.elo_curve_rgb || 0) === 1 ? 'checked' : ''}>
+            <span class="toggle-text"><strong>RGB Perso</strong><small>Vague animée sur la courbe</small></span>
+          </label>` : ''}
           <button class="btn-save-color" type="button" id="btn-save-elo-curve" onclick="saveEloCurveStyle()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">🎨 Appliquer</button>
         </div>
       </div>` : ''}
@@ -2983,9 +3002,17 @@ async function loadEloHistory(playerId, days = 7, silent = false) {
   }
 }
 
-function drawEloHistory(data) {
+function drawEloHistory(data, animationFrameOnly = false) {
   const canvas = document.getElementById('elo-history-canvas');
-  if (!canvas) return;
+  if (!canvas) {
+    if (eloHistoryRgbFrame) cancelAnimationFrame(eloHistoryRgbFrame);
+    eloHistoryRgbFrame = 0;
+    return;
+  }
+  if (eloHistoryRgbFrame) {
+    cancelAnimationFrame(eloHistoryRgbFrame);
+    eloHistoryRgbFrame = 0;
+  }
   const wrap = canvas.parentElement;
   const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
   const width = Math.max(320, Math.floor(wrap?.clientWidth || 680));
@@ -3008,6 +3035,14 @@ function drawEloHistory(data) {
   const curveColorSecondary = /^#[0-9a-fA-F]{6}$/.test(String(data?.player?.elo_curve_color_secondary || currentPlayer?.elo_curve_color_secondary || ''))
     ? String(data?.player?.elo_curve_color_secondary || currentPlayer?.elo_curve_color_secondary).toUpperCase()
     : '#85EBFF';
+  const rgbEnabled = Number(data?.player?.elo_curve_rgb ?? currentPlayer?.elo_curve_rgb ?? 0) === 1;
+  const rgbHue = (Date.now() / 34) % 360;
+  const rgbColor = (offset = 0, alpha = 1) => `hsla(${Math.round((rgbHue + offset) % 360)}, 96%, 64%, ${alpha})`;
+  const lineColorA = rgbEnabled ? rgbColor(0) : curveColor;
+  const lineColorB = rgbEnabled ? rgbColor(126) : curveColorSecondary;
+  const lineColorC = rgbEnabled ? rgbColor(252) : '#ffd60a';
+  const fillColorA = rgbEnabled ? rgbColor(0, 0.34) : `${curveColor}55`;
+  const fillColorB = rgbEnabled ? rgbColor(252, 0.02) : `${curveColor}00`;
   const startTime = Number(stats.startTime || points[0]?.t || (Date.now() - 7 * 86400000));
   const endTime = Number(stats.endTime || Date.now());
   const rawMin = Number(stats.minElo || data?.player?.elo || 1000);
@@ -3104,10 +3139,10 @@ function drawEloHistory(data) {
     type: p.point.type || '',
     t: Number(p.point.t || 0),
   }));
-  initEloHistoryHover();
+  if (!animationFrameOnly) initEloHistoryHover();
   const fillGradient = ctx.createLinearGradient(0, top, 0, height - bottom);
-  fillGradient.addColorStop(0, `${curveColor}55`);
-  fillGradient.addColorStop(1, `${curveColor}00`);
+  fillGradient.addColorStop(0, fillColorA);
+  fillGradient.addColorStop(1, fillColorB);
   ctx.beginPath();
   drawSmoothPath(line);
   ctx.lineTo(line[line.length - 1].x, height - bottom);
@@ -3117,17 +3152,17 @@ function drawEloHistory(data) {
   ctx.fill();
 
   const strokeGradient = ctx.createLinearGradient(left, 0, width - right, 0);
-  strokeGradient.addColorStop(0, curveColor);
-  strokeGradient.addColorStop(0.55, curveColorSecondary);
-  strokeGradient.addColorStop(1, '#ffd60a');
+  strokeGradient.addColorStop(0, lineColorA);
+  strokeGradient.addColorStop(0.55, lineColorB);
+  strokeGradient.addColorStop(1, lineColorC);
   ctx.beginPath();
   drawSmoothPath(line);
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.strokeStyle = strokeGradient;
-  ctx.shadowColor = curveColor;
-  ctx.shadowBlur = 12;
+  ctx.shadowColor = lineColorA;
+  ctx.shadowBlur = rgbEnabled ? 18 : 12;
   ctx.stroke();
   ctx.shadowBlur = 0;
 
@@ -3155,10 +3190,10 @@ function drawEloHistory(data) {
   ctx.font = "900 20px 'Barlow Condensed', sans-serif";
   ctx.fillText(`${Math.round(stats.endElo || data?.player?.elo || 0)} ELO`, left, 24);
   const sub = document.querySelector('.elo-history-sub');
-  if (sub) sub.textContent = `Plage affichee : ${rangeLabel}. Clique un point de partie pour ouvrir le replay.`;
+  if (sub && !animationFrameOnly) sub.textContent = `Plage affichee : ${rangeLabel}. Clique un point de partie pour ouvrir le replay.`;
 
   const statsEl = document.getElementById('elo-history-stats');
-  if (statsEl) {
+  if (statsEl && !animationFrameOnly) {
     const delta = Number(stats.delta || 0);
     const eloValues = drawable.map(point => Number(point.elo || 0)).filter(Number.isFinite);
     const minHistoryElo = eloValues.length ? Math.min(...eloValues) : Number(stats.minElo || data?.player?.elo || 0);
@@ -3190,6 +3225,9 @@ function drawEloHistory(data) {
       ${renderReplayStat(lowestPoint, minHistoryElo, 'Pire ELO')}
       <div class="elo-history-stat"><strong>${Math.round(avgHistoryElo)}</strong><span>ELO moyen</span></div>
     `;
+  }
+  if (rgbEnabled) {
+    eloHistoryRgbFrame = requestAnimationFrame(() => drawEloHistory(data, true));
   }
 }
 
@@ -6160,13 +6198,14 @@ async function saveEloCurveStyle() {
   const btn = document.getElementById('btn-save-elo-curve');
   const color = document.getElementById('elo-curve-color-input')?.value || '';
   const colorSecondary = document.getElementById('elo-curve-color-secondary-input')?.value || '';
+  const rgb = !!document.getElementById('elo-curve-rgb-input')?.checked;
   PROFIL_SFX.click();
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
     const res = await fetch(`/api/players/${me.id}/elo-curve-style`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color, colorSecondary, token: localStorage.getItem('token') }),
+      body: JSON.stringify({ color, colorSecondary, rgb, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -6177,6 +6216,7 @@ async function saveEloCurveStyle() {
     const patch = {
       elo_curve_color: data.color || '',
       elo_curve_color_secondary: data.colorSecondary || '',
+      elo_curve_rgb: Number(data.rgb || 0),
       elo_curve_changed_at: data.changedAt || Date.now(),
     };
     Object.assign(me, patch);

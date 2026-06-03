@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.16 | Puissance 4 Ranked</title>
+<title>News 3.2.0 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css">
 <style>
-:root{--bg:#070711;--surface:#111123;--surface2:#191930;--line:rgba(255,255,255,.09);--text:#f5f3ff;--muted:rgba(245,243,255,.62);--pink:#ff2d55;--cyan:#71ddff;--yellow:#ffd60a;--green:#30d158;--violet:#b36bff;--orange:#ff9f0a}
+:root{--bg:#070711;--surface:#111123;--surface2:#191930;--line:rgba(255,255,255,.09);--text:#f5f3ff;--muted:rgba(245,243,255,.62);--pink:#ff2d55;--cyan:#71ddff;--yellow:#ffd60a;--green:#30d158;--violet:#b36bff}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;overflow-x:hidden}
 body{background:radial-gradient(circle at 12% 10%,rgba(255,45,85,.16),transparent 30%),radial-gradient(circle at 86% 18%,rgba(113,221,255,.13),transparent 28%),radial-gradient(circle at 55% 105%,rgba(179,107,255,.14),transparent 34%),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px),var(--bg);background-size:auto,auto,auto,48px 48px,48px 48px,auto}
@@ -44,41 +44,21 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
 .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:30px 0 14px;flex-wrap:wrap}
 .section-head h2{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:42px;line-height:.9;text-transform:uppercase}
 .section-head p{margin:0;color:var(--muted);max-width:560px;line-height:1.55}
-.update-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.update-card{position:relative;overflow:hidden;min-height:250px;border-radius:26px;border:1px solid var(--line);background:linear-gradient(150deg,var(--soft,rgba(255,255,255,.04)),transparent 50%),linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.24);transition:.24s ease}
-.update-card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.16)}
-.update-card::after{content:"";position:absolute;inset:auto -44px -48px auto;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,var(--soft,rgba(113,221,255,.16)),transparent 70%)}
-.card-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-.icon{width:48px;height:48px;border-radius:17px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);font-size:22px;animation:iconFloat 3.4s ease-in-out infinite}
-.tag{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted)}
-.update-card h3{position:relative;z-index:1;margin:0;font-family:'Barlow Condensed',sans-serif;font-size:31px;line-height:.96;text-transform:uppercase}
-.update-card ul{position:relative;z-index:1;margin:14px 0 0;padding:0;list-style:none;display:grid;gap:9px}
-.update-card li{display:flex;gap:9px;color:var(--muted);font-size:14px;line-height:1.42}
-.update-card li::before{content:"";width:8px;height:8px;border-radius:50%;margin-top:6px;background:var(--accent,#71ddff);box-shadow:0 0 14px var(--accent,#71ddff);flex:0 0 auto}
-.timeline{display:grid;grid-template-columns:minmax(0,.78fr) minmax(0,1.22fr);gap:16px}
-.release-panel,.timeline-panel{border-radius:28px;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.018)),var(--surface);padding:22px}
-.release-panel h2,.timeline-panel h2{margin:0 0 12px;font-family:'Barlow Condensed',sans-serif;font-size:34px;text-transform:uppercase}
-.release-list,.timeline-list{display:grid;gap:10px;margin-top:16px}
-.release-item{display:flex;justify-content:space-between;gap:12px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);padding:12px}
-.release-item span{color:var(--muted);font-size:13px}.release-item strong{font-family:'Barlow Condensed',sans-serif;font-size:20px;text-transform:uppercase}
-.timeline-item{display:grid;grid-template-columns:92px minmax(0,1fr);gap:14px;align-items:start;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);padding:14px}
-.timeline-date{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;text-transform:uppercase;color:var(--cyan)}
-.timeline-item strong{display:block;font-size:15px;margin-bottom:4px}.timeline-item span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
-.footer-note{margin-top:24px;border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:16px 18px;color:var(--muted);line-height:1.55}
 .bubble-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.bubble-column{position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);background:linear-gradient(160deg,var(--soft,rgba(255,255,255,.05)),transparent 52%),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)),var(--surface);padding:20px;min-height:320px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
+.bubble-column{position:relative;overflow:hidden;border-radius:28px;border:1px solid var(--line);background:linear-gradient(160deg,var(--soft,rgba(255,255,255,.05)),transparent 52%),linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)),var(--surface);padding:20px;min-height:330px;box-shadow:0 18px 50px rgba(0,0,0,.24)}
 .bubble-column::after{content:"";position:absolute;right:-60px;bottom:-60px;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,var(--soft,rgba(113,221,255,.16)),transparent 70%);pointer-events:none}
 .bubble-title{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.bubble-title .icon{animation:none}
+.icon{width:48px;height:48px;border-radius:17px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);font-size:22px;animation:iconFloat 3.4s ease-in-out infinite}
 .bubble-title h2{margin:0;font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.9;text-transform:uppercase}
 .bubble-list{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}
 .news-bubble{display:inline-flex;align-items:flex-start;gap:8px;max-width:100%;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);padding:10px 13px;color:var(--text);font-size:13px;font-weight:700;line-height:1.25;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.2s ease}
 .news-bubble:hover{transform:translateY(-2px);border-color:var(--accent,#71ddff);background:rgba(255,255,255,.065)}
 .news-bubble span{color:var(--accent,#71ddff);filter:drop-shadow(0 0 8px var(--accent,#71ddff));flex:0 0 auto}
+.footer-note{margin-top:24px;border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:16px 18px;color:var(--muted);line-height:1.55}
 @keyframes floatGlow{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(24px,18px,0) scale(1.08)}}@keyframes versionPulse{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-5px) rotate(-2deg)}}@keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@media (max-width:980px){.hero,.timeline{grid-template-columns:1fr}.update-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bubble-board{grid-template-columns:1fr}}
-@media (max-width:680px){.page{padding:18px 12px 54px}.topbar{align-items:stretch}.brand{width:100%;justify-content:center;text-align:center}.nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.nav a{justify-content:center}.hero{padding:22px;border-radius:26px;min-height:auto}h1{font-size:48px}.hero p{font-size:14px}.hero-actions{display:grid;grid-template-columns:1fr;width:100%}.update-grid{grid-template-columns:1fr}.section-head h2{font-size:34px}.timeline-item{grid-template-columns:1fr}.version-meta{grid-template-columns:1fr}}
-@media (max-width:420px){.nav{grid-template-columns:1fr}.brand strong{font-size:27px}h1{font-size:40px}.update-card{padding:17px;min-height:auto}.update-card h3{font-size:27px}}
+@media (max-width:980px){.hero{grid-template-columns:1fr}.bubble-board{grid-template-columns:1fr}}
+@media (max-width:680px){.page{padding:18px 12px 54px}.topbar{align-items:stretch}.brand{width:100%;justify-content:center;text-align:center}.nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.nav a{justify-content:center}.hero{padding:22px;border-radius:26px;min-height:auto}h1{font-size:48px}.hero p{font-size:14px}.hero-actions{display:grid;grid-template-columns:1fr;width:100%}.section-head h2{font-size:34px}.version-meta{grid-template-columns:1fr}.bubble-column{min-height:auto}.news-bubble{border-radius:18px}}
+@media (max-width:420px){.nav{grid-template-columns:1fr}.brand strong{font-size:27px}h1{font-size:40px}.bubble-column{padding:17px}.bubble-title h2{font-size:29px}}
 </style>
 </head>
 <body>
@@ -96,13 +76,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.16</span></h1>
-      <p>Personnalisation du pseudo affinee: choix de police en fenêtre contextuelle, aperçu plus lisible et sélection de fontes mieux triée.</p>
-      <div class="hero-actions"><a class="btn-main" href="/profil">Configurer le profil</a><a class="btn-ghost" href="/boutique">Voir la boutique</a></div>
+      <h1>Mise a jour <span>3.2.0</span></h1>
+      <p>Grosse passe profil et ecosysteme: police en vraie fenetre, raretes cosmetiques, courbe ELO RGB Perso, API enrichie et fiche Discord plus complete.</p>
+      <div class="hero-actions"><a class="btn-main" href="/profil">Configurer le profil</a><a class="btn-ghost" href="/api-doc">Lire l'API</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.16</div><h2>Police preview</h2><p>Le choix de police se fait dans une vraie fenêtre avec aperçu direct du pseudo.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Profil</strong></div><div class="meta-box"><span>Type</span><strong>UX</strong></div></div>
+      <div><div class="version-orb">3.2.0</div><h2>Profil vivant</h2><p>Les cosmetiques deviennent plus lisibles, plus propres sur mobile et mieux branches a l'API.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Profil</strong></div><div class="meta-box"><span>Type</span><strong>UX/API</strong></div></div>
     </aside>
   </section>
 
@@ -112,38 +92,39 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Lien de parrain personnalisable depuis le profil.</div>
-          <div class="news-bubble"><span>&#10022;</span>Le parrainage accepte id, P4-id, pseudo ou slug perso.</div>
-          <div class="news-bubble"><span>&#10022;</span>Pseudo stylable avec couleur, degrade et police premium.</div>
-          <div class="news-bubble"><span>&#10022;</span>Fenêtre contextuelle de choix de police avec aperçu.</div>
-          <div class="news-bubble"><span>&#10022;</span>Courbe ELO configurable en couleur et export PNG inclus.</div>
+          <div class="news-bubble"><span>&#10022;</span>Fenetre de police revue comme les decorations avatar.</div>
+          <div class="news-bubble"><span>&#10022;</span>Filtres de polices par rarete: commun, rare, epique, legendaire, mythique.</div>
+          <div class="news-bubble"><span>&#10022;</span>Encadres colores selon la rarete sur les polices et decorations.</div>
+          <div class="news-bubble"><span>&#10022;</span>Courbe ELO avec couleur, degrade et animation RGB reservee Perso.</div>
+          <div class="news-bubble"><span>&#10022;</span>Fiche Discord /ui enrichie avec stats, rang, economie et cosmetiques.</div>
+          <div class="news-bubble"><span>&#10022;</span>Documentation API completee avec les derniers endpoints profil.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
         <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Decorations avatar listees par rarete.</div>
-          <div class="news-bubble"><span>&#9679;</span>Admins autorises sur tous les hosts bot.</div>
-          <div class="news-bubble"><span>&#9679;</span>Perso peut modifier les styles sans attente.</div>
-          <div class="news-bubble"><span>&#9679;</span>VIP+ garde les changements rapides toutes les 24h.</div>
-          <div class="news-bubble"><span>&#9679;</span>VIP peut styliser le pseudo avec cooldown mensuel.</div>
-          <div class="news-bubble"><span>&#9679;</span>Liste de polices nettoyee pour eviter les doublons visuels.</div>
+          <div class="news-bubble"><span>&#9679;</span>Responsive mobile repasse sur les fenetres profil recentes.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le selecteur de police est moins transparent et scroll toute la fenetre.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le menu version affiche maintenant la branche 3.2.0.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les admins conservent les acces complets aux outils de hosting bot.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le panel profil garde les infos utiles sans doubler les sections Discord.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les donnees API exposent mieux les styles pseudo et courbe ELO.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>Les slugs avec chiffre ne sont plus confondus avec un id.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le login Discord conserve le lien parrain complet.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les champs vides reviennent proprement aux styles par defaut.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le panel host est aussi accessible depuis une session admin.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le pseudo affiché evite mieux les coupes quand il a de la place.</div>
+          <div class="news-bubble"><span>&#10003;</span>La fenetre police n'est plus cachee par les blocs du profil.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le rendu telephone evite mieux les cartes trop serrees.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le bouton courbe enregistre aussi l'etat RGB.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le canvas ELO repasse en statique quand RGB est desactive.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les infos Discord restent plus lisibles avec permissions en flags.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.1.16: choix de police en fenêtre contextuelle, aperçu direct et affichage pseudo plus propre.</div>
+  <div class="footer-note">Version 3.2.0: profil plus propre, raretes cosmetiques visibles, courbe RGB Perso, API documentee et fiche Discord enrichie.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

@@ -141,6 +141,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_font TEXT NOT NULL DEFAULT 
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_style_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_rgb INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -367,7 +368,7 @@ const pQ = {
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
   updatePseudoStyle: db.prepare(`UPDATE players SET pseudo_color = @color, pseudo_color_secondary = @colorSecondary, pseudo_font = @font, pseudo_style_changed_at = @changedAt WHERE id = @id`),
-  updateEloCurveStyle: db.prepare(`UPDATE players SET elo_curve_color = @color, elo_curve_color_secondary = @colorSecondary, elo_curve_changed_at = @changedAt WHERE id = @id`),
+  updateEloCurveStyle: db.prepare(`UPDATE players SET elo_curve_color = @color, elo_curve_color_secondary = @colorSecondary, elo_curve_rgb = @rgb, elo_curve_changed_at = @changedAt WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),

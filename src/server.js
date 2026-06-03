@@ -383,6 +383,7 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       color: player.color || '#ff2d55',
       elo_curve_color: player.elo_curve_color || '',
       elo_curve_color_secondary: player.elo_curve_color_secondary || '',
+      elo_curve_rgb: Number(player.elo_curve_rgb || 0),
       elo: currentElo,
       wins: Number(player.wins || 0),
       losses: Number(player.losses || 0),
@@ -5677,7 +5678,7 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
 });
 
 app.patch('/api/players/:id/elo-curve-style', (req, res) => {
-  const { color, colorSecondary = '', token } = req.body;
+  const { color, colorSecondary = '', rgb = false, token } = req.body;
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
@@ -5687,13 +5688,17 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
   }
   const nextColor = normalizeHexColor(color);
   const nextColorSecondary = normalizeHexColor(colorSecondary);
+  const nextRgb = rgb === true || rgb === 1 || rgb === '1' || rgb === 'true';
   if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
   if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
+  if (nextRgb && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Animation RGB reservee au role Perso.' });
+  }
   const remaining = getEloCurveRemainingMs(player);
   if (remaining > 0) return res.status(429).json({ error: `Courbe ELO modifiable dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
   const changedAt = Date.now();
-  pQ.updateEloCurveStyle.run({ id, color: nextColor, colorSecondary: nextColorSecondary, changedAt });
-  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, changedAt });
+  pQ.updateEloCurveStyle.run({ id, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, changedAt });
+  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, changedAt });
 });
 
 app.patch('/api/players/:id/banner', (req, res) => {

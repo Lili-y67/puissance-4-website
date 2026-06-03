@@ -517,6 +517,18 @@ function startDiscordBot(ctx) {
     const crystalText = linked && Number(linked.is_crystal || 0) === 1
       ? `Actif${linked.crystal_expires_at ? ` jusqu'a ${formatDiscordTimestamp(Number(linked.crystal_expires_at))}` : ''}`
       : 'Non';
+    const linkedCrystals = linked ? Number(linked.bot_crystals || 0) : 0;
+    const linkedCosmetics = linked
+      ? [
+          linked.pseudo_font ? `Police ${code(linked.pseudo_font)}` : 'Police defaut',
+          linked.pseudo_color_secondary ? 'Pseudo degrade' : linked.pseudo_color ? 'Pseudo couleur' : 'Pseudo defaut',
+          linked.elo_curve_rgb ? 'Courbe RGB' : linked.elo_curve_color ? 'Courbe couleur' : 'Courbe defaut',
+          linked.avatar_decoration ? 'Decoration avatar' : null,
+        ].filter(Boolean).join(' | ')
+      : '';
+    const linkedBotInfo = linked && Number(linked.is_bot || 0) === 1
+      ? `\n🤖・Bot API: **Oui** | Owner ID: ${linked.bot_owner_id ? code(linked.bot_owner_id) : '`NONE`'} | Suspendu: **${Number(linked.bot_enabled || 0) === 1 ? 'Non' : 'Oui'}**`
+      : '';
     const sections = [
       memberContextWarning ? [
         '### ⚠️ Contexte serveur',
@@ -557,10 +569,12 @@ function startDiscordBot(ctx) {
               `🏆・Rang: **${rankEmoji(rank)} ${escapeDiscordMarkdown(rank.label || 'Non classe')}** | ELO: **${fmt(linked.elo)}**`,
               `✨・Roles site: ${roleBadges(linked)} | Crystal: **${crystalText}**`,
               `📊・Stats: **${fmt(linked.wins)}V / ${fmt(linked.losses)}D / ${fmt(linked.draws)}N** | WR: **${winRate(linked)}** | Parties: **${fmt(linkedTotal)}**`,
-              `💰・Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes**`,
+              `💰・Economie: **${fmt(linked.coins)} coins** | **${fmt(linked.gems)} gemmes** | **${fmt(linkedCrystals)} cristaux**`,
+              `🎨・Cosmetiques: ${linkedCosmetics || 'Aucun style actif'}`,
               `🟢・Derniere presence site: **${linkedLastSeen}**`,
               `🌐・Lien utile: ${api}/profil?id=${linked.id}`,
-            ].join('\n')
+              linkedBotInfo.trim(),
+            ].filter(Boolean).join('\n')
           : `🔗・Compte lie: **Non**\n🌐・Lien utile: ${api}/profil\n🆔・ID Discord: ${code(user.id)}`,
       ],
       [
@@ -764,6 +778,40 @@ function startDiscordBot(ctx) {
     return [new ActionRowBuilder().addComponents(menu)];
   }
 
+  function premiumSummary(player) {
+    const crystal = Number(player?.is_crystal || 0) === 1
+      ? `Crystal actif${player.crystal_expires_at ? ` jusqu'a ${formatDiscordTimestamp(Number(player.crystal_expires_at), 'd')}` : ''}`
+      : 'Crystal non';
+    const tier = Number(player?.is_perso || 0) === 1
+      ? 'Perso'
+      : Number(player?.is_vip_plus || 0) === 1
+        ? 'VIP+'
+        : Number(player?.is_vip || 0) === 1
+          ? 'VIP'
+          : 'Aucun';
+    return `Pack: **${tier}** | ${crystal}`;
+  }
+
+  function profileCosmeticsSummary(player) {
+    return [
+      `Police: ${player.pseudo_font ? code(player.pseudo_font) : '`defaut`'}`,
+      `Pseudo: ${player.pseudo_color_secondary ? 'degrade' : player.pseudo_color ? 'couleur' : 'defaut'}`,
+      `Badge perso: ${player.custom_role_text ? `**${escapeDiscordMarkdown(player.custom_role_text)}**` : 'aucun'}`,
+      `Courbe ELO: ${player.elo_curve_rgb ? '**RGB Perso**' : player.elo_curve_color ? 'couleur' : 'defaut'}`,
+      `Decoration avatar: **${player.avatar_decoration ? 'Oui' : 'Non'}**`,
+      `Banniere profil: **${player.profile_banner ? 'Oui' : 'Non'}**`,
+    ].join(' | ');
+  }
+
+  function profileBotSummary(player) {
+    if (Number(player?.is_bot || 0) !== 1) return '';
+    const runtime = publicBotRuntime(player.id);
+    const owner = player.bot_owner_id ? code(player.bot_owner_id) : '`NONE`';
+    const online = runtime.online ? 'En ligne' : 'Hors ligne';
+    const suspended = Number(player.bot_enabled || 0) === 1 ? 'Non' : 'Oui';
+    return `### 🤖 Bot API\nOwner ID: ${owner} | Etat: **${online}** | Suspendu: **${suspended}**\nCristaux owner: **${fmt(player.bot_crystals || 0)}** | Dernier ping: **${player.bot_last_seen ? formatDiscordTimestamp(Number(player.bot_last_seen), 'R') : 'Jamais'}**`;
+  }
+
   function profilePayload(player) {
     const rank = rankOf(player.elo);
     const rankIcon = rankEmoji(rank);
@@ -775,13 +823,23 @@ function startDiscordBot(ctx) {
     const lastLine = last
       ? `Derniere partie: ${code(`#${last.id}`)} / ${last.move_count || 0} coups / ${last.duration || 0}s`
       : 'Derniere partie: aucune partie recente';
+    const linkedLine = player.discord_id
+      ? `Discord: ${code(player.discord_id)} | ID joueur: ${code(player.id)}`
+      : `Discord: **Non lie** | ID joueur: ${code(player.id)}`;
+    const economyLine = `Coins: **${fmt(player.coins || 0)}** | Gemmes: **${fmt(player.gems || 0)}** | Cristaux: **${fmt(player.bot_crystals || 0)}**`;
+    const referralLine = player.referral_slug
+      ? `Parrainage: ${api}/?ref=${encodeURIComponent(player.referral_slug)}`
+      : `Parrainage: ${api}/?ref=${encodeURIComponent(player.id)}`;
     return containerMessage({
       color: parseInt(String(player.color || '#ff2d55').replace('#', ''), 16) || 0xff2d55,
       title: `${rankIcon ? `${rankIcon} ` : ''}${player.pseudo} - ${fmt(player.elo)} ELO`,
-      subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)} | Coins: **${fmt(player.coins || 0)}**`,
+      subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)}`,
       sections: [
-        `### Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
-        `### Social et profil\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${lastLine}`,
+        `### 📊 Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
+        `### 👤 Profil\n${linkedLine}\n${premiumSummary(player)}\n${economyLine}\nDerniere presence site: **${player.last_seen ? formatDiscordTimestamp(Number(player.last_seen), 'R') : 'Inconnue'}**`,
+        `### 🎨 Cosmetiques\n${profileCosmeticsSummary(player)}`,
+        `### 🔗 Social\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${referralLine}\n${lastLine}`,
+        profileBotSummary(player),
       ],
       buttons: [
         linkButton('Voir profil', playerUrl(player), '👤'),
@@ -1470,7 +1528,7 @@ function startDiscordBot(ctx) {
         { text: `⏳・${queueCount} en file`, type: ActivityType.Competing },
         { text: `🖥️・${registered} comptes`, type: ActivityType.Watching },
         { text: `🤖・${bots} bots API`, type: ActivityType.Watching },
-        {text :`💾・Version 3.1.2`,type:ActivityType.Watching}
+        {text :`💾・Version 3.2.0`,type:ActivityType.Watching}
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
       bot.user.setStatus('idle')
