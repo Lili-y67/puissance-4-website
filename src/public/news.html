@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.1.9 | Puissance 4 Ranked</title>
+<title>News 3.1.11 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -86,18 +86,18 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.1.9</span></h1>
-      <p>Cette version remet la documentation API au niveau du site actuel et clarifie le live spectateur: routes Crystal, parrainage, boutique, clans, admin, Discord, bots, Socket.IO, variantes d'analyse et spectateurs sont maintenant references proprement.</p>
+      <h1>Mise a jour <span>3.1.11</span></h1>
+      <p>Cette version complete l'administration des bots: suspension visible dans le panel, Cristaux ajoutables par le staff pour les createurs de bots et endpoint dedie cote API.</p>
       <div class="hero-actions"><a class="btn-main" href="/boutique">Voir la boutique</a><a class="btn-ghost" href="/stats">Ouvrir les stats</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.1.9</div><h2>API complete & live clair</h2><p>La doc officielle couvre les dernieres features et le mode spectateur devient plus lisible.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>2 juin</strong></div><div class="meta-box"><span>Focus</span><strong>API</strong></div><div class="meta-box"><span>Type</span><strong>Changelog</strong></div></div>
+      <div><div class="version-orb">3.1.11</div><h2>Admin bots</h2><p>Le staff peut couper un robot et gerer les Cristaux de son createur humain depuis le panel.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Admin</strong></div><div class="meta-box"><span>Type</span><strong>Bots</strong></div></div>
     </aside>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs de la 3.1.9, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
+    <div class="section-head"><div><h2>Ce qui change</h2><p>Les gros blocs jusqu'a la 3.1.11, ranges par zone du site pour retrouver rapidement ce qui a bouge.</p></div></div>
     <div class="update-grid">
       <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128279;</div><div class="tag">Discord</div></div><h3>Roles et synchro</h3><ul><li>Generation admin des roles de rang ELO sans doublons.</li><li>Attribution automatique du role de rang quand le compte est lie.</li><li>Role Connectee synchronise par presence, avec limitation anti rate-limit.</li><li>Permissions Discord prises en compte pour les roles admin.</li></ul></article>
       <article class="update-card" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)"><div class="card-top"><div class="icon">&#128142;</div><div class="tag">Crystal</div></div><h3>Nouveau rang mensuel</h3><ul><li>Rang Crystal renouvelable automatiquement pour 5000 coins.</li><li>Badge dedie avec infobulle, sans couleur forcee sur le pseudo.</li><li>20 gemmes par semaine et avantages VIP/VIP+ hors Perso.</li><li>Message de connexion customisable pour les membres Crystal.</li></ul></article>
@@ -114,18 +114,20 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="update-card" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)"><div class="card-top"><div class="icon">&#128218;</div><div class="tag">3.1.9</div></div><h3>API enrichie</h3><ul><li>Documentation complete des routes Crystal, parrainage, cadeaux boutique et coupons.</li><li>Nouvelle section clans avec chat, membres, roles et leaderboard.</li><li>Endpoints admin ajoutes: gemmes, coupons, bot-enabled, Crystal et backups.</li><li>Bot API, Discord et commandes slash mieux relies aux routes du site.</li></ul></article>
       <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.14)"><div class="card-top"><div class="icon">&#128064;</div><div class="tag">Live</div></div><h3>Spectateur plus clair</h3><ul><li>Les parties live exposent les spectateurs connectes avec pseudo.</li><li>Les visiteurs hors connexion apparaissent en Anonyme.</li><li>Les parties contre bot restent visibles dans le live.</li><li>Les variantes d'analyse disposent d'un fallback si le moteur profond ne repond pas.</li></ul></article>
       <article class="update-card" style="--accent:#ff9f0a;--soft:rgba(255,159,10,.16)"><div class="card-top"><div class="icon">&#128268;</div><div class="tag">Socket.IO</div></div><h3>Events documentes</h3><ul><li>Tchat, nulle, abandon et revanche sont maintenant listes dans l'API.</li><li>join_live_game et leave_live_game documentent le suivi spectateur.</li><li>Les events clan et Crystal login sont references.</li><li>La doc precise les raisons de fin utilisees par replay et profil.</li></ul></article>
+      <article class="update-card" style="--accent:#30d158;--soft:rgba(48,209,88,.16)"><div class="card-top"><div class="icon">&#128994;</div><div class="tag">3.1.10</div></div><h3>Cristaux bot</h3><ul><li>Un compte bot peut maintenant etre associe a un createur humain.</li><li>Chaque victoire du robot donne 1 a 3 Cristaux a son createur.</li><li>La boutique affiche Host Bot 1 Mois pour 3000 Cristaux si un bot est associe.</li><li>Le profil ajoute un panel host: code, download, demarrer, redemarrer, arreter et logs.</li></ul></article>
+      <article class="update-card" style="--accent:#85ebff;--soft:rgba(133,235,255,.16)"><div class="card-top"><div class="icon">&#128737;</div><div class="tag">3.1.11</div></div><h3>Admin bots</h3><ul><li>Le panel affiche mieux les bots actifs ou suspendus.</li><li>Le staff peut suspendre ou reactiver un compte bot depuis la fiche joueur.</li><li>Les Cristaux bot peuvent etre ajoutes ou retires au createur humain.</li><li>L'API refuse les Cristaux si le joueur n'a aucun bot associe.</li></ul></article>
     </div>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Suivi 3.1.9</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
+    <div class="section-head"><div><h2>Suivi 3.1.11</h2><p>Le recap rapide pour savoir ou regarder apres cette mise a jour.</p></div></div>
     <div class="timeline">
-      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>API</span><strong>Doc complete</strong></div><div class="release-item"><span>Live</span><strong>Spectateurs et variantes</strong></div><div class="release-item"><span>Socket</span><strong>Events recenses</strong></div><div class="release-item"><span>News</span><strong>Changelog 3.1.9</strong></div></div></aside>
-      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">API</div><div><strong>La page API colle aux dernieres features.</strong><span>Crystal, parrainage, cadeaux, coupons, clans, admin, Discord, bot API et Socket.IO sont regroupes dans une reference unique.</span></div></div><div class="timeline-item"><div class="timeline-date">Live</div><div><strong>Le mode spectateur est plus explicite.</strong><span>Les spectateurs connectes sont nommes, les visiteurs restent anonymes, et les parties bot restent suivies sans etre confondues avec une ranked humaine.</span></div></div><div class="timeline-item"><div class="timeline-date">Analyse</div><div><strong>Les variantes restent affichables meme en fallback.</strong><span>Si le calcul profond n'est pas disponible, le front peut quand meme proposer une lecture rapide de la position.</span></div></div><div class="timeline-item"><div class="timeline-date">3.1.9</div><div><strong>Chaque nouvelle mise a jour doit remonter ici.</strong><span>La page news sert de changelog vivant: on change le numero, puis on ajoute les cartes des nouveautes.</span></div></div></div></div>
+      <aside class="release-panel"><h2>Zones touchees</h2><div class="release-list"><div class="release-item"><span>Admin</span><strong>Cristaux bot</strong></div><div class="release-item"><span>Bots</span><strong>Suspension visible</strong></div><div class="release-item"><span>API</span><strong>Endpoint staff</strong></div><div class="release-item"><span>News</span><strong>3.1.11</strong></div></div></aside>
+      <div class="timeline-panel"><h2>Notes importantes</h2><div class="timeline-list"><div class="timeline-item"><div class="timeline-date">Admin</div><div><strong>Les Cristaux bot sont gerables depuis la fiche joueur.</strong><span>Le bouton est verrouille si le joueur n'est pas le createur d'au moins un bot.</span></div></div><div class="timeline-item"><div class="timeline-date">Bots</div><div><strong>La suspension reste reservee aux admins.</strong><span>Un bot suspendu est retire de la file API et renvoie l'erreur staff prevue.</span></div></div><div class="timeline-item"><div class="timeline-date">API</div><div><strong>La route bot-crystals garde les memes controles que le panel.</strong><span>Elle refuse les comptes robots, les joueurs sans bot et les montants invalides.</span></div></div><div class="timeline-item"><div class="timeline-date">3.1.11</div><div><strong>Chaque nouvelle mise a jour doit remonter ici.</strong><span>La page news sert de changelog vivant: on change le numero, puis on ajoute les cartes des nouveautes.</span></div></div></div></div>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.1.9: l'API officielle est enrichie avec toutes les dernieres briques du site, et le live clarifie spectateurs, variantes d'analyse, bots et events temps reel.</div>
+  <div class="footer-note">Version 3.1.11: l'admin peut suspendre les bots et ajuster les Cristaux des createurs humains de bots associes.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

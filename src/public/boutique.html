@@ -53,25 +53,30 @@ body{
 @keyframes badgeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 .hero-side{padding:22px;border-radius:26px;background:rgba(10,11,22,.72);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .coins-panel{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:22px;background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.07);margin-bottom:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.wallet-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch}
+.wallet-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
 .wallet-card{display:flex;align-items:center;gap:12px;min-height:86px;padding:14px 16px;border-radius:20px;position:relative;overflow:hidden;width:100%}
 .wallet-card::after{content:'';position:absolute;inset:-35% auto auto -20%;width:90px;height:90px;border-radius:50%;opacity:.28;filter:blur(10px)}
 .wallet-card.coin-badge{background:linear-gradient(135deg, rgba(255,159,10,.26), rgba(255,122,69,.11));border:1px solid rgba(255,159,10,.42);box-shadow:0 0 24px rgba(255,159,10,.14), inset 0 0 16px rgba(255,255,255,.035)}
 .wallet-card.coin-badge::after{background:var(--yellow)}
 .wallet-card.gem-badge{background:linear-gradient(135deg, rgba(133,235,255,.25), rgba(47,128,255,.10));border:1px solid rgba(133,235,255,.48);box-shadow:0 0 28px rgba(133,235,255,.16), inset 0 0 16px rgba(255,255,255,.035)}
 .wallet-card.gem-badge::after{background:var(--blue)}
-.coin-icon,.gem-icon{position:relative;z-index:1;width:36px;height:36px;object-fit:contain}
+.wallet-card.crystal-wallet{background:linear-gradient(135deg,rgba(48,209,88,.24),rgba(145,255,112,.10));border:1px solid rgba(48,209,88,.46);box-shadow:0 0 28px rgba(48,209,88,.14),inset 0 0 16px rgba(255,255,255,.035)}
+.wallet-card.crystal-wallet::after{background:#30d158}
+.coin-icon,.gem-icon,.bot-crystal-icon{position:relative;z-index:1;width:36px;height:36px;object-fit:contain}
 .coin-icon{filter:drop-shadow(0 0 10px rgba(255,214,10,.38))}
 .gem-icon{filter:drop-shadow(0 0 12px rgba(133,235,255,.50))}
+.bot-crystal-icon{filter:drop-shadow(0 0 12px rgba(48,209,88,.48))}
 .coins-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .coins-value{font-family:'Barlow Condensed',sans-serif;font-size:38px;font-weight:900;color:var(--yellow);line-height:1}
 .wallet-card>div:not(:first-child){position:relative;z-index:1}
 .gem-badge .coins-value{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.28)}
+.crystal-wallet .coins-value{color:#30d158;text-shadow:0 0 18px rgba(48,209,88,.28)}
 .shop-controls{display:flex;flex-direction:column;gap:10px;align-items:stretch;width:100%}
-.currency-switch{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;border-radius:18px;background:rgba(7,7,17,.56);border:1px solid rgba(255,255,255,.08)}
+.currency-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px;border-radius:18px;background:rgba(7,7,17,.56);border:1px solid rgba(255,255,255,.08)}
 .currency-switch button{border:0;border-radius:13px;padding:10px 12px;background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.18s}
 .currency-switch button.active.coin{background:rgba(255,159,10,.16);color:var(--yellow);box-shadow:0 0 18px rgba(255,159,10,.12)}
 .currency-switch button.active.gem{background:rgba(133,235,255,.16);color:var(--blue);box-shadow:0 0 18px rgba(133,235,255,.13)}
+.currency-switch button.active.crystal{background:rgba(48,209,88,.16);color:#30d158;box-shadow:0 0 18px rgba(48,209,88,.13)}
 .promo-box{position:relative;padding:12px;border-radius:18px;background:linear-gradient(135deg, rgba(88,86,214,.14), rgba(133,235,255,.07));border:1px solid rgba(133,235,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .promo-box::before{content:'CODE PROMO';display:block;margin-bottom:7px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--blue);text-transform:uppercase}
 .promo-line{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
@@ -116,6 +121,7 @@ body{
 .card.perso{border-color:rgba(255,122,69,.28);box-shadow:0 0 24px rgba(255,122,69,.08),0 22px 44px rgba(0,0,0,.26)}
 .card.booster-elo{border-color:rgba(255,214,10,.18)}
 .card.booster-coin{border-color:rgba(255,159,10,.24);box-shadow:0 0 24px rgba(255,159,10,.08),0 22px 44px rgba(0,0,0,.26)}
+.card.bot-host{border-color:rgba(48,209,88,.34);box-shadow:0 0 28px rgba(48,209,88,.10),0 22px 44px rgba(0,0,0,.26)}
 .tier{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .badge.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.30);color:var(--yellow)}
@@ -123,6 +129,7 @@ body{
 .badge.perso{background:var(--orange-soft);border:1px solid rgba(255,122,69,.34);color:var(--orange)}
 .badge.booster-elo{background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.2);color:var(--yellow)}
 .badge.booster-coin{background:rgba(255,159,10,.10);border:1px solid rgba(255,159,10,.28);color:var(--orange)}
+.badge.bot-host{background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.30);color:#30d158}
 .duration{font-family:'Barlow Condensed',sans-serif;font-size:42px;font-weight:900;letter-spacing:1px}
 .card h2{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .meta{font-size:14px;line-height:1.7;color:var(--muted)}
@@ -138,6 +145,7 @@ body{
 .offer-timer{display:inline-flex;align-items:center;gap:7px;margin-top:10px;padding:8px 11px;border-radius:999px;background:rgba(255,214,10,.10);border:1px solid rgba(255,214,10,.26);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:900;letter-spacing:1px;text-transform:uppercase;box-shadow:0 0 24px rgba(255,214,10,.08)}
 .offer-timer strong{font-size:16px}
 .price.gems .price-new{color:var(--blue);text-shadow:0 0 18px rgba(133,235,255,.22)}
+.price.crystals,.price.crystals .price-new{color:#30d158;text-shadow:0 0 18px rgba(48,209,88,.22)}
 .stat-line.vip .price,.stat-line.vip strong{color:var(--yellow)}
 .stat-line.vipplus .price,.stat-line.vipplus strong{color:var(--blue)}
 .stat-line.perso .price,.stat-line.perso strong{color:var(--orange)}
@@ -145,6 +153,7 @@ body{
 .stat-line.booster-coin .price,.stat-line.booster-coin strong{color:var(--orange)}
 .price.gems{color:var(--blue)!important;text-shadow:0 0 18px rgba(133,235,255,.18)}
 .price.gems img{filter:drop-shadow(0 0 12px rgba(133,235,255,.48))}
+.price.crystals img{filter:drop-shadow(0 0 12px rgba(48,209,88,.48))}
 .feature-list{display:flex;flex-direction:column;gap:10px}
 .feature{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:14px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
 .feature-emoji{font-size:16px;line-height:1.1}
@@ -417,12 +426,20 @@ body{
                 <div class="coins-value" id="gems-value">0</div>
               </div>
             </div>
+            <div class="wallet-card crystal-wallet" style="display:none">
+              <img class="bot-crystal-icon" src="/assets/bot-crystals.png" alt="cristaux">
+              <div>
+                <div class="coins-label">Mes cristaux</div>
+                <div class="coins-value" id="bot-crystals-value">0</div>
+              </div>
+            </div>
           </div>
           <div class="shop-controls">
             <input id="currency-select" type="hidden" value="coins">
             <div class="currency-switch" aria-label="Choix de monnaie">
               <button type="button" id="currency-btn-coins" class="active coin" onclick="setShopCurrency('coins')">🪙 Coins</button>
               <button type="button" id="currency-btn-gems" class="gem" onclick="setShopCurrency('gems')" style="display:none"><img src="/assets/gem.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Gemmes</button>
+              <button type="button" id="currency-btn-crystals" class="crystal" onclick="setShopCurrency('crystals')" style="display:none"><img src="/assets/bot-crystals.png" alt="" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px"> Cristaux</button>
             </div>
             <div class="promo-box">
               <div class="promo-line">
@@ -454,12 +471,14 @@ body{
         <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
         <button type="button" class="category-tab" id="tab-offers" onclick="switchShopCategory('offers')">Packs limités</button>
         <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
+        <button type="button" class="category-tab" id="tab-host" onclick="switchShopCategory('host')" style="display:none">Host Bot</button>
       </div>
     </div>
   </section>
 
   <section id="shop-ranks-section" class="grid"></section>
   <section id="shop-offers-section" class="grid" style="display:none"></section>
+  <section id="shop-host-section" class="grid" style="display:none"></section>
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
     <div class="boosters-row">
@@ -753,6 +772,16 @@ const SHOP_ITEMS = {
     stat: '5000', statSub: 'coins pour x2 serveur',
     meta: 'Active un boost coins pour tout le site pendant 2 heures.',
     features: [['🌍','Global','Tous les gains de coins sont multipliés.'],['⏱️','Durée','Activation de 2 heures après utilisation.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
+  },
+  bot_host_1m: {
+    key: 'bot_host_1m', type: 'host', theme: 'bot-host', badge: '<img src="/assets/bot-crystals.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> HOST', duration: '1 mois', title: 'Host Bot 1 Mois',
+    stat: '3000', statSub: 'Cristaux pour 1 mois',
+    meta: 'Active un espace host pour un bot associe a ton compte : code, logs et actions type VPS depuis le profil.',
+    features: [
+      ['🟢','Panel bot','Demarrer, arreter, redemarrer et suivre les logs.'],
+      ['📥','Code telechargeable','Le code envoye reste recuperable depuis ton profil.'],
+      ['🛡️','Execution controlee','Socle pret pour host serveur, sans execution arbitraire non isolee.']
+    ]
   }
 };
 Object.keys(SHOP_ITEMS).forEach((key) => {
@@ -766,14 +795,18 @@ const SHOP_PRICES = {
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
   global_elo_boost: 5000, global_coin_boost: 5000,
+  bot_host_1m: 0,
 };
 let SHOP_GEM_PRICES = Object.fromEntries(Object.entries(SHOP_PRICES).map(([key, price]) => [key, Math.max(1, Math.ceil(Number(price || 0) * 0.45))]));
+let SHOP_BOT_CRYSTAL_PRICES = { bot_host_1m: 3000 };
 
 let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
 let shopLimitedOffer = null;
 let shopGemsUnlocked = false;
+let shopBotHostEligible = false;
+let shopBotHosts = [];
 let shopReferral = null;
 let currentCategory = 'ranks';
 let customBoosterState = { elo: 0.1, coins: 1, globalElo: 0.2, globalCoins: 2 };
@@ -809,19 +842,25 @@ function getCustomBoosterValue(pack) {
 }
 
 function getShopCurrency() {
-  return document.getElementById('currency-select')?.value === 'gems' ? 'gems' : 'coins';
+  const value = document.getElementById('currency-select')?.value;
+  return value === 'gems' ? 'gems' : value === 'crystals' ? 'crystals' : 'coins';
 }
 
 function getCurrencyLabel() {
-  return getShopCurrency() === 'gems' ? 'gemmes' : 'coins';
+  const currency = getShopCurrency();
+  return currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
 }
 
 function getCurrencyIcon() {
-  return getShopCurrency() === 'gems' ? '/assets/gem.png' : 'assets/coin.png';
+  const currency = getShopCurrency();
+  return currency === 'gems' ? '/assets/gem.png' : currency === 'crystals' ? '/assets/bot-crystals.png' : 'assets/coin.png';
 }
 
 function getDiscountedPrice(price) {
   const basePrice = Math.max(0, Number(price || 0));
+  if (getShopCurrency() === 'crystals') {
+    return { basePrice, finalPrice: basePrice, hasDiscount: false, label: '' };
+  }
   const coupon = appliedCoupon && appliedCouponCode ? appliedCoupon : null;
   const hasReferral = Number(shopReferral?.discountPercent || 0) > 0;
   if ((!coupon && !hasReferral) || basePrice <= 0) {
@@ -861,14 +900,15 @@ function getDisplayPrice(pack) {
 
 function renderPriceHtml(price) {
   const isGems = getShopCurrency() === 'gems';
+  const isCrystals = getShopCurrency() === 'crystals';
   const discount = getDiscountedPrice(price);
   const icon = getCurrencyIcon();
-  const alt = isGems ? 'gemmes' : 'coins';
+  const alt = isGems ? 'gemmes' : isCrystals ? 'Cristaux' : 'coins';
   if (!discount.hasDiscount) {
-    return `<div class="price ${isGems ? 'gems' : 'coins'}"><img src="${icon}" alt="${alt}">${discount.finalPrice}</div>`;
+    return `<div class="price ${isGems ? 'gems' : isCrystals ? 'crystals' : 'coins'}"><img src="${icon}" alt="${alt}">${discount.finalPrice}</div>`;
   }
   return `
-    <div class="price discounted ${isGems ? 'gems' : 'coins'}" title="Prix promo applique">
+    <div class="price discounted ${isGems ? 'gems' : isCrystals ? 'crystals' : 'coins'}" title="Prix promo applique">
       <span class="price-discount-badge">${escapeHtml(discount.label)}</span>
       <span class="price-old">${discount.basePrice}</span>
       <span class="price-new"><img src="${icon}" alt="${alt}">${discount.finalPrice}</span>
@@ -918,22 +958,30 @@ function getCardStatSub(item, pack) {
 }
 
 function setShopCurrency(currency) {
-  const next = currency === 'gems' && shopGemsUnlocked ? 'gems' : 'coins';
+  const next = currency === 'gems' && shopGemsUnlocked
+    ? 'gems'
+    : currency === 'crystals' && shopBotHostEligible
+      ? 'crystals'
+      : 'coins';
   const input = document.getElementById('currency-select');
   if (input) input.value = next;
   document.getElementById('currency-btn-coins')?.classList.toggle('active', next === 'coins');
   document.getElementById('currency-btn-gems')?.classList.toggle('active', next === 'gems');
+  document.getElementById('currency-btn-crystals')?.classList.toggle('active', next === 'crystals');
   renderShop();
   switchShopCategory(currentCategory);
 }
 
 function getCustomBoosterPrice(pack) {
   const currency = getShopCurrency();
+  if (pack === 'bot_host_1m') return Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
   if (pack === 'limited_offer') {
+    if (currency === 'crystals') return 0;
     return currency === 'gems'
       ? Number(shopLimitedOffer?.priceGems || Math.ceil(Number(shopLimitedOffer?.priceCoins || 0) * 0.45))
       : Number(shopLimitedOffer?.priceCoins || 0);
   }
+  if (currency === 'crystals') return Number(SHOP_BOT_CRYSTAL_PRICES[pack] || 0);
   if (pack === 'elo_custom') {
     const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 700);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
@@ -1050,14 +1098,24 @@ function getDynamicBoosterItem(pack) {
 function setCoinsUi(coins, stateText) {
   const coinsEl = document.getElementById('coins-value');
   const gemsEl = document.getElementById('gems-value');
+  const crystalsEl = document.getElementById('bot-crystals-value');
   const gemCard = document.querySelector('.wallet-card.gem-badge');
+  const crystalCard = document.querySelector('.wallet-card.crystal-wallet');
   const gemBtn = document.getElementById('currency-btn-gems');
+  const crystalBtn = document.getElementById('currency-btn-crystals');
   const stateEl = document.getElementById('coins-state');
   if (coinsEl) coinsEl.textContent = Number(coins || 0);
   if (gemsEl) gemsEl.textContent = shopGemsUnlocked ? Number(shopPlayer?.gems || 0) : '';
+  if (crystalsEl) crystalsEl.textContent = shopBotHostEligible ? Number(shopPlayer?.bot_crystals || 0) : '';
   if (gemCard) gemCard.style.display = shopGemsUnlocked ? '' : 'none';
+  if (crystalCard) crystalCard.style.display = shopBotHostEligible ? '' : 'none';
   if (gemBtn) gemBtn.style.display = shopGemsUnlocked ? '' : 'none';
+  if (crystalBtn) crystalBtn.style.display = shopBotHostEligible ? '' : 'none';
   if (!shopGemsUnlocked && getShopCurrency() === 'gems') {
+    const input = document.getElementById('currency-select');
+    if (input) input.value = 'coins';
+  }
+  if (!shopBotHostEligible && getShopCurrency() === 'crystals') {
     const input = document.getElementById('currency-select');
     if (input) input.value = 'coins';
   }
@@ -1156,7 +1214,7 @@ function getStockQty(pack) {
 function getButtonState(pack) {
   const price = getDisplayPrice(pack);
   const currency = getShopCurrency();
-  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
+  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : currency === 'crystals' ? Number(shopPlayer?.bot_crystals || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
   const owned = item.type === 'rank' ? packOwned(pack) : false;
@@ -1166,9 +1224,11 @@ function getButtonState(pack) {
 
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour acheter' };
   if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
+  if (currency === 'crystals' && !shopBotHostEligible) return { disabled: true, note: 'Associe un bot pour utiliser les Cristaux' };
+  if (pack === 'bot_host_1m' && !shopBotHostEligible) return { disabled: true, note: 'Aucun bot associe' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
-  if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
+  if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
   if (item.type === 'bundle') return { disabled: false, note: `${stock === null ? 'Offre active' : `Stock ${stock}`} - Offre limitee` };
   if (item.type === 'booster') {
     const inv = pack === 'elo_custom'
@@ -1183,16 +1243,17 @@ function getButtonState(pack) {
     const stockNote = stock === null ? 'Stock libre' : `Stock ${stock}`;
     return { disabled: false, note: `${stockNote} · Inventaire ${inv}` };
   }
-  return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : 'coins'}` };
+  return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
 }
 
 function getGiftButtonState(pack) {
   const price = getDisplayPrice(pack);
   const currency = getShopCurrency();
-  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : Number(shopPlayer?.coins || 0);
+  const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : currency === 'crystals' ? Number(shopPlayer?.bot_crystals || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!shopPlayer) return { disabled: true, note: 'Connecte-toi pour offrir' };
   if (!item) return { disabled: true, note: 'Pack indisponible' };
+  if (item.type === 'host' || currency === 'crystals') return { disabled: true, note: 'Host non offrable' };
   if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
   const stock = pack === 'limited_offer'
     ? Number(shopLimitedOffer?.stock ?? 0)
@@ -1631,7 +1692,7 @@ function renderCustomBoosterCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
-        <button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>
+        ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           Acheter ${item.title}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1665,7 +1726,7 @@ function renderCard(pack) {
       <div class="stat-line ${item.theme}">
         <div class="stat-line-left">
           <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
-          <span>${getCardStatSub(item, pack)}</span>
+          <span>${item.type === 'host' ? `${price} Cristaux pour 1 mois` : getCardStatSub(item, pack)}</span>
         </div>
           ${renderPriceHtml(price)}
       </div>
@@ -1676,7 +1737,7 @@ function renderCard(pack) {
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
-        <button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>
+        ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
           <small id="buy-${pack}-note">${btnState.note}</small>
@@ -1699,16 +1760,40 @@ function renderShop() {
     renderCustomBoosterCard('global_elo_custom'),
     renderCustomBoosterCard('global_coin_custom'),
   ].join('');
+  const hostTab = document.getElementById('tab-host');
+  if (hostTab) hostTab.style.display = shopBotHostEligible ? '' : 'none';
+  const hostSection = document.getElementById('shop-host-section');
+  if (hostSection) {
+    hostSection.innerHTML = shopBotHostEligible
+      ? renderCard('bot_host_1m')
+      : `<div class="card bot-host" style="grid-column:1/-1"><h2>Host bot verrouille</h2><div class="meta">Associe d'abord un bot a ton compte pour debloquer les Cristaux et l'hebergement.</div></div>`;
+  }
+  if (!shopBotHostEligible && currentCategory === 'host') currentCategory = 'ranks';
 }
 
 function switchShopCategory(category) {
+  if (category === 'host' && !shopBotHostEligible) category = 'ranks';
   currentCategory = category;
+  let currencyChanged = false;
+  if (category === 'host') {
+    const input = document.getElementById('currency-select');
+    if (input && input.value !== 'crystals') { input.value = 'crystals'; currencyChanged = true; }
+  } else if (getShopCurrency() === 'crystals') {
+    const input = document.getElementById('currency-select');
+    if (input) { input.value = 'coins'; currencyChanged = true; }
+  }
+  if (currencyChanged) renderShop();
   document.getElementById('tab-ranks').classList.toggle('active', category === 'ranks');
   document.getElementById('tab-offers').classList.toggle('active', category === 'offers');
   document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
+  document.getElementById('tab-host')?.classList.toggle('active', category === 'host');
+  document.getElementById('currency-btn-coins')?.classList.toggle('active', getShopCurrency() === 'coins');
+  document.getElementById('currency-btn-gems')?.classList.toggle('active', getShopCurrency() === 'gems');
+  document.getElementById('currency-btn-crystals')?.classList.toggle('active', getShopCurrency() === 'crystals');
   document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
   document.getElementById('shop-offers-section').style.display = category === 'offers' ? 'grid' : 'none';
   document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
+  document.getElementById('shop-host-section').style.display = category === 'host' ? 'grid' : 'none';
 }
 
 function openPreview(pack) {
@@ -1768,6 +1853,8 @@ async function loadShop() {
   const token = localStorage.getItem('token');
   if (!token) {
     shopGemsUnlocked = false;
+    shopBotHostEligible = false;
+    shopBotHosts = [];
     setCoinsUi(0, 'Connecte-toi pour acheter.');
     renderShop();
     switchShopCategory(currentCategory);
@@ -1782,10 +1869,13 @@ async function loadShop() {
     shopInventory = data.inventory || {};
     shopLimitedOffer = data.limitedOffer || null;
     shopGemsUnlocked = !!data.gemsUnlocked;
+    shopBotHostEligible = !!data.botHostEligible;
+    shopBotHosts = Array.isArray(data.botHosts) ? data.botHosts : [];
     shopReferral = data.referral || null;
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
+    SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
+    setCoinsUi(shopPlayer?.coins || 0, shopBotHostEligible ? 'Cristaux disponibles pour host tes bots.' : shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
     if (Number(shopReferral?.discountPercent || 0) > 0 && !appliedCouponCode) {
       const percent = Number(shopReferral.discountPercent || 0);
       const message = shopReferral.discountKind === 'filleul' && shopReferral.referrer
@@ -1795,6 +1885,8 @@ async function loadShop() {
     }
   } catch (e) {
     shopGemsUnlocked = false;
+    shopBotHostEligible = false;
+    shopBotHosts = [];
     shopReferral = null;
     setCoinsUi(0, 'Impossible de charger ton solde.');
   }
@@ -1806,6 +1898,10 @@ async function loadShop() {
 async function purchasePack(pack, giftTo = '') {
   const token = localStorage.getItem('token');
   if (!token) return alert('Connecte-toi d abord.');
+  if (pack === 'bot_host_1m') {
+    const input = document.getElementById('currency-select');
+    if (input) input.value = 'crystals';
+  }
   const state = giftTo ? getGiftButtonState(pack) : getButtonState(pack);
   if (state.disabled) return;
 
@@ -1823,7 +1919,8 @@ async function purchasePack(pack, giftTo = '') {
   const coupon = appliedCouponCode;
   const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
-  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currency === 'gems' ? 'gemmes' : 'coins'}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
+  const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
+  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currencyLabel}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
   if (btn) {
@@ -1849,6 +1946,7 @@ async function purchasePack(pack, giftTo = '') {
         currency,
         coupon: coupon || undefined,
         giftTo: giftTo || undefined,
+        botId: pack === 'bot_host_1m' ? Number(shopBotHosts?.[0]?.id || 0) : undefined,
       }),
     });
     const data = await res.json();
@@ -1858,6 +1956,8 @@ async function purchasePack(pack, giftTo = '') {
     }
     shopPlayer = data.player || shopPlayer;
     if (typeof data.gemsUnlocked !== 'undefined') shopGemsUnlocked = !!data.gemsUnlocked;
+    if (typeof data.botHostEligible !== 'undefined') shopBotHostEligible = !!data.botHostEligible;
+    if (Array.isArray(data.botHosts)) shopBotHosts = data.botHosts;
     shopReferral = data.referral || shopReferral;
     shopStock = data.stock || shopStock;
     shopInventory = data.inventory || shopInventory;
@@ -1865,6 +1965,7 @@ async function purchasePack(pack, giftTo = '') {
       shopLimitedOffer.stock = Math.max(0, Number(shopLimitedOffer.stock || 0) - 1);
     }
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
+    SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, giftTo ? `Cadeau envoye a ${data.giftTo || giftTo}.` : item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
   } catch (e) {

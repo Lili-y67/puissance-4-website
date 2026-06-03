@@ -148,6 +148,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN bot_skill INTEGER NOT NULL DEFAULT
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_enabled INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_last_seen INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_ip_hash TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_owner_id INTEGER`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN bot_crystals INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
@@ -225,6 +227,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN color    TEXT NOT NULL DEFAULT '#f
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_discord_id ON players(discord_id)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_enabled ON players(is_bot, bot_enabled, deleted)`); } catch(e) {}
 try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_ip_hash ON players(bot_ip_hash, is_bot, deleted)`); } catch(e) {}
+try { db.exec(`CREATE INDEX IF NOT EXISTS idx_players_bot_owner ON players(bot_owner_id, is_bot, deleted)`); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS clans (
@@ -275,6 +278,20 @@ db.exec(`
     used_at    INTEGER NOT NULL,
     PRIMARY KEY (code, player_id)
   );
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_hosts (
+    bot_id       INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+    owner_id     INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    status       TEXT    NOT NULL DEFAULT 'stopped',
+    code         TEXT    NOT NULL DEFAULT '',
+    logs         TEXT    NOT NULL DEFAULT '',
+    created_at   INTEGER NOT NULL,
+    updated_at   INTEGER NOT NULL,
+    expires_at   INTEGER NOT NULL DEFAULT 0,
+    last_action  TEXT    NOT NULL DEFAULT ''
+  )
 `);
 
 db.exec(`
@@ -333,6 +350,8 @@ const pQ = {
   addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),
   updateGems:   db.prepare(`UPDATE players SET gems = @gems WHERE id = @id`),
   addGems:      db.prepare(`UPDATE players SET gems = gems + @delta WHERE id = @id`),
+  updateBotCrystals: db.prepare(`UPDATE players SET bot_crystals = @bot_crystals WHERE id = @id`),
+  addBotCrystals: db.prepare(`UPDATE players SET bot_crystals = bot_crystals + @delta WHERE id = @id`),
   setReferrer:  db.prepare(`UPDATE players SET referred_by = @referrerId, referred_at = @referredAt WHERE id = @id AND (referred_by IS NULL OR referred_by = 0)`),
   updateTokenEmojiChangedAt: db.prepare(`UPDATE players SET token_emoji_changed_at = @changedAt WHERE id = @id`),
   updateElo:    db.prepare(`UPDATE players SET elo = elo + @delta WHERE id = @id`),
@@ -638,6 +657,15 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     } else {
       pQ.win.run(winnerId);
       pQ.loss.run(loserId);
+    }
+    if (!isDraw && winner && Number(winner.is_bot || 0) === 1 && Number(winner.bot_owner_id || 0) > 0) {
+      const owner = pQ.getById.get(Number(winner.bot_owner_id || 0));
+      if (owner && Number(owner.deleted || 0) !== 1 && Number(owner.is_guest || 0) !== 1 && Number(owner.is_bot || 0) !== 1) {
+        pQ.addBotCrystals.run({
+          id: owner.id,
+          delta: 1 + Math.floor(Math.random() * 3),
+        });
+      }
     }
   }
 

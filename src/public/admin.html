@@ -1276,6 +1276,8 @@ function renderPlayers(players) {
           <span style="color:var(--yellow)">${Number(p.coins || 0)} coins</span>
           <span style="color:var(--muted)">·</span>
           <span style="color:#85EBFF">${Number(p.gems || 0)} gemmes</span>
+          ${Number(p.owned_bot_count || 0) > 0 || Number(p.bot_crystals || 0) > 0 ? `<span style="color:var(--muted)">·</span><span style="color:#30d158">${Number(p.bot_crystals || 0)} cristaux</span>` : ''}
+          ${Number(p.is_bot || 0) === 1 ? `<span style="color:var(--muted)">·</span><span style="color:${Number(p.bot_enabled || 0) === 1 ? 'var(--green)' : 'var(--red)'}">Bot ${Number(p.bot_enabled || 0) === 1 ? 'actif' : 'suspendu'}</span>` : ''}
           <span style="color:var(--muted)">·</span>
           <span>${p.wins}V ${p.losses}D ${p.draws}N</span>
           ${vipExpiryText(p) ? `<span style="color:var(--muted)">·</span><span>${vipExpiryText(p)}</span>` : ''}
@@ -1310,7 +1312,7 @@ function renderPlayers(players) {
       <td><strong>${p.elo}</strong></td>
       <td><strong style="color:var(--yellow)">${Number(p.coins || 0)}</strong></td>
       <td style="color:var(--muted)">${p.wins}/${p.losses}/${p.draws}</td>
-      <td><span class="badge badge-${p.role}">${p.role}</span>${vipBadge(p) ? ' ' + vipBadge(p) : ''} ${customRoleBadge(p)}</td>
+      <td><span class="badge badge-${p.role}">${p.role}</span>${vipBadge(p) ? ' ' + vipBadge(p) : ''} ${customRoleBadge(p)} ${Number(p.is_bot || 0) === 1 ? `<span class="badge" style="background:${Number(p.bot_enabled || 0) === 1 ? 'rgba(48,209,88,0.12)' : 'rgba(255,45,85,0.12)'};color:${Number(p.bot_enabled || 0) === 1 ? 'var(--green)' : 'var(--red)'};border:1px solid ${Number(p.bot_enabled || 0) === 1 ? 'rgba(48,209,88,0.25)' : 'rgba(255,45,85,0.25)'}">Bot ${Number(p.bot_enabled || 0) === 1 ? 'actif' : 'off'}</span>` : ''} ${Number(p.owned_bot_count || 0) > 0 ? `<span class="badge" style="background:rgba(48,209,88,0.12);color:#30d158;border:1px solid rgba(48,209,88,0.25)">${Number(p.bot_crystals || 0)} cristaux</span>` : ''}</td>
       <td>${statusBadges}</td>
       <td>
         <div class="actions">
@@ -1342,6 +1344,9 @@ function openModal(id) {
   const customRoleEmoji = String(player.custom_role_emoji || '').replace(/"/g, '&quot;');
   const currentCoins = Number(player.coins || 0);
   const currentGems = Number(player.gems || 0);
+  const currentBotCrystals = Number(player.bot_crystals || 0);
+  const ownedBotCount = Number(player.owned_bot_count || 0);
+  const canManageBotCrystals = myRole === 'admin' && ownedBotCount > 0 && Number(player.is_bot || 0) !== 1;
   const inventory = player.shop_inventory || {};
   const boosterInventory = Object.entries(ADMIN_SHOP_BOOSTERS)
     .map(([key, label]) => {
@@ -1430,6 +1435,16 @@ function openModal(id) {
           <input type="number" id="give-gems" value="10" min="-1000000" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px" title="Montant positif pour ajouter, negatif pour retirer">
           <button class="btn-sm" style="background:rgba(133,235,255,0.15);color:#85EBFF" onclick="giveGems(${id})">Give</button>
         </div>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Cristaux bot</div>
+        <div style="font-size:12px;color:#30d158;margin-bottom:8px">Total actuel : <strong>${currentBotCrystals}</strong> · Bots associés : <strong>${ownedBotCount}</strong></div>
+        <div style="display:flex;gap:8px">
+          <input type="number" id="give-bot-crystals" value="100" min="-1000000" max="1000000" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px" title="Montant positif pour ajouter, negatif pour retirer">
+          <button class="btn-sm" style="background:rgba(48,209,88,0.15);color:#30d158;opacity:${canManageBotCrystals ? '1' : '.45'}" ${canManageBotCrystals ? '' : 'disabled'} onclick="giveBotCrystals(${id})">Give</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Disponible seulement pour un admin et un joueur humain qui possède au moins un bot associé.</div>
       </div>
 
       ${player.is_bot ? `
@@ -1539,6 +1554,12 @@ async function giveGems(id) {
   const delta = Number(document.getElementById('give-gems')?.value || 0);
   const data = await api('PATCH', `/api/admin/players/${id}/gems`, { delta });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur gemmes.');
+}
+
+async function giveBotCrystals(id) {
+  const delta = Number(document.getElementById('give-bot-crystals')?.value || 0);
+  const data = await api('PATCH', `/api/admin/players/${id}/bot-crystals`, { delta });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur cristaux bot.');
 }
 
 async function toggleBotEnabled(id, enabled) {

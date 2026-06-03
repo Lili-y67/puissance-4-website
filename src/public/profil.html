@@ -1740,6 +1740,7 @@ async function load() {
     }
     if (isOwnProfile && Number(freshPlayer.is_bot || 0) !== 1) {
       loadReferralInfo();
+      loadBotHostPanel();
     }
 
     // Notif discord_linked
@@ -1815,6 +1816,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
     ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
     ...(isOwnProfile ? [{ href: '#section-bot', icon: '🤖', title: 'Mode bot', sub: 'API et token' }] : []),
+    ...(isOwnProfile && Number(player.is_bot || 0) !== 1 ? [{ href: '#section-bot-host', icon: '💚', title: 'Host bot', sub: 'Cristaux et panel' }] : []),
     { href: '#section-discord', icon: '💬', title: 'Discord', sub: 'Liaison et serveur' },
     { href: '#section-activity', icon: '🎮', title: 'Activite', sub: 'Parties et reseau' },
   ];
@@ -2338,7 +2340,20 @@ function render(player, games, following, followers, followStatus, tournaments =
               <span class="value">${player.is_bot ? `cree · ...${escapeHtml(player.bot_token_preview || '????')}` : 'affiche une seule fois'}</span>
             </div>
           </div>
+          <div class="discord-bubble">
+            <span class="icon">💚</span>
+            <div class="meta">
+              <span class="label">Createur</span>
+              <span class="value">${player.is_bot ? (player.bot_owner_id ? `ID ${Number(player.bot_owner_id)}` : 'Non associe') : 'a definir avant activation'}</span>
+            </div>
+          </div>
         </div>
+        ${!player.is_bot && !player.discord_id ? `
+        <div style="display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:10px 0">
+          <label class="card-label" for="bot-owner-input" style="margin:0">Createur du bot</label>
+          <input id="bot-owner-input" class="search-input" style="width:100%;max-width:none;margin:0" placeholder="Pseudo ou ID du compte qui recevra les Cristaux">
+          <div style="font-size:11px;color:var(--muted);line-height:1.45">Le createur recoit 1 a 3 Cristaux a chaque victoire du robot. Laisse vide si tu veux associer plus tard via admin/API.</div>
+        </div>` : ''}
         <div style="font-size:12px;color:var(--muted);line-height:1.55">
           ${player.is_bot
             ? 'Ce compte est deja un bot. Si le token a ete perdu, il ne peut pas etre regenere : il faut creer un nouveau compte bot.'
@@ -2365,6 +2380,22 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     </section>
+
+    ${isOwnProfile && Number(player.is_bot || 0) !== 1 ? `
+    <section class="profile-section" id="section-bot-host">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title">Host bot</div>
+          <div class="profile-section-sub">Cristaux, hebergement mensuel et controle type mini VPS.</div>
+        </div>
+      </div>
+      <div class="color-card" style="margin-top:0;border-color:rgba(48,209,88,0.24);background:linear-gradient(135deg,rgba(48,209,88,0.055),rgba(255,255,255,0.018))">
+        <div class="card-label">Panel Cristaux</div>
+        <div id="bot-host-panel" class="discord-link-panel">
+          <div style="font-size:12px;color:var(--muted)">Chargement de tes bots associes...</div>
+        </div>
+      </div>
+    </section>` : ''}
 
     <!-- Carte liaison Discord -->
     <section class="profile-section" id="section-discord">
@@ -5174,19 +5205,27 @@ async function convertProfileToBot() {
   if (!confirm('Passer ce compte en mode bot ? Le token sera affiche une seule fois et ne pourra pas etre regenere.')) return;
   if (btn) { btn.disabled = true; btn.textContent = 'Creation du token...'; }
   try {
+    const ownerValue = (document.getElementById('bot-owner-input')?.value || '').trim();
+    const ownerId = /^\d+$/.test(ownerValue) ? Number(ownerValue) : undefined;
     const res = await fetch(`/api/players/${me.id}/convert-bot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-session-token': token },
-      body: JSON.stringify({ token, skill: currentPlayer?.elo || me.elo || 1000 }),
+      body: JSON.stringify({
+        token,
+        skill: currentPlayer?.elo || me.elo || 1000,
+        ownerId,
+        owner: ownerId ? undefined : ownerValue || undefined,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Impossible de basculer en mode bot.');
     lastBotToken = data.botToken || '';
     lastBotActivationCurl = data.activationCurl || '';
-    syncStoredPlayerPatch({ is_bot: 1, bot_token_preview: lastBotToken.slice(-8) });
+    syncStoredPlayerPatch({ is_bot: 1, bot_token_preview: lastBotToken.slice(-8), bot_owner_id: data.owner?.id || null });
     if (currentPlayer) {
       currentPlayer.is_bot = 1;
       currentPlayer.bot_token_preview = lastBotToken.slice(-8);
+      currentPlayer.bot_owner_id = data.owner?.id || null;
     }
     const box = document.getElementById('bot-token-box');
     const val = document.getElementById('bot-token-value');
@@ -5257,6 +5296,111 @@ async function copyBotCurl() {
   const command = lastBotActivationCurl || `curl.exe -k -X POST -H "Authorization: Bearer ${token}" "${location.origin}/api/bot/ping?status=seeking"`;
   await copyTextToClipboard(command);
   alert('Requete curl d activation copiee.');
+}
+
+function renderBotHostPanel(data = {}) {
+  const panel = document.getElementById('bot-host-panel');
+  if (!panel) return;
+  const bots = Array.isArray(data.bots) ? data.bots : [];
+  const crystals = Number(data.botCrystals || data.player?.bot_crystals || 0);
+  const price = Number(data.price || 3000);
+  if (!bots.length) {
+    panel.innerHTML = `
+      <div class="discord-bubbles">
+        <div class="discord-bubble"><span class="icon"><img src="/assets/bot-crystals.png" alt="" style="width:26px;height:26px;object-fit:contain"></span><div class="meta"><span class="label">Cristaux</span><span class="value">${crystals}</span></div></div>
+        <div class="discord-bubble"><span class="icon">🤖</span><div class="meta"><span class="label">Bot associe</span><span class="value">Aucun</span></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.55;margin-top:10px">Pour debloquer l'host, active un compte bot en indiquant ce profil comme createur. Chaque victoire de ce robot donnera 1 a 3 Cristaux.</div>
+    `;
+    return;
+  }
+  panel.innerHTML = `
+    <div class="discord-bubbles">
+      <div class="discord-bubble"><span class="icon"><img src="/assets/bot-crystals.png" alt="" style="width:26px;height:26px;object-fit:contain"></span><div class="meta"><span class="label">Cristaux</span><span class="value">${crystals} / ${price}</span></div></div>
+      <div class="discord-bubble"><span class="icon">🤖</span><div class="meta"><span class="label">Bots associes</span><span class="value">${bots.length}</span></div></div>
+      <div class="discord-bubble"><span class="icon">🛒</span><div class="meta"><span class="label">Achat host</span><span class="value"><a href="/boutique" style="color:#30d158;text-decoration:none">Boutique · Host 1 Mois</a></span></div></div>
+    </div>
+    <div style="display:grid;gap:12px;margin-top:14px">
+      ${bots.map(bot => {
+        const host = bot.host || {};
+        const active = !!host.active;
+        const status = active ? (host.status || 'stopped') : 'non actif';
+        return `
+          <div style="padding:14px;border-radius:16px;background:rgba(255,255,255,0.035);border:1px solid rgba(48,209,88,0.18)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <div>
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;text-transform:uppercase">${escapeHtml(bot.pseudo || `Bot ${bot.id}`)}</div>
+                <div style="font-size:12px;color:var(--muted)">Host: ${escapeHtml(status)}${host.expiresAt ? ` · expire le ${new Date(host.expiresAt).toLocaleDateString('fr-FR')}` : ''} · code ${Number(host.codeSize || 0)} octets</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'start')" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Demarrer</button>
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'restart')" ${!active ? 'disabled' : ''} style="background:rgba(133,235,255,.08);border-color:rgba(133,235,255,.28);color:#85EBFF">Redemarrer</button>
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'stop')" ${!active ? 'disabled' : ''} style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b81">Arreter</button>
+                <a class="btn-save-color" href="/api/bot-host/${Number(bot.id)}/download?token=${encodeURIComponent(getStoredSessionToken())}" style="text-decoration:none;background:rgba(255,214,10,.08);border-color:rgba(255,214,10,.25);color:#ffd60a">Download code</a>
+              </div>
+            </div>
+            <textarea id="bot-host-code-${Number(bot.id)}" class="search-input" style="width:100%;max-width:none;min-height:120px;margin:12px 0 8px;font-family:Consolas,monospace;font-size:12px;text-transform:none;letter-spacing:0" placeholder="// Colle ici le code JS de ton bot"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-save-color" onclick="saveBotHostCode(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Envoyer le code</button>
+              <button class="btn-save-color" onclick="loadBotHostLogs(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--text)">Logs</button>
+            </div>
+            <pre id="bot-host-logs-${Number(bot.id)}" style="display:none;margin-top:10px;max-height:220px;overflow:auto;padding:12px;border-radius:12px;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);white-space:pre-wrap"></pre>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function loadBotHostPanel() {
+  const token = getStoredSessionToken();
+  const panel = document.getElementById('bot-host-panel');
+  if (!token || !panel) return;
+  try {
+    const res = await fetch('/api/bot-host/me', { headers: { 'x-session-token': token } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Host indisponible.');
+    renderBotHostPanel(data);
+  } catch (e) {
+    panel.innerHTML = `<div style="font-size:12px;color:#ff6b81">${escapeHtml(e.message || 'Impossible de charger le panel host.')}</div>`;
+  }
+}
+
+async function saveBotHostCode(botId) {
+  const token = getStoredSessionToken();
+  const code = document.getElementById(`bot-host-code-${botId}`)?.value || '';
+  if (!code.trim()) return alert('Colle du code avant d envoyer.');
+  const res = await fetch(`/api/bot-host/${botId}/code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+    body: JSON.stringify({ token, code }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return alert(data.error || 'Upload impossible.');
+  await loadBotHostLogs(botId);
+  alert('Code envoye.');
+}
+
+async function botHostAction(botId, action) {
+  const token = getStoredSessionToken();
+  const res = await fetch(`/api/bot-host/${botId}/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+    body: JSON.stringify({ token, action }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return alert(data.error || 'Action impossible.');
+  await loadBotHostPanel();
+}
+
+async function loadBotHostLogs(botId) {
+  const token = getStoredSessionToken();
+  const box = document.getElementById(`bot-host-logs-${botId}`);
+  if (!box) return;
+  const res = await fetch(`/api/bot-host/${botId}/logs`, { headers: { 'x-session-token': token } });
+  const data = await res.json().catch(() => ({}));
+  box.style.display = 'block';
+  box.textContent = res.ok ? (data.logs || 'Aucun log pour le moment.') : (data.error || 'Logs indisponibles.');
 }
 
 const NITRO_COLORS = { 0: null, 1: '#9b59b6', 2: '#9b59b6', 3: '#3498db' };

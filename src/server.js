@@ -1885,6 +1885,68 @@ function applyReferralDiscountPrice(basePrice, player, coupon = null) {
   return Math.max(0, Math.ceil(afterCoupon * (1 - percent / 100)));
 }
 
+function getOwnedBots(ownerId) {
+  const id = Number(ownerId || 0);
+  if (!id) return [];
+  return db.prepare(`
+    SELECT b.id, b.pseudo, b.elo, b.wins, b.losses, b.draws, b.avatar, b.color,
+           b.bot_enabled, b.bot_token_preview, b.bot_description, b.bot_skill,
+           h.status AS host_status, h.expires_at AS host_expires_at, h.updated_at AS host_updated_at,
+           LENGTH(COALESCE(h.code, '')) AS host_code_size
+    FROM players b
+    LEFT JOIN bot_hosts h ON h.bot_id = b.id
+    WHERE b.deleted = 0
+      AND b.is_guest = 0
+      AND b.is_bot = 1
+      AND b.bot_owner_id = ?
+    ORDER BY b.wins DESC, b.elo DESC, b.id ASC
+  `).all(id).map(row => ({
+    ...sanitize(row),
+    host: {
+      active: Number(row.host_expires_at || 0) > Date.now(),
+      status: row.host_status || 'none',
+      expiresAt: Number(row.host_expires_at || 0) || null,
+      updatedAt: Number(row.host_updated_at || 0) || null,
+      codeSize: Number(row.host_code_size || 0),
+    },
+  }));
+}
+
+function getBotHostForOwner(ownerId, botId) {
+  const owner = Number(ownerId || 0);
+  const bot = Number(botId || 0);
+  if (!owner || !bot) return null;
+  return db.prepare(`
+    SELECT h.*, b.pseudo, b.elo, b.wins, b.losses, b.draws, b.bot_token_preview
+    FROM bot_hosts h
+    JOIN players b ON b.id = h.bot_id
+    WHERE h.owner_id = ? AND h.bot_id = ? AND b.deleted = 0 AND b.is_bot = 1
+  `).get(owner, bot);
+}
+
+function appendBotHostLog(botId, line) {
+  const id = Number(botId || 0);
+  if (!id) return;
+  const now = new Date().toISOString();
+  const entry = `[${now}] ${String(line || '').replace(/[\r\n]+/g, ' ').slice(0, 240)}`;
+  const row = db.prepare(`SELECT logs FROM bot_hosts WHERE bot_id = ?`).get(id);
+  const current = String(row?.logs || '');
+  const next = `${current ? `${current}\n` : ''}${entry}`.split('\n').slice(-160).join('\n');
+  db.prepare(`UPDATE bot_hosts SET logs = ?, updated_at = ? WHERE bot_id = ?`).run(next, Date.now(), id);
+}
+
+function grantBotWinCrystals(botId) {
+  const bot = pQ.getById.get(Number(botId || 0));
+  if (!bot || Number(bot.is_bot || 0) !== 1 || Number(bot.deleted || 0) === 1) return null;
+  const ownerId = Number(bot.bot_owner_id || 0);
+  if (!ownerId || ownerId === Number(bot.id)) return null;
+  const owner = pQ.getById.get(ownerId);
+  if (!owner || Number(owner.deleted || 0) === 1 || Number(owner.is_guest || 0) === 1 || Number(owner.is_bot || 0) === 1) return null;
+  const reward = 1 + Math.floor(Math.random() * 3);
+  pQ.addBotCrystals.run({ id: ownerId, delta: reward });
+  return { ownerId, botId: Number(bot.id), reward };
+}
+
 // Page mot de passe oubliAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Suppression de compte AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -2136,13 +2198,15 @@ app.get('/api/admin/security', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, role, is_vip, is_vip_plus, is_perso, is_crystal, crystal_expires_at, crystal_auto_renew, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, bot_crystals, role, is_vip, is_vip_plus, is_perso, is_crystal, crystal_expires_at, crystal_auto_renew, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled, bot_owner_id FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
+  const ownedBotCountQ = db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1 AND bot_owner_id = ?`);
   const enriched = players.map(p => ({
     ...p,
     online: onlineSockets.has(p.id) && onlineSockets.get(p.id).size > 0,
     discord_linked: !!(p.discord_id),
+    owned_bot_count: Number(ownedBotCountQ.get(p.id)?.c || 0),
     shop_inventory: Object.fromEntries(
       shopItemQ.getAllForPlayer.all(p.id).map(row => [row.item_key, Number(row.quantity || 0)])
     ),
@@ -2191,6 +2255,31 @@ app.patch('/api/admin/players/:id/gems', (req, res) => {
   } catch(e) {}
   notifyPlayerProfileChanged(id, `Gemmes modifiees par le staff (${delta > 0 ? '+' : ''}${delta}).`);
   res.json({ ok: true, gems: nextGems, added: delta });
+});
+
+app.patch('/api/admin/players/:id/bot-crystals', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target || Number(target.deleted || 0) === 1) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (Number(target.is_bot || 0) === 1) return res.status(400).json({ error: 'Les Cristaux se donnent au createur humain, pas au compte bot.' });
+  const ownedBotCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1 AND bot_owner_id = ?`).get(id)?.c || 0);
+  if (ownedBotCount <= 0) return res.status(400).json({ error: 'Ce joueur n a aucun bot associe.' });
+  const delta = Number(req.body?.delta);
+  if (!Number.isFinite(delta) || !Number.isInteger(delta) || delta === 0) {
+    return res.status(400).json({ error: 'Montant invalide.' });
+  }
+  const nextCrystals = Math.max(0, Number(target.bot_crystals || 0) + delta);
+  pQ.updateBotCrystals.run({ bot_crystals: nextCrystals, id });
+  try {
+    WH.wlogAdminAction(delta > 0 ? 'Cristaux bot ajoutes' : 'Cristaux bot retires', target.pseudo, id, [
+      ['Variation', `${delta > 0 ? '+' : ''}${delta}`, true],
+      ['Nouveau total', String(nextCrystals), true],
+      ['Bots associes', String(ownedBotCount), true],
+    ]);
+  } catch(e) {}
+  notifyPlayerProfileChanged(id, `Cristaux bot modifies par le staff (${delta > 0 ? '+' : ''}${delta}).`);
+  res.json({ ok: true, bot_crystals: nextCrystals, added: delta, ownedBotCount });
 });
 
 app.patch('/api/admin/players/:id/bot-enabled', (req, res) => {
@@ -2611,6 +2700,9 @@ const REFERRAL_SHOP_DISCOUNT_PERCENT = REFERRAL_FILLEUL_DISCOUNT_PERCENT;
 const CRYSTAL_PRICE_COINS = 5000;
 const CRYSTAL_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 const CRYSTAL_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const BOT_HOST_PRICE_CRYSTALS = 3000;
+const BOT_HOST_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+const BOT_HOST_MAX_CODE_BYTES = 256 * 1024;
 const CUSTOM_ROLE_MAX_LENGTH = 8;
 const SHOP_ITEMS = Object.freeze({
   crystal: { key: 'crystal', category: 'ranks', label: 'Crystal', price: CRYSTAL_PRICE_COINS },
@@ -2627,6 +2719,7 @@ const SHOP_ITEMS = Object.freeze({
   coin_boost_plus: { key: 'coin_boost_plus', category: 'coin_boosters', label: 'Coin Boost +', price: 6000, boostType: 'coins', multiplier: 10, defaultStock: 3 },
   global_elo_boost: { key: 'global_elo_boost', category: 'global_boosters', label: 'Boost Global ELO', price: 5000, boostType: 'global_elo', multiplier: 1.20, defaultStock: 3 },
   global_coin_boost: { key: 'global_coin_boost', category: 'global_boosters', label: 'Boost Global Coins', price: 5000, boostType: 'global_coins', multiplier: 2, defaultStock: 3 },
+  bot_host_1m: { key: 'bot_host_1m', category: 'bot_hosting', label: 'Host Bot 1 mois', price: 0, crystalPrice: BOT_HOST_PRICE_CRYSTALS },
 });
 const SHOP_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, v.price])));
 const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, Math.max(1, Math.ceil(Number(v.price || 0) * 0.45))])));
@@ -4211,13 +4304,18 @@ app.get('/api/shop/me', (req, res) => {
   const limitedCoupon = limitedOfferCode && limitedOfferEndsAt > Date.now() ? getUsableCoupon(limitedOfferCode, playerId) : null;
   const limitedStock = Number(getConfigValue('shop_limited_offer_stock', '0') || 0);
   const gemsUnlocked = !!String(player.discord_id || '').trim();
+  const ownedBots = getOwnedBots(playerId);
   res.json({
     player: sanitize(player),
     gemsUnlocked,
+    botHostEligible: ownedBots.length > 0,
+    botCrystals: Number(player.bot_crystals || 0),
+    botHosts: ownedBots,
     referral: getReferralInfo(player),
     items: SHOP_ITEMS,
     prices: SHOP_PRICES,
     gemPrices: SHOP_GEM_PRICES,
+    botCrystalPrices: { bot_host_1m: BOT_HOST_PRICE_CRYSTALS },
     stock,
     inventory,
     activeBoosters,
@@ -4415,25 +4513,42 @@ app.post('/api/shop/buy', async (req, res) => {
     return res.status(400).json({ error: 'Tu ne peux pas t offrir un cadeau a toi-meme.' });
   }
   const isGift = recipientId !== Number(playerId);
-  const currency = String(req.body?.currency || 'coins').toLowerCase() === 'gems' ? 'gems' : 'coins';
+  const requestedCurrency = String(req.body?.currency || 'coins').toLowerCase();
+  const currency = requestedCurrency === 'gems' ? 'gems' : requestedCurrency === 'crystals' ? 'crystals' : 'coins';
   if (currency === 'gems' && !String(player.discord_id || '').trim()) {
     return res.status(403).json({ error: 'Lie ton compte Discord pour utiliser les gemmes.' });
+  }
+  if (currency === 'crystals' && pack !== 'bot_host_1m') {
+    return res.status(400).json({ error: 'Les Cristaux servent uniquement a l hebergement de bot.' });
+  }
+  if (pack === 'bot_host_1m' && currency !== 'crystals') {
+    return res.status(400).json({ error: 'Host 1 mois s achete uniquement avec des Cristaux.' });
+  }
+  const ownedBots = getOwnedBots(playerId);
+  if (pack === 'bot_host_1m' && !ownedBots.length) {
+    return res.status(403).json({ error: 'Associe d abord un bot a ton compte pour acheter un host.' });
   }
   const requestedCoupon = normalizeCouponCode(req.body?.coupon);
   const coupon = getUsableCoupon(requestedCoupon, playerId);
   if (requestedCoupon && !coupon) {
     return res.status(400).json({ error: 'Coupon invalide, expire, deja utilise ou limite atteinte.' });
   }
-  const basePrice = pack === 'limited_offer' && currency === 'gems'
+  const basePrice = currency === 'crystals'
+    ? Number(item.crystalPrice || BOT_HOST_PRICE_CRYSTALS)
+    : pack === 'limited_offer' && currency === 'gems'
     ? Number(item.gemPrice || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
     : currency === 'gems'
       ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
       : Number(item.price || 0);
-  const price = applyReferralDiscountPrice(basePrice, player, coupon);
-  const balance = currency === 'gems' ? Number(player.gems || 0) : Number(player.coins || 0);
+  const price = currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
+  const balance = currency === 'gems'
+    ? Number(player.gems || 0)
+    : currency === 'crystals'
+      ? Number(player.bot_crystals || 0)
+      : Number(player.coins || 0);
 
   if (balance < price) {
-    return res.status(400).json({ error: currency === 'gems' ? 'Pas assez de gemmes.' : 'Pas assez de coins.' });
+    return res.status(400).json({ error: currency === 'gems' ? 'Pas assez de gemmes.' : currency === 'crystals' ? 'Pas assez de Cristaux.' : 'Pas assez de coins.' });
   }
   if (pack === 'vip_plus' && Number(recipient.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: isGift ? 'Ce joueur a deja VIP+.' : 'VIP+ deja actif.' });
@@ -4459,6 +4574,7 @@ app.post('/api/shop/buy', async (req, res) => {
   const baseExpiry = currentVipExpiry > now ? currentVipExpiry : now;
 
   if (currency === 'gems') pQ.updateGems.run({ gems: balance - price, id: playerId });
+  else if (currency === 'crystals') pQ.updateBotCrystals.run({ bot_crystals: balance - price, id: playerId });
   else pQ.updateCoins.run({ coins: balance - price, id: playerId });
   if (coupon) {
     db.prepare(`UPDATE coupons SET uses = uses + 1 WHERE code = ?`).run(coupon.code);
@@ -4467,6 +4583,21 @@ app.post('/api/shop/buy', async (req, res) => {
 
   if (pack === 'crystal') {
     grantCrystal(recipientId, { durationMs: CRYSTAL_MONTH_MS, autoRenew: true });
+  } else if (pack === 'bot_host_1m') {
+    const requestedBotId = Number(req.body?.botId || 0);
+    const targetBot = ownedBots.find(bot => Number(bot.id) === requestedBotId) || ownedBots[0];
+    const existing = db.prepare(`SELECT expires_at FROM bot_hosts WHERE bot_id = ?`).get(targetBot.id);
+    const hostBase = Number(existing?.expires_at || 0) > now ? Number(existing.expires_at) : now;
+    db.prepare(`
+      INSERT INTO bot_hosts (bot_id, owner_id, status, code, logs, created_at, updated_at, expires_at, last_action)
+      VALUES (?, ?, 'stopped', '', '', ?, ?, ?, 'created')
+      ON CONFLICT(bot_id) DO UPDATE SET
+        owner_id=excluded.owner_id,
+        updated_at=excluded.updated_at,
+        expires_at=?,
+        last_action='renewed'
+    `).run(targetBot.id, playerId, now, now, hostBase + BOT_HOST_MONTH_MS, hostBase + BOT_HOST_MONTH_MS);
+    appendBotHostLog(targetBot.id, `Host 1 mois achete par ${player.pseudo}.`);
   } else if (pack === 'vip_1m') {
     pQ.updateVip.run({ is_vip: 1, id: recipientId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: recipientId });
@@ -4540,6 +4671,7 @@ app.post('/api/shop/buy', async (req, res) => {
     item,
     prices: SHOP_PRICES,
     gemPrices: SHOP_GEM_PRICES,
+    botCrystalPrices: { bot_host_1m: BOT_HOST_PRICE_CRYSTALS },
     currency,
     paid: price,
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value, expiresAt: Number(coupon.expires_at || 0) || null } : null,
@@ -4547,12 +4679,116 @@ app.post('/api/shop/buy', async (req, res) => {
     stock,
     inventory,
     gemsUnlocked: !!String(pQ.getById.get(playerId)?.discord_id || '').trim(),
+    botHostEligible: getOwnedBots(playerId).length > 0,
+    botCrystals: Number(pQ.getById.get(playerId)?.bot_crystals || 0),
+    botHosts: getOwnedBots(playerId),
     player: sanitize(pQ.getById.get(playerId)),
     referral: getReferralInfo(pQ.getById.get(playerId)),
     target: isGift ? sanitize(pQ.getById.get(recipientId)) : null,
     gifted: isGift,
     giftTo: isGift ? recipient.pseudo : '',
   });
+});
+
+function getHostOwnerFromRequest(req) {
+  const token = String(req.headers['x-session-token'] || req.body?.token || req.query?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return null;
+  const player = pQ.getById.get(playerId);
+  if (!player || Number(player.deleted || 0) === 1 || Number(player.is_guest || 0) === 1 || Number(player.is_bot || 0) === 1) return null;
+  return player;
+}
+
+function getOwnedBotOrFail(ownerId, botId) {
+  const bot = pQ.getById.get(Number(botId || 0));
+  if (!bot || Number(bot.deleted || 0) === 1 || Number(bot.is_bot || 0) !== 1 || Number(bot.bot_owner_id || 0) !== Number(ownerId || 0)) {
+    return null;
+  }
+  return bot;
+}
+
+function serializeBotHost(row, bot = null) {
+  if (!row) return null;
+  const expiresAt = Number(row.expires_at || 0);
+  return {
+    botId: Number(row.bot_id || bot?.id || 0),
+    ownerId: Number(row.owner_id || 0),
+    status: expiresAt > Date.now() ? String(row.status || 'stopped') : 'expired',
+    active: expiresAt > Date.now(),
+    expiresAt: expiresAt || null,
+    updatedAt: Number(row.updated_at || 0) || null,
+    lastAction: row.last_action || '',
+    codeSize: Buffer.byteLength(String(row.code || ''), 'utf8'),
+    bot: bot ? sanitize(bot) : null,
+  };
+}
+
+app.get('/api/bot-host/me', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bots = getOwnedBots(player.id);
+  res.json({
+    ok: true,
+    player: sanitize(pQ.getById.get(player.id)),
+    botCrystals: Number(pQ.getById.get(player.id)?.bot_crystals || 0),
+    price: BOT_HOST_PRICE_CRYSTALS,
+    bots,
+  });
+});
+
+app.post('/api/bot-host/:botId/code', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id);
+  if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Achete Host 1 mois avant d envoyer du code.' });
+  const code = String(req.body?.code || '');
+  if (!code.trim()) return res.status(400).json({ error: 'Code vide.' });
+  if (Buffer.byteLength(code, 'utf8') > BOT_HOST_MAX_CODE_BYTES) return res.status(413).json({ error: 'Code trop lourd pour ce panel.' });
+  db.prepare(`UPDATE bot_hosts SET code = ?, updated_at = ?, last_action = 'upload' WHERE bot_id = ?`).run(code, Date.now(), bot.id);
+  appendBotHostLog(bot.id, `Code mis a jour (${Buffer.byteLength(code, 'utf8')} octets).`);
+  res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot) });
+});
+
+app.get('/api/bot-host/:botId/download', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id);
+  if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
+  const code = String(host.code || '');
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${String(bot.pseudo || 'bot').replace(/[^a-z0-9_-]+/gi, '_')}-host.js"`);
+  res.send(code || `// Aucun code envoye pour ${bot.pseudo}\n`);
+});
+
+app.get('/api/bot-host/:botId/logs', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id);
+  if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
+  res.json({ ok: true, logs: String(host.logs || ''), host: serializeBotHost(host, bot) });
+});
+
+app.post('/api/bot-host/:botId/action', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id);
+  if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Host inactif ou expire.' });
+  const action = String(req.body?.action || '').toLowerCase();
+  const nextStatus = action === 'start' || action === 'restart' ? 'running' : action === 'stop' ? 'stopped' : '';
+  if (!nextStatus) return res.status(400).json({ error: 'Action invalide.' });
+  db.prepare(`UPDATE bot_hosts SET status = ?, updated_at = ?, last_action = ? WHERE bot_id = ?`).run(nextStatus, Date.now(), action, bot.id);
+  botRuntime.set(Number(bot.id), { status: nextStatus === 'running' ? 'hosted' : 'host-stopped', lastSeen: Date.now(), hosted: true });
+  appendBotHostLog(bot.id, action === 'restart' ? 'Redemarrage demande depuis le profil.' : `${action === 'start' ? 'Demarrage' : 'Arret'} demande depuis le profil.`);
+  broadcastPresenceCounts();
+  res.json({ ok: true, host: serializeBotHost(getBotHostForOwner(player.id, bot.id), bot), runtime: publicBotRuntime(bot.id) });
 });
 
 app.get('/api/live', (_, res) => {
@@ -4857,20 +5093,30 @@ app.post('/api/players/:id/convert-bot', (req, res) => {
   const botToken = makeBotToken();
   const skill = Math.max(100, Math.min(3000, Number(req.body?.skill || player.elo || 1000)));
   const description = String(req.body?.description || 'Bot cree par un joueur.').trim().slice(0, 180);
+  const ownerRaw = String(req.body?.owner || req.body?.ownerPseudo || req.body?.creator || '').trim();
+  const ownerIdRaw = Number(req.body?.ownerId || req.body?.creatorId || 0);
+  let owner = null;
+  if (ownerIdRaw) owner = pQ.getById.get(ownerIdRaw);
+  if (!owner && ownerRaw) owner = pQ.getByPseudo.get(ownerRaw);
+  if (owner && (Number(owner.deleted || 0) === 1 || Number(owner.is_guest || 0) === 1 || Number(owner.is_bot || 0) === 1 || Number(owner.id) === id)) {
+    return res.status(400).json({ error: 'Createur de bot invalide. Choisis un compte joueur humain different du bot.' });
+  }
   db.prepare(`
     UPDATE players
     SET is_bot = 1, bot_enabled = 1, bot_skill = ?, bot_description = ?,
         bot_token_hash = ?, bot_token_preview = ?, bot_last_seen = 0,
         bot_ip_hash = ?,
+        bot_owner_id = ?,
         coins = 0,
         custom_role_text = 'BOT', custom_role_color = '#8E8E93', custom_role_emoji = '🤖'
     WHERE id = ?
-  `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), botIpHash, id);
+  `).run(skill, description, hashBotToken(botToken), botToken.slice(-8), botIpHash, owner?.id || null, id);
   const baseUrl = String(discordConfig().baseUrl || '').replace(/\/+$/, '');
   const activationCurl = `curl.exe -k -X POST -H "Authorization: Bearer ${botToken}" "${baseUrl}/api/bot/ping?status=seeking"`;
   res.json({
     ok: true,
     player: sanitize(pQ.getById.get(id)),
+    owner: owner ? sanitize(owner) : null,
     botToken,
     activationCurl,
     note: 'Token affiche une seule fois. Garde-le secret : il ne pourra pas etre regenere.',
