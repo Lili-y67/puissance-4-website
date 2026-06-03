@@ -917,7 +917,9 @@ const PSEUDO_FONT_OPTIONS = new Set([
   'barlow', 'condensed', 'bebas',
   'orbitron', 'audiowide', 'russo', 'chakra', 'rajdhani', 'oxanium', 'pressstart', 'bungee',
   'playfair', 'cinzel', 'merriweather', 'cormorant', 'abril', 'prata', 'bodoni',
+  'unifraktur', 'medieval',
   'pacifico', 'caveat', 'lobster', 'dancing', 'satisfy', 'permanent', 'shadows', 'luckiest',
+  'eaglelake', 'uncial',
   'oswald', 'anton', 'teko', 'righteous',
   'mono', 'serif', 'script',
 ]);
