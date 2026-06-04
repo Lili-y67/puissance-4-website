@@ -4812,7 +4812,7 @@ app.post('/api/shop/buy', async (req, res) => {
   if (currency === 'crystals' && pack !== 'bot_host_1m') {
     return res.status(400).json({ error: 'Les Cristaux servent uniquement a l hebergement de bot.' });
   }
-  if (pack === 'bot_host_1m' && currency !== 'crystals') {
+  if (pack === 'bot_host_1m' && currency !== 'crystals' && !isAdminPlayer(player)) {
     return res.status(400).json({ error: 'Host 1 mois s achete uniquement avec des Cristaux.' });
   }
   const ownedBots = getOwnedBots(playerId);
@@ -4824,6 +4824,7 @@ app.post('/api/shop/buy', async (req, res) => {
   if (requestedCoupon && !coupon) {
     return res.status(400).json({ error: 'Coupon invalide, expire, deja utilise ou limite atteinte.' });
   }
+  const adminFreeBotHost = pack === 'bot_host_1m' && isAdminPlayer(player);
   const basePrice = currency === 'crystals'
     ? Number(item.crystalPrice || BOT_HOST_PRICE_CRYSTALS)
     : pack === 'limited_offer' && currency === 'gems'
@@ -4831,7 +4832,7 @@ app.post('/api/shop/buy', async (req, res) => {
     : currency === 'gems'
       ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
       : Number(item.price || 0);
-  const price = currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
+  const price = adminFreeBotHost ? 0 : currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
   const balance = currency === 'gems'
     ? Number(player.gems || 0)
     : currency === 'crystals'
@@ -4888,7 +4889,7 @@ app.post('/api/shop/buy', async (req, res) => {
         expires_at=?,
         last_action='renewed'
     `).run(targetBot.id, playerId, now, now, hostBase + BOT_HOST_MONTH_MS, hostBase + BOT_HOST_MONTH_MS);
-    appendBotHostLog(targetBot.id, `Host 1 mois achete par ${player.pseudo}.`);
+    appendBotHostLog(targetBot.id, adminFreeBotHost ? `Host 1 mois active gratuitement par admin ${player.pseudo}.` : `Host 1 mois achete par ${player.pseudo}.`);
   } else if (pack === 'vip_1m') {
     pQ.updateVip.run({ is_vip: 1, id: recipientId });
     pQ.updateVipPlus.run({ is_vip_plus: 0, id: recipientId });

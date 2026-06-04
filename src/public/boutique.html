@@ -819,12 +819,39 @@ let offerTimerInterval = null;
 let giftPackKey = '';
 let giftSelectedPlayer = null;
 let giftSearchTimer = null;
+const recentPurchaseNotice = new Map();
 const PREVIEW_NAME_PARTS = ['li', 'na', 'shi', 'ka', 'yo', 'mi', 'sa', 'ly', 'no', 'ra', 'el', 'ia', 'zu', 'ko', 'ri', 'ta', 'ma', 'ne', 'cy', 'va'];
 const PREVIEW_AVATAR_STYLES = ['adventurer', 'adventurer-neutral', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'pixel-art'];
 
 function getStoredPlayer() {
   try { return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null'); }
   catch { return null; }
+}
+
+function isShopAdmin() {
+  return String(shopPlayer?.role || '').toLowerCase() === 'admin';
+}
+
+function setPurchaseNotice(pack, message) {
+  recentPurchaseNotice.set(pack, { message, until: Date.now() + 3200 });
+  setTimeout(() => {
+    const notice = recentPurchaseNotice.get(pack);
+    if (notice && notice.until <= Date.now()) {
+      recentPurchaseNotice.delete(pack);
+      renderShop();
+      switchShopCategory(currentCategory);
+    }
+  }, 3300);
+}
+
+function getPurchaseNotice(pack) {
+  const notice = recentPurchaseNotice.get(pack);
+  if (!notice) return null;
+  if (notice.until <= Date.now()) {
+    recentPurchaseNotice.delete(pack);
+    return null;
+  }
+  return notice.message || 'Achat effectue';
 }
 
 function setStoredPlayer(player) {
@@ -974,7 +1001,7 @@ function setShopCurrency(currency) {
 
 function getCustomBoosterPrice(pack) {
   const currency = getShopCurrency();
-  if (pack === 'bot_host_1m') return Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
+  if (pack === 'bot_host_1m') return isShopAdmin() ? 0 : Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
   if (pack === 'limited_offer') {
     if (currency === 'crystals') return 0;
     return currency === 'gems'
@@ -1212,6 +1239,8 @@ function getStockQty(pack) {
 }
 
 function getButtonState(pack) {
+  const purchaseNotice = getPurchaseNotice(pack);
+  if (purchaseNotice) return { disabled: false, note: purchaseNotice, purchased: true };
   const price = getDisplayPrice(pack);
   const currency = getShopCurrency();
   const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : currency === 'crystals' ? Number(shopPlayer?.bot_crystals || 0) : Number(shopPlayer?.coins || 0);
@@ -1243,6 +1272,7 @@ function getButtonState(pack) {
     const stockNote = stock === null ? 'Stock libre' : `Stock ${stock}`;
     return { disabled: false, note: `${stockNote} · Inventaire ${inv}` };
   }
+  if (pack === 'bot_host_1m' && isShopAdmin()) return { disabled: false, note: 'Gratuit admin' };
   return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
 }
 
@@ -1694,7 +1724,7 @@ function renderCustomBoosterCard(pack) {
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
-          Acheter ${item.title}
+          ${btnState.purchased ? 'Achat effectué' : `Acheter ${item.title}`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
       </div>
@@ -1726,7 +1756,7 @@ function renderCard(pack) {
       <div class="stat-line ${item.theme}">
         <div class="stat-line-left">
           <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
-          <span>${item.type === 'host' ? `${price} Cristaux pour 1 mois` : getCardStatSub(item, pack)}</span>
+          <span>${item.type === 'host' ? (isShopAdmin() ? 'Gratuit admin pour 1 mois' : `${price} Cristaux pour 1 mois`) : getCardStatSub(item, pack)}</span>
         </div>
           ${renderPriceHtml(price)}
       </div>
@@ -1739,7 +1769,7 @@ function renderCard(pack) {
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
         <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
-          ${item.type === 'booster' ? `Acheter ${item.title}` : `Acheter ${item.title}`}
+          ${btnState.purchased ? 'Achat effectué' : `Acheter ${item.title}`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
       </div>
@@ -1920,7 +1950,8 @@ async function purchasePack(pack, giftTo = '') {
   const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
-  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} pour ${price} ${currencyLabel}${promoText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
+  const priceText = price === 0 ? 'gratuitement' : `pour ${price} ${currencyLabel}${promoText}`;
+  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
 
   const btn = document.getElementById(`buy-${pack}`);
   const btnInitialHtml = btn?.innerHTML || '';
@@ -1957,7 +1988,9 @@ async function purchasePack(pack, giftTo = '') {
       return;
     }
     purchaseOk = true;
-    if (btn) btn.innerHTML = giftTo ? 'Cadeau envoyé ✓' : 'Achat validé ✓';
+    const successText = giftTo ? 'Cadeau envoyé' : 'Achat effectué';
+    setPurchaseNotice(pack, `${successText} ✓`);
+    if (btn) btn.innerHTML = `${successText} ✓`;
     shopPlayer = data.player || shopPlayer;
     if (typeof data.gemsUnlocked !== 'undefined') shopGemsUnlocked = !!data.gemsUnlocked;
     if (typeof data.botHostEligible !== 'undefined') shopBotHostEligible = !!data.botHostEligible;
@@ -1971,7 +2004,7 @@ async function purchasePack(pack, giftTo = '') {
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
     setStoredPlayer(shopPlayer);
-    setCoinsUi(shopPlayer?.coins || 0, giftTo ? `Cadeau envoye a ${data.giftTo || giftTo}.` : item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : 'Achat valide avec succes.');
+    setCoinsUi(shopPlayer?.coins || 0, giftTo ? `Cadeau envoye a ${data.giftTo || giftTo}.` : item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : pack === 'bot_host_1m' && price === 0 ? 'Host admin active gratuitement.' : 'Achat effectue avec succes.');
   } catch (e) {
     alert('Erreur reseau.');
   } finally {
