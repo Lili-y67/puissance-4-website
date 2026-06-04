@@ -34,6 +34,7 @@ class GameManager {
       ? Number(options.moveTimeSeconds)
       : 60;
     const persisted = options.persist !== false;
+    const initialCurrent = Number(options.current) === 2 ? 2 : 1;
 
     const gameId = persisted
       ? gQ.create.run({
@@ -53,7 +54,7 @@ class GameManager {
       id: gameId,
       board: new Board(),
       players: { 1: p1, 2: p2 },
-      current: 1,
+      current: initialCurrent,
       startedAt: Date.now(),
       lastMoveAt: Date.now(),
       moveCount: 0,

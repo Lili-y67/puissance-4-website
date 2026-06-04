@@ -1471,7 +1471,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked') {
   const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
   assignDistinctMatchColors(p1, p2);
-  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
+  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
   io.to('live').emit('live_update');
   scheduleBuiltinBotTurn(state.id, 500);
   return state;
@@ -1487,9 +1487,10 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
   const p2 = buildBotGamePayload(targetBot, botSocketId(targetBot.id));
   assignDistinctMatchColors(p1, p2);
 
-  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60 });
+  const current = challengerIsBot && Math.random() < 0.5 ? 1 : 2;
+  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current });
   io.to('live').emit('live_update');
-  if (builtinBotIds.has(Number(p1.id))) scheduleBuiltinBotTurn(state.id, 500);
+  if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
 
@@ -2106,6 +2107,8 @@ ${code}
       P4_API_URL: baseUrl,
       P4_SITE_URL: baseUrl,
       P4_BOT_TOKEN: token,
+      P4_THREADS: String(Math.max(1, Math.min(2, Number(process.env.P4_HOST_THREADS || process.env.P4_THREADS || 1)))),
+      P4_MAX_THREADS: '2',
       P4_BOT_ID: String(id),
       BOT_ID: String(id),
       P4_BOT_NAME: String(bot.pseudo || 'Bot'),
@@ -7885,6 +7888,12 @@ io.on('connection', socket => {
       const { Board } = require('./game/Board');
       const board = new Board();
       moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
+      const firstMoveSide = moves[0]
+        ? (Number(gameRow.player1_id) === Number(moves[0].player_id) ? 1 : 2)
+        : 1;
+      const nextSide = moves.length % 2 === 0
+        ? firstMoveSide
+        : (firstMoveSide === 1 ? 2 : 1);
       const p1db = pQ.getById.get(gameRow.player1_id);
       const p2db = pQ.getById.get(gameRow.player2_id);
       const tournamentRow = gameRow.tournament_id ? tQ.getById.get(gameRow.tournament_id) : null;
@@ -7894,7 +7903,7 @@ io.on('connection', socket => {
           1: { ...sanitize(p1db), color: gameRow.p1_color || p1db.color || '#ff2d55', shape: gameRow.p1_shape || p1db.shape || 'circle', socketId: null },
           2: { ...sanitize(p2db), color: gameRow.p2_color || p2db.color || '#ffd60a', shape: gameRow.p2_shape || p2db.shape || 'circle', socketId: null },
         },
-        current: moves.length % 2 === 0 ? 1 : 2,
+        current: nextSide,
         startedAt: Date.now(), lastMoveAt: Date.now(),
         moveCount: moves.length, status: 'active',
         tournamentId: gameRow.tournament_id || null,
@@ -8169,6 +8178,7 @@ function buildDiscordBotContext() {
     syncPlayerDiscordRankRole,
     syncOnlineDiscordConnectedRoles,
     getPresenceCounts,
+    publicBotRuntime,
     getBoostDisplayName,
     gm,
     mm,

@@ -6,15 +6,24 @@ const {
   Routes,
   ButtonBuilder,
   ButtonStyle,
+  AttachmentBuilder,
   ActionRowBuilder,
+  ChannelType,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
   ContainerBuilder,
   TextDisplayBuilder,
   SeparatorBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   MessageFlags,
+  PermissionsBitField,
 } = require('discord.js');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const { getAllRankRoleNames, RANKS } = require('./rank');
 
 const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
@@ -22,6 +31,9 @@ const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
 const CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const GIVEAWAY_MINUTES_MAX = 10080;
+const TICKET_CATEGORY_ID = process.env.DISCORD_TICKET_CATEGORY_ID || '';
+const TICKET_SUPPORT_ROLE_ID = process.env.DISCORD_TICKET_SUPPORT_ROLE_ID || '';
+const TICKET_TRANSCRIPT_CHANNEL_ID = process.env.DISCORD_TICKET_TRANSCRIPT_CHANNEL_ID || '';
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
   'admin-player': 'player',
@@ -80,6 +92,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       { type: 3, name: 'recompense', description: 'coins, gems ou code item boutique', required: true },
       { type: 4, name: 'quantite', description: 'Quantite ou montant', required: false },
     ] },
+    { name: 'ticket-setup', description: 'Installer le panneau de tickets Puissance 4', default_member_permissions: '16' },
     { name: 'tournois', description: 'Lister les tournois officiels' },
     { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne', required: true }] },
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
@@ -805,7 +818,9 @@ function startDiscordBot(ctx) {
 
   function profileBotSummary(player) {
     if (Number(player?.is_bot || 0) !== 1) return '';
-    const runtime = publicBotRuntime(player.id);
+    const runtime = typeof ctx.publicBotRuntime === 'function'
+      ? ctx.publicBotRuntime(player.id)
+      : { online: false, status: 'offline', lastSeen: 0 };
     const owner = player.bot_owner_id ? code(player.bot_owner_id) : '`NONE`';
     const online = runtime.online ? 'En ligne' : 'Hors ligne';
     const suspended = Number(player.bot_enabled || 0) === 1 ? 'Non' : 'Oui';
@@ -1675,6 +1690,347 @@ function startDiscordBot(ctx) {
     await interaction.update({ content, components: [] }).catch(() => {});
   }
 
+  const ticketTypes = {
+    bug: {
+      label: 'Signaler un bug',
+      emoji: '⚙️',
+      color: 0x85ebff,
+      title: 'Ticket bug',
+      channel: 'bug',
+      intro: 'Decris le bug, la page concernee et ce que tu faisais juste avant.',
+      fields: [
+        ['page', 'Page concernee', 'Ex: /game, /live, /profil...', true, TextInputStyle.Short, 3, 120],
+        ['details', 'Description du bug', 'Explique le probleme avec un maximum de details.', true, TextInputStyle.Paragraph, 20, 1200],
+      ],
+    },
+    report: {
+      label: 'Report joueur',
+      emoji: '🚨',
+      color: 0xff2d55,
+      title: 'Ticket report',
+      channel: 'report',
+      intro: 'Indique le joueur, le contexte et les preuves disponibles.',
+      fields: [
+        ['player', 'Joueur concerne', 'Pseudo ou ID du joueur', true, TextInputStyle.Short, 2, 80],
+        ['reason', 'Motif du report', 'Triche, insultes, comportement...', true, TextInputStyle.Paragraph, 20, 1200],
+      ],
+    },
+    host: {
+      label: 'Aide host bot',
+      emoji: '🤖',
+      color: 0x30d158,
+      title: 'Ticket host bot',
+      channel: 'host',
+      intro: 'Pour les soucis de bot API, hosting, token ou logs.',
+      fields: [
+        ['bot', 'Bot concerne', 'Pseudo ou ID du bot', true, TextInputStyle.Short, 1, 80],
+        ['logs', 'Logs / probleme', 'Colle les logs utiles ou explique le comportement.', true, TextInputStyle.Paragraph, 10, 1400],
+      ],
+    },
+    purchase: {
+      label: 'Boutique / achat',
+      emoji: '🛒',
+      color: 0xffd60a,
+      title: 'Ticket boutique',
+      channel: 'shop',
+      intro: 'Pour les achats, Cristaux, gemmes, boosters et roles.',
+      fields: [
+        ['item', 'Achat ou item concerne', 'Ex: Host Bot 1 mois, VIP, booster...', true, TextInputStyle.Short, 2, 100],
+        ['details', 'Details de la demande', 'Explique ce qui manque ou ce qui semble incorrect.', true, TextInputStyle.Paragraph, 10, 1200],
+      ],
+    },
+    other: {
+      label: 'Autre demande',
+      emoji: '❔',
+      color: 0x9b7cff,
+      title: 'Autre demande',
+      channel: 'ticket',
+      intro: 'Pour toute demande qui ne rentre pas dans une categorie precise.',
+      fields: [
+        ['subject', 'Sujet', 'Resume rapide de la demande', true, TextInputStyle.Short, 3, 100],
+        ['details', 'Message', 'Explique ta demande.', true, TextInputStyle.Paragraph, 10, 1200],
+      ],
+    },
+  };
+
+  function ticketPanelPayload(guildName = 'Puissance 4') {
+    const container = new ContainerBuilder()
+      .setAccentColor(0xff2d55)
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+        `## Support ${guildName}\nChoisis une categorie pour ouvrir un ticket prive avec le staff.`
+      ))
+      .addSeparatorComponents(new SeparatorBuilder())
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+        [
+          '**Bug**: probleme sur le site ou une page.',
+          '**Report**: signalement joueur.',
+          '**Host bot**: aide API, token, code ou logs.',
+          '**Boutique**: achat, Cristaux, gemmes, boosters.',
+          '**Autre**: demande generale.',
+        ].join('\n')
+      ));
+    const row = new ActionRowBuilder().addComponents(
+      Object.entries(ticketTypes).map(([key, type]) => new ButtonBuilder()
+        .setCustomId(`p4_ticket_open:${key}`)
+        .setLabel(type.label)
+        .setEmoji(type.emoji)
+        .setStyle(key === 'report' ? ButtonStyle.Danger : key === 'host' ? ButtonStyle.Success : ButtonStyle.Secondary))
+    );
+    return { flags: MessageFlags.IsComponentsV2, components: [container, row] };
+  }
+
+  function ticketModal(typeKey) {
+    const type = ticketTypes[typeKey] || ticketTypes.other;
+    const modal = new ModalBuilder()
+      .setCustomId(`p4_ticket_modal:${typeKey}`)
+      .setTitle(type.title.slice(0, 45));
+    for (const [id, label, placeholder, required, style, min, max] of type.fields) {
+      modal.addComponents(new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId(id)
+          .setLabel(label.slice(0, 45))
+          .setPlaceholder(placeholder.slice(0, 100))
+          .setRequired(required)
+          .setStyle(style)
+          .setMinLength(min)
+          .setMaxLength(max)
+      ));
+    }
+    return modal;
+  }
+
+  function ticketTopic(userId, typeKey) {
+    return `p4-ticket:${userId}:${typeKey}`;
+  }
+
+  function parseTicketTopic(channel) {
+    const match = String(channel?.topic || '').match(/^p4-ticket:(\d+):([a-z0-9_-]+)/);
+    return match ? { userId: match[1], typeKey: match[2] } : null;
+  }
+
+  function sanitizeTicketName(value) {
+    return String(value || 'ticket')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'ticket';
+  }
+
+  function isTicketStaff(interaction) {
+    if (interaction.memberPermissions?.has?.(PermissionsBitField.Flags.ManageChannels)) return true;
+    return Boolean(TICKET_SUPPORT_ROLE_ID && interaction.member?.roles?.cache?.has?.(TICKET_SUPPORT_ROLE_ID));
+  }
+
+  async function findOpenTicket(guild, userId) {
+    const channels = await guild.channels.fetch().catch(() => null);
+    if (!channels) return null;
+    return channels.find(channel =>
+      channel?.type === ChannelType.GuildText &&
+      String(channel.topic || '').startsWith(`p4-ticket:${userId}:`)
+    ) || null;
+  }
+
+  function ticketActions(closed = false) {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(closed ? 'p4_ticket_reopen' : 'p4_ticket_close')
+        .setLabel(closed ? 'Rouvrir' : 'Fermer')
+        .setEmoji(closed ? '🔓' : '🔒')
+        .setStyle(closed ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId('p4_ticket_delete_panel')
+        .setLabel('Supprimer')
+        .setEmoji('🗑️')
+        .setStyle(ButtonStyle.Danger)
+    );
+  }
+
+  function deleteTranscriptChoices() {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('p4_ticket_transcript_member').setLabel('Transcript staff + membre').setEmoji('📑').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('p4_ticket_transcript_staff').setLabel('Transcript staff').setEmoji('📂').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('p4_ticket_transcript_none').setLabel('Aucun transcript').setEmoji('📤').setStyle(ButtonStyle.Danger)
+    );
+  }
+
+  async function handleTicketSetup(interaction) {
+    const staff = await requireDiscordAdmin(interaction);
+    if (!staff) return;
+    await interaction.channel.send(ticketPanelPayload(interaction.guild?.name || 'Puissance 4'));
+    return interaction.editReply(containerMessage({
+      color: 0x30d158,
+      title: 'Panneau ticket publie',
+      subtitle: 'Les membres peuvent maintenant ouvrir un ticket depuis ce salon.',
+    }));
+  }
+
+  async function handleTicketModal(interaction, typeKey) {
+    const type = ticketTypes[typeKey] || ticketTypes.other;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const existing = await findOpenTicket(interaction.guild, interaction.user.id);
+    if (existing) {
+      return interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Ticket deja ouvert',
+        subtitle: `Tu as deja un ticket: <#${existing.id}>`,
+      }));
+    }
+    const overwrites = [
+      { id: interaction.guild.roles.everyone.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+      {
+        id: interaction.user.id,
+        allow: [
+          PermissionsBitField.Flags.ViewChannel,
+          PermissionsBitField.Flags.SendMessages,
+          PermissionsBitField.Flags.ReadMessageHistory,
+          PermissionsBitField.Flags.AttachFiles,
+          PermissionsBitField.Flags.EmbedLinks,
+        ],
+      },
+    ];
+    if (TICKET_SUPPORT_ROLE_ID) {
+      overwrites.push({
+        id: TICKET_SUPPORT_ROLE_ID,
+        allow: [
+          PermissionsBitField.Flags.ViewChannel,
+          PermissionsBitField.Flags.SendMessages,
+          PermissionsBitField.Flags.ReadMessageHistory,
+          PermissionsBitField.Flags.ManageMessages,
+        ],
+      });
+    }
+    const name = `${type.channel}-${sanitizeTicketName(interaction.user.username)}`;
+    const channel = await interaction.guild.channels.create({
+      name,
+      type: ChannelType.GuildText,
+      parent: TICKET_CATEGORY_ID || interaction.channel?.parentId || undefined,
+      topic: ticketTopic(interaction.user.id, typeKey),
+      permissionOverwrites: overwrites,
+      reason: `Ticket ${type.title} ouvert par ${interaction.user.tag}`,
+    });
+    const fieldLines = type.fields.map(([id, label]) => {
+      const value = interaction.fields.getTextInputValue(id);
+      return `**${label}:**\n${truncate(value, 1500)}`;
+    });
+    const mentionLine = `${TICKET_SUPPORT_ROLE_ID ? `<@&${TICKET_SUPPORT_ROLE_ID}> ` : ''}<@${interaction.user.id}>`;
+    const container = new ContainerBuilder()
+      .setAccentColor(type.color)
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(
+        `## ${type.emoji} ${type.title}\n${mentionLine}\n${type.intro}`
+      ))
+      .addSeparatorComponents(new SeparatorBuilder())
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(fieldLines.join('\n\n').slice(0, 4000)));
+    await channel.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [container, ticketActions(false)],
+    });
+    return interaction.editReply(containerMessage({
+      color: type.color,
+      title: 'Ticket cree',
+      subtitle: `Ton ticket est ouvert: <#${channel.id}>`,
+    }));
+  }
+
+  async function handleTicketButton(interaction) {
+    if (interaction.customId.startsWith('p4_ticket_open:')) {
+      const typeKey = interaction.customId.split(':')[1] || 'other';
+      return interaction.showModal(ticketModal(typeKey));
+    }
+    const info = parseTicketTopic(interaction.channel);
+    if (!info) return interaction.reply({ content: 'Ce salon ne semble pas etre un ticket Puissance 4.', flags: MessageFlags.Ephemeral });
+    const isOwner = info.userId === interaction.user.id;
+    const isStaff = isTicketStaff(interaction);
+    if (!isOwner && !isStaff) return interaction.reply({ content: 'Tu ne peux pas gerer ce ticket.', flags: MessageFlags.Ephemeral });
+
+    if (interaction.customId === 'p4_ticket_close') {
+      await interaction.channel.permissionOverwrites.edit(info.userId, { SendMessages: false }).catch(() => null);
+      return interaction.reply({
+        content: `🔒 Ticket ferme par <@${interaction.user.id}>.`,
+        components: [ticketActions(true)],
+      });
+    }
+    if (interaction.customId === 'p4_ticket_reopen') {
+      await interaction.channel.permissionOverwrites.edit(info.userId, { SendMessages: true }).catch(() => null);
+      return interaction.reply({
+        content: `🔓 Ticket rouvert par <@${interaction.user.id}>.`,
+        components: [ticketActions(false)],
+      });
+    }
+    if (interaction.customId === 'p4_ticket_delete_panel') {
+      return interaction.reply({
+        content: 'Choisis si un transcript doit etre genere avant suppression. Le ticket sera supprime 30 secondes apres le choix.',
+        components: [deleteTranscriptChoices()],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    if (interaction.customId.startsWith('p4_ticket_transcript_')) {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const mode = interaction.customId.replace('p4_ticket_transcript_', '');
+      if (mode !== 'none') await sendTicketTranscript(interaction.channel, info.userId, mode === 'member');
+      else await interaction.channel.send('📤 Aucun transcript ne sera genere.').catch(() => null);
+      await interaction.editReply({ content: 'Suppression programmee dans 30 secondes.' }).catch(() => null);
+      setTimeout(() => interaction.channel.delete('Ticket Puissance 4 termine').catch(() => null), 30000);
+    }
+  }
+
+  async function sendTicketTranscript(channel, userId, sendToMember) {
+    const transcriptPath = await createTicketTranscriptFile(channel);
+    try {
+      const file = new AttachmentBuilder(transcriptPath, { name: `transcript-${channel.name}.html` });
+      const targetChannel = TICKET_TRANSCRIPT_CHANNEL_ID
+        ? await channel.guild.channels.fetch(TICKET_TRANSCRIPT_CHANNEL_ID).catch(() => null)
+        : channel;
+      const message = await (targetChannel?.isTextBased?.() ? targetChannel : channel).send({
+        content: `📄 Transcript du ticket ${channel.name}`,
+        files: [file],
+      });
+      const url = message.attachments.first()?.url || '';
+      await channel.send(url ? `📄 Transcript genere: ${url}` : '📄 Transcript genere.').catch(() => null);
+      if (sendToMember && url) {
+        const member = await channel.guild.members.fetch(userId).catch(() => null);
+        await member?.send?.(`📑 Transcript de ton ticket sur ${channel.guild.name}: ${url}`).catch(() => null);
+      }
+    } finally {
+      fs.unlinkSync(transcriptPath);
+    }
+  }
+
+  async function createTicketTranscriptFile(channel) {
+    const messages = [];
+    let before;
+    while (true) {
+      const batch = await channel.messages.fetch({ limit: 100, before });
+      if (!batch.size) break;
+      messages.push(...batch.values());
+      before = batch.last().id;
+      if (batch.size < 100) break;
+    }
+    messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    const html = renderTicketTranscript(channel, messages);
+    const filePath = path.join(os.tmpdir(), `p4-transcript-${channel.id}-${Date.now()}.html`);
+    fs.writeFileSync(filePath, html, 'utf8');
+    return filePath;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderTicketTranscript(channel, messages) {
+    const rows = messages.map(message => {
+      const attachments = [...message.attachments.values()].map(file => `<a href="${escapeHtml(file.url)}">${escapeHtml(file.name || file.url)}</a>`).join('<br>');
+      const embeds = message.embeds.length ? `<div class="embed">${message.embeds.length} embed(s)</div>` : '';
+      return `<article class="msg"><img src="${escapeHtml(message.author.displayAvatarURL?.({ size: 64 }) || '')}" alt=""><div><header><strong>${escapeHtml(message.author.tag || message.author.username)}</strong><span>${new Date(message.createdTimestamp).toLocaleString('fr-FR')}</span></header><p>${escapeHtml(message.content || '').replace(/\n/g, '<br>') || '<em>Sans texte</em>'}</p>${attachments ? `<div class="files">${attachments}</div>` : ''}${embeds}</div></article>`;
+    }).join('\n');
+    return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Transcript ${escapeHtml(channel.name)}</title><style>body{margin:0;background:#080910;color:#f4f7fb;font:15px system-ui,Segoe UI,sans-serif}.wrap{width:min(980px,calc(100% - 28px));margin:auto;padding:32px 0}h1{margin:0 0 8px}.meta{color:#9aa4b2;margin-bottom:22px}.msg{display:grid;grid-template-columns:46px 1fr;gap:12px;margin:12px 0;padding:14px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:#10131d}.msg img{width:46px;height:46px;border-radius:12px}.msg header{display:flex;gap:10px;flex-wrap:wrap}.msg header span,.files,.embed{color:#9aa4b2}.msg p{margin:6px 0 0;line-height:1.5}.files,.embed{margin-top:8px}.files a{color:#66d9ef}</style></head><body><main class="wrap"><h1>Transcript du ticket</h1><div class="meta">${escapeHtml(channel.name)} | ${messages.length} message(s) | genere le ${new Date().toLocaleString('fr-FR')}</div>${rows || '<p>Aucun message.</p>'}</main></body></html>`;
+  }
+
   bot.once('clientReady', async () => {
     console.log(`[BOT] Bot connecte : ${bot.user.tag}`);
     try {
@@ -1704,6 +2060,12 @@ function startDiscordBot(ctx) {
       }
       if (interaction.isButton?.() && interaction.customId.startsWith('p4_drop_claim:')) {
         return handleDropButton(interaction, interaction.customId.split(':')[1]);
+      }
+      if (interaction.isButton?.() && interaction.customId.startsWith('p4_ticket_')) {
+        return handleTicketButton(interaction);
+      }
+      if (interaction.isModalSubmit?.() && interaction.customId.startsWith('p4_ticket_modal:')) {
+        return handleTicketModal(interaction, interaction.customId.split(':')[1] || 'other');
       }
       if (!interaction.isChatInputCommand()) return;
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -1751,6 +2113,7 @@ function startDiscordBot(ctx) {
       }
       if (interaction.commandName === 'giveaway') return handleGiveaway(interaction);
       if (interaction.commandName === 'drop') return handleDrop(interaction);
+      if (interaction.commandName === 'ticket-setup') return handleTicketSetup(interaction);
       if (interaction.commandName === 'tournois') return interaction.editReply(tournamentsPayload());
       if (interaction.commandName === 'tournoi') {
         const payload = tournamentPayload(interaction.options.getString('id', true));

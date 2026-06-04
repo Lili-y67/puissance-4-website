@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.2.0 | Puissance 4 Ranked</title>
+<title>News 3.3.0 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -76,13 +76,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.2.0</span></h1>
-      <p>Grosse passe profil et ecosysteme: police en vraie fenetre, raretes cosmetiques, courbe ELO RGB Perso, API enrichie et fiche Discord plus complete.</p>
-      <div class="hero-actions"><a class="btn-main" href="/profil">Configurer le profil</a><a class="btn-ghost" href="/api-doc">Lire l'API</a></div>
+      <h1>Mise a jour <span>3.3.0</span></h1>
+      <p>Patch de stabilite autour du hosting bot, de la boutique, du live et de la documentation API. Moins de copier-coller, moins de decallage, plus de retours visibles.</p>
+      <div class="hero-actions"><a class="btn-main" href="/profil">Panel host bot</a><a class="btn-ghost" href="/api-doc">Lire l'API</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.2.0</div><h2>Profil vivant</h2><p>Les cosmetiques deviennent plus lisibles, plus propres sur mobile et mieux branches a l'API.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>3 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Profil</strong></div><div class="meta-box"><span>Type</span><strong>UX/API</strong></div></div>
+      <div><div class="version-orb">3.3.0</div><h2>Host stable</h2><p>Le panel host accepte mieux le code bot reel, les admins hostent gratuitement et le live gagne en fluidite.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>4 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Host</strong></div><div class="meta-box"><span>Type</span><strong>Stabilite</strong></div></div>
     </aside>
   </section>
 
@@ -92,39 +92,39 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Fenetre de police revue comme les decorations avatar.</div>
-          <div class="news-bubble"><span>&#10022;</span>Filtres de polices par rarete: commun, rare, epique, legendaire, mythique.</div>
-          <div class="news-bubble"><span>&#10022;</span>Encadres colores selon la rarete sur les polices et decorations.</div>
-          <div class="news-bubble"><span>&#10022;</span>Courbe ELO avec couleur, degrade et animation RGB reservee Perso.</div>
-          <div class="news-bubble"><span>&#10022;</span>Fiche Discord /ui enrichie avec stats, rang, economie et cosmetiques.</div>
-          <div class="news-bubble"><span>&#10022;</span>Documentation API completee avec les derniers endpoints profil.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le panel host bot peut importer un fichier JS directement.</div>
+          <div class="news-bubble"><span>&#10022;</span>Les admins peuvent activer un host bot sans payer de Cristaux.</div>
+          <div class="news-bubble"><span>&#10022;</span>La boutique affiche maintenant un retour Achat effectue apres validation.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le live a une grille plus stable et moins de repop visuel au refresh.</div>
+          <div class="news-bubble"><span>&#10022;</span>La page game utilise un plateau fluide cale sur son conteneur.</div>
+          <div class="news-bubble"><span>&#10022;</span>La documentation API recoit une nouvelle presentation plus lisible.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
         <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Responsive mobile repasse sur les fenetres profil recentes.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le selecteur de police est moins transparent et scroll toute la fenetre.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le menu version affiche maintenant la branche 3.2.0.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les admins conservent les acces complets aux outils de hosting bot.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le panel profil garde les infos utiles sans doubler les sections Discord.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les donnees API exposent mieux les styles pseudo et courbe ELO.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le code host retire automatiquement le shebang quand il est execute dans le wrapper serveur.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le host injecte aussi P4_API_URL pour les clients bot officiels.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le bouton Choisir un fichier remplit la zone de code puis transfere automatiquement.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les prix host affichent Gratuit admin quand le joueur est administrateur.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les cartes live ne rejouent plus leur animation a chaque refresh.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les boutons de colonnes de game suivent maintenant exactement la largeur du plateau.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>La fenetre police n'est plus cachee par les blocs du profil.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le rendu telephone evite mieux les cartes trop serrees.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le bouton courbe enregistre aussi l'etat RGB.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le canvas ELO repasse en statique quand RGB est desactive.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les infos Discord restent plus lisibles avec permissions en flags.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction du SyntaxError host quand un bot commence par #!/usr/bin/env node.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction des faux blocages de Cristaux pour les admins.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction du message achat qui disparaissait apres le rerender boutique.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction des debordements possibles sur les plateaux live et game.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction des etats vides live coinces dans une seule colonne.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.2.0: profil plus propre, raretes cosmetiques visibles, courbe RGB Perso, API documentee et fiche Discord enrichie.</div>
+  <div class="footer-note">Version 3.3.0: hosting bot plus robuste, import de fichier JS, admins sans restriction de Cristaux, boutique plus claire, live/game plus fluides et API doc rafraichie.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

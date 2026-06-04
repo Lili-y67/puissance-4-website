@@ -11,7 +11,7 @@
  *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_DEPTH=10 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_MAX_TABLE=350000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_THREADS=4 P4_DEPTH=12 P4_THINK_MS=45000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_THREADS=2 P4_DEPTH=12 P4_THINK_MS=45000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally safe but competitive:
  * - pings the site so the bot appears online
@@ -42,9 +42,11 @@ const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS |
 const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
 const MAX_CONCURRENT_GAMES = 1;
 const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 350000));
+const MAX_SEARCH_THREADS = Math.max(1, Math.min(2, Number(process.env.P4_MAX_THREADS || 2)));
 const SEARCH_THREADS = Math.max(1, Math.min(
+  MAX_SEARCH_THREADS,
   Math.max(1, os.cpus().length - 1),
-  Number(process.env.P4_THREADS || 3)
+  Number(process.env.P4_THREADS || 1)
 ));
 const LOG_SEARCH = process.env.P4_LOG_SEARCH !== '0';
 const USE_COLOR = process.env.P4_COLOR !== '0' && process.stdout.isTTY;
