@@ -5704,6 +5704,8 @@ function renderBotHostPanel(data = {}) {
             </div>
             <textarea id="bot-host-code-${Number(bot.id)}" class="search-input" style="width:100%;max-width:none;min-height:120px;margin:12px 0 8px;font-family:Consolas,monospace;font-size:12px;text-transform:none;letter-spacing:0" placeholder="// Code execute sur le serveur avec P4_BASE_URL et P4_BOT_TOKEN&#10;setInterval(async () => {&#10;  await fetch(P4_BASE_URL + '/api/bot/ping?status=hosted', { method:'POST', headers:{ Authorization:'Bearer ' + P4_BOT_TOKEN } });&#10;}, 15000);"></textarea>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <input id="bot-host-file-${Number(bot.id)}" type="file" accept=".js,.cjs,.mjs,text/javascript,application/javascript" style="display:none" onchange="importBotHostCodeFile(${Number(bot.id)}, this)">
+              <button class="btn-save-color" id="bot-host-file-btn-${Number(bot.id)}" onclick="document.getElementById('bot-host-file-${Number(bot.id)}')?.click()" ${!active ? 'disabled' : ''} style="background:rgba(133,235,255,.08);border-color:rgba(133,235,255,.28);color:#85EBFF">Choisir un fichier</button>
               <button class="btn-save-color" id="bot-host-transfer-${Number(bot.id)}" onclick="saveBotHostCode(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Transférer le code</button>
               <button class="btn-save-color" onclick="loadBotHostLogs(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--text)">Logs</button>
             </div>
@@ -5764,6 +5766,39 @@ async function saveBotHostCode(botId) {
           if (freshBtn.textContent === 'Transfert...') freshBtn.textContent = previous;
         }
       }, 250);
+    }
+  }
+}
+
+async function importBotHostCodeFile(botId, input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const fileBtn = document.getElementById(`bot-host-file-btn-${botId}`);
+  const previous = fileBtn?.textContent || 'Choisir un fichier';
+  try {
+    if (file.size > 256 * 1024) {
+      alert('Fichier trop lourd pour ce panel.');
+      return;
+    }
+    if (fileBtn) {
+      fileBtn.disabled = true;
+      fileBtn.textContent = 'Lecture...';
+    }
+    const code = await file.text();
+    const area = document.getElementById(`bot-host-code-${botId}`);
+    if (area) area.value = code;
+    if (fileBtn) fileBtn.textContent = 'Fichier charge';
+    await saveBotHostCode(botId);
+  } catch (e) {
+    alert('Impossible de lire ce fichier.');
+  } finally {
+    if (input) input.value = '';
+    if (fileBtn) {
+      fileBtn.disabled = false;
+      setTimeout(() => {
+        const freshBtn = document.getElementById(`bot-host-file-btn-${botId}`);
+        if (freshBtn) freshBtn.textContent = previous;
+      }, 1200);
     }
   }
 }

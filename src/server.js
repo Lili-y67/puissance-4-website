@@ -2025,6 +2025,12 @@ function botHostWorkDir(botId) {
   return path.join(dir, `bot-${Number(botId || 0)}.js`);
 }
 
+function normalizeBotHostCode(code) {
+  return String(code || '')
+    .replace(/^\uFEFF/, '')
+    .replace(/^\s*#![^\r\n]*(?:\r?\n|$)/, '');
+}
+
 function getBotHostRuntime(botId) {
   const child = botHostProcesses.get(Number(botId || 0));
   return child && !child.killed ? child : null;
@@ -2065,7 +2071,7 @@ function startBotHostProcess(bot, host, action = 'start') {
   if (!id) throw new Error('Bot invalide.');
   if (Number(bot.bot_enabled || 0) !== 1) throw new Error('Bot suspendu par le staff.');
   if (!host || Number(host.expires_at || 0) <= Date.now()) throw new Error('Host inactif ou expire.');
-  const code = String(host.code || '');
+  const code = normalizeBotHostCode(host.code);
   if (!code.trim()) throw new Error('Aucun code host envoye.');
   if (getBotHostRuntime(id)) {
     if (action !== 'restart') throw new Error('Host deja demarre.');
@@ -2081,6 +2087,7 @@ process.env.BOT_ID = ${JSON.stringify(String(id))};
 process.env.P4_BOT_NAME = ${JSON.stringify(String(bot.pseudo || 'Bot'))};
 globalThis.P4_BOT_ID = ${JSON.stringify(String(id))};
 globalThis.P4_BASE_URL = process.env.P4_BASE_URL;
+globalThis.P4_API_URL = process.env.P4_API_URL;
 globalThis.P4_BOT_TOKEN = process.env.P4_BOT_TOKEN;
 process.on('unhandledRejection', err => { console.error('[unhandledRejection]', err && err.stack || err); });
 process.on('uncaughtException', err => { console.error('[uncaughtException]', err && err.stack || err); process.exitCode = 1; });
@@ -2096,6 +2103,7 @@ ${code}
     env: {
       ...process.env,
       P4_BASE_URL: baseUrl,
+      P4_API_URL: baseUrl,
       P4_SITE_URL: baseUrl,
       P4_BOT_TOKEN: token,
       P4_BOT_ID: String(id),
