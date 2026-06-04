@@ -2255,6 +2255,25 @@ function render(player, games, following, followers, followStatus, tournaments =
           ${isPerso(player) || isAdminTier(player) ? `<label class="toggle-wrap" style="min-height:44px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)">
             <input type="checkbox" id="elo-curve-rgb-input" ${Number(player.elo_curve_rgb || 0) === 1 ? 'checked' : ''}>
             <span class="toggle-text"><strong>RGB Perso</strong><small>Vague animée sur la courbe</small></span>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;min-width:116px">
+            <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Vitesse</span>
+            <select id="elo-curve-rgb-speed-input" style="height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--text);padding:0 10px;font-family:'Barlow Condensed',sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">
+              ${[
+                [0.5, 'Lente'],
+                [1, 'Normale'],
+                [1.5, 'Rapide'],
+                [2, 'Tres rapide'],
+                [3, 'Flash'],
+              ].map(([value, label]) => `<option value="${value}" ${Math.abs(Number(player.elo_curve_rgb_speed || 1) - value) < 0.01 ? 'selected' : ''}>${label}</option>`).join('')}
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;min-width:112px">
+            <span style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Sens</span>
+            <select id="elo-curve-rgb-direction-input" style="height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--text);padding:0 10px;font-family:'Barlow Condensed',sans-serif;font-weight:800;letter-spacing:1px;text-transform:uppercase">
+              <option value="forward" ${String(player.elo_curve_rgb_direction || 'forward') !== 'reverse' ? 'selected' : ''}>Avant</option>
+              <option value="reverse" ${String(player.elo_curve_rgb_direction || 'forward') === 'reverse' ? 'selected' : ''}>Arriere</option>
+            </select>
           </label>` : ''}
           <button class="btn-save-color" type="button" id="btn-save-elo-curve" onclick="saveEloCurveStyle()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">🎨 Appliquer</button>
         </div>
@@ -3036,8 +3055,13 @@ function drawEloHistory(data, animationFrameOnly = false) {
     ? String(data?.player?.elo_curve_color_secondary || currentPlayer?.elo_curve_color_secondary).toUpperCase()
     : '#85EBFF';
   const rgbEnabled = Number(data?.player?.elo_curve_rgb ?? currentPlayer?.elo_curve_rgb ?? 0) === 1;
-  const rgbHue = (Date.now() / 34) % 360;
-  const rgbColor = (offset = 0, alpha = 1) => `hsla(${Math.round((rgbHue + offset) % 360)}, 96%, 64%, ${alpha})`;
+  const rgbSpeed = Math.max(0.25, Math.min(4, Number(data?.player?.elo_curve_rgb_speed ?? currentPlayer?.elo_curve_rgb_speed ?? 1) || 1));
+  const rgbDirection = String(data?.player?.elo_curve_rgb_direction ?? currentPlayer?.elo_curve_rgb_direction ?? 'forward') === 'reverse' ? -1 : 1;
+  const rgbHue = ((Date.now() / 34) * rgbSpeed * rgbDirection) % 360;
+  const rgbColor = (offset = 0, alpha = 1) => {
+    const hue = ((rgbHue + offset) % 360 + 360) % 360;
+    return `hsla(${Math.round(hue)}, 96%, 64%, ${alpha})`;
+  };
   const lineColorA = rgbEnabled ? rgbColor(0) : curveColor;
   const lineColorB = rgbEnabled ? rgbColor(126) : curveColorSecondary;
   const lineColorC = rgbEnabled ? rgbColor(252) : '#ffd60a';
@@ -5709,12 +5733,99 @@ function renderBotHostPanel(data = {}) {
               <button class="btn-save-color" id="bot-host-transfer-${Number(bot.id)}" onclick="saveBotHostCode(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Transférer le code</button>
               <button class="btn-save-color" onclick="loadBotHostLogs(${Number(bot.id)})" ${!active ? 'disabled' : ''} style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.10);color:var(--text)">Logs</button>
             </div>
+            <div id="bot-host-budget-${Number(bot.id)}" style="margin-top:10px;padding:12px;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.07)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                <div style="font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:900;letter-spacing:1px;text-transform:uppercase">Budget host</div>
+                <div id="bot-host-metric-line-${Number(bot.id)}" style="font-size:11px;color:var(--muted)">CPU - · RAM - · Reseau -</div>
+              </div>
+              <canvas id="bot-host-chart-${Number(bot.id)}" width="620" height="130" style="display:block;width:100%;height:130px;border-radius:10px;background:rgba(255,255,255,.025)"></canvas>
+            </div>
             <pre id="bot-host-logs-${Number(bot.id)}" style="display:none;margin-top:10px;max-height:220px;overflow:auto;padding:12px;border-radius:12px;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--muted);white-space:pre-wrap"></pre>
           </div>
         `;
       }).join('')}
     </div>
   `;
+  setTimeout(() => bots.forEach(bot => loadBotHostMetrics(Number(bot.id))), 0);
+}
+
+function formatHostMetricValue(value, unit, digits = 0) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n) || n <= 0) return `0 ${unit}`;
+  return `${n.toFixed(digits)} ${unit}`;
+}
+
+function drawHostMetricChart(botId, metrics = [], limits = {}) {
+  const canvas = document.getElementById(`bot-host-chart-${botId}`);
+  const line = document.getElementById(`bot-host-metric-line-${botId}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(255,255,255,.025)';
+  ctx.fillRect(0, 0, w, h);
+  const rows = Array.isArray(metrics) ? metrics.slice(-80) : [];
+  if (!rows.length) {
+    ctx.fillStyle = 'rgba(255,255,255,.45)';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.fillText('Aucune mesure encore. Les courbes arrivent apres le demarrage du host.', 16, 68);
+    if (line) line.textContent = 'CPU - · RAM - · Reseau -';
+    return;
+  }
+  const latest = rows[rows.length - 1];
+  if (line) {
+    line.textContent = `CPU ${formatHostMetricValue(latest.cpuPct, '%', 1)} · RAM ${formatHostMetricValue(latest.rssMb, 'MB', 1)} · Reseau ${formatHostMetricValue(latest.netKb, 'KB', 1)}`;
+  }
+  const pad = 14;
+  const graphW = w - pad * 2;
+  const graphH = h - pad * 2;
+  ctx.strokeStyle = 'rgba(255,255,255,.07)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const y = pad + (graphH / 3) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad, y);
+    ctx.lineTo(w - pad, y);
+    ctx.stroke();
+  }
+  const series = [
+    { key: 'cpuPct', color: '#ff6b81', max: Math.max(100, ...rows.map(r => Number(r.cpuPct || 0))) },
+    { key: 'rssMb', color: '#85ebff', max: Math.max(Number(limits.maxRssMb || 128), ...rows.map(r => Number(r.rssMb || 0))) },
+    { key: 'netKb', color: '#ffd60a', max: Math.max(16, ...rows.map(r => Number(r.netKb || 0))) },
+  ];
+  for (const s of series) {
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    rows.forEach((r, i) => {
+      const x = pad + (rows.length === 1 ? graphW : (i / (rows.length - 1)) * graphW);
+      const y = pad + graphH - Math.min(1, Number(r[s.key] || 0) / s.max) * graphH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.fillStyle = '#ff6b81';
+  ctx.fillText('CPU', pad, 15);
+  ctx.fillStyle = '#85ebff';
+  ctx.fillText('RAM', pad + 42, 15);
+  ctx.fillStyle = '#ffd60a';
+  ctx.fillText('NET', pad + 84, 15);
+}
+
+async function loadBotHostMetrics(botId) {
+  const token = getStoredSessionToken();
+  if (!token || !botId) return;
+  try {
+    const res = await fetch(`/api/bot-host/${botId}/metrics`, { headers: { 'x-session-token': token } });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Mesures indisponibles.');
+    drawHostMetricChart(botId, data.metrics || [], data.limits || {});
+  } catch (e) {
+    drawHostMetricChart(botId, [], {});
+  }
 }
 
 async function loadBotHostPanel() {
@@ -6234,13 +6345,15 @@ async function saveEloCurveStyle() {
   const color = document.getElementById('elo-curve-color-input')?.value || '';
   const colorSecondary = document.getElementById('elo-curve-color-secondary-input')?.value || '';
   const rgb = !!document.getElementById('elo-curve-rgb-input')?.checked;
+  const rgbSpeed = Number(document.getElementById('elo-curve-rgb-speed-input')?.value || 1) || 1;
+  const rgbDirection = document.getElementById('elo-curve-rgb-direction-input')?.value || 'forward';
   PROFIL_SFX.click();
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
     const res = await fetch(`/api/players/${me.id}/elo-curve-style`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color, colorSecondary, rgb, token: localStorage.getItem('token') }),
+      body: JSON.stringify({ color, colorSecondary, rgb, rgbSpeed, rgbDirection, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -6252,6 +6365,8 @@ async function saveEloCurveStyle() {
       elo_curve_color: data.color || '',
       elo_curve_color_secondary: data.colorSecondary || '',
       elo_curve_rgb: Number(data.rgb || 0),
+      elo_curve_rgb_speed: Number(data.rgbSpeed || 1) || 1,
+      elo_curve_rgb_direction: data.rgbDirection || 'forward',
       elo_curve_changed_at: data.changedAt || Date.now(),
     };
     Object.assign(me, patch);

@@ -58,12 +58,21 @@ const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
-const BOT_ARENA_INTERVAL_MS = Math.max(10_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 25_000));
-const BOT_ARENA_MAX_ACTIVE = Math.max(0, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2));
-const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(30_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 3 * 60_000));
-const BOT_ARENA_REST_MS = Math.max(15_000, Number(process.env.BOT_ARENA_REST_MS || 15_000));
-const BOT_SEARCH_TIME_MS = Math.max(80, Number(process.env.BOT_SEARCH_TIME_MS || 520));
-const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
+const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 5 * 60_000));
+const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(1, Number(process.env.BOT_ARENA_MAX_ACTIVE || 0)));
+const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 20 * 60_000));
+const BOT_ARENA_REST_MS = Math.max(60_000, Number(process.env.BOT_ARENA_REST_MS || 5 * 60_000));
+const BOT_SEARCH_TIME_MS = Math.max(80, Math.min(300, Number(process.env.BOT_SEARCH_TIME_MS || 180)));
+const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(9, Number(process.env.BOT_MAX_SEARCH_DEPTH || 8)));
+const BOT_HOST_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_HOST_MAX_ACTIVE || 1)));
+const BOT_HOST_MAX_RSS_MB = Math.max(64, Math.min(256, Number(process.env.BOT_HOST_MAX_RSS_MB || 128)));
+const BOT_HOST_MAX_CPU_MS_PER_MIN = Math.max(1_000, Math.min(45_000, Number(process.env.BOT_HOST_MAX_CPU_MS_PER_MIN || 12_000)));
+const BOT_HOST_WATCHDOG_MS = Math.max(5_000, Number(process.env.BOT_HOST_WATCHDOG_MS || 15_000));
+const HOSTED_BOT_DEPTH = Math.max(1, Math.min(8, Number(process.env.P4_HOST_DEPTH || 6)));
+const HOSTED_BOT_THINK_MS = Math.max(400, Math.min(15_000, Number(process.env.P4_HOST_THINK_MS || 5_000)));
+const HOSTED_BOT_MAX_TABLE = Math.max(1_000, Math.min(120_000, Number(process.env.P4_HOST_MAX_TABLE || 60_000)));
+const LIVE_UPDATE_DEBOUNCE_MS = Math.max(250, Number(process.env.LIVE_UPDATE_DEBOUNCE_MS || 900));
+const BOT_HOST_METRIC_LIMIT = Math.max(30, Math.min(480, Number(process.env.BOT_HOST_METRIC_LIMIT || 240)));
 let nextAnonymousPlayerId = -1;
 
 function cleanGameChatMessage(message) {
@@ -101,8 +110,18 @@ function emitGameOver(result) {
   if (!result || result.error) return result;
   io.to('game:' + result.gameId).emit('game_over', result);
   rememberFinishedGameSockets(result);
-  io.to('live').emit('live_update');
+  emitLiveUpdate();
   return result;
+}
+
+let liveUpdateTimer = null;
+function emitLiveUpdate() {
+  if (liveUpdateTimer) return;
+  liveUpdateTimer = setTimeout(() => {
+    liveUpdateTimer = null;
+    io.to('live').emit('live_update');
+  }, LIVE_UPDATE_DEBOUNCE_MS);
+  liveUpdateTimer.unref?.();
 }
 
 function leaveLiveSpectate(socket) {
@@ -384,6 +403,8 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       elo_curve_color: player.elo_curve_color || '',
       elo_curve_color_secondary: player.elo_curve_color_secondary || '',
       elo_curve_rgb: Number(player.elo_curve_rgb || 0),
+      elo_curve_rgb_speed: Number(player.elo_curve_rgb_speed || 1) || 1,
+      elo_curve_rgb_direction: ['forward', 'reverse'].includes(String(player.elo_curve_rgb_direction || 'forward')) ? String(player.elo_curve_rgb_direction || 'forward') : 'forward',
       elo: currentElo,
       wins: Number(player.wins || 0),
       losses: Number(player.losses || 0),
@@ -665,7 +686,7 @@ gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
   syncPlayerDiscordRankRole(player1Id).catch(() => {});
   syncPlayerDiscordRankRole(player2Id).catch(() => {});
   setTimeout(() => {
-    try { io.to('live').emit('live_update'); } catch (_) {}
+    try { emitLiveUpdate(); } catch (_) {}
   }, 6500);
 };
 
@@ -871,11 +892,51 @@ function getBotFromRequest(req) {
   const token = getBotTokenFromReq(req);
   if (!token) return null;
   const tokenHash = hashBotToken(token);
-  return db.prepare(`
+  const bot = db.prepare(`
     SELECT * FROM players
     WHERE (bot_token_hash = ? OR bot_host_token_hash = ?) AND is_bot = 1 AND deleted = 0
     LIMIT 1
   `).get(tokenHash, tokenHash) || null;
+  if (bot) {
+    req.p4BotTokenHash = tokenHash;
+    req.p4BotUsesHostToken = String(bot.bot_host_token_hash || '') === tokenHash;
+  }
+  return bot;
+}
+
+function meterBotHostNetwork(req, res, bot) {
+  if (!req?.p4BotUsesHostToken || !bot) return;
+  const botId = Number(bot.id || 0);
+  if (!botId) return;
+  let bytes = estimateRequestBytes(req);
+  const child = getBotHostRuntime(botId);
+  const addBytes = chunk => {
+    if (!chunk) return;
+    if (Buffer.isBuffer(chunk)) bytes += chunk.length;
+    else bytes += Buffer.byteLength(String(chunk));
+  };
+  const originalWrite = res.write.bind(res);
+  const originalEnd = res.end.bind(res);
+  res.write = (chunk, ...args) => {
+    addBytes(chunk);
+    return originalWrite(chunk, ...args);
+  };
+  res.end = (chunk, ...args) => {
+    addBytes(chunk);
+    if (child && !child.killed) child.__p4NetBytes = Number(child.__p4NetBytes || 0) + bytes;
+    else {
+      const metrics = readBotHostMetrics(botId);
+      const last = metrics[metrics.length - 1];
+      const now = Date.now();
+      if (!last || now - Number(last.at || 0) > 15_000) {
+        appendBotHostMetric(botId, { at: now, cpuPct: 0, rssMb: 0, netKb: bytes / 1024 });
+      } else {
+        last.netKb = Number(last.netKb || 0) + bytes / 1024;
+        db.prepare(`UPDATE bot_hosts SET metrics = ?, updated_at = ? WHERE bot_id = ?`).run(JSON.stringify(metrics.slice(-BOT_HOST_METRIC_LIMIT)), now, botId);
+      }
+    }
+    return originalEnd(chunk, ...args);
+  };
 }
 
 function ensureBotEnabled(bot, res) {
@@ -1462,7 +1523,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
         }
       }
     }
-    if (result?.type !== 'game_over') io.to('live').emit('live_update');
+    if (result?.type !== 'game_over') emitLiveUpdate();
     scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
   }, delayMs);
 }
@@ -1472,7 +1533,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked') {
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
   assignDistinctMatchColors(p1, p2);
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
-  io.to('live').emit('live_update');
+  emitLiveUpdate();
   scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
@@ -1489,7 +1550,7 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
 
   const current = challengerIsBot && Math.random() < 0.5 ? 1 : 2;
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current });
-  io.to('live').emit('live_update');
+  emitLiveUpdate();
   if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
@@ -1966,6 +2027,7 @@ function getOwnedBots(ownerId, viewer = null) {
            b.bot_enabled, b.bot_token_preview, b.bot_description, b.bot_skill, b.bot_owner_id,
            owner.pseudo AS bot_owner_pseudo,
            h.status AS host_status, h.expires_at AS host_expires_at, h.updated_at AS host_updated_at,
+           h.metrics AS host_metrics,
            LENGTH(COALESCE(h.code, '')) AS host_code_size
     FROM players b
     LEFT JOIN bot_hosts h ON h.bot_id = b.id
@@ -1975,16 +2037,24 @@ function getOwnedBots(ownerId, viewer = null) {
       AND b.is_bot = 1
       AND (? = 1 OR b.bot_owner_id = ?)
     ORDER BY b.wins DESC, b.elo DESC, b.id ASC
-  `).all(adminMode ? 1 : 0, id).filter(row => !builtinBotIds.has(Number(row.id || 0))).map(row => ({
-    ...sanitize(row),
-    host: {
-      active: Number(row.host_expires_at || 0) > Date.now(),
-      status: row.host_status || 'none',
-      expiresAt: Number(row.host_expires_at || 0) || null,
-      updatedAt: Number(row.host_updated_at || 0) || null,
-      codeSize: Number(row.host_code_size || 0),
-    },
-  }));
+  `).all(adminMode ? 1 : 0, id).filter(row => !builtinBotIds.has(Number(row.id || 0))).map(row => {
+    let metrics = [];
+    try {
+      const parsed = JSON.parse(String(row.host_metrics || '[]'));
+      metrics = Array.isArray(parsed) ? parsed : [];
+    } catch (_) {}
+    return {
+      ...sanitize(row),
+      host: {
+        active: Number(row.host_expires_at || 0) > Date.now(),
+        status: row.host_status || 'none',
+        expiresAt: Number(row.host_expires_at || 0) || null,
+        updatedAt: Number(row.host_updated_at || 0) || null,
+        codeSize: Number(row.host_code_size || 0),
+        lastMetric: metrics[metrics.length - 1] || null,
+      },
+    };
+  });
 }
 
 function getBotHostForOwner(ownerId, botId, viewer = null) {
@@ -2020,6 +2090,40 @@ function appendBotHostLog(botId, line) {
   db.prepare(`UPDATE bot_hosts SET logs = ?, updated_at = ? WHERE bot_id = ?`).run(next, Date.now(), id);
 }
 
+function readBotHostMetrics(botId) {
+  const id = Number(botId || 0);
+  if (!id) return [];
+  const row = db.prepare(`SELECT metrics FROM bot_hosts WHERE bot_id = ?`).get(id);
+  try {
+    const parsed = JSON.parse(String(row?.metrics || '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function appendBotHostMetric(botId, sample) {
+  const id = Number(botId || 0);
+  if (!id || !sample) return;
+  const metrics = readBotHostMetrics(id);
+  metrics.push({
+    at: Number(sample.at || Date.now()),
+    cpuPct: Number(sample.cpuPct || 0),
+    rssMb: Number(sample.rssMb || 0),
+    netKb: Number(sample.netKb || 0),
+  });
+  const next = metrics.slice(-BOT_HOST_METRIC_LIMIT);
+  db.prepare(`UPDATE bot_hosts SET metrics = ?, updated_at = ? WHERE bot_id = ?`).run(JSON.stringify(next), Date.now(), id);
+}
+
+function estimateRequestBytes(req) {
+  let bytes = 0;
+  try { bytes += Buffer.byteLength(JSON.stringify(req.headers || {}), 'utf8'); } catch (_) {}
+  try { bytes += Buffer.byteLength(JSON.stringify(req.body || {}), 'utf8'); } catch (_) {}
+  try { bytes += Buffer.byteLength(String(req.originalUrl || req.url || ''), 'utf8'); } catch (_) {}
+  return bytes;
+}
+
 function botHostWorkDir(botId) {
   const dir = path.join(os.tmpdir(), 'p4-bot-hosts');
   try { fs.mkdirSync(dir, { recursive: true }); } catch(e) {}
@@ -2037,11 +2141,92 @@ function getBotHostRuntime(botId) {
   return child && !child.killed ? child : null;
 }
 
+function countRunningBotHosts(exceptBotId = 0) {
+  let count = 0;
+  const except = Number(exceptBotId || 0);
+  for (const [botId, child] of botHostProcesses) {
+    if (Number(botId) === except) continue;
+    if (child && !child.killed) count++;
+  }
+  return count;
+}
+
+function readProcessUsage(pid) {
+  const id = Number(pid || 0);
+  if (!id || process.platform !== 'linux') return null;
+  try {
+    const stat = fs.readFileSync(`/proc/${id}/stat`, 'utf8').trim();
+    const end = stat.lastIndexOf(')');
+    const parts = stat.slice(end + 2).split(/\s+/);
+    const utimeTicks = Number(parts[11] || 0);
+    const stimeTicks = Number(parts[12] || 0);
+    const rssPages = Number(parts[21] || 0);
+    return {
+      cpuMs: (utimeTicks + stimeTicks) * 10,
+      rssMb: (rssPages * 4096) / 1024 / 1024,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function attachBotHostWatchdog(botId, child) {
+  const id = Number(botId || 0);
+  if (!id || !child) return;
+  child.__p4Usage = { at: Date.now(), usage: readProcessUsage(child.pid) };
+  child.__p4MetricBaseline = { at: Date.now(), usage: child.__p4Usage.usage, netBytes: Number(child.__p4NetBytes || 0) };
+  child.__p4Watchdog = setInterval(() => {
+    const current = botHostProcesses.get(id);
+    if (current !== child || child.killed) return;
+    const usage = readProcessUsage(child.pid);
+    if (!usage) return;
+    if (usage.rssMb > BOT_HOST_MAX_RSS_MB) {
+      appendBotHostLog(id, `Limite memoire host depassee (${usage.rssMb.toFixed(1)} MB > ${BOT_HOST_MAX_RSS_MB} MB).`);
+      stopBotHostProcess(id, 'resource-memory');
+      return;
+    }
+    const metricBase = child.__p4MetricBaseline;
+    if (metricBase?.usage) {
+      const metricElapsedMs = Math.max(1, Date.now() - metricBase.at);
+      const metricCpuMs = Math.max(0, usage.cpuMs - metricBase.usage.cpuMs);
+      const netBytes = Number(child.__p4NetBytes || 0);
+      appendBotHostMetric(id, {
+        at: Date.now(),
+        cpuPct: Math.min(400, (metricCpuMs / metricElapsedMs) * 100),
+        rssMb: usage.rssMb,
+        netKb: Math.max(0, netBytes - Number(metricBase.netBytes || 0)) / 1024,
+      });
+      child.__p4MetricBaseline = { at: Date.now(), usage, netBytes };
+    } else {
+      child.__p4MetricBaseline = { at: Date.now(), usage, netBytes: Number(child.__p4NetBytes || 0) };
+    }
+    const previous = child.__p4Usage;
+    if (!previous?.usage) {
+      child.__p4Usage = { at: Date.now(), usage };
+      return;
+    }
+    const elapsedMs = Math.max(1, Date.now() - previous.at);
+    if (elapsedMs < 60_000) return;
+    const cpuDeltaMs = Math.max(0, usage.cpuMs - previous.usage.cpuMs);
+    const allowedCpuMs = BOT_HOST_MAX_CPU_MS_PER_MIN * (elapsedMs / 60_000);
+    child.__p4Usage = { at: Date.now(), usage };
+    if (cpuDeltaMs > allowedCpuMs) {
+      appendBotHostLog(id, `Limite CPU host depassee (${Math.round(cpuDeltaMs)} ms/${Math.round(elapsedMs)} ms).`);
+      stopBotHostProcess(id, 'resource-cpu');
+    }
+  }, BOT_HOST_WATCHDOG_MS);
+  child.__p4Watchdog.unref?.();
+}
+
 function stopBotHostProcess(botId, reason = 'stop') {
   const id = Number(botId || 0);
   const child = getBotHostRuntime(id);
   if (!child) return false;
   child.__p4Stopping = true;
+  if (child.__p4Watchdog) {
+    clearInterval(child.__p4Watchdog);
+    child.__p4Watchdog = null;
+  }
   try { child.kill('SIGTERM'); } catch(e) {}
   setTimeout(() => {
     const current = botHostProcesses.get(id);
@@ -2078,6 +2263,9 @@ function startBotHostProcess(bot, host, action = 'start') {
     if (action !== 'restart') throw new Error('Host deja demarre.');
     stopBotHostProcess(id, 'restart');
   }
+  if (BOT_HOST_MAX_ACTIVE > 0 && countRunningBotHosts(id) >= BOT_HOST_MAX_ACTIVE) {
+    throw new Error(`Limite budget: ${BOT_HOST_MAX_ACTIVE} host bot actif maximum.`);
+  }
   const token = resolveBotHostToken(bot);
   if (!token) throw new Error('Token host indisponible.');
   const runPath = botHostWorkDir(id);
@@ -2109,6 +2297,9 @@ ${code}
       P4_BOT_TOKEN: token,
       P4_THREADS: String(Math.max(1, Math.min(2, Number(process.env.P4_HOST_THREADS || process.env.P4_THREADS || 1)))),
       P4_MAX_THREADS: '2',
+      P4_DEPTH: String(HOSTED_BOT_DEPTH),
+      P4_THINK_MS: String(HOSTED_BOT_THINK_MS),
+      P4_MAX_TABLE: String(HOSTED_BOT_MAX_TABLE),
       P4_BOT_ID: String(id),
       BOT_ID: String(id),
       P4_BOT_NAME: String(bot.pseudo || 'Bot'),
@@ -2116,6 +2307,8 @@ ${code}
     },
   });
   botHostProcesses.set(id, child);
+  child.__p4NetBytes = 0;
+  attachBotHostWatchdog(id, child);
   const startedAt = Date.now();
   db.prepare(`UPDATE bot_hosts SET status = 'running', pid = ?, exit_code = NULL, exit_signal = '', started_at = ?, stopped_at = 0, updated_at = ?, last_action = ? WHERE bot_id = ?`)
     .run(Number(child.pid || 0), startedAt, startedAt, action, id);
@@ -2129,6 +2322,7 @@ ${code}
   child.stdout?.on('data', chunk => logPipe('stdout', chunk));
   child.stderr?.on('data', chunk => logPipe('stderr', chunk));
   child.on('exit', (code, signal) => {
+    if (child.__p4Watchdog) clearInterval(child.__p4Watchdog);
     if (botHostProcesses.get(id) === child) botHostProcesses.delete(id);
     const now = Date.now();
     db.prepare(`UPDATE bot_hosts SET status = ?, pid = 0, exit_code = ?, exit_signal = ?, stopped_at = ?, updated_at = ?, last_action = 'exit' WHERE bot_id = ?`)
@@ -5006,6 +5200,14 @@ function getOwnedBotOrFail(ownerId, botId, viewer = null) {
 function serializeBotHost(row, bot = null) {
   if (!row) return null;
   const expiresAt = Number(row.expires_at || 0);
+  const metrics = (() => {
+    try {
+      const parsed = JSON.parse(String(row.metrics || '[]'));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+      return [];
+    }
+  })();
   return {
     botId: Number(row.bot_id || bot?.id || 0),
     ownerId: Number(row.owner_id || 0),
@@ -5015,6 +5217,7 @@ function serializeBotHost(row, bot = null) {
     updatedAt: Number(row.updated_at || 0) || null,
     lastAction: row.last_action || '',
     codeSize: Buffer.byteLength(String(row.code || ''), 'utf8'),
+    lastMetric: metrics[metrics.length - 1] || null,
     bot: bot ? sanitize(bot) : null,
   };
 }
@@ -5068,6 +5271,27 @@ app.get('/api/bot-host/:botId/logs', (req, res) => {
   const host = getBotHostForOwner(player.id, bot.id, player);
   if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
   res.json({ ok: true, logs: String(host.logs || ''), host: serializeBotHost(host, bot) });
+});
+
+app.get('/api/bot-host/:botId/metrics', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id, player);
+  if (!host) return res.status(404).json({ error: 'Aucun host pour ce bot.' });
+  res.json({
+    ok: true,
+    host: serializeBotHost(host, bot),
+    metrics: readBotHostMetrics(bot.id),
+    limits: {
+      maxRssMb: BOT_HOST_MAX_RSS_MB,
+      maxCpuMsPerMin: BOT_HOST_MAX_CPU_MS_PER_MIN,
+      maxThreads: 2,
+      hostedDepth: HOSTED_BOT_DEPTH,
+      hostedThinkMs: HOSTED_BOT_THINK_MS,
+    },
+  });
 });
 
 app.post('/api/bot-host/:botId/action', (req, res) => {
@@ -5346,6 +5570,7 @@ app.get('/api/players', (req, res) => {
   let rows = db.prepare(`
     SELECT id, pseudo, elo, wins, losses, draws, color, color_secondary, shape, avatar,
            avatar_decoration, profile_banner, role, is_vip, is_vip_plus, is_perso,
+           elo_curve_color, elo_curve_color_secondary, elo_curve_rgb, elo_curve_rgb_speed, elo_curve_rgb_direction,
            is_crystal, crystal_expires_at, crystal_auto_renew, crystal_alert_message, crystal_alert_color, crystal_alert_emoji, crystal_alert_animation,
            custom_role_text, custom_role_color, custom_role_emoji,
            is_bot, bot_skill, bot_description, bot_enabled, bot_last_seen, last_seen
@@ -5436,12 +5661,14 @@ app.post('/api/bot/token/rotate', (req, res) => {
 
 app.get('/api/bot/me', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
   res.json({ bot: { ...sanitize(bot), runtime: publicBotRuntime(bot.id), activeGame: serializeBotGameState(findActiveBotGame(bot.id), bot.id) } });
 });
 
 app.post('/api/bot/ping', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!ensureBotEnabled(bot, res)) return;
   const status = String(req.body?.status || req.query?.status || 'idle').slice(0, 40);
   botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
@@ -5452,6 +5679,7 @@ app.post('/api/bot/ping', (req, res) => {
 
 app.post('/api/bot/queue/join', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!ensureBotEnabled(bot, res)) return;
   botRuntime.set(Number(bot.id), { status: 'queue', lastSeen: Date.now() });
   broadcastPresenceCounts();
@@ -5479,6 +5707,7 @@ app.post('/api/bot/queue/join', (req, res) => {
 
 app.post('/api/bot/queue/leave', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!ensureBotEnabled(bot, res)) return;
   const idx = botApiQueue.indexOf(Number(bot.id));
   if (idx >= 0) botApiQueue.splice(idx, 1);
@@ -5489,12 +5718,14 @@ app.post('/api/bot/queue/leave', (req, res) => {
 
 app.get('/api/bot/game', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!ensureBotEnabled(bot, res)) return;
   res.json({ game: serializeBotGameState(findActiveBotGame(bot.id), bot.id) });
 });
 
 app.post('/api/bot/move', (req, res) => {
   const bot = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, bot);
   if (!ensureBotEnabled(bot, res)) return;
   const state = findActiveBotGame(bot.id);
   if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
@@ -5508,6 +5739,7 @@ app.post('/api/bot/move', (req, res) => {
 
 app.post('/api/bot/challenge/:id', (req, res) => {
   const challenger = getBotFromRequest(req);
+  meterBotHostNetwork(req, res, challenger);
   if (!ensureBotEnabled(challenger, res)) return;
   const targetId = Number(req.params.id);
   const target = pQ.getById.get(targetId);
@@ -5690,7 +5922,7 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
 });
 
 app.patch('/api/players/:id/elo-curve-style', (req, res) => {
-  const { color, colorSecondary = '', rgb = false, token } = req.body;
+  const { color, colorSecondary = '', rgb = false, rgbSpeed = 1, rgbDirection = 'forward', token } = req.body;
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
@@ -5701,6 +5933,8 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
   const nextColor = normalizeHexColor(color);
   const nextColorSecondary = normalizeHexColor(colorSecondary);
   const nextRgb = rgb === true || rgb === 1 || rgb === '1' || rgb === 'true';
+  const nextRgbSpeed = Math.max(0.25, Math.min(4, Number(rgbSpeed || 1) || 1));
+  const nextRgbDirection = String(rgbDirection || 'forward') === 'reverse' ? 'reverse' : 'forward';
   if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
   if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
   if (nextRgb && !isPersoPlayer(player) && !isAdminPlayer(player)) {
@@ -5709,8 +5943,16 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
   const remaining = getEloCurveRemainingMs(player);
   if (remaining > 0) return res.status(429).json({ error: `Courbe ELO modifiable dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
   const changedAt = Date.now();
-  pQ.updateEloCurveStyle.run({ id, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, changedAt });
-  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, changedAt });
+  pQ.updateEloCurveStyle.run({
+    id,
+    color: nextColor,
+    colorSecondary: nextColorSecondary,
+    rgb: nextRgb ? 1 : 0,
+    rgbSpeed: nextRgbSpeed,
+    rgbDirection: nextRgbDirection,
+    changedAt,
+  });
+  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, rgbSpeed: nextRgbSpeed, rgbDirection: nextRgbDirection, changedAt });
 });
 
 app.patch('/api/players/:id/banner', (req, res) => {
@@ -7537,13 +7779,13 @@ io.on('connection', socket => {
     if (!id || !gm.games.has(id)) return;
     socket.liveSpectateGameId = id;
     socket.join(`live:spectate:${id}`);
-    io.to('live').emit('live_update');
+    emitLiveUpdate();
   });
 
   socket.on('leave_live_game', () => {
     const hadGame = socket.liveSpectateGameId;
     leaveLiveSpectate(socket);
-    if (hadGame) io.to('live').emit('live_update');
+    if (hadGame) emitLiveUpdate();
   });
 
   socket.on('visitor_presence', ({ visitorId } = {}) => {
@@ -7593,7 +7835,7 @@ io.on('connection', socket => {
       });
     }
     socket.emit('identified', sanitize(player));
-    if (socket.liveSpectateGameId) io.to('live').emit('live_update');
+    if (socket.liveSpectateGameId) emitLiveUpdate();
     broadcastPresenceCounts();
   });
 
@@ -7731,7 +7973,7 @@ io.on('connection', socket => {
       scheduleBuiltinBotTurn(result.gameId, 500);
     }
     // Notifier les spectateurs live. Les fins de partie le font via emitGameOver().
-    if (result.type !== 'game_over') io.to('live').emit('live_update');
+    if (result.type !== 'game_over') emitLiveUpdate();
   });
 
   socket.on('game_chat_send', ({ message } = {}) => {
@@ -7980,7 +8222,7 @@ io.on('connection', socket => {
     const afterCounts = getPresenceCounts();
     const after = `${afterCounts.onlinePlayers}:${afterCounts.visitors}`;
     if (before !== after) broadcastPresenceCounts();
-    if (liveSpectatedGameId) io.to('live').emit('live_update');
+    if (liveSpectatedGameId) emitLiveUpdate();
     // Nettoyer la map IP si plus de socket actif pour ce joueur
     if (socket.playerId && socket.clientIp) {
       const sameIpSockets = [...io.sockets.sockets.values()]

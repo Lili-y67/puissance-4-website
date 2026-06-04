@@ -9,9 +9,9 @@
  *   P4_API_URL=http://localhost:8080 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_CHALLENGE_BOT_ID=7 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *   P4_INSECURE_TLS=1 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_DEPTH=10 P4_THINK_MS=15000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_MAX_TABLE=350000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
- *   P4_THREADS=2 P4_DEPTH=12 P4_THINK_MS=45000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_DEPTH=8 P4_THINK_MS=5000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_MAX_TABLE=60000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
+ *   P4_THREADS=4 P4_DEPTH=9 P4_THINK_MS=8000 P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js
  *
  * This example is intentionally safe but competitive:
  * - pings the site so the bot appears online
@@ -35,14 +35,14 @@ const BOT_TOKENS = String(process.env.P4_BOT_TOKENS || process.env.P4_BOT_TOKEN 
   .split(/[,\s]+/)
   .map(token => token.trim())
   .filter(Boolean);
-const LOOP_MS = Math.max(750, Number(process.env.P4_LOOP_MS || 1200));
+const LOOP_MS = Math.max(1000, Number(process.env.P4_LOOP_MS || 2000));
 const CHALLENGE_BOT_ID = Number(process.env.P4_CHALLENGE_BOT_ID || 0);
-const MAX_DEPTH = Math.max(1, Math.min(15, Number(process.env.P4_DEPTH || 12)));
-const THINK_MS = Math.max(400, Math.min(120000, Number(process.env.P4_THINK_MS || 45000)));
-const REQUEST_GAP_MS = Math.max(250, Number(process.env.P4_REQUEST_GAP_MS || 450));
+const MAX_DEPTH = Math.max(1, Math.min(10, Number(process.env.P4_DEPTH || 8)));
+const THINK_MS = Math.max(400, Math.min(30000, Number(process.env.P4_THINK_MS || 5000)));
+const REQUEST_GAP_MS = Math.max(400, Number(process.env.P4_REQUEST_GAP_MS || 700));
 const MAX_CONCURRENT_GAMES = 1;
-const MAX_TABLE = Math.max(1000, Number(process.env.P4_MAX_TABLE || 350000));
-const MAX_SEARCH_THREADS = Math.max(1, Math.min(2, Number(process.env.P4_MAX_THREADS || 2)));
+const MAX_TABLE = Math.max(1000, Math.min(120000, Number(process.env.P4_MAX_TABLE || 60000)));
+const MAX_SEARCH_THREADS = Math.max(1, Math.min(4, Number(process.env.P4_MAX_THREADS || 4)));
 const SEARCH_THREADS = Math.max(1, Math.min(
   MAX_SEARCH_THREADS,
   Math.max(1, os.cpus().length - 1),
