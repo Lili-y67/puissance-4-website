@@ -434,20 +434,77 @@ function startDiscordBot(ctx) {
       if (activity.applicationId) return `https://cdn.discordapp.com/app-assets/${activity.applicationId}/${asset}.png`;
       return '';
     };
+    const activitySearchText = activity => [
+      activity.name,
+      activity.details,
+      activity.state,
+      activity.assets?.largeText,
+      activity.assets?.smallText,
+    ].filter(Boolean).join(' ').toLowerCase();
+    const isCodeActivity = activity => /(^|\s)(code|vscode|visual studio code|cursor|sublime text|intellij|webstorm|pycharm|phpstorm|rider|clion|fleet)(\s|$)/i.test(activitySearchText(activity));
+    const isMinecraftActivity = activity => /minecraft|lunar client|feather client|badlion|labymod|salwyrr|pvplounge/i.test(activitySearchText(activity));
+    const firstMatch = (values, regex) => {
+      for (const value of values.filter(Boolean)) {
+        const match = String(value).match(regex);
+        if (match?.[1]) return match[1];
+        if (match?.[0]) return match[0];
+      }
+      return '';
+    };
+    const codeAppName = activity => {
+      const values = [activity.assets?.smallText, activity.assets?.largeText, activity.name];
+      return values.find(value => /visual studio code|cursor|sublime text|intellij|webstorm|pycharm|phpstorm|rider|clion|fleet/i.test(String(value || '')))
+        || (String(activity.name || '').toLowerCase() === 'code' ? 'Visual Studio Code' : activity.name || 'editeur');
+    };
+    const minecraftServer = activity => firstMatch(
+      [activity.state, activity.details, activity.assets?.largeText, activity.assets?.smallText],
+      /(?:serveur|server|sur)\s*:?\s*([a-z0-9_.-]+\.[a-z]{2,}(?::\d{2,5})?)/i,
+    ) || firstMatch(
+      [activity.state, activity.details],
+      /[a-z0-9_.-]+\.[a-z]{2,}(?::\d{2,5})?/i,
+    );
+    const minecraftPseudo = activity => firstMatch(
+      [activity.state, activity.details, activity.assets?.largeText, activity.assets?.smallText],
+      /(?:pseudo|joueur|player|as)\s*:?\s*([a-z0-9_]{3,16})/i,
+    );
     const activityText = activity => {
       const name = escapeDiscordMarkdown(activity.name || 'Activite');
       if (activity.type === ActivityType.Custom) {
         const emoji = activityEmoji(activity);
-        return `${emoji || '💬'} Statut perso: **${escapeDiscordMarkdown(activity.state || activity.name || 'Aucun texte')}**`;
+        return `${emoji || '💬'}・Statut perso: **${escapeDiscordMarkdown(activity.state || activity.name || 'Aucun texte')}**`;
       }
-      if (activity.type === ActivityType.Playing) return `${activityIcon(activity)} Joue a **${name}**`;
-      if (activity.type === ActivityType.Streaming) return `${activityIcon(activity)} En live sur **${name}**`;
-      if (activity.type === ActivityType.Listening) return `${activityIcon(activity)} Ecoute **${name}**`;
-      if (activity.type === ActivityType.Watching) return `${activityIcon(activity)} Regarde **${name}**`;
-      if (activity.type === ActivityType.Competing) return `${activityIcon(activity)} Competition sur **${name}**`;
-      return `${activityIcon(activity)} Activite: **${name}**`;
+      if (isCodeActivity(activity)) return `💻・Code avec **${escapeDiscordMarkdown(codeAppName(activity))}**`;
+      if (isMinecraftActivity(activity)) return `⛏️・Minecraft${activity.assets?.smallText ? ` via **${escapeDiscordMarkdown(activity.assets.smallText)}**` : ''}`;
+      if (activity.type === ActivityType.Playing) return `${activityIcon(activity)}・Joue a **${name}**`;
+      if (activity.type === ActivityType.Streaming) return `${activityIcon(activity)}・En live sur **${name}**`;
+      if (activity.type === ActivityType.Listening) return `${activityIcon(activity)}・Ecoute **${name}**`;
+      if (activity.type === ActivityType.Watching) return `${activityIcon(activity)}・Regarde **${name}**`;
+      if (activity.type === ActivityType.Competing) return `${activityIcon(activity)}・Competition sur **${name}**`;
+      return `${activityIcon(activity)}・Activite: **${name}**`;
     };
     const activityLabels = activity => {
+      if (isCodeActivity(activity)) {
+        return {
+          details: 'Projet / diagnostics',
+          state: 'Fichier / position',
+          large: 'Langage',
+          small: 'Editeur',
+          elapsed: 'Session de code',
+          since: 'Code depuis',
+          link: 'Ouvrir',
+        };
+      }
+      if (isMinecraftActivity(activity)) {
+        return {
+          details: 'Mode',
+          state: 'Etat',
+          large: 'Monde / version',
+          small: 'Launcher',
+          elapsed: 'Session Minecraft',
+          since: 'Joue depuis',
+          link: 'Ouvrir',
+        };
+      }
       if (activity.type === ActivityType.Playing) {
         return {
           details: 'Partie',
@@ -521,40 +578,44 @@ function startDiscordBot(ctx) {
           : 0;
         const cover = assetUrl(activity, 'largeImage');
         const lines = [];
-        if (activity.details) lines.push(`   ・🎵 Titre: **${escapeDiscordMarkdown(activity.details)}**`);
-        if (activity.state) lines.push(`   ・🎤 Artiste: **${escapeDiscordMarkdown(activity.state)}**`);
-        if (activity.assets?.largeText) lines.push(`   ・💿 Album: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
+        if (activity.details) lines.push(`   🎵・Titre: **${escapeDiscordMarkdown(activity.details)}**`);
+        if (activity.state) lines.push(`   🎤・Artiste: **${escapeDiscordMarkdown(activity.state)}**`);
+        if (activity.assets?.largeText) lines.push(`   💿・Album: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
         if (total > 0) {
-          lines.push(`   ・⏱️ Lecture: **${formatTime(elapsed)} / ${formatTime(total)}**`);
-          lines.push(`   ・${progressBar(elapsed, total)} **${Math.round(Math.max(0, Math.min(1, elapsed / total)) * 100)}%**`);
+          lines.push(`   ⏱️・Lecture: **${formatTime(elapsed)} / ${formatTime(total)}**`);
+          lines.push(`   ${progressBar(elapsed, total)} **${Math.round(Math.max(0, Math.min(1, elapsed / total)) * 100)}%**`);
         } else if (activity.timestamps?.start) {
-          lines.push(`   ・⏱️ Depuis: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
+          lines.push(`   ⏱️・Depuis: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
         }
-        if (activity.syncId) lines.push(`   ・🔗 Musique: https://open.spotify.com/track/${activity.syncId}`);
-        if (cover) lines.push(`   ・🖼️ Pochette: ${cover}`);
+        if (activity.syncId) lines.push(`   🔗・Musique: https://open.spotify.com/track/${activity.syncId}`);
+        if (cover) lines.push(`   🖼️・Pochette: ${cover}`);
         return `**${index + 1}.** <:Spotify:1508052989645033612> **Spotify**\n${lines.join('\n')}`;
       }
       const labels = activityLabels(activity);
       const title = activityText(activity);
       const details = [];
-      if (activity.details) details.push(`🎯 ${labels.details}: **${escapeDiscordMarkdown(activity.details)}**`);
-      if (activity.state && activity.type !== ActivityType.Custom) details.push(`📝 ${labels.state}: **${escapeDiscordMarkdown(activity.state)}**`);
-      if (activity.assets?.largeText) details.push(`🖼️ ${labels.large}: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
-      if (activity.assets?.smallText) details.push(`🔎 ${labels.small}: **${escapeDiscordMarkdown(activity.assets.smallText)}**`);
+      const server = isMinecraftActivity(activity) ? minecraftServer(activity) : '';
+      const pseudo = isMinecraftActivity(activity) ? minecraftPseudo(activity) : '';
+      if (activity.details) details.push(`🎯・${labels.details}: **${escapeDiscordMarkdown(activity.details)}**`);
+      if (server) details.push(`🌐・${isMinecraftActivity(activity) ? 'Serveur / URL' : 'Serveur'}: **${escapeDiscordMarkdown(server)}**`);
+      if (pseudo) details.push(`👤・Pseudo: **${escapeDiscordMarkdown(pseudo)}**`);
+      if (activity.state && activity.type !== ActivityType.Custom && activity.state !== server && activity.state !== pseudo) details.push(`📝・${labels.state}: **${escapeDiscordMarkdown(activity.state)}**`);
+      if (activity.assets?.largeText) details.push(`🖼️・${labels.large}: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
+      if (activity.assets?.smallText) details.push(`🔎・${labels.small}: **${escapeDiscordMarkdown(activity.assets.smallText)}**`);
       if (activity.timestamps?.start && activity.timestamps?.end) {
         const elapsed = Date.now() - activity.timestamps.start.getTime();
         const total = activity.timestamps.end.getTime() - activity.timestamps.start.getTime();
-        details.push(`⏱️ ${labels.elapsed}: **${formatTime(elapsed)} / ${formatTime(total)}**`);
+        details.push(`⏱️・${labels.elapsed}: **${formatTime(elapsed)} / ${formatTime(total)}**`);
       } else if (activity.timestamps?.start) {
-        details.push(`⏱️ ${labels.since}: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
+        details.push(`⏱️・${labels.since}: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
       }
-      if (activity.url) details.push(`🔗 ${labels.link}: ${activity.url}`);
-      else if (activity.syncId && activity.name === 'Spotify') details.push(`🔗 Spotify: https://open.spotify.com/track/${activity.syncId}`);
+      if (activity.url) details.push(`🔗・${labels.link}: ${activity.url}`);
+      else if (activity.syncId && activity.name === 'Spotify') details.push(`🔗・Spotify: https://open.spotify.com/track/${activity.syncId}`);
       const largeUrl = assetUrl(activity, 'largeImage');
       const smallUrl = assetUrl(activity, 'smallImage');
-      if (largeUrl) details.push(`🖼️ Image: ${largeUrl}`);
-      if (smallUrl) details.push(`🔎 Miniature: ${smallUrl}`);
-      return `**${index + 1}.** ${title}${details.length ? `\n${details.map(line => `   ・${line}`).join('\n')}` : ''}`;
+      if (largeUrl) details.push(`🖼️・Image: ${largeUrl}`);
+      if (smallUrl) details.push(`🔎・Miniature: ${smallUrl}`);
+      return `**${index + 1}.** ${title}${details.length ? `\n${details.map(line => `   ${line}`).join('\n')}` : ''}`;
     }).join('\n');
   }
 
