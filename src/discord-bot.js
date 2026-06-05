@@ -366,6 +366,37 @@ function startDiscordBot(ctx) {
     return String(value == null ? '' : value).replace(/([\\*_~`>|])/g, '\\$1');
   }
 
+  function activityAssetUrl(activity, key) {
+    const asset = activity?.assets?.[key];
+    if (!asset) return '';
+    if (/^https?:\/\//i.test(asset)) return asset;
+    if (String(asset).startsWith('mp:')) return `https://media.discordapp.net/${String(asset).slice(3)}`;
+    if (String(asset).startsWith('spotify:')) return `https://i.scdn.co/image/${String(asset).slice(8)}`;
+    if (activity.applicationId) return `https://cdn.discordapp.com/app-assets/${activity.applicationId}/${asset}.png`;
+    return '';
+  }
+
+  function progressBar(elapsedMs, totalMs, size = 21) {
+    const total = Math.max(1, Number(totalMs || 0));
+    const ratio = Math.max(0, Math.min(1, Number(elapsedMs || 0) / total));
+    const pos = Math.max(0, Math.min(size - 1, Math.round(ratio * (size - 1))));
+    return `${'─'.repeat(pos)}●${'─'.repeat(size - 1 - pos)}`;
+  }
+
+  function getSpotifyActivity(member) {
+    return (member?.presence?.activities || []).find(activity => activity?.name === 'Spotify' || activity?.syncId) || null;
+  }
+
+  function spotifyActivityButtons(member) {
+    const spotify = getSpotifyActivity(member);
+    if (!spotify) return [];
+    const buttons = [];
+    if (spotify.syncId) buttons.push(linkButton('Ouvrir Musique', `https://open.spotify.com/track/${spotify.syncId}`, '🎵'));
+    const cover = activityAssetUrl(spotify, 'largeImage');
+    if (cover) buttons.push(linkButton('Voir Pochette', cover, '💿'));
+    return buttons;
+  }
+
   function formatDiscordActivity(member) {
     const activities = member?.presence?.activities || [];
     if (!activities.length) return 'Aucune activite detectee.';
@@ -393,10 +424,31 @@ function startDiscordBot(ctx) {
       if (!asset) return '';
       if (/^https?:\/\//i.test(asset)) return asset;
       if (String(asset).startsWith('mp:')) return `https://media.discordapp.net/${String(asset).slice(3)}`;
+      if (String(asset).startsWith('spotify:')) return `https://i.scdn.co/image/${String(asset).slice(8)}`;
       if (activity.applicationId) return `https://cdn.discordapp.com/app-assets/${activity.applicationId}/${asset}.png`;
       return '';
     };
     return activities.slice(0, 6).map((activity, index) => {
+      if (activity.name === 'Spotify' || activity.syncId) {
+        const elapsed = activity.timestamps?.start ? Date.now() - activity.timestamps.start.getTime() : 0;
+        const total = activity.timestamps?.start && activity.timestamps?.end
+          ? activity.timestamps.end.getTime() - activity.timestamps.start.getTime()
+          : 0;
+        const cover = assetUrl(activity, 'largeImage');
+        const lines = [];
+        if (activity.details) lines.push(`   ・🎵 Titre: **${escapeDiscordMarkdown(activity.details)}**`);
+        if (activity.state) lines.push(`   ・🎤 Artiste: **${escapeDiscordMarkdown(activity.state)}**`);
+        if (activity.assets?.largeText) lines.push(`   ・💿 Album: **${escapeDiscordMarkdown(activity.assets.largeText)}**`);
+        if (total > 0) {
+          lines.push(`   ・⏱️ Lecture: **${formatTime(elapsed)} / ${formatTime(total)}**`);
+          lines.push(`   ・${progressBar(elapsed, total)} **${Math.round(Math.max(0, Math.min(1, elapsed / total)) * 100)}%**`);
+        } else if (activity.timestamps?.start) {
+          lines.push(`   ・⏱️ Depuis: <t:${Math.floor(activity.timestamps.start.getTime() / 1000)}:R>`);
+        }
+        if (activity.syncId) lines.push(`   ・🔗 Musique: https://open.spotify.com/track/${activity.syncId}`);
+        if (cover) lines.push(`   ・🖼️ Pochette: ${cover}`);
+        return `**${index + 1}.** <:Spotify:1508052989645033612> **Spotify**\n${lines.join('\n')}`;
+      }
       const emoji = activityEmoji(activity);
       const title = activity.type === ActivityType.Custom
         ? `Statut perso ${emoji ? `${emoji} ` : ''}${escapeDiscordMarkdown(activity.state || activity.name || 'Aucun texte')}`
@@ -602,12 +654,14 @@ function startDiscordBot(ctx) {
     if (decoration) buttons.push(linkButton('Decoration', decoration, '✨'));
     if (linked) buttons.push(linkButton('Profil P4', playerUrl(linked), '🎮'));
     buttons.push(linkButton('Serveur', api, '🔗'));
+    const spotifyButtons = spotifyActivityButtons(member);
     return containerMessage({
       color: Number.parseInt(String(member.displayHexColor || '#85ebff').replace('#', ''), 16) || 0x85ebff,
       title: `📌 UI Discord - ${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}`,
       subtitle: 'Fiche complete: Discord, serveur, activite, medias et liaison Puissance 4.',
       sections,
       buttons,
+      rows: spotifyButtons.length ? [rowButtons(spotifyButtons)] : [],
     });
   }
 
