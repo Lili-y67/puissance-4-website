@@ -539,6 +539,53 @@ pre {
   line-height: 1.45;
 }
 
+.p4-install-app {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,214,10,.32);
+  background: linear-gradient(135deg, rgba(255,214,10,.14), rgba(255,45,85,.10));
+  color: #f4f4fb;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 12px 28px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.p4-install-app[hidden] {
+  display: none;
+}
+
+.p4-install-app:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,214,10,.58);
+  background: linear-gradient(135deg, rgba(255,214,10,.22), rgba(255,45,85,.15));
+}
+
+.p4-install-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffd60a, #ff8a3d);
+  color: #17120a;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 0 18px rgba(255,214,10,.18);
+  animation: p4InstallPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes p4InstallPulse {
+  50% { transform: translateY(2px); box-shadow: 0 0 26px rgba(255,214,10,.34); }
+}
+
 .p4-global-menu-copyright {
   display: block;
   margin-top: 8px;

@@ -1,0 +1,56 @@
+{
+  "id": "/",
+  "name": "Puissance 4 Ranked",
+  "short_name": "Puissance 4",
+  "description": "Puissance 4 multijoueur classe, parties en direct, profils et classements.",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#06060e",
+  "theme_color": "#ff2d55",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "/assets/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/pwa-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jouer",
+      "short_name": "Jouer",
+      "url": "/",
+      "icons": [{ "src": "/assets/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Profil",
+      "short_name": "Profil",
+      "url": "/profil",
+      "icons": [{ "src": "/assets/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Classement",
+      "short_name": "Classement",
+      "url": "/leaderboard",
+      "icons": [{ "src": "/assets/pwa-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

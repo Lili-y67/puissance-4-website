@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_KEY = 'p4_theme';
   const root = document.documentElement;
+  let deferredInstallPrompt = null;
 
   function getSavedTheme() {
     try {
@@ -39,6 +40,82 @@
     link.rel = 'stylesheet';
     link.href = '/theme.css';
     document.head.appendChild(link);
+  }
+
+  function ensurePwaMetadata() {
+    const head = document.head;
+    if (!head) return;
+    const entries = [
+      ['link', { rel: 'manifest', href: '/manifest.webmanifest' }],
+      ['link', { rel: 'apple-touch-icon', href: '/assets/apple-touch-icon.png' }],
+      ['meta', { name: 'theme-color', content: '#ff2d55' }],
+      ['meta', { name: 'mobile-web-app-capable', content: 'yes' }],
+      ['meta', { name: 'apple-mobile-web-app-capable', content: 'yes' }],
+      ['meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' }],
+      ['meta', { name: 'apple-mobile-web-app-title', content: 'Puissance 4' }],
+    ];
+    entries.forEach(([tag, attrs]) => {
+      const selector = tag === 'link'
+        ? `link[rel="${attrs.rel}"]`
+        : `meta[name="${attrs.name}"]`;
+      if (head.querySelector(selector)) return;
+      const element = document.createElement(tag);
+      Object.entries(attrs).forEach(([key, value]) => element.setAttribute(key, value));
+      head.appendChild(element);
+    });
+  }
+
+  function isStandalone() {
+    return window.matchMedia?.('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+  }
+
+  function isIosDevice() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function updateInstallButton() {
+    const button = document.getElementById('p4-install-app');
+    if (!button) return;
+    const canInstall = Boolean(deferredInstallPrompt);
+    const showIosHelp = isIosDevice() && !isStandalone();
+    button.hidden = isStandalone() || (!canInstall && !showIosHelp);
+    button.querySelector('.p4-install-label').textContent = showIosHelp && !canInstall
+      ? 'Installer sur iPhone'
+      : 'Installer l’application';
+    button.querySelector('.p4-install-sub').textContent = showIosHelp && !canInstall
+      ? 'Partager puis Sur l’écran d’accueil'
+      : 'Ouvrir comme une vraie application';
+  }
+
+  async function installApplication() {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      await deferredInstallPrompt.userChoice.catch(() => null);
+      deferredInstallPrompt = null;
+      updateInstallButton();
+      return;
+    }
+    if (isIosDevice()) {
+      alert('Sur iPhone ou iPad : ouvre le menu Partager de Safari, puis touche « Sur l’écran d’accueil ».');
+    }
+  }
+
+  function registerPwa() {
+    ensurePwaMetadata();
+    if ('serviceWorker' in navigator && window.isSecureContext) {
+      navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {});
+    }
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      updateInstallButton();
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      updateInstallButton();
+    });
   }
 
   function mountButton() {
@@ -133,6 +210,13 @@
           </a>
         `).join('')}
       </div>
+      <button class="p4-install-app" id="p4-install-app" type="button" hidden>
+        <span class="p4-install-icon">⬇</span>
+        <span class="p4-global-menu-copy">
+          <span class="p4-global-menu-label p4-install-label">Installer l’application</span>
+          <span class="p4-global-menu-sub p4-install-sub">Ouvrir comme une vraie application</span>
+        </span>
+      </button>
       <div class="p4-global-menu-foot">
         Menu compact pour éviter les pages qui débordent. Les pages de partie gardent leur interface dédiée.
         <a class="p4-global-menu-copyright" href="/cgu">© 2026 Puissance-4 · CGU</a>
@@ -142,6 +226,7 @@
     toggle.addEventListener('click', () => setMenuOpen(!document.body.classList.contains('p4-global-menu-open')));
     backdrop.addEventListener('click', () => setMenuOpen(false));
     panel.querySelector('.p4-global-menu-close')?.addEventListener('click', () => setMenuOpen(false));
+    panel.querySelector('#p4-install-app')?.addEventListener('click', installApplication);
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') setMenuOpen(false);
     });
@@ -149,10 +234,12 @@
     document.body.appendChild(toggle);
     document.body.appendChild(backdrop);
     document.body.appendChild(panel);
+    updateInstallButton();
   }
 
   applyTheme(root.dataset.theme || getSavedTheme());
   ensureThemeStylesheet();
+  registerPwa();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

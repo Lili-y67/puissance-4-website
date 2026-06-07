@@ -1707,7 +1707,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
   lastModified: true,
   setHeaders(res, filePath) {
-    if (/\.(?:png|jpe?g|webp|gif|svg|ico|mp3|wav|ogg|m4a|woff2?)$/i.test(filePath)) {
+    if (/(?:service-worker\.js|manifest\.webmanifest)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (/\.(?:png|jpe?g|webp|gif|svg|ico|mp3|wav|ogg|m4a|woff2?)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     } else if (/\.(?:css|js)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=3600');
