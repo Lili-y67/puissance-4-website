@@ -440,11 +440,16 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
   for (let index = 0; index <= timeDivisions; index++) {
     const ratio = index / timeDivisions;
     const x = pad.left + plotW * ratio;
+    const sampleIndex = values.length ? Math.round(ratio * (values.length - 1)) : 0;
+    const sampleTime = values[sampleIndex]?.at ? new Date(values[sampleIndex].at) : null;
+    const timeLabel = sampleTime && !Number.isNaN(sampleTime.getTime())
+      ? sampleTime.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })
+      : '--:--';
     ctx.strokeStyle = 'rgba(255,255,255,.035)';
     ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
     ctx.fillStyle = '#a0a0a0';
     ctx.textAlign = index === 0 ? 'left' : index === timeDivisions ? 'right' : 'center';
-    ctx.fillText(index === timeDivisions ? 'maint.' : `-${Math.round((timeDivisions - index) * (120 / timeDivisions))}s`, x, h - 14);
+    ctx.fillText(timeLabel, x, h - 14);
   }
   if (!values.length) return;
   renderedSeries.forEach(item => {
