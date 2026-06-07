@@ -303,6 +303,7 @@ input[type="file"]{display:none;}
 .profile-badge.perso{--badge-color:#ffb28a;--badge-bg:rgba(255,122,69,.12);--badge-border:rgba(255,122,69,.38);--badge-glow:rgba(255,122,69,.28)}
 .profile-badge.staff{--badge-color:#ff6b8a;--badge-bg:rgba(255,45,85,.12);--badge-border:rgba(255,45,85,.38);--badge-glow:rgba(255,45,85,.28)}
 .profile-badge.modo{--badge-color:#aeb8ff;--badge-bg:rgba(76,110,245,.13);--badge-border:rgba(76,110,245,.36);--badge-glow:rgba(76,110,245,.26)}
+.profile-badge.dev{--badge-color:#8fffd3;--badge-bg:rgba(48,209,88,.12);--badge-border:rgba(48,209,88,.38);--badge-glow:rgba(48,209,88,.28);text-decoration:none}
 .profile-badge.bot{--badge-color:#cfd2dd;--badge-bg:rgba(142,142,147,.14);--badge-border:rgba(184,187,199,.36);--badge-glow:rgba(184,187,199,.20)}
 .profile-badge.clan{--badge-color:#dffaff;--badge-bg:rgba(133,235,255,.10);--badge-border:rgba(133,235,255,.28);--badge-glow:rgba(133,235,255,.18)}
 @keyframes profile-badge-sheen{0%,48%{transform:translateX(-70%);opacity:0}58%{opacity:.7}76%,100%{transform:translateX(95%);opacity:0}}
@@ -1459,7 +1460,7 @@ function getProfileBoosterCounts() {
 }
 
 function getVipMediaRemainingMs() {
-  if (String(currentPlayer?.role || '') === 'admin') return 0;
+  if (isAdminTier(currentPlayer)) return 0;
   const lastChanged = Number(currentPlayer?.vip_media_changed_at || 0);
   if (!lastChanged) return 0;
   const cooldown = (Number(currentPlayer?.is_vip_plus) === 1 || Number(currentPlayer?.is_perso) === 1) ? (12 * 60 * 60 * 1000) : (24 * 60 * 60 * 1000);
@@ -1468,7 +1469,7 @@ function getVipMediaRemainingMs() {
 }
 
 function getAvatarDecorationRemainingMs(player = currentPlayer) {
-  if (String(player?.role || '') === 'admin') return 0;
+  if (isAdminTier(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   if (!lastChanged) return 0;
   const remaining = lastChanged + (24 * 60 * 60 * 1000) - Date.now();
@@ -1476,15 +1477,15 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
 }
 
 function isVipPlus(player = currentPlayer) {
-  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || isAdminTier(player);
 }
 
 function isVip(player = currentPlayer) {
-  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_vip) === 1 || Number(player?.is_vip_plus) === 1 || Number(player?.is_perso) === 1 || Number(player?.is_crystal) === 1 || Number(player?.is_bot) === 1 || isAdminTier(player);
 }
 
 function isPerso(player = currentPlayer) {
-  return Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1;
+  return Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || isAdminTier(player);
 }
 
 function canUseGradient(player = currentPlayer) {
@@ -1492,7 +1493,11 @@ function canUseGradient(player = currentPlayer) {
 }
 
 function isAdminTier(player = currentPlayer) {
-  return String(player?.role || '') === 'admin';
+  return ['admin', 'moderator'].includes(String(player?.role || ''));
+}
+
+function isDeveloper(player = currentPlayer) {
+  return Number(player?.is_developer || 0) === 1 || String(player?.role || '') === 'developer';
 }
 
 function canUsePseudoStyle(player = currentPlayer) {
@@ -2106,6 +2111,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
+            ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><span class="badge-icon">&lt;/&gt;</span>DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
             ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
@@ -2549,9 +2555,9 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     <!-- Carte mot de passe admin -->
-    ${player.role === 'admin' ? `
+    ${['admin', 'moderator'].includes(String(player.role || '')) ? `
     <div class="color-card" style="margin-top:0;border-color:rgba(255,45,85,0.3);background:rgba(255,45,85,0.05)">
-      <div class="card-label" style="color:var(--red)">Accès Panel Admin</div>
+      <div class="card-label" style="color:var(--red)">Accès Panel Staff</div>
       <div style="font-size:12px;color: var(--muted);margin:8px 0 12px">
         Mot de passe du panel <a href="/admin" target="_blank" style="color:var(--red)">/admin</a>
       </div>
@@ -4233,8 +4239,8 @@ async function saveBanner(input) {
   const token = localStorage.getItem('token');
   const isGif = (file.type || '').toLowerCase() === 'image/gif';
   const premiumGifAccess = isVip(me);
-  const isAdminTier = String(me?.role || '') === 'admin';
-  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 4 * 1024 * 1024);
+  const hasStaffBenefits = isAdminTier(me);
+  const maxBytes = hasStaffBenefits ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 4 * 1024 * 1024);
   if (isGif && !premiumGifAccess) return alert('Les GIF sont reserves aux VIP et VIP+.');
   if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Banniere trop lourde (max 4MB).');
   if (!me.id || !token) return;
@@ -4261,8 +4267,8 @@ function handleAvatarUpload(input) {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const isGif = (file.type || '').toLowerCase() === 'image/gif';
   const premiumGifAccess = isVip(me);
-  const isAdminTier = String(me?.role || '') === 'admin';
-  const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 2 * 1024 * 1024);
+  const hasStaffBenefits = isAdminTier(me);
+  const maxBytes = hasStaffBenefits ? Number.MAX_SAFE_INTEGER : (isGif && premiumGifAccess ? 5 * 1024 * 1024 : 2 * 1024 * 1024);
   if (isGif && !premiumGifAccess) return alert('Les GIF sont reserves aux VIP et VIP+.');
   if (file.size > maxBytes) return alert(isGif ? 'GIF trop lourd (max 5MB).' : 'Image trop lourde (max 2MB).');
 
@@ -4285,8 +4291,8 @@ function handleTokenEmojiUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  const isAdminTier = String(me?.role || '') === 'admin';
-  if (!isVipPlus(me) && !isAdminTier) {
+  const hasStaffBenefits = isAdminTier(me);
+  if (!isVipPlus(me) && !hasStaffBenefits) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -4294,7 +4300,7 @@ function handleTokenEmojiUpload(input) {
     input.value = '';
     return alert('Format invalide. Utilise PNG, JPG ou WEBP.');
   }
-  if (!isAdminTier && file.size > 1024 * 1024) {
+  if (!hasStaffBenefits && file.size > 1024 * 1024) {
     input.value = '';
     return alert('Emoji perso trop lourd (max 1MB).');
   }
@@ -4312,8 +4318,8 @@ function handleAvatarDecorationUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  const isAdminTier = String(me?.role || '') === 'admin';
-  if (!isVipPlus(me) && !isAdminTier) {
+  const hasStaffBenefits = isAdminTier(me);
+  if (!isVipPlus(me) && !hasStaffBenefits) {
     input.value = '';
     return alert('Reserve au VIP+.');
   }
@@ -4321,7 +4327,7 @@ function handleAvatarDecorationUpload(input) {
     input.value = '';
     return alert('Format invalide. Utilise PNG, JPG ou WEBP.');
   }
-  if (!isAdminTier && file.size > 1024 * 1024) {
+  if (!hasStaffBenefits && file.size > 1024 * 1024) {
     input.value = '';
     return alert('Decoration trop lourde (max 1MB).');
   }
@@ -5136,7 +5142,7 @@ async function renderQueueMusicPicker(player = currentPlayer) {
   const meta = document.getElementById('queue-music-meta');
   const btn = document.getElementById('queue-music-save-btn');
   if (!card || !select || !themeSelect || !meta || !btn) return;
-  const canEdit = isPerso(player) || String(player?.role || '') === 'admin';
+  const canEdit = isPerso(player) || isAdminTier(player);
   const currentValue = String(player?.queue_music || '');
   card.style.display = canEdit ? 'flex' : 'none';
   if (!canEdit) return;

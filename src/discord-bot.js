@@ -1650,7 +1650,7 @@ function startDiscordBot(ctx) {
     }
     if (action === 'ban' || action === 'unban') {
       const banned = action === 'ban' ? 1 : 0;
-      ctx.pQ.setBanned.run({ banned, id: target.id });
+      ctx.pQ.setBanned.run({ banned, until: null, id: target.id });
       ctx.WH.wlogBan(target.pseudo, target.id, banned);
       if (typeof ctx.notifyPlayerProfileChanged === 'function') ctx.notifyPlayerProfileChanged(target.id, banned ? 'Compte banni via Discord.' : 'Bannissement retire via Discord.');
       return interaction.editReply(containerMessage({ color: banned ? 0xff3b30 : 0x30d158, title: banned ? 'Joueur banni' : 'Joueur debanni', subtitle: target.pseudo }));

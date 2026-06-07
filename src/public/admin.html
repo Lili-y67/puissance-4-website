@@ -714,7 +714,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   <div class="stats-row" id="stats-row"></div>
 
   <div class="admin-stack">
-  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
+  <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div class="admin-section-title">Boosts</div>
@@ -783,7 +783,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     </div>
   </div>
 
-  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
+  <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div class="admin-section-title">Coupons boutique</div>
@@ -802,7 +802,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <div id="active-coupons-list" class="coupon-list"></div>
   </div>
 
-  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
+  <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div class="admin-section-title">Pack limité</div>
@@ -813,7 +813,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <button class="btn-sm" style="background:rgba(255,214,10,0.16);color:var(--yellow);border:1px solid rgba(255,214,10,0.3);height:42px" onclick="openLimitedPackBuilder()">Créer / modifier le pack limité</button>
   </div>
 
-  <div class="table-wrap" style="padding:18px 20px;margin-bottom:0;">
+  <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
         <div class="admin-section-title">Alerte serveur</div>
@@ -861,7 +861,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       style="background:rgba(255,255,255,0.05);color:var(--muted);">
       Parties
     </button>
-    <button id="tab-tournaments-btn" class="pill-tab" onclick="switchAdminTab('tournaments')"
+    <button id="tab-tournaments-btn" class="pill-tab admin-only-panel" onclick="switchAdminTab('tournaments')"
       style="background:rgba(255,255,255,0.05);color:var(--muted);">
       Tournois
     </button>
@@ -1077,15 +1077,21 @@ async function showPanel() {
   if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const systemActions = document.getElementById('system-status-actions');
   if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
-  await loadBoostStatus();
-  await loadCoinBoostStatus();
-  await loadActiveCoupons();
-  clearInterval(activeCouponsTimer);
-  clearInterval(activeCouponsTickTimer);
-  activeCouponsTimer = setInterval(loadActiveCoupons, 30000);
-  activeCouponsTickTimer = setInterval(refreshCouponCountdowns, 1000);
-  await loadSystemStatus();
-  await loadVipBoosts();
+  document.querySelectorAll('.admin-only-panel').forEach(el => {
+    el.style.display = myRole === 'admin' ? '' : 'none';
+  });
+  document.querySelector('.ops-grid')?.style.setProperty('display', myRole === 'admin' ? '' : 'none');
+  if (myRole === 'admin') {
+    await loadBoostStatus();
+    await loadCoinBoostStatus();
+    await loadActiveCoupons();
+    clearInterval(activeCouponsTimer);
+    clearInterval(activeCouponsTickTimer);
+    activeCouponsTimer = setInterval(loadActiveCoupons, 30000);
+    activeCouponsTickTimer = setInterval(refreshCouponCountdowns, 1000);
+    await loadSystemStatus();
+    await loadVipBoosts();
+  }
   await loadPlayers();
 }
 
@@ -1388,6 +1394,39 @@ function openModal(id) {
     : canManageRoles
       ? `<div style="margin-bottom:14px;font-size:12px;color:var(--muted)">Le badge personnalisé se débloque avec le pack Perso.</div>`
       : '';
+
+  if (myRole !== 'admin') {
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.id = 'admin-modal';
+    modal.innerHTML = `
+      <div class="modal">
+        <h3>${escapeHtml(pseudo)}</h3>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+          Les modérateurs peuvent uniquement gérer les bannissements. Le revert des parties se trouve dans l'onglet Parties.
+        </div>
+        ${banned ? `
+          <div style="padding:12px;border-radius:10px;background:rgba(255,45,85,.08);border:1px solid rgba(255,45,85,.2);margin-bottom:14px">
+            <div style="color:var(--red);font-weight:700">Compte banni</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">${player.banned_until ? `Jusqu'au ${new Date(player.banned_until).toLocaleString('fr-FR')}` : 'Bannissement définitif'}</div>
+          </div>
+          <button class="btn-sm" style="width:100%;background:rgba(48,209,88,.12);color:var(--green);margin-bottom:10px" onclick="setBan(${id},false,0)">Débannir</button>
+        ` : `
+          <div style="margin-bottom:14px">
+            <div class="admin-field-label">Bannissement temporaire</div>
+            <div style="display:flex;gap:8px">
+              <input id="ban-duration-minutes" type="number" min="1" max="525600" value="1440" class="search-input" style="margin:0;flex:1" placeholder="Durée en minutes">
+              <button class="btn-sm" style="background:rgba(255,159,10,.14);color:var(--orange)" onclick="setBan(${id},true,Number(document.getElementById('ban-duration-minutes').value))">Bannir</button>
+            </div>
+          </div>
+          <button class="btn-sm" style="width:100%;background:rgba(255,45,85,.12);color:var(--red);margin-bottom:10px" onclick="setBan(${id},true,0)">Bannir définitivement</button>
+        `}
+        <button class="btn-sm" style="width:100%;background:rgba(255,255,255,.04);color:var(--muted)" onclick="document.getElementById('admin-modal').remove()">Fermer</button>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    return;
+  }
 
   const modal = document.createElement('div');
   modal.className = 'modal-bg';
@@ -1706,7 +1745,12 @@ async function muteCustom(id) {
 }
 
 async function toggleBan(id, banned) {
-  const data = await api('PATCH', `/api/admin/players/${id}/ban`, { banned: !banned });
+  const data = await api('PATCH', `/api/admin/players/${id}/ban`, { banned: !banned, durationMinutes: 0 });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur ban.');
+}
+
+async function setBan(id, banned, durationMinutes) {
+  const data = await api('PATCH', `/api/admin/players/${id}/ban`, { banned, durationMinutes });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur ban.');
 }
 

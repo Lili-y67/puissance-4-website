@@ -4308,7 +4308,7 @@ const QueueMusic = (() => {
   let localObjectUrl = '';
   let volume = 0.35;
   function canUseCustomQueueMusic(player) {
-    return !!(player && (Number(player.is_perso || 0) === 1 || String(player.role || '') === 'admin'));
+    return !!(player && (Number(player.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(player.role || ''))));
   }
   function get() {
     if (!audio) audio = document.getElementById('queue-music');

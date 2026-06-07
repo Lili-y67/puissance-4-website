@@ -108,6 +108,7 @@ try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TE
 try { db.exec(`ALTER TABLE boosts ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banner     TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN role       TEXT    NOT NULL DEFAULT 'user'`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN is_developer INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_vip_plus INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_perso INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -122,6 +123,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN crystal_alert_animation TEXT NOT N
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_expires_at INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN muted_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN banned     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN banned_until INTEGER`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
@@ -352,6 +354,7 @@ const pQ = {
   updatePassword: db.prepare(`UPDATE players SET password  = @password  WHERE id = @id`),
   updateBanner:   db.prepare(`UPDATE players SET banner   = @banner   WHERE id = @id`),
   updateRole:     db.prepare(`UPDATE players SET role     = @role     WHERE id = @id`),
+  updateDeveloper: db.prepare(`UPDATE players SET is_developer = @is_developer WHERE id = @id`),
   updateVip:      db.prepare(`UPDATE players SET is_vip   = @is_vip   WHERE id = @id`),
   updateVipPlus:  db.prepare(`UPDATE players SET is_vip_plus = @is_vip_plus WHERE id = @id`),
   updatePerso:    db.prepare(`UPDATE players SET is_perso = @is_perso WHERE id = @id`),
@@ -374,7 +377,7 @@ const pQ = {
   updatePseudoStyle: db.prepare(`UPDATE players SET pseudo_color = @color, pseudo_color_secondary = @colorSecondary, pseudo_font = @font, pseudo_style_changed_at = @changedAt WHERE id = @id`),
   updateEloCurveStyle: db.prepare(`UPDATE players SET elo_curve_color = @color, elo_curve_color_secondary = @colorSecondary, elo_curve_rgb = @rgb, elo_curve_rgb_speed = @rgbSpeed, elo_curve_rgb_direction = @rgbDirection, elo_curve_changed_at = @changedAt WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
-  setBanned:      db.prepare(`UPDATE players SET banned   = @banned   WHERE id = @id`),
+  setBanned:      db.prepare(`UPDATE players SET banned = @banned, banned_until = @until WHERE id = @id`),
   updateAvatar: db.prepare(`UPDATE players SET avatar = @avatar WHERE id = @id`),
   updateCoins:  db.prepare(`UPDATE players SET coins = @coins WHERE id = @id`),
   addCoins:     db.prepare(`UPDATE players SET coins = coins + @delta WHERE id = @id`),

@@ -829,7 +829,7 @@ function getStoredPlayer() {
 }
 
 function isShopAdmin() {
-  return String(shopPlayer?.role || '').toLowerCase() === 'admin';
+  return ['admin', 'moderator'].includes(String(shopPlayer?.role || '').toLowerCase());
 }
 
 function setPurchaseNotice(pack, message) {

@@ -314,7 +314,7 @@ function readApiError(res, fallback) {
 }
 
 function canCreateTournament(player = currentPlayer) {
-  return Number(player?.is_perso || 0) === 1 || String(player?.role || '') === 'admin';
+  return Number(player?.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(player?.role || ''));
 }
 
 function statusLabel(status) {

@@ -57,6 +57,9 @@ const botHostProcesses = new Map();
 const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
+const devMachineMetrics = [];
+let devMachineCpuBase = process.cpuUsage();
+let devMachineCpuAt = Date.now();
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
 const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 5 * 60_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(1, Number(process.env.BOT_ARENA_MAX_ACTIVE || 1)));
@@ -719,8 +722,24 @@ function hasPersoRoleIds(roleIds = []) {
   return Array.isArray(roleIds) && roleIds.includes(DISCORD_ROLE_CUSTOM);
 }
 
+function hasDeveloperRoleIds(roleIds = [], guildRoles = []) {
+  if (!Array.isArray(roleIds)) return false;
+  if (DISCORD_ROLE_DEVELOPER && roleIds.includes(DISCORD_ROLE_DEVELOPER)) return true;
+  const developerIds = new Set(
+    (Array.isArray(guildRoles) ? guildRoles : [])
+      .filter(role => /^(dev|developer|développeur|developpeur)$/i.test(String(role?.name || '').trim()))
+      .map(role => String(role.id || ''))
+      .filter(Boolean)
+  );
+  return roleIds.some(roleId => developerIds.has(String(roleId)));
+}
+
 function isPersoPlayer(player) {
-  return !!player && (Number(player.is_perso) === 1 || Number(player.is_bot) === 1);
+  return !!player && (
+    Number(player.is_perso) === 1
+    || Number(player.is_bot) === 1
+    || ['admin', 'moderator'].includes(String(player.role || ''))
+  );
 }
 
 function isCrystalPlayer(player) {
@@ -733,8 +752,28 @@ function isAdminPlayer(player) {
   return !!player && String(player.role || '') === 'admin';
 }
 
+function hasStaffRoleBenefits(player) {
+  return !!player && ['admin', 'moderator'].includes(String(player.role || ''));
+}
+
+function isDeveloperPlayer(player) {
+  return !!player && (Number(player.is_developer || 0) === 1 || String(player.role || '') === 'developer');
+}
+
+function isPlayerBanned(player) {
+  if (!player || Number(player.banned || 0) !== 1) return false;
+  const until = Number(player.banned_until || 0);
+  if (until > 0 && until <= Date.now()) {
+    pQ.setBanned.run({ banned: 0, until: null, id: player.id });
+    player.banned = 0;
+    player.banned_until = null;
+    return false;
+  }
+  return true;
+}
+
 function canUseGradientPlayer(player) {
-  return isAdminPlayer(player) || isVipPlusPlayer(player) || isPersoPlayer(player);
+  return hasStaffRoleBenefits(player) || isVipPlusPlayer(player) || isPersoPlayer(player);
 }
 
 function getPremiumTier(player) {
@@ -759,11 +798,11 @@ function isVipPlayer(player) {
   if (Number(player.is_bot) === 1) return true;
   const vipExpiresAt = Number(player.vip_expires_at || 0);
   if (vipExpiresAt && vipExpiresAt < Date.now() && Number(player.is_vip_plus) !== 1 && Number(player.is_perso) !== 1) return false;
-  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isCrystalPlayer(player) || isAdminPlayer(player);
+  return Number(player.is_vip) === 1 || Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || isCrystalPlayer(player) || hasStaffRoleBenefits(player);
 }
 
 function isVipPlusPlayer(player) {
-  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || Number(player.is_bot) === 1 || isCrystalPlayer(player) || isAdminPlayer(player));
+  return !!player && (Number(player.is_vip_plus) === 1 || Number(player.is_perso) === 1 || Number(player.is_bot) === 1 || isCrystalPlayer(player) || hasStaffRoleBenefits(player));
 }
 
 let canvasFontsRegistered = false;
@@ -1116,7 +1155,7 @@ function getQueueMusicPaths() {
 }
 
 function getVipMediaRemainingMs(player) {
-  if (isAdminPlayer(player)) return 0;
+  if (hasStaffRoleBenefits(player)) return 0;
   const lastChanged = Number(player?.vip_media_changed_at || 0);
   const cooldown = isVipPlusPlayer(player) ? VIP_PLUS_MEDIA_COOLDOWN_MS : VIP_MEDIA_COOLDOWN_MS;
   const remaining = lastChanged + cooldown - Date.now();
@@ -1124,14 +1163,14 @@ function getVipMediaRemainingMs(player) {
 }
 
 function getAvatarDecorationRemainingMs(player) {
-  if (isAdminPlayer(player)) return 0;
+  if (hasStaffRoleBenefits(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
 function getProfileBannerRemainingMs(player) {
-  if (isAdminPlayer(player)) return 0;
+  if (hasStaffRoleBenefits(player)) return 0;
   const lastChanged = Number(player?.profile_banner_changed_at || 0);
   const remaining = lastChanged + PROFILE_BANNER_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
@@ -1143,7 +1182,7 @@ function normalizeHexColor(value) {
 }
 
 function getPseudoStyleRemainingMs(player) {
-  if (isAdminPlayer(player) || isPersoPlayer(player)) return 0;
+  if (hasStaffRoleBenefits(player) || isPersoPlayer(player)) return 0;
   const lastChanged = Number(player?.pseudo_style_changed_at || 0);
   const cooldown = isVipPlusPlayer(player) ? VIP_MEDIA_COOLDOWN_MS : VIP_MONTHLY_STYLE_COOLDOWN_MS;
   const remaining = lastChanged + cooldown - Date.now();
@@ -1151,7 +1190,7 @@ function getPseudoStyleRemainingMs(player) {
 }
 
 function getEloCurveRemainingMs(player) {
-  if (isAdminPlayer(player) || isPersoPlayer(player)) return 0;
+  if (hasStaffRoleBenefits(player) || isPersoPlayer(player)) return 0;
   const lastChanged = Number(player?.elo_curve_changed_at || 0);
   const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
   return remaining > 0 ? remaining : 0;
@@ -2364,6 +2403,30 @@ process.once('SIGINT', () => {
   stopAllBotHosts('SIGINT');
   process.exit(0);
 });
+
+function sampleDevMachineMetrics() {
+  const now = Date.now();
+  const elapsedMs = Math.max(1, now - devMachineCpuAt);
+  const cpuUsage = process.cpuUsage(devMachineCpuBase);
+  const cpuMs = (cpuUsage.user + cpuUsage.system) / 1000;
+  const cores = Math.max(1, os.cpus()?.length || 1);
+  const memory = process.memoryUsage();
+  const totalMem = Math.max(1, os.totalmem());
+  const freeMem = Math.max(0, os.freemem());
+  devMachineMetrics.push({
+    at: now,
+    processCpuPct: Math.min(100, (cpuMs / elapsedMs / cores) * 100),
+    loadPct: Math.min(100, (Number(os.loadavg()?.[0] || 0) / cores) * 100),
+    processRssMb: memory.rss / 1024 / 1024,
+    heapUsedMb: memory.heapUsed / 1024 / 1024,
+    systemMemoryPct: ((totalMem - freeMem) / totalMem) * 100,
+  });
+  if (devMachineMetrics.length > 240) devMachineMetrics.splice(0, devMachineMetrics.length - 240);
+  devMachineCpuBase = process.cpuUsage();
+  devMachineCpuAt = now;
+}
+sampleDevMachineMetrics();
+setInterval(sampleDevMachineMetrics, 5000);
 process.once('SIGTERM', () => {
   stopAllBotHosts('SIGTERM');
   process.exit(0);
@@ -2400,6 +2463,7 @@ app.delete('/api/players/:id', (req, res) => {
     is_vip = 0,
     is_vip_plus = 0,
     is_perso = 0,
+    is_developer = 0,
     is_crystal = 0,
     crystal_expires_at = NULL,
     crystal_auto_renew = 0,
@@ -2433,6 +2497,88 @@ function getOrCreateAdminPassword() {
 const ADMIN_PASSWORD = getOrCreateAdminPassword();
 
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
+app.get('/dev', (_, res) => res.sendFile(path.join(__dirname, 'public/dev.html')));
+
+const DEV_SOURCE_ROOT = path.resolve(__dirname, '..');
+const DEV_SOURCE_EXTENSIONS = new Set(['.js', '.json', '.html', '.css', '.md', '.toml']);
+const DEV_ROOT_FILES = new Set(['package.json', 'README.md', 'railway.toml', 'nixpacks.toml']);
+
+function getDeveloperSession(req) {
+  const token = String(req.headers['x-token'] || req.query.token || '').trim();
+  const playerId = validateSession(token);
+  if (!playerId) return null;
+  const player = pQ.getById.get(playerId);
+  return player && (isDeveloperPlayer(player) || isAdminPlayer(player)) ? player : null;
+}
+
+function normalizeDeveloperSourcePath(value) {
+  const relative = String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!relative || relative.includes('\0')) return null;
+  const normalized = path.posix.normalize(relative);
+  if (normalized === '..' || normalized.startsWith('../')) return null;
+  const allowedRootFile = DEV_ROOT_FILES.has(normalized);
+  const allowedSourceFile = normalized.startsWith('src/') && DEV_SOURCE_EXTENSIONS.has(path.extname(normalized).toLowerCase());
+  if (!allowedRootFile && !allowedSourceFile) return null;
+  const absolute = path.resolve(DEV_SOURCE_ROOT, normalized);
+  if (!absolute.startsWith(DEV_SOURCE_ROOT + path.sep)) return null;
+  return { relative: normalized, absolute };
+}
+
+function listDeveloperSourceFiles() {
+  const files = [...DEV_ROOT_FILES].filter(name => fs.existsSync(path.join(DEV_SOURCE_ROOT, name)));
+  const walk = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === 'data' || entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(absolute);
+      } else if (DEV_SOURCE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+        files.push(path.relative(DEV_SOURCE_ROOT, absolute).replace(/\\/g, '/'));
+      }
+    }
+  };
+  walk(path.join(DEV_SOURCE_ROOT, 'src'));
+  return files.sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
+app.get('/api/dev/me', (req, res) => {
+  const player = getDeveloperSession(req);
+  if (!player) return res.status(403).json({ error: 'Acces developpeur requis.' });
+  res.json({ ok: true, id: player.id, pseudo: player.pseudo, role: player.role });
+});
+
+app.get('/api/dev/sources', (req, res) => {
+  if (!getDeveloperSession(req)) return res.status(403).json({ error: 'Acces developpeur requis.' });
+  res.json({ files: listDeveloperSourceFiles() });
+});
+
+app.get('/api/dev/source', (req, res) => {
+  if (!getDeveloperSession(req)) return res.status(403).json({ error: 'Acces developpeur requis.' });
+  const target = normalizeDeveloperSourcePath(req.query.path);
+  if (!target || !fs.existsSync(target.absolute) || !fs.statSync(target.absolute).isFile()) {
+    return res.status(404).json({ error: 'Fichier source introuvable.' });
+  }
+  const size = fs.statSync(target.absolute).size;
+  if (size > 1024 * 1024) return res.status(413).json({ error: 'Fichier trop volumineux.' });
+  res.json({
+    path: target.relative,
+    language: path.extname(target.relative).slice(1) || 'text',
+    content: fs.readFileSync(target.absolute, 'utf8'),
+  });
+});
+
+app.get('/api/dev/metrics', (req, res) => {
+  if (!getDeveloperSession(req)) return res.status(403).json({ error: 'Acces developpeur requis.' });
+  res.json({
+    estimated: true,
+    platform: `${os.platform()} ${os.release()}`,
+    cpuModel: os.cpus()?.[0]?.model || 'CPU inconnue',
+    cpuCores: os.cpus()?.length || 1,
+    totalMemoryMb: Math.round(os.totalmem() / 1024 / 1024),
+    uptimeSeconds: Math.round(process.uptime()),
+    metrics: devMachineMetrics,
+  });
+});
 
 // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le mot de passe admin (rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux joueurs rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle admin)
 app.get('/api/admin/password', async (req, res) => {
@@ -2450,7 +2596,9 @@ app.get('/api/admin/password', async (req, res) => {
       role = discordRole;
     }
   } catch(e) {}
-  if (role !== 'admin') return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux administrateurs.' });
+  if (!['admin', 'moderator'].includes(role)) {
+    return res.status(403).json({ error: 'Reserve au staff.' });
+  }
   res.json({ password: ADMIN_PASSWORD });
 });
 
@@ -2632,24 +2780,27 @@ app.get('/api/admin/security', (req, res) => {
 // Liste tous les joueurs
 app.get('/api/admin/players', (req, res) => {
   if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, bot_crystals, role, is_vip, is_vip_plus, is_perso, is_crystal, crystal_expires_at, crystal_auto_renew, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled, bot_owner_id FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
+  const players = db.prepare(`SELECT id, pseudo, elo, coins, gems, bot_crystals, role, is_vip, is_vip_plus, is_perso, is_crystal, crystal_expires_at, crystal_auto_renew, vip_expires_at, color_secondary, custom_role_text, custom_role_color, custom_role_emoji, wins, losses, draws, suspicious, banned, banned_until, muted_until, created_at, discord_id, discord_info, last_seen, is_bot, bot_enabled, bot_owner_id FROM players WHERE deleted = 0 ORDER BY elo DESC`).all();
   // Enrichir avec le statut en ligne
   const now = Date.now();
   const ownedBotCountQ = db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1 AND bot_owner_id = ?`);
-  const enriched = players.map(p => ({
-    ...p,
-    online: onlineSockets.has(p.id) && onlineSockets.get(p.id).size > 0,
-    discord_linked: !!(p.discord_id),
-    owned_bot_count: Number(ownedBotCountQ.get(p.id)?.c || 0),
-    shop_inventory: Object.fromEntries(
-      shopItemQ.getAllForPlayer.all(p.id).map(row => [row.item_key, Number(row.quantity || 0)])
-    ),
-  }));
+  const enriched = players.map(p => {
+    isPlayerBanned(p);
+    return {
+      ...p,
+      online: onlineSockets.has(p.id) && onlineSockets.get(p.id).size > 0,
+      discord_linked: !!(p.discord_id),
+      owned_bot_count: Number(ownedBotCountQ.get(p.id)?.c || 0),
+      shop_inventory: Object.fromEntries(
+        shopItemQ.getAllForPlayer.all(p.id).map(row => [row.item_key, Number(row.quantity || 0)])
+      ),
+    };
+  });
   res.json(enriched);
 });
 
 app.patch('/api/admin/players/:id/coins', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   const id = Number(req.params.id);
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
@@ -2670,7 +2821,7 @@ app.patch('/api/admin/players/:id/coins', (req, res) => {
 });
 
 app.patch('/api/admin/players/:id/gems', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   const id = Number(req.params.id);
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
@@ -2813,7 +2964,7 @@ app.post('/api/admin/limited-pack', (req, res) => {
 });
 
 app.patch('/api/admin/players/:id/shop-item', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   const id = Number(req.params.id);
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
@@ -2994,7 +3145,7 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
   if (!playerId || playerId !== id) return res.status(401).json({ error: 'Session invalide.' });
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (Number(target.is_perso || 0) !== 1) {
+  if (!isPersoPlayer(target)) {
     return res.status(403).json({ error: 'Le badge personnalise est reserve au pack Perso.' });
   }
 
@@ -3060,7 +3211,7 @@ app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
 
 // Reset ELO
 app.patch('/api/admin/players/:id/elo', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   const { elo } = req.body;
   const _pe = pQ.getById.get(Number(req.params.id));
   WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
@@ -3072,7 +3223,7 @@ app.patch('/api/admin/players/:id/elo', (req, res) => {
 
 // Mute temporaire (interdit de jouer)
 app.patch('/api/admin/players/:id/mute', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   const hours = Number(req.body?.hours);
   const minutes = Number(req.body?.minutes);
   const durationMinutes = Number.isFinite(minutes)
@@ -3088,18 +3239,25 @@ app.patch('/api/admin/players/:id/mute', (req, res) => {
 
 // Ban / Unban
 app.patch('/api/admin/players/:id/ban', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent bannir.' });
-  const { banned } = req.body;
+  if (!isModo(req)) return res.status(403).json({ error: 'Action reservee au staff.' });
+  const banned = req.body?.banned !== false;
+  const durationMinutes = Math.max(0, Math.min(525600, Math.trunc(Number(req.body?.durationMinutes || 0))));
+  const until = banned && durationMinutes > 0 ? Date.now() + durationMinutes * 60 * 1000 : null;
   const _pb = pQ.getById.get(Number(req.params.id));
   WH.wlogBan(_pb?.pseudo || req.params.id, req.params.id, banned);
-  pQ.setBanned.run({ banned: banned ? 1 : 0, id: Number(req.params.id) });
-  notifyPlayerProfileChanged(Number(req.params.id), banned ? 'Compte banni par le staff.' : 'Bannissement retire par le staff.');
-  res.json({ ok: true });
+  pQ.setBanned.run({ banned: banned ? 1 : 0, until, id: Number(req.params.id) });
+  const message = !banned
+    ? 'Bannissement retire par le staff.'
+    : until
+      ? `Compte banni temporairement par le staff (${durationMinutes} min).`
+      : 'Compte banni definitivement par le staff.';
+  notifyPlayerProfileChanged(Number(req.params.id), message);
+  res.json({ ok: true, banned, bannedUntil: until });
 });
 
 // Reset suspicious
 app.patch('/api/admin/players/:id/suspicious', (req, res) => {
-  if (!isModo(req)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
   abQ.setSuspicious.run({ val: 0, id: Number(req.params.id) });
   notifyPlayerProfileChanged(Number(req.params.id), 'Statut suspect retire par le staff.');
   res.json({ ok: true });
@@ -3119,6 +3277,7 @@ const { wlog, mkEmbed: embed } = WH;
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
+const DISCORD_ROLE_DEVELOPER = String(process.env.DISCORD_ROLE_DEVELOPER || '').trim();
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
@@ -4014,6 +4173,8 @@ async function getDiscordRole(discordUserId, botToken) {
     if (!Array.isArray(member.roles)) return 'user';
     if (member.roles.includes(DISCORD_ROLE_ADM)) return 'admin';
     if (member.roles.includes(DISCORD_ROLE_MOD)) return 'moderator';
+    const guildRoles = await fetchDiscordGuildRolesCached(botToken);
+    if (hasDeveloperRoleIds(member.roles, guildRoles)) return 'developer';
     return 'user';
   } catch(e) { return 'user'; }
 }
@@ -4042,12 +4203,15 @@ async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
     const server_roles_rich = (memberInfo.roles || [])
       .map(rid => ({ id: rid, name: rolesMap[rid]?.name || rid, color: rolesMap[rid]?.color || null }))
       .filter(r => r.name !== '@everyone');
+    const developer = hasDeveloperRoleIds(memberInfo.roles, guildRoles);
     const newRole = Array.isArray(memberInfo.roles) && memberInfo.roles.includes(DISCORD_ROLE_ADM)
       ? 'admin'
       : Array.isArray(memberInfo.roles) && memberInfo.roles.includes(DISCORD_ROLE_MOD)
         ? 'moderator'
-        : 'user';
-    const snapshot = { memberInfo, server_roles_rich, newRole };
+        : developer
+          ? 'developer'
+          : 'user';
+    const snapshot = { memberInfo, server_roles_rich, newRole, developer };
     discordMemberSnapshotCache.set(cacheKey, { snapshot, expiresAt: Date.now() + DISCORD_MEMBER_CACHE_TTL_MS });
     return snapshot;
   } catch(e) {
@@ -4067,6 +4231,7 @@ function applyDiscordSnapshotToPlayer(playerOrId, snapshot) {
   const vipNow = hasVipRoleIds(roles) ? 1 : 0;
   const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : 0;
   const persoNow = hasPersoRoleIds(roles) ? 1 : 0;
+  const developerNow = snapshot.developer ? 1 : 0;
 
   if (newRole !== player.role) {
     pQ.updateRole.run({ role: newRole, id: player.id });
@@ -4075,6 +4240,9 @@ function applyDiscordSnapshotToPlayer(playerOrId, snapshot) {
   if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id: player.id });
   if (vipPlusNow !== Number(player.is_vip_plus || 0)) pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id: player.id });
   if (persoNow !== Number(player.is_perso || 0)) pQ.updatePerso.run({ is_perso: persoNow, id: player.id });
+  if (developerNow !== Number(player.is_developer || 0)) {
+    pQ.updateDeveloper.run({ is_developer: developerNow, id: player.id });
+  }
   if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) {
     pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
   }
@@ -4099,7 +4267,7 @@ let discordRoleSyncOffset = 0;
 setInterval(async () => {
   const { botToken } = discordConfig();
   if (!botToken) return;
-  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, is_perso, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0 ORDER BY id ASC`).all();
+  const linked = db.prepare(`SELECT id, pseudo, role, is_vip, is_vip_plus, is_perso, is_developer, custom_role_text, custom_role_emoji, discord_id, discord_info FROM players WHERE discord_id IS NOT NULL AND discord_id != '' AND deleted = 0 ORDER BY id ASC`).all();
   if (!linked.length) return;
   const batchSize = Math.min(DISCORD_ROLE_SYNC_BATCH_SIZE, linked.length);
   const batch = [];
@@ -4110,11 +4278,12 @@ setInterval(async () => {
   for (const player of batch) {
     const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
     if (!snapshot) continue;
-    const { memberInfo, server_roles_rich, newRole } = snapshot;
+    const { memberInfo, server_roles_rich, newRole, developer } = snapshot;
     const roles = memberInfo.roles || [];
     const vipPlusNow = hasVipPlusRoleIds(roles) ? 1 : 0;
     const vipNow = hasVipRoleIds(roles) ? 1 : 0;
     const persoNow = hasPersoRoleIds(roles) ? 1 : 0;
+    const developerNow = developer ? 1 : 0;
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
       console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ${newRole}`);
@@ -4128,6 +4297,9 @@ setInterval(async () => {
     }
     if (persoNow !== Number(player.is_perso || 0)) {
       pQ.updatePerso.run({ is_perso: persoNow, id: player.id });
+    }
+    if (developerNow !== Number(player.is_developer || 0)) {
+      pQ.updateDeveloper.run({ is_developer: developerNow, id: player.id });
     }
     if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) {
       pQ.updateVipExpiry.run({ vip_expires_at: null, id: player.id });
@@ -4611,7 +4783,7 @@ app.post('/api/tournaments', (req, res) => {
   if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isPersoPlayer(player) && !isAdminPlayer(player)) {
+  if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'Creation reservee aux Perso.' });
   }
 
@@ -5009,7 +5181,7 @@ app.post('/api/shop/buy', async (req, res) => {
   if (currency === 'crystals' && pack !== 'bot_host_1m') {
     return res.status(400).json({ error: 'Les Cristaux servent uniquement a l hebergement de bot.' });
   }
-  if (pack === 'bot_host_1m' && currency !== 'crystals' && !isAdminPlayer(player)) {
+  if (pack === 'bot_host_1m' && currency !== 'crystals' && !hasStaffRoleBenefits(player)) {
     return res.status(400).json({ error: 'Host 1 mois s achete uniquement avec des Cristaux.' });
   }
   const ownedBots = getOwnedBots(playerId);
@@ -5021,7 +5193,7 @@ app.post('/api/shop/buy', async (req, res) => {
   if (requestedCoupon && !coupon) {
     return res.status(400).json({ error: 'Coupon invalide, expire, deja utilise ou limite atteinte.' });
   }
-  const adminFreeBotHost = pack === 'bot_host_1m' && isAdminPlayer(player);
+  const adminFreeBotHost = pack === 'bot_host_1m' && hasStaffRoleBenefits(player);
   const basePrice = currency === 'crystals'
     ? Number(item.crystalPrice || BOT_HOST_PRICE_CRYSTALS)
     : pack === 'limited_offer' && currency === 'gems'
@@ -5547,7 +5719,7 @@ function sanitize(p) {
       vip_expires_at: null,
     };
   }
-  const canUseQueueMusic = isPersoPlayer(rest) || isAdminPlayer(rest);
+  const canUseQueueMusic = isPersoPlayer(rest) || hasStaffRoleBenefits(rest);
   return {
     ...rest,
     queue_music: canUseQueueMusic ? String(rest.queue_music || '') : '',
@@ -5815,6 +5987,7 @@ app.delete('/api/players/:id', (req, res) => {
     is_vip = 0,
     is_vip_plus = 0,
     is_perso = 0,
+    is_developer = 0,
     is_crystal = 0,
     crystal_expires_at = NULL,
     crystal_auto_renew = 0,
@@ -5833,21 +6006,21 @@ app.patch('/api/players/:id/shape', (req, res) => {
   if (!base || !allowed.includes(base)) return res.status(400).json({ error: 'Forme invalide.' });
   if (!token || validateSession(token) !== Number(req.params.id)) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
   const player = pQ.getById.get(Number(req.params.id));
-  if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
+  if (base === 'emoji' && !isVipPlayer(player) && !hasStaffRoleBenefits(player)) {
     const last = Number(player?.token_emoji_changed_at || 0);
     const remaining = last + TOKEN_EMOJI_COOLDOWN_MS - Date.now();
     if (remaining > 0) {
       return res.status(429).json({ error: `Emoji modifiable dans ${Math.ceil(remaining / 60000)} min.`, remainingMs: remaining });
     }
   }
-  if (base === 'emoji_image' && !isVipPlusPlayer(player) && !isAdminPlayer(player)) {
+  if (base === 'emoji_image' && !isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'L emoji image est reserve au VIP+.' });
   }
   if (base === 'emoji_image' && !player?.token_emoji_image) {
     return res.status(400).json({ error: 'Ajoute d\'abord un emoji perso VIP.' });
   }
   pQ.updateShape.run({ shape, id: Number(req.params.id) }); // stocke 'circle' ou 'emoji:AAaAa AaaAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAAAasAA...AAAaAAasAA'
-  if (base === 'emoji' && !isVipPlayer(player) && !isAdminPlayer(player)) {
+  if (base === 'emoji' && !isVipPlayer(player) && !hasStaffRoleBenefits(player)) {
     pQ.updateTokenEmojiChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   }
   res.json({ ok: true });
@@ -5898,7 +6071,7 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isVipPlayer(player) && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+  if (!isVipPlayer(player) && !isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'Style de pseudo reserve au VIP, VIP+ ou Perso.' });
   }
   const nextColor = normalizeHexColor(color);
@@ -5927,7 +6100,7 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isVipPlayer(player) && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+  if (!isVipPlayer(player) && !isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'Couleur de courbe reservee au VIP, VIP+ ou Perso.' });
   }
   const nextColor = normalizeHexColor(color);
@@ -5937,7 +6110,7 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
   const nextRgbDirection = String(rgbDirection || 'forward') === 'reverse' ? 'reverse' : 'forward';
   if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
   if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
-  if (nextRgb && !isPersoPlayer(player) && !isAdminPlayer(player)) {
+  if (nextRgb && !isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'Animation RGB reservee au role Perso.' });
   }
   const remaining = getEloCurveRemainingMs(player);
@@ -5961,7 +6134,7 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (!banner || !banner.startsWith('data:image/')) return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(banner);
-  const isAdminTier = isAdminPlayer(player);
+  const isAdminTier = hasStaffRoleBenefits(player);
   const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 4 * 1024 * 1024);
   const approxBytes = Math.ceil((banner.length - banner.indexOf(',') - 1) * 3 / 4);
   if (isGif && !isVipPlayer(player) && !isAdminTier) {
@@ -5988,7 +6161,7 @@ app.patch('/api/players/:id/avatar', (req, res) => {
     return res.status(400).json({ error: 'Image invalide.' });
   const player = pQ.getById.get(Number(req.params.id));
   const isGif = /^data:image\/gif;base64,/i.test(avatar);
-  const isAdminTier = isAdminPlayer(player);
+  const isAdminTier = hasStaffRoleBenefits(player);
   const maxBytes = isAdminTier ? Number.MAX_SAFE_INTEGER : (isGif && isVipPlayer(player) ? 5 * 1024 * 1024 : 2 * 1024 * 1024);
   const approxBytes = Math.ceil((avatar.length - avatar.indexOf(',') - 1) * 3 / 4);
   if (isGif && !isVipPlayer(player) && !isAdminTier) {
@@ -6013,7 +6186,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
@@ -6022,7 +6195,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
     return res.status(429).json({ error: `Emoji perso disponible dans ${formatCooldownHours(remaining)}.` });
   }
   const approxBytes = Math.ceil((image.length - image.indexOf(',') - 1) * 3 / 4);
-  if (!isAdminPlayer(player) && approxBytes > 1024 * 1024) {
+  if (!hasStaffRoleBenefits(player) && approxBytes > 1024 * 1024) {
     return res.status(413).json({ error: 'Emoji perso trop lourd (max 1MB).' });
   }
   pQ.updateTokenEmojiImage.run({ image, id });
@@ -6035,7 +6208,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   const nextDecoration = String(image || '').trim();
   const isPreset = getAvatarDecorationPaths().includes(nextDecoration);
   const isInlineImage = /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(nextDecoration);
@@ -6047,7 +6220,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
     return res.status(429).json({ error: `Decoration avatar disponible dans ${formatCooldownHours(remaining)}.` });
   }
   const approxBytes = isInlineImage ? Math.ceil((nextDecoration.length - nextDecoration.indexOf(',') - 1) * 3 / 4) : 0;
-  if (!isAdminPlayer(player) && isInlineImage && approxBytes > 1024 * 1024) {
+  if (!hasStaffRoleBenefits(player) && isInlineImage && approxBytes > 1024 * 1024) {
     return res.status(413).json({ error: 'Decoration trop lourde (max 1MB).' });
   }
   pQ.updateAvatarDecoration.run({ image: nextDecoration, id });
@@ -6060,7 +6233,7 @@ app.patch('/api/players/:id/profile-banner', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isPersoPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Reserve au pack Perso.' });
+  if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve au pack Perso.' });
   const nextBanner = String(image || '').trim();
   const isPreset = nextBanner === '' || getProfileBannerPaths().includes(nextBanner);
   if (!isPreset) {
@@ -6080,7 +6253,7 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isPersoPlayer(player) && !isAdminPlayer(player)) {
+  if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
     return res.status(403).json({ error: 'Reserve au grade Perso.' });
   }
   const nextMusic = String(music || '').trim();
@@ -6306,12 +6479,12 @@ app.post('/api/clans', security.routeGuard('clan'), (req, res) => {
     if (!playerId || isAnonymousPlayerId(playerId)) return res.status(401).json({ error: 'Connecte-toi pour créer un clan.' });
     const player = pQ.getById.get(playerId);
     if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
-    if (!isPersoPlayer(player) && !isAdminPlayer(player)) return res.status(403).json({ error: 'Seuls les Perso peuvent créer un clan.' });
+    if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Seuls les Perso peuvent créer un clan.' });
     if (cQ.getForPlayer.get(playerId)) return res.status(409).json({ error: 'Tu es déjà dans un clan.' });
 
     const last = cQ.lastCreatedBy.get(playerId);
     const cooldownMs = 30 * 24 * 60 * 60 * 1000;
-    if (!isAdminPlayer(player) && last && Date.now() - Number(last.created_at || 0) < cooldownMs) {
+    if (!hasStaffRoleBenefits(player) && last && Date.now() - Number(last.created_at || 0) < cooldownMs) {
       const leftDays = Math.ceil((cooldownMs - (Date.now() - Number(last.created_at || 0))) / 86400000);
       return res.status(429).json({ error: `Tu pourras recréer un clan dans ${leftDays} jour(s).` });
     }
@@ -7172,18 +7345,23 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       pQ.updateVip.run({ is_vip: 0, id });
       pQ.updateVipPlus.run({ is_vip_plus: 0, id });
       pQ.updatePerso.run({ is_perso: 0, id });
+      pQ.updateDeveloper.run({ is_developer: 0, id });
       pQ.updateVipExpiry.run({ vip_expires_at: null, id });
       revokeAdminSessionsForPlayer(id);
       return res.status(404).json({ error: 'Membre introuvable sur le serveur.', unlinked: true, role: 'user' });
     }
-    const { memberInfo, server_roles_rich, newRole } = snapshot;
+    const { memberInfo, server_roles_rich, newRole, developer } = snapshot;
     if (newRole !== player.role) pQ.updateRole.run({ role: newRole, id });
     const vipNow = hasVipRoleIds(memberInfo.roles || []) ? 1 : 0;
     const vipPlusNow = hasVipPlusRoleIds(memberInfo.roles || []) ? 1 : 0;
     const persoNow = hasPersoRoleIds(memberInfo.roles || []) ? 1 : 0;
+    const developerNow = developer ? 1 : 0;
     if (vipNow !== Number(player.is_vip || 0)) pQ.updateVip.run({ is_vip: vipNow, id });
     if (vipPlusNow !== Number(player.is_vip_plus || 0)) pQ.updateVipPlus.run({ is_vip_plus: vipPlusNow, id });
     if (persoNow !== Number(player.is_perso || 0)) pQ.updatePerso.run({ is_perso: persoNow, id });
+    if (developerNow !== Number(player.is_developer || 0)) {
+      pQ.updateDeveloper.run({ is_developer: developerNow, id });
+    }
     if (!vipNow && !vipPlusNow && Number(player.vip_expires_at || 0)) pQ.updateVipExpiry.run({ vip_expires_at: null, id });
     // Mettre AAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  jour discord_info
     const existing = player.discord_info ? JSON.parse(player.discord_info) : {};
@@ -7196,7 +7374,7 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
     };
     rQ.setDiscord.run(player.discord_id, JSON.stringify(updated), id);
     const fresh = pQ.getById.get(id);
-    res.json({ ok: true, roles: server_roles_rich, role: newRole, is_vip: vipNow, is_vip_plus: vipPlusNow, is_perso: persoNow, vip_expires_at: Number(fresh?.vip_expires_at || 0) || null });
+    res.json({ ok: true, roles: server_roles_rich, role: newRole, is_vip: vipNow, is_vip_plus: vipPlusNow, is_perso: persoNow, is_developer: developerNow, vip_expires_at: Number(fresh?.vip_expires_at || 0) || null });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -7905,7 +8083,11 @@ io.on('connection', socket => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
     // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier ban/mute
-    if (freshPlayer.banned) return socket.emit('error', { message: 'Ton compte est banni.' });
+    if (isPlayerBanned(freshPlayer)) {
+      const until = Number(freshPlayer.banned_until || 0);
+      const suffix = until > 0 ? ` jusqu'au ${new Date(until).toLocaleString('fr-FR')}` : '';
+      return socket.emit('error', { message: `Ton compte est banni${suffix}.` });
+    }
     if (freshPlayer.muted_until && freshPlayer.muted_until > Date.now()) {
       const mins = Math.ceil((freshPlayer.muted_until - Date.now()) / 60000);
       return socket.emit('error', { message: `Tu es banni de jeu pendant encore ${mins} minute(s).` });
