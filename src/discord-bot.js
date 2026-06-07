@@ -20,6 +20,8 @@ const {
   MessageFlags,
   PermissionsBitField,
 } = require('discord.js');
+const {DefaultWebSocketManagerOptions}=require('@discordjs/ws')
+DefaultWebSocketManagerOptions.identifyProperties.browser = 'Discord Android'
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
@@ -442,7 +444,7 @@ function startDiscordBot(ctx) {
       activity.assets?.smallText,
     ].filter(Boolean).join(' ').toLowerCase();
     const isCodeActivity = activity => /(^|\s)(code|vscode|visual studio code|cursor|sublime text|intellij|webstorm|pycharm|phpstorm|rider|clion|fleet)(\s|$)/i.test(activitySearchText(activity));
-    const isMinecraftActivity = activity => /minecraft|lunar client|feather client|badlion|labymod|salwyrr|pvplounge/i.test(activitySearchText(activity));
+    const isMinecraftActivity = activity => /minecraft|Lunar Client|Feather Client|CheatBreaker|badlion|labymod|salwyrr|pvplounge/i.test(activitySearchText(activity));
     const firstMatch = (values, regex) => {
       for (const value of values.filter(Boolean)) {
         const match = String(value).match(regex);
@@ -1752,7 +1754,7 @@ function startDiscordBot(ctx) {
         {text :`💾・Version 3.2.0`,type:ActivityType.Watching}
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
-      bot.user.setStatus('idle')
+      bot.user.setStatus('online')
       bot.user.setActivity(status.text, { type: status.type });
     } catch (_) {}
   }
