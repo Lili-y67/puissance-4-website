@@ -3256,6 +3256,9 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
   const rgb = req.body?.rgb == null
     ? Number(target.custom_role_rgb || 0) === 1
     : req.body.rgb === true || req.body.rgb === 1 || req.body.rgb === '1' || req.body.rgb === 'true';
+  if (rgb && Number(target.is_perso || 0) !== 1) {
+    return res.status(403).json({ error: 'Le RGB du badge est reserve au rang Perso.' });
+  }
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le role personnalise doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise pour le role personnalise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
@@ -3297,8 +3300,8 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
   if (!playerId || playerId !== id) return res.status(401).json({ error: 'Session invalide.' });
   const target = pQ.getById.get(id);
   if (!target) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isPersoPlayer(target)) {
-    return res.status(403).json({ error: 'Le badge personnalise est reserve au pack Perso.' });
+  if (Number(target.is_perso || 0) !== 1 && !isAdminPlayer(target)) {
+    return res.status(403).json({ error: 'Le badge personnalise est reserve au rang Perso et aux admins.' });
   }
 
   const rawText = String(req.body?.text || '').trim();
@@ -3306,6 +3309,9 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
   const rawColorSecondary = String(req.body?.colorSecondary || '').trim();
   const rawEmoji = String(req.body?.emoji || '').trim();
   const rgb = req.body?.rgb === true || req.body?.rgb === 1 || req.body?.rgb === '1' || req.body?.rgb === 'true';
+  if (rgb && Number(target.is_perso || 0) !== 1) {
+    return res.status(403).json({ error: 'Le RGB du badge est reserve au rang Perso.' });
+  }
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le badge perso doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });

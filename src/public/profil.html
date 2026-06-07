@@ -651,13 +651,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   transition:all 0.2s;
 }
 .profile-badge.perso.badge-rgb-wave{
-  --badge-color:#fff;--badge-border:transparent;--badge-glow:rgba(133,235,255,.28);
-  background:linear-gradient(110deg,#ff3864,#ffd60a,#30d158,#36d7ff,#8a5cff,#ff4fc3,#ff3864);
-  background-size:320% 100%;
-  color:#fff;
-  border-color:transparent;
-  box-shadow:0 0 18px rgba(255,56,100,.22),0 0 28px rgba(54,215,255,.16),inset 0 1px 0 rgba(255,255,255,.28);
-  animation:badgeRgbWave 4s linear infinite;
+  --badge-color:#f8f7ff;--badge-border:rgba(255,255,255,.16);--badge-glow:rgba(133,235,255,.14);
+  background:
+    linear-gradient(110deg,rgba(255,56,100,.16),rgba(255,214,10,.13),rgba(48,209,88,.14),rgba(54,215,255,.16),rgba(138,92,255,.16),rgba(255,79,195,.14),rgba(255,56,100,.16)),
+    rgba(255,255,255,.025);
+  background-size:320% 100%,100% 100%;
+  color:#f8f7ff;
+  border-color:rgba(255,255,255,.14);
+  box-shadow:0 0 14px rgba(255,56,100,.08),0 0 20px rgba(54,215,255,.07),inset 0 1px 0 rgba(255,255,255,.12);
+  animation:badgeRgbWave 6.5s linear infinite;
 }
 @keyframes badgeRgbWave{to{background-position:320% 50%}}
 .shape-preview.shape-rgb-wave,.token-emoji-preview.shape-rgb-wave{
@@ -1538,6 +1540,14 @@ function isPerso(player = currentPlayer) {
   return Number(player?.is_perso) === 1 || Number(player?.is_bot) === 1 || isAdminTier(player);
 }
 
+function canConfigurePersoBadge(player = currentPlayer) {
+  return Number(player?.is_perso) === 1 || String(player?.role || '') === 'admin';
+}
+
+function canUsePersoBadgeRgb(player = currentPlayer) {
+  return Number(player?.is_perso) === 1;
+}
+
 function canUseGradient(player = currentPlayer) {
   return isVipPlus(player) || isPerso(player);
 }
@@ -1831,7 +1841,7 @@ function getPersoRoleAccent(player = currentPlayer) {
     glow: colorSecondary ? `${colorSecondary}44` : `${color}44`,
     label: String(player?.custom_role_text || '').trim().toUpperCase() || defaultAccent.label,
     emoji: String(player?.custom_role_emoji || '').trim(),
-    rgb: Number(player?.custom_role_rgb || 0) === 1,
+    rgb: canUsePersoBadgeRgb(player) && Number(player?.custom_role_rgb || 0) === 1,
   };
 }
 
@@ -2505,7 +2515,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
       ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
     </div>
-    ${isPerso(player) ? `
+    ${canConfigurePersoBadge(player) ? `
     <div class="color-card" id="perso-role-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Badge Perso</span>
@@ -2522,12 +2532,12 @@ function render(player, games, following, followers, followStatus, tournaments =
           <input type="color" id="perso-role-color-secondary-input" value="${player.custom_role_color_secondary || '#85EBFF'}" oninput="refreshPersoRolePreview()">
           <span>Couleur 2</span>
         </div>
-        <label class="pseudo-format-option rgb"><input id="perso-role-rgb-input" type="checkbox" ${Number(player.custom_role_rgb || 0) === 1 ? 'checked' : ''} onchange="refreshPersoRolePreview()"><span>RGB vague</span></label>
+        ${canUsePersoBadgeRgb(player) ? `<label class="pseudo-format-option rgb"><input id="perso-role-rgb-input" type="checkbox" ${Number(player.custom_role_rgb || 0) === 1 ? 'checked' : ''} onchange="refreshPersoRolePreview()"><span>RGB doux</span></label>` : ''}
         <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
         <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11px;color:var(--muted)">Aperçu :</span><span id="perso-role-preview" class="profile-badge perso"></span></div>
-      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel, ses couleurs et éventuellement une vague RGB. Maximum 8 caractères.</div>
+      <div style="font-size:11px;color:var(--muted)">Choisis ton texte, un emoji optionnel et ses couleurs. ${canUsePersoBadgeRgb(player) ? 'Le RGB doux est réservé au rang Perso.' : 'Accès administrateur complet, hors RGB réservé au rang Perso.'} Maximum 8 caractères.</div>
     </div>` : ''}
     ${Number(player.is_crystal || 0) === 1 ? `
     <div class="color-card" id="crystal-alert-card" style="border-color:rgba(133,235,255,.28);background:rgba(133,235,255,.045)">
