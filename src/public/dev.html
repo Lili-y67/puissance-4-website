@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Developer Console - Puissance 4</title>
 <link rel="stylesheet" href="/theme.css">
+<link rel="icon" href="./assets/site-logo-small.png">
 <style>
 :root{--bg:#070706;--panel:#11110e;--panel2:#171711;--yellow:#ffd60a;--yellow2:#ff9f0a;--text:#f6f3e4;--muted:#969384;--line:rgba(255,214,10,.2);--red:#ff5b70;--green:#52e59a;--blue:#85ebff}
 *{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Barlow,system-ui,sans-serif}
@@ -17,11 +18,11 @@ button,input{font:inherit}.hidden{display:none!important}.btn{border:1px solid v
 .hero{margin:18px 0;display:grid;grid-template-columns:1.35fr .65fr;gap:14px}.panel{background:linear-gradient(145deg,rgba(20,20,16,.96),rgba(12,12,10,.94));border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.22);transition:border-color .25s,transform .25s,box-shadow .25s;animation:riseIn .6s ease both}.panel:hover{border-color:rgba(255,214,10,.34);box-shadow:0 24px 65px rgba(0,0,0,.32),0 0 35px rgba(255,214,10,.035)}.hero-main{min-height:220px;position:relative;overflow:hidden}.hero-main:after{content:"</>";position:absolute;right:20px;bottom:-24px;font:900 110px ui-monospace,monospace;color:rgba(255,214,10,.045);transform:rotate(-8deg);animation:codeDrift 5s ease-in-out infinite}.kicker{color:var(--yellow);font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase}.hero h1{font-family:"Barlow Condensed",sans-serif;font-size:42px;line-height:1;margin:8px 0}.copy{color:var(--muted);line-height:1.5;max-width:720px}.health{display:inline-flex;align-items:center;gap:7px;margin-top:20px;color:var(--green);font-size:12px;font-weight:800}.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 1.8s infinite}@keyframes pulse{50%{opacity:.35}}
 .machine-title{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:900;margin:7px 0}.machine-meta{color:var(--muted);font-size:12px;line-height:1.5}.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}.quick{padding:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);border-radius:12px}.quick strong{display:block;color:var(--yellow);font-size:20px}.quick span{font-size:9px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
 .tabs{display:flex;gap:8px;margin-bottom:14px}.tab{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);padding:10px 15px;border-radius:11px;font-weight:900;cursor:pointer;transition:.22s}.tab:hover{color:var(--text);transform:translateY(-2px)}.tab.active{background:rgba(255,214,10,.12);border-color:var(--line);color:var(--yellow);box-shadow:0 8px 25px rgba(255,214,10,.07)}
-.monitor-grid{display:grid;grid-template-columns:320px repeat(3,minmax(0,1fr));gap:10px;align-items:stretch}.monitor-card{min-width:0;background:linear-gradient(180deg,rgba(18,18,17,.97),rgba(7,8,7,.97));border:1px solid rgba(113,255,64,.15);border-radius:10px;overflow:hidden;box-shadow:0 18px 42px rgba(0,0,0,.3);animation:riseIn .55s ease both}.monitor-head{height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;background:linear-gradient(180deg,rgba(42,42,43,.95),rgba(24,24,25,.95));border-bottom:1px solid rgba(255,255,255,.08);font:800 11px "Barlow Condensed",sans-serif;letter-spacing:.7px;text-transform:uppercase;color:#ddd}.monitor-head strong{font:800 11px ui-monospace,Consolas,monospace;color:#9cff72}.monitor-summary{grid-row:span 1;background:linear-gradient(180deg,rgba(18,55,13,.95) 0 34px,rgba(17,18,17,.98) 34px)}.monitor-summary .monitor-head{justify-content:center;background:rgba(12,69,8,.8);color:#75ff45}.status-body{padding:10px}.status-row{display:grid;grid-template-columns:76px 1fr 72px;align-items:center;gap:9px;margin-bottom:9px;color:#dedede;font:11px ui-monospace,Consolas,monospace}.status-row strong{text-align:right;color:#c8c8c8}.meter{height:25px;background:rgba(255,255,255,.07);overflow:hidden;border:1px solid rgba(255,255,255,.04)}.meter-fill{height:100%;width:0;background:linear-gradient(90deg,#1d7f12,#76b72a);box-shadow:0 0 16px rgba(92,255,38,.28);transition:width .65s ease}.status-net{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.status-mini{padding:9px;background:rgba(255,255,255,.035);border-left:3px solid #49ff2a}.status-mini span{display:block;color:#888;font:9px ui-monospace,monospace;text-transform:uppercase}.status-mini strong{display:block;margin-top:5px;color:#e5e5e5;font:800 12px ui-monospace,monospace}.status-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);font:10px ui-monospace,monospace;color:#888}.status-foot .online{color:#70ff48}.chart-card{transition:border-color .25s,transform .25s}.chart-card:hover{transform:translateY(-2px);border-color:rgba(113,255,64,.38)}.chart-cpu{grid-column:2}.chart-system{grid-column:3}.chart-rx{grid-column:4}.chart-tx{grid-column:1}.chart-process{grid-column:2 / span 3}.chart-stage{position:relative;padding:0;background:#050605}canvas{display:block;width:100%;height:230px;background:transparent}.chart-process canvas{height:255px}.legend{display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px 10px;color:#898989;font-size:10px;border-top:1px solid rgba(255,255,255,.05)}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.live-state{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11px}.live-state.connected{color:#6fff45}
+.monitor-grid{display:grid;grid-template-columns:320px repeat(3,minmax(0,1fr));gap:10px;align-items:stretch}.monitor-card{min-width:0;background:linear-gradient(180deg,rgba(18,18,17,.97),rgba(7,8,7,.97));border:1px solid rgba(113,255,64,.15);border-radius:10px;overflow:hidden;box-shadow:0 18px 42px rgba(0,0,0,.3);animation:riseIn .55s ease both}.monitor-head{height:34px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 12px;background:linear-gradient(180deg,rgba(42,42,43,.95),rgba(24,24,25,.95));border-bottom:1px solid rgba(255,255,255,.08);font:800 11px "Barlow Condensed",sans-serif;letter-spacing:.7px;text-transform:uppercase;color:#ddd}.monitor-head strong{font:800 11px ui-monospace,Consolas,monospace;color:#9cff72}.monitor-summary{grid-row:span 1;background:linear-gradient(180deg,rgba(18,55,13,.95) 0 34px,rgba(17,18,17,.98) 34px)}.monitor-summary .monitor-head{justify-content:center;background:rgba(12,69,8,.8);color:#75ff45}.status-body{padding:10px}.status-row{display:grid;grid-template-columns:76px 1fr 72px;align-items:center;gap:9px;margin-bottom:9px;color:#dedede;font:11px ui-monospace,Consolas,monospace}.status-row strong{text-align:right;color:#c8c8c8}.meter{height:25px;background:rgba(255,255,255,.07);overflow:hidden;border:1px solid rgba(255,255,255,.04)}.meter-fill{height:100%;width:0;background:linear-gradient(90deg,#1d7f12,#76b72a);box-shadow:0 0 16px rgba(92,255,38,.28);transition:width .65s ease}.status-net{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}.status-mini{padding:9px;background:rgba(255,255,255,.035);border-left:3px solid #49ff2a}.status-mini span{display:block;color:#888;font:9px ui-monospace,monospace;text-transform:uppercase}.status-mini strong{display:block;margin-top:5px;color:#e5e5e5;font:800 12px ui-monospace,monospace}.status-foot{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.08);font:10px ui-monospace,monospace;color:#888}.status-foot .online{color:#70ff48}.chart-card{transition:border-color .25s,transform .25s}.chart-card:hover{transform:translateY(-2px);border-color:rgba(113,255,64,.38)}.chart-cpu{grid-column:2}.chart-system{grid-column:3}.chart-network{grid-column:4}.chart-process{grid-column:1 / span 4}.chart-stage{position:relative;padding:0;background:#050605}canvas{display:block;width:100%;height:230px;background:transparent;cursor:crosshair}.chart-process canvas{height:255px}.legend{display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px 10px;color:#898989;font-size:10px;border-top:1px solid rgba(255,255,255,.05)}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}.rgb-dot{animation:rgbDot 4s linear infinite}.logs-card{grid-column:1 / span 4}.logs-body{display:flex;gap:8px;align-items:flex-start;min-height:68px;max-height:132px;overflow:auto;padding:11px;flex-wrap:wrap}.log-bubble{position:relative;max-width:360px;padding:8px 11px 8px 29px;border:1px solid rgba(116,255,83,.2);border-radius:4px 12px 12px 12px;background:rgba(255,255,255,.035);color:#d6d6d6;font:10px/1.4 ui-monospace,Consolas,monospace;animation:logIn .25s ease both}.log-bubble:before{content:"";position:absolute;left:11px;top:11px;width:7px;height:7px;border-radius:50%;background:#65ff3e;box-shadow:0 0 9px #65ff3e}.log-bubble.warn{border-color:rgba(255,181,54,.35)}.log-bubble.warn:before{background:#ffb536;box-shadow:0 0 9px #ffb536}.log-bubble.error{border-color:rgba(255,83,112,.4)}.log-bubble.error:before{background:#ff5370;box-shadow:0 0 9px #ff5370}.log-time{color:#737373;margin-right:6px}.live-state{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11px}.live-state.connected{color:#6fff45}
 .source-layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px}.source-sidebar{min-height:690px}.source-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px}.source-count{font:800 11px ui-monospace,monospace;color:var(--yellow)}.search{margin:12px 0;width:100%}.file-list{max-height:590px;overflow:auto;display:flex;flex-direction:column;gap:5px;padding-right:3px}.file{width:100%;text-align:left;border:1px solid transparent;background:rgba(255,255,255,.025);color:#b9b6a8;padding:9px 10px;border-radius:9px;cursor:pointer;font:11px/1.35 ui-monospace,Consolas,monospace;word-break:break-all;transition:.18s}.file:hover,.file.active{background:rgba(255,214,10,.08);border-color:var(--line);color:var(--yellow);transform:translateX(3px)}
 .reader{min-width:0;padding:0;overflow:hidden}.reader-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:#181818;border-bottom:1px solid #2d2d2d}.reader-path{color:#dcdcaa;font:12px ui-monospace,Consolas,monospace;word-break:break-all}.reader-actions{display:flex;gap:7px}.editor{position:relative;background:#1e1e1e}.editor:before{content:"";display:block;height:30px;background:linear-gradient(90deg,#252526,#1e1e1e);border-bottom:1px solid #303030}.editor:after{content:"READ ONLY";position:absolute;right:14px;top:8px;color:#858585;font:9px ui-monospace,Consolas,monospace;letter-spacing:1px}pre{margin:0;min-height:620px;max-height:760px;overflow:auto;background:#1e1e1e;border:0;border-radius:0;padding:14px 18px;color:#d4d4d4;font:12px/1.62 "Cascadia Code",Consolas,ui-monospace,monospace;white-space:pre;tab-size:2;counter-reset:line}.code-line{display:block;min-height:1.62em}.code-line:before{counter-increment:line;content:counter(line);display:inline-block;width:42px;margin-right:18px;color:#858585;text-align:right;user-select:none}.tok-comment{color:#6a9955;font-style:italic}.tok-string{color:#ce9178}.tok-keyword{color:#c586c0}.tok-number{color:#b5cea8}.tok-function{color:#dcdcaa}.tok-tag{color:#569cd6}.tok-property{color:#9cdcfe}.tok-boolean{color:#569cd6}.empty{color:#858585}
-@keyframes gridShift{to{background-position:0 0,0 0,34px 34px,34px 34px}}@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes dropIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}@keyframes logoFloat{50%{transform:translateY(-5px);box-shadow:0 12px 45px rgba(255,214,10,.2)}}@keyframes codeDrift{50%{transform:rotate(-5deg) translateY(-8px)}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
-@media(max-width:1250px){.monitor-grid{grid-template-columns:300px 1fr 1fr}.chart-cpu{grid-column:2}.chart-system{grid-column:3}.chart-rx{grid-column:2}.chart-tx{grid-column:3}.chart-process{grid-column:1 / span 3}}@media(max-width:980px){.hero,.source-layout{grid-template-columns:1fr}.monitor-grid{grid-template-columns:1fr 1fr}.monitor-summary,.chart-cpu,.chart-system,.chart-rx,.chart-tx,.chart-process{grid-column:auto}.chart-process{grid-column:1 / span 2}.source-sidebar{min-height:auto}.file-list{max-height:310px}}@media(max-width:620px){.shell{width:calc(100% - 16px)}.topbar{align-items:flex-start}.top-actions{flex-wrap:wrap;justify-content:flex-end}.identity{display:none}.hero h1{font-size:34px}.tabs{overflow:auto}.monitor-grid{grid-template-columns:1fr}.monitor-summary,.chart-cpu,.chart-system,.chart-rx,.chart-tx,.chart-process{grid-column:1}.reader-head{align-items:flex-start;flex-direction:column}pre{font-size:10px;min-height:480px}}
+@keyframes gridShift{to{background-position:0 0,0 0,34px 34px,34px 34px}}@keyframes riseIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes dropIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}@keyframes logoFloat{50%{transform:translateY(-5px);box-shadow:0 12px 45px rgba(255,214,10,.2)}}@keyframes codeDrift{50%{transform:rotate(-5deg) translateY(-8px)}}@keyframes rgbDot{to{filter:hue-rotate(360deg)}}@keyframes logIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+@media(max-width:1250px){.monitor-grid{grid-template-columns:300px 1fr 1fr}.chart-cpu{grid-column:2}.chart-system{grid-column:3}.chart-network{grid-column:2 / span 2}.chart-process,.logs-card{grid-column:1 / span 3}}@media(max-width:980px){.hero,.source-layout{grid-template-columns:1fr}.monitor-grid{grid-template-columns:1fr 1fr}.monitor-summary,.chart-cpu,.chart-system,.chart-network,.chart-process,.logs-card{grid-column:auto}.chart-network,.chart-process,.logs-card{grid-column:1 / span 2}.source-sidebar{min-height:auto}.file-list{max-height:310px}}@media(max-width:620px){.shell{width:calc(100% - 16px)}.topbar{align-items:flex-start}.top-actions{flex-wrap:wrap;justify-content:flex-end}.identity{display:none}.hero h1{font-size:34px}.tabs{overflow:auto}.monitor-grid{grid-template-columns:1fr}.monitor-summary,.chart-cpu,.chart-system,.chart-network,.chart-process,.logs-card{grid-column:1}.reader-head{align-items:flex-start;flex-direction:column}pre{font-size:10px;min-height:480px}}
 </style>
 </head>
 <body>
@@ -91,11 +92,11 @@ button,input{font:inherit}.hidden{display:none!important}.btn{border:1px solid v
             <div class="status-foot"><span class="online">● Monitoring actif</span><span>Mise à jour 1s</span></div>
           </div>
         </article>
-        <article class="monitor-card chart-card chart-cpu"><div class="monitor-head"><span>CPU processus</span><strong id="cpu-chart-value">0%</strong></div><div class="chart-stage"><canvas id="cpu-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot" style="background:#58ff32"></i>Charge normalisée</span></div></article>
-        <article class="monitor-card chart-card chart-system"><div class="monitor-head"><span>RAM système</span><strong id="system-memory-chart-value">0%</strong></div><div class="chart-stage"><canvas id="system-memory-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot" style="background:#71b52d"></i>Mémoire utilisée</span></div></article>
-        <article class="monitor-card chart-card chart-rx"><div class="monitor-head"><span>Réseau entrant</span><strong id="network-rx-chart-value">0 KB/s</strong></div><div class="chart-stage"><canvas id="network-rx-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot" style="background:#42ff36"></i>RX entrant</span></div></article>
-        <article class="monitor-card chart-card chart-tx"><div class="monitor-head"><span>Réseau sortant</span><strong id="network-tx-chart-value">0 KB/s</strong></div><div class="chart-stage"><canvas id="network-tx-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot" style="background:#28c91f"></i>TX sortant</span></div></article>
-        <article class="monitor-card chart-card chart-process"><div class="monitor-head"><span>Mémoire processus Node.js</span><strong id="process-memory-chart-value">0 MB</strong></div><div class="chart-stage"><canvas id="process-memory-chart" width="1200" height="255"></canvas></div><div class="legend"><span><i class="dot" style="background:#58ff32"></i>RSS Node.js</span><span><i class="dot" style="background:#d0ff38"></i>Heap utilisé</span></div></article>
+        <article class="monitor-card chart-card chart-cpu"><div class="monitor-head"><span>CPU processus</span><strong id="cpu-chart-value">0%</strong></div><div class="chart-stage"><canvas id="cpu-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot rgb-dot" style="background:#58ff32"></i>Charge normalisée</span></div></article>
+        <article class="monitor-card chart-card chart-system"><div class="monitor-head"><span>RAM système</span><strong id="system-memory-chart-value">0%</strong></div><div class="chart-stage"><canvas id="system-memory-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot rgb-dot" style="background:#71b52d"></i>Mémoire utilisée</span></div></article>
+        <article class="monitor-card chart-card chart-network"><div class="monitor-head"><span>Réseau entrant / sortant</span><strong id="network-chart-value">0 / 0 KB/s</strong></div><div class="chart-stage"><canvas id="network-chart" width="680" height="230"></canvas></div><div class="legend"><span><i class="dot rgb-dot" style="background:#42ff36"></i>RX entrant</span><span><i class="dot rgb-dot" style="background:#ff9f32;animation-delay:-2s"></i>TX sortant</span></div></article>
+        <article class="monitor-card chart-card chart-process"><div class="monitor-head"><span>Mémoire processus Node.js</span><strong id="process-memory-chart-value">0 MB</strong></div><div class="chart-stage"><canvas id="process-memory-chart" width="1200" height="255"></canvas></div><div class="legend"><span><i class="dot rgb-dot" style="background:#58ff32"></i>RSS Node.js</span><span><i class="dot rgb-dot" style="background:#d0ff38;animation-delay:-2s"></i>Heap utilisé</span></div></article>
+        <article class="monitor-card logs-card"><div class="monitor-head"><span>Logs de supervision</span><strong id="log-count">0 événement</strong></div><div id="monitor-logs" class="logs-body"></div></article>
       </div>
     </section>
 
@@ -128,6 +129,10 @@ let activeContent = '';
 let metricsTimer = null;
 let metricsSocket = null;
 let liveMetrics = [];
+let chartAnimationFrame = null;
+let chartAnimationAt = 0;
+let monitorLogs = [];
+let lastMetricAlertAt = 0;
 
 async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -316,21 +321,84 @@ async function copySource() {
 }
 
 function formatUptime(seconds) {
-  const total = Math.max(0, Number(seconds || 0));
+  const total = Math.max(0, Math.floor(Number(seconds || 0)));
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
   const minutes = Math.floor((total % 3600) / 60);
-  return days ? `${days}j ${hours}h` : `${hours}h ${minutes}m`;
+  const remainingSeconds = total % 60;
+  return days
+    ? `${days}j ${hours}h ${minutes}m ${remainingSeconds}s`
+    : `${hours}h ${minutes}m ${remainingSeconds}s`;
+}
+
+function addMonitorLog(message, type = 'info') {
+  monitorLogs.unshift({
+    message: String(message || 'Événement'),
+    type,
+    at: new Date(),
+  });
+  monitorLogs = monitorLogs.slice(0, 12);
+  const container = document.getElementById('monitor-logs');
+  if (!container) return;
+  container.innerHTML = monitorLogs.map(log => {
+    const time = log.at.toLocaleTimeString('fr-FR');
+    return `<div class="log-bubble ${escapeHtml(log.type)}"><span class="log-time">${time}</span>${escapeHtml(log.message)}</div>`;
+  }).join('');
+  document.getElementById('log-count').textContent = `${monitorLogs.length} événement${monitorLogs.length > 1 ? 's' : ''}`;
+}
+
+function startChartAnimation() {
+  if (chartAnimationFrame) return;
+  const animate = timestamp => {
+    chartAnimationFrame = requestAnimationFrame(animate);
+    if (document.hidden || timestamp - chartAnimationAt < 50) return;
+    chartAnimationAt = timestamp;
+    document.querySelectorAll('canvas[data-hover-ready="1"]').forEach(canvas => {
+      const state = canvas._chartState;
+      if (state) drawChart(canvas.id, state.rows, state.series, state.maxValue, state.options);
+    });
+  };
+  chartAnimationFrame = requestAnimationFrame(animate);
 }
 
 function drawChart(canvasId, rows, series, maxValue, options = {}) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  canvas._chartState = { rows, series, maxValue, options };
+  if (!canvas.dataset.hoverReady) {
+    canvas.dataset.hoverReady = '1';
+    canvas.addEventListener('mousemove', event => {
+      const state = canvas._chartState;
+      const values = Array.isArray(state?.rows) ? state.rows.slice(-120) : [];
+      if (!values.length) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (event.clientX - rect.left) * (canvas.width / rect.width);
+      const plotStart = 44;
+      const plotWidth = canvas.width - 44 - 12;
+      const ratio = Math.max(0, Math.min(1, (mouseX - plotStart) / plotWidth));
+      canvas._hoverIndex = Math.round(ratio * (values.length - 1));
+      drawChart(canvasId, state.rows, state.series, state.maxValue, state.options);
+    });
+    canvas.addEventListener('mouseleave', () => {
+      const state = canvas._chartState;
+      canvas._hoverIndex = null;
+      if (state) drawChart(canvasId, state.rows, state.series, state.maxValue, state.options);
+    });
+  }
   const ctx = canvas.getContext('2d');
   const w = canvas.width, h = canvas.height;
   const pad = { top: 14, right: 12, bottom: 27, left: 44 };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
+  const hue = (performance.now() / 24) % 360;
+  const renderedSeries = series.map((item, index) => {
+    const seriesHue = (hue + Number(item.hueOffset ?? index * 145)) % 360;
+    return {
+      ...item,
+      color: item.rgb === false ? item.color : `hsl(${seriesHue} 100% 62%)`,
+      fillColor: item.fillColor || `hsla(${seriesHue},100%,55%,.2)`,
+    };
+  });
   ctx.clearRect(0, 0, w, h);
   const background = ctx.createLinearGradient(0, 0, 0, h);
   background.addColorStop(0, '#111212');
@@ -338,7 +406,8 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, w, h);
   const values = Array.isArray(rows) ? rows.slice(-120) : [];
-  const resolvedMax = Math.max(1, typeof maxValue === 'function' ? maxValue(values) : Number(maxValue || 100));
+  const requestedMax = typeof maxValue === 'function' ? maxValue(values) : Number(maxValue || 100);
+  const resolvedMax = Number.isFinite(requestedMax) ? Math.max(1, requestedMax) : 100;
   ctx.font = '10px Consolas, monospace';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 1;
@@ -362,7 +431,7 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
     ctx.fillText(index === 6 ? 'maint.' : `-${Math.round((6 - index) * 20)}s`, x, h - 12);
   }
   if (!values.length) return;
-  series.forEach(item => {
+  renderedSeries.forEach(item => {
     const points = values.map((row, index) => ({
       x: pad.left + (values.length === 1 ? 0 : index / (values.length - 1)) * plotW,
       y: h - pad.bottom - Math.min(1, Number(row[item.key] || 0) / resolvedMax) * plotH,
@@ -393,6 +462,54 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
     ctx.arc(last.x, last.y, 2.8, 0, Math.PI * 2);
     ctx.fill();
   });
+  if (Number.isInteger(canvas._hoverIndex)) {
+    const index = Math.max(0, Math.min(values.length - 1, canvas._hoverIndex));
+    const row = values[index];
+    const x = pad.left + (values.length === 1 ? 0 : index / (values.length - 1)) * plotW;
+    ctx.strokeStyle = 'rgba(255,255,255,.7)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
+    ctx.setLineDash([]);
+    renderedSeries.forEach(item => {
+      const value = Number(row[item.key] || 0);
+      const y = h - pad.bottom - Math.min(1, value / resolvedMax) * plotH;
+      ctx.fillStyle = '#080908';
+      ctx.strokeStyle = item.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    });
+    const time = row.at ? new Date(row.at).toLocaleTimeString('fr-FR') : 'Échantillon';
+    const tooltipRows = renderedSeries.map(item => {
+      const value = Number(row[item.key] || 0);
+      return `${item.label || item.key} : ${value.toFixed(item.decimals ?? 1)}${item.suffix ?? options.unit ?? ''}`;
+    });
+    ctx.font = '11px Consolas, monospace';
+    const tooltipWidth = tooltipRows.reduce(
+      (width, text) => Math.max(width, ctx.measureText(text).width + 35),
+      Math.max(132, ctx.measureText(time).width + 24)
+    );
+    const tooltipHeight = 29 + tooltipRows.length * 19;
+    const tooltipX = x + tooltipWidth + 14 > w ? x - tooltipWidth - 10 : x + 10;
+    const tooltipY = pad.top + 8;
+    ctx.fillStyle = 'rgba(12,13,12,.96)';
+    ctx.strokeStyle = 'rgba(140,255,96,.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 7);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#bdbdbd';
+    ctx.textAlign = 'left';
+    ctx.fillText(time, tooltipX + 11, tooltipY + 15);
+    tooltipRows.forEach((text, rowIndex) => {
+      const item = renderedSeries[rowIndex];
+      const y = tooltipY + 35 + rowIndex * 19;
+      ctx.fillStyle = item.color;
+      ctx.beginPath(); ctx.arc(tooltipX + 13, y, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillText(text, tooltipX + 23, y);
+    });
+  }
 }
 
 function renderMetrics(rows, uptimeSeconds = null) {
@@ -411,20 +528,22 @@ function renderMetrics(rows, uptimeSeconds = null) {
   document.getElementById('cpu-chart-value').textContent = `${Number(latest.processCpuPct || 0).toFixed(1)}%`;
   document.getElementById('system-memory-chart-value').textContent = `${Number(latest.systemMemoryPct || 0).toFixed(1)}%`;
   document.getElementById('process-memory-chart-value').textContent = `${Number(latest.processRssMb || 0).toFixed(0)} MB`;
-  document.getElementById('network-rx-chart-value').textContent = `${Number(latest.networkRxKbps || 0).toFixed(1)} KB/s`;
-  document.getElementById('network-tx-chart-value').textContent = `${Number(latest.networkTxKbps || 0).toFixed(1)} KB/s`;
-  drawChart('cpu-chart', liveMetrics, [{ key:'processCpuPct', color:'#58ff32' }], 100, { unit:'%' });
-  drawChart('system-memory-chart', liveMetrics, [{ key:'systemMemoryPct', color:'#71b52d' }], 100, { unit:'%' });
+  document.getElementById('network-chart-value').textContent = `${Number(latest.networkRxKbps || 0).toFixed(1)} / ${Number(latest.networkTxKbps || 0).toFixed(1)} KB/s`;
+  drawChart('cpu-chart', liveMetrics, [{ key:'processCpuPct', label:'CPU', suffix:'%', hueOffset:0 }], 100, { unit:'%' });
+  drawChart('system-memory-chart', liveMetrics, [{ key:'systemMemoryPct', label:'RAM système', suffix:'%', hueOffset:85 }], 100, { unit:'%' });
   drawChart('process-memory-chart', liveMetrics, [
-    { key:'processRssMb', color:'#58ff32' },
-    { key:'heapUsedMb', color:'#d0ff38', fill:false },
-  ], values => Math.max(128, ...values.map(row => Number(row.processRssMb || 0))), { unit:' MB' });
-  drawChart('network-rx-chart', liveMetrics, [
-    { key:'networkRxKbps', color:'#42ff36' },
-  ], values => Math.max(8, ...values.map(row => Number(row.networkRxKbps || 0)) * 1.2), { unit:'K' });
-  drawChart('network-tx-chart', liveMetrics, [
-    { key:'networkTxKbps', color:'#28c91f' },
-  ], values => Math.max(8, ...values.map(row => Number(row.networkTxKbps || 0)) * 1.2), { unit:'K' });
+    { key:'processRssMb', label:'RSS', suffix:' MB', decimals:0, hueOffset:0 },
+    { key:'heapUsedMb', label:'Heap', suffix:' MB', decimals:0, hueOffset:170, fill:false },
+  ], values => values.reduce((maximum, row) => Math.max(maximum, Number(row.processRssMb || 0)), 128), { unit:' MB' });
+  drawChart('network-chart', liveMetrics, [
+    { key:'networkRxKbps', label:'RX entrant', suffix:' KB/s', hueOffset:0 },
+    { key:'networkTxKbps', label:'TX sortant', suffix:' KB/s', hueOffset:180, fill:false },
+  ], values => values.reduce((maximum, row) => Math.max(
+    maximum,
+    Number(row.networkRxKbps || 0),
+    Number(row.networkTxKbps || 0)
+  ), 8) * 1.2, { unit:'K' });
+  startChartAnimation();
 }
 
 function setLiveState(connected, label) {
@@ -438,21 +557,33 @@ function connectLiveMetrics() {
   metricsSocket = io({ transports: ['websocket', 'polling'] });
   metricsSocket.on('connect', () => {
     setLiveState(true, 'Temps reel - 1s');
+    addMonitorLog('Connexion au flux de télémétrie établie.');
     metricsSocket.emit('dev_metrics_subscribe', { token: devToken });
   });
   metricsSocket.on('dev_metrics_history', data => {
     renderMetrics(data.metrics || [], data.uptimeSeconds);
+    addMonitorLog(`${(data.metrics || []).length} mesures historiques chargées.`);
   });
   metricsSocket.on('dev_metric', sample => {
     liveMetrics.push(sample);
     if (liveMetrics.length > 240) liveMetrics.splice(0, liveMetrics.length - 240);
     renderMetrics(liveMetrics);
+    const now = Date.now();
+    if (now - lastMetricAlertAt > 30000 && Number(sample.processCpuPct || 0) >= 80) {
+      lastMetricAlertAt = now;
+      addMonitorLog(`Alerte CPU : ${Number(sample.processCpuPct).toFixed(1)}%.`, 'warn');
+    } else if (now - lastMetricAlertAt > 30000 && Number(sample.systemMemoryPct || 0) >= 90) {
+      lastMetricAlertAt = now;
+      addMonitorLog(`Alerte RAM système : ${Number(sample.systemMemoryPct).toFixed(1)}%.`, 'warn');
+    }
   });
   metricsSocket.on('dev_metrics_error', data => {
     setLiveState(false, data?.error || 'Flux refuse');
+    addMonitorLog(data?.error || 'Le flux de télémétrie a été refusé.', 'error');
   });
   metricsSocket.on('disconnect', () => {
     setLiveState(false, 'Reconnexion...');
+    addMonitorLog('Flux interrompu, tentative de reconnexion.', 'warn');
   });
 }
 
@@ -464,7 +595,9 @@ async function loadMetrics() {
     document.getElementById('core-value').textContent = data.cpuCores;
     document.getElementById('total-memory-value').textContent = `${Math.round(data.totalMemoryMb / 1024)} GB`;
     renderMetrics(data.metrics || [], data.uptimeSeconds);
+    addMonitorLog(`Machine détectée : ${data.cpuCores} cœurs, ${Math.round(data.totalMemoryMb / 1024)} GB de RAM.`);
   } catch(error) {
+    addMonitorLog(`Chargement impossible : ${error.message}`, 'error');
     if (/acces|session/i.test(error.message)) logout();
   }
 }
