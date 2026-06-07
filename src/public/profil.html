@@ -284,7 +284,7 @@ input[type="file"]{display:none;}
 .profile-pseudo{
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
-.profile-pseudo.pseudo-rgb-wave{
+.pseudo-rgb-wave{
   background-image:linear-gradient(90deg,#ff3864,#ffcc00,#39ff88,#36d7ff,#8a5cff,#ff4fc3,#ff3864)!important;
   background-size:300% 100%!important;
   -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
@@ -649,6 +649,27 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   width:28px;height:28px;
   background:var(--red);
   transition:all 0.2s;
+}
+.profile-badge.perso.badge-rgb-wave{
+  --badge-color:#fff;--badge-border:transparent;--badge-glow:rgba(133,235,255,.28);
+  background:linear-gradient(110deg,#ff3864,#ffd60a,#30d158,#36d7ff,#8a5cff,#ff4fc3,#ff3864);
+  background-size:320% 100%;
+  color:#fff;
+  border-color:transparent;
+  box-shadow:0 0 18px rgba(255,56,100,.22),0 0 28px rgba(54,215,255,.16),inset 0 1px 0 rgba(255,255,255,.28);
+  animation:badgeRgbWave 4s linear infinite;
+}
+@keyframes badgeRgbWave{to{background-position:320% 50%}}
+.shape-preview.shape-rgb-wave,.token-emoji-preview.shape-rgb-wave{
+  animation:emojiRgbGlow 3.2s linear infinite;
+}
+@keyframes emojiRgbGlow{
+  0%{filter:drop-shadow(0 0 5px #ff3864) drop-shadow(0 0 10px rgba(255,56,100,.45))}
+  20%{filter:drop-shadow(0 0 5px #ffd60a) drop-shadow(0 0 10px rgba(255,214,10,.45))}
+  40%{filter:drop-shadow(0 0 5px #30d158) drop-shadow(0 0 10px rgba(48,209,88,.45))}
+  60%{filter:drop-shadow(0 0 5px #36d7ff) drop-shadow(0 0 10px rgba(54,215,255,.45))}
+  80%{filter:drop-shadow(0 0 5px #8a5cff) drop-shadow(0 0 10px rgba(138,92,255,.45))}
+  100%{filter:drop-shadow(0 0 5px #ff3864) drop-shadow(0 0 10px rgba(255,56,100,.45))}
 }
 .emoji-input-wrap{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;display:none;}
 .emoji-input-wrap.visible{display:flex;}
@@ -1720,6 +1741,12 @@ function applyPseudoDisplay(element, player = currentPlayer) {
   element.classList.toggle('pseudo-rgb-wave', Number(player?.pseudo_rgb || 0) === 1);
 }
 
+function syncPseudoRgbPreviews(enabled) {
+  const active = Boolean(enabled);
+  document.querySelectorAll('.shape-btn[data-shape="emoji"] .shape-preview, .shape-btn[data-shape="emoji_image"] .shape-preview, #token-emoji-preview')
+    .forEach(element => element.classList.toggle('shape-rgb-wave', active));
+}
+
 function getPremiumTier(player = currentPlayer) {
   if (Number(player?.is_bot) === 1) return 'bot';
   if (Number(player?.is_crystal) === 1) return 'crystal';
@@ -1804,6 +1831,7 @@ function getPersoRoleAccent(player = currentPlayer) {
     glow: colorSecondary ? `${colorSecondary}44` : `${color}44`,
     label: String(player?.custom_role_text || '').trim().toUpperCase() || defaultAccent.label,
     emoji: String(player?.custom_role_emoji || '').trim(),
+    rgb: Number(player?.custom_role_rgb || 0) === 1,
   };
 }
 
@@ -2154,7 +2182,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
             ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><img src="/assets/developer-badge.png" alt="">DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
-            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso ${getPersoRoleAccent(player).rgb ? 'badge-rgb-wave' : ''}" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
           <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
@@ -2484,20 +2512,22 @@ function render(player, games, following, followers, followStatus, tournaments =
         <span class="save-confirm" id="perso-role-confirm">✓ Enregistré !</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="perso-role-text-input" class="search-input" style="max-width:140px;margin:0" type="text" maxlength="8" placeholder="LILI" value="${String(player.custom_role_text || '').replace(/"/g, '&quot;')}">
-        <input id="perso-role-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="✨" value="${String(player.custom_role_emoji || '').replace(/"/g, '&quot;')}">
+        <input id="perso-role-text-input" class="search-input" style="max-width:140px;margin:0" type="text" maxlength="8" placeholder="LILI" value="${String(player.custom_role_text || '').replace(/"/g, '&quot;')}" oninput="refreshPersoRolePreview()">
+        <input id="perso-role-emoji-input" class="search-input" style="max-width:90px;margin:0;font-family:Segoe UI Emoji,Apple Color Emoji,Noto Color Emoji,sans-serif" type="text" maxlength="4" placeholder="✨" value="${String(player.custom_role_emoji || '').replace(/"/g, '&quot;')}" oninput="refreshPersoRolePreview()">
         <div class="color-picker-inline" style="min-width:132px">
-          <input type="color" id="perso-role-color-input" value="${player.custom_role_color || '#FF7A45'}">
+          <input type="color" id="perso-role-color-input" value="${player.custom_role_color || '#FF7A45'}" oninput="refreshPersoRolePreview()">
           <span>Couleur 1</span>
         </div>
         <div class="color-picker-inline" style="min-width:132px">
-          <input type="color" id="perso-role-color-secondary-input" value="${player.custom_role_color_secondary || '#85EBFF'}">
+          <input type="color" id="perso-role-color-secondary-input" value="${player.custom_role_color_secondary || '#85EBFF'}" oninput="refreshPersoRolePreview()">
           <span>Couleur 2</span>
         </div>
+        <label class="pseudo-format-option rgb"><input id="perso-role-rgb-input" type="checkbox" ${Number(player.custom_role_rgb || 0) === 1 ? 'checked' : ''} onchange="refreshPersoRolePreview()"><span>RGB vague</span></label>
         <button class="btn-save-color" id="btn-save-perso-role" onclick="saveProfileCustomRole()">✨ Enregistrer</button>
         <button class="btn-save-color" id="btn-remove-perso-role" onclick="removeProfileCustomRole()" style="background:rgba(255,45,85,0.08);border-color:rgba(255,45,85,0.3);color:#ff6b88">- Retirer</button>
       </div>
-      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel et la couleur du badge. Maximum 8 caractères.</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:11px;color:var(--muted)">Aperçu :</span><span id="perso-role-preview" class="profile-badge perso"></span></div>
+      <div style="font-size:11px;color:var(--muted)">Choisis ton texte perso, un emoji optionnel, ses couleurs et éventuellement une vague RGB. Maximum 8 caractères.</div>
     </div>` : ''}
     ${Number(player.is_crystal || 0) === 1 ? `
     <div class="color-card" id="crystal-alert-card" style="border-color:rgba(133,235,255,.28);background:rgba(133,235,255,.045)">
@@ -2950,6 +2980,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       initShapePicker(isEmoji ? 'emoji' : shapeRaw, isEmoji ? shapeRaw.slice(6) : DEFAULT_PROFILE_EMOJI, player.token_emoji_image || '');
       refreshTokenEmojiPreview();
       refreshAvatarDecorationPreview(player);
+      refreshPersoRolePreview();
     }, 50);
   }
   // Initialiser la pagination des parties et le toggle auto-rejoin
@@ -4957,12 +4988,14 @@ function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = ''
     row.appendChild(btn);
   });
   updateEmojiWrap();
+  syncPseudoRgbPreviews(document.getElementById('pseudo-style-rgb-input')?.checked || Number(currentPlayer?.pseudo_rgb || 0) === 1);
 }
 
 function selectShape(id) {
   selectedShape = id;
   document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === id));
   updateEmojiWrap();
+  syncPseudoRgbPreviews(document.getElementById('pseudo-style-rgb-input')?.checked || Number(currentPlayer?.pseudo_rgb || 0) === 1);
 }
 
 function updateEmojiWrap() {
@@ -6423,6 +6456,8 @@ function refreshPseudoStylePreview() {
     pseudo_rgb: document.getElementById('pseudo-style-rgb-input')?.checked ? 1 : 0,
   };
   applyPseudoDisplay(pseudoEl, preview);
+  applyPseudoDisplay(document.querySelector('#pseudo-font-current strong'), preview);
+  syncPseudoRgbPreviews(Number(preview.pseudo_rgb) === 1);
 }
 
 async function savePseudoStyle() {
@@ -6462,6 +6497,8 @@ async function savePseudoStyle() {
     sessionStorage.setItem('player', JSON.stringify(me));
     const pseudoEl = document.querySelector('.profile-pseudo');
     applyPseudoDisplay(pseudoEl, currentPlayer || me);
+    applyPseudoDisplay(document.querySelector('#pseudo-font-current strong'), currentPlayer || me);
+    syncPseudoRgbPreviews(Number(patch.pseudo_rgb) === 1);
     PROFIL_SFX.success();
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🎨 Style'; }
@@ -6525,11 +6562,13 @@ async function saveProfileCustomRole() {
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
   const colorSecondaryInput = document.getElementById('perso-role-color-secondary-input');
+  const rgbInput = document.getElementById('perso-role-rgb-input');
   const btn = document.getElementById('btn-save-perso-role');
   const text = String(textInput?.value || '').trim().slice(0, 8);
   const emoji = [...String(emojiInput?.value || '').trim()][0] || '';
   const color = String(colorInput?.value || '#FF7A45').toUpperCase();
   const colorSecondary = String(colorSecondaryInput?.value || '').toUpperCase();
+  const rgb = Boolean(rgbInput?.checked);
   PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
@@ -6537,7 +6576,7 @@ async function saveProfileCustomRole() {
     const res = await fetch(`/api/players/${me.id}/custom-role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, emoji, color, colorSecondary, token: localStorage.getItem('token') }),
+      body: JSON.stringify({ text, emoji, color, colorSecondary, rgb, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -6550,6 +6589,7 @@ async function saveProfileCustomRole() {
       custom_role_color: data.color ?? (text ? color : ''),
       custom_role_color_secondary: data.colorSecondary ?? (text ? colorSecondary : ''),
       custom_role_emoji: data.emoji ?? (text ? emoji : ''),
+      custom_role_rgb: Number(data.rgb ?? (text && rgb ? 1 : 0)),
     };
     if (currentPlayer) Object.assign(currentPlayer, patch);
     Object.assign(me, patch);
@@ -6568,6 +6608,29 @@ async function saveProfileCustomRole() {
   }
 }
 
+function refreshPersoRolePreview() {
+  const preview = document.getElementById('perso-role-preview');
+  if (!preview) return;
+  const text = String(document.getElementById('perso-role-text-input')?.value || '').trim().slice(0, 8).toUpperCase() || 'PERSO';
+  const emoji = [...String(document.getElementById('perso-role-emoji-input')?.value || '').trim()][0] || '';
+  const color = String(document.getElementById('perso-role-color-input')?.value || '#FF7A45').toUpperCase();
+  const colorSecondary = String(document.getElementById('perso-role-color-secondary-input')?.value || '').toUpperCase();
+  const rgb = Boolean(document.getElementById('perso-role-rgb-input')?.checked);
+  preview.style.setProperty('--badge-color', color);
+  preview.style.setProperty('--badge-bg', colorSecondary ? `linear-gradient(135deg,${color}22,${colorSecondary}22)` : `${color}18`);
+  preview.style.setProperty('--badge-border', `${color}66`);
+  preview.style.setProperty('--badge-glow', colorSecondary ? `${colorSecondary}44` : `${color}44`);
+  preview.classList.toggle('badge-rgb-wave', rgb);
+  preview.replaceChildren();
+  if (emoji) {
+    const icon = document.createElement('span');
+    icon.className = 'badge-icon';
+    icon.textContent = emoji;
+    preview.appendChild(icon);
+  }
+  preview.appendChild(document.createTextNode(text));
+}
+
 async function removeProfileCustomRole() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   if (!me.id) return;
@@ -6576,6 +6639,7 @@ async function removeProfileCustomRole() {
   const emojiInput = document.getElementById('perso-role-emoji-input');
   const colorInput = document.getElementById('perso-role-color-input');
   const colorSecondaryInput = document.getElementById('perso-role-color-secondary-input');
+  const rgbInput = document.getElementById('perso-role-rgb-input');
   PROFIL_SFX.click();
   btn.disabled = true;
   btn.textContent = '...';
@@ -6583,7 +6647,7 @@ async function removeProfileCustomRole() {
     const res = await fetch(`/api/players/${me.id}/custom-role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '', emoji: '', color: '', colorSecondary: '', token: localStorage.getItem('token') }),
+      body: JSON.stringify({ text: '', emoji: '', color: '', colorSecondary: '', rgb: false, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -6591,7 +6655,7 @@ async function removeProfileCustomRole() {
       alert(data.error || 'Impossible de retirer le grade perso.');
       return;
     }
-    const patch = { custom_role_text: '', custom_role_color: '', custom_role_color_secondary: '', custom_role_emoji: '' };
+    const patch = { custom_role_text: '', custom_role_color: '', custom_role_color_secondary: '', custom_role_emoji: '', custom_role_rgb: 0 };
     if (currentPlayer) Object.assign(currentPlayer, patch);
     Object.assign(me, patch);
     localStorage.setItem('player', JSON.stringify(me));
@@ -6600,6 +6664,8 @@ async function removeProfileCustomRole() {
     if (emojiInput) emojiInput.value = '';
     if (colorInput) colorInput.value = '#FF7A45';
     if (colorSecondaryInput) colorSecondaryInput.value = '#85EBFF';
+    if (rgbInput) rgbInput.checked = false;
+    refreshPersoRolePreview();
     PROFIL_SFX.success();
     await load();
   } finally {

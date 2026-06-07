@@ -128,6 +128,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_text  TEXT    NOT NULL
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_emoji TEXT    NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN custom_role_rgb INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_image TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -364,7 +365,7 @@ const pQ = {
   updateCrystalWeeklyGems: db.prepare(`UPDATE players SET crystal_weekly_gems_at = @crystal_weekly_gems_at WHERE id = @id`),
   updateCrystalAlert: db.prepare(`UPDATE players SET crystal_alert_message = @message, crystal_alert_color = @color, crystal_alert_emoji = @emoji, crystal_alert_animation = @animation WHERE id = @id`),
   updateVipExpiry: db.prepare(`UPDATE players SET vip_expires_at = @vip_expires_at WHERE id = @id`),
-  updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_color_secondary = @colorSecondary, custom_role_emoji = @emoji WHERE id = @id`),
+  updateCustomRole: db.prepare(`UPDATE players SET custom_role_text = @text, custom_role_color = @color, custom_role_color_secondary = @colorSecondary, custom_role_emoji = @emoji, custom_role_rgb = @rgb WHERE id = @id`),
   updateTokenEmojiImage: db.prepare(`UPDATE players SET token_emoji_image = @image WHERE id = @id`),
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
   updateAvatarDecoration: db.prepare(`UPDATE players SET avatar_decoration = @image WHERE id = @id`),

@@ -3253,6 +3253,9 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
   const rawColor = String(req.body?.color || '').trim();
   const rawColorSecondary = String(req.body?.colorSecondary || '').trim();
   const rawEmoji = String(req.body?.emoji || '').trim();
+  const rgb = req.body?.rgb == null
+    ? Number(target.custom_role_rgb || 0) === 1
+    : req.body.rgb === true || req.body.rgb === 1 || req.body.rgb === '1' || req.body.rgb === 'true';
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le role personnalise doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise pour le role personnalise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
@@ -3265,12 +3268,14 @@ app.patch('/api/admin/players/:id/custom-role', (req, res) => {
     color: rawText ? rawColor.toUpperCase() : '',
     colorSecondary: rawText ? rawColorSecondary.toUpperCase() : '',
     emoji: rawText ? emoji : '',
+    rgb: rawText && rgb ? 1 : 0,
   });
   WH.wlogAdminAction('Role personnalise', target.pseudo, id, [
     ['Texte', rawText || 'aucun', true],
     ['Couleur', rawText ? rawColor.toUpperCase() : 'aucune', true],
     ['Couleur 2', rawText && rawColorSecondary ? rawColorSecondary.toUpperCase() : 'aucune', true],
     ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
+    ['RGB', rawText && rgb ? 'oui' : 'non', true],
   ]);
   if (target.discord_id) {
     syncDiscordRole(
@@ -3300,6 +3305,7 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
   const rawColor = String(req.body?.color || '').trim();
   const rawColorSecondary = String(req.body?.colorSecondary || '').trim();
   const rawEmoji = String(req.body?.emoji || '').trim();
+  const rgb = req.body?.rgb === true || req.body?.rgb === 1 || req.body?.rgb === '1' || req.body?.rgb === 'true';
   if (rawText.length > CUSTOM_ROLE_MAX_LENGTH) return res.status(400).json({ error: `Le badge perso doit faire ${CUSTOM_ROLE_MAX_LENGTH} caracteres max.` });
   if (rawText && !rawColor) return res.status(400).json({ error: 'Une couleur est requise.' });
   if (rawColor && !/^#[0-9a-fA-F]{6}$/.test(rawColor)) return res.status(400).json({ error: 'Couleur invalide.' });
@@ -3314,6 +3320,7 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
     color: nextColor,
     colorSecondary: nextColorSecondary,
     emoji: rawText ? emoji : '',
+    rgb: rawText && rgb ? 1 : 0,
   });
 
   try {
@@ -3322,10 +3329,11 @@ app.patch('/api/players/:id/custom-role', (req, res) => {
       ['Couleur', nextColor || 'aucune', true],
       ['Couleur 2', nextColorSecondary || 'aucune', true],
       ['Emoji', rawText ? (emoji || 'aucun') : 'aucun', true],
+      ['RGB', rawText && rgb ? 'oui' : 'non', true],
     ]);
   } catch(e) {}
 
-  res.json({ ok: true, text: rawText, color: nextColor, colorSecondary: nextColorSecondary, emoji: rawText ? emoji : '' });
+  res.json({ ok: true, text: rawText, color: nextColor, colorSecondary: nextColorSecondary, emoji: rawText ? emoji : '', rgb: rawText && rgb ? 1 : 0 });
 });
 
 // Changer le pseudo
@@ -5891,7 +5899,7 @@ app.get('/api/players', (req, res) => {
            avatar_decoration, profile_banner, role, is_vip, is_vip_plus, is_perso,
            elo_curve_color, elo_curve_color_secondary, elo_curve_rgb, elo_curve_rgb_speed, elo_curve_rgb_direction,
            is_crystal, crystal_expires_at, crystal_auto_renew, crystal_alert_message, crystal_alert_color, crystal_alert_emoji, crystal_alert_animation,
-           custom_role_text, custom_role_color, custom_role_emoji,
+           custom_role_text, custom_role_color, custom_role_color_secondary, custom_role_emoji, custom_role_rgb,
            is_bot, bot_skill, bot_description, bot_enabled, bot_last_seen, last_seen
     FROM players
     WHERE deleted = 0 AND is_guest = 0
