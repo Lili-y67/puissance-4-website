@@ -304,6 +304,7 @@ input[type="file"]{display:none;}
 .profile-badge.staff{--badge-color:#ff6b8a;--badge-bg:rgba(255,45,85,.12);--badge-border:rgba(255,45,85,.38);--badge-glow:rgba(255,45,85,.28)}
 .profile-badge.modo{--badge-color:#aeb8ff;--badge-bg:rgba(76,110,245,.13);--badge-border:rgba(76,110,245,.36);--badge-glow:rgba(76,110,245,.26)}
 .profile-badge.dev{--badge-color:#8fffd3;--badge-bg:rgba(48,209,88,.12);--badge-border:rgba(48,209,88,.38);--badge-glow:rgba(48,209,88,.28);text-decoration:none}
+.profile-badge.dev img{width:21px;height:21px;filter:drop-shadow(0 0 6px rgba(39,218,218,.36))}
 .profile-badge.bot{--badge-color:#cfd2dd;--badge-bg:rgba(142,142,147,.14);--badge-border:rgba(184,187,199,.36);--badge-glow:rgba(184,187,199,.20)}
 .profile-badge.clan{--badge-color:#dffaff;--badge-bg:rgba(133,235,255,.10);--badge-border:rgba(133,235,255,.28);--badge-glow:rgba(133,235,255,.18)}
 @keyframes profile-badge-sheen{0%,48%{transform:translateX(-70%);opacity:0}58%{opacity:.7}76%,100%{transform:translateX(95%);opacity:0}}
@@ -2111,7 +2112,7 @@ function render(player, games, following, followers, followStatus, tournaments =
             ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
             ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
             ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
-            ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><span class="badge-icon">&lt;/&gt;</span>DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
+            ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><img src="/assets/developer-badge.png" alt="">DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
             ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
           </div>
           ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
