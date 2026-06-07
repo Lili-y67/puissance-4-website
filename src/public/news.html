@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.3.0 | Puissance 4 Ranked</title>
+<title>News 3.3.1 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -76,13 +76,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.3.0</span></h1>
-      <p>Patch de stabilite autour du hosting bot, de la boutique, du live et de la documentation API. Moins de copier-coller, moins de decallage, plus de retours visibles.</p>
-      <div class="hero-actions"><a class="btn-main" href="/profil">Panel host bot</a><a class="btn-ghost" href="/api-doc">Lire l'API</a></div>
+      <h1>Mise a jour <span>3.3.1</span></h1>
+      <p>Une mise a jour centree sur les outils developpeur, les profils et le bot Discord : telemetrie live, lecteur de sources, nouveaux styles de pseudo et donnees ELO plus completes.</p>
+      <div class="hero-actions"><a class="btn-main" href="/profil">Voir les profils</a><a class="btn-ghost" href="/api-doc">Lire l'API 3.3.1</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.3.0</div><h2>Host stable</h2><p>Le panel host accepte mieux le code bot reel, les admins hostent gratuitement et le live gagne en fluidite.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>4 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Host</strong></div><div class="meta-box"><span>Type</span><strong>Stabilite</strong></div></div>
+      <div><div class="version-orb">3.3.1</div><h2>Dev & profils</h2><p>Le role developpeur obtient son espace securise et les profils deviennent plus expressifs, sans perdre en lisibilite.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>7 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Outils dev</strong></div><div class="meta-box"><span>Type</span><strong>Fonctions</strong></div></div>
     </aside>
   </section>
 
@@ -92,39 +92,39 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Le panel host bot peut importer un fichier JS directement.</div>
-          <div class="news-bubble"><span>&#10022;</span>Les admins peuvent activer un host bot sans payer de Cristaux.</div>
-          <div class="news-bubble"><span>&#10022;</span>La boutique affiche maintenant un retour Achat effectue apres validation.</div>
-          <div class="news-bubble"><span>&#10022;</span>Le live a une grille plus stable et moins de repop visuel au refresh.</div>
-          <div class="news-bubble"><span>&#10022;</span>La page game utilise un plateau fluide cale sur son conteneur.</div>
-          <div class="news-bubble"><span>&#10022;</span>La documentation API recoit une nouvelle presentation plus lisible.</div>
+          <div class="news-bubble"><span>&#10022;</span>Nouvelle page developpeur protegee par mot de passe et double authentification Discord.</div>
+          <div class="news-bubble"><span>&#10022;</span>Telemetrie en direct : CPU, RAM, memoire Node.js, reseau entrant/sortant, uptime et logs.</div>
+          <div class="news-bubble"><span>&#10022;</span>Lecteur de code avec navigation par fichier et coloration syntaxique inspiree de Visual Studio Code.</div>
+          <div class="news-bubble"><span>&#10022;</span>Badge Developpeur et encadre dedie ajoutes aux profils autorises.</div>
+          <div class="news-bubble"><span>&#10022;</span>La recherche de profil peut maintenant afficher les bots avec un badge distinct.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le bot Discord affiche desormais la version 3.3.1 dans son statut.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
         <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Le code host retire automatiquement le shebang quand il est execute dans le wrapper serveur.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le host injecte aussi P4_API_URL pour les clients bot officiels.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le bouton Choisir un fichier remplit la zone de code puis transfere automatiquement.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les prix host affichent Gratuit admin quand le joueur est administrateur.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les cartes live ne rejouent plus leur animation a chaque refresh.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les boutons de colonnes de game suivent maintenant exactement la largeur du plateau.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les pseudos acceptent gras, italique, souligne, minuscules, majuscules et vague RGB animee.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les graphiques developpeur sont separes, interactifs au survol et adaptes aux telephones.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le reseau entrant et sortant partage un graphique avec deux courbes identifiables.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les axes temporels utilisent maintenant des heures lisibles par tranche de minute.</div>
+          <div class="news-bubble"><span>&#9679;</span>La commande Discord /ui utilise des libelles francais locaux, rapides et sans API tierce.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les courbes ELO des bots comptabilisent aussi leurs parties contre des joueurs humains.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>Correction du SyntaxError host quand un bot commence par #!/usr/bin/env node.</div>
-          <div class="news-bubble"><span>&#10003;</span>Correction des faux blocages de Cristaux pour les admins.</div>
-          <div class="news-bubble"><span>&#10003;</span>Correction du message achat qui disparaissait apres le rerender boutique.</div>
-          <div class="news-bubble"><span>&#10003;</span>Correction des debordements possibles sur les plateaux live et game.</div>
-          <div class="news-bubble"><span>&#10003;</span>Correction des etats vides live coinces dans une seule colonne.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction de l'erreur Spread syntax du graphique de telemetrie.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction des droits moderateur : acces aux zones protegees, actions limitees au ban et au revert.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction de la detection des caracteristiques reelles de la machine serveur.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction de la lisibilite des textes, legendes et infobulles des graphiques.</div>
+          <div class="news-bubble"><span>&#10003;</span>Correction du filtrage qui masquait les parties humain contre bot dans certains historiques.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.3.0: hosting bot plus robuste, import de fichier JS, admins sans restriction de Cristaux, boutique plus claire, live/game plus fluides et API doc rafraichie.</div>
+  <div class="footer-note">Version 3.3.1 : espace developpeur securise, supervision en temps reel, profils enrichis, interface Discord francisee et historiques ELO complets pour les joueurs comme pour les bots.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

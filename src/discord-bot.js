@@ -71,7 +71,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
   return [
     { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
     { name: 'moi', description: 'Afficher ton profil lie Discord' },
-    { name: 'ui', description: 'Afficher les informations Discord d un membre', options: [{ type: 6, name: 'utilisateur', description: 'Membre a inspecter', required: false }] },
+    { name: 'ui', description: 'Afficher en francais les informations Discord d un membre', options: [{ type: 6, name: 'utilisateur', description: 'Membre a inspecter', required: false }] },
     { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'stats', description: 'Afficher les statistiques du site' },
     { name: 'systeme', description: 'Afficher l etat public du serveur' },
@@ -690,9 +690,9 @@ function startDiscordBot(ctx) {
     };
     const clientStatus = member?.presence?.clientStatus || {};
     const clientText = compactList([
-      clientStatus.desktop ? 'Desktop' : '',
+      clientStatus.desktop ? 'Ordinateur' : '',
       clientStatus.mobile ? 'Mobile' : '',
-      clientStatus.web ? 'Web' : '',
+      clientStatus.web ? 'Navigateur web' : '',
     ]);
     const roles = member?.roles?.cache
       ? member.roles.cache
@@ -710,14 +710,14 @@ function startDiscordBot(ctx) {
       ? `Oui, jusqu'a ${formatDiscordTimestamp(member.communicationDisabledUntilTimestamp)}`
       : hasMemberContext ? 'Non' : 'Indisponible';
     const permissionLabels = {
-      Administrator: 'ADMINISTRATOR',
-      ManageGuild: 'MANAGE_GUILD',
-      ManageRoles: 'MANAGE_ROLES',
-      ManageChannels: 'MANAGE_CHANNELS',
-      BanMembers: 'BAN_MEMBERS',
-      KickMembers: 'KICK_MEMBERS',
-      ManageMessages: 'MANAGE_MESSAGES',
-      ManageWebhooks: 'MANAGE_WEBHOOKS',
+      Administrator: 'Administrateur',
+      ManageGuild: 'Gerer le serveur',
+      ManageRoles: 'Gerer les roles',
+      ManageChannels: 'Gerer les salons',
+      BanMembers: 'Bannir des membres',
+      KickMembers: 'Expulser des membres',
+      ManageMessages: 'Gerer les messages',
+      ManageWebhooks: 'Gerer les webhooks',
     };
     const strongPerms = hasMemberContext
       ? Object.keys(permissionLabels).filter(perm => member.permissions?.has?.(perm)).map(perm => `\`${permissionLabels[perm]}\``)
@@ -738,7 +738,7 @@ function startDiscordBot(ctx) {
         ].filter(Boolean).join(' | ')
       : '';
     const linkedBotInfo = linked && Number(linked.is_bot || 0) === 1
-      ? `\n🤖・Bot API: **Oui** | Owner ID: ${linked.bot_owner_id ? code(linked.bot_owner_id) : '`NONE`'} | Suspendu: **${Number(linked.bot_enabled || 0) === 1 ? 'Non' : 'Oui'}**`
+      ? `\n🤖・Bot API: **Oui** | ID proprietaire: ${linked.bot_owner_id ? code(linked.bot_owner_id) : '`AUCUN`'} | Suspendu: **${Number(linked.bot_enabled || 0) === 1 ? 'Non' : 'Oui'}**`
       : '';
     const spotifyButtons = spotifyActivityButtons(member);
     const sections = [
@@ -751,21 +751,21 @@ function startDiscordBot(ctx) {
         '### 👤 Identite Discord',
         `🔖・Mention: ${user}`,
         `👤・Nom affiche: **${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}**`,
-        `🏷️・Username: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
+        `🏷️・Nom utilisateur: **${escapeDiscordMarkdown(fullUser.username)}**${fullUser.globalName ? ` | Nom global: **${escapeDiscordMarkdown(fullUser.globalName)}**` : ''}`,
         `🆔・ID Discord: ${code(fullUser.id)}`,
         `📅・Compte cree: ${formatDiscordTimestamp(fullUser.createdTimestamp)} (${formatAgeDays(fullUser.createdTimestamp)})`,
-        `🤖・Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | System: **${fullUser.system ? 'Oui' : 'Non'}**`,
+        `🤖・Bot: **${fullUser.bot ? 'Oui' : 'Non'}** | Compte systeme: **${fullUser.system ? 'Oui' : 'Non'}**`,
       ],
       [
         '### 🏠 Serveur',
         `🪪・Pseudo serveur: **${escapeDiscordMarkdown(member.displayName || fullUser.displayName || fullUser.username)}**`,
         `📥・Arrivee: ${formatDiscordTimestamp(member.joinedTimestamp)} (${formatAgeDays(member.joinedTimestamp)})`,
-        `👑・Owner: **${ownerText}**`,
+        `👑・Proprietaire du serveur: **${ownerText}**`,
         `🚀・Boost serveur: **${boostText}**`,
-        `🔇・Timeout: **${timeoutText}**`,
+        `🔇・Exclusion temporaire: **${timeoutText}**`,
         `🎚️・Role le plus haut: ${highestRole}`,
         `🎭・Roles (${roles.length}): ${rolesText}`,
-        `🧱・Permissions fortes: ${strongPerms.length ? strongPerms.join(' ') : '`NONE`'}`,
+        `🧱・Permissions importantes: ${strongPerms.length ? strongPerms.join(' | ') : '`AUCUNE`'}`,
       ],
       [
         '### 🟢 Activite',
@@ -813,7 +813,7 @@ function startDiscordBot(ctx) {
     return containerMessage({
       color: Number.parseInt(String(member.displayHexColor || '#85ebff').replace('#', ''), 16) || 0x85ebff,
       title: `📌 UI Discord - ${escapeDiscordMarkdown(fullUser.displayName || fullUser.username)}`,
-      subtitle: 'Fiche complete: Discord, serveur, activite, medias et liaison Puissance 4.',
+      subtitle: 'Fiche traduite en francais : Discord, serveur, activite, medias et liaison Puissance 4.',
       sections,
       buttons,
     });
@@ -1751,7 +1751,7 @@ function startDiscordBot(ctx) {
         { text: `⏳・${queueCount} en file`, type: ActivityType.Competing },
         { text: `🖥️・${registered} comptes`, type: ActivityType.Watching },
         { text: `🤖・${bots} bots API`, type: ActivityType.Watching },
-        {text :`💾・Version 3.2.0`,type:ActivityType.Watching}
+        { text: '💾・Version 3.3.1', type: ActivityType.Watching }
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
       bot.user.setStatus('online')

@@ -284,6 +284,13 @@ input[type="file"]{display:none;}
 .profile-pseudo{
   text-shadow:0 0 18px rgba(255,255,255,.08),0 0 30px rgba(133,235,255,.06);
 }
+.profile-pseudo.pseudo-rgb-wave{
+  background-image:linear-gradient(90deg,#ff3864,#ffcc00,#39ff88,#36d7ff,#8a5cff,#ff4fc3,#ff3864)!important;
+  background-size:300% 100%!important;
+  -webkit-background-clip:text!important;background-clip:text!important;color:transparent!important;
+  animation:pseudoRgbWave 4.2s linear infinite;text-shadow:none!important;
+}
+@keyframes pseudoRgbWave{to{background-position:300% 50%}}
 .profile-badges{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-start;margin-top:12px;min-height:34px}
 .profile-badge{
   --badge-color:#eeeef5;--badge-bg:rgba(255,255,255,.06);--badge-border:rgba(255,255,255,.12);--badge-glow:rgba(255,255,255,.12);
@@ -688,6 +695,12 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-current{min-width:190px;flex:1;padding:11px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);display:flex;flex-direction:column;gap:3px;overflow:hidden}
 .pseudo-font-current strong{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pseudo-font-current span{font:800 10px Barlow,sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.pseudo-format-row{width:100%;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pseudo-format-option{position:relative;cursor:pointer}
+.pseudo-format-option input{position:absolute;opacity:0;pointer-events:none}
+.pseudo-format-option span{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:8px 12px;border-radius:11px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--muted);font:800 12px Barlow,sans-serif;transition:.18s}
+.pseudo-format-option input:checked + span{color:#dffaff;border-color:rgba(133,235,255,.5);background:rgba(133,235,255,.12);box-shadow:0 0 18px rgba(133,235,255,.1)}
+.pseudo-format-option.rgb input:checked + span{color:#fff;border-color:transparent;background:linear-gradient(90deg,#ff3864,#ffd60a,#30d158,#36d7ff,#8a5cff,#ff3864);background-size:250% 100%;animation:pseudoRgbWave 3s linear infinite}
 .pseudo-font-modal-bg{display:none;position:fixed;inset:0;z-index:2300;background:rgba(0,0,0,.92);backdrop-filter:blur(12px);padding:20px;align-items:center;justify-content:center}
 .pseudo-font-modal-bg.show{display:flex}
 .pseudo-font-modal{width:min(980px,100%);max-height:min(86vh,900px);overflow:auto;border-radius:22px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(180deg,rgba(16,16,28,.99),rgba(8,8,16,.99));box-shadow:0 24px 90px rgba(0,0,0,.76),0 0 42px rgba(133,235,255,.10);padding:22px}
@@ -809,6 +822,14 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 }
 .search-btn:hover{background:#6b8aff;transform:translateY(-1px);}
 .search-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.search-options{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-bot-toggle{display:inline-flex;align-items:center;gap:9px;cursor:pointer;color:var(--muted);font-size:12px;user-select:none}
+.search-bot-toggle input{position:absolute;opacity:0;pointer-events:none}
+.search-bot-switch{width:38px;height:22px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.08);position:relative;transition:.2s}
+.search-bot-switch::after{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;background:#8e8e93;transition:.2s}
+.search-bot-toggle input:checked + .search-bot-switch{background:rgba(133,235,255,.18);border-color:rgba(133,235,255,.4)}
+.search-bot-toggle input:checked + .search-bot-switch::after{transform:translateX(16px);background:#85ebff;box-shadow:0 0 10px rgba(133,235,255,.7)}
+.mini-bot-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border-radius:999px;background:rgba(133,235,255,.1);border:1px solid rgba(133,235,255,.3);color:#85ebff;font:900 9px Barlow,sans-serif;letter-spacing:.8px;vertical-align:middle}
 .search-result{
   display:none;align-items:center;gap:12px;
   background:var(--surface2);border:1px solid var(--border);border-radius:10px;
@@ -1062,7 +1083,14 @@ body.search-open .profile-side{
 
   <!-- Recherche de joueur -->
   <div class="search-wrap">
-    <div class="search-label">Rechercher un joueur</div>
+    <div class="search-options">
+      <div class="search-label" style="flex:1">Rechercher un joueur</div>
+      <label class="search-bot-toggle">
+        <input id="search-include-bots" type="checkbox" onchange="onSearchBotsChange(this.checked)">
+        <span class="search-bot-switch"></span>
+        <span>Afficher les bots</span>
+      </label>
+    </div>
     <div class="search-row" style="position:relative;">
       <input
         class="search-input"
@@ -1673,10 +1701,23 @@ function getPseudoDisplayStyle(player = currentPlayer) {
   const color1 = /^#[0-9a-fA-F]{6}$/.test(String(player?.pseudo_color || '')) ? String(player.pseudo_color).toUpperCase() : '';
   const color2 = /^#[0-9a-fA-F]{6}$/.test(String(player?.pseudo_color_secondary || '')) ? String(player.pseudo_color_secondary).toUpperCase() : '';
   const font = getPseudoFontFamily(player?.pseudo_font);
-  const fontStyle = `font-family:${font}`;
-  if (color1 && color2) return `${fontStyle};background:linear-gradient(90deg,${color1},${color2});-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none`;
-  if (color1) return `${fontStyle};color:${color1}`;
-  return fontStyle;
+  const formats = new Set(String(player?.pseudo_format || '').split(',').filter(Boolean));
+  const styles = [
+    `font-family:${font}`,
+    `font-weight:${formats.has('bold') ? '900' : '700'}`,
+    `font-style:${formats.has('italic') ? 'italic' : 'normal'}`,
+    `text-decoration:${formats.has('underline') ? 'underline' : 'none'}`,
+    `text-transform:${formats.has('lowercase') ? 'lowercase' : formats.has('uppercase') ? 'uppercase' : 'none'}`,
+  ];
+  if (color1 && color2) styles.push(`background:linear-gradient(90deg,${color1},${color2})`, '-webkit-background-clip:text', 'background-clip:text', 'color:transparent', 'text-shadow:none');
+  else if (color1) styles.push(`color:${color1}`);
+  return styles.join(';');
+}
+
+function applyPseudoDisplay(element, player = currentPlayer) {
+  if (!element) return;
+  element.setAttribute('style', getPseudoDisplayStyle(player));
+  element.classList.toggle('pseudo-rgb-wave', Number(player?.pseudo_rgb || 0) === 1);
 }
 
 function getPremiumTier(player = currentPlayer) {
@@ -2104,7 +2145,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div class="profile-header-inner">
         ${avatarSection}
         <div class="profile-info">
-          <div class="profile-pseudo" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
+          <div class="profile-pseudo ${Number(player.pseudo_rgb || 0) === 1 ? 'pseudo-rgb-wave' : ''}" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
           <div class="profile-badges">
             ${renderBotBadge(player)}
             ${renderVipBadge(player)}
@@ -2377,14 +2418,24 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div style="height:1px;background:rgba(255,255,255,.06);margin:4px 0"></div>
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <div class="color-picker-inline" style="min-width:132px">
-          <input type="color" id="pseudo-style-color-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color || '')) ? player.pseudo_color : (player.color || '#FF2D55')}">
+          <input type="color" id="pseudo-style-color-input" oninput="refreshPseudoStylePreview()" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color || '')) ? player.pseudo_color : (player.color || '#FF2D55')}">
           <span>Pseudo 1</span>
         </div>
         ${canUseGradient(player) ? `<div class="color-picker-inline" style="min-width:132px">
-          <input type="color" id="pseudo-style-color-secondary-input" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color_secondary || '')) ? player.pseudo_color_secondary : '#85EBFF'}">
+          <input type="color" id="pseudo-style-color-secondary-input" oninput="refreshPseudoStylePreview()" value="${/^#[0-9a-fA-F]{6}$/.test(String(player.pseudo_color_secondary || '')) ? player.pseudo_color_secondary : '#85EBFF'}">
           <span>Pseudo 2</span>
         </div>` : ''}
         ${renderPseudoFontPicker(player.pseudo_font || 'barlow', player.pseudo)}
+        <div class="pseudo-format-row" id="pseudo-format-row">
+          ${[
+            ['bold','Gras'],
+            ['italic','Italique'],
+            ['underline','Souligné'],
+            ['lowercase','Minuscules'],
+            ['uppercase','Majuscules'],
+          ].map(([value,label]) => `<label class="pseudo-format-option"><input type="checkbox" value="${value}" ${String(player.pseudo_format || '').split(',').includes(value) ? 'checked' : ''} onchange="onPseudoFormatChange(this)"><span>${label}</span></label>`).join('')}
+          <label class="pseudo-format-option rgb"><input id="pseudo-style-rgb-input" type="checkbox" ${Number(player.pseudo_rgb || 0) === 1 ? 'checked' : ''} onchange="refreshPseudoStylePreview()"><span>RGB vague</span></label>
+        </div>
         <button class="btn-save-color" id="btn-save-pseudo-style" onclick="savePseudoStyle()">🎨 Style</button>
       </div>
       <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP tous les mois.</div>` : ''}
@@ -4491,7 +4542,8 @@ async function onSearchInput(val) {
   if (val.length < 3) { setAutocompleteOpen(false); _acResults = []; return; }
   _acTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`/api/players/search?q=${encodeURIComponent(val)}`);
+      const includeBots = document.getElementById('search-include-bots')?.checked ? '1' : '0';
+      const res = await fetch(`/api/players/search?q=${encodeURIComponent(val)}&includeBots=${includeBots}`);
       if (!res.ok) { setAutocompleteOpen(false); return; }
       _acResults = await res.json();
       renderAcList(_acResults);
@@ -4517,7 +4569,7 @@ function renderAcList(players) {
     return `<div class="ac-item" data-index="${i}" onclick="selectAc(${i})">
       <div style="position:relative;z-index:1;display:flex;align-items:center;gap:10px;width:100%">
         ${av}
-        <span style="font-weight:600;font-size:13px;flex:1;">${p.pseudo}</span>
+        <span style="font-weight:600;font-size:13px;flex:1;">${escapeHtml(p.pseudo)}${Number(p.is_bot || 0) === 1 ? '<span class="mini-bot-badge">BOT</span>' : ''}</span>
         <span style="font-size:11px;color:var(--muted);">${p.elo} ELO</span>
       </div>
     </div>`;
@@ -4713,6 +4765,7 @@ async function searchPlayer() {
     const res = await fetch(`/api/players/by-pseudo/${encodeURIComponent(pseudo)}`);
     if (!res.ok) throw new Error();
     const player = await res.json();
+    if (Number(player.is_bot || 0) === 1 && !document.getElementById('search-include-bots')?.checked) throw new Error();
 
     // Afficher le résultat
     const color   = player.color || '#ff2d55';
@@ -4728,7 +4781,7 @@ async function searchPlayer() {
       ? `<img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover">`
       : player.pseudo[0].toUpperCase();
 
-    document.getElementById('sr-pseudo').textContent = player.pseudo;
+    document.getElementById('sr-pseudo').innerHTML = `${escapeHtml(player.pseudo)}${Number(player.is_bot || 0) === 1 ? '<span class="mini-bot-badge">BOT</span>' : ''}`;
     document.getElementById('sr-stats').innerHTML    = renderResultMiniStats(player.wins, player.losses, player.draws, wr);
     document.getElementById('sr-elo').textContent    = player.elo;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
@@ -5069,6 +5122,12 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
           ? 'Enregistrer la décoration choisie'
           : 'Choisis une autre décoration pour appliquer un changement';
   }
+}
+
+function onSearchBotsChange(checked) {
+  localStorage.setItem('profile_search_bots', checked ? '1' : '0');
+  const value = document.getElementById('search-input')?.value.trim() || '';
+  if (value.length >= 3) onSearchInput(value);
 }
 
 function extractYouTubeId(value) {
@@ -6334,6 +6393,36 @@ function refreshPseudoFontPreviews() {
     }
     if (label) label.textContent = getPseudoFontLabel(currentFont);
   }
+  refreshPseudoStylePreview();
+}
+
+function getSelectedPseudoFormats() {
+  return [...document.querySelectorAll('#pseudo-format-row input[type="checkbox"][value]:checked')]
+    .map(input => input.value)
+    .filter(Boolean);
+}
+
+function onPseudoFormatChange(input) {
+  if (input?.checked && (input.value === 'lowercase' || input.value === 'uppercase')) {
+    const opposite = input.value === 'lowercase' ? 'uppercase' : 'lowercase';
+    const oppositeInput = document.querySelector(`#pseudo-format-row input[value="${opposite}"]`);
+    if (oppositeInput) oppositeInput.checked = false;
+  }
+  refreshPseudoStylePreview();
+}
+
+function refreshPseudoStylePreview() {
+  const pseudoEl = document.querySelector('.profile-pseudo');
+  if (!pseudoEl || !currentPlayer) return;
+  const preview = {
+    ...currentPlayer,
+    pseudo_color: document.getElementById('pseudo-style-color-input')?.value || currentPlayer.pseudo_color,
+    pseudo_color_secondary: document.getElementById('pseudo-style-color-secondary-input')?.value || '',
+    pseudo_font: document.getElementById('pseudo-style-font-input')?.value || currentPlayer.pseudo_font,
+    pseudo_format: getSelectedPseudoFormats().join(','),
+    pseudo_rgb: document.getElementById('pseudo-style-rgb-input')?.checked ? 1 : 0,
+  };
+  applyPseudoDisplay(pseudoEl, preview);
 }
 
 async function savePseudoStyle() {
@@ -6343,13 +6432,15 @@ async function savePseudoStyle() {
   const color = document.getElementById('pseudo-style-color-input')?.value || '';
   const colorSecondary = document.getElementById('pseudo-style-color-secondary-input')?.value || '';
   const font = document.getElementById('pseudo-style-font-input')?.value || 'barlow';
+  const format = getSelectedPseudoFormats().join(',');
+  const rgb = document.getElementById('pseudo-style-rgb-input')?.checked || false;
   PROFIL_SFX.click();
   if (btn) { btn.disabled = true; btn.textContent = '...'; }
   try {
     const res = await fetch(`/api/players/${me.id}/pseudo-style`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ color, colorSecondary, font, token: localStorage.getItem('token') }),
+      body: JSON.stringify({ color, colorSecondary, font, format, rgb, token: localStorage.getItem('token') }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -6361,6 +6452,8 @@ async function savePseudoStyle() {
       pseudo_color: data.color || '',
       pseudo_color_secondary: data.colorSecondary || '',
       pseudo_font: data.font || '',
+      pseudo_format: data.format || '',
+      pseudo_rgb: Number(data.rgb || 0),
       pseudo_style_changed_at: data.changedAt || Date.now(),
     };
     Object.assign(me, patch);
@@ -6368,7 +6461,7 @@ async function savePseudoStyle() {
     localStorage.setItem('player', JSON.stringify(me));
     sessionStorage.setItem('player', JSON.stringify(me));
     const pseudoEl = document.querySelector('.profile-pseudo');
-    if (pseudoEl) pseudoEl.setAttribute('style', getPseudoDisplayStyle(currentPlayer || me));
+    applyPseudoDisplay(pseudoEl, currentPlayer || me);
     PROFIL_SFX.success();
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🎨 Style'; }
@@ -6584,6 +6677,8 @@ function initProfileInteractionSounds() {
 }
 
 initProfileInteractionSounds();
+const searchBotsToggle = document.getElementById('search-include-bots');
+if (searchBotsToggle) searchBotsToggle.checked = localStorage.getItem('profile_search_bots') === '1';
 load();
 </script>
 <script src="/presence.js"></script>

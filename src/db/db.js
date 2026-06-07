@@ -140,6 +140,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_changed_at INTEGER NOT NULL
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_color TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_font TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_format TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_rgb INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN pseudo_style_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
@@ -374,7 +376,7 @@ const pQ = {
   updateGuest:    db.prepare(`UPDATE players SET is_guest = @is_guest WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),
   updatePseudoChangedAt: db.prepare(`UPDATE players SET pseudo_changed_at = @changedAt WHERE id = @id`),
-  updatePseudoStyle: db.prepare(`UPDATE players SET pseudo_color = @color, pseudo_color_secondary = @colorSecondary, pseudo_font = @font, pseudo_style_changed_at = @changedAt WHERE id = @id`),
+  updatePseudoStyle: db.prepare(`UPDATE players SET pseudo_color = @color, pseudo_color_secondary = @colorSecondary, pseudo_font = @font, pseudo_format = @format, pseudo_rgb = @rgb, pseudo_style_changed_at = @changedAt WHERE id = @id`),
   updateEloCurveStyle: db.prepare(`UPDATE players SET elo_curve_color = @color, elo_curve_color_secondary = @colorSecondary, elo_curve_rgb = @rgb, elo_curve_rgb_speed = @rgbSpeed, elo_curve_rgb_direction = @rgbDirection, elo_curve_changed_at = @changedAt WHERE id = @id`),
   setMute:        db.prepare(`UPDATE players SET muted_until = @until WHERE id = @id`),
   setBanned:      db.prepare(`UPDATE players SET banned = @banned, banned_until = @until WHERE id = @id`),

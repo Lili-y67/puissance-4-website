@@ -337,8 +337,8 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
     SELECT g.id, g.player1_id, g.player2_id, g.winner_id,
            g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2,
            g.finished_at, g.move_count, g.duration, g.game_type,
-           p1.pseudo AS p1_pseudo, p1.elo AS p1_current_elo,
-           p2.pseudo AS p2_pseudo, p2.elo AS p2_current_elo
+           p1.pseudo AS p1_pseudo, p1.elo AS p1_current_elo, p1.is_bot AS p1_is_bot,
+           p2.pseudo AS p2_pseudo, p2.elo AS p2_current_elo, p2.is_bot AS p2_is_bot
     FROM games g
     JOIN players p1 ON p1.id = g.player1_id
     JOIN players p2 ON p2.id = g.player2_id
@@ -385,6 +385,7 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       opponent: {
         id: opponentId,
         pseudo: isP1 ? game.p2_pseudo : game.p1_pseudo,
+        isBot: Number(isP1 ? game.p2_is_bot : game.p1_is_bot) === 1,
         eloBefore: opponentBeforeElo || null,
         currentElo: Number(isP1 ? game.p2_current_elo : game.p1_current_elo) || null,
       },
@@ -404,6 +405,10 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
   }
 
   const eloValues = points.map(point => Number(point.elo || 0));
+  const gamesAgainstBots = games.filter(game => Number(
+    Number(game.player1_id) === id ? game.p2_is_bot : game.p1_is_bot
+  ) === 1).length;
+  const gamesAgainstHumans = games.length - gamesAgainstBots;
   const averageElo = eloValues.length
     ? Math.round(eloValues.reduce((sum, elo) => sum + elo, 0) / eloValues.length)
     : currentElo;
@@ -442,6 +447,8 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       maxElo: Math.max(...eloValues, currentElo),
       averageElo,
       games: games.length,
+      gamesAgainstHumans,
+      gamesAgainstBots,
     },
   };
 }
@@ -6206,7 +6213,7 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
 });
 
 app.patch('/api/players/:id/pseudo-style', (req, res) => {
-  const { color, colorSecondary = '', font = '', token } = req.body;
+  const { color, colorSecondary = '', font = '', format = '', rgb = false, token } = req.body;
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
@@ -6217,6 +6224,14 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
   const nextColor = normalizeHexColor(color);
   const nextColorSecondary = normalizeHexColor(colorSecondary);
   const nextFont = String(font || '').trim().toLowerCase();
+  const requestedFormats = String(format || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+  const allowedFormats = new Set(['bold', 'italic', 'underline', 'lowercase', 'uppercase']);
+  if (requestedFormats.some(value => !allowedFormats.has(value))) return res.status(400).json({ error: 'Format de pseudo invalide.' });
+  if (requestedFormats.includes('lowercase') && requestedFormats.includes('uppercase')) {
+    return res.status(400).json({ error: 'Choisis soit minuscules, soit majuscules.' });
+  }
+  const nextFormat = [...new Set(requestedFormats)].join(',');
+  const nextRgb = rgb === true || rgb === 1 || rgb === '1' || rgb === 'true';
   if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
   if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
   if (nextFont && !PSEUDO_FONT_OPTIONS.has(nextFont)) return res.status(400).json({ error: 'Police invalide.' });
@@ -6229,9 +6244,11 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
     color: nextColor,
     colorSecondary: nextColorSecondary,
     font: nextFont,
+    format: nextFormat,
+    rgb: nextRgb ? 1 : 0,
     changedAt,
   });
-  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, font: nextFont, changedAt });
+  res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, font: nextFont, format: nextFormat, rgb: nextRgb ? 1 : 0, changedAt });
 });
 
 app.patch('/api/players/:id/elo-curve-style', (req, res) => {
@@ -6412,19 +6429,20 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
 app.get('/api/players/search', (req, res) => {
   try {
     const q = (req.query.q || '').trim();
+    const includeBots = String(req.query.includeBots || '') === '1';
     if (q.length < 3) return res.json([]);
     // Autoriser alphanum + _ + - + . (suffisant, pas de regex bloquante)
     if (q.length > 20) return res.json([]);
     const rows = db.prepare(`
-      SELECT id, pseudo, elo, avatar, color, profile_banner
+      SELECT id, pseudo, elo, avatar, color, profile_banner, is_bot
       FROM players
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
         AND is_guest = 0
-        AND is_bot = 0
+        AND (? = 1 OR is_bot = 0)
       ORDER BY elo DESC LIMIT 8
-    `).all(q.replace(/%/g, '') + '%');
-    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '' })));
+    `).all(q.replace(/%/g, '') + '%', includeBots ? 1 : 0);
+    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '', is_bot: Number(p.is_bot || 0) })));
   } catch(e) {
     console.error('[search]', e.message);
     res.json([]);
