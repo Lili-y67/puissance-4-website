@@ -37,6 +37,14 @@ const io     = new Server(server, {
   transports: ['websocket', 'polling'],
   allowUpgrades: true,
 });
+io.engine.on('connection', connection => {
+  connection.on('packet', packet => {
+    devNetworkTotals.rxBytes += estimatePayloadBytes(packet?.data);
+  });
+  connection.on('packetCreate', packet => {
+    devNetworkTotals.txBytes += estimatePayloadBytes(packet?.data);
+  });
+});
 
 const mm = new Matchmaking();
 const gm = new GameManager();
@@ -60,6 +68,8 @@ const botArenaRestUntil = new Map();
 const devMachineMetrics = [];
 let devMachineCpuBase = process.cpuUsage();
 let devMachineCpuAt = Date.now();
+const devNetworkTotals = { rxBytes: 0, txBytes: 0 };
+let devNetworkBase = { rxBytes: 0, txBytes: 0 };
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
 const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 5 * 60_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(1, Number(process.env.BOT_ARENA_MAX_ACTIVE || 1)));
@@ -2404,6 +2414,28 @@ process.once('SIGINT', () => {
   process.exit(0);
 });
 
+function estimatePayloadBytes(payload) {
+  if (payload == null) return 0;
+  if (Buffer.isBuffer(payload)) return payload.length;
+  if (typeof payload === 'string') return Buffer.byteLength(payload);
+  try { return Buffer.byteLength(JSON.stringify(payload)); } catch { return 0; }
+}
+
+app.use((req, res, next) => {
+  devNetworkTotals.rxBytes += Number(req.headers['content-length'] || 0);
+  const originalWrite = res.write.bind(res);
+  const originalEnd = res.end.bind(res);
+  res.write = (chunk, ...args) => {
+    devNetworkTotals.txBytes += estimatePayloadBytes(chunk);
+    return originalWrite(chunk, ...args);
+  };
+  res.end = (chunk, ...args) => {
+    devNetworkTotals.txBytes += estimatePayloadBytes(chunk);
+    return originalEnd(chunk, ...args);
+  };
+  next();
+});
+
 function sampleDevMachineMetrics() {
   const now = Date.now();
   const elapsedMs = Math.max(1, now - devMachineCpuAt);
@@ -2413,20 +2445,27 @@ function sampleDevMachineMetrics() {
   const memory = process.memoryUsage();
   const totalMem = Math.max(1, os.totalmem());
   const freeMem = Math.max(0, os.freemem());
-  devMachineMetrics.push({
+  const elapsedSeconds = elapsedMs / 1000;
+  const sample = {
     at: now,
+    uptimeSeconds: Math.round(process.uptime()),
     processCpuPct: Math.min(100, (cpuMs / elapsedMs / cores) * 100),
     loadPct: Math.min(100, (Number(os.loadavg()?.[0] || 0) / cores) * 100),
     processRssMb: memory.rss / 1024 / 1024,
     heapUsedMb: memory.heapUsed / 1024 / 1024,
     systemMemoryPct: ((totalMem - freeMem) / totalMem) * 100,
-  });
+    networkRxKbps: Math.max(0, (devNetworkTotals.rxBytes - devNetworkBase.rxBytes) / 1024 / elapsedSeconds),
+    networkTxKbps: Math.max(0, (devNetworkTotals.txBytes - devNetworkBase.txBytes) / 1024 / elapsedSeconds),
+  };
+  devMachineMetrics.push(sample);
   if (devMachineMetrics.length > 240) devMachineMetrics.splice(0, devMachineMetrics.length - 240);
   devMachineCpuBase = process.cpuUsage();
   devMachineCpuAt = now;
+  devNetworkBase = { ...devNetworkTotals };
+  io.to('dev-metrics').emit('dev_metric', sample);
 }
 sampleDevMachineMetrics();
-setInterval(sampleDevMachineMetrics, 5000);
+setInterval(sampleDevMachineMetrics, 1000);
 process.once('SIGTERM', () => {
   stopAllBotHosts('SIGTERM');
   process.exit(0);
@@ -2516,6 +2555,11 @@ const developerLoginCodes = new Map();
 
 function getDeveloperSession(req) {
   const token = String(req.headers['x-dev-token'] || '').trim();
+  return getDeveloperSessionByToken(token);
+}
+
+function getDeveloperSessionByToken(tokenValue) {
+  const token = String(tokenValue || '').trim();
   const session = token ? developerSessions.get(token) : null;
   if (!session?.playerId || Number(session.expiresAt || 0) <= Date.now()) {
     if (token) developerSessions.delete(token);
@@ -8042,6 +8086,20 @@ app.get('/api/stats/weekly', (_, res) => {
 
 io.on('connection', socket => {
   socket.emit('presence_counts', getPresenceCounts());
+
+  socket.on('dev_metrics_subscribe', ({ token } = {}) => {
+    const player = getDeveloperSessionByToken(token);
+    if (!player) return socket.emit('dev_metrics_error', { error: 'Session developpeur invalide.' });
+    socket.join('dev-metrics');
+    socket.emit('dev_metrics_history', {
+      metrics: devMachineMetrics,
+      uptimeSeconds: Math.round(process.uptime()),
+    });
+  });
+
+  socket.on('dev_metrics_unsubscribe', () => {
+    socket.leave('dev-metrics');
+  });
 
   socket.on('join_live', () => {
     socket.join('live');
