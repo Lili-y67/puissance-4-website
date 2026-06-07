@@ -6,129 +6,251 @@
 <title>Developer Console - Puissance 4</title>
 <link rel="stylesheet" href="/theme.css">
 <style>
-:root{--bg:#070a0d;--panel:#10151b;--line:rgba(143,255,211,.16);--dev:#8fffd3;--text:#eef8f4;--muted:#84938d;--blue:#85ebff;--red:#ff6b81}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,rgba(48,209,88,.1),transparent 35%),var(--bg);color:var(--text);font-family:Barlow,system-ui,sans-serif;min-height:100vh}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(143,255,211,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(143,255,211,.025) 1px,transparent 1px);background-size:32px 32px}
-.page{width:min(1400px,calc(100% - 32px));margin:0 auto;padding:24px 0 50px;position:relative}
-.topbar,.card{background:rgba(16,21,27,.92);border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 70px rgba(0,0,0,.25)}
-.topbar{padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
-.brand{font-family:"Barlow Condensed",sans-serif;font-size:25px;font-weight:900;letter-spacing:1.5px}.brand span{color:var(--dev)}
-.actions{display:flex;gap:8px;align-items:center}.btn{border:1px solid var(--line);background:rgba(143,255,211,.07);color:var(--dev);padding:9px 13px;border-radius:10px;font-weight:800;cursor:pointer;text-decoration:none}
-.hero{display:grid;grid-template-columns:1.4fr .6fr;gap:18px;margin-bottom:18px}.card{padding:20px}.kicker{color:var(--dev);font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
-h1,h2{font-family:"Barlow Condensed",sans-serif;margin:6px 0}h1{font-size:42px}h2{font-size:25px}.copy,.meta{color:var(--muted);line-height:1.55}
-.status{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}.metric{padding:12px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06)}.metric strong{display:block;font-size:20px;color:var(--dev)}.metric span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
-.layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:18px}.search{width:100%;padding:11px 13px;border-radius:11px;border:1px solid var(--line);background:#090d11;color:var(--text);outline:none;margin:10px 0}
-.files{display:flex;flex-direction:column;gap:6px;max-height:650px;overflow:auto}.file{width:100%;text-align:left;border:1px solid transparent;background:rgba(255,255,255,.025);color:#bac8c2;padding:9px 11px;border-radius:9px;cursor:pointer;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.file:hover,.file.active{color:var(--dev);border-color:var(--line);background:rgba(143,255,211,.07)}
-.code-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.code-path{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--dev);font-size:13px;word-break:break-all}
-pre{margin:0;background:#080b0f;border:1px solid rgba(255,255,255,.07);border-radius:13px;padding:16px;max-height:650px;overflow:auto;color:#d7e3de;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre;tab-size:2}
-canvas{width:100%;height:210px;background:#080b0f;border:1px solid rgba(255,255,255,.07);border-radius:13px;margin-top:14px}
-.legend{display:flex;gap:15px;flex-wrap:wrap;font-size:12px;color:var(--muted)}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
-.error{display:none;padding:14px;border:1px solid rgba(255,107,129,.3);background:rgba(255,107,129,.08);color:var(--red);border-radius:12px;margin-bottom:14px}
-@media(max-width:900px){.hero,.layout{grid-template-columns:1fr}.files{max-height:300px}h1{font-size:34px}}@media(max-width:520px){.page{width:min(100% - 18px,1400px)}.topbar{align-items:flex-start;flex-direction:column}.status{grid-template-columns:1fr}}
+:root{--bg:#070706;--panel:#11110e;--panel2:#171711;--yellow:#ffd60a;--yellow2:#ff9f0a;--text:#f6f3e4;--muted:#969384;--line:rgba(255,214,10,.2);--red:#ff5b70;--green:#52e59a;--blue:#85ebff}
+*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:var(--bg);color:var(--text);font-family:Barlow,system-ui,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 16% 0,rgba(255,214,10,.12),transparent 30%),radial-gradient(circle at 90% 10%,rgba(255,159,10,.07),transparent 28%),linear-gradient(rgba(255,214,10,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,214,10,.025) 1px,transparent 1px);background-size:auto,auto,34px 34px,34px 34px}
+button,input{font:inherit}.hidden{display:none!important}.btn{border:1px solid var(--line);background:rgba(255,214,10,.08);color:var(--yellow);padding:10px 14px;border-radius:11px;font-weight:800;cursor:pointer;transition:.18s;text-decoration:none}.btn:hover{background:rgba(255,214,10,.15);transform:translateY(-1px)}.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}.btn-solid{color:#111;background:linear-gradient(135deg,var(--yellow),var(--yellow2));border:0}.btn-ghost{color:var(--muted);background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.08)}
+#login-screen{min-height:100vh;display:grid;place-items:center;padding:22px;position:relative}.gate{width:min(480px,100%);background:rgba(17,17,14,.96);border:1px solid var(--line);border-radius:26px;padding:34px;box-shadow:0 35px 100px rgba(0,0,0,.55),0 0 60px rgba(255,214,10,.06)}
+.gate-mark{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#12100a;font:900 19px ui-monospace,monospace;box-shadow:0 0 30px rgba(255,214,10,.25)}.eyebrow{margin-top:22px;color:var(--yellow);font-size:11px;font-weight:900;letter-spacing:2.2px;text-transform:uppercase}.gate h1{font-family:"Barlow Condensed",sans-serif;font-size:39px;line-height:1;margin:7px 0 10px}.gate-copy{color:var(--muted);line-height:1.55;font-size:14px;margin-bottom:22px}.security-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}.security-row span{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 8px;border-radius:8px;background:rgba(255,214,10,.07);border:1px solid var(--line);color:#d8c75f}
+.field{margin-bottom:12px}.field label{display:block;margin:0 0 6px;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}.input{width:100%;border:1px solid rgba(255,255,255,.1);background:#090907;color:var(--text);border-radius:12px;padding:12px 14px;outline:none}.input:focus{border-color:rgba(255,214,10,.48);box-shadow:0 0 0 3px rgba(255,214,10,.06)}.gate-actions{display:grid;gap:8px;margin-top:18px}.gate-actions .btn{height:45px}.error{display:none;color:#ff8b9b;background:rgba(255,91,112,.08);border:1px solid rgba(255,91,112,.25);border-radius:11px;padding:10px 12px;font-size:13px;margin-bottom:14px}.code-step{display:none}.code-step.visible{display:block}
+#console{position:relative;min-height:100vh}.shell{width:min(1500px,calc(100% - 30px));margin:auto;padding:18px 0 42px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;border:1px solid var(--line);background:rgba(17,17,14,.94);border-radius:18px;position:sticky;top:10px;z-index:5;backdrop-filter:blur(18px)}.brand{display:flex;align-items:center;gap:11px}.brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#15120a;display:grid;place-items:center;font:900 13px ui-monospace,monospace}.brand-name{font-family:"Barlow Condensed",sans-serif;font-size:21px;font-weight:900;letter-spacing:1px}.brand-name span{color:var(--yellow)}.top-actions{display:flex;align-items:center;gap:8px}.identity{color:var(--muted);font-size:12px;margin-right:4px}
+.hero{margin:18px 0;display:grid;grid-template-columns:1.35fr .65fr;gap:14px}.panel{background:rgba(17,17,14,.93);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.22)}.hero-main{min-height:220px;position:relative;overflow:hidden}.hero-main:after{content:"</>";position:absolute;right:20px;bottom:-24px;font:900 110px ui-monospace,monospace;color:rgba(255,214,10,.045);transform:rotate(-8deg)}.kicker{color:var(--yellow);font-size:10px;font-weight:900;letter-spacing:2px;text-transform:uppercase}.hero h1{font-family:"Barlow Condensed",sans-serif;font-size:42px;line-height:1;margin:8px 0}.copy{color:var(--muted);line-height:1.5;max-width:720px}.health{display:inline-flex;align-items:center;gap:7px;margin-top:20px;color:var(--green);font-size:12px;font-weight:800}.pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 1.8s infinite}@keyframes pulse{50%{opacity:.35}}
+.machine-title{font-family:"Barlow Condensed",sans-serif;font-size:24px;font-weight:900;margin:7px 0}.machine-meta{color:var(--muted);font-size:12px;line-height:1.5}.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:15px}.quick{padding:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);border-radius:12px}.quick strong{display:block;color:var(--yellow);font-size:20px}.quick span{font-size:9px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tab{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--muted);padding:10px 15px;border-radius:11px;font-weight:900;cursor:pointer}.tab.active{background:rgba(255,214,10,.12);border-color:var(--line);color:var(--yellow)}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.metric-card{background:linear-gradient(145deg,rgba(255,214,10,.055),rgba(255,255,255,.02));border:1px solid rgba(255,214,10,.13);border-radius:16px;padding:15px}.metric-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}.metric-value{font-family:"Barlow Condensed",sans-serif;font-size:29px;font-weight:900;margin:5px 0 2px}.metric-sub{font-size:11px;color:var(--muted)}canvas{display:block;width:100%;height:285px;background:#090907;border:1px solid rgba(255,255,255,.07);border-radius:15px}.legend{display:flex;gap:18px;flex-wrap:wrap;margin:12px 2px 0;color:var(--muted);font-size:11px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.source-layout{display:grid;grid-template-columns:360px minmax(0,1fr);gap:14px}.source-sidebar{min-height:690px}.source-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px}.source-count{font:800 11px ui-monospace,monospace;color:var(--yellow)}.search{margin:12px 0;width:100%}.file-list{max-height:590px;overflow:auto;display:flex;flex-direction:column;gap:5px;padding-right:3px}.file{width:100%;text-align:left;border:1px solid transparent;background:rgba(255,255,255,.025);color:#b9b6a8;padding:9px 10px;border-radius:9px;cursor:pointer;font:11px/1.35 ui-monospace,Consolas,monospace;word-break:break-all}.file:hover,.file.active{background:rgba(255,214,10,.08);border-color:var(--line);color:var(--yellow)}
+.reader{min-width:0}.reader-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.reader-path{color:var(--yellow);font:12px ui-monospace,Consolas,monospace;word-break:break-all}.reader-actions{display:flex;gap:7px}pre{margin:0;min-height:620px;max-height:760px;overflow:auto;background:#080806;border:1px solid rgba(255,255,255,.07);border-radius:15px;padding:17px;color:#dcd9c9;font:12px/1.58 ui-monospace,Consolas,monospace;white-space:pre;tab-size:2}.empty{color:#6f6d63}
+@media(max-width:980px){.hero,.source-layout{grid-template-columns:1fr}.source-sidebar{min-height:auto}.file-list{max-height:310px}.metrics-grid{grid-template-columns:1fr 1fr}}@media(max-width:620px){.shell{width:calc(100% - 16px)}.topbar{align-items:flex-start}.top-actions{flex-wrap:wrap;justify-content:flex-end}.identity{display:none}.hero h1{font-size:34px}.metrics-grid{grid-template-columns:1fr}.tabs{overflow:auto}.reader-head{align-items:flex-start;flex-direction:column}pre{font-size:10px;min-height:480px}}
 </style>
 </head>
 <body>
-<main class="page">
-  <header class="topbar">
-    <div class="brand">P4 <span>DEVELOPER CONSOLE</span></div>
-    <div class="actions"><span id="identity" class="meta"></span><a class="btn" href="/profil">Profil</a><a class="btn" href="/">Accueil</a></div>
-  </header>
-  <div id="error" class="error"></div>
+<section id="login-screen">
+  <div class="gate">
+    <div class="gate-mark">&lt;/&gt;</div>
+    <div class="eyebrow">Restricted workspace</div>
+    <h1>Developer Gate</h1>
+    <div class="gate-copy">Authentification par mot de passe prive, verification du role Discord et code temporaire envoye en message prive.</div>
+    <div class="security-row"><span>Role sync</span><span>Discord 2FA</span><span>Session 4h</span><span>Read only</span></div>
+    <div id="login-error" class="error"></div>
+    <div class="field"><label>Compte developpeur</label><input id="identity-input" class="input" placeholder="Pseudo ou ID Discord" autocomplete="username"></div>
+    <div class="field"><label>Mot de passe console</label><input id="password-input" type="password" class="input" placeholder="Mot de passe affiche sur le profil" autocomplete="current-password"></div>
+    <div id="code-step" class="code-step">
+      <div class="field"><label>Code Discord</label><input id="code-input" class="input" inputmode="numeric" maxlength="6" placeholder="000000"></div>
+    </div>
+    <div class="gate-actions">
+      <button id="login-button" class="btn btn-solid" onclick="login()">Recevoir le code Discord</button>
+      <button id="reset-button" class="btn btn-ghost hidden" onclick="resetLogin()">Changer de compte</button>
+    </div>
+  </div>
+</section>
 
-  <section class="hero">
-    <article class="card">
-      <div class="kicker">Accès développeur</div>
-      <h1>Code & télémétrie</h1>
-      <div class="copy">Consulte les sources autorisées fichier par fichier et surveille les ressources du processus serveur. Les secrets, données et fichiers d'environnement ne sont jamais exposés.</div>
-      <canvas id="performance-chart" width="900" height="230"></canvas>
-      <div class="legend">
-        <span><i class="dot" style="background:#ff6b81"></i>CPU processus</span>
-        <span><i class="dot" style="background:#85ebff"></i>RAM système</span>
-        <span><i class="dot" style="background:#8fffd3"></i>RAM processus</span>
-      </div>
-    </article>
-    <aside class="card">
-      <div class="kicker">Machine</div>
-      <h2 id="machine-title">Mesures en cours</h2>
-      <div id="machine-meta" class="meta">Chargement...</div>
-      <div class="status">
-        <div class="metric"><strong id="cpu-value">-</strong><span>CPU</span></div>
-        <div class="metric"><strong id="ram-value">-</strong><span>RAM système</span></div>
-        <div class="metric"><strong id="rss-value">-</strong><span>Processus</span></div>
-        <div class="metric"><strong id="uptime-value">-</strong><span>Uptime</span></div>
-      </div>
-    </aside>
-  </section>
+<main id="console" class="hidden">
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">&lt;/&gt;</div><div class="brand-name">P4 <span>DEVELOPER</span></div></div>
+      <div class="top-actions"><span id="identity" class="identity"></span><a class="btn btn-ghost" href="/profil">Profil</a><a class="btn btn-ghost" href="/">Accueil</a><button class="btn" onclick="logout()">Deconnexion</button></div>
+    </header>
 
-  <section class="layout">
-    <aside class="card">
-      <div class="kicker">Repository</div>
-      <h2>Fichiers sources</h2>
-      <input id="source-search" class="search" placeholder="Filtrer les fichiers..." oninput="renderFiles()">
-      <div id="files" class="files"></div>
-    </aside>
-    <article class="card">
-      <div class="code-head">
-        <div><div class="kicker">Lecteur</div><div id="source-path" class="code-path">Sélectionne un fichier</div></div>
-        <button id="copy-btn" class="btn" onclick="copySource()" disabled>Copier</button>
+    <section class="hero">
+      <article class="panel hero-main">
+        <div class="kicker">Developer control room</div>
+        <h1>Sources & observabilite</h1>
+        <div class="copy">Une vue en lecture seule sur le code autorise et la sante du processus serveur. Les fichiers secrets, variables d'environnement et donnees utilisateurs restent exclus.</div>
+        <div class="health"><i class="pulse"></i>Console connectee et mesures actives</div>
+      </article>
+      <aside class="panel">
+        <div class="kicker">Runtime</div>
+        <div id="machine-title" class="machine-title">Machine serveur</div>
+        <div id="machine-meta" class="machine-meta">Chargement des informations...</div>
+        <div class="quick-grid">
+          <div class="quick"><strong id="core-value">-</strong><span>Coeurs</span></div>
+          <div class="quick"><strong id="total-memory-value">-</strong><span>RAM totale</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <nav class="tabs">
+      <button id="tab-performance" class="tab active" onclick="switchTab('performance')">Performance</button>
+      <button id="tab-sources" class="tab" onclick="switchTab('sources')">Code source</button>
+    </nav>
+
+    <section id="performance-view">
+      <div class="metrics-grid">
+        <div class="metric-card"><div class="metric-label">CPU processus</div><div id="cpu-value" class="metric-value" style="color:var(--red)">-</div><div class="metric-sub">Moyenne normalisee par coeur</div></div>
+        <div class="metric-card"><div class="metric-label">RAM systeme</div><div id="ram-value" class="metric-value" style="color:var(--blue)">-</div><div class="metric-sub">Memoire globale estimee</div></div>
+        <div class="metric-card"><div class="metric-label">Memoire processus</div><div id="rss-value" class="metric-value" style="color:var(--green)">-</div><div class="metric-sub">Resident Set Size Node.js</div></div>
+        <div class="metric-card"><div class="metric-label">Uptime</div><div id="uptime-value" class="metric-value" style="color:var(--yellow)">-</div><div class="metric-sub">Depuis le dernier demarrage</div></div>
       </div>
-      <pre id="source-code">Les fichiers sont chargés uniquement lorsque tu appuies sur leur bouton.</pre>
-    </article>
-  </section>
+      <article class="panel">
+        <div class="source-toolbar"><div><div class="kicker">Historique live</div><h2 style="margin:5px 0 0">Charge de la machine</h2></div><div class="source-count">Actualisation 5s</div></div>
+        <canvas id="performance-chart" width="1200" height="300"></canvas>
+        <div class="legend"><span><i class="dot" style="background:#ff5b70"></i>CPU processus</span><span><i class="dot" style="background:#85ebff"></i>RAM systeme</span><span><i class="dot" style="background:#52e59a"></i>RAM processus</span></div>
+      </article>
+    </section>
+
+    <section id="sources-view" class="hidden">
+      <div class="source-layout">
+        <aside class="panel source-sidebar">
+          <div class="source-toolbar"><div><div class="kicker">Repository</div><h2 style="margin:5px 0">Fichiers</h2></div><span id="source-count" class="source-count">0 fichier</span></div>
+          <input id="source-search" class="input search" placeholder="Rechercher un chemin..." oninput="renderFiles()">
+          <div id="files" class="file-list"></div>
+        </aside>
+        <article class="panel reader">
+          <div class="reader-head">
+            <div><div class="kicker">Lecteur securise</div><div id="source-path" class="reader-path">Selectionne un fichier</div></div>
+            <div class="reader-actions"><button id="copy-button" class="btn" onclick="copySource()" disabled>Copier</button><button class="btn btn-ghost" onclick="closeSource()">Fermer</button></div>
+          </div>
+          <pre id="source-code" class="empty">Chaque fichier est charge uniquement lorsque son bouton est ouvert.</pre>
+        </article>
+      </div>
+    </section>
+  </div>
 </main>
+
 <script>
-const token = localStorage.getItem('token') || '';
+let devToken = sessionStorage.getItem('devToken') || '';
+let loginRequestId = null;
 let sourceFiles = [];
 let activeSource = '';
 let activeContent = '';
+let metricsTimer = null;
 
-async function devApi(path) {
-  const res = await fetch(path, { headers: { 'x-token': token } });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Accès refusé.');
+async function request(path, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (devToken) headers['x-dev-token'] = devToken;
+  const response = await fetch(path, { ...options, headers });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Requete impossible.');
   return data;
 }
 
-function showError(message) {
-  const el = document.getElementById('error');
-  el.textContent = message;
-  el.style.display = 'block';
+function setLoginError(message) {
+  const error = document.getElementById('login-error');
+  error.textContent = message || 'Erreur.';
+  error.style.display = 'block';
 }
 
-function renderFiles() {
-  const query = document.getElementById('source-search').value.trim().toLowerCase();
-  const rows = query ? sourceFiles.filter(file => file.toLowerCase().includes(query)) : sourceFiles;
-  document.getElementById('files').innerHTML = rows.map(file =>
-    `<button class="file ${file === activeSource ? 'active' : ''}" data-path="${escapeHtml(file)}">${escapeHtml(file)}</button>`
-  ).join('');
-  document.querySelectorAll('.file').forEach(button => {
-    button.addEventListener('click', () => openSource(button.dataset.path));
-  });
+function resetLogin() {
+  loginRequestId = null;
+  document.getElementById('code-step').classList.remove('visible');
+  document.getElementById('identity-input').disabled = false;
+  document.getElementById('password-input').disabled = false;
+  document.getElementById('code-input').value = '';
+  document.getElementById('login-button').textContent = 'Recevoir le code Discord';
+  document.getElementById('reset-button').classList.add('hidden');
+  document.getElementById('login-error').style.display = 'none';
+}
+
+async function login() {
+  const button = document.getElementById('login-button');
+  const devIdentity = document.getElementById('identity-input').value.trim();
+  const password = document.getElementById('password-input').value;
+  const code = document.getElementById('code-input').value.trim();
+  if (!devIdentity) return setLoginError('Entre ton pseudo ou ton ID Discord.');
+  if (!password) return setLoginError('Entre le mot de passe de la console.');
+  if (loginRequestId && !/^\d{6}$/.test(code)) return setLoginError('Entre le code Discord a 6 chiffres.');
+  button.disabled = true;
+  button.textContent = loginRequestId ? 'Verification...' : 'Envoi du code...';
+  try {
+    const body = { password, devIdentity, playerToken: localStorage.getItem('token') || null };
+    if (loginRequestId) { body.requestId = loginRequestId; body.code = code; }
+    const data = await request('/api/dev/login', { method: 'POST', body: JSON.stringify(body) });
+    if (data.requiresCode) {
+      loginRequestId = data.requestId;
+      document.getElementById('code-step').classList.add('visible');
+      document.getElementById('identity-input').disabled = true;
+      document.getElementById('password-input').disabled = true;
+      document.getElementById('reset-button').classList.remove('hidden');
+      document.getElementById('login-error').style.display = 'none';
+      button.textContent = 'Valider le code';
+      document.getElementById('code-input').focus();
+      return;
+    }
+    devToken = data.token;
+    sessionStorage.setItem('devToken', devToken);
+    await openConsole();
+  } catch(error) {
+    setLoginError(error.message);
+  } finally {
+    button.disabled = false;
+    if (!devToken) button.textContent = loginRequestId ? 'Valider le code' : 'Recevoir le code Discord';
+  }
+}
+
+async function openConsole() {
+  try {
+    const [me, sources] = await Promise.all([request('/api/dev/me'), request('/api/dev/sources')]);
+    document.getElementById('identity').textContent = me.pseudo;
+    sourceFiles = sources.files || [];
+    renderFiles();
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('console').classList.remove('hidden');
+    await loadMetrics();
+    clearInterval(metricsTimer);
+    metricsTimer = setInterval(loadMetrics, 5000);
+  } catch(error) {
+    sessionStorage.removeItem('devToken');
+    devToken = '';
+    setLoginError(error.message);
+  }
+}
+
+async function logout() {
+  try { await request('/api/dev/logout', { method: 'POST' }); } catch(error) {}
+  sessionStorage.removeItem('devToken');
+  location.reload();
+}
+
+function switchTab(tab) {
+  const performance = tab === 'performance';
+  document.getElementById('performance-view').classList.toggle('hidden', !performance);
+  document.getElementById('sources-view').classList.toggle('hidden', performance);
+  document.getElementById('tab-performance').classList.toggle('active', performance);
+  document.getElementById('tab-sources').classList.toggle('active', !performance);
 }
 
 function escapeHtml(value) {
   return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function renderFiles() {
+  const query = document.getElementById('source-search')?.value.trim().toLowerCase() || '';
+  const rows = query ? sourceFiles.filter(file => file.toLowerCase().includes(query)) : sourceFiles;
+  document.getElementById('source-count').textContent = `${rows.length} fichier${rows.length > 1 ? 's' : ''}`;
+  document.getElementById('files').innerHTML = rows.map(file =>
+    `<button class="file ${file === activeSource ? 'active' : ''}" data-path="${escapeHtml(file)}">${escapeHtml(file)}</button>`
+  ).join('');
+  document.querySelectorAll('.file').forEach(button => button.addEventListener('click', () => openSource(button.dataset.path)));
+}
+
 async function openSource(file) {
-  try {
-    const data = await devApi(`/api/dev/source?path=${encodeURIComponent(file)}`);
-    activeSource = data.path;
-    activeContent = data.content;
-    document.getElementById('source-path').textContent = data.path;
-    document.getElementById('source-code').textContent = data.content;
-    document.getElementById('copy-btn').disabled = false;
-    renderFiles();
-  } catch (error) {
-    showError(error.message);
-  }
+  const data = await request(`/api/dev/source?path=${encodeURIComponent(file)}`);
+  activeSource = data.path;
+  activeContent = data.content;
+  document.getElementById('source-path').textContent = data.path;
+  const code = document.getElementById('source-code');
+  code.textContent = data.content;
+  code.classList.remove('empty');
+  document.getElementById('copy-button').disabled = false;
+  renderFiles();
+}
+
+function closeSource() {
+  activeSource = '';
+  activeContent = '';
+  document.getElementById('source-path').textContent = 'Selectionne un fichier';
+  const code = document.getElementById('source-code');
+  code.textContent = 'Chaque fichier est charge uniquement lorsque son bouton est ouvert.';
+  code.classList.add('empty');
+  document.getElementById('copy-button').disabled = true;
+  renderFiles();
 }
 
 async function copySource() {
   if (!activeContent) return;
   await navigator.clipboard.writeText(activeContent);
-  const button = document.getElementById('copy-btn');
-  button.textContent = 'Copié';
+  const button = document.getElementById('copy-button');
+  button.textContent = 'Copie';
   setTimeout(() => { button.textContent = 'Copier'; }, 1200);
 }
 
@@ -143,27 +265,26 @@ function formatUptime(seconds) {
 function drawMetrics(rows) {
   const canvas = document.getElementById('performance-chart');
   const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height, pad = 24;
+  const w = canvas.width, h = canvas.height, pad = 28;
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = '#080b0f'; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = '#090907'; ctx.fillRect(0, 0, w, h);
   ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    const y = pad + ((h - pad * 2) / 4) * i;
+  for (let index = 0; index < 5; index++) {
+    const y = pad + ((h - pad * 2) / 4) * index;
     ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(w - pad, y); ctx.stroke();
   }
-  const values = Array.isArray(rows) ? rows.slice(-100) : [];
+  const values = Array.isArray(rows) ? rows.slice(-120) : [];
   if (!values.length) return;
   const rssMax = Math.max(256, ...values.map(row => Number(row.processRssMb || 0)));
-  const series = [
-    { key:'processCpuPct', color:'#ff6b81', max:100 },
+  [
+    { key:'processCpuPct', color:'#ff5b70', max:100 },
     { key:'systemMemoryPct', color:'#85ebff', max:100 },
-    { key:'processRssMb', color:'#8fffd3', max:rssMax },
-  ];
-  series.forEach(seriesItem => {
-    ctx.strokeStyle = seriesItem.color; ctx.lineWidth = 2; ctx.beginPath();
+    { key:'processRssMb', color:'#52e59a', max:rssMax },
+  ].forEach(series => {
+    ctx.strokeStyle = series.color; ctx.lineWidth = 2.2; ctx.beginPath();
     values.forEach((row, index) => {
       const x = pad + (values.length === 1 ? 0 : index / (values.length - 1)) * (w - pad * 2);
-      const y = h - pad - Math.min(1, Number(row[seriesItem.key] || 0) / seriesItem.max) * (h - pad * 2);
+      const y = h - pad - Math.min(1, Number(row[series.key] || 0) / series.max) * (h - pad * 2);
       index ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
     });
     ctx.stroke();
@@ -172,37 +293,26 @@ function drawMetrics(rows) {
 
 async function loadMetrics() {
   try {
-    const data = await devApi('/api/dev/metrics');
+    const data = await request('/api/dev/metrics');
     const latest = data.metrics?.[data.metrics.length - 1] || {};
     document.getElementById('machine-title').textContent = data.cpuModel || 'Machine serveur';
-    document.getElementById('machine-meta').textContent = `${data.platform} · ${data.cpuCores} cœurs · ${data.totalMemoryMb} MB · mesures estimées`;
+    document.getElementById('machine-meta').textContent = `${data.platform} - mesures estimees depuis le processus Node.js`;
+    document.getElementById('core-value').textContent = data.cpuCores;
+    document.getElementById('total-memory-value').textContent = `${Math.round(data.totalMemoryMb / 1024)} GB`;
     document.getElementById('cpu-value').textContent = `${Number(latest.processCpuPct || 0).toFixed(1)}%`;
     document.getElementById('ram-value').textContent = `${Number(latest.systemMemoryPct || 0).toFixed(1)}%`;
     document.getElementById('rss-value').textContent = `${Number(latest.processRssMb || 0).toFixed(0)} MB`;
     document.getElementById('uptime-value').textContent = formatUptime(data.uptimeSeconds);
     drawMetrics(data.metrics || []);
-  } catch (error) {
-    showError(error.message);
+  } catch(error) {
+    if (/acces|session/i.test(error.message)) logout();
   }
 }
 
-async function init() {
-  if (!token) {
-    showError('Connecte-toi avec un compte développeur pour ouvrir cette page.');
-    return;
-  }
-  try {
-    const [me, sources] = await Promise.all([devApi('/api/dev/me'), devApi('/api/dev/sources')]);
-    document.getElementById('identity').textContent = me.pseudo;
-    sourceFiles = sources.files || [];
-    renderFiles();
-    await loadMetrics();
-    setInterval(loadMetrics, 5000);
-  } catch (error) {
-    showError(error.message);
-  }
-}
-init();
+document.getElementById('identity-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
+document.getElementById('password-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
+document.getElementById('code-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
+if (devToken) openConsole();
 </script>
 </body>
 </html>

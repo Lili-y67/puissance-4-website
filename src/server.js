@@ -2495,6 +2495,15 @@ function getOrCreateAdminPassword() {
   return pwd;
 }
 const ADMIN_PASSWORD = getOrCreateAdminPassword();
+function getOrCreateDeveloperPassword() {
+  const row = db.prepare('SELECT value FROM config WHERE key = ?').get('developer_password');
+  if (row) return row.value;
+  const password = crypto.randomBytes(10).toString('hex');
+  db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('developer_password', password);
+  console.log(`[DEV] Mot de passe genere : ${password}`);
+  return password;
+}
+const DEVELOPER_PASSWORD = getOrCreateDeveloperPassword();
 
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 app.get('/dev', (_, res) => res.sendFile(path.join(__dirname, 'public/dev.html')));
@@ -2502,14 +2511,101 @@ app.get('/dev', (_, res) => res.sendFile(path.join(__dirname, 'public/dev.html')
 const DEV_SOURCE_ROOT = path.resolve(__dirname, '..');
 const DEV_SOURCE_EXTENSIONS = new Set(['.js', '.json', '.html', '.css', '.md', '.toml']);
 const DEV_ROOT_FILES = new Set(['package.json', 'README.md', 'railway.toml', 'nixpacks.toml']);
+const developerSessions = new Map();
+const developerLoginCodes = new Map();
 
 function getDeveloperSession(req) {
-  const token = String(req.headers['x-token'] || req.query.token || '').trim();
-  const playerId = validateSession(token);
-  if (!playerId) return null;
-  const player = pQ.getById.get(playerId);
-  return player && (isDeveloperPlayer(player) || isAdminPlayer(player)) ? player : null;
+  const token = String(req.headers['x-dev-token'] || '').trim();
+  const session = token ? developerSessions.get(token) : null;
+  if (!session?.playerId || Number(session.expiresAt || 0) <= Date.now()) {
+    if (token) developerSessions.delete(token);
+    return null;
+  }
+  const player = pQ.getById.get(session.playerId);
+  if (!player || (!isDeveloperPlayer(player) && !isAdminPlayer(player))) {
+    developerSessions.delete(token);
+    return null;
+  }
+  return player;
 }
+
+app.get('/api/dev/password', async (req, res) => {
+  const playerId = validateSession(String(req.headers['x-token'] || ''));
+  const player = playerId ? pQ.getById.get(playerId) : null;
+  if (!player?.discord_id || !isDeveloperPlayer(player)) {
+    return res.status(403).json({ error: 'Acces developpeur requis.' });
+  }
+  try {
+    const { botToken } = discordConfig();
+    const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
+    if (!snapshot?.developer) return res.status(403).json({ error: 'Role Discord developpeur requis.' });
+    applyDiscordSnapshotToPlayer(player, snapshot);
+  } catch(e) {
+    return res.status(503).json({ error: 'Verification Discord indisponible.' });
+  }
+  res.json({ password: DEVELOPER_PASSWORD });
+});
+
+app.post('/api/dev/login', async (req, res) => {
+  const { password, playerToken, devIdentity, requestId, code } = req.body || {};
+  if (password !== DEVELOPER_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+  const player = findAdminLoginPlayer(devIdentity, playerToken);
+  if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord developpeur introuvable.' });
+
+  const { botToken } = discordConfig();
+  const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
+  if (!snapshot?.developer && !isAdminPlayer(player)) {
+    return res.status(403).json({ error: 'Role Discord developpeur requis.' });
+  }
+  applyDiscordSnapshotToPlayer(player, snapshot);
+
+  if (requestId) {
+    const challenge = developerLoginCodes.get(String(requestId));
+    if (!challenge || challenge.playerId !== player.id || challenge.expiresAt <= Date.now()) {
+      developerLoginCodes.delete(String(requestId));
+      return res.status(403).json({ error: 'Code Discord expire ou invalide.' });
+    }
+    if (String(code || '').trim() !== challenge.code) {
+      challenge.attempts += 1;
+      if (challenge.attempts >= 5) developerLoginCodes.delete(String(requestId));
+      return res.status(403).json({ error: 'Code Discord incorrect.' });
+    }
+    developerLoginCodes.delete(String(requestId));
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 4 * 60 * 60 * 1000;
+    developerSessions.set(token, { playerId: player.id, expiresAt });
+    setTimeout(() => developerSessions.delete(token), 4 * 60 * 60 * 1000);
+    return res.json({ token, expiresAt, pseudo: player.pseudo });
+  }
+
+  const challengeId = crypto.randomBytes(16).toString('hex');
+  const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  developerLoginCodes.set(challengeId, {
+    playerId: player.id,
+    code: challengeCode,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+    attempts: 0,
+  });
+  setTimeout(() => developerLoginCodes.delete(challengeId), 10 * 60 * 1000);
+  try {
+    await sendDM(player.discord_id, [
+      'Puissance 4 - Code Developer Console',
+      '',
+      `Ton code de connexion est : ${challengeCode}`,
+      'Il expire dans 10 minutes. Ne le partage avec personne.',
+    ].join('\n'));
+  } catch(e) {
+    developerLoginCodes.delete(challengeId);
+    return res.status(500).json({ error: "Impossible d'envoyer le code Discord." });
+  }
+  res.json({ requiresCode: true, requestId: challengeId });
+});
+
+app.post('/api/dev/logout', (req, res) => {
+  const token = String(req.headers['x-dev-token'] || '').trim();
+  if (token) developerSessions.delete(token);
+  res.json({ ok: true });
+});
 
 function normalizeDeveloperSourcePath(value) {
   const relative = String(value || '').replace(/\\/g, '/').replace(/^\/+/, '');
@@ -3277,7 +3373,7 @@ const { wlog, mkEmbed: embed } = WH;
 const DISCORD_GUILD    = '1477078197530263582';
 const DISCORD_ROLE_ADM = '1480180456782827530';
 const DISCORD_ROLE_MOD = '1480180483613655181';
-const DISCORD_ROLE_DEVELOPER = String(process.env.DISCORD_ROLE_DEVELOPER || '').trim();
+const DISCORD_ROLE_DEVELOPER = String(process.env.DISCORD_ROLE_DEVELOPER || '1513095490554826882').trim();
 const DISCORD_ROLE_VIP = '1489360367246114866'; // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle VIP
 const DISCORD_ROLE_VIP_PLUS = '1490328326806438058';
 const DISCORD_ROLE_CUSTOM = '1490049340407021649';
