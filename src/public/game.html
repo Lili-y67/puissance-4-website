@@ -463,6 +463,22 @@ body {
 /* Shapes — appliquées en inline style via JS pour éviter les conflits de spécificité */
 .token.s-emoji { border-radius: 0 !important; overflow: visible; }
 .token.s-emoji canvas { display: block; width: 100%; height: 100%; }
+.token .token-rgb-soft-base{position:relative;z-index:1}
+.token .token-rgb-soft-layer{
+  position:absolute;inset:0;z-index:2;width:100%;height:100%;object-fit:cover;
+  pointer-events:none;opacity:.20;mix-blend-mode:color;
+  filter:saturate(1.22) hue-rotate(0deg);
+  animation:token-rgb-soft-wave 8.5s linear infinite;
+  animation-delay:var(--token-rgb-delay,0s);
+}
+@keyframes token-rgb-soft-wave{
+  0%{filter:saturate(1.18) hue-rotate(0deg);opacity:.16}
+  25%{filter:saturate(1.3) hue-rotate(90deg);opacity:.24}
+  50%{filter:saturate(1.2) hue-rotate(180deg);opacity:.18}
+  75%{filter:saturate(1.3) hue-rotate(270deg);opacity:.24}
+  100%{filter:saturate(1.18) hue-rotate(360deg);opacity:.16}
+}
+@media(prefers-reduced-motion:reduce){.token .token-rgb-soft-layer{animation:none;opacity:.14}}
 .cell.winning {
   box-shadow:
     inset 0 3px 10px rgba(0,0,0,0.7),
@@ -1052,6 +1068,8 @@ let p1Emoji   = '⭐';
 let p2Emoji   = '💎';
 let p1EmojiImage = '';
 let p2EmojiImage = '';
+let p1TokenRgb = false;
+let p2TokenRgb = false;
 let tournamentMeta = null;
 let activeMoveTimeSeconds = 0;
 let turnTimerInterval = null;
@@ -1289,6 +1307,7 @@ function getResolvedPlayerVisual(player) {
     avatar: safePlayer.avatar || stored.avatar || '',
     avatar_decoration: safePlayer.avatar_decoration || stored.avatar_decoration || '',
     profile_banner: safePlayer.profile_banner || stored.profile_banner || '',
+    pseudo_rgb: safePlayer.pseudo_rgb ?? stored.pseudo_rgb ?? 0,
   };
 }
 
@@ -1631,6 +1650,8 @@ function connectSocket(pendingMatch) {
     );
     const rawS1 = data.players[1].shape || 'circle';
     const rawS2 = data.players[2].shape || 'circle';
+    p1TokenRgb = data.players[1].token_rgb === true || Number(data.players[1].pseudo_rgb || 0) === 1;
+    p2TokenRgb = data.players[2].token_rgb === true || Number(data.players[2].pseudo_rgb || 0) === 1;
     if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
     else p1Shape = rawS1;
     if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
@@ -1786,6 +1807,8 @@ function setupLobby(data) {
   // Stocker les shapes (format 'circle' ou 'emoji:⭐')
   const rawS1 = data.players[1].shape || 'circle';
   const rawS2 = data.players[2].shape || 'circle';
+  p1TokenRgb = data.players[1].token_rgb === true || Number(data.players[1].pseudo_rgb || 0) === 1;
+  p2TokenRgb = data.players[2].token_rgb === true || Number(data.players[2].pseudo_rgb || 0) === 1;
   if (rawS1.startsWith('emoji:')) { p1Shape='emoji'; p1Emoji=rawS1.slice(6)||'⭐'; }
   else p1Shape = rawS1;
   if (rawS2.startsWith('emoji:')) { p2Shape='emoji'; p2Emoji=rawS2.slice(6)||'💎'; }
@@ -1905,8 +1928,9 @@ function onMovePlayed(data) {
 
 // ── Emoji → pion teinté ──────────────────────────────────────────────────────
 // Garde les détails de l'emoji original, puis ajoute un dégradé joueur léger.
-function makeEmojiToken(tokenEl, emoji, color, glowColor, tintColor = '') {
+function makeEmojiToken(tokenEl, emoji, color, glowColor, tintColor = '', rgbEnabled = false) {
   tokenEl.textContent = '';
+  tokenEl.className = 'token s-emoji';
   // Forcer via setAttribute pour surpasser .cell.p1 .token { background: ... }
   tokenEl.setAttribute('style',
     'border-radius:0!important;clip-path:none!important;' +
@@ -1973,7 +1997,17 @@ function makeEmojiToken(tokenEl, emoji, color, glowColor, tintColor = '') {
   // Glow via shadow sur le canvas
   tokenEl.style.filter = `drop-shadow(0 0 ${size*0.1}px ${glowColor})`;
 
+  canvas.className = 'token-rgb-soft-base';
   tokenEl.appendChild(canvas);
+  if (rgbEnabled) {
+    const rgbLayer = document.createElement('canvas');
+    rgbLayer.width = canvas.width;
+    rgbLayer.height = canvas.height;
+    rgbLayer.className = 'token-rgb-soft-layer';
+    rgbLayer.setAttribute('aria-hidden', 'true');
+    rgbLayer.getContext('2d')?.drawImage(canvas, 0, 0);
+    tokenEl.appendChild(rgbLayer);
+  }
 }
 
 function lightenHex(hex, amount) {
@@ -1983,7 +2017,7 @@ function lightenHex(hex, amount) {
   return `rgb(${lr},${lg},${lb})`;
 }
 
-function makeImageToken(tokenEl, imageSrc, glowColor) {
+function makeImageToken(tokenEl, imageSrc, glowColor, rgbEnabled = false) {
   tokenEl.textContent = '';
   tokenEl.className = 'token s-emoji';
   tokenEl.style.background = 'transparent';
@@ -1991,7 +2025,16 @@ function makeImageToken(tokenEl, imageSrc, glowColor) {
   tokenEl.style.clipPath = 'none';
   tokenEl.style.borderRadius = '0';
   tokenEl.style.filter = `drop-shadow(0 0 8px ${glowColor})`;
-  tokenEl.innerHTML = `<img src="${imageSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:18%;display:block;">`;
+  tokenEl.innerHTML = `<img class="token-rgb-soft-base" src="${imageSrc}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:18%;display:block;">`;
+  if (rgbEnabled) {
+    const rgbLayer = document.createElement('img');
+    rgbLayer.src = imageSrc;
+    rgbLayer.alt = '';
+    rgbLayer.className = 'token-rgb-soft-layer';
+    rgbLayer.style.borderRadius = '18%';
+    rgbLayer.setAttribute('aria-hidden', 'true');
+    tokenEl.appendChild(rgbLayer);
+  }
 }
 
 const SHAPE_CLIPS = {
@@ -2010,10 +2053,11 @@ function applyToken(row, col, player) {
   const token = cell.querySelector('.token');
   if (token) {
     const shape = player === 1 ? p1Shape : p2Shape;
+    const rgbEnabled = player === 1 ? p1TokenRgb : p2TokenRgb;
     if (shape === 'emoji_image') {
       const imgSrc = player === 1 ? p1EmojiImage : p2EmojiImage;
       const glow = getComputedStyle(document.documentElement).getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
-      if (imgSrc) makeImageToken(token, imgSrc, glow);
+      if (imgSrc) makeImageToken(token, imgSrc, glow, rgbEnabled);
     } else if (shape === 'emoji') {
       const root = document.documentElement;
       const cs   = getComputedStyle(root);
@@ -2022,13 +2066,14 @@ function applyToken(row, col, player) {
       const tint = cs.getPropertyValue(player === 1 ? '--p1-secondary' : '--p2-secondary').trim();
       const em   = player === 1 ? p1Emoji : p2Emoji;
       // Dessiner le canvas AVANT l'animation drop
-      makeEmojiToken(token, em, col, glow, tint);
+      makeEmojiToken(token, em, col, glow, tint, rgbEnabled);
     } else {
       const clip = SHAPE_CLIPS[shape] || SHAPE_CLIPS.circle;
       token.style.borderRadius = clip.borderRadius;
       token.style.clipPath     = clip.clipPath;
       token.className = 'token';
     }
+    token.style.setProperty('--token-rgb-delay', `${-((row * 0.32) + (col * 0.18)).toFixed(2)}s`);
   }
   // Déclencher l'animation drop après avoir préparé le token
   void cell.offsetWidth;
@@ -2297,6 +2342,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
     iaBotColor = botInfo.color || botColor;
     p2Shape    = botInfo.shape || 'circle';
     p2EmojiImage = botInfo.token_emoji_image || '';
+    p2TokenRgb = botInfo.token_rgb === true || Number(botInfo.pseudo_rgb || 0) === 1;
     window.__iaBotVisual = {
       pseudo: botName,
       avatar: botInfo.avatar || '/bot-avatar.svg',
@@ -2309,10 +2355,12 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
     iaBotColor = botColor;
     p2Shape    = 'circle';
     p2EmojiImage = '';
+    p2TokenRgb = false;
     window.__iaBotVisual = { pseudo: botName, avatar: '/bot-avatar.svg', avatar_decoration: '', profile_banner: '', color: iaBotColor, color_secondary: '' };
   }
 
   const savedPlayer = getResolvedPlayerVisual(myPlayer || getStoredPlayerVisual());
+  p1TokenRgb = Number(savedPlayer.pseudo_rgb || 0) === 1;
   const rawShape = savedPlayer.shape || 'circle';
   if (rawShape.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = rawShape.slice(6) || '⭐'; }
   else p1Shape = rawShape;

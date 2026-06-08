@@ -168,6 +168,7 @@ let botUsageRows = [];
 let selectedBotUsageId = null;
 let botUsageTimer = null;
 let botUsageLimits = { rssMb: 128, cpuPct: 50 };
+let botUsageRenderFrame = null;
 
 async function request(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
@@ -463,10 +464,45 @@ function renderSelectedBotUsage() {
   startChartAnimation();
 }
 
+function mergeBotUsageMetrics(previousRows, nextRows) {
+  const previousById = new Map((previousRows || []).map(row => [Number(row.id), row]));
+  return (nextRows || []).map(row => {
+    const previous = previousById.get(Number(row.id));
+    if (!previous) return row;
+    const samples = [...(Array.isArray(row.metrics) ? row.metrics : []), ...(Array.isArray(previous.metrics) ? previous.metrics : [])];
+    const unique = new Map(samples.map(sample => [Number(sample?.at || 0), sample]));
+    const metrics = [...unique.values()]
+      .filter(sample => Number(sample?.at || 0) > 0)
+      .sort((a, b) => Number(a.at) - Number(b.at))
+      .slice(-240);
+    return { ...row, metrics, lastMetric: metrics[metrics.length - 1] || row.lastMetric || null };
+  });
+}
+
+function appendLiveBotMetric(botId, sample) {
+  const bot = botUsageRows.find(row => Number(row.id) === Number(botId));
+  if (!bot || !sample || Number(sample.at || 0) <= 0) return;
+  const metrics = Array.isArray(bot.metrics) ? bot.metrics : [];
+  if (Number(metrics[metrics.length - 1]?.at || 0) === Number(sample.at)) metrics[metrics.length - 1] = sample;
+  else metrics.push(sample);
+  if (metrics.length > 240) metrics.splice(0, metrics.length - 240);
+  bot.metrics = metrics;
+  bot.lastMetric = sample;
+}
+
+function refreshBotUsageLiveView() {
+  if (botUsageRenderFrame) return;
+  botUsageRenderFrame = requestAnimationFrame(() => {
+    botUsageRenderFrame = null;
+    renderBotUsageList();
+    if (!document.getElementById('bots-view')?.classList.contains('hidden')) renderSelectedBotUsage();
+  });
+}
+
 async function loadBotUsage() {
   try {
     const data = await request('/api/dev/bot-usage');
-    botUsageRows = Array.isArray(data.bots) ? data.bots : [];
+    botUsageRows = mergeBotUsageMetrics(botUsageRows, Array.isArray(data.bots) ? data.bots : []);
     botUsageLimits = data.limits || botUsageLimits;
     const tab = document.getElementById('tab-bots');
     tab?.classList.toggle('hidden', botUsageRows.length === 0);
@@ -761,6 +797,11 @@ function connectLiveMetrics() {
   metricsSocket = io({ transports: ['websocket', 'polling'] });
   metricsSocket.on('connect', () => {
     setLiveState(true, 'Temps reel - 1s');
+    const botState = document.getElementById('bot-usage-refresh');
+    if (botState) {
+      botState.classList.add('connected');
+      botState.innerHTML = '<i class="pulse"></i>Temps reel - 1s';
+    }
     addMonitorLog('Connexion au flux de télémétrie établie.');
     metricsSocket.emit('dev_metrics_subscribe', { token: devToken });
   });
@@ -772,6 +813,14 @@ function connectLiveMetrics() {
     liveMetrics.push(sample);
     if (liveMetrics.length > 240) liveMetrics.splice(0, liveMetrics.length - 240);
     renderMetrics(liveMetrics);
+    const sharedSample = {
+      at: Number(sample.at || Date.now()),
+      cpuPct: Number(sample.processCpuPct || 0),
+      rssMb: Number(sample.processRssMb || 0),
+      netKb: Number(sample.networkRxKbps || 0) + Number(sample.networkTxKbps || 0),
+    };
+    botUsageRows.filter(bot => bot.sharedProcess).forEach(bot => appendLiveBotMetric(bot.id, sharedSample));
+    refreshBotUsageLiveView();
     const now = Date.now();
     if (now - lastMetricAlertAt > 30000 && Number(sample.processCpuPct || 0) >= 80) {
       lastMetricAlertAt = now;
@@ -781,12 +830,21 @@ function connectLiveMetrics() {
       addMonitorLog(`Alerte RAM système : ${Number(sample.systemMemoryPct).toFixed(1)}%.`, 'warn');
     }
   });
+  metricsSocket.on('dev_bot_metric', data => {
+    appendLiveBotMetric(data?.botId, data?.sample);
+    refreshBotUsageLiveView();
+  });
   metricsSocket.on('dev_metrics_error', data => {
     setLiveState(false, data?.error || 'Flux refuse');
     addMonitorLog(data?.error || 'Le flux de télémétrie a été refusé.', 'error');
   });
   metricsSocket.on('disconnect', () => {
     setLiveState(false, 'Reconnexion...');
+    const botState = document.getElementById('bot-usage-refresh');
+    if (botState) {
+      botState.classList.remove('connected');
+      botState.innerHTML = '<i class="pulse"></i>Secours API - 5s';
+    }
     addMonitorLog('Flux interrompu, tentative de reconnexion.', 'warn');
   });
 }
