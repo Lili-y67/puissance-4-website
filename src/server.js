@@ -71,12 +71,12 @@ let devMachineCpuAt = Date.now();
 const devNetworkTotals = { rxBytes: 0, txBytes: 0 };
 let devNetworkBase = { rxBytes: 0, txBytes: 0 };
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
-const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 5 * 60_000));
+const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 2 * 60_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(1, Number(process.env.BOT_ARENA_MAX_ACTIVE || 1)));
-const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 20 * 60_000));
-const BOT_ARENA_REST_MS = Math.max(60_000, Number(process.env.BOT_ARENA_REST_MS || 5 * 60_000));
-const BOT_SEARCH_TIME_MS = Math.max(80, Math.min(300, Number(process.env.BOT_SEARCH_TIME_MS || 180)));
-const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(9, Number(process.env.BOT_MAX_SEARCH_DEPTH || 8)));
+const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 8 * 60_000));
+const BOT_ARENA_REST_MS = Math.max(60_000, Number(process.env.BOT_ARENA_REST_MS || 90_000));
+const BOT_SEARCH_TIME_MS = Math.max(80, Math.min(300, Number(process.env.BOT_SEARCH_TIME_MS || 140)));
+const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(9, Number(process.env.BOT_MAX_SEARCH_DEPTH || 7)));
 const BOT_HOST_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_HOST_MAX_ACTIVE || 2)));
 const BOT_HOST_MAX_RSS_MB = Math.max(64, Math.min(256, Number(process.env.BOT_HOST_MAX_RSS_MB || 128)));
 const BOT_HOST_MAX_CPU_MS_PER_MIN = Math.max(1_000, Math.min(45_000, Number(process.env.BOT_HOST_MAX_CPU_MS_PER_MIN || 30_000)));
@@ -1420,7 +1420,7 @@ function getBuiltinBotTimeBudget(state, side) {
   const depth = getBuiltinBotSearchDepth(state, side);
   if (depth >= 12) return Math.max(BOT_SEARCH_TIME_MS, 850);
   if (depth >= 10) return Math.max(BOT_SEARCH_TIME_MS, 620);
-  return Math.min(Math.max(BOT_SEARCH_TIME_MS, 220), 520);
+  return Math.min(Math.max(BOT_SEARCH_TIME_MS, 140), 520);
 }
 
 function cloneGrid(grid) {
@@ -2726,6 +2726,89 @@ app.get('/api/dev/metrics', (req, res) => {
     totalMemoryMb: Math.round(os.totalmem() / 1024 / 1024),
     uptimeSeconds: Math.round(process.uptime()),
     metrics: devMachineMetrics,
+  });
+});
+
+app.get('/api/dev/bot-usage', (req, res) => {
+  if (!getDeveloperSession(req)) return res.status(403).json({ error: 'Acces developpeur requis.' });
+  const hostedBots = db.prepare(`
+    SELECT b.id, b.pseudo, b.avatar, b.color, b.bot_enabled,
+           h.status, h.pid, h.started_at, h.stopped_at, h.updated_at, h.expires_at, h.metrics
+    FROM bot_hosts h
+    JOIN players b ON b.id = h.bot_id
+    WHERE b.deleted = 0 AND b.is_bot = 1
+    ORDER BY
+      CASE h.status WHEN 'running' THEN 0 WHEN 'crashed' THEN 1 ELSE 2 END,
+      b.pseudo COLLATE NOCASE ASC
+  `).all().filter(row => !builtinBotIds.has(Number(row.id || 0))).map(row => {
+    let metrics = [];
+    try {
+      const parsed = JSON.parse(String(row.metrics || '[]'));
+      if (Array.isArray(parsed)) {
+        metrics = parsed.slice(-BOT_HOST_METRIC_LIMIT).map(sample => ({
+          at: Number(sample?.at || 0),
+          cpuPct: Number(sample?.cpuPct || 0),
+          rssMb: Number(sample?.rssMb || 0),
+          netKb: Number(sample?.netKb || 0),
+        })).filter(sample => sample.at > 0);
+      }
+    } catch (_) {}
+    const runtime = getBotHostRuntime(row.id);
+    const status = runtime ? 'running' : String(row.status || 'stopped');
+    return {
+      id: Number(row.id),
+      pseudo: String(row.pseudo || `Bot #${row.id}`),
+      avatar: String(row.avatar || ''),
+      color: String(row.color || '#85EBFF'),
+      enabled: Number(row.bot_enabled || 0) === 1,
+      status,
+      source: 'hosted',
+      sharedProcess: false,
+      pid: runtime ? Number(runtime.pid || 0) : Number(row.pid || 0),
+      startedAt: Number(row.started_at || 0) || null,
+      stoppedAt: Number(row.stopped_at || 0) || null,
+      updatedAt: Number(row.updated_at || 0) || null,
+      expiresAt: Number(row.expires_at || 0) || null,
+      metrics,
+      lastMetric: metrics[metrics.length - 1] || null,
+    };
+  });
+  const sharedMetrics = devMachineMetrics.map(sample => ({
+    at: Number(sample?.at || 0),
+    cpuPct: Number(sample?.processCpuPct || 0),
+    rssMb: Number(sample?.processRssMb || 0),
+    netKb: Number(sample?.networkRxKbps || 0) + Number(sample?.networkTxKbps || 0),
+  })).filter(sample => sample.at > 0);
+  const builtinBots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(bot => (
+    bot && !bot.deleted && Number(bot.is_bot || 0) === 1
+  )).map(bot => {
+    const playing = !!findActiveBotGame(bot.id);
+    return {
+      id: Number(bot.id),
+      pseudo: String(bot.pseudo || `Bot #${bot.id}`),
+      avatar: String(bot.avatar || ''),
+      color: String(bot.color || '#85EBFF'),
+      enabled: Number(bot.bot_enabled || 0) === 1,
+      status: playing ? 'arena' : 'shared',
+      source: 'builtin',
+      sharedProcess: true,
+      pid: Number(process.pid || 0),
+      startedAt: null,
+      stoppedAt: null,
+      updatedAt: Date.now(),
+      expiresAt: null,
+      metrics: sharedMetrics,
+      lastMetric: sharedMetrics[sharedMetrics.length - 1] || null,
+    };
+  }).sort((a, b) => a.pseudo.localeCompare(b.pseudo, 'fr', { sensitivity: 'base' }));
+  res.json({
+    generatedAt: Date.now(),
+    sampleIntervalMs: BOT_HOST_WATCHDOG_MS,
+    limits: {
+      rssMb: BOT_HOST_MAX_RSS_MB,
+      cpuPct: Math.round((BOT_HOST_MAX_CPU_MS_PER_MIN / 60_000) * 100),
+    },
+    bots: [...builtinBots, ...hostedBots],
   });
 });
 
