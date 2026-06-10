@@ -810,6 +810,17 @@ const SHOP_PRICES = {
 let SHOP_GEM_PRICES = Object.fromEntries(Object.entries(SHOP_PRICES).map(([key, price]) => [key, Math.max(1, Math.ceil(Number(price || 0) * 0.45))]));
 let SHOP_BOT_CRYSTAL_PRICES = { bot_host_1m: 3000 };
 
+function mergeShopItems(items) {
+  if (!items || typeof items !== 'object') return;
+  Object.entries(items).forEach(([key, item]) => {
+    if (!item || typeof item !== 'object') return;
+    SHOP_ITEMS[key] = {
+      ...(SHOP_ITEMS[key] || {}),
+      ...deepRepairMojibake(item),
+    };
+  });
+}
+
 let shopPlayer = null;
 let shopStock = {};
 let shopInventory = {};
@@ -1792,7 +1803,7 @@ function renderCustomBoosterCard(pack) {
         </div>
       </div>
       <div class="feature-list">
-        ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
+        ${(Array.isArray(item.features) ? item.features : []).map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
       </div>
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
@@ -1808,6 +1819,7 @@ function renderCustomBoosterCard(pack) {
 
 function renderCard(pack) {
   const item = getDisplayItem(pack);
+  if (!item) return '';
   const price = getCustomBoosterPrice(pack);
   const btnState = getButtonState(pack);
   const giftState = getGiftButtonState(pack);
@@ -1835,7 +1847,7 @@ function renderCard(pack) {
           ${renderPriceHtml(price)}
       </div>
       <div class="feature-list">
-        ${item.features.map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
+        ${(Array.isArray(item.features) ? item.features : []).map(([emoji, title, text]) => `<div class="feature"><div class="feature-emoji">${emoji}</div><div class="feature-copy"><strong>${title}</strong><span>${text}</span></div></div>`).join('')}
         ${item.type === 'booster' ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) · inventaire perso ${inv}.</span></div></div>` : ''}
         ${bundleStockHtml}
       </div>
@@ -1924,7 +1936,7 @@ function openPreview(pack) {
   note.textContent = item.type === 'booster'
     ? renderPriceNote(pack, ` · ${pack.includes('_custom') ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
     : renderPriceNote(pack, ` · Aperçu uniquement, rien n'est sauvegardé`);
-  features.innerHTML = item.features.map(([emoji, t, text]) => `
+  features.innerHTML = (Array.isArray(item.features) ? item.features : []).map(([emoji, t, text]) => `
     <div class="feature">
       <div class="feature-emoji">${emoji}</div>
       <div class="feature-copy"><strong>${t}</strong><span>${text}</span></div>
@@ -1959,7 +1971,7 @@ async function loadPreviewAssets() {
   }
   if (catalogRes.status === 'fulfilled' && catalogRes.value.ok) {
     const data = await catalogRes.value.json().catch(() => ({}));
-    Object.assign(SHOP_ITEMS, data.items || {});
+    mergeShopItems(data.items);
     Object.assign(SHOP_PRICES, data.prices || {});
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
   }
@@ -1989,7 +2001,7 @@ async function loadShop() {
     shopBotHostEligible = !!data.botHostEligible;
     shopBotHosts = Array.isArray(data.botHosts) ? data.botHosts : [];
     shopReferral = data.referral || null;
-    Object.assign(SHOP_ITEMS, data.items || {});
+    mergeShopItems(data.items);
     Object.assign(SHOP_PRICES, data.prices || {});
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
