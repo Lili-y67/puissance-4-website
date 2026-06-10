@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.3.1';
+const CACHE_VERSION = 'p4-shell-v3.3.1-cursor-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const APP_SHELL = [
   '/theme.js',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
+  '/assets/wukong-cursor.png',
   '/assets/pwa-icon-192.png',
   '/assets/pwa-icon-512.png',
   '/assets/pwa-icon-maskable-512.png',
