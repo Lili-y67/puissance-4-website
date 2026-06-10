@@ -1,3 +1,5 @@
+@import url('/cursor.css');
+
 :root[data-theme="light"] {
   --bg: #f4f0ff;
   --surface: rgba(255,255,255,.86);

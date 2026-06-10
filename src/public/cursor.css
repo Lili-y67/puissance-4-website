@@ -1,0 +1,25 @@
+html,
+body,
+body * {
+  cursor: url('/assets/wukong-cursor.png') 7 6, auto !important;
+}
+
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"],
+label[for],
+select,
+summary {
+  cursor: url('/assets/wukong-cursor.png') 7 6, pointer !important;
+}
+
+input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+textarea,
+[contenteditable="true"] {
+  cursor: url('/assets/wukong-cursor.png') 7 6, text !important;
+}
