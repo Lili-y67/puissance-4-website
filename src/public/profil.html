@@ -758,6 +758,7 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .pseudo-font-option{min-height:54px;border-radius:13px;border:1px solid var(--rarity-border,rgba(255,255,255,.10));background:linear-gradient(135deg,var(--rarity-bg,#141421),#141421);color:var(--text);cursor:pointer;text-align:left;padding:8px 10px;display:flex;flex-direction:column;gap:3px;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 0 16px var(--rarity-glow,transparent)}
 .pseudo-font-option:hover{transform:translateY(-1px);border-color:var(--rarity-color,rgba(133,235,255,.34));background:linear-gradient(135deg,var(--rarity-bg,#172131),#172131)}
 .pseudo-font-option.active{border-color:var(--rarity-color,rgba(133,235,255,.70));background:linear-gradient(135deg,var(--rarity-bg,#17293a),#17293a);box-shadow:0 0 0 1px var(--rarity-border,rgba(133,235,255,.20)),0 0 22px var(--rarity-glow,rgba(133,235,255,.14))}
+.pseudo-font-option.locked{opacity:.42;cursor:not-allowed;filter:saturate(.55)}
 .pseudo-font-option strong{display:block;font-size:18px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pseudo-font-option span{font:700 9px Barlow,sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .avatar-decoration-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:2200;padding:20px;align-items:center;justify-content:center}
@@ -1398,6 +1399,7 @@ let eloHistoryActivePoint = null;
 let eloHistoryRgbFrame = 0;
 let queueMusicPreviewFrame = null;
 let profileShopInventory = {};
+let profileShopCatalog = {};
 let profileActiveBoosters = {};
 let profileLivePoll = null;
 let currentGamesCache = [];
@@ -1470,6 +1472,7 @@ async function loadProfileShopInventory() {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
   if (!token || !isOwnProfile) {
     profileShopInventory = {};
+    profileShopCatalog = {};
     profileActiveBoosters = {};
     return;
   }
@@ -1477,11 +1480,46 @@ async function loadProfileShopInventory() {
     const res = await fetch('/api/shop/me', { headers: { 'x-session-token': token } });
     const data = await res.json();
     profileShopInventory = data?.inventory && typeof data.inventory === 'object' ? data.inventory : {};
+    profileShopCatalog = data?.items && typeof data.items === 'object' ? data.items : {};
     profileActiveBoosters = data?.activeBoosters && typeof data.activeBoosters === 'object' ? data.activeBoosters : {};
   } catch {
     profileShopInventory = {};
+    profileShopCatalog = {};
     profileActiveBoosters = {};
   }
+}
+
+function getProfileCosmeticPack(type, asset) {
+  return Object.values(profileShopCatalog || {}).find(item =>
+    item?.category === 'cosmetics' &&
+    item?.cosmeticType === type &&
+    Array.isArray(item.assets) &&
+    item.assets.includes(asset)
+  ) || null;
+}
+
+function ownsProfileCosmetic(type, asset, player = currentPlayer) {
+  if (!asset || String(player?.role || '').toLowerCase() === 'admin') return true;
+  const pack = getProfileCosmeticPack(type, asset);
+  return !!pack && Number(profileShopInventory?.[pack.key] || 0) > 0;
+}
+
+function ownsAnyProfileFontPack(player = currentPlayer) {
+  if (String(player?.role || '').toLowerCase() === 'admin') return true;
+  return Object.values(profileShopCatalog || {}).some(item =>
+    item?.category === 'cosmetics' &&
+    item?.cosmeticType === 'font' &&
+    Number(profileShopInventory?.[item.key] || 0) > 0
+  );
+}
+
+function ownsAnyProfileDecorationPack(player = currentPlayer) {
+  if (String(player?.role || '').toLowerCase() === 'admin') return true;
+  return Object.values(profileShopCatalog || {}).some(item =>
+    item?.category === 'cosmetics' &&
+    item?.cosmeticType === 'decoration' &&
+    Number(profileShopInventory?.[item.key] || 0) > 0
+  );
 }
 
 function getProfileBoosterMeta(key) {
@@ -1587,7 +1625,7 @@ function isDeveloper(player = currentPlayer) {
 }
 
 function canUsePseudoStyle(player = currentPlayer) {
-  return isVip(player) || isPerso(player) || isAdminTier(player);
+  return isVip(player) || isPerso(player) || isAdminTier(player) || ownsAnyProfileFontPack(player);
 }
 
 function canUseEloCurveStyle(player = currentPlayer) {
@@ -1716,9 +1754,12 @@ function renderPseudoFontPreviewGrid(selected = 'barlow', previewText = 'Pseudo'
       <div class="pseudo-font-preview-grid">
       ${fonts.map(([value, label]) => {
         const rarity = PSEUDO_FONT_RARITIES[value] || 'common';
-        return `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''}" data-pseudo-font="${value}" data-font-rarity="${rarity}" onclick="selectPseudoFont('${value}')" title="${escapeHtml(label)}" style="${rarityStyle(rarity)}">
+        const pack = getProfileCosmeticPack('font', value);
+        const unlocked = value === 'barlow' || ownsProfileCosmetic('font', value);
+        const title = unlocked ? label : `${label} - ${pack?.label || 'Pack boutique requis'}`;
+        return `<button type="button" class="pseudo-font-option ${current === value ? 'active' : ''} ${unlocked ? '' : 'locked'}" data-pseudo-font="${value}" data-font-rarity="${rarity}" ${unlocked ? `onclick="selectPseudoFont('${value}')"` : 'disabled'} title="${escapeHtml(title)}" style="${rarityStyle(rarity)}">
           <strong style="font-family:${getPseudoFontFamily(value)}">${sample}</strong>
-          <span>${escapeHtml(label)} · ${escapeHtml(PSEUDO_FONT_RARITY_LABELS[rarity])}</span>
+          <span>${escapeHtml(label)} · ${unlocked ? escapeHtml(PSEUDO_FONT_RARITY_LABELS[rarity]) : `🔒 ${escapeHtml(pack?.label || 'Boutique')}`}</span>
         </button>`;
       }).join('')}
       </div>
@@ -2613,7 +2654,7 @@ function render(player, games, following, followers, followStatus, tournaments =
           <div class="base" id="avatar-decoration-base">${avatarHtml}</div>
           <div class="overlay" id="avatar-decoration-overlay">${avatarDecorationSrc ? `<img src="${avatarDecorationSrc}" alt="décoration">` : ''}</div>
         </div>
-        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
+        <div class="avatar-decoration-meta" id="avatar-decoration-meta">Choisis une décoration débloquée dans la boutique pour entourer ton avatar. Changement toutes les 24h.</div>
       </div>
       <div style="font-size:11px;color:var(--muted);line-height:1.5">
         Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)"> lili_crystal_</strong>
@@ -2653,7 +2694,7 @@ function render(player, games, following, followers, followStatus, tournaments =
         <div class="avatar-decoration-modal-head">
           <div>
             <div class="avatar-decoration-modal-title">Décorations Avatar</div>
-            <div class="avatar-decoration-modal-sub">Choisis une décoration de la collection VIP+ puis applique-la quand le rendu te plaît. La prévisualisation se met à jour immédiatement.</div>
+            <div class="avatar-decoration-modal-sub">Les décorations sont vendues par packs de 5 dans la boutique. Les éléments verrouillés indiquent le pack requis.</div>
           </div>
           <button class="avatar-decoration-modal-close" type="button" onclick="closeAvatarDecorationPicker()">×</button>
         </div>
@@ -2663,7 +2704,7 @@ function render(player, games, following, followers, followStatus, tournaments =
               <div class="base" id="avatar-decoration-modal-base">${avatarHtml}</div>
               <div class="overlay" id="avatar-decoration-modal-overlay">${avatarDecorationSrc ? `<img src="${avatarDecorationSrc}" alt="décoration">` : ''}</div>
             </div>
-            <div class="avatar-decoration-meta" id="avatar-decoration-modal-meta">Choisis une décoration de la collection VIP+ pour entourer ton avatar. Changement toutes les 24h.</div>
+            <div class="avatar-decoration-meta" id="avatar-decoration-modal-meta">Choisis une décoration achetée dans la boutique pour entourer ton avatar. Changement toutes les 24h.</div>
             <div class="avatar-decoration-modal-actions">
               <button class="avatar-decoration-btn" id="avatar-decoration-apply-btn" type="button" onclick="saveSelectedAvatarDecoration()">Appliquer la sélection</button>
             </div>
@@ -4285,7 +4326,6 @@ async function uploadAvatarDecorationData(imageData, me) {
 function renderAvatarDecorationGallery(player = currentPlayer) {
   const gallery = document.getElementById('avatar-decoration-gallery');
   if (!gallery) return;
-  const canEdit = isVipPlus(player);
   const currentValue = String(player?.avatar_decoration || '');
   const selectedValue = pendingAvatarDecoration === null ? currentValue : String(pendingAvatarDecoration || '');
   const tiers = [
@@ -4304,7 +4344,7 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
   };
   const cards = [
     `<div class="avatar-decoration-tier" style="--tier-color:#8e8e93"><span>◇</span>Aucune</div>`,
-    `<button type="button" class="avatar-decoration-option ${selectedValue === '' ? 'active' : ''} ${!canEdit ? 'locked' : ''}" style="${rarityStyle('common')}" ${canEdit ? `onclick="selectAvatarDecoration('')"` : 'disabled'} title="Aucune décoration">
+    `<button type="button" class="avatar-decoration-option ${selectedValue === '' ? 'active' : ''}" style="${rarityStyle('common')}" onclick="selectAvatarDecoration('')" title="Aucune décoration">
       <span class="avatar-decoration-option-none">Aucune</span>
     </button>`
   ];
@@ -4315,9 +4355,11 @@ function renderAvatarDecorationGallery(player = currentPlayer) {
     if (!items.length) continue;
     cards.push(`<div class="avatar-decoration-tier" style="--tier-color:${tier.color}"><span>${tier.icon}</span>${tier.label}</div>`);
     for (const src of items) {
-    const active = selectedValue === src ? 'active' : '';
-    const locked = !canEdit ? 'locked' : '';
-      cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" style="${rarityStyle(tier.key)}" ${canEdit ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="${tier.label}">
+      const active = selectedValue === src ? 'active' : '';
+      const unlocked = ownsProfileCosmetic('decoration', src, player);
+      const pack = getProfileCosmeticPack('decoration', src);
+      const locked = unlocked ? '' : 'locked';
+      cards.push(`<button type="button" class="avatar-decoration-option ${active} ${locked}" style="${rarityStyle(tier.key)}" ${unlocked ? `onclick="selectAvatarDecoration('${src}')"` : 'disabled'} title="${unlocked ? tier.label : `🔒 ${pack?.label || 'Pack boutique requis'}`}">
       <img src="${src}" alt="décoration" loading="lazy" decoding="async">
     </button>`);
     }
@@ -5147,20 +5189,20 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
     : String(pendingAvatarDecoration || '');
   const src = getRenderableMediaSrc(effectiveDecoration);
   const remaining = getAvatarDecorationRemainingMs(player);
-  const isVipPlusTier = isVipPlus(player);
+  const hasDecorationAccess = ownsAnyProfileDecorationPack(player);
   const hasPendingChange = pendingAvatarDecoration !== null && String(pendingAvatarDecoration || '') !== String(player?.avatar_decoration || '');
   if (overlay) overlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
   if (headerOverlay) headerOverlay.innerHTML = src ? `<img src="${src}" alt="décoration avatar">` : '';
   if (modalOverlay) modalOverlay.innerHTML = src ? `<img src="${src}" alt="décoration">` : '';
-  const message = !isVipPlusTier
-    ? 'Reserve au role VIP+.'
-    : hasPendingChange
+  const message = hasPendingChange
       ? 'Clique sur Appliquer la sélection pour enregistrer cette décoration.'
     : remaining > 0
       ? `Disponible dans ${formatRemainingTime(remaining)}. Changement toutes les 24h.`
       : src
         ? 'Décoration active. Tu peux la modifier toutes les 24h.'
-        : 'Choisis une décoration de la collection VIP+. Changement toutes les 24h.';
+        : hasDecorationAccess
+          ? 'Choisis une décoration débloquée. Changement toutes les 24h.'
+          : 'Découvre les packs de décorations dans la boutique.';
   const messageColor = remaining > 0 || hasPendingChange ? '#85EBFF' : 'var(--muted)';
   if (meta) {
     meta.textContent = message;
@@ -5171,22 +5213,16 @@ function refreshAvatarDecorationPreview(player = currentPlayer) {
     modalMeta.style.color = messageColor;
   }
   if (btn) {
-    btn.disabled = !isVipPlusTier;
-    btn.textContent = !isVipPlusTier
-      ? 'Reserve VIP+'
-      : hasPendingChange
+    btn.disabled = false;
+    btn.textContent = hasPendingChange
         ? 'Continuer la sélection'
         : src ? 'Changer la décoration' : 'Choisir une décoration';
-    btn.title = !isVipPlusTier
-      ? 'Reserve au role VIP+'
-      : 'Ouvrir la galerie des décorations';
+    btn.title = 'Ouvrir la galerie des décorations';
   }
   if (applyBtn) {
-    applyBtn.disabled = !isVipPlusTier || remaining > 0 || !hasPendingChange;
+    applyBtn.disabled = remaining > 0 || !hasPendingChange;
     applyBtn.textContent = hasPendingChange ? 'Appliquer la sélection' : (remaining > 0 ? 'Décoration active' : 'Déjà appliquée');
-    applyBtn.title = !isVipPlusTier
-      ? 'Reserve au role VIP+'
-      : remaining > 0
+    applyBtn.title = remaining > 0
         ? `Disponible dans ${formatRemainingTime(remaining)}`
         : hasPendingChange
           ? 'Enregistrer la décoration choisie'

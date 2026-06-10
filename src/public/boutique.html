@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Boutique</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=MedievalSharp&family=Metal+Mania&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Uncial+Antiqua&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -111,6 +111,14 @@ body{
 .booster-column.global .subsection-label{color:#85EBFF}
 .booster-column .grid{grid-template-columns:repeat(2,minmax(340px,1fr));gap:22px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.cosmetic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.cosmetic-card{--pack-accent:#85ebff;min-height:0;border-color:color-mix(in srgb,var(--pack-accent) 38%,transparent);box-shadow:0 22px 58px rgba(0,0,0,.28),0 0 28px color-mix(in srgb,var(--pack-accent) 12%,transparent)}
+.cosmetic-preview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px;border-radius:20px;background:rgba(5,6,14,.58);border:1px solid rgba(255,255,255,.07)}
+.cosmetic-swatch{min-height:82px;border-radius:15px;border:1px solid color-mix(in srgb,var(--pack-accent) 36%,transparent);background:color-mix(in srgb,var(--pack-accent) 10%,rgba(255,255,255,.025));display:flex;align-items:center;justify-content:center;overflow:hidden;padding:7px;text-align:center}
+.cosmetic-swatch img{width:100%;height:100%;max-height:78px;object-fit:contain;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--pack-accent) 28%,transparent))}
+.cosmetic-swatch.font{font-size:16px;font-weight:800;overflow-wrap:anywhere}
+.cosmetic-pack-note{font-size:12px;color:var(--muted);line-height:1.5}
+@media(max-width:850px){.cosmetic-grid{grid-template-columns:1fr}}
 .card{position:relative;overflow:hidden;min-height:470px;padding:22px;border-radius:28px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.018));border:1px solid var(--border);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 58px rgba(0,0,0,.30);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .booster-column .card{min-height:0;padding:24px;gap:18px}
 .card:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.14);box-shadow:0 36px 82px rgba(0,0,0,.38)}
@@ -469,6 +477,7 @@ body{
       </div>
       <div class="category-tabs">
         <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
+        <button type="button" class="category-tab" id="tab-cosmetics" onclick="switchShopCategory('cosmetics')">Decos & polices</button>
         <button type="button" class="category-tab" id="tab-offers" onclick="switchShopCategory('offers')">Packs limités</button>
         <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
         <button type="button" class="category-tab" id="tab-host" onclick="switchShopCategory('host')" style="display:none">Host Bot</button>
@@ -477,6 +486,7 @@ body{
   </section>
 
   <section id="shop-ranks-section" class="grid"></section>
+  <section id="shop-cosmetics-section" class="cosmetic-grid" style="display:none"></section>
   <section id="shop-offers-section" class="grid" style="display:none"></section>
   <section id="shop-host-section" class="grid" style="display:none"></section>
 
@@ -702,7 +712,7 @@ const SHOP_ITEMS = {
     features: [
       ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
       ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
-      ['✨', 'Décorations avatar', 'Accès à la collection de décorations VIP+.']
+      ['✨', 'Décorations avatar', 'Import personnalisé VIP+ et compatibilité avec les packs boutique.']
     ]
   },
   perso: {
@@ -832,6 +842,10 @@ function isShopAdmin() {
   return ['admin', 'moderator'].includes(String(shopPlayer?.role || '').toLowerCase());
 }
 
+function isCosmeticAdmin() {
+  return String(shopPlayer?.role || '').toLowerCase() === 'admin';
+}
+
 function setPurchaseNotice(pack, message) {
   recentPurchaseNotice.set(pack, { message, until: Date.now() + 3200 });
   setTimeout(() => {
@@ -890,7 +904,8 @@ function getDiscountedPrice(price) {
   }
   const coupon = appliedCoupon && appliedCouponCode ? appliedCoupon : null;
   const hasReferral = Number(shopReferral?.discountPercent || 0) > 0;
-  if ((!coupon && !hasReferral) || basePrice <= 0) {
+  const hasPerso = Number(shopPlayer?.is_perso || 0) === 1;
+  if ((!coupon && !hasReferral && !hasPerso) || basePrice <= 0) {
     return { basePrice, finalPrice: basePrice, hasDiscount: false, label: '' };
   }
 
@@ -906,6 +921,10 @@ function getDiscountedPrice(price) {
       finalPrice = Math.max(0, Math.ceil(finalPrice * (1 - percent / 100)));
       labels.push(`-${percent}%`);
     }
+  }
+  if (Number(shopPlayer?.is_perso || 0) === 1) {
+    finalPrice = Math.max(0, Math.ceil(finalPrice * 0.70));
+    labels.push('-30% Perso');
   }
   if (hasReferral) {
     const percent = Math.max(0, Math.min(95, Number(shopReferral.discountPercent || 0)));
@@ -1255,6 +1274,8 @@ function getButtonState(pack) {
   if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
   if (currency === 'crystals' && !shopBotHostEligible) return { disabled: true, note: 'Associe un bot pour utiliser les Cristaux' };
   if (pack === 'bot_host_1m' && !shopBotHostEligible) return { disabled: true, note: 'Aucun bot associe' };
+  if (item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin' };
+  if (item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack deja possede' };
   if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
@@ -1276,6 +1297,44 @@ function getButtonState(pack) {
   return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
 }
 
+function getFontPreviewFamily(font) {
+  const families = {
+    bebas: "'Bebas Neue',sans-serif", anton: "'Anton',sans-serif", righteous: "'Righteous',sans-serif",
+    silkscreen: "'Silkscreen',sans-serif", orbitron: "'Orbitron',sans-serif", audiowide: "'Audiowide',sans-serif",
+    chakra: "'Chakra Petch',sans-serif", pressstart: "'Press Start 2P',sans-serif", bungee: "'Bungee',sans-serif",
+    rubikglitch: "'Rubik Glitch',sans-serif", playfair: "'Playfair Display',serif", cinzel: "'Cinzel',serif",
+    abril: "'Abril Fatface',serif", prata: "'Prata',serif", bodoni: "'Bodoni Moda',serif",
+    fredericka: "'Fredericka the Great',serif", pacifico: "'Pacifico',cursive", lobster: "'Lobster',cursive",
+    permanent: "'Permanent Marker',cursive", luckiest: "'Luckiest Guy',cursive", eaglelake: "'Eagle Lake',cursive",
+    uncial: "'Uncial Antiqua',cursive", unifraktur: "'UnifrakturMaguntia',cursive", medieval: "'MedievalSharp',cursive",
+    jacquard: "'Jacquard 12',cursive", metalmania: "'Metal Mania',cursive", creepster: "'Creepster',cursive",
+    imfell: "'IM Fell English SC',serif",
+  };
+  return families[font] || "'Barlow Condensed',sans-serif";
+}
+
+function renderCosmeticCard(item) {
+  const assets = Array.isArray(item.assets) ? item.assets : [];
+  const state = getButtonState(item.key);
+  const giftState = getGiftButtonState(item.key);
+  const previews = assets.map(asset => item.cosmeticType === 'decoration'
+    ? `<div class="cosmetic-swatch"><img src="${escapeHtml(asset)}" alt="Apercu decoration" loading="lazy"></div>`
+    : `<div class="cosmetic-swatch font" style="font-family:${getFontPreviewFamily(asset)}">${escapeHtml(shopPlayer?.pseudo || 'Pseudo')}</div>`
+  ).join('');
+  return `<article class="card cosmetic-card" style="--pack-accent:${escapeHtml(item.accent || '#85ebff')}">
+    <div class="tier"><span class="badge vipplus">${item.cosmeticType === 'decoration' ? '✨ DECOS' : '🔠 POLICES'}</span><div class="duration">${assets.length}</div></div>
+    <h2>${escapeHtml(item.label || item.key)}</h2>
+    <div class="meta">${assets.length} choix debloques ensemble. Selection depuis ton profil apres achat.</div>
+    <div class="cosmetic-preview">${previews}</div>
+    <div class="stat-line vipplus"><div class="stat-line-left"><strong>${assets.length}</strong><span>elements dans ce pack</span></div>${renderPriceHtml(getCustomBoosterPrice(item.key))}</div>
+    <div class="cosmetic-pack-note">Tarif de base : 5 000 Coins ou 100 gemmes. Les joueurs Perso profitent automatiquement de -30%.</div>
+    <div class="card-actions">
+      <button class="gift-btn" type="button" onclick="openGiftModal('${item.key}')" ${giftState.disabled ? 'disabled' : ''}>🎁 Offrir</button>
+      <button class="cta vipplus" id="buy-${item.key}" onclick="buyPack('${item.key}')" ${state.disabled ? 'disabled' : ''}>${state.disabled ? state.note : `Acheter le pack`}<small id="buy-${item.key}-note">${state.note}</small></button>
+    </div>
+  </article>`;
+}
+
 function getGiftButtonState(pack) {
   const price = getDisplayPrice(pack);
   const currency = getShopCurrency();
@@ -1294,6 +1353,21 @@ function getGiftButtonState(pack) {
 }
 
 function getDisplayItem(pack) {
+  const catalogItem = SHOP_ITEMS[pack];
+  if (catalogItem?.category === 'cosmetics') {
+    return {
+      ...catalogItem,
+      type: 'cosmetic',
+      theme: 'vipplus',
+      title: catalogItem.label,
+      meta: `${catalogItem.assets?.length || 0} elements cosmetiques a debloquer ensemble.`,
+      features: [
+        ['👁️', 'Apercus inclus', 'Tous les elements du pack sont visibles avant achat.'],
+        ['🎒', 'Deblocage permanent', 'Le pack reste dans ton inventaire.'],
+        ['🎨', 'Selection profil', 'Choisis ensuite chaque element depuis ton profil.'],
+      ],
+    };
+  }
   if (pack === 'limited_offer' && shopLimitedOffer?.expiresAt) {
     const items = Array.isArray(shopLimitedOffer.items) ? shopLimitedOffer.items : [];
     const labelFor = (key) => ({
@@ -1370,7 +1444,7 @@ function getDisplayItem(pack) {
         ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
         ['🖼️', 'GIF rapides', 'Avatar et bannière GIF avec cooldown réduit à 12h.'],
         ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
-        ['✨', 'Décorations avatar', 'Accès à la collection de décorations VIP+ et leur sélecteur dédié.']
+        ['✨', 'Décorations avatar', 'Import personnalisé VIP+ et sélecteur pour les packs achetés.']
       ]
     };
   }
@@ -1779,6 +1853,10 @@ function renderCard(pack) {
 
 function renderShop() {
   document.getElementById('shop-ranks-section').innerHTML = ['crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-cosmetics-section').innerHTML = Object.values(SHOP_ITEMS)
+    .filter(item => item?.category === 'cosmetics')
+    .map(renderCosmeticCard)
+    .join('');
   document.getElementById('shop-offers-section').innerHTML = shopLimitedOffer?.expiresAt && Number(shopLimitedOffer.stock || 0) > 0
     ? renderCard('limited_offer')
     : `<div class="card perso" style="grid-column:1/-1"><h2>Aucun pack limité</h2><div class="meta">Le staff n'a pas encore activé d'offre temporaire.</div></div>`;
@@ -1814,6 +1892,7 @@ function switchShopCategory(category) {
   }
   if (currencyChanged) renderShop();
   document.getElementById('tab-ranks').classList.toggle('active', category === 'ranks');
+  document.getElementById('tab-cosmetics').classList.toggle('active', category === 'cosmetics');
   document.getElementById('tab-offers').classList.toggle('active', category === 'offers');
   document.getElementById('tab-boosters').classList.toggle('active', category === 'boosters');
   document.getElementById('tab-host')?.classList.toggle('active', category === 'host');
@@ -1821,6 +1900,7 @@ function switchShopCategory(category) {
   document.getElementById('currency-btn-gems')?.classList.toggle('active', getShopCurrency() === 'gems');
   document.getElementById('currency-btn-crystals')?.classList.toggle('active', getShopCurrency() === 'crystals');
   document.getElementById('shop-ranks-section').style.display = category === 'ranks' ? 'grid' : 'none';
+  document.getElementById('shop-cosmetics-section').style.display = category === 'cosmetics' ? 'grid' : 'none';
   document.getElementById('shop-offers-section').style.display = category === 'offers' ? 'grid' : 'none';
   document.getElementById('shop-boosters-section').style.display = category === 'boosters' ? 'flex' : 'none';
   document.getElementById('shop-host-section').style.display = category === 'host' ? 'grid' : 'none';
@@ -1863,9 +1943,10 @@ function closePreview() {
 }
 
 async function loadPreviewAssets() {
-  const [decorationsRes, bannersRes] = await Promise.allSettled([
+  const [decorationsRes, bannersRes, catalogRes] = await Promise.allSettled([
     fetch('/api/decorations'),
     fetch('/api/profile-banners'),
+    fetch('/api/shop/catalog'),
   ]);
 
   if (decorationsRes.status === 'fulfilled' && decorationsRes.value.ok) {
@@ -1875,6 +1956,12 @@ async function loadPreviewAssets() {
   if (bannersRes.status === 'fulfilled' && bannersRes.value.ok) {
     const data = await bannersRes.value.json().catch(() => ({}));
     previewProfileBanners = Array.isArray(data?.banners) ? data.banners : [];
+  }
+  if (catalogRes.status === 'fulfilled' && catalogRes.value.ok) {
+    const data = await catalogRes.value.json().catch(() => ({}));
+    Object.assign(SHOP_ITEMS, data.items || {});
+    Object.assign(SHOP_PRICES, data.prices || {});
+    SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
   }
 }
 
@@ -1902,10 +1989,15 @@ async function loadShop() {
     shopBotHostEligible = !!data.botHostEligible;
     shopBotHosts = Array.isArray(data.botHosts) ? data.botHosts : [];
     shopReferral = data.referral || null;
+    Object.assign(SHOP_ITEMS, data.items || {});
+    Object.assign(SHOP_PRICES, data.prices || {});
     SHOP_GEM_PRICES = data.gemPrices || SHOP_GEM_PRICES;
     SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, shopBotHostEligible ? 'Cristaux disponibles pour host tes bots.' : shopGemsUnlocked ? 'Solde actuel disponible dans la boutique.' : 'Lie Discord pour debloquer les gemmes.');
+    if (Number(shopPlayer?.is_perso || 0) === 1 && !appliedCouponCode) {
+      setCouponStatus('Avantage Perso actif : -30% immediat sur toute la boutique.', 'ok');
+    }
     if (Number(shopReferral?.discountPercent || 0) > 0 && !appliedCouponCode) {
       const percent = Number(shopReferral.discountPercent || 0);
       const message = shopReferral.discountKind === 'filleul' && shopReferral.referrer

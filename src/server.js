@@ -1046,6 +1046,13 @@ const PSEUDO_FONT_OPTIONS = new Set([
   'oswald', 'anton', 'teko', 'righteous',
   'mono', 'serif', 'script',
 ]);
+const PSEUDO_FONT_CATALOG = [
+  'bebas', 'anton', 'righteous', 'silkscreen',
+  'orbitron', 'audiowide', 'chakra', 'pressstart', 'bungee', 'rubikglitch',
+  'playfair', 'cinzel', 'abril', 'prata', 'bodoni', 'fredericka',
+  'pacifico', 'lobster', 'permanent', 'luckiest', 'eaglelake', 'uncial',
+  'unifraktur', 'medieval', 'jacquard', 'metalmania', 'creepster', 'imfell',
+];
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
@@ -2075,9 +2082,31 @@ function getReferralInfo(player) {
 function applyReferralDiscountPrice(basePrice, player, coupon = null) {
   const afterCoupon = applyCouponPrice(basePrice, coupon);
   if (afterCoupon <= 0) return afterCoupon;
+  let finalPrice = afterCoupon;
+  if (Number(player?.is_perso || 0) === 1) {
+    finalPrice = Math.max(0, Math.ceil(finalPrice * 0.70));
+  }
   const percent = Number(getReferralInfo(player).discountPercent || 0);
-  if (percent <= 0) return afterCoupon;
-  return Math.max(0, Math.ceil(afterCoupon * (1 - percent / 100)));
+  if (percent > 0) {
+    finalPrice = Math.max(0, Math.ceil(finalPrice * (1 - percent / 100)));
+  }
+  return finalPrice;
+}
+
+function getCosmeticPackForAsset(type, asset) {
+  const normalizedType = String(type || '');
+  const normalizedAsset = String(asset || '');
+  return Object.values(COSMETIC_PACKS).find(pack =>
+    pack.cosmeticType === normalizedType && pack.assets.includes(normalizedAsset)
+  ) || null;
+}
+
+function playerOwnsCosmeticAsset(player, type, asset) {
+  if (!player || !asset) return false;
+  if (String(player.role || '').toLowerCase() === 'admin') return true;
+  const pack = getCosmeticPackForAsset(type, asset);
+  if (!pack) return false;
+  return Number(shopItemQ.getOne.get(player.id, pack.key)?.quantity || 0) > 0;
 }
 
 function getOwnedBots(ownerId, viewer = null) {
@@ -3597,6 +3626,36 @@ const BOT_HOST_PRICE_CRYSTALS = 3000;
 const BOT_HOST_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
 const BOT_HOST_MAX_CODE_BYTES = 256 * 1024;
 const CUSTOM_ROLE_MAX_LENGTH = 8;
+const COSMETIC_PACK_PRICE_COINS = 5000;
+const COSMETIC_PACK_PRICE_GEMS = 100;
+const COSMETIC_PACK_SIZE = 5;
+const COSMETIC_PACK_NAMES = ['Aurore', 'Neon', 'Eclipse', 'Prisme', 'Comete', 'Mirage', 'Nova', 'Zenith', 'Pulse', 'Cosmos'];
+const COSMETIC_PACK_COLORS = ['#ff2d55', '#5ac8fa', '#bf5af2', '#ffd60a', '#30d158', '#ff9f0a', '#85ebff', '#ff7a45', '#a78bfa', '#f472b6'];
+
+function buildCosmeticPackItems() {
+  const packs = {};
+  const addPacks = (type, assets, label) => {
+    for (let index = 0; index < assets.length; index += COSMETIC_PACK_SIZE) {
+      const number = Math.floor(index / COSMETIC_PACK_SIZE) + 1;
+      const key = `${type}_pack_${number}`;
+      packs[key] = {
+        key,
+        category: 'cosmetics',
+        cosmeticType: type,
+        label: `Pack ${label} ${COSMETIC_PACK_NAMES[number - 1] || number}`,
+        price: COSMETIC_PACK_PRICE_COINS,
+        gemPrice: COSMETIC_PACK_PRICE_GEMS,
+        accent: COSMETIC_PACK_COLORS[number - 1] || '#85ebff',
+        assets: assets.slice(index, index + COSMETIC_PACK_SIZE),
+      };
+    }
+  };
+  addPacks('decoration', getAvatarDecorationPaths(), 'Decos');
+  addPacks('font', PSEUDO_FONT_CATALOG, 'Polices');
+  return packs;
+}
+
+const COSMETIC_PACKS = Object.freeze(buildCosmeticPackItems());
 const SHOP_ITEMS = Object.freeze({
   crystal: { key: 'crystal', category: 'ranks', label: 'Crystal', price: CRYSTAL_PRICE_COINS },
   vip_1m: { key: 'vip_1m', category: 'ranks', label: 'VIP 1 mois', price: 100 },
@@ -3613,9 +3672,13 @@ const SHOP_ITEMS = Object.freeze({
   global_elo_boost: { key: 'global_elo_boost', category: 'global_boosters', label: 'Boost Global ELO', price: 5000, boostType: 'global_elo', multiplier: 1.20, defaultStock: 3 },
   global_coin_boost: { key: 'global_coin_boost', category: 'global_boosters', label: 'Boost Global Coins', price: 5000, boostType: 'global_coins', multiplier: 2, defaultStock: 3 },
   bot_host_1m: { key: 'bot_host_1m', category: 'bot_hosting', label: 'Host Bot 1 mois', price: 0, crystalPrice: BOT_HOST_PRICE_CRYSTALS },
+  ...COSMETIC_PACKS,
 });
 const SHOP_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, v.price])));
-const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [k, Math.max(1, Math.ceil(Number(v.price || 0) * 0.45))])));
+const SHOP_GEM_PRICES = Object.freeze(Object.fromEntries(Object.entries(SHOP_ITEMS).map(([k, v]) => [
+  k,
+  Number.isFinite(Number(v.gemPrice)) ? Number(v.gemPrice) : Math.max(1, Math.ceil(Number(v.price || 0) * 0.45)),
+])));
 const SHOP_STOCK_KEYS = Object.freeze(
   Object.fromEntries(Object.values(SHOP_ITEMS).filter(v => Number.isFinite(v.defaultStock)).map(v => [v.key, `shop_stock_${v.key}`]))
 );
@@ -5183,6 +5246,15 @@ app.delete('/api/admin/tournaments/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/shop/catalog', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({
+    items: SHOP_ITEMS,
+    prices: SHOP_PRICES,
+    gemPrices: SHOP_GEM_PRICES,
+  });
+});
+
 app.get('/api/shop/me', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = validateSession(token);
@@ -5490,7 +5562,7 @@ app.post('/api/shop/buy', async (req, res) => {
     : pack === 'limited_offer' && currency === 'gems'
     ? Number(item.gemPrice || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
     : currency === 'gems'
-      ? Number(SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
+      ? Number(item.gemPrice || SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
       : Number(item.price || 0);
   const price = adminFreeBotHost ? 0 : currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
   const balance = currency === 'gems'
@@ -5510,6 +5582,9 @@ app.post('/api/shop/buy', async (req, res) => {
   }
   if (pack === 'perso' && Number(recipient.is_perso || 0) === 1) {
     return res.status(400).json({ error: isGift ? 'Ce joueur a deja le pack Perso.' : 'Pack Perso deja actif.' });
+  }
+  if (item.category === 'cosmetics' && Number(shopItemQ.getOne.get(recipientId, item.key)?.quantity || 0) > 0) {
+    return res.status(400).json({ error: isGift ? 'Ce joueur possede deja ce pack.' : 'Pack deja possede.' });
   }
   if ((pack === 'vip_1m' || pack === 'vip_1y') && Number(recipient.is_vip_plus || 0) === 1) {
     return res.status(400).json({ error: isGift ? 'Ce joueur a deja VIP+ a vie.' : 'VIP+ est deja actif a vie.' });
@@ -5607,6 +5682,7 @@ app.post('/api/shop/buy', async (req, res) => {
       paid: price,
       basePrice,
       referralDiscount: Number(getReferralInfo(player).discountPercent || 0),
+      persoDiscount: Number(player.is_perso || 0) === 1 ? 30 : 0,
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     });
   } catch(e) {}
@@ -6362,12 +6438,13 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
-  if (!isVipPlayer(player) && !isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
-    return res.status(403).json({ error: 'Style de pseudo reserve au VIP, VIP+ ou Perso.' });
-  }
   const nextColor = normalizeHexColor(color);
   const nextColorSecondary = normalizeHexColor(colorSecondary);
   const nextFont = String(font || '').trim().toLowerCase();
+  const ownsSelectedFont = nextFont && nextFont !== 'barlow' && playerOwnsCosmeticAsset(player, 'font', nextFont);
+  if (!isVipPlayer(player) && !isPersoPlayer(player) && !hasStaffRoleBenefits(player) && !ownsSelectedFont) {
+    return res.status(403).json({ error: 'Achete un pack de polices ou active un rang premium.' });
+  }
   const requestedFormats = String(format || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
   const allowedFormats = new Set(['bold', 'italic', 'underline', 'lowercase', 'uppercase']);
   if (requestedFormats.some(value => !allowedFormats.has(value))) return res.status(400).json({ error: 'Format de pseudo invalide.' });
@@ -6379,6 +6456,10 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
   if (color && !nextColor) return res.status(400).json({ error: 'Couleur invalide.' });
   if (colorSecondary && !nextColorSecondary) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
   if (nextFont && !PSEUDO_FONT_OPTIONS.has(nextFont)) return res.status(400).json({ error: 'Police invalide.' });
+  if (nextFont && nextFont !== 'barlow' && !playerOwnsCosmeticAsset(player, 'font', nextFont)) {
+    const pack = getCosmeticPackForAsset('font', nextFont);
+    return res.status(403).json({ error: `Achete ${pack?.label || 'le pack de polices'} dans la boutique.` });
+  }
   if (nextColorSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade du pseudo est reserve au VIP+ ou Perso.' });
   const remaining = getPseudoStyleRemainingMs(player);
   if (remaining > 0) return res.status(429).json({ error: `Style pseudo disponible dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
@@ -6509,12 +6590,19 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
   const nextDecoration = String(image || '').trim();
   const isPreset = getAvatarDecorationPaths().includes(nextDecoration);
   const isInlineImage = /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(nextDecoration);
+  const ownsPreset = isPreset && playerOwnsCosmeticAsset(player, 'decoration', nextDecoration);
+  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player) && nextDecoration && !ownsPreset) {
+    return res.status(403).json({ error: 'Achete le pack de cette decoration dans la boutique.' });
+  }
   if (nextDecoration && !isPreset && !isInlineImage) {
     return res.status(400).json({ error: 'Image invalide.' });
+  }
+  if (isPreset && !playerOwnsCosmeticAsset(player, 'decoration', nextDecoration)) {
+    const pack = getCosmeticPackForAsset('decoration', nextDecoration);
+    return res.status(403).json({ error: `Achete ${pack?.label || 'le pack de decorations'} dans la boutique.` });
   }
   const remaining = getAvatarDecorationRemainingMs(player);
   if (remaining > 0) {
