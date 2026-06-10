@@ -39,10 +39,14 @@ const io     = new Server(server, {
 });
 io.engine.on('connection', connection => {
   connection.on('packet', packet => {
-    devNetworkTotals.rxBytes += estimatePayloadBytes(packet?.data);
+    if (!isDevTelemetryPayload(packet?.data)) {
+      devNetworkTotals.rxBytes += estimatePayloadBytes(packet?.data);
+    }
   });
   connection.on('packetCreate', packet => {
-    devNetworkTotals.txBytes += estimatePayloadBytes(packet?.data);
+    if (!isDevTelemetryPayload(packet?.data)) {
+      devNetworkTotals.txBytes += estimatePayloadBytes(packet?.data);
+    }
   });
 });
 
@@ -2430,7 +2434,23 @@ function estimatePayloadBytes(payload) {
   try { return Buffer.byteLength(JSON.stringify(payload)); } catch { return 0; }
 }
 
+function isDevTelemetryPayload(payload) {
+  const text = Buffer.isBuffer(payload)
+    ? payload.toString('utf8')
+    : typeof payload === 'string'
+      ? payload
+      : '';
+  return text.includes('"dev_metric"')
+    || text.includes('"dev_metrics_history"')
+    || text.includes('"dev_bot_metric"')
+    || text.includes('"dev_metrics_subscribe"')
+    || text.includes('"dev_metrics_unsubscribe"');
+}
+
 app.use((req, res, next) => {
+  if (req.path.startsWith('/api/dev/') || req.path.startsWith('/socket.io/')) {
+    return next();
+  }
   devNetworkTotals.rxBytes += Number(req.headers['content-length'] || 0);
   const originalWrite = res.write.bind(res);
   const originalEnd = res.end.bind(res);
