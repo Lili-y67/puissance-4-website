@@ -1,11 +1,12 @@
-const CACHE_VERSION = 'p4-shell-v3.3.1-cursor-1';
+const CACHE_VERSION = 'p4-shell-v3.3.1-cursor-2';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css',
+  '/theme.css?v=wukong-cursor-2',
   '/theme.js',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
+  '/assets/wukong-cursor.cur',
   '/assets/wukong-cursor.png',
   '/assets/pwa-icon-192.png',
   '/assets/pwa-icon-512.png',

@@ -1,7 +1,7 @@
 html,
 body,
 body * {
-  cursor: url('/assets/wukong-cursor.png') 7 6, auto !important;
+  cursor: url('/assets/wukong-cursor.cur'), url('/assets/wukong-cursor.png') 7 6, auto !important;
 }
 
 a,
@@ -15,13 +15,13 @@ input[type="radio"],
 label[for],
 select,
 summary {
-  cursor: url('/assets/wukong-cursor.png') 7 6, pointer !important;
+  cursor: url('/assets/wukong-cursor.cur'), url('/assets/wukong-cursor.png') 7 6, pointer !important;
 }
 
 input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
 textarea,
 [contenteditable="true"] {
-  cursor: url('/assets/wukong-cursor.png') 7 6, text !important;
+  cursor: url('/assets/wukong-cursor.cur'), url('/assets/wukong-cursor.png') 7 6, text !important;
 }
 
 :root[data-theme="light"] {

@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css';
+    link.href = '/theme.css?v=wukong-cursor-2';
     document.head.appendChild(link);
   }
 
