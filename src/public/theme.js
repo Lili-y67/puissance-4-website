@@ -131,6 +131,7 @@
   const MENU_ITEMS = [
     { href: '/', icon: '🏠', label: 'Accueil', sub: 'Lancer une partie' },
     { href: '/profil', icon: '👤', label: 'Profil', sub: 'Compte et style' },
+    { href: '/progression', icon: '🎯', label: 'Progression', sub: 'Quêtes et thèmes' },
     { href: '/live', icon: '🔴', label: 'Live', sub: 'Spectateur' },
     { href: '/local', icon: '🎲', label: 'Local', sub: '1v1 hors ligne' },
     { href: '/players', icon: '👥', label: 'Joueurs', sub: 'Profils publics' },

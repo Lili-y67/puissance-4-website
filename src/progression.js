@@ -14,11 +14,12 @@ const CHALLENGES = [
 ];
 
 const BOARD_THEMES = [
-  { key: 'classic', label: 'Classique', level: 1, colors: ['#1565c0', '#0d47a1', '#42a5f5'] },
-  { key: 'neon', label: 'Neon', level: 3, colors: ['#6d28d9', '#db2777', '#22d3ee'] },
-  { key: 'sunset', label: 'Coucher de soleil', level: 5, colors: ['#7c2d12', '#ea580c', '#facc15'] },
-  { key: 'ice', label: 'Glace', level: 8, colors: ['#0f4c81', '#38bdf8', '#dbeafe'] },
-  { key: 'obsidian', label: 'Obsidienne', level: 12, colors: ['#18181b', '#3f3f46', '#a855f7'] },
+  { key: 'classic', label: 'Classique', level: 1, icon: '🔵', tagline: 'La coque moderne d’origine.', colors: ['#1565c0', '#0d47a1', '#42a5f5'] },
+  { key: 'arcade', label: 'Arcade 84', level: 3, icon: '📺', tagline: 'Signal CRT, scanlines et coque rétro.', colors: ['#07150f', '#15ff79', '#063d2a'] },
+  { key: 'neon', label: 'Néon Pulse', level: 5, icon: '⚡', tagline: 'Contours électriques et lumière pulsée.', colors: ['#19002f', '#ff2bd6', '#00f7ff'] },
+  { key: 'sunset', label: 'Solar Flare', level: 7, icon: '🌅', tagline: 'Métal chaud traversé par le soleil.', colors: ['#4a1208', '#ff5a1f', '#ffd60a'] },
+  { key: 'ice', label: 'Cryo', level: 10, icon: '❄️', tagline: 'Verre givré et cristaux polaires.', colors: ['#092c4c', '#4dd9ff', '#e8fbff'] },
+  { key: 'obsidian', label: 'Obsidienne', level: 14, icon: '💎', tagline: 'Pierre taillée aux failles violettes.', colors: ['#09080d', '#292431', '#a855f7'] },
 ];
 
 function periodKey(period, now = Date.now()) {

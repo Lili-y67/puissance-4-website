@@ -816,6 +816,87 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
 }
 .cell .token{z-index:3}
 @keyframes cell-element{from{transform:scale(.88) rotate(-4deg);opacity:.34}to{transform:scale(1.08) rotate(4deg);opacity:.66}}
+
+/* Board skins: each theme changes the physical board, not only its palette. */
+html[data-board-skin="arcade"] .board{
+  border-radius:22px 22px 38px 38px;
+  clip-path:polygon(3% 0,97% 0,100% 88%,94% 100%,6% 100%,0 88%);
+  outline:2px solid rgba(53,255,132,.42);
+  background:
+    linear-gradient(rgba(53,255,132,.045) 50%,transparent 50%),
+    repeating-linear-gradient(90deg,rgba(53,255,132,.025) 0 2px,transparent 2px 8px),
+    linear-gradient(180deg,#10241a,#031109 72%,#0b2618);
+  background-size:100% 4px,auto,auto;
+  box-shadow:0 28px 80px rgba(0,0,0,.68),0 0 28px rgba(21,255,121,.22),inset 0 0 42px rgba(21,255,121,.08);
+}
+html[data-board-skin="arcade"] .board::before{
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(180deg,transparent,rgba(68,255,142,.16),transparent);
+  opacity:.8;
+  animation:arcade-scan 3.8s linear infinite;
+}
+html[data-board-skin="arcade"] .board::after{
+  background:radial-gradient(ellipse at center,transparent 46%,rgba(0,0,0,.55) 100%);
+  box-shadow:inset 0 0 48px rgba(0,0,0,.78);
+  opacity:1;
+}
+html[data-board-skin="arcade"] .cell{
+  border-radius:22%;
+  background:radial-gradient(circle at 50% 58%,#020805 0 50%,#123523 68%,#06150d 100%);
+  box-shadow:inset 0 0 0 2px rgba(45,255,128,.18),inset 0 0 18px rgba(0,0,0,.95),0 0 8px rgba(21,255,121,.1);
+}
+html[data-board-skin="arcade"] .cell:not(.p1):not(.p2)::before{border-radius:18%;background:repeating-linear-gradient(0deg,rgba(21,255,121,.12) 0 1px,transparent 1px 3px);animation:arcade-flicker 1.8s steps(2) infinite}
+@keyframes arcade-scan{from{transform:translateY(-110%)}to{transform:translateY(110%)}}
+@keyframes arcade-flicker{0%,92%,100%{opacity:.38}94%{opacity:.8}96%{opacity:.16}}
+
+html[data-board-skin="neon"] .board{
+  border-radius:38px;
+  outline:2px solid #00f7ff;
+  background:radial-gradient(circle at 20% 90%,rgba(255,43,214,.28),transparent 38%),radial-gradient(circle at 90% 10%,rgba(0,247,255,.25),transparent 35%),#0b0018;
+  box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 22px #00f7ff,0 0 52px rgba(255,43,214,.45),inset 0 0 38px rgba(119,0,255,.28);
+  animation:neon-board-pulse 2.1s ease-in-out infinite;
+}
+html[data-board-skin="neon"] .board::before{background:repeating-linear-gradient(90deg,rgba(0,247,255,.08) 0 1px,transparent 1px 14.28%);opacity:.9}
+html[data-board-skin="neon"] .board::after{background:linear-gradient(115deg,transparent 25%,rgba(255,255,255,.24) 46%,transparent 66%);animation:neon-sweep 3s ease-in-out infinite;opacity:.8}
+html[data-board-skin="neon"] .cell{background:#07000f;box-shadow:inset 0 0 15px #000,inset 0 0 0 2px rgba(0,247,255,.36),0 0 12px rgba(255,43,214,.34)}
+@keyframes neon-board-pulse{50%{filter:brightness(1.18) saturate(1.24);box-shadow:0 30px 90px rgba(0,0,0,.7),0 0 34px #ff2bd6,0 0 68px rgba(0,247,255,.42),inset 0 0 44px rgba(119,0,255,.36)}}
+@keyframes neon-sweep{0%,35%{transform:translateX(-120%)}75%,100%{transform:translateX(120%)}}
+
+html[data-board-skin="sunset"] .board{
+  border-radius:44px 44px 24px 24px;
+  outline:2px solid rgba(255,214,10,.5);
+  background:radial-gradient(circle at 50% 118%,#ffd60a 0 14%,#ff5a1f 31%,transparent 55%),linear-gradient(180deg,#401020,#160608);
+  box-shadow:0 28px 90px rgba(0,0,0,.62),0 20px 55px rgba(255,90,31,.3),inset 0 1px 0 rgba(255,241,180,.28);
+}
+html[data-board-skin="sunset"] .board::before{background:repeating-linear-gradient(0deg,rgba(255,214,10,.1) 0 1px,transparent 1px 28px);opacity:.65}
+html[data-board-skin="sunset"] .cell{background:radial-gradient(circle at 35% 28%,rgba(255,240,190,.12),#22070b 65%);box-shadow:inset 0 5px 15px rgba(0,0,0,.8),inset 0 0 0 2px rgba(255,151,54,.18),0 8px 15px rgba(74,18,8,.45)}
+
+html[data-board-skin="ice"] .board{
+  border-radius:30px;
+  outline:2px solid rgba(217,249,255,.7);
+  background:linear-gradient(125deg,rgba(255,255,255,.4),transparent 22%),repeating-linear-gradient(135deg,rgba(255,255,255,.08) 0 2px,transparent 2px 24px),linear-gradient(145deg,#68dcff,#123f70 62%,#dffaff);
+  box-shadow:0 30px 90px rgba(0,0,0,.58),0 0 38px rgba(77,217,255,.35),inset 0 0 42px rgba(255,255,255,.24);
+}
+html[data-board-skin="ice"] .board::after{background:linear-gradient(140deg,rgba(255,255,255,.42),transparent 24%,transparent 68%,rgba(214,249,255,.28));clip-path:polygon(0 0,100% 0,86% 18%,96% 37%,82% 58%,100% 100%,0 100%,13% 78%,3% 52%,17% 25%)}
+html[data-board-skin="ice"] .cell{background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.3),rgba(6,34,64,.92) 68%);box-shadow:inset 0 5px 14px rgba(0,19,46,.72),inset 0 0 0 2px rgba(225,252,255,.36),0 0 10px rgba(216,249,255,.25)}
+
+html[data-board-skin="obsidian"] .board{
+  border-radius:18px;
+  clip-path:polygon(4% 0,96% 3%,100% 22%,97% 92%,88% 100%,9% 97%,0 82%,2% 15%);
+  outline:none;
+  background:linear-gradient(132deg,transparent 44%,rgba(168,85,247,.42) 45%,transparent 47%),linear-gradient(48deg,transparent 64%,rgba(168,85,247,.3) 65%,transparent 67%),linear-gradient(145deg,#28232e,#050407 58%,#151019);
+  box-shadow:0 34px 95px rgba(0,0,0,.78),0 0 38px rgba(168,85,247,.24),inset 0 0 34px #000;
+}
+html[data-board-skin="obsidian"] .board::before{background:repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 1px,transparent 1px 23px);opacity:.7}
+html[data-board-skin="obsidian"] .cell{border-radius:42%;background:radial-gradient(circle at 35% 28%,rgba(184,129,255,.12),#040305 68%);box-shadow:inset 0 5px 16px #000,inset 0 0 0 1px rgba(193,145,255,.2),0 0 10px rgba(168,85,247,.12)}
+
+@media(prefers-reduced-motion:reduce){
+  html[data-board-skin] .board,
+  html[data-board-skin] .board::before,
+  html[data-board-skin] .board::after,
+  html[data-board-skin] .cell::before{animation:none!important}
+}
 .result-overlay.show{
   border-color:color-mix(in srgb,var(--mode,#85EBFF) 28%, rgba(255,255,255,.10));
 }
@@ -1271,6 +1352,7 @@ function applyBoardPalette(seed = '') {
   const equipped = localStorage.getItem('p4_board_theme') || 'classic';
   const equippedThemes = {
     classic: { name: 'classique', hues: [210, 218, 198], sat: 82, light: 54 },
+    arcade: { name: 'arcade', hues: [145, 160, 128], sat: 92, light: 48 },
     neon: { name: 'neon', hues: [268, 326, 188], sat: 88, light: 58 },
     sunset: { name: 'sunset', hues: [18, 32, 48], sat: 90, light: 56 },
     ice: { name: 'glace', hues: [204, 194, 220], sat: 86, light: 63 },
@@ -1280,6 +1362,7 @@ function applyBoardPalette(seed = '') {
   const theme = equippedThemes[equipped] || BOARD_THEMES[hash % BOARD_THEMES.length];
   const drift = ((hash >>> 8) % 17) - 8;
   const root = document.documentElement;
+  root.dataset.boardSkin = equippedThemes[equipped] ? equipped : 'classic';
   const hues = theme.hues.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 7 - 3) + 360) % 360);
   root.style.setProperty('--board-theme', theme.name);
   root.style.setProperty('--board-a', hslColor(hues[0], theme.sat, theme.light));
