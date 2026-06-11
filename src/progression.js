@@ -1,0 +1,355 @@
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const CHALLENGES = [
+  { key: 'daily_play', period: 'daily', icon: '🎮', rarity: 'common', label: 'Mise en jambes', description: 'Termine 2 parties classées.', metric: 'games', target: 2, coins: 30, xp: 35 },
+  { key: 'daily_win', period: 'daily', icon: '🏆', rarity: 'rare', label: 'Première couronne', description: 'Remporte une partie classée.', metric: 'wins', target: 1, coins: 45, xp: 50 },
+  { key: 'daily_moves', period: 'daily', icon: '🧠', rarity: 'common', label: 'Calculateur', description: 'Joue 35 coups cumulés.', metric: 'moves', target: 35, coins: 35, xp: 40 },
+  { key: 'daily_tactician', period: 'daily', icon: '🎯', rarity: 'epic', label: 'Partie tactique', description: 'Termine une partie d’au moins 28 coups.', metric: 'thoughtful_games', target: 1, coins: 60, xp: 65 },
+  { key: 'daily_elo', period: 'daily', icon: '📈', rarity: 'rare', label: 'Ascension', description: 'Gagne 20 points ELO cumulés.', metric: 'elo_gain', target: 20, coins: 55, xp: 60 },
+  { key: 'weekly_play', period: 'weekly', icon: '⚔️', rarity: 'common', label: 'Habitué de l’arène', description: 'Termine 12 parties classées.', metric: 'games', target: 12, coins: 140, xp: 140 },
+  { key: 'weekly_win', period: 'weekly', icon: '👑', rarity: 'rare', label: 'Semaine dominante', description: 'Remporte 5 parties classées.', metric: 'wins', target: 5, coins: 190, xp: 180 },
+  { key: 'weekly_fast', period: 'weekly', icon: '⚡', rarity: 'epic', label: 'Frappe éclair', description: 'Gagne 2 parties en moins de 3 minutes.', metric: 'fast_wins', target: 2, coins: 220, xp: 210 },
+  { key: 'weekly_marathon', period: 'weekly', icon: '🔥', rarity: 'epic', label: 'Marathon mental', description: 'Termine 3 parties de 35 coups ou plus.', metric: 'marathon_games', target: 3, coins: 210, xp: 200 },
+  { key: 'weekly_clan', period: 'weekly', icon: '🛡️', rarity: 'legendary', label: 'Pour la bannière', description: 'Rapporte 12 points à ton clan.', metric: 'clan_points', target: 12, coins: 260, xp: 250 },
+];
+
+const BOARD_THEMES = [
+  { key: 'classic', label: 'Classique', level: 1, colors: ['#1565c0', '#0d47a1', '#42a5f5'] },
+  { key: 'neon', label: 'Neon', level: 3, colors: ['#6d28d9', '#db2777', '#22d3ee'] },
+  { key: 'sunset', label: 'Coucher de soleil', level: 5, colors: ['#7c2d12', '#ea580c', '#facc15'] },
+  { key: 'ice', label: 'Glace', level: 8, colors: ['#0f4c81', '#38bdf8', '#dbeafe'] },
+  { key: 'obsidian', label: 'Obsidienne', level: 12, colors: ['#18181b', '#3f3f46', '#a855f7'] },
+];
+
+function periodKey(period, now = Date.now()) {
+  const date = new Date(now);
+  const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / DAY_MS);
+  if (period === 'weekly') return `w${Math.floor((day + 3) / 7)}`;
+  return `d${day}`;
+}
+
+function levelFromXp(xp) {
+  return Math.max(1, Math.floor(Math.sqrt(Math.max(0, Number(xp || 0)) / 90)) + 1);
+}
+
+function periodEndsAt(period, now = Date.now()) {
+  const date = new Date(now);
+  const dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  if (period === 'weekly') {
+    const weekday = (date.getUTCDay() + 6) % 7;
+    return dayStart + (7 - weekday) * DAY_MS;
+  }
+  return dayStart + DAY_MS;
+}
+
+function createProgression({ db, pQ, cQ }) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS seasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      season_key TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      starts_at INTEGER NOT NULL,
+      ends_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS season_player_stats (
+      season_id INTEGER NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      games INTEGER NOT NULL DEFAULT 0,
+      wins INTEGER NOT NULL DEFAULT 0,
+      losses INTEGER NOT NULL DEFAULT 0,
+      draws INTEGER NOT NULL DEFAULT 0,
+      points INTEGER NOT NULL DEFAULT 0,
+      peak_elo INTEGER NOT NULL DEFAULT 1000,
+      PRIMARY KEY (season_id, player_id)
+    );
+    CREATE TABLE IF NOT EXISTS player_progression (
+      player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      xp INTEGER NOT NULL DEFAULT 0,
+      equipped_board_theme TEXT NOT NULL DEFAULT 'classic',
+      updated_at INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS challenge_progress (
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      challenge_key TEXT NOT NULL,
+      period_key TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      claimed INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (player_id, challenge_key, period_key)
+    );
+    CREATE TABLE IF NOT EXISTS progression_game_events (
+      game_id INTEGER PRIMARY KEY REFERENCES games(id) ON DELETE CASCADE,
+      processed_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS clan_mission_progress (
+      clan_id INTEGER NOT NULL REFERENCES clans(id) ON DELETE CASCADE,
+      period_key TEXT NOT NULL,
+      mission_key TEXT NOT NULL,
+      progress INTEGER NOT NULL DEFAULT 0,
+      target INTEGER NOT NULL DEFAULT 0,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (clan_id, period_key, mission_key)
+    );
+    CREATE TABLE IF NOT EXISTS spectator_predictions (
+      game_id INTEGER NOT NULL,
+      player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      predicted_side INTEGER NOT NULL,
+      resolved INTEGER NOT NULL DEFAULT 0,
+      correct INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (game_id, player_id)
+    );
+  `);
+
+  const q = {
+    event: db.prepare(`INSERT OR IGNORE INTO progression_game_events (game_id, processed_at) VALUES (?, ?)`),
+    season: db.prepare(`SELECT * FROM seasons WHERE starts_at <= ? AND ends_at > ? ORDER BY starts_at DESC LIMIT 1`),
+    addSeason: db.prepare(`INSERT INTO seasons (season_key, name, starts_at, ends_at) VALUES (?, ?, ?, ?)`),
+    seasonUpsert: db.prepare(`
+      INSERT INTO season_player_stats (season_id, player_id, games, wins, losses, draws, points, peak_elo)
+      VALUES (@season_id, @player_id, 1, @wins, @losses, @draws, @points, @peak_elo)
+      ON CONFLICT(season_id, player_id) DO UPDATE SET
+        games = games + 1,
+        wins = wins + excluded.wins,
+        losses = losses + excluded.losses,
+        draws = draws + excluded.draws,
+        points = points + excluded.points,
+        peak_elo = MAX(peak_elo, excluded.peak_elo)
+    `),
+    progression: db.prepare(`SELECT * FROM player_progression WHERE player_id = ?`),
+    ensureProgression: db.prepare(`INSERT OR IGNORE INTO player_progression (player_id, updated_at) VALUES (?, ?)`),
+    addXp: db.prepare(`UPDATE player_progression SET xp = xp + ?, updated_at = ? WHERE player_id = ?`),
+    setTheme: db.prepare(`UPDATE player_progression SET equipped_board_theme = ?, updated_at = ? WHERE player_id = ?`),
+    challenge: db.prepare(`SELECT * FROM challenge_progress WHERE player_id = ? AND challenge_key = ? AND period_key = ?`),
+    challengeUpsert: db.prepare(`
+      INSERT INTO challenge_progress (player_id, challenge_key, period_key, progress, claimed, updated_at)
+      VALUES (?, ?, ?, ?, 0, ?)
+      ON CONFLICT(player_id, challenge_key, period_key) DO UPDATE SET
+        progress = progress + excluded.progress,
+        updated_at = excluded.updated_at
+    `),
+    claim: db.prepare(`UPDATE challenge_progress SET claimed = 1, updated_at = ? WHERE player_id = ? AND challenge_key = ? AND period_key = ? AND claimed = 0`),
+    clanForPlayer: db.prepare(`SELECT clan_id FROM clan_members WHERE player_id = ?`),
+    clanMissionUpsert: db.prepare(`
+      INSERT INTO clan_mission_progress (clan_id, period_key, mission_key, progress, target, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(clan_id, period_key, mission_key) DO UPDATE SET
+        progress = progress + excluded.progress,
+        target = excluded.target,
+        updated_at = excluded.updated_at
+    `),
+    leaderboard: db.prepare(`
+      SELECT sps.*, p.pseudo, p.avatar, p.color, p.elo
+      FROM season_player_stats sps
+      JOIN players p ON p.id = sps.player_id
+      WHERE sps.season_id = ?
+      ORDER BY sps.points DESC, sps.wins DESC, sps.peak_elo DESC
+      LIMIT 50
+    `),
+    prediction: db.prepare(`
+      INSERT INTO spectator_predictions (game_id, player_id, predicted_side, created_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(game_id, player_id) DO UPDATE SET predicted_side = excluded.predicted_side, created_at = excluded.created_at
+    `),
+    predictionStats: db.prepare(`
+      SELECT predicted_side, COUNT(*) AS count
+      FROM spectator_predictions
+      WHERE game_id = ?
+      GROUP BY predicted_side
+    `),
+    resolvePredictions: db.prepare(`
+      UPDATE spectator_predictions
+      SET resolved = 1, correct = CASE WHEN predicted_side = ? THEN 1 ELSE 0 END
+      WHERE game_id = ? AND resolved = 0
+    `),
+  };
+
+  function currentSeason(now = Date.now()) {
+    let season = q.season.get(now, now);
+    if (season) return season;
+    const date = new Date(now);
+    const quarter = Math.floor(date.getUTCMonth() / 3);
+    const start = Date.UTC(date.getUTCFullYear(), quarter * 3, 1);
+    const end = Date.UTC(date.getUTCFullYear(), quarter * 3 + 3, 1);
+    const key = `${date.getUTCFullYear()}-S${quarter + 1}`;
+    q.addSeason.run(key, `Saison ${quarter + 1} ${date.getUTCFullYear()}`, start, end);
+    return q.season.get(now, now);
+  }
+
+  function ensurePlayer(playerId) {
+    q.ensureProgression.run(Number(playerId), Date.now());
+    return q.progression.get(Number(playerId));
+  }
+
+  function addChallengeMetric(playerId, metric, amount) {
+    const now = Date.now();
+    CHALLENGES.filter(item => item.metric === metric).forEach(item => {
+      q.challengeUpsert.run(playerId, item.key, periodKey(item.period, now), Math.max(0, Math.trunc(amount)), now);
+    });
+  }
+
+  const processGame = db.transaction(({ gameId, player1Id, player2Id, winnerId, isDraw, moveCount = 0, duration = 0, gameType = 'ranked', isSuspect = false, eloChanges = {} }) => {
+    if (!gameId || isSuspect || String(gameType) === 'friendly') return false;
+    if (!q.event.run(gameId, Date.now()).changes) return false;
+    const season = currentSeason();
+    const players = [Number(player1Id), Number(player2Id)];
+    players.forEach(playerId => {
+      const won = !isDraw && playerId === Number(winnerId);
+      const player = pQ.getById.get(playerId);
+      q.seasonUpsert.run({
+        season_id: season.id,
+        player_id: playerId,
+        wins: won ? 1 : 0,
+        losses: !isDraw && !won ? 1 : 0,
+        draws: isDraw ? 1 : 0,
+        points: won ? 3 : isDraw ? 1 : 0,
+        peak_elo: Number(player?.elo || 1000),
+      });
+      ensurePlayer(playerId);
+      q.addXp.run(won ? 35 : isDraw ? 22 : 15, Date.now(), playerId);
+      addChallengeMetric(playerId, 'games', 1);
+      addChallengeMetric(playerId, 'moves', Math.ceil(Number(moveCount || 0) / 2));
+      if (Number(moveCount || 0) >= 28) addChallengeMetric(playerId, 'thoughtful_games', 1);
+      if (Number(moveCount || 0) >= 35) addChallengeMetric(playerId, 'marathon_games', 1);
+      addChallengeMetric(playerId, 'elo_gain', Math.max(0, Number(eloChanges?.[playerId] || 0)));
+      if (won) addChallengeMetric(playerId, 'wins', 1);
+      if (won && Number(duration || 0) > 0 && Number(duration || 0) <= 180) addChallengeMetric(playerId, 'fast_wins', 1);
+
+      const clanId = Number(q.clanForPlayer.get(playerId)?.clan_id || 0);
+      if (clanId) {
+        const points = won ? 3 : isDraw ? 1 : 0;
+        q.clanMissionUpsert.run(clanId, periodKey('weekly'), 'play_games', 1, 20, Date.now());
+        q.clanMissionUpsert.run(clanId, periodKey('weekly'), 'win_games', won ? 1 : 0, 8, Date.now());
+        q.clanMissionUpsert.run(clanId, periodKey('weekly'), 'score_points', points, 30, Date.now());
+        addChallengeMetric(playerId, 'clan_points', points);
+      }
+    });
+    q.resolvePredictions.run(isDraw ? 0 : (Number(winnerId) === Number(player1Id) ? 1 : 2), gameId);
+    return true;
+  });
+
+  function getPlayerData(playerId) {
+    const row = ensurePlayer(playerId);
+    const xp = Number(row.xp || 0);
+    const level = levelFromXp(xp);
+    const now = Date.now();
+    const challenges = CHALLENGES.map(item => {
+      const key = periodKey(item.period, now);
+      const progress = q.challenge.get(playerId, item.key, key);
+      return {
+        ...item,
+        progress: Math.min(item.target, Number(progress?.progress || 0)),
+        completed: Number(progress?.progress || 0) >= item.target,
+        claimed: !!Number(progress?.claimed || 0),
+        expiresAt: periodEndsAt(item.period, now),
+      };
+    });
+    const season = currentSeason(now);
+    const seasonStats = db.prepare(`SELECT * FROM season_player_stats WHERE season_id = ? AND player_id = ?`).get(season.id, playerId) || null;
+    return {
+      xp,
+      level,
+      xpCurrent: xp - Math.pow(level - 1, 2) * 90,
+      xpNext: Math.max(1, (Math.pow(level, 2) - Math.pow(level - 1, 2)) * 90),
+      equippedBoardTheme: row.equipped_board_theme || 'classic',
+      themes: BOARD_THEMES.map(theme => ({ ...theme, unlocked: level >= theme.level })),
+      challenges,
+      challengeSummary: {
+        completed: challenges.filter(item => item.completed).length,
+        claimed: challenges.filter(item => item.claimed).length,
+        total: challenges.length,
+        availableRewards: challenges.filter(item => item.completed && !item.claimed).length,
+      },
+      season: { ...season, stats: seasonStats },
+    };
+  }
+
+  function claimChallenge(playerId, challengeKey) {
+    const definition = CHALLENGES.find(item => item.key === challengeKey);
+    if (!definition) throw new Error('Defi introuvable.');
+    const key = periodKey(definition.period);
+    const progress = q.challenge.get(playerId, definition.key, key);
+    if (Number(progress?.progress || 0) < definition.target) throw new Error('Defi incomplet.');
+    if (Number(progress?.claimed || 0)) throw new Error('Recompense deja recuperee.');
+    if (!q.claim.run(Date.now(), playerId, definition.key, key).changes) throw new Error('Recompense indisponible.');
+    ensurePlayer(playerId);
+    q.addXp.run(definition.xp, Date.now(), playerId);
+    pQ.addCoins.run({ delta: definition.coins, id: playerId });
+    return { coins: definition.coins, xp: definition.xp };
+  }
+
+  function equipTheme(playerId, themeKey) {
+    const data = getPlayerData(playerId);
+    const theme = data.themes.find(item => item.key === themeKey);
+    if (!theme) throw new Error('Theme introuvable.');
+    if (!theme.unlocked) throw new Error(`Theme disponible au niveau ${theme.level}.`);
+    q.setTheme.run(theme.key, Date.now(), playerId);
+    return theme;
+  }
+
+  function getClanMissions(clanId) {
+    const key = periodKey('weekly');
+    const definitions = [
+      { key: 'play_games', label: 'Jouer 20 parties', target: 20 },
+      { key: 'win_games', label: 'Gagner 8 parties', target: 8 },
+      { key: 'score_points', label: 'Marquer 30 points', target: 30 },
+    ];
+    return definitions.map(item => {
+      const row = db.prepare(`SELECT * FROM clan_mission_progress WHERE clan_id = ? AND period_key = ? AND mission_key = ?`).get(clanId, key, item.key);
+      return { ...item, progress: Math.min(item.target, Number(row?.progress || 0)), completed: Number(row?.progress || 0) >= item.target };
+    });
+  }
+
+  function getClanWar(clanId) {
+    const key = periodKey('weekly');
+    const rows = db.prepare(`
+      SELECT c.id, c.name, c.tag, c.color, c.blason, COALESCE(SUM(cmp.progress), 0) AS score
+      FROM clans c
+      LEFT JOIN clan_mission_progress cmp ON cmp.clan_id = c.id AND cmp.period_key = ?
+      GROUP BY c.id
+      ORDER BY score DESC, c.name COLLATE NOCASE
+    `).all(key);
+    const index = rows.findIndex(row => Number(row.id) === Number(clanId));
+    if (index < 0) return null;
+    const current = rows[index];
+    const opponent = rows[index % 2 === 0 ? index + 1 : index - 1] || null;
+    return {
+      rank: index + 1,
+      current,
+      opponent,
+      lead: opponent ? Number(current.score || 0) - Number(opponent.score || 0) : Number(current.score || 0),
+      endsAt: (Math.floor((Date.now() / DAY_MS + 3) / 7) + 1) * 7 * DAY_MS - 3 * DAY_MS,
+    };
+  }
+
+  function seasonData() {
+    const season = currentSeason();
+    return { season, leaderboard: q.leaderboard.all(season.id) };
+  }
+
+  function setPrediction(gameId, playerId, side) {
+    if (![1, 2].includes(Number(side))) throw new Error('Pronostic invalide.');
+    q.prediction.run(Number(gameId), Number(playerId), Number(side), Date.now());
+  }
+
+  function predictionStats(gameId) {
+    const counts = { 1: 0, 2: 0 };
+    q.predictionStats.all(Number(gameId)).forEach(row => { counts[Number(row.predicted_side)] = Number(row.count || 0); });
+    return counts;
+  }
+
+  return {
+    processGame,
+    getPlayerData,
+    claimChallenge,
+    equipTheme,
+    getClanMissions,
+    getClanWar,
+    seasonData,
+    setPrediction,
+    predictionStats,
+    boardThemes: BOARD_THEMES,
+  };
+}
+
+module.exports = { createProgression };

@@ -1246,6 +1246,16 @@ function renderAnalysis(results, accuracy) {
         </div>
       </div>`;
   }
+  function coachingText(player) {
+    const rows = results.filter(r => r.player === player);
+    const errors = rows.filter(r => ['mistake', 'blunder'].includes(r.classification));
+    const inaccuracies = rows.filter(r => r.classification === 'inaccuracy');
+    if (!errors.length && inaccuracies.length <= 1) return 'Partie très propre : conserve ce rythme et travaille surtout la conversion des positions gagnantes.';
+    const first = errors[0] || inaccuracies[0];
+    const best = first?.bestCol !== undefined ? ` La colonne ${Number(first.bestCol) + 1} était la meilleure piste.` : '';
+    if (errors.length >= 3) return `Priorité : ralentir dans les positions tactiques. ${errors.length} erreurs importantes ont changé l'évaluation.${best}`;
+    return `Axe de travail : vérifier les menaces adverses avant de poser un pion.${best}`;
+  }
   function buildEvalGraph() {
     if (!evalHistory.length) return '';
     const W = 100, H = 60;
@@ -1312,6 +1322,10 @@ function renderAnalysis(results, accuracy) {
           <div class="accuracy-pct" style="color:${accColor(accuracy.p2)}">${accuracy.p2}%</div>
           <div class="accuracy-label"><span class="accuracy-dot" style="background:${p2Color}"></span>${g.p2_pseudo}</div>
         </div>
+      </div>
+      <div class="analysis-note" style="margin-top:12px">
+        <strong>${g.p1_pseudo} :</strong> ${coachingText(1)}<br>
+        <strong>${g.p2_pseudo} :</strong> ${coachingText(2)}
       </div>
       ${buildEvalGraph()}
     </div>

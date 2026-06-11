@@ -1016,6 +1016,7 @@ body[data-game-mode="bot"]{--mode:#85EBFF;--mode-soft:rgba(133,235,255,.16);--mo
       <div class="result-btns">
         <button class="btn-action primary" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">⚡ Rejouer</button>
         <button class="btn-action ghost" id="btn-home" onclick="sessionStorage.setItem('no_auto_queue','1');location.href='/'">🏠 Accueil</button>
+        <a class="btn-action ghost" href="/progression">🎯 Progression</a>
         <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
       </div>
     </div>
@@ -1267,8 +1268,16 @@ function hslSoft(h, s = 88, l = 60, a = .26) {
 }
 
 function applyBoardPalette(seed = '') {
+  const equipped = localStorage.getItem('p4_board_theme') || 'classic';
+  const equippedThemes = {
+    classic: { name: 'classique', hues: [210, 218, 198], sat: 82, light: 54 },
+    neon: { name: 'neon', hues: [268, 326, 188], sat: 88, light: 58 },
+    sunset: { name: 'sunset', hues: [18, 32, 48], sat: 90, light: 56 },
+    ice: { name: 'glace', hues: [204, 194, 220], sat: 86, light: 63 },
+    obsidian: { name: 'obsidienne', hues: [260, 280, 312], sat: 54, light: 38 },
+  };
   const hash = hashSeed(seed);
-  const theme = BOARD_THEMES[hash % BOARD_THEMES.length];
+  const theme = equippedThemes[equipped] || BOARD_THEMES[hash % BOARD_THEMES.length];
   const drift = ((hash >>> 8) % 17) - 8;
   const root = document.documentElement;
   const hues = theme.hues.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 7 - 3) + 360) % 360);

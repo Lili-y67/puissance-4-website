@@ -63,10 +63,20 @@ body::after{content:"";position:fixed;inset:auto -180px -180px auto;width:460px;
   </section>
 
   <div class="layout">
-    <section class="card">
-      <div class="card-title">Membres</div>
-      <div class="members" id="members"></div>
-    </section>
+    <div style="display:grid;gap:20px">
+      <section class="card">
+        <div class="card-title">Guerre de clans</div>
+        <div id="clan-war"><div class="notice">Recherche d'un adversaire...</div></div>
+      </section>
+      <section class="card">
+        <div class="card-title">Missions hebdomadaires</div>
+        <div class="members" id="clan-missions"><div class="notice">Chargement des missions...</div></div>
+      </section>
+      <section class="card">
+        <div class="card-title">Membres</div>
+        <div class="members" id="members"></div>
+      </section>
+    </div>
 
     <aside class="card">
       <div class="card-title">Tchat clan</div>
@@ -204,11 +214,46 @@ async function loadClan() {
   const data = await api(`/api/clans/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`);
   clan = data.clan;
   renderClan();
+  await loadClanMissions();
   initClanSocket();
   if (clanSocket?.connected) clanSocket.emit('join_clan_chat', { clanId: Number(clan.id) });
   await loadMessages();
   clearInterval(chatTimer);
   chatTimer = setInterval(loadMessages, 15000);
+}
+async function loadClanMissions() {
+  const root = document.getElementById('clan-missions');
+  if (!root || !clan?.id) return;
+  try {
+    const data = await api(`/api/clans/${clan.id}/missions`);
+    const warRoot = document.getElementById('clan-war');
+    const war = data.war;
+    if (warRoot) {
+      warRoot.innerHTML = war?.opponent
+        ? `<div class="member" style="grid-template-columns:minmax(0,1fr) auto">
+            <div><div class="member-name">${escapeHtml(clan.name)} contre ${escapeHtml(war.opponent.name)}</div>
+            <div class="member-meta">Rang hebdomadaire #${Number(war.rank)} · fin ${new Date(Number(war.endsAt)).toLocaleDateString('fr-FR')}</div></div>
+            <div class="role">${Number(war.current.score || 0)} - ${Number(war.opponent.score || 0)}</div>
+          </div>`
+        : '<div class="notice">Aucun autre clan disponible pour cette guerre.</div>';
+    }
+    root.innerHTML = (data.missions || []).map(mission => {
+      const pct = Math.min(100, Math.round(Number(mission.progress || 0) / Number(mission.target || 1) * 100));
+      return `<div class="member" style="grid-template-columns:minmax(0,1fr) auto">
+        <div>
+          <div class="member-name">${mission.completed ? '✓ ' : ''}${escapeHtml(mission.label)}</div>
+          <div class="member-meta" style="margin-top:8px">
+            <span style="display:block;height:7px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden">
+              <i style="display:block;width:${pct}%;height:100%;background:linear-gradient(90deg,var(--clan-color,#85ebff),#ffd60a)"></i>
+            </span>
+          </div>
+        </div>
+        <div class="role">${Number(mission.progress || 0)} / ${Number(mission.target || 0)}</div>
+      </div>`;
+    }).join('') || '<div class="notice">Aucune mission active.</div>';
+  } catch (error) {
+    root.innerHTML = `<div class="notice">${escapeHtml(error.message)}</div>`;
+  }
 }
 function messageMarkup(msg) {
   return `<div class="msg" data-message-id="${Number(msg.id || 0)}">

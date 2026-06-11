@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080613">
+<title>Puissance 4 - Progression V2</title>
+<link rel="icon" type="image/png" href="/assets/site-logo-small.png">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/theme.css?v=wukong-cursor-2">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+:root{--bg:#070510;--surface:rgba(17,14,35,.88);--surface-2:rgba(28,23,52,.84);--line:rgba(255,255,255,.09);--text:#fff8f1;--muted:rgba(255,248,241,.58);--red:#ff2d55;--gold:#ffd60a;--cyan:#85ebff;--green:#30d158;--purple:#bf5af2}
+html{scroll-behavior:smooth}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-3;background:radial-gradient(circle at 12% 8%,rgba(255,45,85,.2),transparent 32%),radial-gradient(circle at 88% 12%,rgba(133,235,255,.14),transparent 30%),radial-gradient(circle at 55% 82%,rgba(191,90,242,.12),transparent 34%),#070510}
+body::after{content:"";position:fixed;inset:0;z-index:-2;opacity:.36;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:52px 52px;mask-image:linear-gradient(to bottom,#000,transparent 90%)}
+button,a{font:inherit}.page{width:min(1240px,100%);margin:auto;padding:22px 18px 90px}
+.nav{position:sticky;top:12px;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;border:1px solid var(--line);border-radius:22px;background:rgba(9,7,22,.76);backdrop-filter:blur(20px);box-shadow:0 18px 55px rgba(0,0,0,.25)}
+.brand{display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none;font:900 28px "Barlow Condensed";letter-spacing:2.5px;text-transform:uppercase}.brand img{width:40px;height:40px;border-radius:13px}.brand span{color:var(--red)}
+.nav-links{display:flex;gap:7px}.nav-link,.action-btn{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.045);color:var(--text);padding:10px 14px;text-decoration:none;font:800 13px "Barlow Condensed";letter-spacing:1.3px;text-transform:uppercase;cursor:pointer;transition:.2s}.nav-link:hover,.action-btn:hover{transform:translateY(-2px);border-color:rgba(133,235,255,.4);background:rgba(133,235,255,.08)}
+.hero{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:22px;margin:22px 0;padding:clamp(25px,4vw,44px);border:1px solid rgba(255,255,255,.11);border-radius:36px;background:linear-gradient(135deg,rgba(255,45,85,.17),transparent 34%),linear-gradient(315deg,rgba(133,235,255,.1),transparent 38%),rgba(16,12,34,.91);box-shadow:0 34px 100px rgba(0,0,0,.38)}
+.hero::before{content:"";position:absolute;z-index:-1;width:420px;height:420px;right:-170px;top:-210px;border-radius:50%;background:conic-gradient(from 40deg,var(--cyan),var(--purple),var(--red),var(--gold),var(--cyan));filter:blur(12px);opacity:.14;animation:orbit 14s linear infinite}.hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 25%,rgba(255,255,255,.07) 46%,transparent 64%);transform:translateX(-130%);animation:scan 7s ease-in-out infinite}
+@keyframes orbit{to{transform:rotate(360deg)}}@keyframes scan{0%,48%{transform:translateX(-130%)}78%,100%{transform:translateX(130%)}}
+.eyebrow{display:flex;align-items:center;gap:9px;color:var(--cyan);font:900 13px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase}.eyebrow::before{content:"";width:28px;height:2px;background:currentColor;box-shadow:0 0 14px currentColor}
+h1{max-width:760px;margin:10px 0 12px;font:900 clamp(52px,8vw,100px)/.82 "Barlow Condensed";letter-spacing:-2px;text-transform:uppercase}.gradient-text{color:transparent;background:linear-gradient(90deg,#fff,var(--gold) 45%,var(--cyan));background-clip:text;-webkit-background-clip:text}
+.hero-copy{max-width:700px;color:var(--muted);font-size:15px;line-height:1.65}.season-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);font-size:12px;color:rgba(255,255,255,.75)}.pill strong{color:#fff}
+.level-card{align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018));box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.level-top{display:flex;justify-content:space-between;align-items:end;gap:12px}.level-label{color:var(--muted);font:800 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase}.level-number{font:900 70px/.82 "Barlow Condensed";color:var(--gold);text-shadow:0 0 28px rgba(255,214,10,.25)}.level-xp{font:900 17px "Barlow Condensed";color:var(--cyan)}
+.xp-track,.quest-track{position:relative;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.07)}.xp-track{height:14px;margin-top:18px}.xp-fill,.quest-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--red),var(--gold),var(--cyan));box-shadow:0 0 18px rgba(133,235,255,.28);transition:width .8s cubic-bezier(.2,.9,.2,1)}.xp-fill::after,.quest-fill::after{content:"";display:block;width:45%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:barShine 2.2s linear infinite}@keyframes barShine{from{transform:translateX(-120%)}to{transform:translateX(320%)}}
+.level-foot{display:flex;justify-content:space-between;gap:10px;margin-top:9px;color:var(--muted);font-size:12px}
+.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}.summary-card{position:relative;overflow:hidden;padding:17px;border:1px solid var(--line);border-radius:20px;background:var(--surface);box-shadow:0 18px 55px rgba(0,0,0,.2);transition:.22s}.summary-card:hover{transform:translateY(-3px)}.summary-card::after{content:"";position:absolute;width:90px;height:90px;right:-30px;bottom:-45px;border-radius:50%;background:var(--accent,var(--cyan));opacity:.1;filter:blur(5px)}.summary-icon{font-size:23px}.summary-value{margin-top:9px;font:900 34px "Barlow Condensed"}.summary-label{color:var(--muted);font-size:12px}
+.content-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(330px,.75fr);gap:20px}.panel{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:28px;padding:20px;background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.012)),var(--surface);box-shadow:0 25px 75px rgba(0,0,0,.26)}.panel+.panel{margin-top:20px}.panel-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:16px}.panel-kicker{color:var(--cyan);font:800 11px "Barlow Condensed";letter-spacing:2.5px;text-transform:uppercase}.panel-title{margin:3px 0 0;font:900 31px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.panel-note{max-width:360px;color:var(--muted);font-size:12px;line-height:1.45;text-align:right}
+.quest-tabs{display:flex;gap:7px;padding:5px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025);margin-bottom:15px}.quest-tab{flex:1;border:0;border-radius:11px;background:transparent;color:var(--muted);padding:10px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;transition:.2s}.quest-tab.active{background:linear-gradient(135deg,rgba(255,45,85,.22),rgba(133,235,255,.12));color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.quest-list{display:grid;gap:11px}.quest{--quest:#85ebff;position:relative;overflow:hidden;display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px;border:1px solid color-mix(in srgb,var(--quest) 26%,rgba(255,255,255,.07));border-radius:19px;background:linear-gradient(105deg,color-mix(in srgb,var(--quest) 8%,transparent),rgba(255,255,255,.02));transition:transform .2s,border-color .2s,box-shadow .2s;animation:questIn .45s both}.quest:hover{transform:translateX(4px);border-color:color-mix(in srgb,var(--quest) 48%,transparent);box-shadow:0 14px 35px color-mix(in srgb,var(--quest) 10%,transparent)}@keyframes questIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.quest.completed{background:linear-gradient(105deg,rgba(48,209,88,.11),rgba(255,255,255,.02))}.quest.claimed{opacity:.58}.quest-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:color-mix(in srgb,var(--quest) 13%,rgba(255,255,255,.03));border:1px solid color-mix(in srgb,var(--quest) 30%,transparent);font-size:25px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}.quest-title-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.quest-title{font:900 19px "Barlow Condensed"}.rarity{padding:4px 7px;border-radius:999px;background:color-mix(in srgb,var(--quest) 12%,transparent);color:var(--quest);font:900 9px "Barlow Condensed";letter-spacing:1.3px;text-transform:uppercase}.quest-desc{margin-top:2px;color:var(--muted);font-size:12px}.quest-track{height:7px;margin-top:9px}.quest-meta{display:flex;justify-content:space-between;gap:10px;margin-top:7px;font-size:11px;color:var(--muted)}.quest-reward{color:var(--gold);font-weight:700}.quest-action{min-width:112px}.claim-btn{width:100%;border:1px solid color-mix(in srgb,var(--quest) 35%,transparent);border-radius:13px;background:color-mix(in srgb,var(--quest) 10%,rgba(255,255,255,.02));color:#fff;padding:10px 12px;font:900 12px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.2s}.claim-btn.ready{animation:rewardPulse 1.5s ease-in-out infinite;background:linear-gradient(135deg,var(--gold),#ff9f0a);border-color:transparent;color:#160e00}.claim-btn:disabled{cursor:default;opacity:.58}@keyframes rewardPulse{50%{transform:scale(1.035);box-shadow:0 0 24px rgba(255,214,10,.28)}}
+.themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.theme-card{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:18px;padding:10px;background:rgba(255,255,255,.025);cursor:pointer;transition:.22s}.theme-card:hover{transform:translateY(-3px)}.theme-card.locked{filter:saturate(.35);opacity:.55;cursor:not-allowed}.theme-card.active{border-color:var(--cyan);box-shadow:0 0 28px rgba(133,235,255,.16)}.theme-preview{position:relative;height:92px;border-radius:13px;overflow:hidden;background:linear-gradient(135deg,var(--c1),var(--c2),var(--c3))}.theme-preview::before{content:"";position:absolute;inset:12px;opacity:.72;background:radial-gradient(circle at 15% 30%,#fff 0 7px,transparent 8px),radial-gradient(circle at 43% 68%,#fff 0 7px,transparent 8px),radial-gradient(circle at 75% 32%,#fff 0 7px,transparent 8px),radial-gradient(circle at 88% 74%,#fff 0 7px,transparent 8px)}.theme-info{display:flex;justify-content:space-between;gap:8px;margin-top:9px}.theme-name{font:900 17px "Barlow Condensed"}.theme-state{color:var(--muted);font-size:10px}.active-mark{position:absolute;right:17px;top:17px;display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--cyan);color:#081117;font-weight:900}
+.ranking{display:grid;gap:8px}.rank-row{display:grid;grid-template-columns:38px 38px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px;border-radius:15px;background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.055)}.rank-row:nth-child(1){border-color:rgba(255,214,10,.26);background:rgba(255,214,10,.055)}.rank-position{font:900 18px "Barlow Condensed";color:var(--gold)}.rank-avatar{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;overflow:hidden;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.09);font-weight:800}.rank-avatar img{width:100%;height:100%;object-fit:cover}.rank-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rank-sub{color:var(--muted);font-size:10px}.rank-points{font:900 17px "Barlow Condensed";color:var(--cyan)}
+.achievements{display:grid;gap:9px}.achievement{display:grid;grid-template-columns:43px 1fr;gap:11px;align-items:center;padding:11px;border-radius:15px;border:1px solid var(--line);background:rgba(255,255,255,.025)}.achievement-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;background:rgba(255,255,255,.05);font-size:19px}.achievement.done{border-color:rgba(48,209,88,.25)}.achievement.done .achievement-icon{background:rgba(48,209,88,.13);box-shadow:0 0 18px rgba(48,209,88,.12)}.achievement strong{display:block;font:900 17px "Barlow Condensed"}.achievement span{color:var(--muted);font-size:11px}
+.empty,.notice{padding:18px;border-radius:17px;border:1px solid rgba(255,214,10,.2);background:rgba(255,214,10,.07);color:#ffe994}.skeleton{height:92px;border-radius:18px;background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,.09),rgba(255,255,255,.035));background-size:220% 100%;animation:skeleton 1.3s linear infinite}@keyframes skeleton{to{background-position:-220% 0}}
+.toast{position:fixed;z-index:100;right:20px;bottom:20px;max-width:min(390px,calc(100vw - 24px));display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.13);border-radius:17px;background:rgba(14,12,29,.94);backdrop-filter:blur(20px);box-shadow:0 24px 70px rgba(0,0,0,.42);transform:translateY(130%);opacity:0;transition:.35s}.toast.show{transform:none;opacity:1}.toast-icon{font-size:25px}.toast strong{display:block;font-family:"Barlow Condensed";font-size:18px}.toast span{color:var(--muted);font-size:12px}
+.confetti{position:fixed;z-index:110;width:9px;height:16px;border-radius:3px;pointer-events:none;animation:confettiFall 1.25s ease-in forwards}@keyframes confettiFall{to{transform:translate(var(--x),105vh) rotate(720deg);opacity:0}}
+.mobile-nav{display:none}
+.reveal{opacity:0;transform:translateY(14px);transition:.55s}.reveal.visible{opacity:1;transform:none}
+@media(max-width:980px){.hero{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}.side-column{display:grid;grid-template-columns:1fr 1fr;gap:18px}.side-column .panel{margin:0}.themes{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.page{padding:12px 10px 98px}.nav{top:7px;border-radius:18px}.brand{font-size:23px}.brand img{width:35px;height:35px}.nav-links{display:none}.hero{margin:14px 0;padding:24px 18px;border-radius:27px}h1{font-size:clamp(52px,18vw,78px)}.hero-copy{font-size:14px}.summary-grid{gap:8px}.summary-card{padding:14px}.summary-value{font-size:29px}.content-grid{gap:14px}.panel{padding:15px;border-radius:22px}.panel-head{align-items:flex-start;flex-direction:column}.panel-note{text-align:left}.quest{grid-template-columns:48px minmax(0,1fr);padding:12px}.quest-icon{width:48px;height:48px}.quest-action{grid-column:1/-1;min-width:0}.claim-btn{padding:11px}.themes{grid-template-columns:1fr 1fr}.side-column{display:grid;grid-template-columns:1fr}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);z-index:90;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));padding:7px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:rgba(9,7,22,.88);backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,.45)}.mobile-nav a{display:grid;place-items:center;gap:2px;padding:7px 3px;border-radius:13px;color:var(--muted);text-decoration:none;font:800 10px "Barlow Condensed";letter-spacing:.6px;text-transform:uppercase}.mobile-nav a.active{background:rgba(133,235,255,.09);color:var(--cyan)}.mobile-nav b{font-size:19px}.toast{left:12px;right:12px;bottom:88px}}
+@media(max-width:420px){.summary-grid{grid-template-columns:1fr 1fr}.summary-label{font-size:10px}.level-number{font-size:58px}.themes{grid-template-columns:1fr}.rank-row{grid-template-columns:31px 34px minmax(0,1fr) auto;gap:7px}.season-pills .pill{width:100%;justify-content:center}.quest-desc{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<main class="page">
+  <nav class="nav">
+    <a class="brand" href="/"><img src="/assets/site-logo-small.png" alt="">Puissance <span>4</span></a>
+    <div class="nav-links">
+      <a class="nav-link" href="/">Jouer</a>
+      <a class="nav-link" href="/profil">Profil</a>
+      <a class="nav-link" href="/clan">Clan</a>
+      <a class="nav-link" href="/live">Live</a>
+    </div>
+  </nav>
+
+  <section class="hero reveal">
+    <div>
+      <div class="eyebrow" id="season-name">Saison en cours</div>
+      <h1>Ta route vers <span class="gradient-text">le sommet</span></h1>
+      <p class="hero-copy">Chaque partie fait avancer quelque chose : ton niveau, tes défis, ton clan ou ton rang saisonnier. Pas de progression vide, seulement des objectifs liés à ta façon de jouer.</p>
+      <div class="season-pills" id="season-meta">
+        <span class="pill">Chargement de la saison...</span>
+      </div>
+    </div>
+    <div class="level-card">
+      <div class="level-top">
+        <div><div class="level-label">Niveau global</div><div class="level-number" id="level">1</div></div>
+        <div class="level-xp" id="xp-percent">0%</div>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0"></div></div>
+      <div class="level-foot"><span id="xp-copy">0 / 90 XP</span><span id="next-theme">Prochain thème</span></div>
+    </div>
+  </section>
+
+  <div id="login-notice" class="notice" style="display:none;margin-bottom:18px">Connecte-toi pour progresser, récupérer les récompenses et équiper tes thèmes.</div>
+
+  <section class="summary-grid reveal" id="summary">
+    <div class="summary-card" style="--accent:#ffd60a"><div class="summary-icon">🎯</div><div class="summary-value" id="summary-completed">0/0</div><div class="summary-label">Quêtes terminées</div></div>
+    <div class="summary-card" style="--accent:#30d158"><div class="summary-icon">🎁</div><div class="summary-value" id="summary-rewards">0</div><div class="summary-label">Récompenses disponibles</div></div>
+    <div class="summary-card" style="--accent:#85ebff"><div class="summary-icon">🏆</div><div class="summary-value" id="summary-points">0</div><div class="summary-label">Points de saison</div></div>
+    <div class="summary-card" style="--accent:#bf5af2"><div class="summary-icon">📈</div><div class="summary-value" id="summary-wins">0</div><div class="summary-label">Victoires cette saison</div></div>
+  </section>
+
+  <div class="content-grid">
+    <div>
+      <section class="panel reveal" id="quests">
+        <div class="panel-head">
+          <div><div class="panel-kicker">Contrats de l’arène</div><h2 class="panel-title">Quêtes actives</h2></div>
+          <div class="panel-note" id="quest-countdown">Actualisation dans --:--:--</div>
+        </div>
+        <div class="quest-tabs">
+          <button class="quest-tab active" data-period="daily" onclick="setQuestPeriod('daily')">Aujourd’hui</button>
+          <button class="quest-tab" data-period="weekly" onclick="setQuestPeriod('weekly')">Cette semaine</button>
+        </div>
+        <div class="quest-list" id="quest-list">
+          <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+        </div>
+      </section>
+
+      <section class="panel reveal" id="themes-panel">
+        <div class="panel-head">
+          <div><div class="panel-kicker">Personnalisation</div><h2 class="panel-title">Arsenal visuel</h2></div>
+          <div class="panel-note">Les thèmes débloqués s’appliquent à tes prochaines parties.</div>
+        </div>
+        <div class="themes" id="themes"></div>
+      </section>
+    </div>
+
+    <aside class="side-column">
+      <section class="panel reveal">
+        <div class="panel-head"><div><div class="panel-kicker">Top joueurs</div><h2 class="panel-title">Saison</h2></div></div>
+        <div class="ranking" id="ranking"><div class="skeleton"></div><div class="skeleton"></div></div>
+      </section>
+      <section class="panel reveal">
+        <div class="panel-head"><div><div class="panel-kicker">Collection</div><h2 class="panel-title">Succès</h2></div></div>
+        <div class="achievements" id="achievements"></div>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<nav class="mobile-nav">
+  <a href="/"><b>⚔️</b>Jouer</a>
+  <a class="active" href="/progression"><b>🎯</b>Quêtes</a>
+  <a href="/clan"><b>🛡️</b>Clan</a>
+  <a href="/profil"><b>👤</b>Profil</a>
+</nav>
+
+<div class="toast" id="toast"><div class="toast-icon" id="toast-icon">🎁</div><div><strong id="toast-title">Récompense obtenue</strong><span id="toast-copy"></span></div></div>
+
+<script>
+const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+const rarityMeta = {
+  common: { label: 'Commun', color: '#85ebff' },
+  rare: { label: 'Rare', color: '#5e8cff' },
+  epic: { label: 'Épique', color: '#bf5af2' },
+  legendary: { label: 'Légendaire', color: '#ffd60a' },
+};
+let progression = null;
+let seasonData = null;
+let activePeriod = 'daily';
+let toastTimer = null;
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+}
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'Content-Type':'application/json', 'x-session-token':token, ...(options.headers || {}) },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Erreur serveur.');
+  return data;
+}
+function timeLeft(ts) {
+  const ms = Math.max(0, Number(ts || 0) - Date.now());
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor(ms % 3600000 / 60000);
+  const seconds = Math.floor(ms % 60000 / 1000);
+  return `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+function showToast(title, copy, icon = '🎁') {
+  const toast = document.getElementById('toast');
+  document.getElementById('toast-title').textContent = title;
+  document.getElementById('toast-copy').textContent = copy;
+  document.getElementById('toast-icon').textContent = icon;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
+}
+function launchConfetti() {
+  const colors = ['#ff2d55','#ffd60a','#85ebff','#30d158','#bf5af2'];
+  for (let i = 0; i < 34; i++) {
+    const piece = document.createElement('i');
+    piece.className = 'confetti';
+    piece.style.left = `${35 + Math.random() * 30}vw`;
+    piece.style.top = '-20px';
+    piece.style.background = colors[i % colors.length];
+    piece.style.setProperty('--x', `${-180 + Math.random() * 360}px`);
+    piece.style.animationDelay = `${Math.random() * .22}s`;
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 1600);
+  }
+}
+function setQuestPeriod(period) {
+  activePeriod = period;
+  document.querySelectorAll('.quest-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.period === period));
+  renderQuests();
+}
+function renderQuests() {
+  const root = document.getElementById('quest-list');
+  if (!progression) return;
+  const quests = progression.challenges.filter(item => item.period === activePeriod);
+  root.innerHTML = quests.map((item, index) => {
+    const rarity = rarityMeta[item.rarity] || rarityMeta.common;
+    const pct = Math.min(100, Math.round(Number(item.progress || 0) / Math.max(1, Number(item.target || 1)) * 100));
+    const state = item.claimed ? 'claimed' : item.completed ? 'completed' : '';
+    const button = item.claimed ? 'Récupérée' : item.completed ? 'Récupérer' : `${pct}%`;
+    return `<article class="quest ${state}" style="--quest:${rarity.color};animation-delay:${index * 55}ms">
+      <div class="quest-icon">${esc(item.icon || '🎯')}</div>
+      <div>
+        <div class="quest-title-row"><strong class="quest-title">${esc(item.label)}</strong><span class="rarity">${rarity.label}</span></div>
+        <div class="quest-desc">${esc(item.description || '')}</div>
+        <div class="quest-track"><div class="quest-fill" style="width:${pct}%"></div></div>
+        <div class="quest-meta"><span>${Number(item.progress || 0)} / ${Number(item.target || 0)}</span><span class="quest-reward">+${item.coins} coins · +${item.xp} XP</span></div>
+      </div>
+      <div class="quest-action"><button class="claim-btn ${item.completed && !item.claimed ? 'ready' : ''}" onclick="claimQuest('${item.key}')" ${!item.completed || item.claimed ? 'disabled' : ''}>${button}</button></div>
+    </article>`;
+  }).join('') || '<div class="empty">Aucune quête active.</div>';
+  updateCountdown();
+}
+function renderThemes() {
+  const root = document.getElementById('themes');
+  root.innerHTML = progression.themes.map(theme => {
+    const active = theme.key === progression.equippedBoardTheme;
+    return `<article class="theme-card ${theme.unlocked ? '' : 'locked'} ${active ? 'active' : ''}" style="--c1:${theme.colors[0]};--c2:${theme.colors[1]};--c3:${theme.colors[2]}" onclick="equipTheme('${theme.key}',${theme.unlocked})">
+      ${active ? '<span class="active-mark">✓</span>' : ''}
+      <div class="theme-preview"></div>
+      <div class="theme-info"><div><div class="theme-name">${esc(theme.label)}</div><div class="theme-state">${theme.unlocked ? active ? 'Équipé' : 'Appuyer pour équiper' : `Niveau ${theme.level} requis`}</div></div><span>${theme.unlocked ? '🎨' : '🔒'}</span></div>
+    </article>`;
+  }).join('');
+}
+function renderAchievements() {
+  const stats = progression.season?.stats || {};
+  const achievements = [
+    ['🎮','Premiers pas','Terminer une partie',Number(stats.games || 0) >= 1],
+    ['⚔️','Combattant','Terminer 10 parties cette saison',Number(stats.games || 0) >= 10],
+    ['👑','Challenger','Gagner 5 parties cette saison',Number(stats.wins || 0) >= 5],
+    ['🎨','Collectionneur','Atteindre le niveau 5',progression.level >= 5],
+    ['💎','Vétéran','Atteindre le niveau 10',progression.level >= 10],
+  ];
+  document.getElementById('achievements').innerHTML = achievements.map(([icon,name,copy,done]) => `<div class="achievement ${done ? 'done' : ''}"><div class="achievement-icon">${done ? '✓' : icon}</div><div><strong>${esc(name)}</strong><span>${esc(copy)}</span></div></div>`).join('');
+}
+function renderSummary() {
+  const summary = progression.challengeSummary || {};
+  const stats = progression.season?.stats || {};
+  document.getElementById('summary-completed').textContent = `${summary.completed || 0}/${summary.total || 0}`;
+  document.getElementById('summary-rewards').textContent = Number(summary.availableRewards || 0);
+  document.getElementById('summary-points').textContent = Number(stats.points || 0);
+  document.getElementById('summary-wins').textContent = Number(stats.wins || 0);
+}
+function renderPlayer() {
+  if (!progression) return;
+  const pct = Math.min(100, Math.round(Number(progression.xpCurrent || 0) / Math.max(1, Number(progression.xpNext || 1)) * 100));
+  document.getElementById('level').textContent = progression.level;
+  document.getElementById('xp-percent').textContent = `${pct}%`;
+  document.getElementById('xp-copy').textContent = `${progression.xpCurrent} / ${progression.xpNext} XP`;
+  requestAnimationFrame(() => document.getElementById('xp-fill').style.width = `${pct}%`);
+  const nextTheme = progression.themes.find(theme => !theme.unlocked);
+  document.getElementById('next-theme').textContent = nextTheme ? `${nextTheme.label} · niv. ${nextTheme.level}` : 'Tous les thèmes débloqués';
+  localStorage.setItem('p4_board_theme', progression.equippedBoardTheme || 'classic');
+  renderSummary();
+  renderQuests();
+  renderThemes();
+  renderAchievements();
+}
+function renderSeason() {
+  const season = seasonData?.season || {};
+  document.getElementById('season-name').textContent = season.name || 'Saison en cours';
+  document.getElementById('season-meta').innerHTML = `
+    <span class="pill">📅 <strong>${new Date(season.starts_at).toLocaleDateString('fr-FR')}</strong> au <strong>${new Date(season.ends_at).toLocaleDateString('fr-FR')}</strong></span>
+    <span class="pill">🏆 Victoire <strong>3 pts</strong></span>
+    <span class="pill">🤝 Nul <strong>1 pt</strong></span>`;
+  const rows = (seasonData?.leaderboard || []).slice(0, 10);
+  document.getElementById('ranking').innerHTML = rows.map((row,index) => {
+    const avatar = row.avatar ? `<img src="${esc(row.avatar)}" alt="">` : esc(String(row.pseudo || '?')[0]);
+    return `<div class="rank-row"><span class="rank-position">#${index + 1}</span><span class="rank-avatar">${avatar}</span><div><div class="rank-name">${esc(row.pseudo)}</div><div class="rank-sub">${Number(row.wins || 0)} victoires · pic ${Number(row.peak_elo || row.elo || 0)} ELO</div></div><span class="rank-points">${Number(row.points || 0)} pts</span></div>`;
+  }).join('') || '<div class="empty">La saison attend sa première partie.</div>';
+}
+async function claimQuest(key) {
+  try {
+    const data = await api(`/api/progression/challenges/${encodeURIComponent(key)}/claim`, { method:'POST', body:'{}' });
+    progression = data.progression;
+    renderPlayer();
+    if (data.player) localStorage.setItem('player', JSON.stringify(data.player));
+    launchConfetti();
+    showToast('Quête validée', `+${data.reward.coins} coins et +${data.reward.xp} XP`, '🏆');
+  } catch (error) {
+    showToast('Impossible', error.message, '⚠️');
+  }
+}
+async function equipTheme(key, unlocked) {
+  if (!unlocked) return showToast('Thème verrouillé', 'Continue de gagner de l’XP pour le débloquer.', '🔒');
+  try {
+    const data = await api('/api/progression/theme', { method:'POST', body:JSON.stringify({ theme:key }) });
+    progression = data.progression;
+    localStorage.setItem('p4_board_theme', key);
+    renderThemes();
+    showToast('Thème équipé', `${data.theme.label} sera utilisé lors de tes prochaines parties.`, '🎨');
+  } catch (error) {
+    showToast('Impossible', error.message, '⚠️');
+  }
+}
+function updateCountdown() {
+  const quest = progression?.challenges?.find(item => item.period === activePeriod);
+  const el = document.getElementById('quest-countdown');
+  if (el && quest) el.textContent = `Actualisation dans ${timeLeft(quest.expiresAt)}`;
+}
+function initReveal() {
+  const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  }), { threshold:.08 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+}
+async function load() {
+  seasonData = await api('/api/seasons/current');
+  renderSeason();
+  if (!token) {
+    document.getElementById('login-notice').style.display = 'block';
+    document.getElementById('quest-list').innerHTML = '<div class="empty">Connecte-toi pour découvrir tes contrats personnalisés.</div>';
+    return;
+  }
+  const data = await api('/api/progression/me');
+  progression = data.progression;
+  renderPlayer();
+}
+initReveal();
+setInterval(updateCountdown, 1000);
+load().catch(error => {
+  const notice = document.getElementById('login-notice');
+  notice.style.display = 'block';
+  notice.textContent = error.message;
+});
+</script>
+<script src="/presence.js"></script>
+<script src="/theme.js"></script>
+</body>
+</html>

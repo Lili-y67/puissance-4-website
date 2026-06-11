@@ -130,6 +130,7 @@ img,canvas,svg{max-width:100%}
 .spectator-chip.anonymous{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.08);color:var(--muted)}
 .spectator-dot{width:7px;height:7px;border-radius:50%;background:#30d158;box-shadow:0 0 10px rgba(48,209,88,.5);flex:0 0 auto}
 .spectator-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.live-social{margin-top:12px;display:grid;gap:10px}.social-row{display:flex;gap:8px;flex-wrap:wrap}.social-btn{flex:1;min-width:88px;padding:9px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--text);font:800 13px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.social-btn:hover{border-color:rgba(133,235,255,.4);background:rgba(133,235,255,.08)}.reaction-pop{position:fixed;z-index:80;font-size:38px;pointer-events:none;animation:reactionFly 1.3s ease-out forwards}@keyframes reactionFly{from{opacity:0;transform:translateY(18px) scale(.7)}20%{opacity:1}to{opacity:0;transform:translateY(-100px) scale(1.25)}}
 .analysis-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:2px;text-transform:uppercase}
 .analysis-copy{font-size:13px;color:var(--muted);line-height:1.5}
 .eval-wrap{display:flex;flex-direction:column;gap:10px}
@@ -282,6 +283,15 @@ img,canvas,svg{max-width:100%}
               <span class="spectator-chip anonymous"><span class="spectator-dot"></span><span class="spectator-name">Aucun spectateur</span></span>
             </div>
           </div>
+          <div class="live-social">
+            <div class="social-row" id="prediction-row"></div>
+            <div class="social-row">
+              <button class="social-btn" onclick="sendReaction('fire')">🔥 <span id="react-fire">0</span></button>
+              <button class="social-btn" onclick="sendReaction('wow')">😮 <span id="react-wow">0</span></button>
+              <button class="social-btn" onclick="sendReaction('clap')">👏 <span id="react-clap">0</span></button>
+              <button class="social-btn" onclick="sendReaction('heart')">❤️ <span id="react-heart">0</span></button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -355,6 +365,7 @@ const SHAPE_CLIPS = {
 };
 
 let socket = null;
+const sessionToken = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
 let prevIds = new Set();
 let selectedGameId = null;
 let liveAnalysisWorker = null;
@@ -1253,6 +1264,7 @@ function renderSpec(game) {
   `;
 
   renderSpectators(game.spectators || []);
+  renderLiveSocial(game);
   requestLiveWorkerAnalysis(game);
 }
 
@@ -1272,6 +1284,51 @@ function renderSpectators(spectators = []) {
       <span class="spectator-name">${escapeHtml(viewer.pseudo || 'Anonyme')}</span>
     </span>
   `).join('');
+}
+
+function renderLiveSocial(game) {
+  const predictions = game.predictions || {};
+  const p1 = game.players?.[1]?.pseudo || 'Joueur 1';
+  const p2 = game.players?.[2]?.pseudo || 'Joueur 2';
+  const row = document.getElementById('prediction-row');
+  if (row) row.innerHTML = `
+    <button class="social-btn" onclick="predictWinner(1)">Pronostic ${escapeHtml(p1)} · ${Number(predictions[1] || 0)}</button>
+    <button class="social-btn" onclick="predictWinner(2)">Pronostic ${escapeHtml(p2)} · ${Number(predictions[2] || 0)}</button>`;
+  const reactions = game.reactions || {};
+  ['fire','wow','clap','heart'].forEach(key => {
+    const el = document.getElementById(`react-${key}`);
+    if (el) el.textContent = Number(reactions[key] || 0);
+  });
+}
+
+async function predictWinner(side) {
+  if (!selectedGameId) return;
+  if (!sessionToken) return alert('Connecte-toi pour pronostiquer.');
+  const res = await fetch(`/api/live/${selectedGameId}/predict`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-session-token': sessionToken },
+    body: JSON.stringify({ side }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return alert(data.error || 'Pronostic impossible.');
+  refresh();
+}
+
+function sendReaction(reaction) {
+  if (!selectedGameId || !socket?.connected) return;
+  socket.emit('live_reaction', { gameId: Number(selectedGameId), reaction });
+}
+
+function showReaction(reaction) {
+  const emoji = { fire: '🔥', wow: '😮', clap: '👏', heart: '❤️' }[reaction];
+  if (!emoji) return;
+  const el = document.createElement('div');
+  el.className = 'reaction-pop';
+  el.textContent = emoji;
+  el.style.left = `${20 + Math.random() * 60}vw`;
+  el.style.top = `${55 + Math.random() * 20}vh`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
 }
 
 async function refresh() {
@@ -1315,6 +1372,15 @@ try {
   window._p4SharedSocket = socket;
   socket.emit('join_live');
   socket.on('live_update', () => refresh());
+  socket.on('live_reaction', payload => {
+    if (Number(payload?.gameId) !== Number(selectedGameId)) return;
+    showReaction(payload.reaction);
+    const counts = payload.counts || {};
+    ['fire','wow','clap','heart'].forEach(key => {
+      const el = document.getElementById(`react-${key}`);
+      if (el) el.textContent = Number(counts[key] || 0);
+    });
+  });
   socket.on('connect', () => {
     socket.emit('join_live');
     syncLiveSpectatorRoom();

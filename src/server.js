@@ -27,6 +27,7 @@ const apiAuditRecent = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
+const { createProgression }    = require('./progression');
 
 const MAIN_DB_PATH = path.join(__dirname, '../data/p4.db');
 
@@ -52,6 +53,7 @@ io.engine.on('connection', connection => {
 
 const mm = new Matchmaking();
 const gm = new GameManager();
+const progression = createProgression({ db, pQ, cQ });
 const security = createSecurity({
   dataDir: path.join(__dirname, '../data'),
   onEvent: event => {
@@ -61,6 +63,7 @@ const security = createSecurity({
 const tournamentQueues = new Map();
 const duelChallenges = new Map();
 const gameRematchRequests = new Map();
+const liveReactions = new Map();
 const anonymousSessions = new Map();
 const anonymousPlayers = new Map();
 const botApiQueue = [];
@@ -128,6 +131,7 @@ function emitGameOver(result) {
   io.to('game:' + result.gameId).emit('game_over', result);
   rememberFinishedGameSockets(result);
   emitLiveUpdate();
+  setTimeout(() => liveReactions.delete(Number(result.gameId)), 30_000).unref?.();
   return result;
 }
 
@@ -700,12 +704,30 @@ gm._onAfkEnd = (result) => {
   emitGameOver(result);
   console.log(`[AFK] Partie ${result.gameId} terminee : winner side ${result.winner}`);
 };
-gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw }) => {
+gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw, reason, payload }) => {
   try {
     applyTournamentResult(gameId, player1Id, player2Id, winnerId, isDraw);
     finalizeExpiredTournaments();
   } catch (e) {
     console.error('[TOURNOI] result hook:', e.message);
+  }
+  try {
+    const game = gQ.getById.get(gameId);
+    progression.processGame({
+      gameId,
+      player1Id,
+      player2Id,
+      winnerId,
+      isDraw,
+      moveCount: Number(game?.move_count || 0),
+      duration: Number(payload?.duration || game?.duration || 0),
+      gameType: String(payload?.gameType || game?.game_type || 'ranked'),
+      isSuspect: !!payload?.isSuspect,
+      eloChanges: payload?.eloChanges || {},
+      reason,
+    });
+  } catch (e) {
+    console.error('[PROGRESSION] result hook:', e.message);
   }
   syncPlayerDiscordRankRole(player1Id).catch(() => {});
   syncPlayerDiscordRankRole(player2Id).catch(() => {});
@@ -5063,6 +5085,8 @@ app.get('/bots',        (_, res) => res.sendFile(path.join(__dirname, 'public/pl
 app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
 app.get('/analyse',     (_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
 app.get('/analyse.html',(_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
+app.get('/progression',  (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
+app.get('/progression.html', (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
 app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
 app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
@@ -5861,6 +5885,69 @@ app.post('/api/bot-host/:botId/action', (req, res) => {
   }
 });
 
+app.get('/api/progression/me', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  res.json({ ok: true, progression: progression.getPlayerData(playerId) });
+});
+
+app.post('/api/progression/challenges/:key/claim', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  try {
+    const reward = progression.claimChallenge(playerId, String(req.params.key || ''));
+    res.json({ ok: true, reward, progression: progression.getPlayerData(playerId), player: sanitize(pQ.getById.get(playerId)) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Recompense indisponible.' });
+  }
+});
+
+app.post('/api/progression/theme', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  try {
+    const theme = progression.equipTheme(playerId, String(req.body?.theme || ''));
+    res.json({ ok: true, theme, progression: progression.getPlayerData(playerId) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Theme indisponible.' });
+  }
+});
+
+app.get('/api/seasons/current', (_, res) => {
+  res.json(progression.seasonData());
+});
+
+app.get('/api/clans/:id/missions', (req, res) => {
+  const clanId = Number(req.params.id || 0);
+  if (!clanId || !cQ.getById.get(clanId)) return res.status(404).json({ error: 'Clan introuvable.' });
+  res.json({
+    missions: progression.getClanMissions(clanId),
+    war: progression.getClanWar(clanId),
+  });
+});
+
+app.post('/api/live/:id/predict', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  const gameId = Number(req.params.id || 0);
+  const game = gm.games.get(gameId);
+  if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour pronostiquer.' });
+  if (!game || game.status !== 'active') return res.status(404).json({ error: 'Partie indisponible.' });
+  if ([Number(game.players[1]?.id), Number(game.players[2]?.id)].includes(Number(playerId))) {
+    return res.status(400).json({ error: 'Les joueurs ne peuvent pas pronostiquer leur propre partie.' });
+  }
+  try {
+    progression.setPrediction(gameId, playerId, Number(req.body?.side));
+    emitLiveUpdate();
+    res.json({ ok: true, predictions: progression.predictionStats(gameId) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Pronostic impossible.' });
+  }
+});
+
 app.get('/api/live', (_, res) => {
   const games = [];
   for (const [id, state] of gm.games) {
@@ -5886,6 +5973,8 @@ app.get('/api/live', (_, res) => {
       botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
       winCells: Array.isArray(state.winCells) ? state.winCells : [],
       spectators: getLiveSpectators(id),
+      predictions: progression.predictionStats(id),
+      reactions: liveReactions.get(Number(id)) || {},
     };
     if (state.status === 'finished') {
       entry.result   = state.result   || null;  // { winner, eloChanges }
@@ -8369,6 +8458,25 @@ io.on('connection', socket => {
     const hadGame = socket.liveSpectateGameId;
     leaveLiveSpectate(socket);
     if (hadGame) emitLiveUpdate();
+  });
+
+  socket.on('live_reaction', ({ gameId, reaction } = {}) => {
+    const id = Number(gameId || socket.liveSpectateGameId || 0);
+    const allowed = ['fire', 'wow', 'clap', 'heart'];
+    const key = String(reaction || '').toLowerCase();
+    if (!id || !gm.games.has(id) || !allowed.includes(key)) return;
+    if (Date.now() - Number(socket.lastLiveReactionAt || 0) < 1200) return;
+    socket.lastLiveReactionAt = Date.now();
+    const counts = { ...(liveReactions.get(id) || {}) };
+    counts[key] = Number(counts[key] || 0) + 1;
+    liveReactions.set(id, counts);
+    io.to(`live:spectate:${id}`).emit('live_reaction', {
+      gameId: id,
+      reaction: key,
+      counts,
+      pseudo: socket.playerData?.pseudo || 'Anonyme',
+    });
+    emitLiveUpdate();
   });
 
   socket.on('visitor_presence', ({ visitorId } = {}) => {
