@@ -156,6 +156,12 @@
     return pageLabels[path] || ['Explore Puissance 4', document.title || 'Puissance 4 Arena'];
   }
 
+  function isOwnProfile(player) {
+    if (normalizedPath() !== '/profil' || !player?.id) return false;
+    const viewedId = new URLSearchParams(location.search).get('id');
+    return !viewedId || String(viewedId) === String(player.id);
+  }
+
   function sessionStart() {
     try {
       let value = Number(sessionStorage.getItem(SESSION_KEY));
@@ -175,11 +181,10 @@
     const details = customContext.details || fallbackDetails;
     const pageState = customContext.state || fallbackState;
     const identity = player?.pseudo || '';
+    const showIdentity = !customContext.hideIdentity && isOwnProfile(player);
     return {
       details,
-      state: customContext.hideIdentity
-        ? pageState
-        : identity ? `${identity} • ${pageState}` : pageState,
+      state: showIdentity && identity ? `${identity} • ${pageState}` : pageState,
       largeImageText: 'Puissance 4 Arena',
       smallImage: player?.id ? absoluteAsset(player.avatar) : anonymousAvatar(),
       smallImageText: player?.pseudo ? `Joue avec ${player.pseudo}` : 'Visiteur anonyme',

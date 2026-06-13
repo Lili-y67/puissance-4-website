@@ -8,6 +8,7 @@ const LARGE_IMAGE = 'site-logo';
 const BASE_URL = 'https://puissance-4-website-production.up.railway.app';
 const STALE_AFTER_MS = 45_000;
 const MIN_DISCORD_UPDATE_MS = 5_000;
+const REASSERT_ACTIVITY_MS = 30_000;
 const MAX_BODY_BYTES = 32 * 1024;
 
 let rpc = null;
@@ -147,11 +148,11 @@ function normalizeActivity(input = {}) {
   return activity;
 }
 
-async function flushDiscordActivity() {
+async function flushDiscordActivity({ force = false } = {}) {
   pendingPublishTimer = null;
   if (!rpcReady || !rpc || !latestActivity) return false;
   const signature = JSON.stringify(latestActivity);
-  if (signature === lastPublishedSignature) return true;
+  if (!force && signature === lastPublishedSignature) return true;
   try {
     await rpc.setActivity(latestActivity);
     lastPublishedSignature = signature;
@@ -176,15 +177,15 @@ async function flushDiscordActivity() {
   }
 }
 
-function queueDiscordActivity({ immediate = false } = {}) {
+function queueDiscordActivity({ immediate = false, force = false } = {}) {
   if (!rpcReady || !rpc || !latestActivity) return false;
   const signature = JSON.stringify(latestActivity);
-  if (signature === lastPublishedSignature) return true;
+  if (!force && signature === lastPublishedSignature) return true;
   clearTimeout(pendingPublishTimer);
   const elapsed = Date.now() - lastDiscordUpdateAt;
   const delay = immediate ? 0 : Math.max(0, MIN_DISCORD_UPDATE_MS - elapsed);
   pendingPublishTimer = setTimeout(() => {
-    flushDiscordActivity().catch(error => {
+    flushDiscordActivity({ force }).catch(error => {
       console.warn('[RPC] Publication impossible:', error?.message || error);
     });
   }, delay);
@@ -195,7 +196,8 @@ function publishActivity(input) {
   latestActivity = normalizeActivity(input);
   lastSiteActivityAt = Date.now();
   scheduleClear();
-  return queueDiscordActivity();
+  const shouldReassert = Date.now() - lastDiscordUpdateAt >= REASSERT_ACTIVITY_MS;
+  return queueDiscordActivity({ force: shouldReassert });
 }
 
 function scheduleClear() {
@@ -224,7 +226,7 @@ function connectRpc() {
     rpcReady = true;
     console.log(`[RPC] Connecté à Discord avec l'application ${CLIENT_ID}.`);
     if (!latestActivity) latestActivity = defaultActivity();
-    queueDiscordActivity({ immediate: true });
+    queueDiscordActivity({ immediate: true, force: true });
   });
   client.on('disconnected', () => {
     rpcReady = false;
@@ -258,6 +260,7 @@ const server = http.createServer((req, res) => {
       buttons: (latestActivity?.buttons || []).map(button => button.label),
       source: lastSiteActivityAt ? 'site' : 'fallback',
       rateLimitMs: MIN_DISCORD_UPDATE_MS,
+      reassertMs: REASSERT_ACTIVITY_MS,
       discordUpdates: discordUpdateCount,
     }, origin);
   }

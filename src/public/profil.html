@@ -2233,7 +2233,6 @@ async function checkDiscordRpcStatus(manual = false) {
     const response = await fetch('http://127.0.0.1:6464/status', {
       cache: 'no-store',
       mode: 'cors',
-      targetAddressSpace: 'local',
       signal: AbortSignal.timeout(10000),
     });
     if (!response.ok) throw new Error(`RPC HTTP ${response.status}`);
