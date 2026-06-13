@@ -118,6 +118,15 @@
     });
   }
 
+  function loadDiscordPresence() {
+    if (document.querySelector('script[data-p4-rpc-presence]')) return;
+    const script = document.createElement('script');
+    script.src = '/rpc-presence.js?v=2';
+    script.async = true;
+    script.dataset.p4RpcPresence = '1';
+    document.head.appendChild(script);
+  }
+
   function mountButton() {
     if (document.getElementById('p4-theme-toggle')) return;
     const btn = document.createElement('button');
@@ -241,6 +250,7 @@
   applyTheme(root.dataset.theme || getSavedTheme());
   ensureThemeStylesheet();
   registerPwa();
+  loadDiscordPresence();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

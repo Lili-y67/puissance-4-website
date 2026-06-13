@@ -38,6 +38,21 @@ npm run dev
 # Ouvrir un 2e onglet pour simuler un 2e joueur
 ```
 
+## Discord Rich Presence
+
+Le site peut publier la page active dans Discord grâce à un compagnon local :
+
+```bash
+npm install
+npm run rpc
+```
+
+Le domaine public et l'application Discord sont deja configures dans le
+compagnon. Sous Windows, `start-discord-rpc.cmd` permet de le lancer en
+double-cliquant dessus.
+Le compagnon doit rester ouvert avec Discord Desktop. Un navigateur mobile ou
+une PWA mobile ne peut pas piloter directement le Rich Presence Discord.
+
 ## Déploiement sur Railway (gratuit)
 
 1. Push le projet sur GitHub

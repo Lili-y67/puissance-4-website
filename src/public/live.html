@@ -214,6 +214,8 @@ img,canvas,svg{max-width:100%}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=wukong-cursor-2">
+<link rel="stylesheet" href="/board-skins.css?v=2">
+<script src="/board-skins.js?v=2"></script>
 </head>
 <body>
 <div class="bg-grid"></div>
@@ -382,6 +384,22 @@ let liveSoundEnabled = localStorage.getItem('p4_live_sound') !== '0';
 let lastSpecGameId = null;
 let liveVariantCount = Math.max(1, Math.min(3, Number(localStorage.getItem('p4_live_variant_count') || 2)));
 let lastVariantGame = null;
+
+function updateLiveDiscordPresence(game = null, activeCount = null) {
+  const context = game ? {
+    details: `Regarde ${game.players?.[1]?.pseudo || 'Joueur 1'} contre ${game.players?.[2]?.pseudo || 'Joueur 2'}`,
+    state: game.status === 'finished'
+      ? `${game.moves || 0} coups • Partie terminée`
+      : `${game.moves || 0} coups • Tour de ${game.players?.[game.current]?.pseudo || 'un joueur'} • ${(game.spectators || []).length} spectateur${(game.spectators || []).length > 1 ? 's' : ''}`,
+    url: `${location.origin}/spec/${game.id}`,
+  } : {
+    details: 'Parcourt les parties en direct',
+    state: `${Number(activeCount || 0)} partie${Number(activeCount || 0) > 1 ? 's' : ''} active${Number(activeCount || 0) > 1 ? 's' : ''}`,
+    url: `${location.origin}/live`,
+  };
+  window.__p4RpcContext = context;
+  window.P4DiscordPresence?.setContext(context);
+}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -790,6 +808,7 @@ function backToLive() {
   document.getElementById('list-view').classList.add('show');
   document.getElementById('headline-title').textContent = 'Parties en direct';
   document.getElementById('headline-pill').textContent = 'Cliquer pour spectate';
+  updateLiveDiscordPresence(null, Number(document.getElementById('count')?.textContent || 0));
 }
 
 function syncLiveSpectatorRoom() {
@@ -1031,49 +1050,10 @@ function tokenStyleKey(player = {}) {
   ].join('|');
 }
 
-const BOARD_THEMES = [
-  { name: 'flamme', hues: [8, 32, 48], sat: 90, light: 58 },
-  { name: 'ocean', hues: [196, 214, 178], sat: 84, light: 58 },
-  { name: 'terre', hues: [138, 92, 38], sat: 68, light: 52 },
-  { name: 'cristal', hues: [188, 226, 272], sat: 82, light: 64 },
-  { name: 'orage', hues: [226, 252, 198], sat: 74, light: 58 },
-  { name: 'aurore', hues: [318, 266, 198], sat: 86, light: 61 },
-  { name: 'poison', hues: [126, 286, 82], sat: 82, light: 55 },
-  { name: 'solaire', hues: [42, 24, 350], sat: 88, light: 59 },
-];
-
-function hashSeed(seed) {
-  const str = String(seed || 'live-board');
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-function hslColor(h, s = 82, l = 58) {
-  return `hsl(${Math.round(h % 360)} ${s}% ${l}%)`;
-}
-
-function hslSoft(h, s = 88, l = 60, a = .26) {
-  return `hsl(${Math.round(h % 360)} ${s}% ${l}% / ${a})`;
-}
-
 function applyBoardPalette(el, seed = '') {
   if (!el) return;
-  const hash = hashSeed(seed);
-  const theme = BOARD_THEMES[hash % BOARD_THEMES.length];
-  const drift = ((hash >>> 8) % 17) - 8;
-  const hues = theme.hues.map((h, i) => (h + drift + i * ((hash >>> (12 + i * 3)) % 7 - 3) + 360) % 360);
-  el.style.setProperty('--board-theme', theme.name);
-  el.style.setProperty('--board-a', hslColor(hues[0], theme.sat, theme.light));
-  el.style.setProperty('--board-b', hslColor(hues[1], theme.sat, theme.light));
-  el.style.setProperty('--board-c', hslColor(hues[2], theme.sat, Math.min(68, theme.light + 4)));
-  el.style.setProperty('--board-a-soft', hslSoft(hues[0], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .32));
-  el.style.setProperty('--board-b-soft', hslSoft(hues[1], Math.min(92, theme.sat + 6), Math.min(66, theme.light + 4), .30));
-  el.style.setProperty('--board-c-soft', hslSoft(hues[2], Math.min(92, theme.sat + 6), Math.min(68, theme.light + 6), .18));
-  el.style.setProperty('--board-spin', `${190 + (hash % 80)}deg`);
+  const skin = window.P4BoardSkins?.pick?.(seed) || 'classic';
+  window.P4BoardSkins?.applyElement?.(el, skin);
 }
 
 function renderBoardInto(board, game, large = true) {
@@ -1127,6 +1107,7 @@ function renderList(games) {
   document.getElementById('count').textContent = activeCount;
   document.getElementById('human-live-count').textContent = `${humanGames.filter(g => g.status === 'active').length} active`;
   document.getElementById('bot-live-count').textContent = `${botGames.filter(g => g.status === 'active').length} active`;
+  if (!selectedGameId) updateLiveDiscordPresence(null, activeCount);
   if (!games.length) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎮</div><div class="empty-title">Aucune partie en cours</div><div>Reviens dans quelques instants pour spectate une game.</div></div>`;
     botContainer.innerHTML = '';
@@ -1266,6 +1247,7 @@ function renderSpec(game) {
   renderSpectators(game.spectators || []);
   renderLiveSocial(game);
   requestLiveWorkerAnalysis(game);
+  updateLiveDiscordPresence(game);
 }
 
 function renderSpectators(spectators = []) {

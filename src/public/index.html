@@ -4880,6 +4880,13 @@ async function connectAndQueue() {
   socket.on('queue_joined', ({ position, reason }) => {
     QueueMusic.start();
     showQueueView(position);
+    const context = {
+      details: 'Recherche un adversaire',
+      state: `Position #${position} dans la file`,
+      url: location.href,
+    };
+    window.__p4RpcContext = context;
+    window.P4DiscordPresence?.setContext(context);
     if (reason === 'anti_rematch') {
       const sub = document.getElementById('queue-sub');
       if (sub) sub.textContent = "↻ Adversaire récent — recherche d'un autre joueur...";
@@ -4890,6 +4897,15 @@ async function connectAndQueue() {
     showQueueVolume(false);
     sessionStorage.setItem('match',  JSON.stringify(data));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
+    const players = Object.values(data.players || {});
+    const opponent = players.find(player => String(player?.id) !== String(myPlayer?.id));
+    const context = {
+      details: opponent?.pseudo ? `Adversaire trouvé : ${opponent.pseudo}` : 'Adversaire trouvé',
+      state: 'La partie va commencer',
+      url: location.href,
+    };
+    window.__p4RpcContext = context;
+    window.P4DiscordPresence?.setContext(context);
     window.location.href = '/game';
   });
   socket.on('connect_error', () => showError('Connexion à la file impossible pour le moment.'));
@@ -4992,6 +5008,13 @@ function handleLeaveQueue() {
   }
   clearInterval(timerInterval);
   timerInterval = null;
+  const context = {
+    details: 'Dans l’arène',
+    state: 'Prêt pour une nouvelle partie',
+    url: location.href,
+  };
+  window.__p4RpcContext = context;
+  window.P4DiscordPresence?.setContext(context);
   const loginView = document.getElementById('view-login');
   const queueView = document.getElementById('view-queue');
   queueView.classList.add('fade-out');
