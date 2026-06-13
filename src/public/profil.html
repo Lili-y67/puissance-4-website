@@ -2190,6 +2190,7 @@ function discordRpcCardHtml() {
         <div class="discord-rpc-actions">
           <a class="discord-rpc-btn primary" href="/downloads/puissance4-discord-rpc.zip" download>Télécharger le RPC</a>
           <button class="discord-rpc-btn primary" type="button" onclick="checkDiscordRpcStatus(true)">Vérifier le RPC</button>
+          <a class="discord-rpc-btn" href="http://127.0.0.1:6464/" target="_blank" rel="noopener">Diagnostic local</a>
           <a class="discord-rpc-btn" href="discord://-/channels/@me">Ouvrir Discord</a>
         </div>
       </div>
@@ -2215,8 +2216,8 @@ async function checkDiscordRpcStatus(manual = false) {
       : 'Le compagnon tourne, mais Discord Desktop doit être ouvert.';
   } catch {
     status.classList.add('offline');
-    status.textContent = 'Compagnon arrêté';
-    description.textContent = 'Lance start-discord-rpc.cmd sur ton PC, puis garde sa fenêtre ouverte.';
+    status.textContent = 'Accès local bloqué';
+    description.innerHTML = 'Autorise <strong>Accès au réseau local</strong> pour ce site dans Chrome, puis clique sur Vérifier le RPC.';
   }
   if (manual) PROFIL_SFX.discord();
 }

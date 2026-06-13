@@ -15,6 +15,18 @@ let lastSignature = '';
 let reconnectTimer = null;
 let clearTimer = null;
 
+function defaultActivity() {
+  return {
+    details: 'Sur Puissance 4',
+    state: 'Explore l’arène',
+    largeImageKey: LARGE_IMAGE,
+    largeImageText: 'Puissance 4 Arena',
+    startTimestamp: new Date(),
+    buttons: [{ label: 'Puissance 4 Site', url: BASE_URL }],
+    instance: false,
+  };
+}
+
 const clean = (value, max = 128) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
 
 function safeUrl(value) {
@@ -54,6 +66,15 @@ function reply(res, status, payload, origin = '') {
     'Content-Type': 'application/json; charset=utf-8',
   });
   res.end(JSON.stringify(payload));
+}
+
+function statusPage(res) {
+  const state = rpcReady ? 'Connecté à Discord' : 'En attente de Discord Desktop';
+  const activity = latestActivity ? 'Activité reçue du site' : 'Aucune activité reçue du site';
+  res.writeHead(200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Puissance 4 RPC</title>
+  <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#090914;color:#eeeef5;font:16px Arial,sans-serif}.card{width:min(560px,calc(100vw - 48px));padding:28px;border:1px solid #5865f2;border-radius:22px;background:#111126}h1{color:#aeb8ff}.line{margin:10px 0;padding:12px;border-radius:12px;background:#ffffff0a}.ok{color:#30d158}.warn{color:#ffd60a}</style>
+  <main class="card"><h1>Puissance 4 Rich Presence</h1><div class="line ${rpcReady ? 'ok' : 'warn'}">${state}</div><div class="line ${latestActivity ? 'ok' : 'warn'}">${activity}</div><p>Dans Discord : Paramètres → Confidentialité de l’activité → active le partage d’activité.</p><p>Si le site ne détecte pas le compagnon, autorise son accès au réseau local dans Chrome.</p></main></html>`);
 }
 
 function normalize(input = {}) {
@@ -123,6 +144,7 @@ function connect() {
   rpc.once('ready', async () => {
     rpcReady = true;
     console.log('[RPC] Connecté à Discord.');
+    if (!latestActivity) latestActivity = defaultActivity();
     if (latestActivity) await rpc.setActivity(latestActivity).catch(() => {});
   });
   rpc.on('disconnected', () => {
@@ -138,6 +160,7 @@ function connect() {
 
 const server = http.createServer((req, res) => {
   const origin = String(req.headers.origin || '');
+  if (req.method === 'GET' && req.url === '/') return statusPage(res);
   if (req.method === 'GET' && req.url === '/status') {
     return reply(res, 200, { ok: true, discord: rpcReady, activity: Boolean(latestActivity) }, origin);
   }
