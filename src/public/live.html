@@ -388,9 +388,8 @@ let lastVariantGame = null;
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
     details: `Regarde ${game.players?.[1]?.pseudo || 'Joueur 1'} contre ${game.players?.[2]?.pseudo || 'Joueur 2'}`,
-    state: game.status === 'finished'
-      ? `${game.moves || 0} coups • Partie terminée`
-      : `${game.moves || 0} coups • Tour de ${game.players?.[game.current]?.pseudo || 'un joueur'} • ${(game.spectators || []).length} spectateur${(game.spectators || []).length > 1 ? 's' : ''}`,
+    state: `${Number.isFinite(Number(game.players?.[1]?.elo)) ? Math.round(Number(game.players[1].elo)) : '—'} ELO • ${Number.isFinite(Number(game.players?.[2]?.elo)) ? Math.round(Number(game.players[2].elo)) : '—'} ELO`,
+    hideIdentity: true,
     url: `${location.origin}/spec/${game.id}`,
   } : {
     details: 'Parcourt les parties en direct',

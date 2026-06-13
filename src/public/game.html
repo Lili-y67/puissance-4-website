@@ -1330,15 +1330,14 @@ function updateGameDiscordPresence(extra = {}) {
   const players = extra.players || lobbyData?.players || {};
   const opponentSide = mySide === 1 ? 2 : 1;
   const opponent = players?.[opponentSide];
-  const occupied = document.querySelectorAll('.cell.p1, .cell.p2').length;
   const activeMode = document.body.dataset.gameMode || 'ranked';
   const mode = iaMode ? 'contre une IA' : activeMode === 'friendly' ? 'en amical' : activeMode === 'tournament' ? 'en tournoi' : 'en ranked';
-  const turnText = gameOver
-    ? (extra.result || 'Partie terminée')
-    : currentTurn === mySide ? 'À son tour' : `Tour de ${opponent?.pseudo || 'son adversaire'}`;
+  const p1Elo = Number.isFinite(Number(players?.[1]?.elo)) ? Math.round(Number(players[1].elo)) : '—';
+  const p2Elo = Number.isFinite(Number(players?.[2]?.elo)) ? Math.round(Number(players[2].elo)) : '—';
   const context = {
     details: opponent?.pseudo ? `Joue ${mode} contre ${opponent.pseudo}` : `Joue ${mode}`,
-    state: `${turnText} • ${Number(extra.moves ?? occupied)} coup${Number(extra.moves ?? occupied) > 1 ? 's' : ''}`,
+    state: `${p1Elo} ELO • ${p2Elo} ELO`,
+    hideIdentity: true,
     url: location.href,
   };
   window.__p4RpcContext = context;

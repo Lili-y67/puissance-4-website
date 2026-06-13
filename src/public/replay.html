@@ -305,14 +305,13 @@ let replayTimeout = null;
 const MIN_THINK = 400;
 const MAX_THINK = 3000;
 
-function updateReplayDiscordPresence(finished = false) {
+function updateReplayDiscordPresence() {
   if (!gameData) return;
-  const winner = gameData.winner_id === null
-    ? 'Match nul'
-    : `Victoire de ${gameData.winner_id === gameData.player1_id ? gameData.p1_pseudo : gameData.p2_pseudo}`;
+  const result = gameData.winner_id === null ? 'Égalité' : 'Victoire';
   const context = {
     details: `Replay de ${gameData.p1_pseudo} contre ${gameData.p2_pseudo}`,
-    state: finished ? `${winner} • ${moves.length} coups` : `Coup ${moveIndex} sur ${moves.length}`,
+    state: `${result} • ${moves.length} coup${moves.length > 1 ? 's' : ''}`,
+    hideIdentity: true,
     url: location.href,
   };
   window.__p4RpcContext = context;

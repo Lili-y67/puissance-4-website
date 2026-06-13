@@ -6,6 +6,7 @@ const PORT = 6464;
 const CLIENT_ID = '1477252548090921060';
 const LARGE_IMAGE = 'site-logo';
 const BASE_URL = 'https://puissance-4-website-production.up.railway.app';
+const LARGE_IMAGE_TEXT = `${BASE_URL}/`;
 const STALE_AFTER_MS = 45_000;
 const MIN_DISCORD_UPDATE_MS = 5_000;
 const REASSERT_ACTIVITY_MS = 30_000;
@@ -26,7 +27,7 @@ function defaultActivity() {
     details: 'Sur Puissance 4',
     state: 'Explore l’arène',
     largeImageKey: LARGE_IMAGE,
-    largeImageText: 'Puissance 4 Arena',
+    largeImageText: LARGE_IMAGE_TEXT,
     startTimestamp: new Date(),
     buttons: [{ label: 'Puissance 4 Site', url: BASE_URL }],
     instance: false,
@@ -114,7 +115,7 @@ function normalize(input = {}) {
     details: clean(input.details) || 'Sur Puissance 4',
     state: dedupeSegments(input.state),
     largeImageKey: LARGE_IMAGE,
-    largeImageText: clean(input.largeImageText) || 'Puissance 4 Arena',
+    largeImageText: clean(input.largeImageText) || LARGE_IMAGE_TEXT,
     startTimestamp: Number(input.startedAt) > 0 ? new Date(Number(input.startedAt)) : undefined,
     buttons: activityButtons(profileUrl),
     instance: false,

@@ -121,7 +121,7 @@
   function loadDiscordPresence() {
     if (document.querySelector('script[data-p4-rpc-presence]')) return;
     const script = document.createElement('script');
-    script.src = '/rpc-presence.js?v=7';
+    script.src = '/rpc-presence.js?v=8';
     script.async = true;
     script.dataset.p4RpcPresence = '1';
     document.head.appendChild(script);

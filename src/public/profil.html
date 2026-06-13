@@ -1439,6 +1439,9 @@ let profileShopInventory = {};
 let profileShopCatalog = {};
 let profileActiveBoosters = {};
 let profileLivePoll = null;
+let profileRpcOnline = false;
+let profileRpcLive = false;
+let profileRpcGames = 0;
 let currentGamesCache = [];
 let currentFollowingCache = [];
 let currentFollowersCache = [];
@@ -2133,9 +2136,13 @@ async function load() {
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
     const freshPlayer = player;
     currentPlayer = freshPlayer;
+    profileRpcOnline = !!freshPlayer.online;
+    profileRpcLive = false;
+    profileRpcGames = totalGames;
     const rpcContext = {
       details: isOwnProfile ? 'Personnalise son profil' : `Consulte le profil de ${freshPlayer.pseudo}`,
-      state: `${Number(freshPlayer.elo || 0)} ELO • ${totalGames} partie${totalGames > 1 ? 's' : ''}`,
+      state: `${Number(freshPlayer.elo || 0)} ELO • ${profileRpcGames} partie${profileRpcGames > 1 ? 's' : ''} • ${profileRpcOnline ? 'En ligne' : 'Hors ligne'}`,
+      hideIdentity: true,
       url: location.href,
     };
     window.__p4RpcContext = rpcContext;
@@ -5698,6 +5705,19 @@ function formatLastSeen(ts) {
   return `Il y a ${y} an${y>1?'s':''}`;
 }
 
+function syncProfileRpcPresence() {
+  if (!currentPlayer) return;
+  const availability = profileRpcLive ? 'En direct' : profileRpcOnline ? 'En ligne' : 'Hors ligne';
+  const rpcContext = {
+    details: isOwnProfile ? 'Personnalise son profil' : `Consulte le profil de ${currentPlayer.pseudo}`,
+    state: `${Number(currentPlayer.elo || 0)} ELO • ${profileRpcGames} partie${profileRpcGames > 1 ? 's' : ''} • ${availability}`,
+    hideIdentity: true,
+    url: location.href,
+  };
+  window.__p4RpcContext = rpcContext;
+  window.P4DiscordPresence?.setContext(rpcContext);
+}
+
 async function loadStatus(playerId) {
   try {
     const res  = await fetch(`/api/players/${playerId}/status`);
@@ -5707,6 +5727,8 @@ async function loadStatus(playerId) {
     if (!ring || !wrap) return;
     if (currentPlayer && String(currentPlayer.id) === String(playerId)) {
       currentPlayer.online = !!data.online;
+      profileRpcOnline = !!data.online;
+      syncProfileRpcPresence();
     }
 
     if (data.online) {
@@ -5748,6 +5770,8 @@ async function refreshLiveBadge(playerId) {
       : null;
 
     const existing = wrap.querySelector('.status-badge.live');
+    profileRpcLive = Boolean(liveGame);
+    syncProfileRpcPresence();
     if (liveGame) {
       const html = `<div class="status-badge live" onclick="location.href='/spec/${liveGame.id}'" title="Voir la partie en direct">
         <div class="status-dot live"></div>
