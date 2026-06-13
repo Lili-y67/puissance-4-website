@@ -860,6 +860,17 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .discord-rpc-status::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
 .discord-rpc-status.online{color:#30d158}
 .discord-rpc-status.offline{color:#ff6b81}
+.discord-rpc-preview{
+  display:none;align-items:center;gap:10px;margin-top:12px;padding:10px;border-radius:13px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.17)
+}
+.discord-rpc-preview.show{display:flex}
+.discord-rpc-preview img{width:42px;height:42px;flex:0 0 42px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.08)}
+.discord-rpc-preview-copy{min-width:0}
+.discord-rpc-preview-details,.discord-rpc-preview-state{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.discord-rpc-preview-details{font-size:13px;font-weight:800;color:var(--text)}
+.discord-rpc-preview-state{margin-top:2px;font-size:11px;color:var(--muted)}
+.discord-rpc-preview-avatar{margin-top:3px;font-size:10px;color:#aeb6ff}
 .discord-rpc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .discord-rpc-btn{
   display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 12px;border-radius:11px;
@@ -2137,7 +2148,6 @@ async function load() {
     pendingAvatarDecoration = null;
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
-    if (isOwnProfile) setTimeout(() => checkDiscordRpcStatus(false), 100);
     renderQueueMusicPicker(freshPlayer);
     loadEloHistory(freshPlayer.id, eloHistoryDays, true);
     if (eloHistoryTimer) clearInterval(eloHistoryTimer);
@@ -2185,7 +2195,15 @@ function discordRpcCardHtml() {
             <div class="discord-rpc-title">Discord Rich Presence</div>
             <div class="discord-rpc-sub" id="discord-rpc-description">Affiche ta page, tes parties et ton adversaire sur Discord Desktop.</div>
           </div>
-          <span class="discord-rpc-status" id="discord-rpc-status">Vérification</span>
+          <span class="discord-rpc-status" id="discord-rpc-status">À vérifier</span>
+        </div>
+        <div class="discord-rpc-preview" id="discord-rpc-preview">
+          <img id="discord-rpc-preview-avatar" alt="Avatar envoyé au RPC">
+          <div class="discord-rpc-preview-copy">
+            <div class="discord-rpc-preview-details" id="discord-rpc-preview-details"></div>
+            <div class="discord-rpc-preview-state" id="discord-rpc-preview-state"></div>
+            <div class="discord-rpc-preview-avatar" id="discord-rpc-preview-avatar-label"></div>
+          </div>
         </div>
         <div class="discord-rpc-actions">
           <a class="discord-rpc-btn primary" href="/downloads/puissance4-discord-rpc.zip" download>Télécharger le RPC</a>
@@ -2200,24 +2218,50 @@ function discordRpcCardHtml() {
 async function checkDiscordRpcStatus(manual = false) {
   const status = document.getElementById('discord-rpc-status');
   const description = document.getElementById('discord-rpc-description');
+  const preview = document.getElementById('discord-rpc-preview');
+  const previewAvatar = document.getElementById('discord-rpc-preview-avatar');
+  const previewDetails = document.getElementById('discord-rpc-preview-details');
+  const previewState = document.getElementById('discord-rpc-preview-state');
+  const previewAvatarLabel = document.getElementById('discord-rpc-preview-avatar-label');
   if (!status || !description) return;
   status.className = 'discord-rpc-status';
-  status.textContent = 'Vérification';
+  status.textContent = 'Autorisation';
+  if (manual) {
+    description.innerHTML = 'Chrome peut demander <strong>Autoriser ce site à accéder aux appareils de votre réseau local</strong>. Clique sur <strong>Autoriser</strong>.';
+  }
   try {
     const response = await fetch('http://127.0.0.1:6464/status', {
       cache: 'no-store',
-      signal: AbortSignal.timeout(1800),
+      mode: 'cors',
+      targetAddressSpace: 'local',
+      signal: AbortSignal.timeout(10000),
     });
+    if (!response.ok) throw new Error(`RPC HTTP ${response.status}`);
     const data = await response.json();
+    const buttonCount = Array.isArray(data.buttons) ? data.buttons.length : 0;
     status.classList.add(data.discord ? 'online' : 'offline');
     status.textContent = data.discord ? 'RPC actif' : 'Discord absent';
     description.textContent = data.discord
-      ? 'Le compagnon est connecté : ton activité Puissance 4 est visible.'
+      ? `${data.source === 'site' ? 'Activité du site synchronisée' : 'Présence de secours active'} • ${buttonCount} bouton${buttonCount > 1 ? 's' : ''} • protection anti-rafale ${Math.round(Number(data.rateLimitMs || 5000) / 1000)} s.`
       : 'Le compagnon tourne, mais Discord Desktop doit être ouvert.';
+    if (preview && previewDetails && previewState && previewAvatarLabel && previewAvatar) {
+      previewDetails.textContent = data.details || 'Puissance 4';
+      previewState.textContent = data.state || 'Présence prête';
+      previewAvatarLabel.textContent = data.smallImageText || (data.smallImage ? 'Avatar RPC' : 'Aucun petit avatar envoyé');
+      previewAvatar.hidden = !data.smallImage;
+      if (data.smallImage) {
+        previewAvatar.src = data.smallImage;
+        previewAvatar.onerror = () => { previewAvatar.hidden = true; };
+      } else {
+        previewAvatar.removeAttribute('src');
+      }
+      preview.classList.add('show');
+    }
   } catch {
     status.classList.add('offline');
     status.textContent = 'Accès local bloqué';
-    description.innerHTML = 'Autorise <strong>Accès au réseau local</strong> pour ce site dans Chrome, puis clique sur Vérifier le RPC.';
+    description.innerHTML = 'Dans Chrome, ouvre les informations du site à gauche de l’adresse, autorise <strong>Accès au réseau local</strong>, puis reclique sur <strong>Vérifier le RPC</strong>.';
+    preview?.classList.remove('show');
   }
   if (manual) PROFIL_SFX.discord();
 }

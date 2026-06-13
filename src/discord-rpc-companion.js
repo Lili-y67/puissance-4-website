@@ -7,6 +7,7 @@ const CLIENT_ID = '1477252548090921060';
 const LARGE_IMAGE = 'site-logo';
 const BASE_URL = 'https://puissance-4-website-production.up.railway.app';
 const STALE_AFTER_MS = 45_000;
+const MIN_DISCORD_UPDATE_MS = 5_000;
 const MAX_BODY_BYTES = 32 * 1024;
 
 let rpc = null;
@@ -15,6 +16,10 @@ let reconnectTimer = null;
 let clearTimer = null;
 let latestActivity = null;
 let lastPublishedSignature = '';
+let lastSiteActivityAt = 0;
+let lastDiscordUpdateAt = 0;
+let pendingPublishTimer = null;
+let discordUpdateCount = 0;
 
 function defaultActivity() {
   return {
@@ -28,9 +33,29 @@ function defaultActivity() {
   };
 }
 
+function activityButtons(profileUrl, siteUrl) {
+  const candidates = [
+    profileUrl ? { label: 'Voir le Profil', url: profileUrl } : null,
+    siteUrl ? { label: 'Puissance 4 Site', url: siteUrl } : null,
+  ].filter(Boolean);
+  return candidates.filter((button, index, list) =>
+    list.findIndex(other => other.url === button.url) === index
+  ).slice(0, 2);
+}
+
 function text(value, max = 128) {
   const clean = String(value || '').replace(/\s+/g, ' ').trim();
   return clean ? clean.slice(0, max) : '';
+}
+
+function dedupeSegments(value) {
+  const seen = new Set();
+  return text(value).split(/\s*•\s*/).filter(segment => {
+    const key = segment.toLocaleLowerCase('fr-FR');
+    if (!segment || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).join(' • ');
 }
 
 function safeHttpUrl(value) {
@@ -76,7 +101,7 @@ function reply(res, status, payload, origin = '') {
 
 function statusPage(res) {
   const state = rpcReady ? 'Connecté à Discord' : 'En attente de Discord Desktop';
-  const activity = latestActivity ? 'Activité reçue du site' : 'Aucune activité reçue du site';
+  const activity = lastSiteActivityAt ? 'Activité reçue du site' : 'Présence de secours active';
   res.writeHead(200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/html; charset=utf-8' });
   res.end(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Puissance 4 RPC</title>
   <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#090914;color:#eeeef5;font:16px Arial,sans-serif}.card{width:min(560px,calc(100vw - 48px));padding:28px;border:1px solid #5865f2;border-radius:22px;background:#111126;box-shadow:0 24px 80px #0008}h1{margin:0 0 18px;color:#aeb8ff}.line{margin:10px 0;padding:12px;border-radius:12px;background:#ffffff0a}.ok{color:#30d158}.warn{color:#ffd60a}</style>
@@ -85,7 +110,7 @@ function statusPage(res) {
 
 function normalizeActivity(input = {}) {
   const details = text(input.details) || 'Sur Puissance 4';
-  const state = text(input.state);
+  const state = dedupeSegments(input.state);
   const avatar = safeHttpUrl(input.smallImage);
   const requestedProfileUrl = safeHttpUrl(input.profileUrl);
   const requestedSiteUrl = safeHttpUrl(input.siteUrl);
@@ -114,24 +139,24 @@ function normalizeActivity(input = {}) {
     activity.startTimestamp = new Date(startedAt);
   }
 
-  const buttons = [];
-  if (profileUrl?.startsWith('https://')) buttons.push({ label: 'Voir le Profil', url: profileUrl });
-  if (siteUrl?.startsWith('https://')) buttons.push({ label: 'Puissance 4 Site', url: siteUrl });
+  const buttons = activityButtons(
+    profileUrl?.startsWith('https://') ? profileUrl : '',
+    siteUrl?.startsWith('https://') ? siteUrl : ''
+  );
   if (buttons.length) activity.buttons = buttons.slice(0, 2);
   return activity;
 }
 
-async function publishActivity(input) {
-  const normalized = normalizeActivity(input);
-  const signature = JSON.stringify(normalized);
-  latestActivity = normalized;
-  scheduleClear();
-  if (!rpcReady || !rpc) return false;
+async function flushDiscordActivity() {
+  pendingPublishTimer = null;
+  if (!rpcReady || !rpc || !latestActivity) return false;
+  const signature = JSON.stringify(latestActivity);
   if (signature === lastPublishedSignature) return true;
-
   try {
     await rpc.setActivity(latestActivity);
     lastPublishedSignature = signature;
+    lastDiscordUpdateAt = Date.now();
+    discordUpdateCount += 1;
     return true;
   } catch (error) {
     if (latestActivity.smallImageKey) {
@@ -141,6 +166,8 @@ async function publishActivity(input) {
       try {
         await rpc.setActivity(withoutAvatar);
         lastPublishedSignature = signature;
+        lastDiscordUpdateAt = Date.now();
+        discordUpdateCount += 1;
         return true;
       } catch {}
     }
@@ -149,12 +176,34 @@ async function publishActivity(input) {
   }
 }
 
+function queueDiscordActivity({ immediate = false } = {}) {
+  if (!rpcReady || !rpc || !latestActivity) return false;
+  const signature = JSON.stringify(latestActivity);
+  if (signature === lastPublishedSignature) return true;
+  clearTimeout(pendingPublishTimer);
+  const elapsed = Date.now() - lastDiscordUpdateAt;
+  const delay = immediate ? 0 : Math.max(0, MIN_DISCORD_UPDATE_MS - elapsed);
+  pendingPublishTimer = setTimeout(() => {
+    flushDiscordActivity().catch(error => {
+      console.warn('[RPC] Publication impossible:', error?.message || error);
+    });
+  }, delay);
+  return true;
+}
+
+function publishActivity(input) {
+  latestActivity = normalizeActivity(input);
+  lastSiteActivityAt = Date.now();
+  scheduleClear();
+  return queueDiscordActivity();
+}
+
 function scheduleClear() {
   clearTimeout(clearTimer);
   clearTimer = setTimeout(async () => {
-    latestActivity = null;
-    lastPublishedSignature = '';
-    if (rpcReady && rpc) await rpc.clearActivity().catch(() => {});
+    latestActivity = defaultActivity();
+    lastSiteActivityAt = 0;
+    queueDiscordActivity();
   }, STALE_AFTER_MS);
 }
 
@@ -175,17 +224,7 @@ function connectRpc() {
     rpcReady = true;
     console.log(`[RPC] Connecté à Discord avec l'application ${CLIENT_ID}.`);
     if (!latestActivity) latestActivity = defaultActivity();
-    if (latestActivity) {
-      try {
-        await rpc.setActivity(latestActivity);
-        lastPublishedSignature = JSON.stringify(latestActivity);
-      } catch {
-        const withoutAvatar = { ...latestActivity };
-        delete withoutAvatar.smallImageKey;
-        delete withoutAvatar.smallImageText;
-        await rpc.setActivity(withoutAvatar).catch(() => {});
-      }
-    }
+    queueDiscordActivity({ immediate: true });
   });
   client.on('disconnected', () => {
     rpcReady = false;
@@ -207,9 +246,22 @@ const server = http.createServer((req, res) => {
   const origin = String(req.headers.origin || '');
   if (req.method === 'GET' && req.url === '/') return statusPage(res);
   if (req.method === 'GET' && req.url === '/status') {
-    return reply(res, 200, { ok: true, discord: rpcReady, activity: Boolean(latestActivity) }, origin);
+    if (origin && !isAllowedOrigin(origin)) return reply(res, 403, { ok: false, error: 'Origine refusée' });
+    return reply(res, 200, {
+      ok: true,
+      discord: rpcReady,
+      activity: Boolean(latestActivity),
+      details: latestActivity?.details || '',
+      state: latestActivity?.state || '',
+      smallImage: latestActivity?.smallImageKey || '',
+      smallImageText: latestActivity?.smallImageText || '',
+      buttons: (latestActivity?.buttons || []).map(button => button.label),
+      source: lastSiteActivityAt ? 'site' : 'fallback',
+      rateLimitMs: MIN_DISCORD_UPDATE_MS,
+      discordUpdates: discordUpdateCount,
+    }, origin);
   }
-  if (!isAllowedOrigin(origin)) return reply(res, 403, { ok: false, error: 'Origin refusée' });
+  if (!isAllowedOrigin(origin)) return reply(res, 403, { ok: false, error: 'Origine refusée' });
   if (req.method === 'OPTIONS') {
     res.writeHead(204, corsHeaders(origin));
     return res.end();
@@ -233,7 +285,7 @@ const server = http.createServer((req, res) => {
   });
   req.on('end', async () => {
     try {
-      const published = await publishActivity(JSON.parse(body || '{}'));
+      const published = publishActivity(JSON.parse(body || '{}'));
       reply(res, 200, { ok: true, discord: rpcReady, published }, origin);
     } catch {
       reply(res, 400, { ok: false, error: 'Payload invalide' }, origin);
@@ -250,6 +302,7 @@ server.listen(PORT, HOST, () => {
 function shutdown() {
   clearTimeout(clearTimer);
   clearTimeout(reconnectTimer);
+  clearTimeout(pendingPublishTimer);
   if (rpcReady && rpc) rpc.clearActivity().catch(() => {});
   try { rpc?.destroy(); } catch {}
   server.close(() => process.exit(0));

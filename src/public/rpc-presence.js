@@ -1,8 +1,18 @@
 (function () {
   const ENDPOINT = 'http://127.0.0.1:6464/activity';
   const HEARTBEAT_MS = 30_000;
-  const UPDATE_DELAY_MS = 650;
+  const UPDATE_DELAY_MS = 1_500;
   const SESSION_KEY = 'p4_rpc_session_started';
+  const VISITOR_KEY = 'p4_visitor_id';
+  const ANONYMOUS_AVATAR_STYLES = [
+    'adventurer',
+    'adventurer-neutral',
+    'bottts',
+    'fun-emoji',
+    'lorelei',
+    'micah',
+    'pixel-art',
+  ];
   let customContext = window.__p4RpcContext || {};
   let publishTimer = null;
   let lastSignature = '';
@@ -55,6 +65,34 @@
     } catch {
       return null;
     }
+  }
+
+  function visitorId() {
+    try {
+      let value = localStorage.getItem(VISITOR_KEY);
+      if (!value) {
+        value = crypto.randomUUID?.() || `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem(VISITOR_KEY, value);
+      }
+      return value;
+    } catch {
+      return 'anonymous-puissance4';
+    }
+  }
+
+  function hashValue(value) {
+    let hash = 2166136261;
+    for (const char of String(value || '')) {
+      hash ^= char.charCodeAt(0);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function anonymousAvatar() {
+    const seed = visitorId();
+    const style = ANONYMOUS_AVATAR_STYLES[hashValue(seed) % ANONYMOUS_AVATAR_STYLES.length];
+    return `https://api.dicebear.com/9.x/${style}/png?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&size=128`;
   }
 
   function readMatch() {
@@ -136,17 +174,15 @@
     const [fallbackDetails, fallbackState] = pageActivity(player);
     const details = customContext.details || fallbackDetails;
     const pageState = customContext.state || fallbackState;
-    const identity = player?.pseudo
-      ? `${player.pseudo}${Number.isFinite(Number(player.elo)) ? ` • ${Number(player.elo)} ELO` : ''}`
-      : '';
+    const identity = player?.pseudo || '';
     return {
       details,
       state: customContext.hideIdentity
         ? pageState
         : identity ? `${identity} • ${pageState}` : pageState,
       largeImageText: 'Puissance 4 Arena',
-      smallImage: player?.id ? absoluteAsset(player.avatar) : '',
-      smallImageText: player?.pseudo ? `Joue avec ${player.pseudo}` : '',
+      smallImage: player?.id ? absoluteAsset(player.avatar) : anonymousAvatar(),
+      smallImageText: player?.pseudo ? `Joue avec ${player.pseudo}` : 'Visiteur anonyme',
       startedAt: sessionStart(),
       url: customContext.url || location.href,
       playerId: player?.id || '',

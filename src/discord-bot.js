@@ -613,6 +613,9 @@ function startDiscordBot(ctx) {
       }
       if (activity.url) details.push(`🔗・${labels.link}: ${activity.url}`);
       else if (activity.syncId && activity.name === 'Spotify') details.push(`🔗・Spotify: https://open.spotify.com/track/${activity.syncId}`);
+      if (Array.isArray(activity.buttons) && activity.buttons.length) {
+        details.push(`🔘・Boutons RPC: **${activity.buttons.map(button => escapeDiscordMarkdown(button)).join('** | **')}**`);
+      }
       const largeUrl = assetUrl(activity, 'largeImage');
       const smallUrl = assetUrl(activity, 'smallImage');
       if (largeUrl) details.push(`🖼️・Image: ${largeUrl}`);
