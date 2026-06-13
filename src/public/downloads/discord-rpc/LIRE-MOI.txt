@@ -1,0 +1,16 @@
+PUISSANCE 4 - DISCORD RICH PRESENCE
+
+1. Extrais completement le fichier ZIP dans un dossier.
+2. Ouvre Discord Desktop.
+3. Double-clique sur "Lancer Puissance 4 RPC.cmd".
+4. Laisse la fenetre ouverte pendant que tu utilises le site.
+
+Au premier lancement, les petits fichiers necessaires sont installes
+automatiquement. Node.js doit etre installe sur le PC.
+
+Telechargement Node.js :
+https://nodejs.org/
+
+Le compagnon fonctionne uniquement sur ordinateur avec Discord Desktop.
+Il ne lit aucun mot de passe et communique uniquement avec le site
+Puissance 4 et le client Discord local.
