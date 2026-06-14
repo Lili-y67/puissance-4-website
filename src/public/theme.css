@@ -779,6 +779,7 @@ body.p4-menu-mounted .home-dock .dock-links {
 }
 .p4-page-egg:hover,
 .p4-page-egg:focus-visible { transform: rotate(-10deg) scale(1.1); outline: 2px solid #fff; outline-offset: 4px; }
+.p4-page-egg.escaping { animation: p4EggEscape .42s cubic-bezier(.2, .9, .35, 1.15) !important; }
 .p4-page-egg.caught { transform: scale(1.7) rotate(360deg); opacity: 0; pointer-events: none; }
 .p4-page-egg[data-rarity="rare"] { box-shadow: 0 0 28px #4c8dff99, inset 0 -7px 11px rgba(0,0,0,.24); }
 .p4-page-egg[data-rarity="epic"] { box-shadow: 0 0 34px #bf5af2aa, inset 0 -7px 11px rgba(0,0,0,.24); animation:p4EggEpic 2s ease-in-out infinite; }
@@ -797,6 +798,13 @@ body.p4-menu-mounted .home-dock .dock-links {
 .p4-page-egg.p4-coin-egg::after { inset: 8px; border-width: 1px; }
 .p4-page-egg.p4-coin-egg:hover,
 .p4-page-egg.p4-coin-egg:focus-visible { opacity: 1; filter: saturate(1.2); }
+
+@keyframes p4EggEscape {
+  0% { transform: rotate(0deg) scale(1); }
+  35% { transform: rotate(-16deg) scale(.82); }
+  70% { transform: rotate(12deg) scale(1.14); }
+  100% { transform: rotate(0deg) scale(1); }
+}
 
 .p4-chaos-egg {
   position: fixed;

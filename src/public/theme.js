@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-6';
+    link.href = '/theme.css?v=eggs-7';
     document.head.appendChild(link);
   }
 
@@ -124,7 +124,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-6', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-7', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -301,6 +301,66 @@
     };
   }
 
+  let eggAudioContext = null;
+
+  function playEggSound(kind, rarity = 'common') {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      eggAudioContext ||= new AudioContext();
+      if (eggAudioContext.state === 'suspended') eggAudioContext.resume();
+
+      const context = eggAudioContext;
+      const now = context.currentTime;
+      const tone = (from, to, delay, duration, wave = 'sine', volume = 0.035) => {
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        const startsAt = now + delay;
+        oscillator.type = wave;
+        oscillator.frequency.setValueAtTime(from, startsAt);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, to), startsAt + duration);
+        gain.gain.setValueAtTime(0.0001, startsAt);
+        gain.gain.exponentialRampToValueAtTime(volume, startsAt + Math.min(0.018, duration / 3));
+        gain.gain.exponentialRampToValueAtTime(0.0001, startsAt + duration);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start(startsAt);
+        oscillator.stop(startsAt + duration + 0.02);
+      };
+
+      if (kind === 'dodge') {
+        tone(310, 760, 0, 0.12, 'triangle', 0.028);
+        tone(580, 980, 0.07, 0.1, 'sine', 0.018);
+      } else if (kind === 'coin') {
+        tone(720, 980, 0, 0.08, 'square', 0.025);
+        tone(980, 1320, 0.08, 0.1, 'square', 0.022);
+      } else if (kind === 'gem') {
+        [1047, 1319, 1568].forEach((frequency, index) => {
+          tone(frequency, frequency * 1.04, index * 0.065, 0.16, 'sine', 0.03);
+        });
+      } else if (kind === 'queenpawn') {
+        [523, 659, 784, 1047, 1319].forEach((frequency, index) => {
+          tone(frequency, frequency * 1.02, index * 0.075, 0.2, index === 4 ? 'triangle' : 'sine', 0.035);
+        });
+      } else if (kind === 'capture') {
+        const baseFrequency = {
+          common: 420,
+          rare: 500,
+          epic: 590,
+          legendary: 700,
+          mythic: 820,
+          artifact: 940,
+        }[rarity] || 420;
+        tone(baseFrequency, baseFrequency * 1.45, 0, 0.14, 'triangle', 0.03);
+        tone(baseFrequency * 1.3, baseFrequency * 2, 0.09, 0.18, 'sine', 0.025);
+      } else {
+        tone(190, 125, 0, 0.16, 'sawtooth', 0.018);
+      }
+    } catch {
+      // Audio is decorative; restricted browsers can safely ignore it.
+    }
+  }
+
   function mountPageEasterEgg() {
     const path = normalizedPath();
     if (!eggAllowed(path) || document.getElementById('p4-page-egg')) return;
@@ -379,7 +439,19 @@
     const toast = document.createElement('div');
     const position = eggPosition(path);
     const travelerRarity = rarityFor(`${path}:traveler`);
-    let dodges = 1;
+    const dodgeRanges = {
+      common: [0, 1],
+      rare: [1, 2],
+      epic: [2, 3],
+      legendary: [3, 4],
+      mythic: [4, 5],
+      artifact: [5, 6],
+      queenpawn: [7, 9],
+    };
+    const [minimumDodges, maximumDodges] = dodgeRanges[travelerRarity.key] || [1, 2];
+    const dodgeSeed = hourlySeed(`${path}:traveler:dodges`);
+    let dodges = minimumDodges + (dodgeSeed % (maximumDodges - minimumDodges + 1));
+    let dodgeAttempt = 0;
 
     egg.id = 'p4-page-egg';
     egg.className = 'p4-page-egg';
@@ -422,10 +494,25 @@
     egg.addEventListener('click', async () => {
       if (dodges > 0) {
         dodges -= 1;
-        const next = eggPosition(path, 2);
+        dodgeAttempt += 1;
+        const next = eggPosition(`${path}:traveler:${dodgeSeed}`, dodgeAttempt + 1);
         egg.style.setProperty('--egg-left', `${next.left}vw`);
         egg.style.setProperty('--egg-top', `${next.top}vh`);
-        showToast('Raté. Ce pion connaît visiblement une case que tu ne connais pas.');
+        egg.classList.remove('escaping');
+        void egg.offsetWidth;
+        egg.classList.add('escaping');
+        window.setTimeout(() => egg.classList.remove('escaping'), 440);
+        playEggSound('dodge', travelerRarity.key);
+        const dodgeMessages = [
+          'Raté, le pion change de case.',
+          'Presque. Il vient encore de filer.',
+          'Ce pion refuse décidément de rester tranquille.',
+          'Bien tenté, mais il avait prévu le clic.',
+        ];
+        const remaining = dodges > 0
+          ? ` Encore ${dodges} esquive${dodges > 1 ? 's' : ''} possible${dodges > 1 ? 's' : ''}.`
+          : ' Le prochain clic sera le bon.';
+        showToast(`${dodgeMessages[(dodgeAttempt - 1) % dodgeMessages.length]}${remaining}`);
         return;
       }
       const rect = egg.getBoundingClientRect();
@@ -445,6 +532,7 @@
           if (data.alreadyClaimed) {
             const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
             setCooldownRemaining('traveler', data.retryAfterMs || EGG_RESPAWN_MS);
+            playEggSound('blocked');
             showToast(`Ce pion voyageur reviendra dans environ ${minutes} minute(s).`);
             egg.classList.add('caught');
             setTimeout(() => egg.remove(), 500);
@@ -462,6 +550,7 @@
           } catch (_) {}
         } catch (error) {
           egg.disabled = false;
+          playEggSound('blocked');
           showToast(error.message);
           return;
         }
@@ -469,6 +558,8 @@
       const caught = caughtCount() + (alreadyCaught ? 0 : 1);
       writeStorage(storageKey, '1');
       startCooldown('traveler');
+      playEggSound(travelerRarity.key === 'queenpawn' ? 'queenpawn' : 'capture', travelerRarity.key);
+      if (gems > 0) window.setTimeout(() => playEggSound('gem'), 220);
       sparks(rect);
       egg.classList.add('caught');
       const collectionText = collectible
@@ -506,6 +597,7 @@
         const rect = coinEgg.getBoundingClientRect();
         const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
         if (!token) {
+          playEggSound('blocked');
           showToast('Ce mini-pion contient des coins, mais il ne reconnaît que les joueurs connectés.');
           return;
         }
@@ -523,9 +615,12 @@
           if (data.alreadyClaimed) {
             const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
             setCooldownRemaining('coins', data.retryAfterMs || EGG_RESPAWN_MS);
+            playEggSound('blocked');
             showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`);
           } else {
             startCooldown('coins');
+            playEggSound('coin');
+            if (Number(data.gems || 0) > 0) window.setTimeout(() => playEggSound('gem'), 150);
             const gemText = Number(data.gems || 0) > 0 ? ` Coup de chance rarissime : +${Number(data.gems)} gemmes !` : '';
             showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}`);
             try {
@@ -541,6 +636,7 @@
           setTimeout(() => coinEgg.remove(), 500);
         } catch (error) {
           coinEgg.disabled = false;
+          playEggSound('blocked');
           showToast(error.message);
         }
       });
