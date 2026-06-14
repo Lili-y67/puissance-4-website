@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.4.0-eggs-3';
+const CACHE_VERSION = 'p4-shell-v3.4.0-eggs-4';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=wukong-cursor-2',
-  '/theme.js',
+  '/theme.css?v=eggs-4',
+  '/theme.js?v=eggs-4',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',
@@ -37,10 +37,31 @@ function shouldBypass(request, url) {
     || url.pathname.startsWith('/downloads/');
 }
 
+function isLiveShellAsset(url) {
+  return url.pathname === '/theme.js'
+    || url.pathname === '/theme.css'
+    || url.pathname === '/service-worker.js';
+}
+
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
   if (shouldBypass(request, url)) return;
+
+  if (isLiveShellAsset(url)) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .then(response => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_VERSION).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(

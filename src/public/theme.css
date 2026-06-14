@@ -746,6 +746,12 @@ body.p4-menu-mounted .home-dock .dock-links {
 .p4-page-egg:hover,
 .p4-page-egg:focus-visible { transform: rotate(-10deg) scale(1.1); outline: 2px solid #fff; outline-offset: 4px; }
 .p4-page-egg.caught { transform: scale(1.7) rotate(360deg); opacity: 0; pointer-events: none; }
+.p4-page-egg[data-rarity="rare"] { box-shadow: 0 0 28px #4c8dff99, inset 0 -7px 11px rgba(0,0,0,.24); }
+.p4-page-egg[data-rarity="epic"] { box-shadow: 0 0 34px #bf5af2aa, inset 0 -7px 11px rgba(0,0,0,.24); animation:p4EggEpic 2s ease-in-out infinite; }
+.p4-page-egg[data-rarity="legendary"] { border-color:#fff2a8;box-shadow:0 0 18px #ffd60a,0 0 42px #ff9f0a88,inset 0 -7px 11px rgba(0,0,0,.24);animation:p4EggLegendary 1.3s ease-in-out infinite alternate }
+.p4-page-egg[data-rarity="spectral"] { border-color:#b8fff2;box-shadow:0 0 20px #72f7d4,0 0 48px #8b5cf688;filter:hue-rotate(0deg);animation:p4EggSpectral 2.4s linear infinite }
+.p4-page-egg[data-rarity="legendary"]::after,
+.p4-page-egg[data-rarity="spectral"]::after { box-shadow:11px -16px 0 -1px #fff; }
 .p4-page-egg.p4-coin-egg {
   width: 25px;
   height: 25px;
@@ -839,6 +845,9 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
 @keyframes p4EggSpark {
   to { transform: translate(var(--spark-x), var(--spark-y)) rotate(480deg) scale(.2); opacity: 0; }
 }
+@keyframes p4EggEpic { 50% { transform:translateY(-4px) rotate(5deg);filter:brightness(1.2) } }
+@keyframes p4EggLegendary { to { transform:scale(1.12) rotate(-6deg);filter:brightness(1.25) } }
+@keyframes p4EggSpectral { to { filter:hue-rotate(360deg);transform:rotate(360deg) } }
 @keyframes p4EggMenuDance { to { transform: rotate(8deg) scale(1.08); } }
 @keyframes p4EggPageWobble { 25% { transform: rotate(.35deg); } 75% { transform: rotate(-.35deg); } }
 @keyframes p4EggBanner { 0% { opacity:0;transform:translate(-50%,-20px) rotate(-5deg) } 12%,82% { opacity:1;transform:translateX(-50%) rotate(-2deg) } 100% { opacity:0;transform:translate(-50%,-12px) rotate(3deg) } }
@@ -847,6 +856,7 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
   .p4-page-egg,
   .p4-egg-toast { transition-duration: .01ms !important; }
   .p4-egg-spark,
+  .p4-page-egg[data-rarity],
   .p4-egg-banner,
   body.p4-egg-chaos main,
   body.p4-egg-chaos .page,

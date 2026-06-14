@@ -158,6 +158,7 @@ html, body {
 
 /* Easter eggs décoratifs */
 .egg-peeker {
+  --peeker-color:#ffd60a;
   position: fixed;
   z-index: 8;
   right: -24px;
@@ -166,8 +167,8 @@ html, body {
   height: 58px;
   border: 3px solid rgba(255,255,255,.28);
   border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #fff7a8 0 7%, #ffd60a 9% 54%, #a66b00 72%);
-  box-shadow: 0 0 26px rgba(255,214,10,.35), inset 0 -7px 12px rgba(0,0,0,.25);
+  background: radial-gradient(circle at 34% 30%, #fff 0 7%,var(--peeker-color) 10% 56%,color-mix(in srgb,var(--peeker-color) 58%,black) 76%);
+  box-shadow: 0 0 26px color-mix(in srgb,var(--peeker-color) 45%,transparent), inset 0 -7px 12px rgba(0,0,0,.25);
   cursor: pointer;
   transition: right .25s ease, transform .25s ease;
 }
@@ -3102,7 +3103,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 /* ── IA overlay ── */
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
-<link rel="stylesheet" href="/theme.css?v=wukong-cursor-2">
+<link rel="stylesheet" href="/theme.css?v=eggs-4">
 </head>
 <body>
 
@@ -3617,6 +3618,7 @@ const EggHunt = (() => {
   let toastTimer = null;
   let logoClicks = 0;
   let peekerDodges = 3;
+  let peekerRarity = 'Commun';
 
   function toast(message) {
     const el = document.getElementById('egg-toast');
@@ -3691,7 +3693,30 @@ const EggHunt = (() => {
   }
 
   function init() {
-    document.getElementById('egg-peeker')?.addEventListener('click', event => {
+    const peeker = document.getElementById('egg-peeker');
+    const hourMs = 60 * 60 * 1000;
+    const seenKey = 'p4_egg_cooldown_index_special';
+    let lastSeen = 0;
+    try { lastSeen = Number(localStorage.getItem(seenKey) || 0); } catch (_) {}
+    if (Date.now() - lastSeen < hourMs) {
+      peeker?.remove();
+    } else if (peeker) {
+      try { localStorage.setItem(seenKey, String(Date.now())); } catch (_) {}
+      const roll = Math.floor(Date.now() / hourMs) % 1000;
+      const rarity = roll < 8
+        ? ['Spectral','#72f7d4']
+        : roll < 45
+          ? ['Légendaire','#ffd60a']
+          : roll < 155
+            ? ['Épique','#bf5af2']
+            : roll < 390
+              ? ['Rare','#4c8dff']
+              : ['Commun','#ff2d55'];
+      peekerRarity = rarity[0];
+      peeker.style.setProperty('--peeker-color', rarity[1]);
+    }
+
+    peeker?.addEventListener('click', event => {
       const peeker = event.currentTarget;
       if (peekerDodges > 0) {
         const taunts = [
@@ -3710,7 +3735,7 @@ const EggHunt = (() => {
       tokenRain();
       showWinningBoard();
       SFX.matchFound();
-      toast('PION CAPTURÉ ! Succès secret : « Il ne pouvait pas fuir éternellement ».');
+      toast(`PION ${peekerRarity.toUpperCase()} CAPTURÉ ! Succès secret : « Il ne pouvait pas fuir éternellement ».`);
       setTimeout(() => {
         peeker.classList.remove('captured', 'hunting');
         peeker.style.left = '';
@@ -5269,6 +5294,6 @@ window.addEventListener('DOMContentLoaded', () => {
   <!-- Musique d'attente queue -->
   <audio id="queue-music" src="/sounds/puissance4-song.mp3" loop preload="none" style="display:none"></audio>
 <script src="/presence.js"></script>
-<script src="/theme.js"></script>
+<script src="/theme.js?v=eggs-4"></script>
 </body>
 </html>

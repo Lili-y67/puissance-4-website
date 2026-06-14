@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=wukong-cursor-2';
+    link.href = '/theme.css?v=eggs-4';
     document.head.appendChild(link);
   }
 
@@ -105,7 +105,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-4', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -300,6 +300,18 @@
       const elapsed = Math.max(0, EGG_RESPAWN_MS - Number(remainingMs || 0));
       writeStorage(cooldownKey(type), String(Date.now() - elapsed));
     };
+    const hourlySeed = value => {
+      const hour = Math.floor(Date.now() / EGG_RESPAWN_MS);
+      return [...`${value}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
+    };
+    const rarityFor = value => {
+      const roll = hourlySeed(value) % 1000;
+      if (roll < 8) return { key: 'spectral', label: 'Spectral', color: '#72f7d4' };
+      if (roll < 45) return { key: 'legendary', label: 'Légendaire', color: '#ffd60a' };
+      if (roll < 155) return { key: 'epic', label: 'Épique', color: '#bf5af2' };
+      if (roll < 390) return { key: 'rare', label: 'Rare', color: '#4c8dff' };
+      return { key: 'common', label: 'Commun', color: '#ff2d55' };
+    };
     const caughtCount = () => {
       try {
         let total = 0;
@@ -317,15 +329,17 @@
     const egg = document.createElement('button');
     const toast = document.createElement('div');
     const position = eggPosition(path);
+    const travelerRarity = rarityFor(`${path}:traveler`);
     let dodges = 1;
 
     egg.id = 'p4-page-egg';
     egg.className = 'p4-page-egg';
     egg.type = 'button';
-    egg.setAttribute('aria-label', 'Pion voyageur caché');
+    egg.dataset.rarity = travelerRarity.key;
+    egg.setAttribute('aria-label', `Pion voyageur ${travelerRarity.label}`);
     egg.style.setProperty('--egg-left', `${position.left}vw`);
     egg.style.setProperty('--egg-top', `${position.top}vh`);
-    egg.style.setProperty('--egg-color', path.length % 2 ? '#ff2d55' : '#ffd60a');
+    egg.style.setProperty('--egg-color', travelerRarity.color);
 
     toast.className = 'p4-egg-toast';
     toast.setAttribute('role', 'status');
@@ -370,11 +384,14 @@
       startCooldown('traveler');
       sparks(rect);
       egg.classList.add('caught');
-      showToast(`${EGG_MESSAGES[path] || 'Pion voyageur trouvé : il préparait quelque chose de très peu stratégique.'} Collection : ${caught} pion(s).`);
+      showToast(`${travelerRarity.label} trouvé ! ${EGG_MESSAGES[path] || 'Le pion voyageur préparait quelque chose de très peu stratégique.'} Collection : ${caught} pion(s).`);
       setTimeout(() => egg.remove(), 500);
     });
 
-    if (travelerReady) document.body.appendChild(egg);
+    if (travelerReady) {
+      startCooldown('traveler');
+      document.body.appendChild(egg);
+    }
     document.body.appendChild(toast);
 
     const rewardPaths = new Set([
@@ -387,12 +404,14 @@
     if (rewardPaths.has(path) && cooldownReady('coins')) {
       const coinEgg = document.createElement('button');
       const coinPosition = eggPosition(`${path}:coins`, 3);
+      const coinRarity = rarityFor(`${path}:coins`);
       coinEgg.className = 'p4-page-egg p4-coin-egg';
       coinEgg.type = 'button';
-      coinEgg.setAttribute('aria-label', 'Mini pion brillant');
+      coinEgg.dataset.rarity = coinRarity.key;
+      coinEgg.setAttribute('aria-label', `Mini pion brillant ${coinRarity.label}`);
       coinEgg.style.setProperty('--egg-left', `${coinPosition.left}vw`);
       coinEgg.style.setProperty('--egg-top', `${coinPosition.top}vh`);
-      coinEgg.style.setProperty('--egg-color', '#30d158');
+      coinEgg.style.setProperty('--egg-color', coinRarity.color);
       coinEgg.addEventListener('click', async () => {
         const rect = coinEgg.getBoundingClientRect();
         const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
@@ -433,6 +452,7 @@
           showToast(error.message);
         }
       });
+      startCooldown('coins');
       document.body.appendChild(coinEgg);
     }
 
@@ -464,6 +484,7 @@
         setTimeout(() => banner.remove(), 3300);
         chaosEgg.remove();
       });
+      startCooldown('chaos');
       document.body.appendChild(chaosEgg);
     }
   }
