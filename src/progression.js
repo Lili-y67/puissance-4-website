@@ -6,10 +6,15 @@ const CHALLENGES = [
   { key: 'daily_moves', period: 'daily', icon: '🧠', rarity: 'common', label: 'Calculateur', description: 'Joue 35 coups cumulés.', metric: 'moves', target: 35, coins: 35, xp: 40 },
   { key: 'daily_tactician', period: 'daily', icon: '🎯', rarity: 'epic', label: 'Partie tactique', description: 'Termine une partie d’au moins 28 coups.', metric: 'thoughtful_games', target: 1, coins: 60, xp: 65 },
   { key: 'daily_elo', period: 'daily', icon: '📈', rarity: 'rare', label: 'Ascension', description: 'Gagne 20 points ELO cumulés.', metric: 'elo_gain', target: 20, coins: 55, xp: 60 },
+  { key: 'daily_bot_win', period: 'daily', icon: '🤖', rarity: 'rare', label: 'Test de Turing inversé', description: 'Remporte une partie contre un bot.', metric: 'bot_wins', target: 1, coins: 50, xp: 55 },
+  { key: 'daily_shop', period: 'daily', icon: '🛍️', rarity: 'common', label: 'Petite trouvaille', description: 'Effectue un achat dans la boutique.', metric: 'shop_purchases', target: 1, coins: 30, xp: 35 },
+  { key: 'daily_profile', period: 'daily', icon: '✨', rarity: 'common', label: 'Nouveau look', description: 'Modifie un élément de ton profil.', metric: 'profile_updates', target: 1, coins: 25, xp: 30 },
   { key: 'weekly_play', period: 'weekly', icon: '⚔️', rarity: 'common', label: 'Habitué de l’arène', description: 'Termine 12 parties classées.', metric: 'games', target: 12, coins: 140, xp: 140 },
   { key: 'weekly_win', period: 'weekly', icon: '👑', rarity: 'rare', label: 'Semaine dominante', description: 'Remporte 5 parties classées.', metric: 'wins', target: 5, coins: 190, xp: 180 },
   { key: 'weekly_fast', period: 'weekly', icon: '⚡', rarity: 'epic', label: 'Frappe éclair', description: 'Gagne 2 parties en moins de 3 minutes.', metric: 'fast_wins', target: 2, coins: 220, xp: 210 },
   { key: 'weekly_marathon', period: 'weekly', icon: '🔥', rarity: 'epic', label: 'Marathon mental', description: 'Termine 3 parties de 35 coups ou plus.', metric: 'marathon_games', target: 3, coins: 210, xp: 200 },
+  { key: 'weekly_bot_hunter', period: 'weekly', icon: '🧩', rarity: 'epic', label: 'Chasseur de circuits', description: 'Termine 5 parties contre des bots.', metric: 'bot_games', target: 5, coins: 180, xp: 190 },
+  { key: 'weekly_shopping', period: 'weekly', icon: '💰', rarity: 'rare', label: 'Collectionneur avisé', description: 'Effectue 3 achats dans la boutique.', metric: 'shop_purchases', target: 3, coins: 150, xp: 160 },
   { key: 'weekly_clan', period: 'weekly', icon: '🛡️', rarity: 'legendary', label: 'Pour la bannière', description: 'Rapporte 12 points à ton clan.', metric: 'clan_points', target: 12, coins: 260, xp: 250 },
 ];
 
@@ -189,14 +194,25 @@ function createProgression({ db, pQ, cQ }) {
     });
   }
 
+  function recordAction(playerId, metric, amount = 1) {
+    const id = Number(playerId);
+    const value = Math.max(0, Math.trunc(Number(amount || 0)));
+    if (!id || !metric || !value) return false;
+    ensurePlayer(id);
+    addChallengeMetric(id, String(metric), value);
+    return true;
+  }
+
   const processGame = db.transaction(({ gameId, player1Id, player2Id, winnerId, isDraw, moveCount = 0, duration = 0, gameType = 'ranked', isSuspect = false, eloChanges = {} }) => {
     if (!gameId || isSuspect || String(gameType) === 'friendly') return false;
     if (!q.event.run(gameId, Date.now()).changes) return false;
     const season = currentSeason();
     const players = [Number(player1Id), Number(player2Id)];
+    const playerRows = new Map(players.map(playerId => [playerId, pQ.getById.get(playerId)]));
+    const hasBot = [...playerRows.values()].some(player => Number(player?.is_bot || 0) === 1);
     players.forEach(playerId => {
       const won = !isDraw && playerId === Number(winnerId);
-      const player = pQ.getById.get(playerId);
+      const player = playerRows.get(playerId);
       q.seasonUpsert.run({
         season_id: season.id,
         player_id: playerId,
@@ -215,6 +231,10 @@ function createProgression({ db, pQ, cQ }) {
       addChallengeMetric(playerId, 'elo_gain', Math.max(0, Number(eloChanges?.[playerId] || 0)));
       if (won) addChallengeMetric(playerId, 'wins', 1);
       if (won && Number(duration || 0) > 0 && Number(duration || 0) <= 180) addChallengeMetric(playerId, 'fast_wins', 1);
+      if (hasBot && Number(player?.is_bot || 0) !== 1) {
+        addChallengeMetric(playerId, 'bot_games', 1);
+        if (won) addChallengeMetric(playerId, 'bot_wins', 1);
+      }
 
       const clanId = Number(q.clanForPlayer.get(playerId)?.clan_id || 0);
       if (clanId) {
@@ -341,6 +361,7 @@ function createProgression({ db, pQ, cQ }) {
 
   return {
     processGame,
+    recordAction,
     getPlayerData,
     claimChallenge,
     equipTheme,

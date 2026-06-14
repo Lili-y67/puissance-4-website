@@ -156,6 +156,33 @@ html, body {
   );
 }
 
+/* Easter eggs décoratifs */
+.egg-peeker {
+  position: fixed;
+  z-index: 8;
+  right: -24px;
+  bottom: 18%;
+  width: 58px;
+  height: 58px;
+  border: 3px solid rgba(255,255,255,.28);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff7a8 0 7%, #ffd60a 9% 54%, #a66b00 72%);
+  box-shadow: 0 0 26px rgba(255,214,10,.35), inset 0 -7px 12px rgba(0,0,0,.25);
+  cursor: pointer;
+  transition: right .25s ease, transform .25s ease;
+}
+.egg-peeker::before,.egg-peeker::after{content:"";position:absolute;top:18px;width:6px;height:9px;border-radius:50%;background:#16120b}
+.egg-peeker::before{left:17px}.egg-peeker::after{left:32px}
+.egg-peeker:hover,.egg-peeker:focus-visible{right:8px;transform:rotate(-14deg) scale(1.08);outline:2px solid #fff;outline-offset:4px}
+.egg-toast{position:fixed;z-index:200;left:50%;bottom:28px;max-width:calc(100vw - 30px);padding:12px 18px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(13,13,28,.94);color:#fff;font:800 14px 'Barlow Condensed',sans-serif;letter-spacing:.7px;box-shadow:0 16px 50px rgba(0,0,0,.45);transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:.3s}
+.egg-toast.show{transform:translate(-50%,0);opacity:1}
+.egg-burst{position:fixed;z-index:190;width:18px;height:18px;border-radius:50%;pointer-events:none;animation:eggBurst 1.35s ease-out forwards}
+@keyframes eggBurst{to{transform:translate(var(--egg-x),var(--egg-y)) rotate(540deg) scale(.35);opacity:0}}
+html.party-mode{animation:eggHue 2.8s linear infinite}
+html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alternate}
+@keyframes eggHue{to{filter:hue-rotate(360deg)}}@keyframes eggLogo{to{transform:rotate(12deg) scale(1.12)}}
+@media(prefers-reduced-motion:reduce){.egg-burst,html.party-mode,html.party-mode .hero-logo-mark{animation:none!important}}
+
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
 .page {
   position: relative;
@@ -3083,6 +3110,8 @@ html, body {
 </div>
 <div class="tokens-bg" id="tokens-bg"></div>
 <div class="scanlines"></div>
+<button class="egg-peeker" id="egg-peeker" type="button" aria-label="Jeton mystérieux"></button>
+<div class="egg-toast" id="egg-toast" role="status" aria-live="polite"></div>
 
 <div class="tournament-notice" id="tournament-notice">
   <div class="tournament-notice-head">
@@ -3571,6 +3600,79 @@ function spawnTokens() {
   }
 }
 spawnTokens();
+
+const EggHunt = (() => {
+  const messages = [
+    'Le jeton jaune prétend qu’il était là depuis le début.',
+    'Succès secret : cliquer sur un truc manifestement cliquable.',
+    'Conseil tactique : quatre jetons alignés, c’est généralement prometteur.',
+    'Le bot demande une pause café. Requête refusée.',
+  ];
+  let toastTimer = null;
+  let logoClicks = 0;
+
+  function toast(message) {
+    const el = document.getElementById('egg-toast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  function burst(originX = innerWidth / 2, originY = innerHeight / 2) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (let i = 0; i < 28; i++) {
+      const token = document.createElement('i');
+      token.className = 'egg-burst';
+      token.style.left = `${originX}px`;
+      token.style.top = `${originY}px`;
+      token.style.background = i % 2 ? '#ffd60a' : '#ff2d55';
+      token.style.boxShadow = `0 0 12px ${i % 2 ? '#ffd60a' : '#ff2d55'}`;
+      const angle = Math.PI * 2 * i / 28;
+      const distance = 90 + Math.random() * 230;
+      token.style.setProperty('--egg-x', `${Math.cos(angle) * distance}px`);
+      token.style.setProperty('--egg-y', `${Math.sin(angle) * distance}px`);
+      document.body.appendChild(token);
+      setTimeout(() => token.remove(), 1500);
+    }
+  }
+
+  function party(message) {
+    document.documentElement.classList.add('party-mode');
+    burst();
+    toast(message);
+    setTimeout(() => document.documentElement.classList.remove('party-mode'), 4200);
+  }
+
+  function init() {
+    document.getElementById('egg-peeker')?.addEventListener('click', event => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      toast(messages[Math.floor(Math.random() * messages.length)]);
+    });
+    document.querySelector('.hero-logo-mark')?.addEventListener('click', () => {
+      logoClicks += 1;
+      if (logoClicks === 4) {
+        logoClicks = 0;
+        party('Puissance 4 : même le logo sait compter jusqu’à quatre.');
+      }
+    });
+    const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+    let position = 0;
+    document.addEventListener('keydown', event => {
+      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      position = key === konami[position] ? position + 1 : (key === konami[0] ? 1 : 0);
+      if (position === konami.length) {
+        position = 0;
+        party('Mode arcade secret activé. Aucun ELO n’a été maltraité.');
+      }
+    });
+  }
+
+  return { init };
+})();
+EggHunt.init();
 
 // ═══════════════════════════════════════════════════════════════════
 //  AUTH TABS

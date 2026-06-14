@@ -5710,6 +5710,7 @@ app.post('/api/shop/buy', async (req, res) => {
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
     });
   } catch(e) {}
+  progression.recordAction(playerId, 'shop_purchases');
 
   const inventoryRows = shopItemQ.getAllForPlayer.all(playerId);
   const inventory = Object.fromEntries(inventoryRows.map(r => [r.item_key, Number(r.quantity || 0)]));
@@ -6479,6 +6480,7 @@ app.patch('/api/players/:id/shape', (req, res) => {
   if (base === 'emoji' && !isVipPlayer(player) && !hasStaffRoleBenefits(player)) {
     pQ.updateTokenEmojiChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   }
+  progression.recordAction(Number(req.params.id), 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6493,6 +6495,7 @@ app.patch('/api/players/:id/color', (req, res) => {
   if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+, Perso ou Admin.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   pQ.updateColorSecondary.run({ color_secondary: normalizedSecondary ? normalizedSecondary.toUpperCase() : '', id: Number(req.params.id) });
+  progression.recordAction(Number(req.params.id), 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6518,6 +6521,7 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
   }
   pQ.updatePseudo.run({ pseudo: nextPseudo, id });
   pQ.updatePseudoChangedAt.run({ changedAt: Date.now(), id });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, pseudo: nextPseudo });
 });
 
@@ -6562,6 +6566,7 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
     rgb: nextRgb ? 1 : 0,
     changedAt,
   });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, font: nextFont, format: nextFormat, rgb: nextRgb ? 1 : 0, changedAt });
 });
 
@@ -6596,6 +6601,7 @@ app.patch('/api/players/:id/elo-curve-style', (req, res) => {
     rgbDirection: nextRgbDirection,
     changedAt,
   });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, color: nextColor, colorSecondary: nextColorSecondary, rgb: nextRgb ? 1 : 0, rgbSpeed: nextRgbSpeed, rgbDirection: nextRgbDirection, changedAt });
 });
 
@@ -6622,6 +6628,7 @@ app.patch('/api/players/:id/banner', (req, res) => {
   if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pBanner = pQ.getById.get(Number(req.params.id));
   WH.wlogBanner(_pBanner?.pseudo || req.params.id, req.params.id, Math.round(banner.length / 1024), banner);
+  progression.recordAction(Number(req.params.id), 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6649,6 +6656,7 @@ app.patch('/api/players/:id/avatar', (req, res) => {
   if (isGif) pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id: Number(req.params.id) });
   const _pAvatar = pQ.getById.get(Number(req.params.id));
   WH.wlogAvatar(_pAvatar?.pseudo || req.params.id, req.params.id, Math.round(avatar.length / 1024), avatar);
+  progression.recordAction(Number(req.params.id), 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6671,6 +6679,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   }
   pQ.updateTokenEmojiImage.run({ image, id });
   pQ.updateVipMediaChangedAt.run({ changedAt: Date.now(), id });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6703,6 +6712,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   }
   pQ.updateAvatarDecoration.run({ image: nextDecoration, id });
   pQ.updateAvatarDecorationChangedAt.run({ changedAt: Date.now(), id });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6723,6 +6733,7 @@ app.patch('/api/players/:id/profile-banner', (req, res) => {
   }
   pQ.updateProfileBanner.run({ image: nextBanner, id });
   pQ.updateProfileBannerChangedAt.run({ changedAt: Date.now(), id });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true });
 });
 
@@ -6743,6 +6754,7 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
     return res.status(400).json({ error: 'Musique invalide.' });
   }
   pQ.updateQueueMusic.run({ music: nextMusic, id });
+  progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, queue_music: nextMusic });
 });
 
@@ -7800,6 +7812,8 @@ app.post('/api/bot-replay', (req, res) => {
   }
 
   const newBotElo = (pQ.getById.get(botPlayerId))?.elo ?? botElo + botDelta;
+  progression.recordAction(playerId, 'bot_games');
+  if (!isDraw && Number(winnerId) === Number(playerId)) progression.recordAction(playerId, 'bot_wins');
   res.json({ gameId, botDelta, newBotElo });
   } catch(err) {
     console.error('[bot-replay]', err.message, err.stack);
