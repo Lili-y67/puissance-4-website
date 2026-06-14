@@ -9,7 +9,7 @@ const os         = require('os');
 const { fork }   = require('child_process');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
-const { TOKEN_COLOR_CATALOG } = require('./token-collection');
+const { TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenGemReward } = require('./token-collection');
 const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
@@ -5133,16 +5133,22 @@ const EASTER_EGG_RESPAWN_MS = 60 * 60 * 1000;
 app.post('/api/easter-eggs/claim', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.body?.token || '');
   const playerId = validateSession(token);
-  if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour recuperer les coins.' });
+  if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour ajouter ce pion a ta collection.' });
 
   const pathKey = String(req.body?.path || '').trim().toLowerCase();
   const eggId = String(req.body?.eggId || '').trim().toLowerCase();
-  if (!EASTER_EGG_REWARD_PATHS.has(pathKey) || eggId !== 'coin-v1') {
+  if (!EASTER_EGG_REWARD_PATHS.has(pathKey) || !['coin-v1', 'traveler-v1'].includes(eggId)) {
     return res.status(400).json({ error: 'Easter egg invalide.' });
   }
 
   const eggKey = `${pathKey}:${eggId}`;
-  const reward = 20 + Math.floor(Math.random() * 31);
+  const reward = eggId === 'coin-v1' ? 20 + Math.floor(Math.random() * 31) : 0;
+  const raritySeed = eggId === 'coin-v1' ? `${pathKey}:coins` : `${pathKey}:traveler`;
+  const hour = Math.floor(Date.now() / EASTER_EGG_RESPAWN_MS);
+  const roll = [...`${raritySeed}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261) % 1000;
+  const rarity = roll < 8 ? 'spectral' : roll < 45 ? 'legendary' : roll < 155 ? 'epic' : roll < 390 ? 'rare' : 'common';
+  const collectible = drawTokenColorForRarity(rarity);
+  const gems = drawTokenGemReward(collectible);
   const claim = db.transaction(() => {
     const now = Date.now();
     const existing = getEasterEggClaim.get(playerId, eggKey);
@@ -5155,14 +5161,30 @@ app.post('/api/easter-eggs/claim', (req, res) => {
       const inserted = insertEasterEggClaim.run(playerId, eggKey, reward, now);
       if (!inserted.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: EASTER_EGG_RESPAWN_MS };
     }
-    pQ.addCoins.run({ delta: reward, id: playerId });
-    return { reward, alreadyClaimed: false, respawnMs: EASTER_EGG_RESPAWN_MS };
+    if (reward > 0) pQ.addCoins.run({ delta: reward, id: playerId });
+    if (gems > 0) pQ.addGems.run({ delta: gems, id: playerId });
+    tokenCollectionQ.add.run({ player_id: playerId, color_key: collectible.key, now });
+    return {
+      reward,
+      gems,
+      collectible: {
+        key: collectible.key,
+        label: collectible.label,
+        hex: collectible.hex,
+        hexSecondary: collectible.hexSecondary || '',
+        rarity: collectible.rarity,
+        design: collectible.design || 'classic',
+      },
+      alreadyClaimed: false,
+      respawnMs: EASTER_EGG_RESPAWN_MS,
+    };
   })();
   const player = pQ.getById.get(playerId);
   res.json({
     ok: true,
     ...claim,
     coins: Number(player?.coins || 0),
+    gemsNow: Number(player?.gems || 0),
   });
 });
 
@@ -5181,6 +5203,7 @@ function getTokenCollectionPayload(playerId) {
     hexSecondary: color.hexSecondary || '',
     theme: color.theme,
     rarity: color.rarity,
+    design: color.design || 'classic',
     quantity: quantities.get(color.key) || 0,
   }));
   const collected = items.filter(item => item.quantity > 0).length;

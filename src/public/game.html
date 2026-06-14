@@ -2244,7 +2244,6 @@ function onGameOver(data) {
   }, 300);
 
   const myId = data.players?.[mySide]?.id ?? myPlayer?.id;
-  const myTokenDrop = myId !== undefined ? (data.tokenDrops?.[myId] || data.tokenDrops?.[String(myId)] || null) : null;
   const oppSide = mySide === 1 ? 2 : 1;
   const oppId = data.players?.[oppSide]?.id;
   const myDelta = myId !== undefined ? Number(data.eloChanges?.[myId] ?? data.eloChanges?.[String(myId)] ?? 0) : 0;
@@ -2320,8 +2319,6 @@ function onGameOver(data) {
       <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
       <div class="result-meta-chip">Temps<strong>${formatDuration(data.duration)}</strong></div>
       <div class="result-meta-chip">Mon Elo<strong>${myTransition}</strong></div>
-      ${myTokenDrop ? `<div class="result-meta-chip">Jeton gagne<strong style="color:${myTokenDrop.hex || '#85EBFF'}">${myTokenDrop.label || myTokenDrop.key}</strong></div>` : ''}
-      ${Number(myTokenDrop?.gems || 0) > 0 ? `<div class="result-meta-chip">Bonus legendaire<strong>+${Number(myTokenDrop.gems)} gemmes</strong></div>` : ''}
     `;
   }
 

@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-4';
+    link.href = '/theme.css?v=eggs-5';
     document.head.appendChild(link);
   }
 
@@ -105,7 +105,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-4', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-5', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -266,7 +266,8 @@
   };
 
   function normalizedPath() {
-    return window.location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+    const path = window.location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+    return ['/replay', '/tournoi', '/duel'].find(base => path === base || path.startsWith(`${base}/`)) || path;
   }
 
   function eggAllowed(path) {
@@ -293,7 +294,7 @@
     const writeStorage = (key, value) => {
       try { localStorage.setItem(key, value); } catch (_) {}
     };
-    const cooldownKey = type => `p4_egg_cooldown_${type}_${path}`;
+    const cooldownKey = type => `p4_egg_cooldown_v2_${type}_${path}`;
     const cooldownReady = type => Date.now() - Number(readStorage(cooldownKey(type)) || 0) >= EGG_RESPAWN_MS;
     const startCooldown = type => writeStorage(cooldownKey(type), String(Date.now()));
     const setCooldownRemaining = (type, remainingMs) => {
@@ -312,6 +313,13 @@
       if (roll < 390) return { key: 'rare', label: 'Rare', color: '#4c8dff' };
       return { key: 'common', label: 'Commun', color: '#ff2d55' };
     };
+    const designForRarity = rarity => ({
+      common: 'classic',
+      rare: 'grooved',
+      epic: 'star',
+      legendary: 'prism',
+      spectral: 'spectral',
+    }[rarity] || 'classic');
     const caughtCount = () => {
       try {
         let total = 0;
@@ -336,6 +344,7 @@
     egg.className = 'p4-page-egg';
     egg.type = 'button';
     egg.dataset.rarity = travelerRarity.key;
+    egg.dataset.design = designForRarity(travelerRarity.key);
     egg.setAttribute('aria-label', `Pion voyageur ${travelerRarity.label}`);
     egg.style.setProperty('--egg-left', `${position.left}vw`);
     egg.style.setProperty('--egg-top', `${position.top}vh`);
@@ -369,7 +378,7 @@
       }
     }
 
-    egg.addEventListener('click', () => {
+    egg.addEventListener('click', async () => {
       if (dodges > 0) {
         dodges -= 1;
         const next = eggPosition(path, 2);
@@ -379,17 +388,56 @@
         return;
       }
       const rect = egg.getBoundingClientRect();
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+      let collectible = null;
+      let gems = 0;
+      if (token && rewardPaths.has(path)) {
+        egg.disabled = true;
+        try {
+          const response = await fetch('/api/easter-eggs/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+            body: JSON.stringify({ path, eggId: 'traveler-v1' }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || 'Collection indisponible.');
+          if (data.alreadyClaimed) {
+            const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
+            setCooldownRemaining('traveler', data.retryAfterMs || EGG_RESPAWN_MS);
+            showToast(`Ce pion voyageur reviendra dans environ ${minutes} minute(s).`);
+            egg.classList.add('caught');
+            setTimeout(() => egg.remove(), 500);
+            return;
+          }
+          collectible = data.collectible || null;
+          gems = Number(data.gems || 0);
+          try {
+            const player = JSON.parse(localStorage.getItem('player') || '{}');
+            if (player?.id && gems > 0) {
+              player.gems = Number(data.gemsNow || player.gems || 0);
+              localStorage.setItem('player', JSON.stringify(player));
+              sessionStorage.setItem('player', JSON.stringify(player));
+            }
+          } catch (_) {}
+        } catch (error) {
+          egg.disabled = false;
+          showToast(error.message);
+          return;
+        }
+      }
       const caught = caughtCount() + (alreadyCaught ? 0 : 1);
       writeStorage(storageKey, '1');
       startCooldown('traveler');
       sparks(rect);
       egg.classList.add('caught');
-      showToast(`${travelerRarity.label} trouvé ! ${EGG_MESSAGES[path] || 'Le pion voyageur préparait quelque chose de très peu stratégique.'} Collection : ${caught} pion(s).`);
+      const collectionText = collectible
+        ? ` ${collectible.label} rejoint ta collection${gems > 0 ? ` et rapporte +${gems} gemmes` : ''}.`
+        : ` Collection locale : ${caught} pion(s).`;
+      showToast(`${travelerRarity.label} trouvé ! ${EGG_MESSAGES[path] || 'Le pion voyageur préparait quelque chose de très peu stratégique.'}${collectionText}`);
       setTimeout(() => egg.remove(), 500);
     });
 
     if (travelerReady) {
-      startCooldown('traveler');
       document.body.appendChild(egg);
     }
     document.body.appendChild(toast);
@@ -408,6 +456,7 @@
       coinEgg.className = 'p4-page-egg p4-coin-egg';
       coinEgg.type = 'button';
       coinEgg.dataset.rarity = coinRarity.key;
+      coinEgg.dataset.design = designForRarity(coinRarity.key);
       coinEgg.setAttribute('aria-label', `Mini pion brillant ${coinRarity.label}`);
       coinEgg.style.setProperty('--egg-left', `${coinPosition.left}vw`);
       coinEgg.style.setProperty('--egg-top', `${coinPosition.top}vh`);
@@ -436,11 +485,14 @@
             showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`);
           } else {
             startCooldown('coins');
-            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins. Solde : ${Number(data.coins || 0)}.`);
+            const gemText = Number(data.gems || 0) > 0 ? ` +${Number(data.gems)} gemmes légendaires.` : '';
+            const tokenText = data.collectible?.label ? ` Pion ${data.collectible.label} ajouté à la collection.` : '';
+            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}${tokenText}`);
             try {
               const player = JSON.parse(localStorage.getItem('player') || '{}');
               if (player?.id) {
                 player.coins = Number(data.coins || player.coins || 0);
+                player.gems = Number(data.gemsNow || player.gems || 0);
                 localStorage.setItem('player', JSON.stringify(player));
                 sessionStorage.setItem('player', JSON.stringify(player));
               }
@@ -452,7 +504,6 @@
           showToast(error.message);
         }
       });
-      startCooldown('coins');
       document.body.appendChild(coinEgg);
     }
 
@@ -484,7 +535,6 @@
         setTimeout(() => banner.remove(), 3300);
         chaosEgg.remove();
       });
-      startCooldown('chaos');
       document.body.appendChild(chaosEgg);
     }
   }
