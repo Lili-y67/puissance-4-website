@@ -5118,6 +5118,16 @@ const insertEasterEggClaim = db.prepare(`
   INSERT OR IGNORE INTO easter_egg_claims (player_id, egg_key, reward, claimed_at)
   VALUES (?, ?, ?, ?)
 `);
+const getEasterEggClaim = db.prepare(`
+  SELECT reward, claimed_at FROM easter_egg_claims
+  WHERE player_id = ? AND egg_key = ?
+`);
+const renewEasterEggClaim = db.prepare(`
+  UPDATE easter_egg_claims
+  SET reward = ?, claimed_at = ?
+  WHERE player_id = ? AND egg_key = ? AND claimed_at <= ?
+`);
+const EASTER_EGG_RESPAWN_MS = 60 * 60 * 1000;
 
 app.post('/api/easter-eggs/claim', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.body?.token || '');
@@ -5133,10 +5143,19 @@ app.post('/api/easter-eggs/claim', (req, res) => {
   const eggKey = `${pathKey}:${eggId}`;
   const reward = 20 + Math.floor(Math.random() * 31);
   const claim = db.transaction(() => {
-    const inserted = insertEasterEggClaim.run(playerId, eggKey, reward, Date.now());
-    if (!inserted.changes) return { reward: 0, alreadyClaimed: true };
+    const now = Date.now();
+    const existing = getEasterEggClaim.get(playerId, eggKey);
+    if (existing) {
+      const retryAfterMs = Math.max(0, Number(existing.claimed_at || 0) + EASTER_EGG_RESPAWN_MS - now);
+      if (retryAfterMs > 0) return { reward: 0, alreadyClaimed: true, retryAfterMs };
+      const renewed = renewEasterEggClaim.run(reward, now, playerId, eggKey, now - EASTER_EGG_RESPAWN_MS);
+      if (!renewed.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: EASTER_EGG_RESPAWN_MS };
+    } else {
+      const inserted = insertEasterEggClaim.run(playerId, eggKey, reward, now);
+      if (!inserted.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: EASTER_EGG_RESPAWN_MS };
+    }
     pQ.addCoins.run({ delta: reward, id: playerId });
-    return { reward, alreadyClaimed: false };
+    return { reward, alreadyClaimed: false, respawnMs: EASTER_EGG_RESPAWN_MS };
   })();
   const player = pQ.getById.get(playerId);
   res.json({

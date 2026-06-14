@@ -286,11 +286,19 @@
     if (!eggAllowed(path) || document.getElementById('p4-page-egg')) return;
 
     const storageKey = `p4_egg_${path}`;
+    const EGG_RESPAWN_MS = 60 * 60 * 1000;
     const readStorage = key => {
       try { return localStorage.getItem(key); } catch (_) { return null; }
     };
     const writeStorage = (key, value) => {
       try { localStorage.setItem(key, value); } catch (_) {}
+    };
+    const cooldownKey = type => `p4_egg_cooldown_${type}_${path}`;
+    const cooldownReady = type => Date.now() - Number(readStorage(cooldownKey(type)) || 0) >= EGG_RESPAWN_MS;
+    const startCooldown = type => writeStorage(cooldownKey(type), String(Date.now()));
+    const setCooldownRemaining = (type, remainingMs) => {
+      const elapsed = Math.max(0, EGG_RESPAWN_MS - Number(remainingMs || 0));
+      writeStorage(cooldownKey(type), String(Date.now() - elapsed));
     };
     const caughtCount = () => {
       try {
@@ -305,10 +313,11 @@
       }
     };
     const alreadyCaught = readStorage(storageKey) === '1';
+    const travelerReady = cooldownReady('traveler');
     const egg = document.createElement('button');
     const toast = document.createElement('div');
     const position = eggPosition(path);
-    let dodges = alreadyCaught ? 0 : 1;
+    let dodges = 1;
 
     egg.id = 'p4-page-egg';
     egg.className = 'p4-page-egg';
@@ -358,13 +367,14 @@
       const rect = egg.getBoundingClientRect();
       const caught = caughtCount() + (alreadyCaught ? 0 : 1);
       writeStorage(storageKey, '1');
+      startCooldown('traveler');
       sparks(rect);
       egg.classList.add('caught');
       showToast(`${EGG_MESSAGES[path] || 'Pion voyageur trouvé : il préparait quelque chose de très peu stratégique.'} Collection : ${caught} pion(s).`);
       setTimeout(() => egg.remove(), 500);
     });
 
-    document.body.appendChild(egg);
+    if (travelerReady) document.body.appendChild(egg);
     document.body.appendChild(toast);
 
     const rewardPaths = new Set([
@@ -374,7 +384,7 @@
       '/reset-password', '/404',
     ]);
 
-    if (rewardPaths.has(path)) {
+    if (rewardPaths.has(path) && cooldownReady('coins')) {
       const coinEgg = document.createElement('button');
       const coinPosition = eggPosition(`${path}:coins`, 3);
       coinEgg.className = 'p4-page-egg p4-coin-egg';
@@ -402,8 +412,11 @@
           sparks(rect);
           coinEgg.classList.add('caught');
           if (data.alreadyClaimed) {
-            showToast('Ce mini-pion a déjà vidé ses poches. Il garde seulement son charme.');
+            const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
+            setCooldownRemaining('coins', data.retryAfterMs || EGG_RESPAWN_MS);
+            showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`);
           } else {
+            startCooldown('coins');
             showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins. Solde : ${Number(data.coins || 0)}.`);
             try {
               const player = JSON.parse(localStorage.getItem('player') || '{}');
@@ -423,33 +436,36 @@
       document.body.appendChild(coinEgg);
     }
 
-    const chaosEgg = document.createElement('button');
-    const chaosPosition = eggPosition(`${path}:chaos`, 5);
-    const chaosIcons = ['?', '4', '!', '☻'];
-    chaosEgg.className = 'p4-chaos-egg';
-    chaosEgg.type = 'button';
-    chaosEgg.textContent = chaosIcons[path.length % chaosIcons.length];
-    chaosEgg.setAttribute('aria-label', 'Bouton très suspect');
-    chaosEgg.style.setProperty('--chaos-left', `${chaosPosition.left}vw`);
-    chaosEgg.style.setProperty('--chaos-top', `${chaosPosition.top}vh`);
-    chaosEgg.addEventListener('click', () => {
-      const banner = document.createElement('div');
-      const chaosMessages = [
-        'Mode stratégie approximative activé',
-        'Le site vient de perdre 4 points de sérieux',
-        'Alerte : un pion a touché aux réglages',
-        'Technique secrète : cliquer partout',
-      ];
-      banner.className = 'p4-egg-banner';
-      banner.textContent = chaosMessages[path.length % chaosMessages.length];
-      document.body.classList.add('p4-egg-chaos');
-      document.body.appendChild(banner);
-      sparks(chaosEgg.getBoundingClientRect());
-      setTimeout(() => document.body.classList.remove('p4-egg-chaos'), 3000);
-      setTimeout(() => banner.remove(), 3300);
-      chaosEgg.remove();
-    });
-    document.body.appendChild(chaosEgg);
+    if (cooldownReady('chaos')) {
+      const chaosEgg = document.createElement('button');
+      const chaosPosition = eggPosition(`${path}:chaos`, 5);
+      const chaosIcons = ['?', '4', '!', '☻'];
+      chaosEgg.className = 'p4-chaos-egg';
+      chaosEgg.type = 'button';
+      chaosEgg.textContent = chaosIcons[path.length % chaosIcons.length];
+      chaosEgg.setAttribute('aria-label', 'Bouton très suspect');
+      chaosEgg.style.setProperty('--chaos-left', `${chaosPosition.left}vw`);
+      chaosEgg.style.setProperty('--chaos-top', `${chaosPosition.top}vh`);
+      chaosEgg.addEventListener('click', () => {
+        const banner = document.createElement('div');
+        const chaosMessages = [
+          'Mode stratégie approximative activé',
+          'Le site vient de perdre 4 points de sérieux',
+          'Alerte : un pion a touché aux réglages',
+          'Technique secrète : cliquer partout',
+        ];
+        startCooldown('chaos');
+        banner.className = 'p4-egg-banner';
+        banner.textContent = chaosMessages[path.length % chaosMessages.length];
+        document.body.classList.add('p4-egg-chaos');
+        document.body.appendChild(banner);
+        sparks(chaosEgg.getBoundingClientRect());
+        setTimeout(() => document.body.classList.remove('p4-egg-chaos'), 3000);
+        setTimeout(() => banner.remove(), 3300);
+        chaosEgg.remove();
+      });
+      document.body.appendChild(chaosEgg);
+    }
   }
 
   applyTheme(root.dataset.theme || getSavedTheme());
