@@ -306,19 +306,31 @@
       return [...`${value}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
     };
     const rarityFor = value => {
-      const roll = hourlySeed(value) % 1000;
-      if (roll < 8) return { key: 'spectral', label: 'Spectral', color: '#72f7d4' };
-      if (roll < 45) return { key: 'legendary', label: 'Légendaire', color: '#ffd60a' };
-      if (roll < 155) return { key: 'epic', label: 'Épique', color: '#bf5af2' };
-      if (roll < 390) return { key: 'rare', label: 'Rare', color: '#4c8dff' };
-      return { key: 'common', label: 'Commun', color: '#ff2d55' };
+      const rarities = [
+        { key: 'common', label: 'Commun', color: '#ff5c72', rate: 50 },
+        { key: 'rare', label: 'Rare', color: '#4c8dff', rate: 25 },
+        { key: 'epic', label: 'Épique', color: '#bf5af2', rate: 12 },
+        { key: 'legendary', label: 'Légendaire', color: '#ffd60a', rate: 7 },
+        { key: 'mythic', label: 'Mythique', color: '#ff2d86', rate: 3.5 },
+        { key: 'artifact', label: 'Artefact', color: '#72f7d4', rate: 1.5 },
+        { key: 'queenpawn', label: 'QueenPawn', color: '#fff2c7', rate: 1 },
+      ];
+      const roll = (hourlySeed(value) % 10000) / 100;
+      let cursor = 0;
+      for (const rarity of rarities) {
+        cursor += rarity.rate;
+        if (roll < cursor) return rarity;
+      }
+      return rarities[0];
     };
     const designForRarity = rarity => ({
       common: 'classic',
       rare: 'grooved',
       epic: 'star',
       legendary: 'prism',
-      spectral: 'spectral',
+      mythic: 'mythic',
+      artifact: 'artifact',
+      queenpawn: 'queen',
     }[rarity] || 'classic');
     const caughtCount = () => {
       try {
@@ -485,9 +497,8 @@
             showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`);
           } else {
             startCooldown('coins');
-            const gemText = Number(data.gems || 0) > 0 ? ` +${Number(data.gems)} gemmes légendaires.` : '';
-            const tokenText = data.collectible?.label ? ` Pion ${data.collectible.label} ajouté à la collection.` : '';
-            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}${tokenText}`);
+            const gemText = Number(data.gems || 0) > 0 ? ` Coup de chance rarissime : +${Number(data.gems)} gemmes !` : '';
+            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}`);
             try {
               const player = JSON.parse(localStorage.getItem('player') || '{}');
               if (player?.id) {

@@ -9,7 +9,7 @@ const os         = require('os');
 const { fork }   = require('child_process');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
-const { TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenGemReward } = require('./token-collection');
+const { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward } = require('./token-collection');
 const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
@@ -5142,13 +5142,15 @@ app.post('/api/easter-eggs/claim', (req, res) => {
   }
 
   const eggKey = `${pathKey}:${eggId}`;
-  const reward = eggId === 'coin-v1' ? 20 + Math.floor(Math.random() * 31) : 0;
-  const raritySeed = eggId === 'coin-v1' ? `${pathKey}:coins` : `${pathKey}:traveler`;
+  const isCoinEgg = eggId === 'coin-v1';
+  const reward = isCoinEgg ? 10 + Math.floor(Math.random() * 41) : 0;
+  const coinEggGems = isCoinEgg && Math.random() < 0.01 ? 5 + Math.floor(Math.random() * 6) : 0;
+  const raritySeed = `${pathKey}:traveler`;
   const hour = Math.floor(Date.now() / EASTER_EGG_RESPAWN_MS);
-  const roll = [...`${raritySeed}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261) % 1000;
-  const rarity = roll < 8 ? 'spectral' : roll < 45 ? 'legendary' : roll < 155 ? 'epic' : roll < 390 ? 'rare' : 'common';
-  const collectible = drawTokenColorForRarity(rarity);
-  const gems = drawTokenGemReward(collectible);
+  const rarityRoll = ([...`${raritySeed}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261) % 10000) / 10000;
+  const rarity = drawTokenRarity(() => rarityRoll);
+  const collectible = isCoinEgg ? null : drawTokenColorForRarity(rarity.key);
+  const gems = isCoinEgg ? coinEggGems : drawTokenGemReward(collectible);
   const claim = db.transaction(() => {
     const now = Date.now();
     const existing = getEasterEggClaim.get(playerId, eggKey);
@@ -5163,18 +5165,18 @@ app.post('/api/easter-eggs/claim', (req, res) => {
     }
     if (reward > 0) pQ.addCoins.run({ delta: reward, id: playerId });
     if (gems > 0) pQ.addGems.run({ delta: gems, id: playerId });
-    tokenCollectionQ.add.run({ player_id: playerId, color_key: collectible.key, now });
+    if (collectible) tokenCollectionQ.add.run({ player_id: playerId, color_key: collectible.key, now });
     return {
       reward,
       gems,
-      collectible: {
+      collectible: collectible ? {
         key: collectible.key,
         label: collectible.label,
         hex: collectible.hex,
         hexSecondary: collectible.hexSecondary || '',
         rarity: collectible.rarity,
         design: collectible.design || 'classic',
-      },
+      } : null,
       alreadyClaimed: false,
       respawnMs: EASTER_EGG_RESPAWN_MS,
     };
@@ -5196,16 +5198,21 @@ app.get('/api/decorations', (_, res) => {
 function getTokenCollectionPayload(playerId) {
   const rows = tokenCollectionQ.getAllForPlayer.all(Number(playerId || 0));
   const quantities = new Map(rows.map(row => [String(row.color_key), Number(row.quantity || 0)]));
-  const items = TOKEN_COLOR_CATALOG.map(color => ({
-    key: color.key,
-    label: color.label,
-    hex: color.hex,
-    hexSecondary: color.hexSecondary || '',
-    theme: color.theme,
-    rarity: color.rarity,
-    design: color.design || 'classic',
-    quantity: quantities.get(color.key) || 0,
-  }));
+  const items = TOKEN_COLOR_CATALOG.map(color => {
+    const rarity = TOKEN_RARITIES.find(entry => entry.key === color.rarity);
+    return {
+      key: color.key,
+      label: color.label,
+      hex: color.hex,
+      hexSecondary: color.hexSecondary || '',
+      theme: color.theme,
+      rarity: color.rarity,
+      rarityLabel: rarity?.label || color.rarity,
+      spawnRate: Number(rarity?.spawnRate || 0),
+      design: color.design || 'classic',
+      quantity: quantities.get(color.key) || 0,
+    };
+  });
   const collected = items.filter(item => item.quantity > 0).length;
   const totalCopies = items.reduce((sum, item) => sum + item.quantity, 0);
   return {
@@ -5224,6 +5231,7 @@ app.get('/api/token-collection/catalog', (_, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json({
     items: TOKEN_COLOR_CATALOG.map(({ weight, ...color }) => color),
+    rarities: TOKEN_RARITIES,
     total: TOKEN_COLOR_CATALOG.length,
   });
 });

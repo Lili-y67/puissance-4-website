@@ -1,3 +1,13 @@
+const TOKEN_RARITIES = Object.freeze([
+  { key: 'common', label: 'Commun', spawnRate: 50, color: '#ff5c72', design: 'classic' },
+  { key: 'rare', label: 'Rare', spawnRate: 25, color: '#4c8dff', design: 'grooved' },
+  { key: 'epic', label: 'Epique', spawnRate: 12, color: '#bf5af2', design: 'star' },
+  { key: 'legendary', label: 'Legendaire', spawnRate: 7, color: '#ffd60a', design: 'prism' },
+  { key: 'mythic', label: 'Mythique', spawnRate: 3.5, color: '#ff2d86', design: 'mythic' },
+  { key: 'artifact', label: 'Artefact', spawnRate: 1.5, color: '#72f7d4', design: 'artifact' },
+  { key: 'queenpawn', label: 'QueenPawn', spawnRate: 1, color: '#fff2c7', design: 'queen' },
+]);
+
 const TOKEN_COLOR_CATALOG = Object.freeze([
   { key: 'rouge', label: 'Rouge', hex: '#ff2d55', theme: 'Classiques', rarity: 'common', design: 'classic', weight: 12 },
   { key: 'jaune', label: 'Jaune', hex: '#ffd60a', theme: 'Classiques', rarity: 'common', design: 'classic', weight: 12 },
@@ -26,8 +36,19 @@ const TOKEN_COLOR_CATALOG = Object.freeze([
   { key: 'emeraude', label: 'Emeraude taillee', hex: '#1bd68e', hexSecondary: '#00623f', theme: 'Prestige', rarity: 'epic', design: 'gem', weight: 3 },
   { key: 'prisme', label: 'Prisme legendaire', hex: '#85ebff', hexSecondary: '#ff5ca8', theme: 'Legendes', rarity: 'legendary', design: 'prism', weight: 1, gemRewardMin: 5, gemRewardMax: 15 },
   { key: 'solaire', label: 'Solaire legendaire', hex: '#fff09a', hexSecondary: '#ff6b00', theme: 'Legendes', rarity: 'legendary', design: 'sun', weight: 1, gemRewardMin: 5, gemRewardMax: 15 },
-  { key: 'spectre', label: 'Spectre', hex: '#72f7d4', hexSecondary: '#8b5cf6', theme: 'Anomalies', rarity: 'spectral', design: 'spectral', weight: 1 },
-  { key: 'cosmos', label: 'Cosmos', hex: '#80a7ff', hexSecondary: '#d946ef', theme: 'Anomalies', rarity: 'spectral', design: 'cosmos', weight: 1 },
+  { key: 'dragon', label: 'Ecaille de dragon', hex: '#ff493d', hexSecondary: '#52120e', theme: 'Legendes', rarity: 'legendary', design: 'scale', weight: 1, gemRewardMin: 5, gemRewardMax: 15 },
+
+  { key: 'spectre', label: 'Spectre mythique', hex: '#72f7d4', hexSecondary: '#8b5cf6', theme: 'Mythiques', rarity: 'mythic', design: 'spectral', weight: 1, gemRewardMin: 8, gemRewardMax: 18 },
+  { key: 'cosmos', label: 'Cosmos mythique', hex: '#80a7ff', hexSecondary: '#d946ef', theme: 'Mythiques', rarity: 'mythic', design: 'cosmos', weight: 1, gemRewardMin: 8, gemRewardMax: 18 },
+  { key: 'phoenix', label: 'Coeur du Phenix', hex: '#fff07a', hexSecondary: '#ff1744', theme: 'Mythiques', rarity: 'mythic', design: 'flame', weight: 1, gemRewardMin: 8, gemRewardMax: 18 },
+  { key: 'lunaire', label: 'Lune eternelle', hex: '#e8e9ff', hexSecondary: '#5754c9', theme: 'Mythiques', rarity: 'mythic', design: 'moon', weight: 1, gemRewardMin: 8, gemRewardMax: 18 },
+
+  { key: 'relique', label: 'Relique ancienne', hex: '#62ffd5', hexSecondary: '#57452b', theme: 'Artefacts', rarity: 'artifact', design: 'artifact', weight: 1, gemRewardMin: 10, gemRewardMax: 22 },
+  { key: 'chronos', label: 'Chronos', hex: '#e8cf78', hexSecondary: '#315f72', theme: 'Artefacts', rarity: 'artifact', design: 'clock', weight: 1, gemRewardMin: 10, gemRewardMax: 22 },
+  { key: 'runique', label: 'Pion runique', hex: '#c5fff0', hexSecondary: '#087b67', theme: 'Artefacts', rarity: 'artifact', design: 'rune', weight: 1, gemRewardMin: 10, gemRewardMax: 22 },
+
+  { key: 'queenpawn', label: 'QueenPawn', hex: '#fff8dd', hexSecondary: '#d39bff', theme: 'Tresors impossibles', rarity: 'queenpawn', design: 'queen', weight: 1, gemRewardMin: 15, gemRewardMax: 30 },
+  { key: 'queenpawn_noire', label: 'QueenPawn Noire', hex: '#5c5278', hexSecondary: '#ff4dc4', theme: 'Tresors impossibles', rarity: 'queenpawn', design: 'queen-dark', weight: 1, gemRewardMin: 15, gemRewardMax: 30 },
 ]);
 
 function drawTokenColor(random = Math.random) {
@@ -48,11 +69,21 @@ function drawTokenColorForRarity(rarity, random = Math.random) {
   return pool[index] || TOKEN_COLOR_CATALOG[0];
 }
 
+function drawTokenRarity(random = Math.random) {
+  const roll = Math.max(0, Math.min(0.999999, Number(random()) || 0)) * 100;
+  let cursor = 0;
+  for (const rarity of TOKEN_RARITIES) {
+    cursor += Number(rarity.spawnRate || 0);
+    if (roll < cursor) return rarity;
+  }
+  return TOKEN_RARITIES[0];
+}
+
 function drawTokenGemReward(token, random = Math.random) {
-  if (!token || token.rarity !== 'legendary') return 0;
+  if (!token || !Number(token.gemRewardMax || 0)) return 0;
   const min = Math.max(0, Math.floor(Number(token.gemRewardMin || 0)));
   const max = Math.max(min, Math.floor(Number(token.gemRewardMax || min)));
   return min + Math.floor(Math.max(0, Math.min(0.999999, Number(random()) || 0)) * (max - min + 1));
 }
 
-module.exports = { TOKEN_COLOR_CATALOG, drawTokenColor, drawTokenColorForRarity, drawTokenGemReward };
+module.exports = { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColor, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward };

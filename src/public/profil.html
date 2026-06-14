@@ -721,6 +721,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .collection-token[data-design="pearl"]{filter:saturate(.72);box-shadow:inset 0 0 13px rgba(133,235,255,.45),0 8px 18px rgba(0,0,0,.24)}
 .collection-token[data-design="prism"],.collection-token[data-design="cosmos"],.collection-token[data-design="spectral"]{background:conic-gradient(from 25deg,var(--token-a),#fff6a8,var(--token-b),#8b5cf6,var(--token-a));animation:collectionTokenGlow 2.2s ease-in-out infinite alternate}
 .collection-token[data-design="sun"]::before{inset:18%;border:0;background:repeating-conic-gradient(rgba(255,255,255,.8) 0 7deg,transparent 7deg 22deg);mask:radial-gradient(circle,transparent 0 38%,#000 40%)}
+.collection-token[data-design="scale"]::before{inset:10%;border:0;background:radial-gradient(circle at 25% 25%,rgba(255,255,255,.42) 0 12%,transparent 13%),radial-gradient(circle at 75% 25%,rgba(255,255,255,.28) 0 12%,transparent 13%),radial-gradient(circle at 50% 70%,rgba(255,255,255,.3) 0 15%,transparent 16%)}
+.collection-token[data-design="flame"]::before{inset:14%;border:0;border-radius:55% 45% 55% 45%;background:linear-gradient(145deg,#fff7a8,#ff7a00 48%,#ff1744);transform:rotate(45deg)}
+.collection-token[data-design="moon"]::before{inset:15%;border:0;background:#fff;border-radius:50%;box-shadow:9px 0 0 0 var(--token-b)}
+.collection-token[data-design="artifact"],.collection-token[data-design="clock"],.collection-token[data-design="rune"]{box-shadow:0 0 20px var(--token-a),inset 0 0 0 5px rgba(255,255,255,.12)}
+.collection-token[data-design="artifact"]::before{inset:15%;border:3px dashed rgba(255,255,255,.72)}
+.collection-token[data-design="clock"]::before{inset:13%;border:3px solid rgba(255,255,255,.5);background:linear-gradient(90deg,transparent 48%,#fff 49% 52%,transparent 53%),linear-gradient(0deg,transparent 48%,#fff 49% 52%,transparent 53%)}
+.collection-token[data-design="rune"]::before{content:'◇';inset:6px;display:grid;place-items:center;border:0;color:#fff;font-size:29px;text-shadow:0 0 8px #fff}
+.collection-token[data-design="queen"],.collection-token[data-design="queen-dark"]{background:conic-gradient(from 20deg,var(--token-a),var(--token-b),#fff2a8,var(--token-a));box-shadow:0 0 16px #fff,0 0 30px var(--token-b),inset 0 0 0 5px rgba(255,255,255,.18);animation:collectionTokenGlow 1.4s ease-in-out infinite alternate}
+.collection-token[data-design="queen"]::before,.collection-token[data-design="queen-dark"]::before{content:'♛';inset:4px;display:grid;place-items:center;border:0;color:#3a214d;font-size:30px;text-shadow:0 1px #fff,0 0 7px #fff}
 @keyframes collectionTokenGlow{to{filter:brightness(1.22);transform:translateY(-2px);box-shadow:0 0 22px var(--token-a),inset 0 0 0 5px rgba(255,255,255,.12)}}
 .collection-token.locked{filter:grayscale(1);opacity:.18;background:#777}
 .collection-token-qty{position:absolute;right:-7px;bottom:-5px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#090a13;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font:900 11px 'Barlow Condensed',sans-serif}
@@ -2153,7 +2162,7 @@ function renderTokenCollectionSection(player) {
           ${renderCollectionToken(item)}
           <div class="token-entry-copy">
             <strong>${quantity > 0 ? escapeHtml(item.label) : 'Non obtenu'}</strong>
-            <span>${quantity > 0 ? `${escapeHtml(item.rarity)} · x${quantity}` : 'Trouve ce pion cache sur le site'}</span>
+            <span>${quantity > 0 ? `${escapeHtml(item.rarityLabel || item.rarity)} · ${Number(item.spawnRate || 0).toLocaleString('fr-FR')}% · x${quantity}` : `${escapeHtml(item.rarityLabel || item.rarity)} · ${Number(item.spawnRate || 0).toLocaleString('fr-FR')}% de spawn`}</span>
           </div>
         </div>`;
       }).join('')}
