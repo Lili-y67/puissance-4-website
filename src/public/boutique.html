@@ -2029,15 +2029,18 @@ async function loadShop() {
   switchShopCategory(currentCategory);
 }
 
-async function purchasePack(pack, giftTo = '') {
+async function purchasePack(pack, giftTo = '', giftToId = 0) {
   const token = localStorage.getItem('token');
-  if (!token) return alert('Connecte-toi d abord.');
+  if (!token) {
+    alert('Connecte-toi d abord.');
+    return false;
+  }
   if (pack === 'bot_host_1m') {
     const input = document.getElementById('currency-select');
     if (input) input.value = 'crystals';
   }
   const state = giftTo ? getGiftButtonState(pack) : getButtonState(pack);
-  if (state.disabled) return;
+  if (state.disabled) return false;
 
   const item = getDisplayItem(pack);
   const packLabel = item?.title || pack;
@@ -2048,16 +2051,16 @@ async function purchasePack(pack, giftTo = '') {
   const rawCoupon = String(document.getElementById('coupon-input')?.value || '').trim();
   if (rawCoupon && !appliedCouponCode) {
     setCouponStatus('Valide le code promo avant achat.', 'error');
-    return;
+    return false;
   }
   const coupon = appliedCouponCode;
   const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
   const priceText = price === 0 ? 'gratuitement' : `pour ${price} ${currencyLabel}${promoText}`;
-  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return;
+  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
 
-  const btn = document.getElementById(`buy-${pack}`);
+  const btn = giftTo ? null : document.getElementById(`buy-${pack}`);
   const btnInitialHtml = btn?.innerHTML || '';
   if (btn) {
     btn.disabled = true;
@@ -2083,13 +2086,14 @@ async function purchasePack(pack, giftTo = '') {
         currency,
         coupon: coupon || undefined,
         giftTo: giftTo || undefined,
+        giftToId: Number(giftToId || 0) || undefined,
         botId: pack === 'bot_host_1m' ? Number(shopBotHosts?.[0]?.id || 0) : undefined,
       }),
     });
     const data = await res.json();
     if (!res.ok) {
       alert(data.error || 'Impossible d acheter cet objet.');
-      return;
+      return false;
     }
     purchaseOk = true;
     const successText = giftTo ? 'Cadeau envoyé' : 'Achat effectué';
@@ -2109,8 +2113,10 @@ async function purchasePack(pack, giftTo = '') {
     SHOP_BOT_CRYSTAL_PRICES = data.botCrystalPrices || SHOP_BOT_CRYSTAL_PRICES;
     setStoredPlayer(shopPlayer);
     setCoinsUi(shopPlayer?.coins || 0, giftTo ? `Cadeau envoye a ${data.giftTo || giftTo}.` : item?.type === 'booster' ? 'Booster ajoute a ton inventaire.' : pack === 'bot_host_1m' && price === 0 ? 'Host admin active gratuitement.' : 'Achat effectue avec succes.');
+    return true;
   } catch (e) {
     alert('Erreur reseau.');
+    return false;
   } finally {
     renderShop();
     switchShopCategory(currentCategory);
@@ -2187,7 +2193,10 @@ function openGiftModal(pack) {
     selected.textContent = '';
     selected.classList.remove('show');
   }
-  if (btn) btn.disabled = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '🎁 Offrir';
+  }
   if (err) err.textContent = '';
   renderGiftResults([]);
   bg?.classList.add('show');
@@ -2229,13 +2238,26 @@ function onGiftSearchInput() {
 
 async function confirmGift() {
   const err = document.getElementById('gift-error');
+  const btn = document.getElementById('gift-confirm-btn');
   if (!giftPackKey || !giftSelectedPlayer?.pseudo) return;
   if (Number(giftSelectedPlayer.id) === Number(shopPlayer?.id || 0)) {
     if (err) err.textContent = 'Tu ne peux pas t offrir un cadeau a toi-meme.';
     return;
   }
-  await purchasePack(giftPackKey, giftSelectedPlayer.pseudo);
-  closeGiftModal();
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+  }
+  const sent = await purchasePack(giftPackKey, giftSelectedPlayer.pseudo, giftSelectedPlayer.id);
+  if (sent) {
+    closeGiftModal();
+    return;
+  }
+  if (err) err.textContent = 'Le cadeau n a pas ete envoye. Verifie le message affiche puis reessaie.';
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = '🎁 Offrir';
+  }
 }
 
 repairDomText();

@@ -250,6 +250,7 @@ class GameManager {
         vipTier: elo.vipTier ?? null,
       },
       coinChanges: elo.coins || {},
+      tokenDrops: elo.tokenDrops || {},
     };
 
     this.socketToGame.delete(state.players[1].socketId);
@@ -278,6 +279,7 @@ class GameManager {
         vipTier: elo.vipTier ?? null,
       },
       coinChanges: elo.coins || {},
+      tokenDrops: elo.tokenDrops || {},
       coinsNow: {
         [state.players[1].id]: elo.player1CoinsNow,
         [state.players[2].id]: elo.player2CoinsNow,

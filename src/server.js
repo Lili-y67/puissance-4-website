@@ -8,7 +8,8 @@ const crypto     = require('crypto');
 const os         = require('os');
 const { fork }   = require('child_process');
 
-const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
+const { TOKEN_COLOR_CATALOG } = require('./token-collection');
 const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
 const { startDiscordBot } = require('./discord-bot');
@@ -5170,6 +5171,51 @@ app.get('/api/decorations', (_, res) => {
   res.json({ decorations: getAvatarDecorationPaths() });
 });
 
+function getTokenCollectionPayload(playerId) {
+  const rows = tokenCollectionQ.getAllForPlayer.all(Number(playerId || 0));
+  const quantities = new Map(rows.map(row => [String(row.color_key), Number(row.quantity || 0)]));
+  const items = TOKEN_COLOR_CATALOG.map(color => ({
+    key: color.key,
+    label: color.label,
+    hex: color.hex,
+    hexSecondary: color.hexSecondary || '',
+    theme: color.theme,
+    rarity: color.rarity,
+    quantity: quantities.get(color.key) || 0,
+  }));
+  const collected = items.filter(item => item.quantity > 0).length;
+  const totalCopies = items.reduce((sum, item) => sum + item.quantity, 0);
+  return {
+    items,
+    stats: {
+      collected,
+      total: items.length,
+      totalCopies,
+      duplicates: Math.max(0, totalCopies - collected),
+      completionPercent: items.length ? Math.round((collected / items.length) * 100) : 0,
+    },
+  };
+}
+
+app.get('/api/token-collection/catalog', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({
+    items: TOKEN_COLOR_CATALOG.map(({ weight, ...color }) => color),
+    total: TOKEN_COLOR_CATALOG.length,
+  });
+});
+
+app.get('/api/players/:id/token-collection', (req, res) => {
+  const player = pQ.getById.get(Number(req.params.id));
+  if (!player || Number(player.deleted || 0) === 1) {
+    return res.status(404).json({ error: 'Joueur introuvable.' });
+  }
+  res.json({
+    player: { id: player.id, pseudo: player.pseudo },
+    collection: getTokenCollectionPayload(player.id),
+  });
+});
+
 app.get('/api/profile-banners', (_, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json({ banners: getProfileBannerPaths() });
@@ -5619,12 +5665,16 @@ app.post('/api/shop/buy', async (req, res) => {
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
   const giftTo = String(req.body?.giftTo || '').trim().slice(0, 32);
-  const recipient = giftTo ? pQ.getByPseudo.get(giftTo) : player;
-  if (giftTo && (!recipient || Number(recipient.deleted || 0) === 1 || Number(recipient.is_guest || 0) === 1 || Number(recipient.is_bot || 0) === 1)) {
+  const legacyGiftId = /^\d+$/.test(giftTo) ? Number(giftTo) : 0;
+  const requestedGiftId = Number(req.body?.giftToId || legacyGiftId || 0);
+  const giftToId = Number.isSafeInteger(requestedGiftId) && requestedGiftId > 0 ? requestedGiftId : 0;
+  const hasGiftTarget = giftToId > 0 || !!giftTo;
+  const recipient = giftToId ? pQ.getById.get(giftToId) : giftTo ? pQ.getByPseudo.get(giftTo) : player;
+  if (hasGiftTarget && (!recipient || Number(recipient.deleted || 0) === 1 || Number(recipient.is_guest || 0) === 1 || Number(recipient.is_bot || 0) === 1)) {
     return res.status(404).json({ error: 'Joueur destinataire introuvable.' });
   }
   const recipientId = Number(recipient.id || playerId);
-  if (giftTo && recipientId === Number(playerId)) {
+  if (hasGiftTarget && recipientId === Number(playerId)) {
     return res.status(400).json({ error: 'Tu ne peux pas t offrir un cadeau a toi-meme.' });
   }
   const isGift = recipientId !== Number(playerId);

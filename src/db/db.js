@@ -4,6 +4,7 @@
 const Database = require('better-sqlite3');
 const path     = require('path');
 const fs       = require('fs');
+const { drawTokenColor, drawTokenGemReward } = require('../token-collection');
 
 const DB_PATH = path.join(__dirname, '../../data/p4.db');
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -280,6 +281,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_clan_members_player ON clan_members(player_id);
   CREATE INDEX IF NOT EXISTS idx_clan_members_clan ON clan_members(clan_id);
   CREATE INDEX IF NOT EXISTS idx_clan_messages_clan ON clan_messages(clan_id, created_at);
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS player_token_collection (
+    player_id        INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    color_key        TEXT NOT NULL,
+    quantity         INTEGER NOT NULL DEFAULT 0,
+    first_obtained_at INTEGER NOT NULL,
+    updated_at       INTEGER NOT NULL,
+    PRIMARY KEY (player_id, color_key)
+  );
+  CREATE INDEX IF NOT EXISTS idx_token_collection_player
+    ON player_token_collection(player_id, updated_at DESC);
 `);
 
 db.exec(`
@@ -681,6 +695,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const p2CoinMultiplier = coinBoost * (p2ShopCoinBoost ? Math.max(1, Number(p2ShopCoinBoost.multiplier || 1)) : 1);
   const p1Coins = isFriendly || isSuspect || p1IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * p1CoinMultiplier);
   const p2Coins = isFriendly || isSuspect || p2IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * p2CoinMultiplier);
+  const tokenDrops = {};
 
   if (!isFriendly && !isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
@@ -688,6 +703,20 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
     if (p1Coins > 0) pQ.addCoins.run({ delta: p1Coins, id: game.player1_id });
     if (p2Coins > 0) pQ.addCoins.run({ delta: p2Coins, id: game.player2_id });
+    if (!p1IsBot && Number(player1?.is_guest || 0) !== 1) {
+      const token = drawTokenColor();
+      const gems = drawTokenGemReward(token);
+      tokenCollectionQ.add.run({ player_id: game.player1_id, color_key: token.key, now: Date.now() });
+      if (gems > 0) pQ.addGems.run({ delta: gems, id: game.player1_id });
+      tokenDrops[game.player1_id] = { key: token.key, label: token.label, hex: token.hex, rarity: token.rarity, gems };
+    }
+    if (!p2IsBot && Number(player2?.is_guest || 0) !== 1) {
+      const token = drawTokenColor();
+      const gems = drawTokenGemReward(token);
+      tokenCollectionQ.add.run({ player_id: game.player2_id, color_key: token.key, now: Date.now() });
+      if (gems > 0) pQ.addGems.run({ delta: gems, id: game.player2_id });
+      tokenDrops[game.player2_id] = { key: token.key, label: token.label, hex: token.hex, rarity: token.rarity, gems };
+    }
     if (isDraw) {
       pQ.draw.run(game.player1_id);
       pQ.draw.run(game.player2_id);
@@ -748,6 +777,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
       [game.player1_id]: p1Coins,
       [game.player2_id]: p2Coins,
     },
+    tokenDrops,
     player1CoinsNow: pQ.getById.get(game.player1_id).coins,
     player2CoinsNow: pQ.getById.get(game.player2_id).coins,
     player1EloNow: pQ.getById.get(game.player1_id).elo,
@@ -841,6 +871,22 @@ const sQ = {
   get:   db.prepare('SELECT player_id, expires FROM sessions WHERE token = ?'),
   del:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   purge: db.prepare('DELETE FROM sessions WHERE expires < ?'),
+};
+
+const tokenCollectionQ = {
+  getAllForPlayer: db.prepare(`
+    SELECT color_key, quantity, first_obtained_at, updated_at
+    FROM player_token_collection
+    WHERE player_id = ?
+    ORDER BY first_obtained_at ASC
+  `),
+  add: db.prepare(`
+    INSERT INTO player_token_collection (player_id, color_key, quantity, first_obtained_at, updated_at)
+    VALUES (@player_id, @color_key, 1, @now, @now)
+    ON CONFLICT(player_id, color_key) DO UPDATE SET
+      quantity = quantity + 1,
+      updated_at = excluded.updated_at
+  `),
 };
 
 const tQ = {
@@ -962,4 +1008,4 @@ const tQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, cQ, sQ, abQ, rQ, tQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, cQ, sQ, abQ, rQ, tQ, tokenCollectionQ, calcElo, finishGame };

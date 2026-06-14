@@ -701,6 +701,34 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .token-emoji-btn{font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;border-radius:10px;background:rgba(255,214,10,0.1);border:1px solid rgba(255,214,10,0.24);color:var(--yellow);cursor:pointer;transition:all .2s;}
 .token-emoji-btn:hover{background:rgba(255,214,10,0.18);}
 .token-emoji-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none;transform:none}
+.token-collection-card{position:relative;overflow:hidden;padding:20px;border-radius:24px;border:1px solid rgba(133,235,255,.18);background:linear-gradient(135deg,rgba(133,235,255,.07),rgba(255,45,85,.045)),var(--surface);box-shadow:0 20px 52px rgba(0,0,0,.24)}
+.token-collection-card::after{content:'';position:absolute;width:190px;height:190px;right:-65px;bottom:-90px;border-radius:50%;background:radial-gradient(circle,rgba(133,235,255,.14),transparent 68%);pointer-events:none}
+.token-collection-head{position:relative;z-index:1;display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.token-collection-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:1.5px;text-transform:uppercase}
+.token-collection-sub{margin-top:4px;color:var(--muted);font-size:12px;line-height:1.5}
+.token-collection-stats{display:flex;gap:8px;flex-wrap:wrap}
+.token-collection-stat{min-width:82px;padding:9px 11px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);text-align:center}
+.token-collection-stat strong{display:block;font:900 22px 'Barlow Condensed',sans-serif}
+.token-collection-stat span{display:block;margin-top:2px;font-size:9px;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase}
+.token-collection-preview{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.collection-token{--token-a:#555;--token-b:var(--token-a);position:relative;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 34% 28%,rgba(255,255,255,.72),transparent 13%),linear-gradient(135deg,var(--token-a),var(--token-b));border:3px solid rgba(255,255,255,.24);box-shadow:inset 0 -7px 12px rgba(0,0,0,.23),0 8px 18px rgba(0,0,0,.24)}
+.collection-token.locked{filter:grayscale(1);opacity:.18;background:#777}
+.collection-token-qty{position:absolute;right:-7px;bottom:-5px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#090a13;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font:900 11px 'Barlow Condensed',sans-serif}
+.token-collection-progress{position:relative;z-index:1;height:7px;margin-top:16px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.token-collection-progress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff2d55,#ffd60a,#30d158,#64d2ff,#af52de);box-shadow:0 0 16px rgba(133,235,255,.25)}
+.token-collection-modal-bg{display:none;position:fixed;inset:0;z-index:2400;padding:20px;background:rgba(0,0,0,.76);backdrop-filter:blur(9px);align-items:center;justify-content:center}
+.token-collection-modal-bg.show{display:flex}
+.token-collection-modal{width:min(980px,96vw);max-height:90vh;overflow:auto;padding:24px;border-radius:26px;background:#0d0d1c;border:1px solid rgba(255,255,255,.10);box-shadow:0 28px 90px rgba(0,0,0,.55)}
+.token-collection-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.token-collection-close{width:38px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:var(--text);cursor:pointer;font-size:22px}
+.token-theme-title{margin:20px 0 10px;font:900 18px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;color:#85ebff}
+.token-collection-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.token-collection-entry{display:flex;align-items:center;gap:11px;min-width:0;padding:11px;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)}
+.token-collection-entry.locked{opacity:.42}
+.token-collection-entry .collection-token{width:48px;height:48px;flex-shrink:0}
+.token-entry-copy{min-width:0}.token-entry-copy strong{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.token-entry-copy span{display:block;margin-top:3px;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+@media(max-width:760px){.token-collection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.token-collection-modal{padding:17px}.token-collection-stat{min-width:72px}}
+@media(max-width:430px){.token-collection-grid{grid-template-columns:1fr}}
 .avatar-decoration-card{background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface);border:1px solid var(--border);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;animation:slide-in 0.5s 0.16s cubic-bezier(0.22,1,0.36,1) both;box-shadow:0 18px 38px rgba(0,0,0,.18);}
 .avatar-decoration-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .avatar-decoration-preview{position:relative;width:88px;height:88px;border-radius:50%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;overflow:visible;flex-shrink:0}
@@ -1438,6 +1466,7 @@ let queueMusicPreviewFrame = null;
 let profileShopInventory = {};
 let profileShopCatalog = {};
 let profileActiveBoosters = {};
+let profileTokenCollection = { items: [], stats: { collected: 0, total: 0, totalCopies: 0, duplicates: 0, completionPercent: 0 } };
 let profileLivePoll = null;
 let profileRpcOnline = false;
 let profileRpcLive = false;
@@ -2085,7 +2114,85 @@ function renderClanSection(player, isOwnProfile) {
           </div>
         </div>
       </div>
-    </section>`;
+  </section>`;
+}
+
+function tokenStyle(item) {
+  return `--token-a:${escapeHtml(item?.hex || '#555')};--token-b:${escapeHtml(item?.hexSecondary || item?.hex || '#555')}`;
+}
+
+function renderCollectionToken(item) {
+  const quantity = Number(item?.quantity || 0);
+  return `<div class="collection-token ${quantity > 0 ? '' : 'locked'}" style="${tokenStyle(item)}" title="${escapeHtml(item?.label || 'Jeton inconnu')}">
+    ${quantity > 1 ? `<span class="collection-token-qty">x${quantity}</span>` : ''}
+  </div>`;
+}
+
+function renderTokenCollectionSection(player) {
+  const collection = profileTokenCollection || {};
+  const items = Array.isArray(collection.items) ? collection.items : [];
+  const stats = collection.stats || {};
+  const preview = [...items.filter(item => Number(item.quantity || 0) > 0), ...items.filter(item => Number(item.quantity || 0) <= 0)].slice(0, 10);
+  const themes = [...new Set(items.map(item => item.theme).filter(Boolean))];
+  const modalThemes = themes.map(theme => `
+    <div class="token-theme-title">${escapeHtml(theme)}</div>
+    <div class="token-collection-grid">
+      ${items.filter(item => item.theme === theme).map(item => {
+        const quantity = Number(item.quantity || 0);
+        return `<div class="token-collection-entry ${quantity > 0 ? '' : 'locked'}">
+          ${renderCollectionToken(item)}
+          <div class="token-entry-copy">
+            <strong>${quantity > 0 ? escapeHtml(item.label) : 'Non obtenu'}</strong>
+            <span>${quantity > 0 ? `${escapeHtml(item.rarity)} · x${quantity}` : 'Joue une partie classee'}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `).join('');
+  return `<section class="profile-section" id="section-collection">
+    <div class="profile-section-head">
+      <div>
+        <div class="profile-section-title">Collection</div>
+        <div class="profile-section-sub">Les jetons colores recuperes en terminant des parties classees.</div>
+      </div>
+    </div>
+    <div class="token-collection-card">
+      <div class="token-collection-head">
+        <div>
+          <div class="token-collection-title">Ronds de Puissance 4</div>
+          <div class="token-collection-sub">Chaque partie classee legitime ajoute un jeton. Les doublons s'empilent en x2, x3 et plus.</div>
+        </div>
+        <div class="token-collection-stats">
+          <div class="token-collection-stat"><strong>${Number(stats.collected || 0)}/${Number(stats.total || 0)}</strong><span>Couleurs</span></div>
+          <div class="token-collection-stat"><strong>${Number(stats.totalCopies || 0)}</strong><span>Jetons</span></div>
+          <div class="token-collection-stat"><strong>${Number(stats.duplicates || 0)}</strong><span>Doublons</span></div>
+        </div>
+      </div>
+      <div class="token-collection-preview">${preview.map(renderCollectionToken).join('')}</div>
+      <div class="token-collection-progress"><span style="width:${Math.max(0, Math.min(100, Number(stats.completionPercent || 0)))}%"></span></div>
+      <button class="avatar-decoration-btn" type="button" onclick="openTokenCollection()" style="position:relative;z-index:1;margin-top:14px">Voir toute la collection</button>
+    </div>
+    <div class="token-collection-modal-bg" id="token-collection-modal-bg" onclick="if(event.target===this)closeTokenCollection()">
+      <div class="token-collection-modal">
+        <div class="token-collection-modal-head">
+          <div>
+            <div class="token-collection-title">Collection de ${escapeHtml(player.pseudo)}</div>
+            <div class="token-collection-sub">${Number(stats.completionPercent || 0)}% complete · ${Number(stats.totalCopies || 0)} exemplaire(s).</div>
+          </div>
+          <button class="token-collection-close" type="button" onclick="closeTokenCollection()">×</button>
+        </div>
+        ${modalThemes || '<div class="empty-state">Collection indisponible.</div>'}
+      </div>
+    </div>
+  </section>`;
+}
+
+function openTokenCollection() {
+  document.getElementById('token-collection-modal-bg')?.classList.add('show');
+}
+
+function closeTokenCollection() {
+  document.getElementById('token-collection-modal-bg')?.classList.remove('show');
 }
 
 function formatRemainingTime(ms) {
@@ -2115,10 +2222,11 @@ async function load() {
   }
 
   try {
-    const [profileRes, followRes, tournamentsRes] = await Promise.all([
+    const [profileRes, followRes, tournamentsRes, tokenCollectionRes] = await Promise.all([
       fetch(`/api/players/${playerId}`),
       viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
       fetch(`/api/players/${playerId}/tournaments`),
+      fetch(`/api/players/${playerId}/token-collection`),
     ]);
     if (profileRes.status === 404) {
       document.getElementById('content').innerHTML = `
@@ -2133,7 +2241,9 @@ async function load() {
     const { player, games, games_total, following, followers } = await profileRes.json();
     const totalGames = Number(games_total ?? player.games_total ?? (games || []).length);
     const tournamentData = tournamentsRes.ok ? await tournamentsRes.json() : { tournaments: [] };
+    const tokenCollectionData = tokenCollectionRes.ok ? await tokenCollectionRes.json() : { collection: { items: [], stats: {} } };
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
+    profileTokenCollection = tokenCollectionData.collection || { items: [], stats: {} };
     const freshPlayer = player;
     currentPlayer = freshPlayer;
     profileRpcOnline = !!freshPlayer.online;
@@ -2330,6 +2440,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     .join('');
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
+    { href: '#section-collection', icon: '🔴', title: 'Collection', sub: 'Ronds et doublons' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
     ...(isOwnProfile ? [{ href: '#section-custom', icon: '🎨', title: 'Personnaliser', sub: 'Pseudo, couleurs, pion' }] : []),
@@ -2471,6 +2582,8 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     </section>
+
+    ${renderTokenCollectionSection(player)}
 
     <section class="profile-section" id="section-social">
     <div class="profile-section-head">
