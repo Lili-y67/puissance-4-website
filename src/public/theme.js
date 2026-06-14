@@ -150,7 +150,7 @@
     { href: '/analyse', icon: '🧠', label: 'Analyse', sub: 'Moteur de coups' },
     { href: '/boutique', icon: '🛒', label: 'Boutique', sub: 'Coins et gemmes' },
     { href: '/stats', icon: '📈', label: 'Stats', sub: 'Données du site' },
-    { href: '/news', icon: '📰', label: 'News', sub: 'Mise a jour 3.2.0' },
+    { href: '/news', icon: '📰', label: 'News', sub: 'Mise a jour 3.4.0' },
     { href: '/regles', icon: '📘', label: 'Règles', sub: 'Jeu et gains' },
     { href: '/api-doc', icon: '🧪', label: 'API', sub: 'Docs développeur' },
     { href: 'https://discord.gg/MrKbBAAWcm', icon: '📣', label: 'Discord', sub: 'Communauté' },
