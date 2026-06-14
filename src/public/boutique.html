@@ -682,6 +682,7 @@ const SHOP_ITEMS = {
     features: [
       ['💠', 'Badge Crystal', 'Badge image exclusif visible sans couleur de role.'],
       ['💎', '20 gemmes / semaine', 'Bonus hebdomadaire automatique tant que le rang est actif.'],
+      ['⏱️', 'Easter eggs toutes les 15 min', 'Crystal profite du même temps de reapparition que VIP+.'],
       ['📣', 'Alerte connexion', 'Message custom en bas a gauche quand tu te connectes au site.']
     ]
   },
@@ -692,7 +693,8 @@ const SHOP_ITEMS = {
     features: [
       ['🎭', 'Emoji custom', 'Choisis ton emoji de pion personnalisé.'],
       ['🖼️', 'Avatar et bannière GIF', 'GIF autorisés sur ton profil avec cooldown premium.'],
-      ['⏱️', 'Boost quotidien', 'Une activation par jour, active pendant 1 heure.']
+      ['⏱️', 'Easter eggs toutes les 30 min', 'Les pions caches reapparaissent deux fois plus vite que pour un joueur standard.'],
+      ['⚡', 'Boost quotidien', 'Une activation par jour, active pendant 1 heure.']
     ]
   },
   vip_1y: {
@@ -702,6 +704,7 @@ const SHOP_ITEMS = {
     features: [
       ['🗓️', '1 an complet', 'Le VIP dure 365 jours et peut être prolongé.'],
       ['🎨', 'Emoji custom VIP', 'Même confort que le VIP mensuel pour ton pion.'],
+      ['⏱️', 'Easter eggs toutes les 30 min', 'Le temps de reapparition passe de 1 heure a 30 minutes.'],
       ['💾', 'GIF médias', 'Avatar et bannière GIF avec les mêmes protections serveur.']
     ]
   },
@@ -712,6 +715,7 @@ const SHOP_ITEMS = {
     features: [
       ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
       ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
+      ['⏱️', 'Easter eggs toutes les 15 min', 'Les pions voyageurs et tresors reapparaissent quatre fois plus vite.'],
       ['✨', 'Décorations avatar', 'Import personnalisé VIP+ et compatibilité avec les packs boutique.']
     ]
   },
@@ -721,6 +725,8 @@ const SHOP_ITEMS = {
     meta: 'Le pack identité pour les profils spéciaux : badge perso, export replay HTML et bonus dédié.',
     features: [
       ['🏷️', 'Badge personnalisé', 'Texte, couleur et emoji dédiés sur ton profil.'],
+      ['🖱️', 'Curseur 32x32', 'Importe ton propre curseur et utilise-le sur tout le site.'],
+      ['⏱️', 'Easter eggs toutes les 10 min', 'Le meilleur temps de reapparition disponible pour les pions caches.'],
       ['📥', 'Replay HTML', 'Télécharge une partie en HTML autonome depuis le replay.'],
       ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
     ]
@@ -1864,7 +1870,19 @@ function renderCard(pack) {
 }
 
 function renderShop() {
-  document.getElementById('shop-ranks-section').innerHTML = ['crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  const respawnComparison = `
+    <article class="card vipplus" style="grid-column:1/-1">
+      <div class="tier"><span class="badge vipplus">⏱️ PIONS CACHES</span><div class="duration">Temps de spawn</div></div>
+      <h2>Réapparition selon le grade</h2>
+      <div class="meta">Le délai concerne les pions voyageurs de collection et les mini-pions trésors. Chaque type possède son propre timer.</div>
+      <div class="feature-list" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div class="feature"><div class="feature-emoji">👤</div><div class="feature-copy"><strong>Joueur</strong><span>1 heure</span></div></div>
+        <div class="feature"><div class="feature-emoji">⭐</div><div class="feature-copy"><strong>VIP</strong><span>30 minutes</span></div></div>
+        <div class="feature"><div class="feature-emoji">💎</div><div class="feature-copy"><strong>VIP+ / Crystal</strong><span>15 minutes</span></div></div>
+        <div class="feature"><div class="feature-emoji">✨</div><div class="feature-copy"><strong>Perso</strong><span>10 minutes</span></div></div>
+      </div>
+    </article>`;
+  document.getElementById('shop-ranks-section').innerHTML = respawnComparison + ['crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
   document.getElementById('shop-cosmetics-section').innerHTML = Object.values(SHOP_ITEMS)
     .filter(item => item?.category === 'cosmetics')
     .map(renderCosmeticCard)

@@ -5130,10 +5130,19 @@ const renewEasterEggClaim = db.prepare(`
 `);
 const EASTER_EGG_RESPAWN_MS = 60 * 60 * 1000;
 
+function getEasterEggRespawnMs(player) {
+  if (isPersoPlayer(player)) return 10 * 60 * 1000;
+  if (isVipPlusPlayer(player)) return 15 * 60 * 1000;
+  if (isVipPlayer(player)) return 30 * 60 * 1000;
+  return EASTER_EGG_RESPAWN_MS;
+}
+
 app.post('/api/easter-eggs/claim', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.body?.token || '');
   const playerId = validateSession(token);
   if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour ajouter ce pion a ta collection.' });
+  const player = pQ.getById.get(playerId);
+  const respawnMs = getEasterEggRespawnMs(player);
 
   const pathKey = String(req.body?.path || '').trim().toLowerCase();
   const eggId = String(req.body?.eggId || '').trim().toLowerCase();
@@ -5146,7 +5155,7 @@ app.post('/api/easter-eggs/claim', (req, res) => {
   const reward = isCoinEgg ? 10 + Math.floor(Math.random() * 41) : 0;
   const coinEggGems = isCoinEgg && Math.random() < 0.01 ? 5 + Math.floor(Math.random() * 6) : 0;
   const raritySeed = `${pathKey}:traveler`;
-  const hour = Math.floor(Date.now() / EASTER_EGG_RESPAWN_MS);
+  const hour = Math.floor(Date.now() / respawnMs);
   const rarityRoll = ([...`${raritySeed}:${hour}`].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261) % 10000) / 10000;
   const rarity = drawTokenRarity(() => rarityRoll);
   const collectible = isCoinEgg ? null : drawTokenColorForRarity(rarity.key);
@@ -5155,13 +5164,13 @@ app.post('/api/easter-eggs/claim', (req, res) => {
     const now = Date.now();
     const existing = getEasterEggClaim.get(playerId, eggKey);
     if (existing) {
-      const retryAfterMs = Math.max(0, Number(existing.claimed_at || 0) + EASTER_EGG_RESPAWN_MS - now);
-      if (retryAfterMs > 0) return { reward: 0, alreadyClaimed: true, retryAfterMs };
-      const renewed = renewEasterEggClaim.run(reward, now, playerId, eggKey, now - EASTER_EGG_RESPAWN_MS);
-      if (!renewed.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: EASTER_EGG_RESPAWN_MS };
+      const retryAfterMs = Math.max(0, Number(existing.claimed_at || 0) + respawnMs - now);
+      if (retryAfterMs > 0) return { reward: 0, alreadyClaimed: true, retryAfterMs, respawnMs };
+      const renewed = renewEasterEggClaim.run(reward, now, playerId, eggKey, now - respawnMs);
+      if (!renewed.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: respawnMs, respawnMs };
     } else {
       const inserted = insertEasterEggClaim.run(playerId, eggKey, reward, now);
-      if (!inserted.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: EASTER_EGG_RESPAWN_MS };
+      if (!inserted.changes) return { reward: 0, alreadyClaimed: true, retryAfterMs: respawnMs, respawnMs };
     }
     if (reward > 0) pQ.addCoins.run({ delta: reward, id: playerId });
     if (gems > 0) pQ.addGems.run({ delta: gems, id: playerId });
@@ -5178,15 +5187,15 @@ app.post('/api/easter-eggs/claim', (req, res) => {
         design: collectible.design || 'classic',
       } : null,
       alreadyClaimed: false,
-      respawnMs: EASTER_EGG_RESPAWN_MS,
+      respawnMs,
     };
   })();
-  const player = pQ.getById.get(playerId);
+  const freshPlayer = pQ.getById.get(playerId);
   res.json({
     ok: true,
     ...claim,
-    coins: Number(player?.coins || 0),
-    gemsNow: Number(player?.gems || 0),
+    coins: Number(freshPlayer?.coins || 0),
+    gemsNow: Number(freshPlayer?.gems || 0),
   });
 });
 
@@ -6312,6 +6321,7 @@ function sanitize(p) {
       token_emoji_image: '',
       profile_banner: '',
       queue_music: '',
+      custom_cursor: '',
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -6905,6 +6915,34 @@ app.patch('/api/players/:id/queue-music', (req, res) => {
   pQ.updateQueueMusic.run({ music: nextMusic, id });
   progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, queue_music: nextMusic });
+});
+
+app.patch('/api/players/:id/custom-cursor', (req, res) => {
+  const id = Number(req.params.id);
+  const token = String(req.body?.token || '');
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
+    return res.status(403).json({ error: 'Le curseur personnalise est reserve au grade Perso.' });
+  }
+  const cursor = String(req.body?.cursor || '').trim();
+  if (cursor) {
+    if (!/^data:image\/png;base64,[a-z0-9+/=]+$/i.test(cursor)) {
+      return res.status(400).json({ error: 'Curseur invalide : PNG 32x32 requis.' });
+    }
+    const bytes = Buffer.from(cursor.slice(cursor.indexOf(',') + 1), 'base64');
+    if (bytes.length > 32 * 1024) return res.status(413).json({ error: 'Curseur trop lourd (max 32 Ko).' });
+    const isPng = bytes.length >= 24
+      && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+    const width = isPng ? bytes.readUInt32BE(16) : 0;
+    const height = isPng ? bytes.readUInt32BE(20) : 0;
+    if (width !== 32 || height !== 32) {
+      return res.status(400).json({ error: 'Le curseur doit mesurer exactement 32x32 pixels.' });
+    }
+  }
+  pQ.updateCustomCursor.run({ cursor, id });
+  progression.recordAction(id, 'profile_updates');
+  res.json({ ok: true, custom_cursor: cursor });
 });
 
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs

@@ -759,6 +759,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .avatar-decoration-btn{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 14px;border-radius:10px;background:rgba(133,235,255,0.1);border:1px solid rgba(133,235,255,0.24);color:#85EBFF;cursor:pointer;transition:all .2s}
 .avatar-decoration-btn:hover{background:rgba(133,235,255,0.18)}
 .avatar-decoration-btn:disabled{opacity:.55;cursor:not-allowed}
+.cursor-custom-preview{position:relative;width:92px;height:92px;flex-shrink:0;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25% 75%,rgba(255,255,255,.045) 75%),linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25% 75%,rgba(255,255,255,.045) 75%);background-position:0 0,8px 8px;background-size:16px 16px;display:grid;place-items:center}
+.cursor-custom-preview img{width:32px;height:32px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
+.cursor-custom-preview::after{content:'32×32';position:absolute;right:7px;bottom:6px;padding:2px 5px;border-radius:6px;background:rgba(0,0,0,.62);color:rgba(255,255,255,.7);font:800 8px 'Barlow Condensed',sans-serif;letter-spacing:.8px}
 .avatar-decoration-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:10px}
 .avatar-decoration-tier{grid-column:1/-1;margin:8px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--tier-color,#85EBFF);display:flex;align-items:center;gap:8px}
 .avatar-decoration-tier::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--tier-color,#85EBFF),transparent);opacity:.35}
@@ -1259,6 +1262,7 @@ body.search-open .profile-side{
 <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarUpload(this)">
 <input type="file" id="token-emoji-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleTokenEmojiUpload(this)">
 <input type="file" id="avatar-decoration-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleAvatarDecorationUpload(this)">
+<input type="file" id="custom-cursor-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleCustomCursorUpload(this)">
 <div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
   <div class="upload-chooser-modal">
     <div class="upload-chooser-head">
@@ -2265,6 +2269,10 @@ async function load() {
     profileTokenCollection = tokenCollectionData.collection || { items: [], stats: {} };
     const freshPlayer = player;
     currentPlayer = freshPlayer;
+    if (isOwnProfile) {
+      syncStoredPlayerPatch({ custom_cursor: String(freshPlayer.custom_cursor || '') });
+      applyProfileCursor(String(freshPlayer.custom_cursor || ''));
+    }
     profileRpcOnline = !!freshPlayer.online;
     profileRpcLive = false;
     profileRpcGames = totalGames;
@@ -2927,6 +2935,26 @@ function render(player, games, following, followers, followStatus, tournaments =
         Vous avez une décoration précise ? Envoyez en MP Discord à <strong style="color:var(--text)"> lili_crystal_</strong>
       </div>
       <button class="avatar-decoration-btn" id="avatar-decoration-btn" type="button" onclick="openAvatarDecorationPicker()">Choisir une décoration</button>
+    </div>
+    <div class="avatar-decoration-card" id="custom-cursor-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Curseur du site</span>
+        <span class="save-confirm" id="custom-cursor-confirm">✓ Enregistré !</span>
+      </div>
+      <div class="avatar-decoration-row">
+        <div class="cursor-custom-preview" id="custom-cursor-preview">
+          <img src="${escapeHtml(player.custom_cursor || '/assets/wukong-cursor.png')}" alt="Apercu curseur">
+        </div>
+        <div class="avatar-decoration-meta">
+          ${isPerso(player)
+            ? 'Importe une petite image. Elle sera automatiquement recadree et convertie en PNG 32x32 pour devenir ton curseur sur tout le site.'
+            : 'Fonction reservee au grade Perso : curseur personnalise PNG 32x32 sur toutes les pages.'}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="avatar-decoration-btn" type="button" onclick="openCustomCursorPicker()" ${isPerso(player) ? '' : 'disabled'}>${player.custom_cursor ? 'Changer le curseur' : 'Importer un curseur'}</button>
+        <button class="avatar-decoration-btn" type="button" onclick="removeCustomCursor()" ${isPerso(player) && player.custom_cursor ? '' : 'disabled'} style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Revenir au curseur original</button>
+      </div>
     </div>
     <div class="avatar-decoration-card" id="queue-music-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -4564,6 +4592,104 @@ async function uploadTokenEmojiData(imageData, me) {
   PROFIL_SFX.error();
   alert(await readApiError(res, 'Erreur upload emoji VIP.'));
   return false;
+}
+
+function applyProfileCursor(cursor) {
+  let style = document.getElementById('p4-custom-cursor-style');
+  if (!cursor) {
+    style?.remove();
+    return;
+  }
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'p4-custom-cursor-style';
+    document.head.appendChild(style);
+  }
+  style.textContent = `html,body,body *{cursor:url("${cursor}") 0 0,auto!important}`;
+}
+
+function openCustomCursorPicker() {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  if (!isPerso(me)) return alert('Le curseur personnalise est reserve au grade Perso.');
+  document.getElementById('custom-cursor-input')?.click();
+}
+
+function resizeCursorImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 32, 32);
+      const scale = Math.min(32 / image.width, 32 / image.height);
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(image, (32 - width) / 2, (32 - height) / 2, width, height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    image.onerror = () => reject(new Error('Image illisible.'));
+    image.src = dataUrl;
+  });
+}
+
+async function saveCustomCursor(cursor) {
+  const me = JSON.parse(localStorage.getItem('player') || '{}');
+  const res = await fetch(`/api/players/${Number(me.id || 0)}/custom-cursor`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: localStorage.getItem('token'), cursor }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Impossible d enregistrer le curseur.');
+  const nextCursor = String(data.custom_cursor || '');
+  syncStoredPlayerPatch({ custom_cursor: nextCursor });
+  if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) currentPlayer.custom_cursor = nextCursor;
+  const preview = document.querySelector('#custom-cursor-preview img');
+  if (preview) preview.src = nextCursor || '/assets/wukong-cursor.png';
+  applyProfileCursor(nextCursor);
+  const confirm = document.getElementById('custom-cursor-confirm');
+  if (confirm) {
+    confirm.classList.add('show');
+    setTimeout(() => confirm.classList.remove('show'), 1800);
+  }
+}
+
+async function handleCustomCursorUpload(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+    input.value = '';
+    return alert('Choisis une image PNG, JPG ou WEBP.');
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    input.value = '';
+    return alert('Image trop lourde (max 2 Mo avant conversion).');
+  }
+  try {
+    const source = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Lecture impossible.'));
+      reader.readAsDataURL(file);
+    });
+    await saveCustomCursor(await resizeCursorImage(source));
+  } catch (error) {
+    alert(error.message || 'Impossible de creer le curseur.');
+  } finally {
+    input.value = '';
+  }
+}
+
+async function removeCustomCursor() {
+  try {
+    await saveCustomCursor('');
+  } catch (error) {
+    alert(error.message || 'Impossible de retirer le curseur.');
+  }
 }
 
 async function uploadAvatarDecorationData(imageData, me) {

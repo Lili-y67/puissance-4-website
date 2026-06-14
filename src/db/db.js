@@ -153,6 +153,7 @@ try { db.exec(`ALTER TABLE players ADD COLUMN elo_curve_changed_at INTEGER NOT N
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN queue_music TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN custom_cursor TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN referred_by INTEGER`); } catch(e) {}
@@ -386,6 +387,7 @@ const pQ = {
   updateProfileBanner: db.prepare(`UPDATE players SET profile_banner = @image WHERE id = @id`),
   updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
   updateQueueMusic: db.prepare(`UPDATE players SET queue_music = @music WHERE id = @id`),
+  updateCustomCursor: db.prepare(`UPDATE players SET custom_cursor = @cursor WHERE id = @id`),
   updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
   updateGuest:    db.prepare(`UPDATE players SET is_guest = @is_guest WHERE id = @id`),
   updatePseudo:   db.prepare(`UPDATE players SET pseudo   = @pseudo   WHERE id = @id`),

@@ -38,8 +38,27 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-5';
+    link.href = '/theme.css?v=eggs-6';
     document.head.appendChild(link);
+  }
+
+  function applyCustomCursor() {
+    let player = null;
+    try {
+      player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+    } catch (_) {}
+    const cursor = String(player?.custom_cursor || '');
+    let style = document.getElementById('p4-custom-cursor-style');
+    if (!/^data:image\/png;base64,[a-z0-9+/=]+$/i.test(cursor)) {
+      style?.remove();
+      return;
+    }
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'p4-custom-cursor-style';
+      document.head.appendChild(style);
+    }
+    style.textContent = `html,body,body *{cursor:url("${cursor}") 0 0,auto!important}`;
   }
 
   function ensurePwaMetadata() {
@@ -105,7 +124,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-5', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-6', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -287,7 +306,17 @@
     if (!eggAllowed(path) || document.getElementById('p4-page-egg')) return;
 
     const storageKey = `p4_egg_${path}`;
-    const EGG_RESPAWN_MS = 60 * 60 * 1000;
+    let storedPlayer = null;
+    try {
+      storedPlayer = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+    } catch (_) {}
+    const EGG_RESPAWN_MS = Number(storedPlayer?.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(storedPlayer?.role || ''))
+      ? 10 * 60 * 1000
+      : Number(storedPlayer?.is_vip_plus || 0) === 1 || Number(storedPlayer?.is_crystal || 0) === 1
+        ? 15 * 60 * 1000
+        : Number(storedPlayer?.is_vip || 0) === 1
+          ? 30 * 60 * 1000
+          : 60 * 60 * 1000;
     const readStorage = key => {
       try { return localStorage.getItem(key); } catch (_) { return null; }
     };
@@ -551,6 +580,7 @@
   }
 
   applyTheme(root.dataset.theme || getSavedTheme());
+  applyCustomCursor();
   ensureThemeStylesheet();
   registerPwa();
   loadDiscordPresence();
