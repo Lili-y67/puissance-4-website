@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.3.1-rpc-12';
+const CACHE_VERSION = 'p4-shell-v3.4.0-eggs-2';
 const APP_SHELL = [
   '/',
   '/index.html',

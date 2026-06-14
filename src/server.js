@@ -5097,6 +5097,55 @@ app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/st
 app.get('/news',        (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
 app.get('/news.html',   (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
 app.get('/nouveautes',  (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS easter_egg_claims (
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    egg_key TEXT NOT NULL,
+    reward INTEGER NOT NULL DEFAULT 0,
+    claimed_at INTEGER NOT NULL,
+    PRIMARY KEY (player_id, egg_key)
+  )
+`);
+
+const EASTER_EGG_REWARD_PATHS = new Set([
+  '/profil', '/boutique', '/progression', '/leaderboard', '/players',
+  '/analyse', '/stats', '/news', '/tournoi', '/regles', '/api-doc',
+  '/local', '/replay', '/cgu', '/duel', '/forgot-password',
+  '/reset-password', '/404',
+]);
+const insertEasterEggClaim = db.prepare(`
+  INSERT OR IGNORE INTO easter_egg_claims (player_id, egg_key, reward, claimed_at)
+  VALUES (?, ?, ?, ?)
+`);
+
+app.post('/api/easter-eggs/claim', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Connecte-toi pour recuperer les coins.' });
+
+  const pathKey = String(req.body?.path || '').trim().toLowerCase();
+  const eggId = String(req.body?.eggId || '').trim().toLowerCase();
+  if (!EASTER_EGG_REWARD_PATHS.has(pathKey) || eggId !== 'coin-v1') {
+    return res.status(400).json({ error: 'Easter egg invalide.' });
+  }
+
+  const eggKey = `${pathKey}:${eggId}`;
+  const reward = 20 + Math.floor(Math.random() * 31);
+  const claim = db.transaction(() => {
+    const inserted = insertEasterEggClaim.run(playerId, eggKey, reward, Date.now());
+    if (!inserted.changes) return { reward: 0, alreadyClaimed: true };
+    pQ.addCoins.run({ delta: reward, id: playerId });
+    return { reward, alreadyClaimed: false };
+  })();
+  const player = pQ.getById.get(playerId);
+  res.json({
+    ok: true,
+    ...claim,
+    coins: Number(player?.coins || 0),
+  });
+});
+
 app.get('/api/decorations', (_, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json({ decorations: getAvatarDecorationPaths() });

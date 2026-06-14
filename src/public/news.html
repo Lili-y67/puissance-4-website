@@ -77,8 +77,8 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
       <h1>Mise a jour <span>3.4.0</span></h1>
-      <p>La progression prend une nouvelle dimension avec des quetes liees aux bots, a la boutique et au profil. L'accueil gagne aussi un menu complet, des compteurs de bots et plusieurs easter eggs decoratifs.</p>
-      <div class="hero-actions"><a class="btn-main" href="/progression">Voir les quetes</a><a class="btn-ghost" href="/">Explorer l'accueil</a></div>
+      <p>La progression prend une nouvelle dimension avec des quetes liees aux bots, a la boutique et au profil. L'accueil gagne aussi un menu complet, des easter eggs, et le compagnon Discord RPC raconte maintenant ton activite directement sur ton profil Discord.</p>
+      <div class="hero-actions"><a class="btn-main" href="/progression">Voir les quetes</a><a class="btn-ghost" href="/downloads/puissance4-discord-rpc.zip">Telecharger le RPC</a></div>
     </div>
     <aside class="version-card">
       <div><div class="version-orb">3.4.0</div><h2>Quetes & bots</h2><p>Chaque victoire contre un bot, achat et modification de profil peut maintenant faire progresser de nouveaux contrats quotidiens ou hebdomadaires.</p></div>
@@ -121,10 +121,22 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
           <div class="news-bubble"><span>&#10003;</span>Les textes de version du site et du statut Discord sont maintenant synchronises en 3.4.0.</div>
         </div>
       </article>
+      <article class="bubble-column" style="--accent:#8b9cf4;--soft:rgba(88,101,242,.18)">
+        <div class="bubble-title"><div class="icon">&#127918;</div><h2>Discord RPC</h2></div>
+        <div class="bubble-list">
+          <div class="news-bubble"><span>&#9670;</span>Un compagnon local relie le site a Discord Desktop pour afficher un Rich Presence Puissance 4.</div>
+          <div class="news-bubble"><span>&#9670;</span>La presence suit l'activite : exploration de l'arene, file d'attente, adversaire trouve, partie ou consultation du profil.</div>
+          <div class="news-bubble"><span>&#9670;</span>Discord peut afficher l'avatar du joueur et jusqu'a deux boutons vers son profil et le site.</div>
+          <div class="news-bubble"><span>&#9670;</span>Si le site ne transmet plus d'activite, le compagnon revient automatiquement sur une presence de secours.</div>
+          <div class="news-bubble"><span>&#9670;</span>Le compagnon communique uniquement avec le site Puissance 4 et le client Discord local, sans lire les mots de passe.</div>
+          <div class="news-bubble"><span>&#9670;</span>Le RPC fonctionne sur ordinateur avec Discord Desktop et Node.js ; les navigateurs mobiles et la PWA ne peuvent pas piloter Discord directement.</div>
+          <a class="news-bubble" href="/downloads/puissance4-discord-rpc.zip" style="--accent:#8b9cf4;text-decoration:none"><span>&#11015;</span>Telecharger le pack Discord Rich Presence.</a>
+        </div>
+      </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.4.0 : nouvelles quetes bots, boutique et profil, progression serveur enrichie, statut Discord actualise, menu complet et easter eggs decoratifs sur l'accueil.</div>
+  <div class="footer-note">Version 3.4.0 : nouvelles quetes bots, boutique et profil, progression serveur enrichie, statut Discord actualise, compagnon Rich Presence pour PC, menu complet et easter eggs decoratifs.</div>
 </main>
 <script src="/theme.js"></script>
 </body>

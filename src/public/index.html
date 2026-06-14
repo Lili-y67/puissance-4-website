@@ -174,14 +174,20 @@ html, body {
 .egg-peeker::before,.egg-peeker::after{content:"";position:absolute;top:18px;width:6px;height:9px;border-radius:50%;background:#16120b}
 .egg-peeker::before{left:17px}.egg-peeker::after{left:32px}
 .egg-peeker:hover,.egg-peeker:focus-visible{right:8px;transform:rotate(-14deg) scale(1.08);outline:2px solid #fff;outline-offset:4px}
+.egg-peeker.hunting{right:auto;bottom:auto;transition:left .34s cubic-bezier(.2,.9,.2,1),top .34s cubic-bezier(.2,.9,.2,1),transform .2s ease}
+.egg-peeker.captured{animation:eggCaptured .65s ease forwards}
 .egg-toast{position:fixed;z-index:200;left:50%;bottom:28px;max-width:calc(100vw - 30px);padding:12px 18px;border:1px solid rgba(255,255,255,.16);border-radius:999px;background:rgba(13,13,28,.94);color:#fff;font:800 14px 'Barlow Condensed',sans-serif;letter-spacing:.7px;box-shadow:0 16px 50px rgba(0,0,0,.45);transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:.3s}
 .egg-toast.show{transform:translate(-50%,0);opacity:1}
 .egg-burst{position:fixed;z-index:190;width:18px;height:18px;border-radius:50%;pointer-events:none;animation:eggBurst 1.35s ease-out forwards}
+.egg-win-card{position:fixed;z-index:195;left:50%;top:50%;width:min(360px,calc(100vw - 28px));padding:20px;border:1px solid rgba(255,255,255,.16);border-radius:25px;background:rgba(10,8,24,.95);box-shadow:0 30px 90px rgba(0,0,0,.55),0 0 45px rgba(255,214,10,.14);backdrop-filter:blur(20px);text-align:center;transform:translate(-50%,-50%) scale(.6) rotate(-5deg);opacity:0;animation:eggWinCard 4.4s cubic-bezier(.2,.9,.2,1) forwards}
+.egg-win-title{font:900 31px 'Barlow Condensed',sans-serif;text-transform:uppercase;color:#ffd60a;letter-spacing:1.5px}.egg-win-copy{margin:4px 0 14px;color:rgba(255,255,255,.65);font-size:12px}.egg-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:12px;border-radius:18px;background:linear-gradient(145deg,#245bd7,#0d318f);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}.egg-mini-cell{aspect-ratio:1;border-radius:50%;background:#080714;box-shadow:inset 0 3px 6px rgba(0,0,0,.7)}.egg-mini-cell.red{background:radial-gradient(circle at 32% 28%,#ff91a6,#ff2d55 52%,#8f1027)}.egg-mini-cell.yellow{background:radial-gradient(circle at 32% 28%,#fff3a8,#ffd60a 52%,#9d6900);animation:eggWinningLine .55s ease-in-out infinite alternate}
 @keyframes eggBurst{to{transform:translate(var(--egg-x),var(--egg-y)) rotate(540deg) scale(.35);opacity:0}}
+@keyframes eggCaptured{55%{transform:scale(1.8) rotate(240deg)}100%{transform:scale(0) rotate(520deg);opacity:0}}
+@keyframes eggWinCard{0%{opacity:0;transform:translate(-50%,-50%) scale(.6) rotate(-5deg)}12%,82%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}100%{opacity:0;transform:translate(-50%,-54%) scale(.92)}}@keyframes eggWinningLine{to{filter:brightness(1.35);box-shadow:0 0 18px rgba(255,214,10,.8),inset 0 2px 5px rgba(255,255,255,.3)}}
 html.party-mode{animation:eggHue 2.8s linear infinite}
 html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alternate}
 @keyframes eggHue{to{filter:hue-rotate(360deg)}}@keyframes eggLogo{to{transform:rotate(12deg) scale(1.12)}}
-@media(prefers-reduced-motion:reduce){.egg-burst,html.party-mode,html.party-mode .hero-logo-mark{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.egg-burst,.egg-win-card,.egg-mini-cell.yellow,html.party-mode,html.party-mode .hero-logo-mark{animation:none!important}.egg-win-card{opacity:1;transform:translate(-50%,-50%)}}
 
 /* ── Layout ─────────────────────────────────────────────────────────────────── */
 .page {
@@ -3610,6 +3616,7 @@ const EggHunt = (() => {
   ];
   let toastTimer = null;
   let logoClicks = 0;
+  let peekerDodges = 3;
 
   function toast(message) {
     const el = document.getElementById('egg-toast');
@@ -3645,11 +3652,71 @@ const EggHunt = (() => {
     setTimeout(() => document.documentElement.classList.remove('party-mode'), 4200);
   }
 
+  function movePeeker(peeker) {
+    peeker.classList.add('hunting');
+    const margin = 70;
+    peeker.style.left = `${margin + Math.random() * Math.max(1, innerWidth - margin * 2)}px`;
+    peeker.style.top = `${margin + Math.random() * Math.max(1, innerHeight - margin * 2)}px`;
+  }
+
+  function tokenRain() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    for (let i = 0; i < 42; i++) {
+      const token = document.createElement('i');
+      token.className = `token-fall ${i % 2 ? 'red' : 'yellow'}`;
+      token.style.position = 'fixed';
+      token.style.zIndex = '185';
+      token.style.left = `${Math.random() * 100}vw`;
+      token.style.top = '-55px';
+      token.style.opacity = '.9';
+      token.style.animationDuration = `${2.2 + Math.random() * 2}s`;
+      token.style.animationDelay = `${Math.random() * .45}s`;
+      document.body.appendChild(token);
+      setTimeout(() => token.remove(), 4700);
+    }
+  }
+
+  function showWinningBoard() {
+    const card = document.createElement('div');
+    const winning = new Set([17, 24, 31, 38]);
+    const red = new Set([23, 29, 30, 36, 37, 39]);
+    const cells = Array.from({ length: 42 }, (_, index) => {
+      const state = winning.has(index) ? 'yellow' : red.has(index) ? 'red' : '';
+      return `<i class="egg-mini-cell ${state}"></i>`;
+    }).join('');
+    card.className = 'egg-win-card';
+    card.innerHTML = `<div class="egg-win-title">Puissance 4 !</div><div class="egg-win-copy">Le pion fugitif avait préparé sa propre ligne gagnante.</div><div class="egg-mini-grid">${cells}</div>`;
+    document.body.appendChild(card);
+    setTimeout(() => card.remove(), 4600);
+  }
+
   function init() {
     document.getElementById('egg-peeker')?.addEventListener('click', event => {
-      const rect = event.currentTarget.getBoundingClientRect();
+      const peeker = event.currentTarget;
+      if (peekerDodges > 0) {
+        const taunts = [
+          'Trop lent. Le pion vient de changer de colonne.',
+          'Encore raté. Même le bot facile aurait cliqué plus vite.',
+          'Dernière esquive. Cette fois, il commence à paniquer.',
+        ];
+        toast(taunts[3 - peekerDodges]);
+        peekerDodges -= 1;
+        movePeeker(peeker);
+        return;
+      }
+      const rect = peeker.getBoundingClientRect();
+      peeker.classList.add('captured');
       burst(rect.left + rect.width / 2, rect.top + rect.height / 2);
-      toast(messages[Math.floor(Math.random() * messages.length)]);
+      tokenRain();
+      showWinningBoard();
+      SFX.matchFound();
+      toast('PION CAPTURÉ ! Succès secret : « Il ne pouvait pas fuir éternellement ».');
+      setTimeout(() => {
+        peeker.classList.remove('captured', 'hunting');
+        peeker.style.left = '';
+        peeker.style.top = '';
+        peekerDodges = 3;
+      }, 5200);
     });
     document.querySelector('.hero-logo-mark')?.addEventListener('click', () => {
       logoClicks += 1;

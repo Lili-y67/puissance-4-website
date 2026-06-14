@@ -247,6 +247,211 @@
     updateInstallButton();
   }
 
+  const EGG_EXCLUDED_PATHS = ['/live', '/admin', '/dev', '/game', '/clan', '/'];
+  const EGG_MESSAGES = {
+    '/profil': 'Pion de profil trouvé : il voulait essayer ta décoration d’avatar.',
+    '/boutique': 'Pion de boutique trouvé : non, il n’était pas en promotion.',
+    '/progression': 'Pion de progression trouvé : +0 ELO, mais beaucoup de panache.',
+    '/leaderboard': 'Pion du classement trouvé : il exige la place numéro 4.',
+    '/players': 'Pion sociable trouvé : il suivait tous les profils en silence.',
+    '/analyse': 'Pion tacticien trouvé : son analyse était « joue au milieu ».',
+    '/stats': 'Pion statistique trouvé : 100 % des pions cachés détestent les graphiques.',
+    '/news': 'Pion journaliste trouvé : exclusivité, il était caché ici.',
+    '/tournoi': 'Pion de tournoi trouvé : éliminé pour avoir roulé hors du plateau.',
+    '/regles': 'Pion réglementaire trouvé : il avait lu les règles, lui.',
+    '/api-doc': 'Pion développeur trouvé : réponse HTTP 204, aucune stratégie.',
+    '/local': 'Pion local trouvé : aucune connexion internet requise pour le surprendre.',
+    '/replay': 'Pion du replay trouvé : oui, tu peux revoir sa fuite au ralenti.',
+    '/404': 'Pion perdu trouvé : finalement, cette page menait quelque part.',
+  };
+
+  function normalizedPath() {
+    return window.location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
+  }
+
+  function eggAllowed(path) {
+    return !EGG_EXCLUDED_PATHS.some(excluded => path === excluded || (excluded !== '/' && path.startsWith(`${excluded}/`)));
+  }
+
+  function eggPosition(path, attempt = 0) {
+    const seed = [...path].reduce((total, char) => total + char.charCodeAt(0), 0) + attempt * 97;
+    return {
+      left: 5 + (seed * 17 % 82),
+      top: 16 + (seed * 29 % 68),
+    };
+  }
+
+  function mountPageEasterEgg() {
+    const path = normalizedPath();
+    if (!eggAllowed(path) || document.getElementById('p4-page-egg')) return;
+
+    const storageKey = `p4_egg_${path}`;
+    const readStorage = key => {
+      try { return localStorage.getItem(key); } catch (_) { return null; }
+    };
+    const writeStorage = (key, value) => {
+      try { localStorage.setItem(key, value); } catch (_) {}
+    };
+    const caughtCount = () => {
+      try {
+        let total = 0;
+        for (let index = 0; index < localStorage.length; index++) {
+          const key = localStorage.key(index);
+          if (key?.startsWith('p4_egg_') && localStorage.getItem(key) === '1') total += 1;
+        }
+        return total;
+      } catch (_) {
+        return 0;
+      }
+    };
+    const alreadyCaught = readStorage(storageKey) === '1';
+    const egg = document.createElement('button');
+    const toast = document.createElement('div');
+    const position = eggPosition(path);
+    let dodges = alreadyCaught ? 0 : 1;
+
+    egg.id = 'p4-page-egg';
+    egg.className = 'p4-page-egg';
+    egg.type = 'button';
+    egg.setAttribute('aria-label', 'Pion voyageur caché');
+    egg.style.setProperty('--egg-left', `${position.left}vw`);
+    egg.style.setProperty('--egg-top', `${position.top}vh`);
+    egg.style.setProperty('--egg-color', path.length % 2 ? '#ff2d55' : '#ffd60a');
+
+    toast.className = 'p4-egg-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 3600);
+    }
+
+    function sparks(rect) {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      for (let index = 0; index < 24; index++) {
+        const spark = document.createElement('i');
+        const angle = Math.PI * 2 * index / 24;
+        const distance = 70 + Math.random() * 130;
+        spark.className = 'p4-egg-spark';
+        spark.style.left = `${rect.left + rect.width / 2}px`;
+        spark.style.top = `${rect.top + rect.height / 2}px`;
+        spark.style.background = index % 2 ? '#ffd60a' : '#ff2d55';
+        spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
+        spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+        document.body.appendChild(spark);
+        setTimeout(() => spark.remove(), 1300);
+      }
+    }
+
+    egg.addEventListener('click', () => {
+      if (dodges > 0) {
+        dodges -= 1;
+        const next = eggPosition(path, 2);
+        egg.style.setProperty('--egg-left', `${next.left}vw`);
+        egg.style.setProperty('--egg-top', `${next.top}vh`);
+        showToast('Raté. Ce pion connaît visiblement une case que tu ne connais pas.');
+        return;
+      }
+      const rect = egg.getBoundingClientRect();
+      const caught = caughtCount() + (alreadyCaught ? 0 : 1);
+      writeStorage(storageKey, '1');
+      sparks(rect);
+      egg.classList.add('caught');
+      showToast(`${EGG_MESSAGES[path] || 'Pion voyageur trouvé : il préparait quelque chose de très peu stratégique.'} Collection : ${caught} pion(s).`);
+      setTimeout(() => egg.remove(), 500);
+    });
+
+    document.body.appendChild(egg);
+    document.body.appendChild(toast);
+
+    const rewardPaths = new Set([
+      '/profil', '/boutique', '/progression', '/leaderboard', '/players',
+      '/analyse', '/stats', '/news', '/tournoi', '/regles', '/api-doc',
+      '/local', '/replay', '/cgu', '/duel', '/forgot-password',
+      '/reset-password', '/404',
+    ]);
+
+    if (rewardPaths.has(path)) {
+      const coinEgg = document.createElement('button');
+      const coinPosition = eggPosition(`${path}:coins`, 3);
+      coinEgg.className = 'p4-page-egg p4-coin-egg';
+      coinEgg.type = 'button';
+      coinEgg.setAttribute('aria-label', 'Mini pion brillant');
+      coinEgg.style.setProperty('--egg-left', `${coinPosition.left}vw`);
+      coinEgg.style.setProperty('--egg-top', `${coinPosition.top}vh`);
+      coinEgg.style.setProperty('--egg-color', '#30d158');
+      coinEgg.addEventListener('click', async () => {
+        const rect = coinEgg.getBoundingClientRect();
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+        if (!token) {
+          showToast('Ce mini-pion contient des coins, mais il ne reconnaît que les joueurs connectés.');
+          return;
+        }
+        coinEgg.disabled = true;
+        try {
+          const response = await fetch('/api/easter-eggs/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+            body: JSON.stringify({ path, eggId: 'coin-v1' }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || 'Recompense indisponible.');
+          sparks(rect);
+          coinEgg.classList.add('caught');
+          if (data.alreadyClaimed) {
+            showToast('Ce mini-pion a déjà vidé ses poches. Il garde seulement son charme.');
+          } else {
+            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins. Solde : ${Number(data.coins || 0)}.`);
+            try {
+              const player = JSON.parse(localStorage.getItem('player') || '{}');
+              if (player?.id) {
+                player.coins = Number(data.coins || player.coins || 0);
+                localStorage.setItem('player', JSON.stringify(player));
+                sessionStorage.setItem('player', JSON.stringify(player));
+              }
+            } catch (_) {}
+          }
+          setTimeout(() => coinEgg.remove(), 500);
+        } catch (error) {
+          coinEgg.disabled = false;
+          showToast(error.message);
+        }
+      });
+      document.body.appendChild(coinEgg);
+    }
+
+    const chaosEgg = document.createElement('button');
+    const chaosPosition = eggPosition(`${path}:chaos`, 5);
+    const chaosIcons = ['?', '4', '!', '☻'];
+    chaosEgg.className = 'p4-chaos-egg';
+    chaosEgg.type = 'button';
+    chaosEgg.textContent = chaosIcons[path.length % chaosIcons.length];
+    chaosEgg.setAttribute('aria-label', 'Bouton très suspect');
+    chaosEgg.style.setProperty('--chaos-left', `${chaosPosition.left}vw`);
+    chaosEgg.style.setProperty('--chaos-top', `${chaosPosition.top}vh`);
+    chaosEgg.addEventListener('click', () => {
+      const banner = document.createElement('div');
+      const chaosMessages = [
+        'Mode stratégie approximative activé',
+        'Le site vient de perdre 4 points de sérieux',
+        'Alerte : un pion a touché aux réglages',
+        'Technique secrète : cliquer partout',
+      ];
+      banner.className = 'p4-egg-banner';
+      banner.textContent = chaosMessages[path.length % chaosMessages.length];
+      document.body.classList.add('p4-egg-chaos');
+      document.body.appendChild(banner);
+      sparks(chaosEgg.getBoundingClientRect());
+      setTimeout(() => document.body.classList.remove('p4-egg-chaos'), 3000);
+      setTimeout(() => banner.remove(), 3300);
+      chaosEgg.remove();
+    });
+    document.body.appendChild(chaosEgg);
+  }
+
   applyTheme(root.dataset.theme || getSavedTheme());
   ensureThemeStylesheet();
   registerPwa();
@@ -256,9 +461,11 @@
     document.addEventListener('DOMContentLoaded', () => {
       mountButton();
       mountGlobalMenu();
+      mountPageEasterEgg();
     });
   } else {
     mountButton();
     mountGlobalMenu();
+    mountPageEasterEgg();
   }
 })();
