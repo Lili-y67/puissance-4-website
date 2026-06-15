@@ -132,6 +132,7 @@ function emitGameOver(result) {
   io.to('game:' + result.gameId).emit('game_over', result);
   rememberFinishedGameSockets(result);
   emitLiveUpdate();
+  broadcastPresenceCounts(true);
   setTimeout(() => liveReactions.delete(Number(result.gameId)), 30_000).unref?.();
   return result;
 }
@@ -254,15 +255,35 @@ function getVisitorCount() {
   return visitorSockets.size;
 }
 
+function getRegistrationCounts() {
+  const row = db.prepare(`
+    SELECT
+      SUM(CASE WHEN is_bot = 0 THEN 1 ELSE 0 END) AS humans,
+      SUM(CASE WHEN is_bot = 1 THEN 1 ELSE 0 END) AS bots,
+      SUM(CASE WHEN is_bot = 0 AND TRIM(COALESCE(discord_id, '')) != '' THEN 1 ELSE 0 END) AS discord_humans
+    FROM players
+    WHERE deleted = 0 AND is_guest = 0
+  `).get() || {};
+  return {
+    registeredHumans: Number(row.humans || 0),
+    registeredBots: Number(row.bots || 0),
+    registeredDiscordPlayers: Number(row.discord_humans || 0),
+  };
+}
+
 function getPresenceCounts() {
   const onlinePlayers = Number(onlineSockets.size || 0);
   const onlineBots = getOnlineBotCount();
   const visitors = Number(getVisitorCount() || 0);
+  const registrations = getRegistrationCounts();
   return {
     onlinePlayers,
     onlineBots,
     visitors,
     totalPresent: onlinePlayers + onlineBots + visitors,
+    activeGames: getActiveGameCount(),
+    ...registrations,
+    registeredPlayers: registrations.registeredHumans + registrations.registeredBots,
   };
 }
 
@@ -302,7 +323,16 @@ function getBoostDisplayName(rawName) {
 
 function broadcastPresenceCounts(force = false) {
   const counts = getPresenceCounts();
-  const signature = `${counts.onlinePlayers}:${counts.onlineBots}:${counts.visitors}:${counts.totalPresent}`;
+  const signature = [
+    counts.onlinePlayers,
+    counts.onlineBots,
+    counts.visitors,
+    counts.totalPresent,
+    counts.activeGames,
+    counts.registeredHumans,
+    counts.registeredDiscordPlayers,
+    counts.registeredBots,
+  ].join(':');
   if (!force && signature === lastPresenceSignature) return counts;
   lastPresenceSignature = signature;
   io.emit('presence_counts', counts);
@@ -1624,6 +1654,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked') {
   assignDistinctMatchColors(p1, p2);
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
   emitLiveUpdate();
+  broadcastPresenceCounts(true);
   scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
@@ -1641,6 +1672,7 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
   const current = challengerIsBot && Math.random() < 0.5 ? 1 : 2;
   const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current });
   emitLiveUpdate();
+  broadcastPresenceCounts(true);
   if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
@@ -2623,6 +2655,7 @@ app.delete('/api/players/:id', (req, res) => {
 
   // Marquer le compte comme supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA
   db.prepare(`UPDATE players SET deleted = 1 WHERE id = ?`).run(id);
+  broadcastPresenceCounts(true);
 
   res.json({ ok: true });
 });
@@ -4935,6 +4968,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const token = createSession(linkedPlayer.id);
       const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer), created: createdNewPlayer }));
+      broadcastPresenceCounts(true);
       return res.redirect('/#discord-auth=' + payload);
     }
 
@@ -4970,6 +5004,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       // Renommer le membre sur le serveur Discord avec son pseudo en jeu
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
+      broadcastPresenceCounts(true);
       const { botToken } = discordConfig();
       try {
         const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
@@ -6348,6 +6383,7 @@ app.post('/api/auth/register', security.routeGuard('register'), (req, res) => {
     player = pQ.getById.get(player.id);
     const token = createSession(player.id);
     security.recordRegistration(req, player.pseudo, player.id);
+    broadcastPresenceCounts(true);
     res.json({ ...sanitize(player), token });
   } catch(e) {
     console.error('[register]', e);
@@ -6689,6 +6725,7 @@ app.delete('/api/players/:id', (req, res) => {
     deleted    = 1
   WHERE id = ?`).run(id);
   db.prepare(`DELETE FROM sessions WHERE player_id = ?`).run(id);
+  broadcastPresenceCounts(true);
 
   res.json({ ok: true });
 });
@@ -7954,6 +7991,7 @@ app.post('/api/discord/unlink/confirm', (req, res) => {
     pQ.updateRole.run({ role: 'user', id: playerId });
   }
   revokeAdminSessionsForPlayer(playerId);
+  broadcastPresenceCounts(true);
 
   res.json({ ok: true });
 });
@@ -8106,6 +8144,7 @@ app.post('/api/players/:id/refresh-discord', async (req, res) => {
       pQ.updateDeveloper.run({ is_developer: 0, id });
       pQ.updateVipExpiry.run({ vip_expires_at: null, id });
       revokeAdminSessionsForPlayer(id);
+      broadcastPresenceCounts(true);
       return res.status(404).json({ error: 'Membre introuvable sur le serveur.', unlinked: true, role: 'user' });
     }
     const { memberInfo, server_roles_rich, newRole, developer } = snapshot;
@@ -8467,10 +8506,6 @@ app.get('/api/leaderboard/wins', (_, res) => {
 });
 app.get('/api/site-stats', (_, res) => {
   const presence = getPresenceCounts();
-  const activeGames = getActiveGameCount();
-  const registeredHumans = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 0`).get()?.c || 0);
-  const registeredBots = Number(db.prepare(`SELECT COUNT(*) as c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1`).get()?.c || 0);
-  const registeredPlayers = registeredHumans + registeredBots;
   const publicTournament = getPublicActiveTournament();
   const upcomingPublicTournament = getPublicPendingTournament();
   const activeBoost = bQ.getActive.get(Date.now());
@@ -8485,11 +8520,12 @@ app.get('/api/site-stats', (_, res) => {
     onlineBots: presence.onlineBots,
     visitors: presence.visitors,
     totalPresent: presence.totalPresent,
-    registeredPlayers,
-    registeredHumans,
-    registeredBots,
+    registeredPlayers: presence.registeredPlayers,
+    registeredHumans: presence.registeredHumans,
+    registeredDiscordPlayers: presence.registeredDiscordPlayers,
+    registeredBots: presence.registeredBots,
     queue: mm?.queue?.length || 0,
-    activeGames,
+    activeGames: presence.activeGames,
     publicTournament,
     upcomingPublicTournament,
     boost: activeBoost ? {
@@ -8518,8 +8554,9 @@ app.get('/api/site-stats', (_, res) => {
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Socket.io AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
 function getStatsOverview() {
   const presence = getPresenceCounts();
-  const registeredPlayers = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.c || 0);
-  const activeGames = getActiveGameCount();
+  const registeredPlayers = presence.registeredHumans;
+  const registeredDiscordPlayers = presence.registeredDiscordPlayers;
+  const activeGames = presence.activeGames;
   const finishedGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status = 'finished'`).get()?.c || 0);
   const totalGames = Number(db.prepare(`SELECT COUNT(*) AS c FROM games`).get()?.c || 0);
   const totalMoves = Number(db.prepare(`SELECT COALESCE(SUM(move_count), 0) AS v FROM games`).get()?.v || 0);
@@ -8586,6 +8623,7 @@ function getStatsOverview() {
     follows,
     tournaments,
     registeredPlayers,
+    registeredDiscordPlayers,
     totalCoins,
     shopPurchases,
     eloBoostersOwned,
@@ -9334,6 +9372,7 @@ function _startMatch(p1, p2, options = {}) {
   p2.color = _c2;
 
   const state = gm.create(p1, p2, options);
+  broadcastPresenceCounts(true);
   const room  = 'game:' + state.id;
   s1.join(room);
   s2.join(room);

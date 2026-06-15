@@ -668,6 +668,12 @@ body{
       <div class="summary-sub">Base de joueurs hors bot.</div>
     </article>
     <article class="summary-card loading-sheen">
+      <div class="summary-icon">&#128172;</div>
+      <div class="summary-label">Joueurs Discord inscrits</div>
+      <div class="summary-value" id="registeredDiscordPlayers">-</div>
+      <div class="summary-sub">Comptes joueurs avec Discord lié.</div>
+    </article>
+    <article class="summary-card loading-sheen">
       <div class="summary-icon">&#128994;</div>
       <div class="summary-label">Joueurs en ligne</div>
       <div class="summary-value" id="onlinePlayers">-</div>
@@ -897,6 +903,7 @@ function renderWeekly(weekly) {
 
 function populate(data, weekly) {
   setText('registeredPlayers', data.registeredPlayers);
+  setText('registeredDiscordPlayers', data.registeredDiscordPlayers || 0);
   setText('onlinePlayers', data.onlinePlayers);
   setText('visitorCount', data.visitors || 0);
   setText('activeGames', data.activeGames);
@@ -936,6 +943,9 @@ function populate(data, weekly) {
 function applyLivePresenceCounts(data = {}) {
   setText('onlinePlayers', data.onlinePlayers ?? data.online ?? 0);
   setText('visitorCount', data.visitors || 0);
+  if (data.registeredHumans !== undefined) setText('registeredPlayers', data.registeredHumans);
+  if (data.registeredDiscordPlayers !== undefined) setText('registeredDiscordPlayers', data.registeredDiscordPlayers);
+  if (data.activeGames !== undefined) setText('activeGames', data.activeGames);
   const totalPresent = Math.max(Number(data.totalPresent || ((data.onlinePlayers || data.online || 0) + (data.visitors || 0))) || 0, 0);
   const onlinePlayers = Math.max(Number(data.onlinePlayers ?? data.online) || 0, 0);
   const heroData = {

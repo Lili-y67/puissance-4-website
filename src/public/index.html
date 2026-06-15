@@ -620,6 +620,32 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   box-shadow:0 0 0 4px rgba(133,235,255,0.12);
   animation:badge-pulse-blue 1.95s ease-in-out infinite;
 }
+.site-discord-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:8px;
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(88,101,242,0.14);
+  border:1px solid rgba(88,101,242,0.34);
+  color:#9ca7ff;
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  box-shadow:0 10px 22px rgba(0,0,0,0.18);
+  animation:badge-float 3.45s ease-in-out infinite;
+}
+.site-discord-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:#5865f2;
+  box-shadow:0 0 0 4px rgba(88,101,242,0.15);
+  animation:badge-pulse-blue 1.8s ease-in-out infinite;
+}
 .site-bots-badge{
   display:inline-flex;
   align-items:center;
@@ -2760,7 +2786,8 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   .site-online-badge,
   .site-games-badge,
   .site-visitor-badge,
-  .site-registered-badge {
+  .site-registered-badge,
+  .site-discord-badge {
     width: 100%;
     max-width: 100%;
     justify-content: center;
@@ -3041,6 +3068,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   .site-games-badge,
   .site-visitor-badge,
   .site-registered-badge,
+  .site-discord-badge,
   .site-bots-badge{
     width: 100%;
     justify-content: center;
@@ -3243,7 +3271,11 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
       </div>
       <div class="site-registered-badge" id="site-registered-badge">
       <span class="site-registered-dot"></span>
-      <span id="site-registered-count">0</span> joueurs inscrits
+      <span id="site-registered-count">0</span> comptes joueurs
+      </div>
+      <div class="site-discord-badge" id="site-discord-badge">
+      <span class="site-discord-dot"></span>
+      <span id="site-discord-count">0</span> joueurs Discord inscrits
       </div>
       <div class="site-bots-badge" id="site-bots-badge">
       <span class="site-bots-dot"></span>
@@ -4965,6 +4997,7 @@ function applySitePresenceCounts(data = {}) {
 function applySiteStatsSnapshot(data = {}) {
   const gamesCount = document.getElementById('site-games-count');
   const registeredCount = document.getElementById('site-registered-count');
+  const discordCount = document.getElementById('site-discord-count');
   const botsCount = document.getElementById('site-bots-count');
   if (gamesCount) {
     gamesCount.textContent = String(Math.max(0, Number(data.activeGames) || 0));
@@ -4972,6 +5005,9 @@ function applySiteStatsSnapshot(data = {}) {
   if (registeredCount) {
     const humans = data.registeredHumans ?? data.registeredPlayers ?? 0;
     registeredCount.textContent = String(Math.max(0, Number(humans) || 0));
+  }
+  if (discordCount) {
+    discordCount.textContent = String(Math.max(0, Number(data.registeredDiscordPlayers) || 0));
   }
   if (botsCount) {
     botsCount.textContent = String(Math.max(0, Number(data.registeredBots) || 0));
@@ -5013,7 +5049,9 @@ function startSiteStatsPolling() {
 
 
 window.addEventListener('p4:presence-counts', (event) => {
-  applySitePresenceCounts(event.detail || {});
+  const data = event.detail || {};
+  applySitePresenceCounts(data);
+  applySiteStatsSnapshot(data);
 });
 
 function showLoggedInView(p) {
