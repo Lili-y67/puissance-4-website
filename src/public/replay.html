@@ -413,7 +413,7 @@ function applyPlayerColors() {
 }
 
 function applyBoardPalette(seed = '') {
-  const skin = window.P4BoardSkins?.pick?.(seed) || 'classic';
+  const skin = window.P4BoardSkins?.equipped?.() || 'classic';
   window.P4BoardSkins?.applyRoot?.(skin);
 }
 
@@ -509,7 +509,7 @@ function renderShell() {
   const g = gameData;
   updateReplayDiscordPresence(false);
   applyPlayerColors();
-  applyBoardPalette(`replay-${g.id || getGameId()}-${g.player1_id || g.p1_pseudo}-${g.player2_id || g.p2_pseudo}`);
+  applyBoardPalette(`game-${g.id || getGameId()}-${g.player1_id || g.p1_pseudo}-${g.player2_id || g.p2_pseudo}`);
   initShapes();
   const p1Won = g.winner_id === g.player1_id;
   const p2Won = g.winner_id === g.player2_id;

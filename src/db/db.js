@@ -316,6 +316,21 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS product_keys (
+    code          TEXT PRIMARY KEY,
+    grants_json   TEXT NOT NULL DEFAULT '[]',
+    created_by    INTEGER,
+    created_at    INTEGER NOT NULL,
+    expires_at    INTEGER,
+    redeemed_by   INTEGER REFERENCES players(id) ON DELETE SET NULL,
+    redeemed_at   INTEGER,
+    redeemed_for  INTEGER REFERENCES players(id) ON DELETE SET NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_product_keys_redeemed
+    ON product_keys(redeemed_at, expires_at);
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS bot_hosts (
     bot_id       INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
     owner_id     INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,

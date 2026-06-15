@@ -1160,6 +1160,7 @@ let turnTimerInterval = null;
 let turnDeadline = 0;
 let currentGameMode = 'ranked';
 let pendingActionOffer = null;
+let currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 
 function setStatus(message = '', allowHtml = false) {
   const el = document.getElementById('status');
@@ -1701,6 +1702,7 @@ function connectSocket(pendingMatch) {
     data.startsIn = 0;
     gameId = data.gameId;
     mySide = data.side;
+    gameOver = false;
     applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
 
     // Appliquer couleurs et shapes
@@ -1746,14 +1748,7 @@ function connectSocket(pendingMatch) {
     updateTurnUI();
 
     // Reconstruire le plateau depuis la grille reçue
-    renderBoard(); // s'assurer que les cellules existent
-    const grid = data.grid;
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 7; c++) {
-        const v = grid[r]?.[c] ?? 0;
-        if (v) applyToken(r, c, v);
-      }
-    }
+    restoreBoard(data.grid);
 
     // Fermer le banner de déconnexion + stopper le chrono s'il tourne
     const banner = document.getElementById('disconnect-banner');
@@ -1938,6 +1933,7 @@ function startGame(data) {
 
   currentTurn = 1;
   gameOver    = false;
+  currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   renderBoard();
   // Locker la board 400ms pour éviter les clics parasites au démarrage
   const boardEl = document.getElementById('board');
@@ -1973,6 +1969,18 @@ function renderBoard() {
   }
 }
 
+function restoreBoard(grid) {
+  currentGrid = Array.from({ length: ROWS }, (_, row) =>
+    Array.from({ length: COLS }, (_, col) => Number(grid?.[row]?.[col] || 0))
+  );
+  renderBoard();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (currentGrid[r][c]) applyToken(r, c, currentGrid[r][c], false);
+    }
+  }
+}
+
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
   if (gameOver || currentTurn !== mySide) return;
@@ -1986,6 +1994,7 @@ function onMovePlayed(data) {
   if (data.player === mySide) SFX.drop();
   else SFX.opponentDrop();
   applyToken(data.row, data.col, data.player);
+  if (currentGrid[data.row]) currentGrid[data.row][data.col] = data.player;
   currentTurn = data.next;
   updateTurnUI();
   updateGameDiscordPresence();
@@ -2111,18 +2120,23 @@ const SHAPE_CLIPS = {
   emoji:    { borderRadius: '50%',   clipPath: '' },
 };
 
-function applyToken(row, col, player) {
+function applyToken(row, col, player, animate = true) {
   const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
   if (!cell) return;
+  cell.classList.remove('p1', 'p2', 'drop');
   cell.classList.add('p' + player);
   const token = cell.querySelector('.token');
   if (token) {
+    token.removeAttribute('style');
+    token.replaceChildren();
+    token.className = 'token';
     const shape = player === 1 ? p1Shape : p2Shape;
     const rgbEnabled = player === 1 ? p1TokenRgb : p2TokenRgb;
     if (shape === 'emoji_image') {
       const imgSrc = player === 1 ? p1EmojiImage : p2EmojiImage;
       const glow = getComputedStyle(document.documentElement).getPropertyValue(player === 1 ? '--p1-glow' : '--p2-glow').trim();
       if (imgSrc) makeImageToken(token, imgSrc, glow, rgbEnabled);
+      else token.className = 'token';
     } else if (shape === 'emoji') {
       const root = document.documentElement;
       const cs   = getComputedStyle(root);
@@ -2140,8 +2154,7 @@ function applyToken(row, col, player) {
     }
     token.style.setProperty('--token-rgb-delay', `${-((row * 0.32) + (col * 0.18)).toFixed(2)}s`);
   }
-  // Déclencher l'animation drop après avoir préparé le token
-  void cell.offsetWidth;
+  if (animate) void cell.offsetWidth;
   cell.classList.add('drop');
 }
 

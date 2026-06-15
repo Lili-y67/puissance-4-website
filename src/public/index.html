@@ -172,6 +172,7 @@ html, body {
   cursor: pointer;
   transition: right .25s ease, transform .25s ease;
 }
+.egg-peeker[hidden]{display:none!important}
 .egg-peeker::before,.egg-peeker::after{content:"";position:absolute;top:18px;width:6px;height:9px;border-radius:50%;background:#16120b}
 .egg-peeker::before{left:17px}.egg-peeker::after{left:32px}
 .egg-peeker:hover,.egg-peeker:focus-visible{right:8px;transform:rotate(-14deg) scale(1.08);outline:2px solid #fff;outline-offset:4px}
@@ -3117,7 +3118,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 </div>
 <div class="tokens-bg" id="tokens-bg"></div>
 <div class="scanlines"></div>
-<button class="egg-peeker" id="egg-peeker" type="button" aria-label="Jeton mystérieux"></button>
+<button class="egg-peeker" id="egg-peeker" type="button" aria-label="Jeton mystérieux" hidden></button>
 <div class="egg-toast" id="egg-toast" role="status" aria-live="polite"></div>
 
 <div class="tournament-notice" id="tournament-notice">
@@ -3692,8 +3693,32 @@ const EggHunt = (() => {
     setTimeout(() => card.remove(), 4600);
   }
 
-  function init() {
+  async function init() {
     const peeker = document.getElementById('egg-peeker');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    if (!token) {
+      peeker?.remove();
+      return;
+    }
+    try {
+      const response = await fetch('/api/shop/me', {
+        cache: 'no-store',
+        headers: { 'x-session-token': token },
+      });
+      if (!response.ok) {
+        peeker?.remove();
+        return;
+      }
+      const data = await response.json();
+      if (!data?.player || Number(data.player.is_guest || 0) === 1 || Number(data.player.is_bot || 0) === 1) {
+        peeker?.remove();
+        return;
+      }
+    } catch {
+      peeker?.remove();
+      return;
+    }
+    if (peeker) peeker.hidden = false;
     const hourMs = 60 * 60 * 1000;
     const seenKey = 'p4_egg_cooldown_index_special';
     let lastSeen = 0;

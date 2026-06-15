@@ -1051,7 +1051,7 @@ function tokenStyleKey(player = {}) {
 
 function applyBoardPalette(el, seed = '') {
   if (!el) return;
-  const skin = window.P4BoardSkins?.pick?.(seed) || 'classic';
+  const skin = window.P4BoardSkins?.equipped?.() || 'classic';
   window.P4BoardSkins?.applyElement?.(el, skin);
 }
 
@@ -1059,7 +1059,7 @@ function renderBoardInto(board, game, large = true) {
   const p1 = game.players[1], p2 = game.players[2];
   const cellClass = large ? 'live-cell' : 'mini-cell';
   const tokenClass = large ? 'live-token' : 'mini-token';
-  applyBoardPalette(board, `live-${game.id || ''}-${game.players?.[1]?.id || game.players?.[1]?.pseudo || ''}-${game.players?.[2]?.id || game.players?.[2]?.pseudo || ''}`);
+  applyBoardPalette(board, `game-${game.id || ''}-${game.players?.[1]?.id || game.players?.[1]?.pseudo || ''}-${game.players?.[2]?.id || game.players?.[2]?.pseudo || ''}`);
   if (board.children.length !== 42) {
     board.innerHTML = '';
     for (let r = 0; r < 6; r++) {

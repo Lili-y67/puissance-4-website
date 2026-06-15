@@ -361,15 +361,26 @@
     }
   }
 
-  function mountPageEasterEgg() {
+  async function mountPageEasterEgg() {
     const path = normalizedPath();
     if (!eggAllowed(path) || document.getElementById('p4-page-egg')) return;
 
     const storageKey = `p4_egg_${path}`;
+    const sessionToken = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    if (!sessionToken) return;
     let storedPlayer = null;
     try {
-      storedPlayer = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
-    } catch (_) {}
+      const response = await fetch('/api/shop/me', {
+        cache: 'no-store',
+        headers: { 'x-session-token': sessionToken },
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      storedPlayer = data?.player || null;
+      if (!storedPlayer || Number(storedPlayer.is_guest || 0) === 1 || Number(storedPlayer.is_bot || 0) === 1) return;
+    } catch (_) {
+      return;
+    }
     const EGG_RESPAWN_MS = Number(storedPlayer?.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(storedPlayer?.role || ''))
       ? 10 * 60 * 1000
       : Number(storedPlayer?.is_vip_plus || 0) === 1 || Number(storedPlayer?.is_crystal || 0) === 1
@@ -516,7 +527,7 @@
         return;
       }
       const rect = egg.getBoundingClientRect();
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+      const token = sessionToken;
       let collectible = null;
       let gems = 0;
       if (token && rewardPaths.has(path)) {

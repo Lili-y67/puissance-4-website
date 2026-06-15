@@ -4051,11 +4051,11 @@ function applyLimitedPackEntry(playerId, entry, context = {}) {
     return;
   }
   if (key === 'vip_1m') {
-    applyShopGrant(playerId, { type: 'vip_days', days: 30 }, context);
+    applyShopGrant(playerId, { type: 'vip_days', days: 30 * qty }, context);
     return;
   }
   if (key === 'vip_1y') {
-    applyShopGrant(playerId, { type: 'vip_days', days: 365 }, context);
+    applyShopGrant(playerId, { type: 'vip_days', days: 365 * qty }, context);
     return;
   }
   if (key === 'vip_plus') {
@@ -4066,6 +4066,10 @@ function applyLimitedPackEntry(playerId, entry, context = {}) {
   }
   if (key === 'perso') {
     pQ.updatePerso.run({ is_perso: 1, id: playerId });
+    return;
+  }
+  if (key === 'crystal') {
+    grantCrystal(playerId, { durationMs: CRYSTAL_MONTH_MS * qty, autoRenew: true });
     return;
   }
   if (key === 'elo_reset') {
@@ -4508,6 +4512,18 @@ function syncOnlineDiscordConnectedRoles() {
     const player = pQ.getById.get(Number(playerId));
     if (player?.discord_id) markDiscordConnectedRealtime(player);
   }
+}
+
+function normalizeProductKey(code = '') {
+  return String(code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40);
+}
+
+function productKeyRewardLabel(entry) {
+  const key = String(entry?.key || '');
+  const qty = Math.max(1, Number(entry?.qty || 1));
+  if (key === 'coins') return `${qty} coins`;
+  if (key === 'gems') return `${qty} gemmes`;
+  return `${resolveInventoryShopItem(key)?.label || SHOP_ITEMS[key]?.label || key} x${qty}`;
 }
 
 function reconcileDiscordConnectedRoles() {
@@ -5898,6 +5914,68 @@ app.post('/api/shop/buy', async (req, res) => {
     target: isGift ? sanitize(pQ.getById.get(recipientId)) : null,
     gifted: isGift,
     giftTo: isGift ? recipient.pseudo : '',
+  });
+});
+
+app.post('/api/shop/product-key/redeem', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const redeemerId = validateSession(token);
+  if (!redeemerId) return res.status(401).json({ error: 'Connecte-toi pour utiliser une clé produit.' });
+  const code = normalizeProductKey(req.body?.code);
+  if (!code) return res.status(400).json({ error: 'Clé produit manquante.' });
+
+  const targetPseudo = String(req.body?.targetPseudo || '').trim();
+  const target = targetPseudo ? pQ.getByPseudo.get(targetPseudo) : pQ.getById.get(redeemerId);
+  if (!target || Number(target.deleted || 0) === 1 || Number(target.is_guest || 0) === 1 || Number(target.is_bot || 0) === 1) {
+    return res.status(404).json({ error: 'Profil destinataire introuvable.' });
+  }
+
+  let grants = [];
+  try {
+    const redeem = db.transaction(() => {
+      const row = db.prepare(`SELECT * FROM product_keys WHERE code = ?`).get(code);
+      if (!row) throw new Error('Clé produit invalide.');
+      if (Number(row.redeemed_at || 0)) throw new Error('Cette clé produit a déjà été utilisée.');
+      if (Number(row.expires_at || 0) && Number(row.expires_at) < Date.now()) throw new Error('Cette clé produit a expiré.');
+      try {
+        grants = JSON.parse(row.grants_json || '[]');
+      } catch {
+        grants = [];
+      }
+      if (!Array.isArray(grants) || !grants.length) throw new Error('Cette clé produit ne contient aucune récompense.');
+      for (const grant of grants) applyLimitedPackEntry(target.id, grant, { now: Date.now(), player: target });
+      const marked = db.prepare(`
+        UPDATE product_keys
+        SET redeemed_by = ?, redeemed_for = ?, redeemed_at = ?
+        WHERE code = ? AND redeemed_at IS NULL
+      `).run(redeemerId, target.id, Date.now(), code);
+      if (marked.changes !== 1) throw new Error('Cette clé produit a déjà été utilisée.');
+    });
+    redeem();
+  } catch (error) {
+    return res.status(400).json({ error: error.message || 'Clé produit inutilisable.' });
+  }
+
+  const fresh = pQ.getById.get(target.id);
+  notifyPlayerProfileChanged(target.id, `Clé produit utilisée : ${grants.map(productKeyRewardLabel).join(', ')}.`);
+  if (fresh?.discord_id) {
+    try {
+      await syncDiscordRole(
+        fresh.discord_id,
+        fresh.role,
+        Number(fresh.is_vip || 0) === 1,
+        Number(fresh.is_vip_plus || 0) === 1,
+        Number(fresh.is_perso || 0) === 1
+      );
+    } catch {}
+  }
+  const inventoryRows = shopItemQ.getAllForPlayer.all(target.id);
+  res.json({
+    ok: true,
+    target: { id: fresh.id, pseudo: fresh.pseudo },
+    rewards: grants.map(productKeyRewardLabel),
+    player: sanitize(fresh),
+    inventory: Object.fromEntries(inventoryRows.map(row => [row.item_key, Number(row.quantity || 0)])),
   });
 });
 

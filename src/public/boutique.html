@@ -88,6 +88,9 @@ body{
 .promo-help{margin-top:7px;font-size:11px;color:var(--muted)}
 .promo-help.ok{color:#30d158}
 .promo-help.error{color:#ff5d7d}
+.product-key-box{position:relative;padding:12px;border-radius:18px;background:linear-gradient(135deg,rgba(48,209,88,.13),rgba(133,235,255,.06));border:1px solid rgba(48,209,88,.22)}
+.product-key-box::before{content:'CLE PRODUIT';display:block;margin-bottom:7px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:900;letter-spacing:2px;color:var(--green);text-transform:uppercase}
+.product-key-target{margin-top:8px}
 .hero-side-title{font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;letter-spacing:2px;text-transform:uppercase}
 .hero-side-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
 .hero-side-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:var(--surface-2);border:1px solid rgba(255,255,255,.05)}
@@ -455,6 +458,14 @@ body{
                 <button id="coupon-validate-btn" type="button" class="promo-validate" onclick="validateCoupon()" disabled>Valider</button>
               </div>
               <div class="promo-help" id="coupon-status">Optionnel, appliqué au moment de confirmer l'achat.</div>
+            </div>
+            <div class="product-key-box">
+              <div class="promo-line">
+                <input id="product-key-input" class="promo-input" placeholder="P4K-XXXX-XXXX">
+                <button id="product-key-btn" type="button" class="promo-validate" onclick="redeemProductKey()">Utiliser</button>
+              </div>
+              <input id="product-key-target" class="promo-input product-key-target" placeholder="Profil destinataire (vide = moi)">
+              <div class="promo-help" id="product-key-status">La récompense sera ajoutée immédiatement au profil choisi.</div>
             </div>
             <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
           </div>
@@ -1249,6 +1260,55 @@ async function validateCoupon() {
     if (btn) {
       btn.textContent = 'Valider';
       btn.disabled = !String(document.getElementById('coupon-input')?.value || '').trim();
+    }
+  }
+}
+
+function setProductKeyStatus(message, type = '') {
+  const el = document.getElementById('product-key-status');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('ok', type === 'ok');
+  el.classList.toggle('error', type === 'error');
+}
+
+async function redeemProductKey() {
+  const token = localStorage.getItem('token');
+  const code = String(document.getElementById('product-key-input')?.value || '').trim().toUpperCase();
+  const targetPseudo = String(document.getElementById('product-key-target')?.value || '').trim();
+  const btn = document.getElementById('product-key-btn');
+  if (!token) return setProductKeyStatus('Connecte-toi pour utiliser une clé.', 'error');
+  if (code.length < 6) return setProductKeyStatus('Clé produit invalide.', 'error');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '...';
+  }
+  try {
+    const res = await fetch('/api/shop/product-key/redeem', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, code, targetPseudo }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      setProductKeyStatus(data.error || 'Impossible d utiliser cette clé.', 'error');
+      return;
+    }
+    if (data.player && Number(data.player.id) === Number(shopPlayer?.id)) {
+      shopPlayer = data.player;
+      shopInventory = data.inventory || shopInventory;
+      setCoinsUi(shopPlayer.coins, 'Clé produit utilisée.');
+      renderShop();
+      switchShopCategory(currentCategory);
+    }
+    document.getElementById('product-key-input').value = '';
+    setProductKeyStatus(`${data.target.pseudo} reçoit : ${data.rewards.join(', ')}.`, 'ok');
+  } catch {
+    setProductKeyStatus('Utilisation impossible pour le moment.', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Utiliser';
     }
   }
 }

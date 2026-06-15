@@ -107,6 +107,11 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       { type: 4, name: 'utilisations', description: 'Nombre maximum d utilisations', required: false },
       { type: 4, name: 'heures', description: 'Expiration en heures, vide = pas d expiration', required: false },
     ]),
+    { name: 'key-generate', description: 'Generer une cle produit a usage unique', default_member_permissions: '8', options: [
+      { type: 3, name: 'contenu', description: 'coins, gems, vip_1m, vip_plus, perso ou item boutique', required: true },
+      { type: 4, name: 'quantite', description: 'Montant ou quantite, defaut 1', required: false },
+      { type: 4, name: 'heures', description: 'Expiration en heures, vide = aucune', required: false },
+    ] },
     { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
     adminCommand('stats', 'Afficher les statistiques staff'),
     adminCommand('player', 'Afficher le profil staff d un joueur', [pseudoOption(true)]),
@@ -1741,6 +1746,42 @@ function startDiscordBot(ctx) {
     }));
   }
 
+  async function handleProductKey(interaction) {
+    const role = await requireStaff(interaction, 'admin');
+    if (!role) return;
+    const content = String(optionString(interaction, 'contenu') || '').trim().toLowerCase();
+    const quantity = Math.max(1, Math.min(999, optionInteger(interaction, 'quantite', 1)));
+    const hours = Math.max(0, Math.min(8760, optionInteger(interaction, 'heures', 0)));
+    const item = content === 'coins' || content === 'gems' || content === 'gemmes'
+      ? null
+      : resolveGiveItem(content);
+    if (!item && !['coins', 'gems', 'gemmes'].includes(content)) {
+      return replyError(interaction, 'Contenu invalide', 'Utilise coins, gems, un rang ou un code item boutique.');
+    }
+    if (item?.key === 'bot_host_1m') {
+      return replyError(interaction, 'Contenu invalide', 'Le host bot demande un bot cible et ne peut pas etre mis dans une cle produit.');
+    }
+    const rewardKey = content === 'gemmes' ? 'gems' : item?.key || content;
+    const codeValue = `P4K-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const expiresAt = hours ? Date.now() + hours * 60 * 60 * 1000 : null;
+    const staff = await getLinkedStaffContext(interaction.user.id);
+    ctx.db.prepare(`
+      INSERT INTO product_keys (code, grants_json, created_by, created_at, expires_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(codeValue, JSON.stringify([{ key: rewardKey, qty: quantity }]), staff.player?.id || null, Date.now(), expiresAt);
+    return interaction.editReply(containerMessage({
+      color: 0x30d158,
+      title: 'Cle produit generee',
+      subtitle: `${code(codeValue)} est prete a etre utilisee dans la boutique.`,
+      sections: [[
+        `Contenu : **${item?.label || rewardKey}**`,
+        `Quantite : **${quantity}**`,
+        `Expiration : **${hours ? `${hours}h` : 'aucune'}**`,
+      ]],
+      buttons: [linkButton('Ouvrir la boutique', `${api}/boutique`, '🛒')],
+    }));
+  }
+
   function updateStatus() {
     try {
       const presence = ctx.getPresenceCounts();
@@ -2334,6 +2375,7 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
       if (ADMIN_COMMAND_ACTIONS[interaction.commandName]) return handleAdmin(interaction);
       if (interaction.commandName === 'admin-coupon') return handleCoupon(interaction);
+      if (interaction.commandName === 'key-generate') return handleProductKey(interaction);
     } catch (error) {
       console.error('[BOT ERROR]', error);
       return replyError(interaction, 'Erreur bot Discord', truncate(error.message || 'Erreur inconnue', 300));
