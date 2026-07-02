@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const BASE = (process.env.BASE_URL || 'https://puissance-4-website-production.up.railway.app').replace(/\/+$/, '');
+const BASE = (process.env.BASE_URL || process.env.PUBLIC_BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`).replace(/\/+$/, '');
 const MEMBER_FORUM_CHANNEL_ID = process.env.DISCORD_MEMBER_FORUM_CHANNEL_ID || '1508534889153036461';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
 const MEMBER_THREAD_STORE = path.join(__dirname, '..', 'data', 'discord-member-forum-threads.json');

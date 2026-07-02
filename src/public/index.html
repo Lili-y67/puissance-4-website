@@ -5126,7 +5126,7 @@ async function connectAndQueue() {
   socket.on('identified',   (player) => {
     myPlayer = { ...myPlayer, ...player };
     localStorage.setItem('player', JSON.stringify(myPlayer));
-    // Envoyer la shape depuis localStorage (plus fiable que la DB Railway)
+    // Envoyer la forme depuis localStorage si elle est plus récente que la base
     const lsPlayer = JSON.parse(localStorage.getItem('player') || '{}');
     socket.emit('queue_join', {
       shape: lsPlayer.shape || 'circle',

@@ -1,6 +1,6 @@
 (function () {
   const ENDPOINT = 'http://127.0.0.1:6464/activity';
-  const PUBLIC_SITE_URL = 'https://puissance-4-website-production.up.railway.app/';
+  const PUBLIC_SITE_URL = `${window.location.origin}/`;
   const HEARTBEAT_MS = 30_000;
   const UPDATE_DELAY_MS = 1_500;
   const SESSION_KEY = 'p4_rpc_session_started';

@@ -53,20 +53,25 @@ double-cliquant dessus.
 Le compagnon doit rester ouvert avec Discord Desktop. Un navigateur mobile ou
 une PWA mobile ne peut pas piloter directement le Rich Presence Discord.
 
-## Déploiement sur Railway (gratuit)
+## Installation sur un VPS Node.js
 
-1. Push le projet sur GitHub
-2. Aller sur https://railway.app → New Project → Deploy from GitHub
-3. Sélectionner le repo
-4. Railway détecte automatiquement Node.js
-5. Dans les settings du projet, ajouter la variable : `PORT=3000`
-6. C'est tout — Railway build et déploie automatiquement
+```bash
+npm install --omit=dev
+cp .env.example .env
+npm start
+```
+
+Le point d'entrée unique est `index.js`. Il démarre le serveur HTTP, Socket.IO,
+la base de données et le bot Discord. Pour la production, configurez
+`BASE_URL=https://votre-domaine.fr` dans `.env`, puis placez Nginx ou Caddy
+devant le port Node.js.
 
 ## Variables d'environnement
 
 | Variable | Valeur par défaut | Description |
 |----------|-------------------|-------------|
-| PORT     | 3000              | Port du serveur |
+| PORT     | 3000              | Port HTTP interne du serveur |
+| BASE_URL | http://127.0.0.1:3000 | URL publique du site en production |
 
 ## Pages
 

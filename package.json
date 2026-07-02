@@ -2,13 +2,13 @@
   "name": "puissance4",
   "version": "3.4.0",
   "description": "Puissance 4 multijoueur en ligne",
-  "main": "src/server.js",
+  "main": "index.js",
   "engines": {
     "node": "20.x"
   },
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
     "rpc": "node src/discord-rpc-companion.js",
     "bot": "node src/bot.js",
     "register-commands": "node src/register-commands.js"

@@ -26,11 +26,11 @@ const os = require('node:os');
 const { Worker, isMainThread, parentPort, workerData } = require('node:worker_threads');
 
 if (process.env.P4_INSECURE_TLS === '1') {
-  // Useful only if the local machine refuses Railway's certificate chain.
+  // À utiliser uniquement pour un certificat TLS local non reconnu.
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const API_URL = (process.env.P4_API_URL || 'https://puissance-4-website-production.up.railway.app').replace(/\/+$/, '');
+const API_URL = (process.env.P4_API_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const BOT_TOKENS = String(process.env.P4_BOT_TOKENS || process.env.P4_BOT_TOKEN || process.env.BOT_TOKEN || '')
   .split(/[,\s]+/)
   .map(token => token.trim())

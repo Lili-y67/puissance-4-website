@@ -215,7 +215,7 @@ class GameManager {
       const p2 = state.players[2];
       const winner = isDraw ? null : (winnerSide === 1 ? p1 : p2);
       const loser = isDraw ? null : (winnerSide === 1 ? p2 : p1);
-      const BASE = 'https://puissance-4-website-ranked-production.up.railway.app';
+      const BASE = (process.env.BASE_URL || process.env.PUBLIC_BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`).replace(/\/+$/, '');
       wlogGame({
         gameId: state.id,
         isDraw,

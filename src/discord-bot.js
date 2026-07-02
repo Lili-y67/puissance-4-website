@@ -28,7 +28,7 @@ const os = require('os');
 const path = require('path');
 const { getAllRankRoleNames, RANKS } = require('./rank');
 
-const DEFAULT_API = 'https://puissance-4-website-production.up.railway.app';
+const DEFAULT_API = `http://127.0.0.1:${process.env.PORT || 3000}`;
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
 const CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508402625370918952';
 const CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
