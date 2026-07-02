@@ -12,15 +12,6 @@ const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
-// Migration : ajouter les colonnes couleur/shape si elles n'existent pas
-['p1_color TEXT DEFAULT \'#ff2d55\'', 'p2_color TEXT DEFAULT \'#ffd60a\'', 'p1_shape TEXT DEFAULT \'circle\'', 'p2_shape TEXT DEFAULT \'circle\''].forEach(col => {
-  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) { /* déjà présente */ }
-});
-
-['tournament_id INTEGER', 'tournament_move_time_seconds INTEGER DEFAULT 0'].forEach(col => {
-  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) {}
-});
-
 db.exec(`
   CREATE TABLE IF NOT EXISTS players (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,6 +39,8 @@ db.exec(`
     p2_color    TEXT    DEFAULT '#ffd60a',
     p1_shape    TEXT    DEFAULT 'circle',
     p2_shape    TEXT    DEFAULT 'circle',
+    tournament_id INTEGER,
+    tournament_move_time_seconds INTEGER DEFAULT 0,
     created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
     finished_at TEXT
   );
@@ -93,6 +86,12 @@ db.exec(`
 `);
 
 // Migration : ajouter colonnes si absentes (pour DBs existantes)
+['p1_color TEXT DEFAULT \'#ff2d55\'', 'p2_color TEXT DEFAULT \'#ffd60a\'', 'p1_shape TEXT DEFAULT \'circle\'', 'p2_shape TEXT DEFAULT \'circle\''].forEach(col => {
+  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) { /* déjà présente */ }
+});
+['tournament_id INTEGER', 'tournament_move_time_seconds INTEGER DEFAULT 0'].forEach(col => {
+  try { db.exec(`ALTER TABLE games ADD COLUMN ${col}`); } catch(e) { /* déjà présente */ }
+});
 try { db.exec(`ALTER TABLE players ADD COLUMN password TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar   TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN shape      TEXT NOT NULL DEFAULT 'circle'`); } catch(e) {}
