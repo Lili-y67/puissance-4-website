@@ -1535,29 +1535,6 @@ function resolveProfileLanguage(value) {
     || null;
 }
 
-function languageSettingsCard(player) {
-  const owner = viewerPlayer || player || {};
-  const currentLanguage = profileLanguages().find(lang => lang.code === String(owner.language || 'fr')) || profileLanguages()[0];
-  return `
-    <div class="color-card" id="language-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div>
-          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)" data-i18n="profile.language.title">Langue du site</span>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
-        </div>
-        <span class="save-confirm" id="language-confirm">✓ <span data-i18n="common.languageSaved">Langue enregistree</span></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="profile-language-input" class="search-input" list="profile-language-options" style="flex:1;min-width:220px;margin:0" type="text" autocomplete="off" placeholder="fra, anglais, espagne..." value="${languageOptionLabel(currentLanguage).replace(/"/g, '&quot;')}">
-        <datalist id="profile-language-options">
-          ${profileLanguages().map(lang => `<option value="${languageOptionLabel(lang).replace(/"/g, '&quot;')}"></option>`).join('')}
-        </datalist>
-        <button class="btn-save-color" id="btn-save-language" onclick="saveProfileLanguage()">🌐 <span data-i18n="common.save">Enregistrer</span></button>
-      </div>
-      <div style="font-size:11px;color:var(--muted)" data-i18n="profile.language.firstPass">Premiere version : les textes communs changent tout de suite, le reste gardera le francais en fallback.</div>
-    </div>`;
-}
-
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
   if (!/^data:image\/gif;base64,/i.test(src)) return src;
@@ -2527,7 +2504,6 @@ function render(player, games, following, followers, followStatus, tournaments =
     .join('');
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
-    ...(viewerPlayer ? [{ href: '#section-language', icon: '🌐', title: 'Langue', sub: 'Site en FR, EN, ES' }] : []),
     { href: '#section-collection', icon: '🔴', title: 'Collection', sub: 'Ronds et doublons' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
@@ -2670,19 +2646,6 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     </section>
-
-    ${viewerPlayer ? `
-    <section class="profile-section" id="section-language">
-      <div class="profile-section-head">
-        <div>
-          <div class="profile-section-title" data-i18n="profile.language.title">Langue du site</div>
-          <div class="profile-section-sub" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
-        </div>
-      </div>
-      <div class="profile-stack">
-        ${languageSettingsCard(player)}
-      </div>
-    </section>` : ''}
 
     ${renderTokenCollectionSection(player)}
 
@@ -7273,61 +7236,6 @@ async function saveCrystalAlert() {
     }
   } catch (e) {
     alert(e.message || 'Erreur Crystal.');
-  }
-}
-
-async function saveProfileLanguage() {
-  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
-  const input = document.getElementById('profile-language-input');
-  const btn = document.getElementById('btn-save-language');
-  const selected = resolveProfileLanguage(input?.value || '');
-  if (!selected) {
-    PROFIL_SFX.error();
-    return alert(window.P4I18n?.t('common.languageUnknown') || 'Langue non reconnue.');
-  }
-  if (!me.id || !token) {
-    PROFIL_SFX.error();
-    return alert(window.P4I18n?.t('common.loginForLanguage') || 'Connecte-toi pour changer la langue.');
-  }
-  try {
-    PROFIL_SFX.click();
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = '...';
-    }
-    const res = await fetch(`/api/players/${me.id}/language`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
-      body: JSON.stringify({ token, language: selected.code }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Impossible de sauvegarder la langue.');
-    const patch = { language: data.language || selected.code };
-    syncStoredPlayerPatch(patch);
-    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) Object.assign(currentPlayer, patch);
-    if (input) input.value = languageOptionLabel(selected);
-    await window.P4I18n?.setLanguage(patch.language);
-    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
-      await load();
-    } else {
-      window.P4I18n?.apply(document.getElementById('content'));
-    }
-    const confirm = document.getElementById('language-confirm');
-    if (confirm) {
-      confirm.classList.add('show');
-      setTimeout(() => confirm.classList.remove('show'), 1600);
-    }
-    PROFIL_SFX.success();
-  } catch (e) {
-    PROFIL_SFX.error();
-    alert(e.message || 'Erreur langue.');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = '🌐 <span data-i18n="common.save">Enregistrer</span>';
-      window.P4I18n?.apply(btn);
-    }
   }
 }
 

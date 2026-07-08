@@ -225,6 +225,66 @@
     return translated && translated !== key ? translated : (I18N_FALLBACK[key] || key);
   }
 
+  function readMenuPlayer() {
+    try {
+      return JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function readMenuToken() {
+    try {
+      return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function patchStoredMenuPlayer(patch) {
+    [localStorage, sessionStorage].forEach(store => {
+      try {
+        const player = JSON.parse(store.getItem('player') || 'null');
+        if (player?.id) store.setItem('player', JSON.stringify({ ...player, ...patch }));
+      } catch (_) {}
+    });
+  }
+
+  async function saveMenuLanguage() {
+    const select = document.getElementById('p4-menu-language-select');
+    const button = document.getElementById('p4-menu-language-save');
+    const language = String(select?.value || 'fr').toLowerCase();
+    const player = readMenuPlayer();
+    const token = readMenuToken();
+    if (button) {
+      button.disabled = true;
+      button.textContent = '...';
+    }
+    try {
+      if (player?.id && token) {
+        const res = await fetch(`/api/players/${player.id}/language`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+          body: JSON.stringify({ token, language }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Impossible de sauvegarder la langue.');
+        patchStoredMenuPlayer({ language: data.language || language });
+      } else {
+        try { localStorage.setItem('p4_language', language); } catch (_) {}
+      }
+      await window.P4I18n?.setLanguage(language);
+      alert(window.P4I18n?.t('menu.language.refresh') || 'La page va se recharger pour appliquer la langue.');
+      location.reload();
+    } catch (error) {
+      alert(error.message || 'Erreur langue.');
+      if (button) {
+        button.disabled = false;
+        button.textContent = window.P4I18n?.t('menu.language.validate') || 'Valider';
+      }
+    }
+  }
+
   function shouldMountGlobalMenu() {
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
     if (path === '/game' || path.endsWith('/game.html')) return false;
@@ -250,6 +310,7 @@
     if (document.getElementById('p4-global-menu-toggle')) return;
     ensureThemeStylesheet();
     document.body.classList.add('p4-menu-mounted');
+    const currentLanguage = window.P4I18n?.getLanguage?.() || readMenuPlayer()?.language || localStorage.getItem('p4_language') || 'fr';
 
     const toggle = document.createElement('button');
     toggle.id = 'p4-global-menu-toggle';
@@ -297,6 +358,23 @@
           <span class="p4-global-menu-sub p4-install-sub" data-i18n="menu.install.sub">Ouvrir comme une vraie application</span>
         </span>
       </button>
+      <div class="p4-menu-language-box">
+        <div class="p4-menu-language-head">
+          <span class="p4-menu-language-icon">🌐</span>
+          <span>
+            <strong data-i18n="menu.language.title">Langue</strong>
+            <small data-i18n="menu.language.help">Choix de la langue</small>
+          </span>
+        </div>
+        <div class="p4-menu-language-row">
+          <select id="p4-menu-language-select" class="p4-menu-language-select">
+            <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>Français</option>
+            <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
+            <option value="es" ${currentLanguage === 'es' ? 'selected' : ''}>Español</option>
+          </select>
+          <button id="p4-menu-language-save" class="p4-menu-language-save" type="button" data-i18n="menu.language.validate">Valider</button>
+        </div>
+      </div>
       <div class="p4-global-menu-foot"><span data-i18n="menu.footer">
         Menu compact pour éviter les pages qui débordent. Les pages de partie gardent leur interface dédiée.
         </span>
@@ -308,6 +386,7 @@
     backdrop.addEventListener('click', () => setMenuOpen(false));
     panel.querySelector('.p4-global-menu-close')?.addEventListener('click', () => setMenuOpen(false));
     panel.querySelector('#p4-install-app')?.addEventListener('click', installApplication);
+    panel.querySelector('#p4-menu-language-save')?.addEventListener('click', saveMenuLanguage);
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') setMenuOpen(false);
     });
