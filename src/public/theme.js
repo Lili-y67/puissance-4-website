@@ -101,11 +101,11 @@
     const showIosHelp = isIosDevice() && !isStandalone();
     button.hidden = isStandalone() || (!canInstall && !showIosHelp);
     button.querySelector('.p4-install-label').textContent = showIosHelp && !canInstall
-      ? 'Installer sur iPhone'
-      : 'Installer l’application';
+      ? (window.P4I18n?.t('menu.install.ios') || 'Installer sur iPhone')
+      : (window.P4I18n?.t('menu.install.label') || 'Installer l’application');
     button.querySelector('.p4-install-sub').textContent = showIosHelp && !canInstall
-      ? 'Partager puis Sur l’écran d’accueil'
-      : 'Ouvrir comme une vraie application';
+      ? (window.P4I18n?.t('menu.install.iosSub') || 'Partager puis Sur l’écran d’accueil')
+      : (window.P4I18n?.t('menu.install.sub') || 'Ouvrir comme une vraie application');
   }
 
   async function installApplication() {
@@ -146,6 +146,16 @@
     document.head.appendChild(script);
   }
 
+  function loadI18n() {
+    if (window.P4I18n || document.querySelector('script[data-p4-i18n]')) return;
+    const script = document.createElement('script');
+    script.src = '/i18n.js?v=1';
+    script.defer = true;
+    script.dataset.p4I18n = '1';
+    script.addEventListener('load', () => window.P4I18n?.apply(document.body));
+    document.head.appendChild(script);
+  }
+
   function mountButton() {
     if (document.getElementById('p4-theme-toggle')) return;
     const btn = document.createElement('button');
@@ -157,23 +167,63 @@
   }
 
   const MENU_ITEMS = [
-    { href: '/', icon: '🏠', label: 'Accueil', sub: 'Lancer une partie' },
-    { href: '/profil', icon: '👤', label: 'Profil', sub: 'Compte et style' },
-    { href: '/progression', icon: '🎯', label: 'Progression', sub: 'Quêtes et thèmes' },
-    { href: '/live', icon: '🔴', label: 'Live', sub: 'Spectateur' },
-    { href: '/local', icon: '🎲', label: 'Local', sub: '1v1 hors ligne' },
-    { href: '/players', icon: '👥', label: 'Joueurs', sub: 'Profils publics' },
-    { href: '/leaderboard', icon: '🏆', label: 'Classement', sub: 'Membres et bots' },
-    { href: '/clan', icon: '🛡️', label: 'Clan', sub: 'Equipe et tchat' },
-    { href: '/tournoi', icon: '🏟️', label: 'Tournois', sub: 'Arènes events' },
-    { href: '/analyse', icon: '🧠', label: 'Analyse', sub: 'Moteur de coups' },
-    { href: '/boutique', icon: '🛒', label: 'Boutique', sub: 'Coins et gemmes' },
-    { href: '/stats', icon: '📈', label: 'Stats', sub: 'Données du site' },
-    { href: '/news', icon: '📰', label: 'News', sub: 'Mise a jour 3.4.0' },
-    { href: '/regles', icon: '📘', label: 'Règles', sub: 'Jeu et gains' },
-    { href: '/api-doc', icon: '🧪', label: 'API', sub: 'Docs développeur' },
-    { href: 'https://discord.gg/MrKbBAAWcm', icon: '📣', label: 'Discord', sub: 'Communauté' },
+    { href: '/', icon: '🏠', labelKey: 'menu.home.label', subKey: 'menu.home.sub' },
+    { href: '/profil', icon: '👤', labelKey: 'menu.profile.label', subKey: 'menu.profile.sub' },
+    { href: '/progression', icon: '🎯', labelKey: 'menu.progression.label', subKey: 'menu.progression.sub' },
+    { href: '/live', icon: '🔴', labelKey: 'menu.live.label', subKey: 'menu.live.sub' },
+    { href: '/local', icon: '🎲', labelKey: 'menu.local.label', subKey: 'menu.local.sub' },
+    { href: '/players', icon: '👥', labelKey: 'menu.players.label', subKey: 'menu.players.sub' },
+    { href: '/leaderboard', icon: '🏆', labelKey: 'menu.leaderboard.label', subKey: 'menu.leaderboard.sub' },
+    { href: '/clan', icon: '🛡️', labelKey: 'menu.clan.label', subKey: 'menu.clan.sub' },
+    { href: '/tournoi', icon: '🏟️', labelKey: 'menu.tournaments.label', subKey: 'menu.tournaments.sub' },
+    { href: '/analyse', icon: '🧠', labelKey: 'menu.analysis.label', subKey: 'menu.analysis.sub' },
+    { href: '/boutique', icon: '🛒', labelKey: 'menu.shop.label', subKey: 'menu.shop.sub' },
+    { href: '/stats', icon: '📈', labelKey: 'menu.stats.label', subKey: 'menu.stats.sub' },
+    { href: '/news', icon: '📰', labelKey: 'menu.news.label', subKey: 'menu.news.sub' },
+    { href: '/regles', icon: '📘', labelKey: 'menu.rules.label', subKey: 'menu.rules.sub' },
+    { href: '/api-doc', icon: '🧪', labelKey: 'menu.api.label', subKey: 'menu.api.sub' },
+    { href: 'https://discord.gg/MrKbBAAWcm', icon: '📣', labelKey: 'menu.discord.label', subKey: 'menu.discord.sub' },
   ];
+
+  const I18N_FALLBACK = {
+    'menu.home.label': 'Accueil',
+    'menu.home.sub': 'Lancer une partie',
+    'menu.profile.label': 'Profil',
+    'menu.profile.sub': 'Compte et style',
+    'menu.progression.label': 'Progression',
+    'menu.progression.sub': 'Quêtes et thèmes',
+    'menu.live.label': 'Live',
+    'menu.live.sub': 'Spectateur',
+    'menu.local.label': 'Local',
+    'menu.local.sub': '1v1 hors ligne',
+    'menu.players.label': 'Joueurs',
+    'menu.players.sub': 'Profils publics',
+    'menu.leaderboard.label': 'Classement',
+    'menu.leaderboard.sub': 'Membres et bots',
+    'menu.clan.label': 'Clan',
+    'menu.clan.sub': 'Equipe et tchat',
+    'menu.tournaments.label': 'Tournois',
+    'menu.tournaments.sub': 'Arènes events',
+    'menu.analysis.label': 'Analyse',
+    'menu.analysis.sub': 'Moteur de coups',
+    'menu.shop.label': 'Boutique',
+    'menu.shop.sub': 'Coins et gemmes',
+    'menu.stats.label': 'Stats',
+    'menu.stats.sub': 'Données du site',
+    'menu.news.label': 'News',
+    'menu.news.sub': 'Mise a jour 3.4.0',
+    'menu.rules.label': 'Règles',
+    'menu.rules.sub': 'Jeu et gains',
+    'menu.api.label': 'API',
+    'menu.api.sub': 'Docs développeur',
+    'menu.discord.label': 'Discord',
+    'menu.discord.sub': 'Communauté',
+  };
+
+  function i18nText(key) {
+    const translated = window.P4I18n?.t(key);
+    return translated && translated !== key ? translated : (I18N_FALLBACK[key] || key);
+  }
 
   function shouldMountGlobalMenu() {
     const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -187,11 +237,11 @@
     const toggle = document.getElementById('p4-global-menu-toggle');
     if (toggle) {
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      toggle.setAttribute('aria-label', open ? (window.P4I18n?.t('common.closeMenu') || 'Fermer le menu') : (window.P4I18n?.t('common.openMenu') || 'Ouvrir le menu'));
       const icon = toggle.querySelector('.p4-global-menu-toggle-icon');
       const text = toggle.querySelector('.p4-global-menu-toggle-text');
       if (icon) icon.textContent = open ? '×' : '☰';
-      if (text) text.textContent = open ? 'Fermer' : 'Menu';
+      if (text) text.textContent = open ? (window.P4I18n?.t('common.close') || 'Fermer') : (window.P4I18n?.t('common.menu') || 'Menu');
     }
   }
 
@@ -206,9 +256,10 @@
     toggle.className = 'p4-global-menu-toggle';
     toggle.type = 'button';
     toggle.setAttribute('aria-label', 'Ouvrir le menu');
+    toggle.dataset.i18nAttr = 'aria-label:common.openMenu';
     toggle.setAttribute('aria-controls', 'p4-global-menu-panel');
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.innerHTML = '<span class="p4-global-menu-toggle-icon">☰</span><span class="p4-global-menu-toggle-text">Menu</span>';
+    toggle.innerHTML = '<span class="p4-global-menu-toggle-icon">☰</span><span class="p4-global-menu-toggle-text" data-i18n="common.menu">Menu</span>';
 
     const backdrop = document.createElement('div');
     backdrop.className = 'p4-global-menu-backdrop';
@@ -226,15 +277,15 @@
             <div class="p4-global-menu-title">Puissance <span>4</span></div>
           </div>
         </div>
-        <button class="p4-global-menu-close" type="button" aria-label="Fermer le menu">×</button>
+        <button class="p4-global-menu-close" type="button" aria-label="Fermer le menu" data-i18n-attr="aria-label:common.closeMenu">×</button>
       </div>
       <div class="p4-global-menu-grid">
         ${MENU_ITEMS.map(item => `
           <a class="p4-global-menu-link" href="${item.href}">
             <span class="p4-global-menu-emoji">${item.icon}</span>
             <span class="p4-global-menu-copy">
-              <span class="p4-global-menu-label">${item.label}</span>
-              <span class="p4-global-menu-sub">${item.sub}</span>
+              <span class="p4-global-menu-label" data-i18n="${item.labelKey}">${i18nText(item.labelKey)}</span>
+              <span class="p4-global-menu-sub" data-i18n="${item.subKey}">${i18nText(item.subKey)}</span>
             </span>
           </a>
         `).join('')}
@@ -242,12 +293,13 @@
       <button class="p4-install-app" id="p4-install-app" type="button" hidden>
         <span class="p4-install-icon">⬇</span>
         <span class="p4-global-menu-copy">
-          <span class="p4-global-menu-label p4-install-label">Installer l’application</span>
-          <span class="p4-global-menu-sub p4-install-sub">Ouvrir comme une vraie application</span>
+          <span class="p4-global-menu-label p4-install-label" data-i18n="menu.install.label">Installer l’application</span>
+          <span class="p4-global-menu-sub p4-install-sub" data-i18n="menu.install.sub">Ouvrir comme une vraie application</span>
         </span>
       </button>
-      <div class="p4-global-menu-foot">
+      <div class="p4-global-menu-foot"><span data-i18n="menu.footer">
         Menu compact pour éviter les pages qui débordent. Les pages de partie gardent leur interface dédiée.
+        </span>
         <a class="p4-global-menu-copyright" href="/cgu">© 2026 Puissance-4 · CGU</a>
       </div>
     `;
@@ -263,6 +315,7 @@
     document.body.appendChild(toggle);
     document.body.appendChild(backdrop);
     document.body.appendChild(panel);
+    window.P4I18n?.apply(panel);
     updateInstallButton();
   }
 
@@ -690,6 +743,7 @@
   applyCustomCursor();
   ensureThemeStylesheet();
   registerPwa();
+  loadI18n();
   loadDiscordPresence();
 
   if (document.readyState === 'loading') {

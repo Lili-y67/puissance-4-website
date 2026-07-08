@@ -1312,6 +1312,7 @@ body.search-open .profile-side{
   </div>
 </div>
 
+<script src="/i18n.js?v=1"></script>
 <script>
 // ── Audio Profil ──────────────────────────────────────────────────────────────
 const PROFIL_SFX = (() => {
@@ -1499,6 +1500,40 @@ let currentFollowingCache = [];
 let currentFollowersCache = [];
 let currentFollowStatusCache = { isFollowing: false, followers: 0, following: 0 };
 let currentTournamentsCache = [];
+
+const PROFILE_LANGUAGE_FALLBACKS = [
+  { code: 'fr', name: 'Français', country: 'France' },
+  { code: 'en', name: 'English', country: 'Royaume-Uni / Etats-Unis' },
+  { code: 'es', name: 'Español', country: 'Espagne / Mexique' },
+  { code: 'de', name: 'Deutsch', country: 'Allemagne' },
+  { code: 'it', name: 'Italiano', country: 'Italie' },
+  { code: 'pt', name: 'Português', country: 'Portugal / Bresil' },
+  { code: 'nl', name: 'Nederlands', country: 'Pays-Bas' },
+  { code: 'pl', name: 'Polski', country: 'Pologne' },
+  { code: 'tr', name: 'Türkçe', country: 'Turquie' },
+  { code: 'ar', name: 'العربية', country: 'Monde arabe' },
+  { code: 'ja', name: '日本語', country: 'Japon' },
+  { code: 'ko', name: '한국어', country: 'Coree' },
+  { code: 'zh', name: '中文', country: 'Chine' },
+  { code: 'ru', name: 'Русский', country: 'Russie' },
+  { code: 'uk', name: 'Українська', country: 'Ukraine' },
+];
+
+function profileLanguages() {
+  return window.P4I18n?.languages || PROFILE_LANGUAGE_FALLBACKS;
+}
+
+function languageOptionLabel(lang) {
+  return `${lang.name} - ${lang.country} (${lang.code})`;
+}
+
+function resolveProfileLanguage(value) {
+  const query = String(value || '').trim();
+  return window.P4I18n?.findLanguage?.(query)
+    || profileLanguages().find(lang => lang.code === query.toLowerCase())
+    || profileLanguages().find(lang => languageOptionLabel(lang).toLowerCase() === query.toLowerCase())
+    || null;
+}
 
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
@@ -2270,7 +2305,8 @@ async function load() {
     const freshPlayer = player;
     currentPlayer = freshPlayer;
     if (isOwnProfile) {
-      syncStoredPlayerPatch({ custom_cursor: String(freshPlayer.custom_cursor || '') });
+      syncStoredPlayerPatch({ custom_cursor: String(freshPlayer.custom_cursor || ''), language: String(freshPlayer.language || 'fr') });
+      await window.P4I18n?.setLanguage(String(freshPlayer.language || 'fr'));
       applyProfileCursor(String(freshPlayer.custom_cursor || ''));
     }
     profileRpcOnline = !!freshPlayer.online;
@@ -2292,6 +2328,7 @@ async function load() {
     pendingAvatarDecoration = null;
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
+    window.P4I18n?.apply(document.getElementById('content'));
     renderQueueMusicPicker(freshPlayer);
     loadEloHistory(freshPlayer.id, eloHistoryDays, true);
     if (eloHistoryTimer) clearInterval(eloHistoryTimer);
@@ -2779,11 +2816,28 @@ function render(player, games, following, followers, followStatus, tournaments =
     <section class="profile-section" id="section-custom">
     <div class="profile-section-head">
       <div>
-        <div class="profile-section-title">Personnalisation</div>
-        <div class="profile-section-sub">Pseudo, couleurs, pion, decor et medias premium.</div>
+        <div class="profile-section-title" data-i18n="profile.custom.title">Personnalisation</div>
+        <div class="profile-section-sub" data-i18n="profile.custom.sub">Pseudo, couleurs, pion, decor et medias premium.</div>
       </div>
     </div>
     <div class="profile-stack">
+    <div class="color-card" id="language-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)" data-i18n="profile.language.title">Langue du site</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
+        </div>
+        <span class="save-confirm" id="language-confirm">✓ <span data-i18n="common.languageSaved">Langue enregistree</span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input id="profile-language-input" class="search-input" list="profile-language-options" style="flex:1;min-width:220px;margin:0" type="text" autocomplete="off" placeholder="fra, anglais, espagne..." value="${languageOptionLabel(profileLanguages().find(lang => lang.code === String(player.language || 'fr')) || profileLanguages()[0]).replace(/"/g, '&quot;')}">
+        <datalist id="profile-language-options">
+          ${profileLanguages().map(lang => `<option value="${languageOptionLabel(lang).replace(/"/g, '&quot;')}"></option>`).join('')}
+        </datalist>
+        <button class="btn-save-color" id="btn-save-language" onclick="saveProfileLanguage()">🌐 <span data-i18n="common.save">Enregistrer</span></button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)" data-i18n="profile.language.firstPass">Premiere version : les textes communs changent tout de suite, le reste gardera le francais en fallback.</div>
+    </div>
     <div class="color-card" id="pseudo-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Pseudo du profil</span>
@@ -7199,6 +7253,61 @@ async function saveCrystalAlert() {
     }
   } catch (e) {
     alert(e.message || 'Erreur Crystal.');
+  }
+}
+
+async function saveProfileLanguage() {
+  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  const input = document.getElementById('profile-language-input');
+  const btn = document.getElementById('btn-save-language');
+  const selected = resolveProfileLanguage(input?.value || '');
+  if (!selected) {
+    PROFIL_SFX.error();
+    return alert(window.P4I18n?.t('common.languageUnknown') || 'Langue non reconnue.');
+  }
+  if (!me.id || !token) {
+    PROFIL_SFX.error();
+    return alert(window.P4I18n?.t('common.loginForLanguage') || 'Connecte-toi pour changer la langue.');
+  }
+  try {
+    PROFIL_SFX.click();
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '...';
+    }
+    const res = await fetch(`/api/players/${me.id}/language`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, language: selected.code }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Impossible de sauvegarder la langue.');
+    const patch = { language: data.language || selected.code };
+    syncStoredPlayerPatch(patch);
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) Object.assign(currentPlayer, patch);
+    if (input) input.value = languageOptionLabel(selected);
+    await window.P4I18n?.setLanguage(patch.language);
+    if (currentPlayer && Number(currentPlayer.id) === Number(me.id)) {
+      await load();
+    } else {
+      window.P4I18n?.apply(document.getElementById('content'));
+    }
+    const confirm = document.getElementById('language-confirm');
+    if (confirm) {
+      confirm.classList.add('show');
+      setTimeout(() => confirm.classList.remove('show'), 1600);
+    }
+    PROFIL_SFX.success();
+  } catch (e) {
+    PROFIL_SFX.error();
+    alert(e.message || 'Erreur langue.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🌐 <span data-i18n="common.save">Enregistrer</span>';
+      window.P4I18n?.apply(btn);
+    }
   }
 }
 
