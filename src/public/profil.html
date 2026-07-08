@@ -1535,6 +1535,28 @@ function resolveProfileLanguage(value) {
     || null;
 }
 
+function languageSettingsCard(player) {
+  const currentLanguage = profileLanguages().find(lang => lang.code === String(player?.language || 'fr')) || profileLanguages()[0];
+  return `
+    <div class="color-card" id="language-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div>
+          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)" data-i18n="profile.language.title">Langue du site</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
+        </div>
+        <span class="save-confirm" id="language-confirm">✓ <span data-i18n="common.languageSaved">Langue enregistree</span></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <input id="profile-language-input" class="search-input" list="profile-language-options" style="flex:1;min-width:220px;margin:0" type="text" autocomplete="off" placeholder="fra, anglais, espagne..." value="${languageOptionLabel(currentLanguage).replace(/"/g, '&quot;')}">
+        <datalist id="profile-language-options">
+          ${profileLanguages().map(lang => `<option value="${languageOptionLabel(lang).replace(/"/g, '&quot;')}"></option>`).join('')}
+        </datalist>
+        <button class="btn-save-color" id="btn-save-language" onclick="saveProfileLanguage()">🌐 <span data-i18n="common.save">Enregistrer</span></button>
+      </div>
+      <div style="font-size:11px;color:var(--muted)" data-i18n="profile.language.firstPass">Premiere version : les textes communs changent tout de suite, le reste gardera le francais en fallback.</div>
+    </div>`;
+}
+
 function getRenderableMediaSrc(src) {
   if (!src || typeof src !== 'string') return '';
   if (!/^data:image\/gif;base64,/i.test(src)) return src;
@@ -2504,6 +2526,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     .join('');
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
+    ...(isOwnProfile ? [{ href: '#section-language', icon: '🌐', title: 'Langue', sub: 'Site en FR, EN, ES' }] : []),
     { href: '#section-collection', icon: '🔴', title: 'Collection', sub: 'Ronds et doublons' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
@@ -2646,6 +2669,19 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     </section>
+
+    ${isOwnProfile ? `
+    <section class="profile-section" id="section-language">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title" data-i18n="profile.language.title">Langue du site</div>
+          <div class="profile-section-sub" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
+        </div>
+      </div>
+      <div class="profile-stack">
+        ${languageSettingsCard(player)}
+      </div>
+    </section>` : ''}
 
     ${renderTokenCollectionSection(player)}
 
@@ -2821,23 +2857,6 @@ function render(player, games, following, followers, followStatus, tournaments =
       </div>
     </div>
     <div class="profile-stack">
-    <div class="color-card" id="language-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div>
-          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)" data-i18n="profile.language.title">Langue du site</span>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px" data-i18n="profile.language.help">Choisis une langue par pays ou par nom.</div>
-        </div>
-        <span class="save-confirm" id="language-confirm">✓ <span data-i18n="common.languageSaved">Langue enregistree</span></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <input id="profile-language-input" class="search-input" list="profile-language-options" style="flex:1;min-width:220px;margin:0" type="text" autocomplete="off" placeholder="fra, anglais, espagne..." value="${languageOptionLabel(profileLanguages().find(lang => lang.code === String(player.language || 'fr')) || profileLanguages()[0]).replace(/"/g, '&quot;')}">
-        <datalist id="profile-language-options">
-          ${profileLanguages().map(lang => `<option value="${languageOptionLabel(lang).replace(/"/g, '&quot;')}"></option>`).join('')}
-        </datalist>
-        <button class="btn-save-color" id="btn-save-language" onclick="saveProfileLanguage()">🌐 <span data-i18n="common.save">Enregistrer</span></button>
-      </div>
-      <div style="font-size:11px;color:var(--muted)" data-i18n="profile.language.firstPass">Premiere version : les textes communs changent tout de suite, le reste gardera le francais en fallback.</div>
-    </div>
     <div class="color-card" id="pseudo-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Pseudo du profil</span>
