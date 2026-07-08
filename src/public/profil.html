@@ -1536,7 +1536,8 @@ function resolveProfileLanguage(value) {
 }
 
 function languageSettingsCard(player) {
-  const currentLanguage = profileLanguages().find(lang => lang.code === String(player?.language || 'fr')) || profileLanguages()[0];
+  const owner = viewerPlayer || player || {};
+  const currentLanguage = profileLanguages().find(lang => lang.code === String(owner.language || 'fr')) || profileLanguages()[0];
   return `
     <div class="color-card" id="language-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
@@ -2526,7 +2527,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     .join('');
   const sectionLinks = [
     { href: '#section-overview', icon: '👤', title: 'Vue', sub: 'Carte profil et rang' },
-    ...(isOwnProfile ? [{ href: '#section-language', icon: '🌐', title: 'Langue', sub: 'Site en FR, EN, ES' }] : []),
+    ...(viewerPlayer ? [{ href: '#section-language', icon: '🌐', title: 'Langue', sub: 'Site en FR, EN, ES' }] : []),
     { href: '#section-collection', icon: '🔴', title: 'Collection', sub: 'Ronds et doublons' },
     { href: '#section-social', icon: '🌐', title: 'Social', sub: 'Suivis, abonnes, stats' },
     { href: '#section-clan', icon: '🛡️', title: 'Clan', sub: player.clan ? player.clan.tag : 'Blason et equipe' },
@@ -2670,7 +2671,7 @@ function render(player, games, following, followers, followStatus, tournaments =
     </div>
     </section>
 
-    ${isOwnProfile ? `
+    ${viewerPlayer ? `
     <section class="profile-section" id="section-language">
       <div class="profile-section-head">
         <div>
