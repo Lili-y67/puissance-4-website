@@ -244,6 +244,10 @@
     return languages.some(lang => lang.code === code) || fallbackLanguages.some(lang => lang.code === code);
   }
 
+  function hasActiveLanguage(code) {
+    return languages.some(lang => lang.code === code);
+  }
+
   function getLanguage() {
     const player = readStoredPlayer();
     const code = String(player?.language || localStorage.getItem(STORAGE_KEY) || activeLanguage || DEFAULT_LANGUAGE).toLowerCase();
@@ -286,7 +290,7 @@
     const safe = hasLanguage(language) ? language : DEFAULT_LANGUAGE;
     const bundle = await fetchBundle(safe);
     languages = Array.isArray(bundle.languages) && bundle.languages.length ? bundle.languages : fallbackLanguages;
-    activeLanguage = hasLanguage(bundle.language) ? bundle.language : safe;
+    activeLanguage = hasActiveLanguage(bundle.language) ? bundle.language : DEFAULT_LANGUAGE;
     activeSource = bundle.source || fallbackSource;
     activeTranslations = activeLanguage === DEFAULT_LANGUAGE ? {} : (bundle.translations || fallbackTranslations[activeLanguage] || {});
     rebuildTextIndex();
@@ -462,8 +466,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language: activeLanguage, texts: missing }),
       });
-      if (!res.ok) throw new Error('translation failed');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || data.error || 'translation failed');
       if (runId !== machineRunId || data.language !== activeLanguage) return;
       const translations = data.translations || {};
       Object.entries(translations).forEach(([source, translated]) => {
@@ -477,8 +481,8 @@
       } else {
         completeTranslationOverlay(totalMissing);
       }
-    } catch (_) {
-      hideTranslationOverlay();
+    } catch (error) {
+      failTranslationOverlay(error.message || 'Le service de traduction ne repond pas.');
     } finally {
       translationInFlight = false;
       if (pendingTranslationRoot && activeLanguage !== DEFAULT_LANGUAGE) {

@@ -229,13 +229,13 @@ const TRANSLATIONS = {
 
 const LANGUAGE_SET = new Set(LANGUAGES.map(language => language.code));
 const CACHE_PATH = path.join(__dirname, '../../data/i18n-machine-cache.json');
-const MACHINE_PROVIDER = String(process.env.TRANSLATION_PROVIDER || process.env.I18N_TRANSLATION_PROVIDER || 'mymemory').toLowerCase();
 const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || '').replace(/\/+$/, '');
 const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.TRANSLATION_API_KEY || '');
 const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
 const MAX_MACHINE_TEXTS = 400;
 const MAX_MACHINE_TEXT_BYTES = 500;
 const EXTERNAL_TRANSLATION_TIMEOUT_MS = 6500;
+const LANGUAGE_DISCOVERY_TTL_MS = 10 * 60 * 1000;
 const PROVIDER_LANGUAGE_CODES = {
   mymemory: {
     en: 'en',
@@ -274,7 +274,7 @@ const PROVIDER_LANGUAGE_CODES = {
     ru: 'ru',
     uk: 'uk',
     ar: 'ar',
-    zh: 'zh',
+    zh: 'zh-Hans',
     ja: 'ja',
     ko: 'ko',
     el: 'el',
@@ -286,6 +286,13 @@ const PROVIDER_LANGUAGE_CODES = {
 };
 
 let machineCache = loadMachineCache();
+let languageDiscoveryCache = null;
+
+function getMachineProvider() {
+  const configured = String(process.env.TRANSLATION_PROVIDER || process.env.I18N_TRANSLATION_PROVIDER || '').trim().toLowerCase();
+  if (configured) return configured;
+  return LIBRETRANSLATE_URL ? 'libretranslate' : 'disabled';
+}
 
 const LOCAL_MACHINE_TRANSLATIONS = {
   en: {
@@ -408,7 +415,8 @@ function machineCacheKey(language, text) {
 function providerLanguageCode(language) {
   const target = normalizeLanguage(language);
   if (target === 'fr') return 'fr';
-  const providerMap = PROVIDER_LANGUAGE_CODES[MACHINE_PROVIDER] || PROVIDER_LANGUAGE_CODES.mymemory;
+  const machineProvider = getMachineProvider();
+  const providerMap = PROVIDER_LANGUAGE_CODES[machineProvider] || {};
   return providerMap[target] || '';
 }
 
@@ -427,7 +435,7 @@ async function fetchJsonWithTimeout(url, options = {}) {
 async function translateWithLibreTranslate(text, language) {
   if (!LIBRETRANSLATE_URL) throw new Error('LibreTranslate URL missing');
   const target = providerLanguageCode(language);
-  if (!target) throw new Error(`Language ${language} not supported by ${MACHINE_PROVIDER}`);
+  if (!target) throw new Error(`Language ${language} not supported by libretranslate`);
   const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -443,9 +451,31 @@ async function translateWithLibreTranslate(text, language) {
   return normalizeText(data.translatedText);
 }
 
+async function translateBatchWithLibreTranslate(texts, language) {
+  if (!LIBRETRANSLATE_URL) throw new Error('LibreTranslate URL missing');
+  const target = providerLanguageCode(language);
+  if (!target) throw new Error(`Language ${language} not supported by libretranslate`);
+  const batch = (Array.isArray(texts) ? texts : []).map(normalizeText).filter(Boolean);
+  if (!batch.length) return [];
+  const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: batch,
+      source: 'fr',
+      target,
+      format: 'text',
+      ...(LIBRETRANSLATE_KEY ? { api_key: LIBRETRANSLATE_KEY } : {}),
+    }),
+  });
+  if (!res.ok || !data.translatedText) throw new Error(data.error || 'LibreTranslate failed');
+  const translated = Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
+  return batch.map((_, index) => normalizeText(translated[index] || ''));
+}
+
 async function translateWithMyMemory(text, language) {
   const target = providerLanguageCode(language);
-  if (!target) throw new Error(`Language ${language} not supported by ${MACHINE_PROVIDER}`);
+  if (!target) throw new Error(`Language ${language} not supported by mymemory`);
   const url = new URL('https://api.mymemory.translated.net/get');
   url.searchParams.set('q', text);
   url.searchParams.set('langpair', `fr|${target}`);
@@ -461,6 +491,8 @@ async function translateOne(text, language) {
   const target = normalizeLanguage(language);
   const source = normalizeText(text);
   if (target === 'fr' || !shouldMachineTranslate(source)) return source;
+  const machineProvider = getMachineProvider();
+  if (machineProvider === 'disabled') throw new Error('No translation provider configured');
   const key = machineCacheKey(target, source);
   if (machineCache[key]) return machineCache[key];
   const local = localMachineTranslation(source, target);
@@ -479,9 +511,14 @@ async function translateOne(text, language) {
     return machineCache[key];
   }
 
-  const translatedCore = MACHINE_PROVIDER === 'libretranslate'
-    ? await translateWithLibreTranslate(textForApi, target)
-    : await translateWithMyMemory(textForApi, target);
+  let translatedCore = '';
+  if (machineProvider === 'libretranslate') {
+    translatedCore = await translateWithLibreTranslate(textForApi, target);
+  } else if (machineProvider === 'mymemory') {
+    translatedCore = await translateWithMyMemory(textForApi, target);
+  } else {
+    throw new Error(`Translation provider ${machineProvider} is not supported`);
+  }
   const translated = decorated.core !== source
     ? `${decorated.prefix}${translatedCore}${decorated.suffix}`.trim()
     : translatedCore;
@@ -507,6 +544,66 @@ async function translateTextsDetailed(texts, language) {
   const errors = [];
   if (target === 'fr') return { translations, errors, total: entries.length, translated: 0, failed: 0 };
 
+  const machineProvider = getMachineProvider();
+  if (machineProvider === 'libretranslate') {
+    const apiItems = [];
+    for (const text of entries) {
+      const key = machineCacheKey(target, text);
+      if (machineCache[key]) {
+        if (machineCache[key] !== text) translations[text] = machineCache[key];
+        continue;
+      }
+
+      const local = localMachineTranslation(text, target);
+      if (local) {
+        machineCache[key] = local;
+        translations[text] = local;
+        continue;
+      }
+
+      const decorated = splitDecoratedText(text);
+      const textForApi = decorated.core || text;
+      const localCore = decorated.core !== text ? localMachineTranslation(textForApi, target) : '';
+      if (localCore) {
+        machineCache[key] = `${decorated.prefix}${localCore}${decorated.suffix}`.trim();
+        translations[text] = machineCache[key];
+        continue;
+      }
+
+      apiItems.push({ source: text, cacheKey: key, decorated, textForApi });
+    }
+
+    if (apiItems.length) {
+      try {
+        const translatedTexts = await translateBatchWithLibreTranslate(apiItems.map(item => item.textForApi), target);
+        apiItems.forEach((item, index) => {
+          const translatedCore = translatedTexts[index] || '';
+          if (!translatedCore) {
+            errors.push({ text: item.source, error: 'LibreTranslate returned an empty translation' });
+            return;
+          }
+          const translated = item.decorated.core !== item.source
+            ? `${item.decorated.prefix}${translatedCore}${item.decorated.suffix}`.trim()
+            : translatedCore;
+          machineCache[item.cacheKey] = translated || item.source;
+          if (machineCache[item.cacheKey] !== item.source) translations[item.source] = machineCache[item.cacheKey];
+        });
+        saveMachineCache();
+      } catch (error) {
+        apiItems.forEach(item => errors.push({ text: item.source, error: error.message || 'translation failed' }));
+      }
+    }
+    if (Object.keys(translations).length) saveMachineCache();
+    return {
+      translations,
+      errors: errors.slice(0, 12),
+      total: entries.length,
+      translated: Object.keys(translations).length,
+      failed: errors.length,
+      provider: machineProvider,
+    };
+  }
+
   for (const text of entries) {
     try {
       const translated = await translateOne(text, target);
@@ -521,8 +618,54 @@ async function translateTextsDetailed(texts, language) {
     total: entries.length,
     translated: Object.keys(translations).length,
     failed: errors.length,
-    provider: MACHINE_PROVIDER,
+    provider: getMachineProvider(),
   };
+}
+
+async function discoverLibreTranslateLanguages() {
+  if (!LIBRETRANSLATE_URL) return null;
+  const now = Date.now();
+  if (languageDiscoveryCache && now - languageDiscoveryCache.createdAt < LANGUAGE_DISCOVERY_TTL_MS) {
+    return languageDiscoveryCache.languages;
+  }
+
+  const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/languages`);
+  if (!res.ok || !Array.isArray(data)) throw new Error('LibreTranslate languages unavailable');
+
+  const providerCodes = new Set(data.map(language => String(language.code || '').toLowerCase()).filter(Boolean));
+  const frenchEntry = data.find(language => String(language.code || '').toLowerCase() === 'fr');
+  const frenchTargets = new Set((frenchEntry?.targets || []).map(code => String(code || '').toLowerCase()));
+  const providerMap = PROVIDER_LANGUAGE_CODES.libretranslate;
+  const languages = LANGUAGES.filter(language => {
+    if (language.code === 'fr') return true;
+    const providerCode = providerMap[language.code];
+    if (!providerCode) return false;
+    const normalizedProviderCode = providerCode.toLowerCase();
+    if (frenchTargets.size) return frenchTargets.has(normalizedProviderCode);
+    return providerCodes.has(normalizedProviderCode);
+  });
+
+  languageDiscoveryCache = {
+    createdAt: now,
+    languages: languages.length > 1 ? languages : LANGUAGES.filter(language => language.code === 'fr'),
+  };
+  return languageDiscoveryCache.languages;
+}
+
+async function getAvailableLanguages() {
+  const machineProvider = getMachineProvider();
+  if (machineProvider === 'libretranslate') {
+    try {
+      return await discoverLibreTranslateLanguages();
+    } catch (_) {
+      return LANGUAGES.filter(language => language.code === 'fr');
+    }
+  }
+  if (machineProvider === 'mymemory') {
+    const providerMap = PROVIDER_LANGUAGE_CODES.mymemory;
+    return LANGUAGES.filter(language => language.code === 'fr' || Boolean(providerMap[language.code]));
+  }
+  return LANGUAGES.filter(language => language.code === 'fr');
 }
 
 function buildBundle(language) {
@@ -536,6 +679,14 @@ function buildBundle(language) {
   };
 }
 
+async function buildBundleAsync(language) {
+  const bundle = buildBundle(language);
+  bundle.languages = await getAvailableLanguages();
+  bundle.provider = getMachineProvider();
+  bundle.translationConfigured = bundle.provider === 'libretranslate' ? Boolean(LIBRETRANSLATE_URL) : bundle.provider !== 'disabled';
+  return bundle;
+}
+
 module.exports = {
   LANGUAGES,
   SOURCE,
@@ -543,6 +694,9 @@ module.exports = {
   LANGUAGE_SET,
   normalizeLanguage,
   buildBundle,
+  buildBundleAsync,
+  getAvailableLanguages,
+  getMachineProvider,
   translateTexts,
   translateTextsDetailed,
 };

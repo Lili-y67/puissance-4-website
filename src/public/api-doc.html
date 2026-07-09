@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -64,7 +64,7 @@ ul{padding-left:18px}
 @media (max-width:760px){.hero-grid,.meta,.subgrid{grid-template-columns:1fr}.page{padding:16px 10px 32px}.hero-actions a{width:100%;justify-content:center}.topline{min-width:0}.section-head{align-items:flex-start}.card,.section,.endpoint{border-radius:18px;padding:14px}h1{font-size:clamp(42px,15vw,58px)}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
-<link rel="stylesheet" href="/theme.css?v=eggs-12">
+<link rel="stylesheet" href="/theme.css?v=eggs-13">
 </head>
 <body>
 <div class="scanlines"></div>
@@ -100,6 +100,7 @@ ul{padding-left:18px}
         <a href="#bot-api">Bot API <span>&rarr;</span></a>
         <a href="#discord-commands">Commandes bot <span>&rarr;</span></a>
         <a href="#admin">Admin <span>&rarr;</span></a>
+        <a href="#i18n">Langues / i18n <span>&rarr;</span></a>
         <a href="#socketio">Socket.IO <span>&rarr;</span></a>
       </div>
     </div>
@@ -119,6 +120,7 @@ ul{padding-left:18px}
         <a href="#bot-api">Bot API</a>
         <a href="#discord-commands">Commandes bot</a>
         <a href="#admin">Administration</a>
+        <a href="#i18n">Langues / i18n</a>
         <a href="#system">Syst&egrave;me</a>
         <a href="#socketio">WebSockets</a>
       </div>
@@ -464,6 +466,55 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/backups</span></div><p>Liste les bases / sauvegardes exportables depuis le panel admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/backups/:key</span></div><p>T&eacute;l&eacute;charge un backup cibl&eacute; (ex. base principale, WAL, SHM).</p></article>
       </div></section>
+      <section class="section" id="i18n"><div class="section-head"><div><h2>Langues et i18n</h2><p>Bundle de textes, traduction automatique de page et sauvegarde de la langue choisie dans le menu global.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip post">POST</span><span class="chip patch">PATCH</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/i18n?lang=fr|en|de...</span></div><p>Retourne le bundle i18n utilis&eacute; par <code>/i18n.js</code> : langue active, fallback fran&ccedil;ais, textes source, traductions manuelles et liste des langues disponibles.</p><div class="meta"><div class="box"><div class="label">Provider</div><div class="value"><code>libretranslate</code> si <code>LIBRETRANSLATE_URL</code> est configur&eacute;, sinon <code>disabled</code>.</div></div><div class="box"><div class="label">Langues</div><div class="value">La liste est filtr&eacute;e depuis <code>GET /languages</code> de LibreTranslate. Sans provider joignable, seul <code>fr</code> est propos&eacute;.</div></div></div><div class="subgrid"><pre><code>const bundle = await fetch('/api/i18n?lang=de')
+  .then(r =&gt; r.json());
+
+console.log(bundle.languages.map(l =&gt; l.code));</code></pre><pre><code>{
+  "language": "de",
+  "fallbackLanguage": "fr",
+  "provider": "libretranslate",
+  "translationConfigured": true,
+  "languages": [{ "code": "fr" }, { "code": "de" }],
+  "source": { "common.save": "Enregistrer" },
+  "translations": {}
+}</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/i18n/translate</span></div><p>Traduit les textes visibles d&rsquo;une page en une seule requ&ecirc;te navigateur. Le backend utilise LibreTranslate en batch, prot&egrave;ge la marque Puissance 4, puis cache les r&eacute;sultats dans <code>data/i18n-machine-cache.json</code>.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>language</code> ou <code>lang</code>, puis <code>texts</code> tableau de textes. Maximum serveur : 400 textes.</div></div><div class="box"><div class="label">Erreurs</div><div class="value">502 provider absent/down, langue non support&eacute;e, timeout LibreTranslate.</div></div></div><div class="subgrid"><pre><code>const res = await fetch('/api/i18n/translate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    language: 'de',
+    texts: ['Connexion', 'Mot de passe', 'Se connecter']
+  })
+});
+const data = await res.json();</code></pre><pre><code>{
+  "language": "de",
+  "provider": "libretranslate",
+  "translations": {
+    "Connexion": "Anmeldung",
+    "Mot de passe": "Passwort"
+  },
+  "stats": { "total": 3, "translated": 3, "failed": 0 },
+  "errors": []
+}</code></pre></div><div class="note ok">Le front affiche un overlay plein &eacute;cran pendant la traduction. Le fran&ccedil;ais ne passe jamais par l&rsquo;API externe.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/language</span></div><p>Sauvegarde la langue pr&eacute;f&eacute;r&eacute;e du joueur connect&eacute;. Le menu global l&rsquo;utilise apr&egrave;s validation de l&rsquo;autocomplete.</p><div class="meta"><div class="box"><div class="label">Session</div><div class="value"><code>x-session-token</code> ou <code>token</code> dans le body.</div></div><div class="box"><div class="label">Body</div><div class="value"><code>language</code> parmi les codes expos&eacute;s par <code>/api/i18n</code>.</div></div></div><div class="subgrid"><pre><code>await fetch('/api/players/2/language', {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-session-token': token
+  },
+  body: JSON.stringify({ language: 'de' })
+});</code></pre><pre><code>{
+  "ok": true,
+  "language": "de",
+  "player": { "id": 2, "language": "de" }
+}</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">Config</span><span class="route">LibreTranslate serveur</span></div><p>Variables &agrave; renseigner sur le serveur Puissance 4 pour activer la traduction automatique.</p><div class="subgrid"><pre><code>TRANSLATION_PROVIDER=libretranslate
+LIBRETRANSLATE_URL=http://IP_OU_HOST_LIBRETRANSLATE:5000
+LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 5000 \
+  --load-only fr,en,es,de,it,pt,nl,pl,ro,sv,tr,ru,uk,ar,zh,ja,ko,el,cs,hu,id,hi \
+  --disable-web-ui</code></pre></div><div class="note warn">Dans deux containers Pterodactyl diff&eacute;rents, <code>127.0.0.1</code> pointe souvent vers le mauvais container. Utiliser l&rsquo;IP ou le hostname joignable du serveur LibreTranslate.</div></article>
+      </div></section>
       <section class="section" id="system"><div class="section-head"><div><h2>Syst&egrave;me</h2><p>Endpoints transverses utilis&eacute;s par l&rsquo;UI, le live et les alertes.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/system-status</span></div><p>&Eacute;tat manuel du serveur : maintenance / red&eacute;marrage / message flottant.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/system-status</span></div><p>Met &agrave; jour l&rsquo;alerte serveur affich&eacute;e en front.</p></article>
@@ -525,6 +576,6 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
   </div>
 </div>
 <script src="/presence.js"></script>
-<script src="/theme.js?v=eggs-12"></script>
+<script src="/theme.js?v=eggs-13"></script>
 </body>
 </html>
