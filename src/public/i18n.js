@@ -122,7 +122,6 @@
     if (text.length < 2 || text.length > 240) return false;
     if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) return false;
     if (/puissance\s*-?\s*4|puissance4/i.test(text)) return false;
-    if (/\b(CGU|GTCU|ELO|XP)\b/i.test(text) && text.length < 28) return false;
     if (/^(https?:\/\/|www\.|[#@])/.test(text)) return false;
     if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(text)) return false;
     return true;
@@ -316,7 +315,8 @@
 
     const ready = {};
     const missing = [];
-    [...new Set([...groups.keys(), ...attrGroups.keys()])].slice(0, 160).forEach(text => {
+    const allTexts = [...new Set([...groups.keys(), ...attrGroups.keys()])];
+    allTexts.slice(0, 400).forEach(text => {
       const key = `${activeLanguage}:${text}`;
       if (machineCache.has(key)) ready[text] = machineCache.get(key);
       else missing.push(text);
@@ -340,6 +340,9 @@
       });
       applyMachineResult(groups, translations);
       applyMachineAttributeResult(attrGroups, translations);
+      if (allTexts.length > 400) {
+        setTimeout(() => applyMachineTranslations(root), 250);
+      }
     } catch (_) {}
   }
 

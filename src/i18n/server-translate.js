@@ -233,10 +233,68 @@ const MACHINE_PROVIDER = String(process.env.TRANSLATION_PROVIDER || process.env.
 const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || '').replace(/\/+$/, '');
 const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.TRANSLATION_API_KEY || '');
 const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
-const MAX_MACHINE_TEXTS = 160;
+const MAX_MACHINE_TEXTS = 400;
 const MAX_MACHINE_TEXT_BYTES = 500;
 
 let machineCache = loadMachineCache();
+
+const LOCAL_MACHINE_TRANSLATIONS = {
+  en: {
+    'Jouez en ligne': 'Play online',
+    'Connecte · Défie · Domine': 'Connect · Challenge · Dominate',
+    'Duels rapides': 'Quick duels',
+    'Parties classées': 'Ranked games',
+    'Spectateur': 'Spectator',
+    'Live en direct': 'Live',
+    'Progression': 'Progression',
+    'Quêtes 3.4.0': 'Quests 3.4.0',
+    'Communauté': 'Community',
+    'Clans & events': 'Clans & events',
+    'Règles & CGU à jour': 'Rules & terms updated',
+    'Lire les CGU': 'Read the terms',
+    'Entrée immédiate': 'Immediate entry',
+    'Mode duel': 'Duel mode',
+    'Entrer dans l’arène': 'Enter arena',
+    'Connexion': 'Log in',
+    'Créer un compte': 'Create account',
+    'Se connecter': 'Log in',
+    'Connecter via Discord': 'Connect with Discord',
+    'Voir mon profil': 'View my profile',
+    'Jouer contre l’ordinateur': 'Play against the computer',
+    '1v1 local': 'Local 1v1',
+    'Pseudo': 'Username',
+    'Mot de passe': 'Password',
+    'Ou': 'Or',
+    'Mode ranked compétitif': 'Competitive ranked mode',
+    'Connexion classique ou Discord': 'Classic login or Discord',
+    'Bot configurable par difficulté ou ELO': 'Bot configurable by difficulty or ELO',
+    'Tournois publics et profils premium': 'Public tournaments and premium profiles',
+    'Quêtes bots, boutique et profil en 3.4.0': 'Bot quests, shop and profile in 3.4.0',
+  },
+  es: {
+    'Jouez en ligne': 'Juega en línea',
+    'Connecte · Défie · Domine': 'Conecta · Desafía · Domina',
+    'Duels rapides': 'Duelos rápidos',
+    'Parties classées': 'Partidas clasificatorias',
+    'Live en direct': 'Directo',
+    'Quêtes 3.4.0': 'Misiones 3.4.0',
+    'Règles & CGU à jour': 'Reglas y condiciones actualizadas',
+    'Lire les CGU': 'Leer las condiciones',
+    'Entrée immédiate': 'Entrada inmediata',
+    'Mode duel': 'Modo duelo',
+    'Entrer dans l’arène': 'Entrar en la arena',
+    'Connexion': 'Iniciar sesión',
+    'Créer un compte': 'Crear cuenta',
+    'Se connecter': 'Iniciar sesión',
+    'Connecter via Discord': 'Conectar con Discord',
+    'Voir mon profil': 'Ver mi perfil',
+    'Jouer contre l’ordinateur': 'Jugar contra el ordenador',
+    '1v1 local': '1v1 local',
+    'Pseudo': 'Usuario',
+    'Mot de passe': 'Contraseña',
+    'Ou': 'O',
+  },
+};
 
 function loadMachineCache() {
   try {
@@ -272,10 +330,26 @@ function shouldMachineTranslate(text) {
   if (textByteLength(value) > MAX_MACHINE_TEXT_BYTES) return false;
   if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(value)) return false;
   if (/puissance\s*-?\s*4|puissance4/i.test(value)) return false;
-  if (/\b(CGU|GTCU|ELO|XP)\b/i.test(value) && value.length < 28) return false;
   if (/^(https?:\/\/|www\.|[#@])/.test(value)) return false;
   if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(value)) return false;
   return true;
+}
+
+function localMachineTranslation(text, language) {
+  const target = normalizeLanguage(language);
+  const source = normalizeText(text);
+  const direct = LOCAL_MACHINE_TRANSLATIONS[target]?.[source];
+  if (direct) return direct;
+  const lowerMatch = Object.entries(LOCAL_MACHINE_TRANSLATIONS[target] || {})
+    .find(([key]) => key.toLowerCase() === source.toLowerCase());
+  return lowerMatch?.[1] || '';
+}
+
+function splitDecoratedText(text) {
+  const source = normalizeText(text);
+  const match = source.match(/^([^A-Za-zÀ-ÖØ-öø-ÿ0-9]*)(.*?)([^A-Za-zÀ-ÖØ-öø-ÿ0-9]*)$/);
+  if (!match) return { prefix: '', core: source, suffix: '' };
+  return { prefix: match[1] || '', core: normalizeText(match[2]), suffix: match[3] || '' };
 }
 
 function machineCacheKey(language, text) {
@@ -319,10 +393,28 @@ async function translateOne(text, language) {
   if (target === 'fr' || !shouldMachineTranslate(source)) return source;
   const key = machineCacheKey(target, source);
   if (machineCache[key]) return machineCache[key];
+  const local = localMachineTranslation(source, target);
+  if (local) {
+    machineCache[key] = local;
+    saveMachineCache();
+    return local;
+  }
 
-  const translated = MACHINE_PROVIDER === 'libretranslate'
-    ? await translateWithLibreTranslate(source, target)
-    : await translateWithMyMemory(source, target);
+  const decorated = splitDecoratedText(source);
+  const textForApi = decorated.core || source;
+  const localCore = decorated.core !== source ? localMachineTranslation(textForApi, target) : '';
+  if (localCore) {
+    machineCache[key] = `${decorated.prefix}${localCore}${decorated.suffix}`.trim();
+    saveMachineCache();
+    return machineCache[key];
+  }
+
+  const translatedCore = MACHINE_PROVIDER === 'libretranslate'
+    ? await translateWithLibreTranslate(textForApi, target)
+    : await translateWithMyMemory(textForApi, target);
+  const translated = decorated.core !== source
+    ? `${decorated.prefix}${translatedCore}${decorated.suffix}`.trim()
+    : translatedCore;
 
   machineCache[key] = translated || source;
   saveMachineCache();
