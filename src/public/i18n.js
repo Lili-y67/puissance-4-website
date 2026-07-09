@@ -106,6 +106,7 @@
   let translationInFlight = false;
   let pendingTranslationRoot = null;
   let overlayTimer = null;
+  const fetchedPageTranslations = new Set();
 
   function normalize(value) {
     return String(value || '')
@@ -207,6 +208,19 @@
       overlay.classList.remove('show');
       setTimeout(() => overlay.remove(), 260);
     }, 450);
+  }
+
+  function failTranslationOverlay(message) {
+    const overlay = document.getElementById('p4-i18n-progress') || ensureTranslationOverlay();
+    clearInterval(overlayTimer);
+    overlayTimer = null;
+    overlay.querySelector('.p4-i18n-progress-eta').textContent = 'traduction partielle';
+    overlay.querySelector('.p4-i18n-progress-text').textContent = message || 'Le service de traduction ne repond pas pour cette langue.';
+    overlay.classList.add('show');
+    setTimeout(() => {
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 260);
+    }, 2200);
   }
 
   function hideTranslationOverlay() {
@@ -393,7 +407,12 @@
     });
   }
 
-  async function applyMachineTranslations(root = document.body) {
+  function pageTranslationKey() {
+    return `${activeLanguage}:${location.pathname}${location.search}`;
+  }
+
+  async function applyMachineTranslations(root = document.body, options = {}) {
+    const allowFetch = options.allowFetch !== false;
     if (!root || activeLanguage === DEFAULT_LANGUAGE) {
       hideTranslationOverlay();
       return;
@@ -429,9 +448,14 @@
         hideTranslationOverlay();
         return;
       }
+      if (!allowFetch || fetchedPageTranslations.has(pageTranslationKey())) {
+        hideTranslationOverlay();
+        return;
+      }
 
       totalMissing = missing.length;
       showTranslationOverlay(totalMissing, startedAt);
+      fetchedPageTranslations.add(pageTranslationKey());
       if (runId !== machineRunId || activeLanguage === DEFAULT_LANGUAGE) return;
       const res = await fetch('/api/i18n/translate', {
         method: 'POST',
@@ -447,7 +471,12 @@
       });
       applyMachineResult(groups, translations);
       applyMachineAttributeResult(attrGroups, translations);
-      completeTranslationOverlay(totalMissing);
+      const translatedTotal = Number(data.stats?.translated || Object.keys(translations).length);
+      if (translatedTotal <= 0) {
+        failTranslationOverlay(`Aucune traduction recue pour ${activeLanguage.toUpperCase()}. Provider: ${data.provider || 'inconnu'}.`);
+      } else {
+        completeTranslationOverlay(totalMissing);
+      }
     } catch (_) {
       hideTranslationOverlay();
     } finally {
@@ -455,7 +484,7 @@
       if (pendingTranslationRoot && activeLanguage !== DEFAULT_LANGUAGE) {
         const nextRoot = pendingTranslationRoot;
         pendingTranslationRoot = null;
-        setTimeout(() => applyMachineTranslations(nextRoot), 250);
+        setTimeout(() => applyMachineTranslations(nextRoot, { allowFetch: false }), 250);
       }
     }
   }
@@ -466,7 +495,7 @@
       clearTimeout(observerTimer);
       observerTimer = setTimeout(() => {
         if (activeLanguage !== DEFAULT_LANGUAGE) {
-          applyMachineTranslations(document.body);
+          applyMachineTranslations(document.body, { allowFetch: false });
         }
       }, 350);
     });

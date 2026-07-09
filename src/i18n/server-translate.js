@@ -235,6 +235,55 @@ const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.
 const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
 const MAX_MACHINE_TEXTS = 400;
 const MAX_MACHINE_TEXT_BYTES = 500;
+const EXTERNAL_TRANSLATION_TIMEOUT_MS = 6500;
+const PROVIDER_LANGUAGE_CODES = {
+  mymemory: {
+    en: 'en',
+    es: 'es',
+    de: 'de',
+    it: 'it',
+    pt: 'pt-PT',
+    nl: 'nl',
+    pl: 'pl',
+    ro: 'ro',
+    sv: 'sv',
+    tr: 'tr',
+    ru: 'ru',
+    uk: 'uk-UA',
+    ar: 'ar',
+    zh: 'zh-CN',
+    ja: 'ja',
+    ko: 'ko',
+    el: 'el',
+    cs: 'cs',
+    hu: 'hu',
+    id: 'id',
+    hi: 'hi',
+  },
+  libretranslate: {
+    en: 'en',
+    es: 'es',
+    de: 'de',
+    it: 'it',
+    pt: 'pt',
+    nl: 'nl',
+    pl: 'pl',
+    ro: 'ro',
+    sv: 'sv',
+    tr: 'tr',
+    ru: 'ru',
+    uk: 'uk',
+    ar: 'ar',
+    zh: 'zh',
+    ja: 'ja',
+    ko: 'ko',
+    el: 'el',
+    cs: 'cs',
+    hu: 'hu',
+    id: 'id',
+    hi: 'hi',
+  },
+};
 
 let machineCache = loadMachineCache();
 
@@ -356,32 +405,53 @@ function machineCacheKey(language, text) {
   return `${normalizeLanguage(language)}:${normalizeText(text).toLowerCase()}`;
 }
 
+function providerLanguageCode(language) {
+  const target = normalizeLanguage(language);
+  if (target === 'fr') return 'fr';
+  const providerMap = PROVIDER_LANGUAGE_CODES[MACHINE_PROVIDER] || PROVIDER_LANGUAGE_CODES.mymemory;
+  return providerMap[target] || '';
+}
+
+async function fetchJsonWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), EXTERNAL_TRANSLATION_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    const data = await res.json().catch(() => ({}));
+    return { res, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function translateWithLibreTranslate(text, language) {
   if (!LIBRETRANSLATE_URL) throw new Error('LibreTranslate URL missing');
-  const res = await fetch(`${LIBRETRANSLATE_URL}/translate`, {
+  const target = providerLanguageCode(language);
+  if (!target) throw new Error(`Language ${language} not supported by ${MACHINE_PROVIDER}`);
+  const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/translate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       q: text,
       source: 'fr',
-      target: language,
+      target,
       format: 'text',
       ...(LIBRETRANSLATE_KEY ? { api_key: LIBRETRANSLATE_KEY } : {}),
     }),
   });
-  const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.translatedText) throw new Error(data.error || 'LibreTranslate failed');
   return normalizeText(data.translatedText);
 }
 
 async function translateWithMyMemory(text, language) {
+  const target = providerLanguageCode(language);
+  if (!target) throw new Error(`Language ${language} not supported by ${MACHINE_PROVIDER}`);
   const url = new URL('https://api.mymemory.translated.net/get');
   url.searchParams.set('q', text);
-  url.searchParams.set('langpair', `fr|${language}`);
+  url.searchParams.set('langpair', `fr|${target}`);
   url.searchParams.set('mt', '1');
   if (TRANSLATION_EMAIL) url.searchParams.set('de', TRANSLATION_EMAIL);
-  const res = await fetch(url);
-  const data = await res.json().catch(() => ({}));
+  const { res, data } = await fetchJsonWithTimeout(url);
   const translated = data?.responseData?.translatedText || data?.matches?.[0]?.translation || '';
   if (!res.ok || !translated) throw new Error(data?.responseDetails || 'MyMemory failed');
   return normalizeText(translated);
@@ -422,6 +492,11 @@ async function translateOne(text, language) {
 }
 
 async function translateTexts(texts, language) {
+  const result = await translateTextsDetailed(texts, language);
+  return result.translations;
+}
+
+async function translateTextsDetailed(texts, language) {
   const target = normalizeLanguage(language);
   const entries = [...new Set((Array.isArray(texts) ? texts : [])
     .map(normalizeText)
@@ -429,15 +504,25 @@ async function translateTexts(texts, language) {
     .slice(0, MAX_MACHINE_TEXTS);
 
   const translations = {};
-  if (target === 'fr') return translations;
+  const errors = [];
+  if (target === 'fr') return { translations, errors, total: entries.length, translated: 0, failed: 0 };
 
   for (const text of entries) {
     try {
       const translated = await translateOne(text, target);
       if (translated && translated !== text) translations[text] = translated;
-    } catch (_) {}
+    } catch (error) {
+      errors.push({ text, error: error.message || 'translation failed' });
+    }
   }
-  return translations;
+  return {
+    translations,
+    errors: errors.slice(0, 12),
+    total: entries.length,
+    translated: Object.keys(translations).length,
+    failed: errors.length,
+    provider: MACHINE_PROVIDER,
+  };
 }
 
 function buildBundle(language) {
@@ -459,4 +544,5 @@ module.exports = {
   normalizeLanguage,
   buildBundle,
   translateTexts,
+  translateTextsDetailed,
 };

@@ -6489,10 +6489,16 @@ app.post('/api/i18n/translate', async (req, res) => {
     return res.json({ language, translations: {}, provider: 'none' });
   }
   try {
-    const translations = await siteI18n.translateTexts(texts, language);
+    const result = await siteI18n.translateTextsDetailed(texts, language);
     res.json({
       language,
-      translations,
+      translations: result.translations,
+      stats: {
+        total: result.total,
+        translated: result.translated,
+        failed: result.failed,
+      },
+      errors: result.errors,
       provider: process.env.TRANSLATION_PROVIDER || process.env.I18N_TRANSLATION_PROVIDER || 'mymemory',
     });
   } catch (error) {
