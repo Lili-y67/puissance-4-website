@@ -98,7 +98,10 @@
   let textIndex = new Map();
   const bundleCache = new Map();
   const machineCache = new Map();
+  const machineTranslatedNodes = new WeakMap();
   let machineRunId = 0;
+  let observer = null;
+  let observerTimer = null;
 
   function normalize(value) {
     return String(value || '')
@@ -232,6 +235,7 @@
       acceptNode(node) {
         const parent = node.parentElement;
         if (!parent || blocked.has(parent.tagName) || parent.closest('[data-i18n-ignore]')) return NodeFilter.FILTER_REJECT;
+        if (machineTranslatedNodes.get(node) === normalizeText(node.nodeValue)) return NodeFilter.FILTER_REJECT;
         const keyedParent = parent.closest('[data-i18n]');
         if (keyedParent?.dataset?.i18n && activeTranslations?.[keyedParent.dataset.i18n]) return NodeFilter.FILTER_REJECT;
         const text = normalizeText(node.nodeValue);
@@ -257,7 +261,10 @@
         if (!node?.nodeValue) return;
         const raw = node.nodeValue;
         const current = normalizeText(raw);
-        if (current === source) node.nodeValue = raw.replace(raw.trim(), translated);
+        if (current === source) {
+          node.nodeValue = raw.replace(raw.trim(), translated);
+          machineTranslatedNodes.set(node, normalizeText(node.nodeValue));
+        }
       });
     });
   }
@@ -270,7 +277,7 @@
 
     const ready = {};
     const missing = [];
-    [...groups.keys()].slice(0, 80).forEach(text => {
+    [...groups.keys()].slice(0, 160).forEach(text => {
       const key = `${activeLanguage}:${text}`;
       if (machineCache.has(key)) ready[text] = machineCache.get(key);
       else missing.push(text);
@@ -293,6 +300,23 @@
       });
       applyMachineResult(groups, translations);
     } catch (_) {}
+  }
+
+  function startObserver() {
+    if (observer || !document.body || !window.MutationObserver) return;
+    observer = new MutationObserver(() => {
+      clearTimeout(observerTimer);
+      observerTimer = setTimeout(() => {
+        if (activeLanguage !== DEFAULT_LANGUAGE) {
+          applyMachineTranslations(document.body);
+        }
+      }, 350);
+    });
+    observer.observe(document.body, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    });
   }
 
   function apply(root = document.body) {
@@ -320,6 +344,7 @@
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(translateNode);
     applyMachineTranslations(root);
+    startObserver();
   }
 
   async function setLanguage(code) {

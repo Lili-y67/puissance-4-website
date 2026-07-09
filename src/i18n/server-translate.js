@@ -233,7 +233,7 @@ const MACHINE_PROVIDER = String(process.env.TRANSLATION_PROVIDER || process.env.
 const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || '').replace(/\/+$/, '');
 const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.TRANSLATION_API_KEY || '');
 const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
-const MAX_MACHINE_TEXTS = 80;
+const MAX_MACHINE_TEXTS = 160;
 const MAX_MACHINE_TEXT_BYTES = 500;
 
 let machineCache = loadMachineCache();
