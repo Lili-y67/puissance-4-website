@@ -1,5 +1,8 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const LANGUAGES = [
   { code: 'fr', name: 'Français', country: 'France', aliases: ['fra', 'france', 'français', 'francais'] },
   { code: 'en', name: 'English', country: 'United Kingdom / United States', aliases: ['ang', 'anglais', 'eng', 'english', 'usa', 'uk', 'royaume'] },
@@ -206,10 +209,122 @@ const TRANSLATIONS = {
 };
 
 const LANGUAGE_SET = new Set(LANGUAGES.map(language => language.code));
+const CACHE_PATH = path.join(__dirname, '../../data/i18n-machine-cache.json');
+const MACHINE_PROVIDER = String(process.env.TRANSLATION_PROVIDER || process.env.I18N_TRANSLATION_PROVIDER || 'mymemory').toLowerCase();
+const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || '').replace(/\/+$/, '');
+const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.TRANSLATION_API_KEY || '');
+const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
+const MAX_MACHINE_TEXTS = 80;
+const MAX_MACHINE_TEXT_BYTES = 500;
+
+let machineCache = loadMachineCache();
+
+function loadMachineCache() {
+  try {
+    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveMachineCache() {
+  try {
+    fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
+    fs.writeFileSync(CACHE_PATH, JSON.stringify(machineCache, null, 2), 'utf8');
+  } catch (_) {}
+}
 
 function normalizeLanguage(code) {
   const normalized = String(code || 'fr').trim().toLowerCase();
   return LANGUAGE_SET.has(normalized) ? normalized : 'fr';
+}
+
+function normalizeText(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function textByteLength(text) {
+  return Buffer.byteLength(String(text || ''), 'utf8');
+}
+
+function shouldMachineTranslate(text) {
+  const value = normalizeText(text);
+  if (value.length < 2 || value.length > 240) return false;
+  if (textByteLength(value) > MAX_MACHINE_TEXT_BYTES) return false;
+  if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(value)) return false;
+  if (/^(https?:\/\/|www\.|[#@])/.test(value)) return false;
+  if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(value)) return false;
+  return true;
+}
+
+function machineCacheKey(language, text) {
+  return `${normalizeLanguage(language)}:${normalizeText(text).toLowerCase()}`;
+}
+
+async function translateWithLibreTranslate(text, language) {
+  if (!LIBRETRANSLATE_URL) throw new Error('LibreTranslate URL missing');
+  const res = await fetch(`${LIBRETRANSLATE_URL}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: text,
+      source: 'fr',
+      target: language,
+      format: 'text',
+      ...(LIBRETRANSLATE_KEY ? { api_key: LIBRETRANSLATE_KEY } : {}),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.translatedText) throw new Error(data.error || 'LibreTranslate failed');
+  return normalizeText(data.translatedText);
+}
+
+async function translateWithMyMemory(text, language) {
+  const url = new URL('https://api.mymemory.translated.net/get');
+  url.searchParams.set('q', text);
+  url.searchParams.set('langpair', `fr|${language}`);
+  url.searchParams.set('mt', '1');
+  if (TRANSLATION_EMAIL) url.searchParams.set('de', TRANSLATION_EMAIL);
+  const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
+  const translated = data?.responseData?.translatedText || data?.matches?.[0]?.translation || '';
+  if (!res.ok || !translated) throw new Error(data?.responseDetails || 'MyMemory failed');
+  return normalizeText(translated);
+}
+
+async function translateOne(text, language) {
+  const target = normalizeLanguage(language);
+  const source = normalizeText(text);
+  if (target === 'fr' || !shouldMachineTranslate(source)) return source;
+  const key = machineCacheKey(target, source);
+  if (machineCache[key]) return machineCache[key];
+
+  const translated = MACHINE_PROVIDER === 'libretranslate'
+    ? await translateWithLibreTranslate(source, target)
+    : await translateWithMyMemory(source, target);
+
+  machineCache[key] = translated || source;
+  saveMachineCache();
+  return machineCache[key];
+}
+
+async function translateTexts(texts, language) {
+  const target = normalizeLanguage(language);
+  const entries = [...new Set((Array.isArray(texts) ? texts : [])
+    .map(normalizeText)
+    .filter(shouldMachineTranslate))]
+    .slice(0, MAX_MACHINE_TEXTS);
+
+  const translations = {};
+  if (target === 'fr') return translations;
+
+  for (const text of entries) {
+    try {
+      const translated = await translateOne(text, target);
+      if (translated && translated !== text) translations[text] = translated;
+    } catch (_) {}
+  }
+  return translations;
 }
 
 function buildBundle(language) {
@@ -230,4 +345,5 @@ module.exports = {
   LANGUAGE_SET,
   normalizeLanguage,
   buildBundle,
+  translateTexts,
 };

@@ -78,6 +78,8 @@
   let activeTranslations = {};
   let textIndex = new Map();
   const bundleCache = new Map();
+  const machineCache = new Map();
+  let machineRunId = 0;
 
   function normalize(value) {
     return String(value || '')
@@ -89,6 +91,16 @@
 
   function normalizeText(value) {
     return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function shouldMachineTranslate(value) {
+    const text = normalizeText(value);
+    if (activeLanguage === DEFAULT_LANGUAGE) return false;
+    if (text.length < 2 || text.length > 240) return false;
+    if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) return false;
+    if (/^(https?:\/\/|www\.|[#@])/.test(text)) return false;
+    if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(text)) return false;
+    return true;
   }
 
   function readStoredPlayer() {
@@ -194,6 +206,74 @@
     if (translated !== raw.trim()) node.nodeValue = raw.replace(raw.trim(), translated);
   }
 
+  function collectMachineTextNodes(root) {
+    const blocked = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION', 'CODE', 'PRE']);
+    const groups = new Map();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const parent = node.parentElement;
+        if (!parent || blocked.has(parent.tagName) || parent.closest('[data-i18n-ignore],[data-i18n]')) return NodeFilter.FILTER_REJECT;
+        const text = normalizeText(node.nodeValue);
+        if (!shouldMachineTranslate(text)) return NodeFilter.FILTER_REJECT;
+        if (t(text) !== text) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const text = normalizeText(node.nodeValue);
+      if (!groups.has(text)) groups.set(text, []);
+      groups.get(text).push(node);
+    }
+    return groups;
+  }
+
+  function applyMachineResult(groups, translations) {
+    groups.forEach((nodes, source) => {
+      const translated = translations[source] || machineCache.get(`${activeLanguage}:${source}`);
+      if (!translated || translated === source) return;
+      nodes.forEach(node => {
+        if (!node?.nodeValue) return;
+        const raw = node.nodeValue;
+        const current = normalizeText(raw);
+        if (current === source) node.nodeValue = raw.replace(raw.trim(), translated);
+      });
+    });
+  }
+
+  async function applyMachineTranslations(root = document.body) {
+    if (!root || activeLanguage === DEFAULT_LANGUAGE) return;
+    const runId = ++machineRunId;
+    const groups = collectMachineTextNodes(root);
+    if (!groups.size) return;
+
+    const ready = {};
+    const missing = [];
+    [...groups.keys()].slice(0, 80).forEach(text => {
+      const key = `${activeLanguage}:${text}`;
+      if (machineCache.has(key)) ready[text] = machineCache.get(key);
+      else missing.push(text);
+    });
+    applyMachineResult(groups, ready);
+    if (!missing.length) return;
+
+    try {
+      const res = await fetch('/api/i18n/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: activeLanguage, texts: missing }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (runId !== machineRunId || data.language !== activeLanguage) return;
+      const translations = data.translations || {};
+      Object.entries(translations).forEach(([source, translated]) => {
+        machineCache.set(`${activeLanguage}:${source}`, translated);
+      });
+      applyMachineResult(groups, translations);
+    } catch (_) {}
+  }
+
   function apply(root = document.body) {
     document.documentElement.lang = activeLanguage || getLanguage();
     if (!root) return;
@@ -218,6 +298,7 @@
     const nodes = [];
     while (walker.nextNode()) nodes.push(walker.currentNode);
     nodes.forEach(translateNode);
+    applyMachineTranslations(root);
   }
 
   async function setLanguage(code) {
