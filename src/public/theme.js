@@ -220,9 +220,78 @@
     'menu.discord.sub': 'Communauté',
   };
 
+  const MENU_LANGUAGES = [
+    { code: 'fr', name: 'Français', country: 'France', aliases: ['fra', 'france', 'français', 'francais'] },
+    { code: 'en', name: 'English', country: 'United Kingdom / United States', aliases: ['ang', 'anglais', 'eng', 'english', 'usa', 'uk', 'royaume'] },
+    { code: 'es', name: 'Español', country: 'Espagne / Mexique', aliases: ['esp', 'espagne', 'mex', 'mexique', 'spanish'] },
+    { code: 'de', name: 'Deutsch', country: 'Allemagne', aliases: ['all', 'allemagne', 'deu', 'german', 'deutsch'] },
+    { code: 'it', name: 'Italiano', country: 'Italie', aliases: ['ita', 'italie', 'italien', 'italian'] },
+    { code: 'pt', name: 'Português', country: 'Portugal / Brésil', aliases: ['por', 'portugal', 'bresil', 'brésil', 'brazil', 'portuguese'] },
+    { code: 'nl', name: 'Nederlands', country: 'Pays-Bas', aliases: ['pay', 'pays-bas', 'hollande', 'dutch', 'netherlands'] },
+    { code: 'pl', name: 'Polski', country: 'Pologne', aliases: ['pol', 'pologne', 'polish'] },
+    { code: 'ro', name: 'Română', country: 'Roumanie', aliases: ['rou', 'roumanie', 'romania', 'romanian'] },
+    { code: 'sv', name: 'Svenska', country: 'Suède', aliases: ['sue', 'suede', 'suède', 'swedish'] },
+    { code: 'tr', name: 'Türkçe', country: 'Turquie', aliases: ['tur', 'turquie', 'turkish'] },
+    { code: 'ru', name: 'Русский', country: 'Russie', aliases: ['rus', 'russie', 'russian'] },
+    { code: 'uk', name: 'Українська', country: 'Ukraine', aliases: ['ukr', 'ukraine', 'ukrainian'] },
+    { code: 'ar', name: 'العربية', country: 'Monde arabe', aliases: ['ara', 'arabe', 'arabic', 'maroc', 'algerie', 'algérie'] },
+    { code: 'zh', name: '中文', country: 'Chine', aliases: ['chi', 'chine', 'chinois', 'chinese', 'mandarin'] },
+    { code: 'ja', name: '日本語', country: 'Japon', aliases: ['jap', 'japon', 'japanese'] },
+    { code: 'ko', name: '한국어', country: 'Corée', aliases: ['cor', 'coree', 'corée', 'korean'] },
+    { code: 'el', name: 'Ελληνικά', country: 'Grèce', aliases: ['gre', 'grece', 'grèce', 'greek'] },
+    { code: 'cs', name: 'Čeština', country: 'Tchéquie', aliases: ['tch', 'tchequie', 'tchéquie', 'czech'] },
+    { code: 'hu', name: 'Magyar', country: 'Hongrie', aliases: ['hon', 'hongrie', 'hungarian'] },
+    { code: 'id', name: 'Bahasa Indonesia', country: 'Indonésie', aliases: ['ind', 'indonesie', 'indonésie', 'indonesian'] },
+    { code: 'hi', name: 'हिन्दी', country: 'Inde', aliases: ['hin', 'inde', 'hindi', 'india'] },
+  ];
+
   function i18nText(key) {
     const translated = window.P4I18n?.t(key);
     return translated && translated !== key ? translated : (I18N_FALLBACK[key] || key);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+    }[char]));
+  }
+
+  function normalizeLanguageQuery(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function menuLanguages() {
+    return Array.isArray(window.P4I18n?.languages) && window.P4I18n.languages.length
+      ? window.P4I18n.languages
+      : MENU_LANGUAGES;
+  }
+
+  function resolveMenuLanguage(query) {
+    const needle = normalizeLanguageQuery(query);
+    if (!needle) return null;
+    return menuLanguages().find(language => {
+      const haystack = [language.code, language.name, language.country, ...(language.aliases || [])].map(normalizeLanguageQuery);
+      return haystack.some(value => value === needle || value.startsWith(needle) || value.includes(needle));
+    }) || null;
+  }
+
+  function languageInputValue(code) {
+    const language = menuLanguages().find(entry => entry.code === code) || MENU_LANGUAGES.find(entry => entry.code === code);
+    return language ? language.name : 'Français';
+  }
+
+  function languageOptionsHtml() {
+    return menuLanguages().map(language => (
+      `<option value="${escapeHtml(language.name)}" label="${escapeHtml(`${language.country} · ${language.code.toUpperCase()}`)}"></option>`
+    )).join('');
   }
 
   function readMenuPlayer() {
@@ -251,9 +320,14 @@
   }
 
   async function saveMenuLanguage() {
-    const select = document.getElementById('p4-menu-language-select');
+    const input = document.getElementById('p4-menu-language-input') || document.getElementById('p4-menu-language-select');
     const button = document.getElementById('p4-menu-language-save');
-    const language = String(select?.value || 'fr').toLowerCase();
+    const matchedLanguage = resolveMenuLanguage(input?.value || 'fr');
+    if (!matchedLanguage) {
+      alert(window.P4I18n?.t('common.languageUnknown') || 'Langue non reconnue.');
+      return;
+    }
+    const language = matchedLanguage.code;
     const player = readMenuPlayer();
     const token = readMenuToken();
     if (button) {
@@ -311,6 +385,7 @@
     ensureThemeStylesheet();
     document.body.classList.add('p4-menu-mounted');
     const currentLanguage = window.P4I18n?.getLanguage?.() || readMenuPlayer()?.language || localStorage.getItem('p4_language') || 'fr';
+    const currentLanguageLabel = languageInputValue(currentLanguage);
 
     const toggle = document.createElement('button');
     toggle.id = 'p4-global-menu-toggle';
@@ -367,11 +442,8 @@
           </span>
         </div>
         <div class="p4-menu-language-row">
-          <select id="p4-menu-language-select" class="p4-menu-language-select">
-            <option value="fr" ${currentLanguage === 'fr' ? 'selected' : ''}>Français</option>
-            <option value="en" ${currentLanguage === 'en' ? 'selected' : ''}>English</option>
-            <option value="es" ${currentLanguage === 'es' ? 'selected' : ''}>Español</option>
-          </select>
+          <input id="p4-menu-language-input" class="p4-menu-language-select" list="p4-menu-language-list" value="${escapeHtml(currentLanguageLabel)}" placeholder="fra, ang, all..." autocomplete="off">
+          <datalist id="p4-menu-language-list">${languageOptionsHtml()}</datalist>
           <button id="p4-menu-language-save" class="p4-menu-language-save" type="button" data-i18n="menu.language.validate">Valider</button>
         </div>
       </div>
