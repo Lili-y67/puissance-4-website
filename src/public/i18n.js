@@ -99,6 +99,7 @@
   const bundleCache = new Map();
   const machineCache = new Map();
   const machineTranslatedNodes = new WeakMap();
+  const machineTranslatedAttrs = new WeakMap();
   let machineRunId = 0;
   let observer = null;
   let observerTimer = null;
@@ -120,9 +121,15 @@
     if (activeLanguage === DEFAULT_LANGUAGE) return false;
     if (text.length < 2 || text.length > 240) return false;
     if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(text)) return false;
+    if (/puissance\s*-?\s*4|puissance4/i.test(text)) return false;
+    if (/\b(CGU|GTCU|ELO|XP)\b/i.test(text) && text.length < 28) return false;
     if (/^(https?:\/\/|www\.|[#@])/.test(text)) return false;
     if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(text)) return false;
     return true;
+  }
+
+  function shouldIgnoreElement(element) {
+    return Boolean(element?.closest?.('[data-i18n-ignore],.logo,.logo-p4,.logo-num,.hero-logo-mark,.dock-brand,.welcome-logo,.p4-global-menu-logo'));
   }
 
   function readStoredPlayer() {
@@ -234,7 +241,7 @@
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const parent = node.parentElement;
-        if (!parent || blocked.has(parent.tagName) || parent.closest('[data-i18n-ignore]')) return NodeFilter.FILTER_REJECT;
+        if (!parent || blocked.has(parent.tagName) || shouldIgnoreElement(parent)) return NodeFilter.FILTER_REJECT;
         if (machineTranslatedNodes.get(node) === normalizeText(node.nodeValue)) return NodeFilter.FILTER_REJECT;
         const keyedParent = parent.closest('[data-i18n]');
         if (keyedParent?.dataset?.i18n && activeTranslations?.[keyedParent.dataset.i18n]) return NodeFilter.FILTER_REJECT;
@@ -269,20 +276,53 @@
     });
   }
 
+  function collectMachineAttributes(root) {
+    const groups = new Map();
+    root.querySelectorAll?.('[title],[aria-label],[placeholder],input[type="button"][value],input[type="submit"][value]').forEach(element => {
+      if (shouldIgnoreElement(element) || element.dataset?.i18nAttr) return;
+      ['title', 'aria-label', 'placeholder', 'value'].forEach(attr => {
+        if (attr === 'value' && !/^(button|submit)$/i.test(element.getAttribute('type') || '')) return;
+        const text = normalizeText(element.getAttribute(attr));
+        if (!shouldMachineTranslate(text) || t(text) !== text) return;
+        const attrMarks = machineTranslatedAttrs.get(element) || {};
+        if (attrMarks[attr] === text) return;
+        if (!groups.has(text)) groups.set(text, []);
+        groups.get(text).push({ element, attr });
+      });
+    });
+    return groups;
+  }
+
+  function applyMachineAttributeResult(groups, translations) {
+    groups.forEach((items, source) => {
+      const translated = translations[source] || machineCache.get(`${activeLanguage}:${source}`);
+      if (!translated || translated === source) return;
+      items.forEach(({ element, attr }) => {
+        if (normalizeText(element.getAttribute(attr)) !== source) return;
+        element.setAttribute(attr, translated);
+        const attrMarks = machineTranslatedAttrs.get(element) || {};
+        attrMarks[attr] = translated;
+        machineTranslatedAttrs.set(element, attrMarks);
+      });
+    });
+  }
+
   async function applyMachineTranslations(root = document.body) {
     if (!root || activeLanguage === DEFAULT_LANGUAGE) return;
     const runId = ++machineRunId;
     const groups = collectMachineTextNodes(root);
-    if (!groups.size) return;
+    const attrGroups = collectMachineAttributes(root);
+    if (!groups.size && !attrGroups.size) return;
 
     const ready = {};
     const missing = [];
-    [...groups.keys()].slice(0, 160).forEach(text => {
+    [...new Set([...groups.keys(), ...attrGroups.keys()])].slice(0, 160).forEach(text => {
       const key = `${activeLanguage}:${text}`;
       if (machineCache.has(key)) ready[text] = machineCache.get(key);
       else missing.push(text);
     });
     applyMachineResult(groups, ready);
+    applyMachineAttributeResult(attrGroups, ready);
     if (!missing.length) return;
 
     try {
@@ -299,6 +339,7 @@
         machineCache.set(`${activeLanguage}:${source}`, translated);
       });
       applyMachineResult(groups, translations);
+      applyMachineAttributeResult(attrGroups, translations);
     } catch (_) {}
   }
 
@@ -336,7 +377,7 @@
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const parent = node.parentElement;
-        if (!parent || blocked.has(parent.tagName) || parent.closest('[data-i18n-ignore],[data-i18n]')) return NodeFilter.FILTER_REJECT;
+        if (!parent || blocked.has(parent.tagName) || shouldIgnoreElement(parent) || parent.closest('[data-i18n]')) return NodeFilter.FILTER_REJECT;
         return NodeFilter.FILTER_ACCEPT;
       },
     });

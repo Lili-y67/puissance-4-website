@@ -271,6 +271,8 @@ function shouldMachineTranslate(text) {
   if (value.length < 2 || value.length > 240) return false;
   if (textByteLength(value) > MAX_MACHINE_TEXT_BYTES) return false;
   if (!/[A-Za-zÀ-ÖØ-öø-ÿ]/.test(value)) return false;
+  if (/puissance\s*-?\s*4|puissance4/i.test(value)) return false;
+  if (/\b(CGU|GTCU|ELO|XP)\b/i.test(value) && value.length < 28) return false;
   if (/^(https?:\/\/|www\.|[#@])/.test(value)) return false;
   if (/^[\d\s.,:;!?%/+()[\]-]+$/.test(value)) return false;
   return true;
