@@ -100,9 +100,12 @@
   const machineCache = new Map();
   const machineTranslatedNodes = new WeakMap();
   const machineTranslatedAttrs = new WeakMap();
+  const MACHINE_BATCH_SIZE = 28;
   let machineRunId = 0;
   let observer = null;
   let observerTimer = null;
+  let translationInFlight = false;
+  let pendingTranslationRoot = null;
 
   function normalize(value) {
     return String(value || '')
@@ -129,6 +132,79 @@
 
   function shouldIgnoreElement(element) {
     return Boolean(element?.closest?.('[data-i18n-ignore],.logo,.logo-p4,.logo-num,.hero-logo-mark,.dock-brand,.welcome-logo,.p4-global-menu-logo'));
+  }
+
+  function ensureTranslationToast() {
+    let toast = document.getElementById('p4-i18n-progress');
+    if (toast) return toast;
+    const style = document.createElement('style');
+    style.id = 'p4-i18n-progress-style';
+    style.textContent = `
+      .p4-i18n-progress{position:fixed;left:50%;bottom:22px;z-index:100000;min-width:min(380px,calc(100vw - 28px));padding:13px 14px;border:1px solid rgba(133,235,255,.26);border-radius:16px;background:rgba(13,12,28,.94);box-shadow:0 18px 55px rgba(0,0,0,.42),0 0 32px rgba(133,235,255,.08);backdrop-filter:blur(16px);color:#f4f4fb;font-family:Inter,system-ui,sans-serif;transform:translate(-50%,18px);opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease}
+      .p4-i18n-progress.show{opacity:1;transform:translate(-50%,0)}
+      .p4-i18n-progress-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+      .p4-i18n-progress-title{font:900 13px "Barlow Condensed",Inter,sans-serif;letter-spacing:1.2px;text-transform:uppercase}
+      .p4-i18n-progress-eta{color:#85ebff;font-size:11px;font-weight:800;white-space:nowrap}
+      .p4-i18n-progress-text{color:rgba(244,244,251,.68);font-size:11px;line-height:1.35;margin-bottom:10px}
+      .p4-i18n-progress-track{height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)}
+      .p4-i18n-progress-fill{width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff2d55,#ffd60a,#85ebff);transition:width .24s ease}
+    `;
+    document.head.appendChild(style);
+    toast = document.createElement('div');
+    toast.id = 'p4-i18n-progress';
+    toast.className = 'p4-i18n-progress';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.innerHTML = `
+      <div class="p4-i18n-progress-head">
+        <div class="p4-i18n-progress-title">Traduction en cours</div>
+        <div class="p4-i18n-progress-eta">calcul...</div>
+      </div>
+      <div class="p4-i18n-progress-text">Preparation des textes...</div>
+      <div class="p4-i18n-progress-track"><div class="p4-i18n-progress-fill"></div></div>
+    `;
+    document.body.appendChild(toast);
+    return toast;
+  }
+
+  function formatEta(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return 'quelques secondes';
+    const seconds = Math.max(1, Math.ceil(ms / 1000));
+    if (seconds < 60) return `${seconds}s restantes`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return `${minutes}m ${String(rest).padStart(2, '0')}s restantes`;
+  }
+
+  function updateTranslationToast(done, total, startedAt) {
+    if (activeLanguage === DEFAULT_LANGUAGE || total <= 0) return;
+    const toast = ensureTranslationToast();
+    const percent = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    const elapsed = Date.now() - startedAt;
+    const etaMs = done > 0 ? (elapsed / done) * Math.max(0, total - done) : 0;
+    toast.querySelector('.p4-i18n-progress-eta').textContent = done > 0 ? formatEta(etaMs) : 'calcul...';
+    toast.querySelector('.p4-i18n-progress-text').textContent = `${done}/${total} textes traduits en ${activeLanguage.toUpperCase()} (${percent}%).`;
+    toast.querySelector('.p4-i18n-progress-fill').style.width = `${percent}%`;
+    requestAnimationFrame(() => toast.classList.add('show'));
+  }
+
+  function completeTranslationToast(total) {
+    const toast = document.getElementById('p4-i18n-progress');
+    if (!toast) return;
+    toast.querySelector('.p4-i18n-progress-eta').textContent = 'termine';
+    toast.querySelector('.p4-i18n-progress-text').textContent = `${total} textes traduits.`;
+    toast.querySelector('.p4-i18n-progress-fill').style.width = '100%';
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 260);
+    }, 900);
+  }
+
+  function hideTranslationToast() {
+    const toast = document.getElementById('p4-i18n-progress');
+    if (!toast) return;
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 260);
   }
 
   function readStoredPlayer() {
@@ -307,43 +383,76 @@
   }
 
   async function applyMachineTranslations(root = document.body) {
-    if (!root || activeLanguage === DEFAULT_LANGUAGE) return;
+    if (!root || activeLanguage === DEFAULT_LANGUAGE) {
+      hideTranslationToast();
+      return;
+    }
+    if (translationInFlight) {
+      pendingTranslationRoot = root;
+      return;
+    }
+    translationInFlight = true;
     const runId = ++machineRunId;
-    const groups = collectMachineTextNodes(root);
-    const attrGroups = collectMachineAttributes(root);
-    if (!groups.size && !attrGroups.size) return;
-
-    const ready = {};
-    const missing = [];
-    const allTexts = [...new Set([...groups.keys(), ...attrGroups.keys()])];
-    allTexts.slice(0, 400).forEach(text => {
-      const key = `${activeLanguage}:${text}`;
-      if (machineCache.has(key)) ready[text] = machineCache.get(key);
-      else missing.push(text);
-    });
-    applyMachineResult(groups, ready);
-    applyMachineAttributeResult(attrGroups, ready);
-    if (!missing.length) return;
+    let translatedCount = 0;
+    let totalMissing = 0;
+    const startedAt = Date.now();
 
     try {
-      const res = await fetch('/api/i18n/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language: activeLanguage, texts: missing }),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (runId !== machineRunId || data.language !== activeLanguage) return;
-      const translations = data.translations || {};
-      Object.entries(translations).forEach(([source, translated]) => {
-        machineCache.set(`${activeLanguage}:${source}`, translated);
-      });
-      applyMachineResult(groups, translations);
-      applyMachineAttributeResult(attrGroups, translations);
-      if (allTexts.length > 400) {
-        setTimeout(() => applyMachineTranslations(root), 250);
+      const groups = collectMachineTextNodes(root);
+      const attrGroups = collectMachineAttributes(root);
+      if (!groups.size && !attrGroups.size) {
+        hideTranslationToast();
+        return;
       }
-    } catch (_) {}
+
+      const ready = {};
+      const missing = [];
+      const allTexts = [...new Set([...groups.keys(), ...attrGroups.keys()])].slice(0, 400);
+      allTexts.forEach(text => {
+        const key = `${activeLanguage}:${text}`;
+        if (machineCache.has(key)) ready[text] = machineCache.get(key);
+        else missing.push(text);
+      });
+      applyMachineResult(groups, ready);
+      applyMachineAttributeResult(attrGroups, ready);
+      if (!missing.length) {
+        hideTranslationToast();
+        return;
+      }
+
+      totalMissing = missing.length;
+      updateTranslationToast(0, totalMissing, startedAt);
+      for (let index = 0; index < missing.length; index += MACHINE_BATCH_SIZE) {
+        if (runId !== machineRunId || activeLanguage === DEFAULT_LANGUAGE) return;
+        const batch = missing.slice(index, index + MACHINE_BATCH_SIZE);
+        const res = await fetch('/api/i18n/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ language: activeLanguage, texts: batch }),
+        });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (runId !== machineRunId || data.language !== activeLanguage) return;
+        const translations = data.translations || {};
+        Object.entries(translations).forEach(([source, translated]) => {
+          machineCache.set(`${activeLanguage}:${source}`, translated);
+        });
+        applyMachineResult(groups, translations);
+        applyMachineAttributeResult(attrGroups, translations);
+        translatedCount = Math.min(totalMissing, index + batch.length);
+        updateTranslationToast(translatedCount, totalMissing, startedAt);
+      }
+      if (translatedCount >= totalMissing) completeTranslationToast(totalMissing);
+    } catch (_) {
+      hideTranslationToast();
+    } finally {
+      translationInFlight = false;
+      if (pendingTranslationRoot && activeLanguage !== DEFAULT_LANGUAGE) {
+        const nextRoot = pendingTranslationRoot;
+        pendingTranslationRoot = null;
+        setTimeout(() => applyMachineTranslations(nextRoot), 250);
+      }
+    }
   }
 
   function startObserver() {
