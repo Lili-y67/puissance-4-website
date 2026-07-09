@@ -100,12 +100,12 @@
   const machineCache = new Map();
   const machineTranslatedNodes = new WeakMap();
   const machineTranslatedAttrs = new WeakMap();
-  const MACHINE_BATCH_SIZE = 28;
   let machineRunId = 0;
   let observer = null;
   let observerTimer = null;
   let translationInFlight = false;
   let pendingTranslationRoot = null;
+  let overlayTimer = null;
 
   function normalize(value) {
     return String(value || '')
@@ -134,77 +134,88 @@
     return Boolean(element?.closest?.('[data-i18n-ignore],.logo,.logo-p4,.logo-num,.hero-logo-mark,.dock-brand,.welcome-logo,.p4-global-menu-logo'));
   }
 
-  function ensureTranslationToast() {
-    let toast = document.getElementById('p4-i18n-progress');
-    if (toast) return toast;
+  function ensureTranslationOverlay() {
+    let overlay = document.getElementById('p4-i18n-progress');
+    if (overlay) return overlay;
     const style = document.createElement('style');
     style.id = 'p4-i18n-progress-style';
     style.textContent = `
-      .p4-i18n-progress{position:fixed;left:50%;bottom:22px;z-index:100000;min-width:min(380px,calc(100vw - 28px));padding:13px 14px;border:1px solid rgba(133,235,255,.26);border-radius:16px;background:rgba(13,12,28,.94);box-shadow:0 18px 55px rgba(0,0,0,.42),0 0 32px rgba(133,235,255,.08);backdrop-filter:blur(16px);color:#f4f4fb;font-family:Inter,system-ui,sans-serif;transform:translate(-50%,18px);opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease}
-      .p4-i18n-progress.show{opacity:1;transform:translate(-50%,0)}
-      .p4-i18n-progress-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
-      .p4-i18n-progress-title{font:900 13px "Barlow Condensed",Inter,sans-serif;letter-spacing:1.2px;text-transform:uppercase}
-      .p4-i18n-progress-eta{color:#85ebff;font-size:11px;font-weight:800;white-space:nowrap}
-      .p4-i18n-progress-text{color:rgba(244,244,251,.68);font-size:11px;line-height:1.35;margin-bottom:10px}
-      .p4-i18n-progress-track{height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)}
-      .p4-i18n-progress-fill{width:0%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff2d55,#ffd60a,#85ebff);transition:width .24s ease}
+      .p4-i18n-progress{position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 50% 15%,rgba(255,45,85,.18),transparent 34%),rgba(5,5,14,.88);backdrop-filter:blur(14px);color:#f4f4fb;font-family:Inter,system-ui,sans-serif;opacity:0;pointer-events:none;transition:opacity .22s ease}
+      .p4-i18n-progress.show{opacity:1;pointer-events:auto}
+      .p4-i18n-progress-card{width:min(440px,100%);padding:22px;border:1px solid rgba(133,235,255,.25);border-radius:20px;background:linear-gradient(180deg,rgba(22,20,42,.96),rgba(11,10,24,.96));box-shadow:0 30px 90px rgba(0,0,0,.48),0 0 42px rgba(133,235,255,.08);text-align:center}
+      .p4-i18n-progress-spinner{width:46px;height:46px;margin:0 auto 14px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:#85ebff;border-right-color:#ffd60a;animation:p4I18nSpin .8s linear infinite}
+      .p4-i18n-progress-title{font:900 22px "Barlow Condensed",Inter,sans-serif;letter-spacing:1.5px;text-transform:uppercase}
+      .p4-i18n-progress-eta{margin-top:7px;color:#85ebff;font-size:12px;font-weight:900}
+      .p4-i18n-progress-text{margin-top:10px;color:rgba(244,244,251,.72);font-size:12px;line-height:1.45}
+      .p4-i18n-progress-track{height:8px;margin-top:16px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)}
+      .p4-i18n-progress-fill{width:18%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#ff2d55,#ffd60a,#85ebff);animation:p4I18nPulse 1.2s ease-in-out infinite}
+      @keyframes p4I18nSpin{to{transform:rotate(360deg)}}
+      @keyframes p4I18nPulse{0%,100%{transform:translateX(-70%)}50%{transform:translateX(470%)}}
     `;
     document.head.appendChild(style);
-    toast = document.createElement('div');
-    toast.id = 'p4-i18n-progress';
-    toast.className = 'p4-i18n-progress';
-    toast.setAttribute('role', 'status');
-    toast.setAttribute('aria-live', 'polite');
-    toast.innerHTML = `
-      <div class="p4-i18n-progress-head">
+    overlay = document.createElement('div');
+    overlay.id = 'p4-i18n-progress';
+    overlay.className = 'p4-i18n-progress';
+    overlay.setAttribute('role', 'status');
+    overlay.setAttribute('aria-live', 'polite');
+    overlay.innerHTML = `
+      <div class="p4-i18n-progress-card">
+        <div class="p4-i18n-progress-spinner"></div>
         <div class="p4-i18n-progress-title">Traduction en cours</div>
         <div class="p4-i18n-progress-eta">calcul...</div>
+        <div class="p4-i18n-progress-text">La page est masquée pendant l'application de la langue.</div>
+        <div class="p4-i18n-progress-track"><div class="p4-i18n-progress-fill"></div></div>
       </div>
-      <div class="p4-i18n-progress-text">Preparation des textes...</div>
-      <div class="p4-i18n-progress-track"><div class="p4-i18n-progress-fill"></div></div>
     `;
-    document.body.appendChild(toast);
-    return toast;
+    document.body.appendChild(overlay);
+    return overlay;
   }
 
-  function formatEta(ms) {
-    if (!Number.isFinite(ms) || ms <= 0) return 'quelques secondes';
-    const seconds = Math.max(1, Math.ceil(ms / 1000));
+  function formatSeconds(seconds) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return 'quelques secondes';
+    seconds = Math.max(1, Math.ceil(seconds));
     if (seconds < 60) return `${seconds}s restantes`;
     const minutes = Math.floor(seconds / 60);
     const rest = seconds % 60;
     return `${minutes}m ${String(rest).padStart(2, '0')}s restantes`;
   }
 
-  function updateTranslationToast(done, total, startedAt) {
+  function showTranslationOverlay(total, startedAt) {
     if (activeLanguage === DEFAULT_LANGUAGE || total <= 0) return;
-    const toast = ensureTranslationToast();
-    const percent = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
-    const elapsed = Date.now() - startedAt;
-    const etaMs = done > 0 ? (elapsed / done) * Math.max(0, total - done) : 0;
-    toast.querySelector('.p4-i18n-progress-eta').textContent = done > 0 ? formatEta(etaMs) : 'calcul...';
-    toast.querySelector('.p4-i18n-progress-text').textContent = `${done}/${total} textes traduits en ${activeLanguage.toUpperCase()} (${percent}%).`;
-    toast.querySelector('.p4-i18n-progress-fill').style.width = `${percent}%`;
-    requestAnimationFrame(() => toast.classList.add('show'));
+    const overlay = ensureTranslationOverlay();
+    const estimatedSeconds = Math.max(2, Math.min(45, Math.ceil(total * 0.45)));
+    const refresh = () => {
+      const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
+      const remaining = Math.max(1, estimatedSeconds - elapsedSeconds);
+      overlay.querySelector('.p4-i18n-progress-eta').textContent = `environ ${formatSeconds(remaining)}`;
+      overlay.querySelector('.p4-i18n-progress-text').textContent = `${total} textes envoyes en une seule requete vers ${activeLanguage.toUpperCase()}.`;
+    };
+    clearInterval(overlayTimer);
+    refresh();
+    overlayTimer = setInterval(refresh, 1000);
+    requestAnimationFrame(() => overlay.classList.add('show'));
   }
 
-  function completeTranslationToast(total) {
-    const toast = document.getElementById('p4-i18n-progress');
-    if (!toast) return;
-    toast.querySelector('.p4-i18n-progress-eta').textContent = 'termine';
-    toast.querySelector('.p4-i18n-progress-text').textContent = `${total} textes traduits.`;
-    toast.querySelector('.p4-i18n-progress-fill').style.width = '100%';
+  function completeTranslationOverlay(total) {
+    const overlay = document.getElementById('p4-i18n-progress');
+    if (!overlay) return;
+    clearInterval(overlayTimer);
+    overlayTimer = null;
+    overlay.querySelector('.p4-i18n-progress-eta').textContent = 'termine';
+    overlay.querySelector('.p4-i18n-progress-text').textContent = `${total} textes traduits.`;
     setTimeout(() => {
-      toast.classList.remove('show');
-      setTimeout(() => toast.remove(), 260);
-    }, 900);
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 260);
+    }, 450);
   }
 
-  function hideTranslationToast() {
-    const toast = document.getElementById('p4-i18n-progress');
-    if (!toast) return;
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 260);
+  function hideTranslationOverlay() {
+    const overlay = document.getElementById('p4-i18n-progress');
+    clearInterval(overlayTimer);
+    overlayTimer = null;
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 260);
   }
 
   function readStoredPlayer() {
@@ -384,7 +395,7 @@
 
   async function applyMachineTranslations(root = document.body) {
     if (!root || activeLanguage === DEFAULT_LANGUAGE) {
-      hideTranslationToast();
+      hideTranslationOverlay();
       return;
     }
     if (translationInFlight) {
@@ -393,7 +404,6 @@
     }
     translationInFlight = true;
     const runId = ++machineRunId;
-    let translatedCount = 0;
     let totalMissing = 0;
     const startedAt = Date.now();
 
@@ -401,7 +411,7 @@
       const groups = collectMachineTextNodes(root);
       const attrGroups = collectMachineAttributes(root);
       if (!groups.size && !attrGroups.size) {
-        hideTranslationToast();
+        hideTranslationOverlay();
         return;
       }
 
@@ -416,35 +426,30 @@
       applyMachineResult(groups, ready);
       applyMachineAttributeResult(attrGroups, ready);
       if (!missing.length) {
-        hideTranslationToast();
+        hideTranslationOverlay();
         return;
       }
 
       totalMissing = missing.length;
-      updateTranslationToast(0, totalMissing, startedAt);
-      for (let index = 0; index < missing.length; index += MACHINE_BATCH_SIZE) {
-        if (runId !== machineRunId || activeLanguage === DEFAULT_LANGUAGE) return;
-        const batch = missing.slice(index, index + MACHINE_BATCH_SIZE);
-        const res = await fetch('/api/i18n/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ language: activeLanguage, texts: batch }),
-        });
-        if (!res.ok) break;
-        const data = await res.json();
-        if (runId !== machineRunId || data.language !== activeLanguage) return;
-        const translations = data.translations || {};
-        Object.entries(translations).forEach(([source, translated]) => {
-          machineCache.set(`${activeLanguage}:${source}`, translated);
-        });
-        applyMachineResult(groups, translations);
-        applyMachineAttributeResult(attrGroups, translations);
-        translatedCount = Math.min(totalMissing, index + batch.length);
-        updateTranslationToast(translatedCount, totalMissing, startedAt);
-      }
-      if (translatedCount >= totalMissing) completeTranslationToast(totalMissing);
+      showTranslationOverlay(totalMissing, startedAt);
+      if (runId !== machineRunId || activeLanguage === DEFAULT_LANGUAGE) return;
+      const res = await fetch('/api/i18n/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: activeLanguage, texts: missing }),
+      });
+      if (!res.ok) throw new Error('translation failed');
+      const data = await res.json();
+      if (runId !== machineRunId || data.language !== activeLanguage) return;
+      const translations = data.translations || {};
+      Object.entries(translations).forEach(([source, translated]) => {
+        machineCache.set(`${activeLanguage}:${source}`, translated);
+      });
+      applyMachineResult(groups, translations);
+      applyMachineAttributeResult(attrGroups, translations);
+      completeTranslationOverlay(totalMissing);
     } catch (_) {
-      hideTranslationToast();
+      hideTranslationOverlay();
     } finally {
       translationInFlight = false;
       if (pendingTranslationRoot && activeLanguage !== DEFAULT_LANGUAGE) {

@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-9';
+    link.href = '/theme.css?v=eggs-10';
     document.head.appendChild(link);
   }
 
@@ -124,7 +124,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-9', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-10', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -149,7 +149,7 @@
   function loadI18n() {
     if (window.P4I18n || document.querySelector('script[data-p4-i18n]')) return;
     const script = document.createElement('script');
-    script.src = '/i18n.js?v=6';
+    script.src = '/i18n.js?v=7';
     script.defer = true;
     script.dataset.p4I18n = '1';
     script.addEventListener('load', () => window.P4I18n?.apply(document.body));
