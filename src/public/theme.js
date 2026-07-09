@@ -149,7 +149,7 @@
   function loadI18n() {
     if (window.P4I18n || document.querySelector('script[data-p4-i18n]')) return;
     const script = document.createElement('script');
-    script.src = '/i18n.js?v=14';
+    script.src = '/i18n.js?v=16';
     script.defer = true;
     script.dataset.p4I18n = '1';
     script.addEventListener('load', () => window.P4I18n?.apply(document.body));

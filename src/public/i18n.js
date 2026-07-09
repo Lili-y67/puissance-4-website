@@ -219,6 +219,7 @@
   let lastTranslationFetchAt = 0;
   const fetchedTranslationRequests = new Set();
   const TRANSLATION_REFETCH_DELAY_MS = 3000;
+  const TRANSLATION_BUSY_RETRY_MS = 30000;
 
   function normalize(value) {
     return String(value || '')
@@ -296,7 +297,7 @@
   function showTranslationOverlay(total, startedAt) {
     if (activeLanguage === DEFAULT_LANGUAGE || total <= 0) return;
     const overlay = ensureTranslationOverlay();
-    const estimatedSeconds = Math.max(3, Math.min(1800, Math.ceil(total * 3.2)));
+    const estimatedSeconds = Math.max(3, Math.min(1800, Math.ceil(total * 1.7)));
     const refresh = () => {
       const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
       const remaining = Math.max(1, estimatedSeconds - elapsedSeconds);
@@ -609,6 +610,17 @@
         body: JSON.stringify({ language: activeLanguage, texts: missing }),
       });
       const data = await res.json();
+      if (res.status === 429) {
+        fetchedTranslationRequests.delete(requestKey);
+        const active = data.active || {};
+        const elapsed = Number(active.elapsedSeconds || 0);
+        failTranslationOverlay(`${data.error || 'Traduction deja en cours.'} Cache en cours depuis ${elapsed}s, nouvelle tentative dans 30s.`);
+        clearTimeout(deferredFetchTimer);
+        deferredFetchTimer = setTimeout(() => {
+          applyMachineTranslations(document.body, { allowFetch: true, forceFetch: true });
+        }, TRANSLATION_BUSY_RETRY_MS);
+        return;
+      }
       if (!res.ok) throw new Error(data.detail || data.error || 'translation failed');
       if (runId !== machineRunId || data.language !== activeLanguage) return;
       const translations = data.translations || {};
