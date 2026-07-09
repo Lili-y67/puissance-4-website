@@ -284,6 +284,18 @@ const PROVIDER_LANGUAGE_CODES = {
     hi: 'hi',
   },
 };
+const PROVIDER_TO_SITE_LANGUAGE_CODES = {
+  mymemory: {
+    'zh-cn': 'zh',
+    'pt-pt': 'pt',
+    'uk-ua': 'uk',
+  },
+  libretranslate: {
+    'zh-hans': 'zh',
+    'zh-cn': 'zh',
+    'zh': 'zh',
+  },
+};
 
 let machineCache = loadMachineCache();
 let languageDiscoveryCache = null;
@@ -368,8 +380,29 @@ function saveMachineCache() {
 }
 
 function normalizeLanguage(code) {
-  const normalized = String(code || 'fr').trim().toLowerCase();
+  const normalized = normalizeProviderCode(code);
+  const mapped = siteLanguageCodeFromAnyProvider(normalized);
+  if (LANGUAGE_SET.has(mapped)) return mapped;
   return LANGUAGE_SET.has(normalized) ? normalized : 'fr';
+}
+
+function normalizeProviderCode(code) {
+  return String(code || 'fr').trim().toLowerCase();
+}
+
+function siteLanguageCodeFromProvider(provider, code) {
+  const normalized = normalizeProviderCode(code);
+  const providerMap = PROVIDER_TO_SITE_LANGUAGE_CODES[provider] || {};
+  return providerMap[normalized] || normalized;
+}
+
+function siteLanguageCodeFromAnyProvider(code) {
+  const normalized = normalizeProviderCode(code);
+  for (const provider of Object.keys(PROVIDER_TO_SITE_LANGUAGE_CODES)) {
+    const mapped = siteLanguageCodeFromProvider(provider, normalized);
+    if (mapped !== normalized) return mapped;
+  }
+  return normalized;
 }
 
 function normalizeText(text) {
@@ -417,7 +450,7 @@ function providerLanguageCode(language) {
   if (target === 'fr') return 'fr';
   const machineProvider = getMachineProvider();
   const providerMap = PROVIDER_LANGUAGE_CODES[machineProvider] || {};
-  return providerMap[target] || '';
+  return providerMap[target] || target;
 }
 
 async function fetchJsonWithTimeout(url, options = {}) {
@@ -632,17 +665,34 @@ async function discoverLibreTranslateLanguages() {
   const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/languages`);
   if (!res.ok || !Array.isArray(data)) throw new Error('LibreTranslate languages unavailable');
 
-  const providerCodes = new Set(data.map(language => String(language.code || '').toLowerCase()).filter(Boolean));
-  const frenchEntry = data.find(language => String(language.code || '').toLowerCase() === 'fr');
-  const frenchTargets = new Set((frenchEntry?.targets || []).map(code => String(code || '').toLowerCase()));
+  const providerEntries = data
+    .map(language => ({
+      ...language,
+      providerCode: normalizeProviderCode(language.code),
+      siteCode: siteLanguageCodeFromProvider('libretranslate', language.code),
+    }))
+    .filter(language => language.providerCode);
+  const providerBySiteCode = new Map(providerEntries.map(language => [language.siteCode, language]));
+  const providerCodes = new Set(providerEntries.map(language => language.siteCode));
+  const frenchEntry = providerEntries.find(language => language.siteCode === 'fr' || language.providerCode === 'fr');
+  const frenchTargets = new Set((frenchEntry?.targets || [])
+    .map(code => siteLanguageCodeFromProvider('libretranslate', code))
+    .filter(Boolean));
   const providerMap = PROVIDER_LANGUAGE_CODES.libretranslate;
-  const languages = LANGUAGES.filter(language => {
+  const languages = LANGUAGES.map(language => {
+    const providerEntry = providerBySiteCode.get(language.code);
+    return providerEntry
+      ? {
+        ...language,
+        providerCode: providerEntry.code || providerMap[language.code] || language.code,
+        providerName: providerEntry.name || language.name,
+        aliases: [...new Set([...(language.aliases || []), providerEntry.code, providerEntry.name].filter(Boolean))],
+      }
+      : language;
+  }).filter(language => {
     if (language.code === 'fr') return true;
-    const providerCode = providerMap[language.code];
-    if (!providerCode) return false;
-    const normalizedProviderCode = providerCode.toLowerCase();
-    if (frenchTargets.size) return frenchTargets.has(normalizedProviderCode);
-    return providerCodes.has(normalizedProviderCode);
+    if (frenchTargets.size) return frenchTargets.has(language.code);
+    return providerCodes.has(language.code) || Boolean(providerMap[language.code]);
   });
 
   languageDiscoveryCache = {

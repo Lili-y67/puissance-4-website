@@ -6473,9 +6473,6 @@ function sanitize(p) {
   };
 }
 
-const SITE_LANGUAGES = siteI18n.LANGUAGES.map(language => language.code);
-const SITE_LANGUAGE_SET = siteI18n.LANGUAGE_SET;
-
 app.get('/api/i18n', async (req, res) => {
   const language = siteI18n.normalizeLanguage(req.query.lang || req.query.language || 'fr');
   try {
@@ -6823,12 +6820,18 @@ app.patch('/api/players/:id/color', (req, res) => {
   res.json({ ok: true });
 });
 
-app.patch('/api/players/:id/language', (req, res) => {
+app.patch('/api/players/:id/language', async (req, res) => {
   const id = Number(req.params.id);
   const token = String(req.body?.token || req.headers['x-session-token'] || req.headers['x-token'] || '');
-  const language = String(req.body?.language || '').trim().toLowerCase();
+  const requestedLanguage = String(req.body?.language || '').trim().toLowerCase();
+  const language = siteI18n.normalizeLanguage(requestedLanguage);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
-  if (!SITE_LANGUAGE_SET.has(language)) return res.status(400).json({ error: 'Langue non disponible.' });
+  const availableLanguages = await siteI18n.getAvailableLanguages().catch(() => siteI18n.LANGUAGES);
+  const availableCodes = new Set(availableLanguages.flatMap(entry => [
+    entry.code,
+    entry.providerCode,
+  ]).filter(Boolean).map(code => String(code).toLowerCase()));
+  if (!availableCodes.has(requestedLanguage)) return res.status(400).json({ error: 'Langue non disponible.' });
   const player = pQ.getById.get(id);
   if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
   pQ.updateLanguage.run({ language, id });

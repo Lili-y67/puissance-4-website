@@ -38,7 +38,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-13';
+    link.href = '/theme.css?v=eggs-14';
     document.head.appendChild(link);
   }
 
@@ -124,7 +124,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-13', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-14', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -149,7 +149,7 @@
   function loadI18n() {
     if (window.P4I18n || document.querySelector('script[data-p4-i18n]')) return;
     const script = document.createElement('script');
-    script.src = '/i18n.js?v=10';
+    script.src = '/i18n.js?v=11';
     script.defer = true;
     script.dataset.p4I18n = '1';
     script.addEventListener('load', () => window.P4I18n?.apply(document.body));
@@ -274,10 +274,19 @@
       : MENU_LANGUAGES;
   }
 
+  function allKnownMenuLanguages() {
+    const seen = new Set();
+    return [...menuLanguages(), ...MENU_LANGUAGES].filter(language => {
+      if (!language?.code || seen.has(language.code)) return false;
+      seen.add(language.code);
+      return true;
+    });
+  }
+
   function resolveMenuLanguage(query) {
     const needle = normalizeLanguageQuery(query);
     if (!needle) return null;
-    return menuLanguages().find(language => {
+    return allKnownMenuLanguages().find(language => {
       const haystack = [language.code, language.name, language.country, ...(language.aliases || [])].map(normalizeLanguageQuery);
       return haystack.some(value => value === needle || value.startsWith(needle) || value.includes(needle));
     }) || null;
