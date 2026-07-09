@@ -113,6 +113,13 @@ function getSocketGameState(socket) {
   return { state, side, opponentSide: side === 1 ? 2 : 1 };
 }
 
+function getGameLatencyPayload(state) {
+  return {
+    1: Number.isFinite(Number(state?.players?.[1]?.pingMs)) ? Math.round(Number(state.players[1].pingMs)) : null,
+    2: Number.isFinite(Number(state?.players?.[2]?.pingMs)) ? Math.round(Number(state.players[2].pingMs)) : null,
+  };
+}
+
 function rememberFinishedGameSockets(result) {
   if (!result?.players) return;
   const p1 = result.players[1];
@@ -8942,6 +8949,23 @@ io.on('connection', socket => {
     if (socket.playerId && !isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
   });
 
+  socket.on('game_latency_probe', (_sentAt, ack) => {
+    if (typeof ack === 'function') ack({ serverAt: Date.now() });
+  });
+
+  socket.on('game_latency_report', ({ ping } = {}) => {
+    const ctxGame = getSocketGameState(socket);
+    if (!ctxGame) return;
+    const ms = Math.round(Number(ping));
+    if (!Number.isFinite(ms) || ms < 0) return;
+    ctxGame.state.players[ctxGame.side].pingMs = Math.min(5000, ms);
+    ctxGame.state.players[ctxGame.side].pingUpdatedAt = Date.now();
+    io.to('game:' + ctxGame.state.id).emit('game_latency_update', {
+      gameId: ctxGame.state.id,
+      latencies: getGameLatencyPayload(ctxGame.state),
+    });
+  });
+
   socket.on('join_clan_chat', ({ clanId } = {}) => {
     const id = Number(clanId || 0);
     if (!socket.playerId) return socket.emit('clan_error', { message: 'Identifie-toi pour rejoindre le tchat clan.' });
@@ -9289,6 +9313,7 @@ io.on('connection', socket => {
         current: state.current,
         moves:   state.moveCount,
         startsIn: 0,
+        latencies: getGameLatencyPayload(state),
       });
 
       // Notifier l'adversaire
@@ -9480,6 +9505,7 @@ function _startMatch(p1, p2, options = {}) {
       1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
       2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
     },
+    latencies: getGameLatencyPayload(state),
     startsIn: 3,
   };
   if (s1) {

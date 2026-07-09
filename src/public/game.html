@@ -183,6 +183,38 @@ body {
 .pc-info { position:relative; flex: 1; min-width: 0; display:flex; flex-direction:column; justify-content:center; padding:0 8px 0 0; }
 .pc-name { position:relative; z-index:1; font-family:'Barlow Condensed',sans-serif; font-weight: 900; font-size: 22px; letter-spacing:1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding:0 10px; }
 .pc-elo  { position:relative; z-index:1; font-size: 12px; font-weight:600; color: var(--muted); padding:0 10px; }
+.pc-ping {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  margin: 6px 10px 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.045);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+.pc-ping::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  vertical-align: 1px;
+}
+.pc-ping.good { color: #30d158; border-color: rgba(48,209,88,.28); background: rgba(48,209,88,.08); }
+.pc-ping.warn { color: #ff9f0a; border-color: rgba(255,159,10,.32); background: rgba(255,159,10,.09); }
+.pc-ping.bad { color: #ff453a; border-color: rgba(255,69,58,.35); background: rgba(255,69,58,.10); }
+.pc-ping.unknown { color: rgba(238,238,245,.36); }
+.player-card.net-warn { border-color: rgba(255,159,10,.38); }
+.player-card.net-bad { border-color: rgba(255,69,58,.48); box-shadow: 0 0 0 1px rgba(255,69,58,.12), 0 20px 54px rgba(255,69,58,.10), inset 0 1px 0 rgba(255,255,255,.06); }
 .turn-mid {
   text-align: center;
   min-width: 132px;
@@ -1034,6 +1066,7 @@ html[data-board-skin="obsidian"] .cell{border-radius:42%;background:radial-gradi
       <div class="pc-info">
         <div class="pc-name" id="name-p1">Joueur 1</div>
         <div class="pc-elo"  id="elo-p1">— ELO</div>
+        <div class="pc-ping unknown" id="ping-p1" title="Connexion">-- ms</div>
       </div>
     </div>
     <div class="turn-mid">
@@ -1051,6 +1084,7 @@ html[data-board-skin="obsidian"] .cell{border-radius:42%;background:radial-gradi
       <div class="pc-info">
         <div class="pc-name" id="name-p2">Joueur 2</div>
         <div class="pc-elo"  id="elo-p2">— ELO</div>
+        <div class="pc-ping unknown" id="ping-p2" title="Connexion">-- ms</div>
       </div>
     </div>
   </div>
@@ -1161,6 +1195,8 @@ let turnDeadline = 0;
 let currentGameMode = 'ranked';
 let pendingActionOffer = null;
 let currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+let latencyProbeTimer = null;
+let latencyProbePending = false;
 
 function setStatus(message = '', allowHtml = false) {
   const el = document.getElementById('status');
@@ -1174,6 +1210,37 @@ function setGameMode(mode = 'ranked') {
   const safeMode = ['ranked', 'friendly', 'tournament', 'bot'].includes(String(mode)) ? String(mode) : 'ranked';
   currentGameMode = safeMode;
   document.body.dataset.gameMode = safeMode;
+}
+
+function latencyClass(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value)) return 'unknown';
+  if (value >= 500) return 'bad';
+  if (value >= 200) return 'warn';
+  return 'good';
+}
+
+function setPlayerLatency(side, ms) {
+  const el = document.getElementById('ping-p' + side);
+  const card = document.getElementById('card-p' + side);
+  if (!el) return;
+  const cls = latencyClass(ms);
+  el.className = `pc-ping ${cls}`;
+  el.textContent = cls === 'unknown' ? '-- ms' : `${Math.round(Number(ms))} ms`;
+  el.title = cls === 'bad'
+    ? 'Connexion instable'
+    : cls === 'warn'
+      ? 'Connexion moyenne'
+      : cls === 'good'
+        ? 'Connexion stable'
+        : 'Connexion inconnue';
+  card?.classList.remove('net-good', 'net-warn', 'net-bad', 'net-unknown');
+  card?.classList.add(`net-${cls}`);
+}
+
+function applyLatencyUpdate(latencies = {}) {
+  setPlayerLatency(1, latencies?.[1]);
+  setPlayerLatency(2, latencies?.[2]);
 }
 
 function getGameModeLabel() {
@@ -1677,6 +1744,7 @@ function connectSocket(pendingMatch) {
   socket.on('connect', () => {
     localStorage.setItem('last_active', Date.now());
     socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || sessionStorage.getItem('token') });
+    startLatencyProbe();
   });
 
   socket.on('identified', (p) => {
@@ -1744,6 +1812,7 @@ function connectSocket(pendingMatch) {
     applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
     applyPlayerCardVisual(1, data.players[1]);
     applyPlayerCardVisual(2, data.players[2]);
+    applyLatencyUpdate(data.latencies || {});
     currentTurn = data.current;
     updateTurnUI();
 
@@ -1767,6 +1836,10 @@ function connectSocket(pendingMatch) {
 
   // match_found depuis la queue (cas où on arrive sans pendingMatch)
   socket.on('match_found', (d) => { d._fresh = true; setupLobby(d); });
+  socket.on('game_latency_update', ({ latencies } = {}) => applyLatencyUpdate(latencies || {}));
+  socket.on('disconnect', () => {
+    if (mySide) setPlayerLatency(mySide, null);
+  });
 
   socket.on('move_played', onMovePlayed);
   socket.on('game_over',   onGameOver);
@@ -1832,6 +1905,29 @@ function connectSocket(pendingMatch) {
   });
 }
 
+function startLatencyProbe() {
+  if (latencyProbeTimer) clearInterval(latencyProbeTimer);
+  if (!socket || iaMode) return;
+  const probe = () => {
+    if (!socket?.connected || !gameId || gameOver || latencyProbePending) return;
+    latencyProbePending = true;
+    const startedAt = performance.now();
+    const timeout = setTimeout(() => {
+      latencyProbePending = false;
+      if (mySide) setPlayerLatency(mySide, null);
+    }, 3000);
+    socket.emit('game_latency_probe', Date.now(), () => {
+      clearTimeout(timeout);
+      latencyProbePending = false;
+      const ping = Math.max(0, Math.round(performance.now() - startedAt));
+      setPlayerLatency(mySide, ping);
+      socket.emit('game_latency_report', { gameId, ping });
+    });
+  };
+  latencyProbeTimer = setInterval(probe, 5000);
+  setTimeout(probe, 800);
+}
+
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
   // Mettre à jour l'URL avec le gameId pour permettre le reload (pas en mode IA)
@@ -1849,6 +1945,7 @@ function setupLobby(data) {
   lobbyData = data;
   gameId    = data.gameId;
   mySide    = data.yourSide;
+  applyLatencyUpdate(data.latencies || {});
   applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
   setGameMode(String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : 'ranked');
   applyTournamentMeta(data.tournament || null, data.moveTimeSeconds || 0);
@@ -1930,6 +2027,7 @@ function startGame(data) {
   setCardElo(2, data.players[2].elo);
   applyPlayerCardVisual(1, data.players[1]);
   applyPlayerCardVisual(2, data.players[2]);
+  applyLatencyUpdate(data.latencies || {});
 
   currentTurn = 1;
   gameOver    = false;
