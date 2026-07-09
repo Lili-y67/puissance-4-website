@@ -3389,11 +3389,11 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
       </button>
 
       <button class="btn btn-robot" onclick="openBotModal()">
-        &#129302; Jouer contre l'ordinateur
+        <span>&#129302;</span> <span data-i18n="home.playBot">Jouer contre l'ordinateur</span>
       </button>
 
       <button class="btn btn-ghost" onclick="window.location.href='/local'" style="margin-top:10px;border-color:rgba(255,214,10,0.35);color:#ffd60a;background:rgba(255,214,10,0.08)">
-        &#127922; 1v1 Local
+        <span>&#127922;</span> <span data-i18n="home.local1v1">1v1 Local</span>
       </button>
 
       <!-- Modal sélection difficulté bot -->
@@ -5077,19 +5077,20 @@ function showLoggedInView(p) {
         </div>
       </div>
       <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
-        <span>&#9889;</span> <span>Rejoindre la partie</span>
+        <span>&#9889;</span> <span data-i18n="home.joinGame">Rejoindre la partie</span>
       </button>
       <button class="btn btn-duel" style="width:100%" type="button" onclick="openDuelModal()">
-        <span>⚔️</span> <span>Envoyer un duel</span>
+        <span>⚔️</span> <span data-i18n="home.sendDuel">Envoyer un duel</span>
       </button>
       <button class="btn btn-robot" style="width:100%" onclick="openBotModal()">
-        <span>&#129302;</span> <span>Jouer contre l'ordinateur</span>
+        <span>&#129302;</span> <span data-i18n="home.playBot">Jouer contre l'ordinateur</span>
       </button>
       <a href="/profil?id=${p.id}" style="font-size:12px;color:var(--muted);text-decoration:none;">
-        &rarr; Mon profil
+        &rarr; <span data-i18n="home.myProfile">Mon profil</span>
       </a>
     </div>
   `;
+  window.P4I18n?.apply?.(loginView);
 }
 
 async function refreshStoredPlayerForQueue() {

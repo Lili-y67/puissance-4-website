@@ -80,6 +80,11 @@
     'profile.language.title': 'Langue du site',
     'profile.language.help': 'Choisis une langue par pays ou par nom.',
     'profile.language.firstPass': 'Premiere version : les textes communs changent tout de suite, le reste gardera le francais en fallback.',
+    'home.playBot': "Jouer contre l'ordinateur",
+    'home.local1v1': '1v1 Local',
+    'home.joinGame': 'Rejoindre la partie',
+    'home.sendDuel': 'Envoyer un duel',
+    'home.myProfile': 'Mon profil',
   };
 
   const fallbackTranslations = {
@@ -132,6 +137,11 @@
       'profile.language.title': 'Site language',
       'profile.language.help': 'Choose a language by country or name.',
       'profile.language.firstPass': 'First pass: common text changes right away, the rest keeps French as fallback.',
+      'home.playBot': 'Play against the computer',
+      'home.local1v1': 'Local 1v1',
+      'home.joinGame': 'Join the game',
+      'home.sendDuel': 'Send a duel',
+      'home.myProfile': 'My profile',
     },
     es: {
       'common.save': 'Guardar',
@@ -182,6 +192,11 @@
       'profile.language.title': 'Idioma del sitio',
       'profile.language.help': 'Elige un idioma por país o nombre.',
       'profile.language.firstPass': 'Primera versión: los textos comunes cambian al instante, el resto mantiene francés como fallback.',
+      'home.playBot': 'Jugar contra el ordenador',
+      'home.local1v1': '1v1 local',
+      'home.joinGame': 'Unirse a la partida',
+      'home.sendDuel': 'Enviar un duelo',
+      'home.myProfile': 'Mi perfil',
     },
   };
 
@@ -200,7 +215,10 @@
   let translationInFlight = false;
   let pendingTranslationRoot = null;
   let overlayTimer = null;
-  const fetchedPageTranslations = new Set();
+  let deferredFetchTimer = null;
+  let lastTranslationFetchAt = 0;
+  const fetchedTranslationRequests = new Set();
+  const TRANSLATION_REFETCH_DELAY_MS = 3000;
 
   function normalize(value) {
     return String(value || '')
@@ -278,12 +296,12 @@
   function showTranslationOverlay(total, startedAt) {
     if (activeLanguage === DEFAULT_LANGUAGE || total <= 0) return;
     const overlay = ensureTranslationOverlay();
-    const estimatedSeconds = Math.max(2, Math.min(45, Math.ceil(total * 0.45)));
+    const estimatedSeconds = Math.max(3, Math.min(1800, Math.ceil(total * 3.2)));
     const refresh = () => {
       const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1000);
       const remaining = Math.max(1, estimatedSeconds - elapsedSeconds);
       overlay.querySelector('.p4-i18n-progress-eta').textContent = `environ ${formatSeconds(remaining)}`;
-      overlay.querySelector('.p4-i18n-progress-text').textContent = `${total} textes envoyes en une seule requete vers ${activeLanguage.toUpperCase()}.`;
+      overlay.querySelector('.p4-i18n-progress-text').textContent = `${total} textes envoyes au serveur, puis traduits avec delai pour proteger LibreTranslate.`;
     };
     clearInterval(overlayTimer);
     refresh();
@@ -505,8 +523,18 @@
     });
   }
 
-  function pageTranslationKey() {
-    return `${activeLanguage}:${location.pathname}${location.search}`;
+  function hashText(value) {
+    let hash = 0;
+    const text = String(value || '');
+    for (let index = 0; index < text.length; index += 1) {
+      hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  function translationRequestKey(texts) {
+    const normalized = [...new Set((texts || []).map(normalizeText).filter(Boolean))].sort();
+    return `${activeLanguage}:${location.pathname}:${normalized.length}:${hashText(normalized.join('\n'))}`;
   }
 
   async function applyMachineTranslations(root = document.body, options = {}) {
@@ -546,14 +574,34 @@
         hideTranslationOverlay();
         return;
       }
-      if (!allowFetch || fetchedPageTranslations.has(pageTranslationKey())) {
+      if (!allowFetch) {
+        hideTranslationOverlay();
+        return;
+      }
+
+      const requestKey = translationRequestKey(missing);
+      if (fetchedTranslationRequests.has(requestKey)) {
+        hideTranslationOverlay();
+        return;
+      }
+
+      const elapsedSinceFetch = Date.now() - lastTranslationFetchAt;
+      if (!options.forceFetch && elapsedSinceFetch < TRANSLATION_REFETCH_DELAY_MS) {
+        pendingTranslationRoot = root;
+        clearTimeout(deferredFetchTimer);
+        deferredFetchTimer = setTimeout(() => {
+          const nextRoot = pendingTranslationRoot || document.body;
+          pendingTranslationRoot = null;
+          applyMachineTranslations(nextRoot, { allowFetch: true, forceFetch: true });
+        }, TRANSLATION_REFETCH_DELAY_MS - elapsedSinceFetch);
         hideTranslationOverlay();
         return;
       }
 
       totalMissing = missing.length;
       showTranslationOverlay(totalMissing, startedAt);
-      fetchedPageTranslations.add(pageTranslationKey());
+      fetchedTranslationRequests.add(requestKey);
+      lastTranslationFetchAt = Date.now();
       if (runId !== machineRunId || activeLanguage === DEFAULT_LANGUAGE) return;
       const res = await fetch('/api/i18n/translate', {
         method: 'POST',
@@ -582,7 +630,7 @@
       if (pendingTranslationRoot && activeLanguage !== DEFAULT_LANGUAGE) {
         const nextRoot = pendingTranslationRoot;
         pendingTranslationRoot = null;
-        setTimeout(() => applyMachineTranslations(nextRoot, { allowFetch: false }), 250);
+        setTimeout(() => applyMachineTranslations(nextRoot, { allowFetch: true }), 250);
       }
     }
   }
@@ -593,7 +641,7 @@
       clearTimeout(observerTimer);
       observerTimer = setTimeout(() => {
         if (activeLanguage !== DEFAULT_LANGUAGE) {
-          applyMachineTranslations(document.body, { allowFetch: false });
+          applyMachineTranslations(document.body, { allowFetch: true });
         }
       }, 350);
     });

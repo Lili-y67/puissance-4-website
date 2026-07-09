@@ -92,6 +92,11 @@ const SOURCE = {
   'profile.avatarDecoration.title': 'Décoration avatar',
   'profile.cursor.title': 'Curseur du site',
   'profile.chooseDecoration': 'Choisir une décoration',
+  'home.playBot': "Jouer contre l'ordinateur",
+  'home.local1v1': '1v1 Local',
+  'home.joinGame': 'Rejoindre la partie',
+  'home.sendDuel': 'Envoyer un duel',
+  'home.myProfile': 'Mon profil',
 };
 
 const TRANSLATIONS = {
@@ -159,6 +164,11 @@ const TRANSLATIONS = {
     'profile.avatarDecoration.title': 'Avatar decoration',
     'profile.cursor.title': 'Site cursor',
     'profile.chooseDecoration': 'Choose a decoration',
+    'home.playBot': 'Play against the computer',
+    'home.local1v1': 'Local 1v1',
+    'home.joinGame': 'Join the game',
+    'home.sendDuel': 'Send a duel',
+    'home.myProfile': 'My profile',
   },
   es: {
     'common.save': 'Guardar',
@@ -224,6 +234,11 @@ const TRANSLATIONS = {
     'profile.avatarDecoration.title': 'Decoración de avatar',
     'profile.cursor.title': 'Cursor del sitio',
     'profile.chooseDecoration': 'Elegir una decoración',
+    'home.playBot': 'Jugar contra el ordenador',
+    'home.local1v1': '1v1 local',
+    'home.joinGame': 'Unirse a la partida',
+    'home.sendDuel': 'Enviar un duelo',
+    'home.myProfile': 'Mi perfil',
   },
 };
 
@@ -232,9 +247,11 @@ const CACHE_PATH = path.join(__dirname, '../../data/i18n-machine-cache.json');
 const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || '').replace(/\/+$/, '');
 const LIBRETRANSLATE_KEY = String(process.env.LIBRETRANSLATE_KEY || process.env.TRANSLATION_API_KEY || '');
 const TRANSLATION_EMAIL = String(process.env.TRANSLATION_CONTACT_EMAIL || process.env.PUBLIC_CONTACT_EMAIL || '');
-const MAX_MACHINE_TEXTS = 400;
+const MAX_MACHINE_TEXTS = numberFromEnv('I18N_MAX_MACHINE_TEXTS', 400, { min: 1, max: 800 });
 const MAX_MACHINE_TEXT_BYTES = 500;
-const EXTERNAL_TRANSLATION_TIMEOUT_MS = 6500;
+const EXTERNAL_TRANSLATION_TIMEOUT_MS = numberFromEnv('I18N_TRANSLATION_TIMEOUT_MS', 60000, { min: 5000, max: 300000 });
+const LIBRETRANSLATE_BATCH_SIZE = numberFromEnv('LIBRETRANSLATE_BATCH_SIZE', 1, { min: 1, max: 25 });
+const LIBRETRANSLATE_DELAY_MS = numberFromEnv('LIBRETRANSLATE_DELAY_MS', 3000, { min: 0, max: 30000 });
 const LANGUAGE_DISCOVERY_TTL_MS = 10 * 60 * 1000;
 const PROVIDER_LANGUAGE_CODES = {
   mymemory: {
@@ -299,6 +316,15 @@ const PROVIDER_TO_SITE_LANGUAGE_CODES = {
 
 let machineCache = loadMachineCache();
 let languageDiscoveryCache = null;
+
+function numberFromEnv(name, fallback, limits = {}) {
+  const value = Number(process.env[name]);
+  if (!Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value);
+  if (Number.isFinite(limits.min) && rounded < limits.min) return limits.min;
+  if (Number.isFinite(limits.max) && rounded > limits.max) return limits.max;
+  return rounded;
+}
 
 function getMachineProvider() {
   const configured = String(process.env.TRANSLATION_PROVIDER || process.env.I18N_TRANSLATION_PROVIDER || '').trim().toLowerCase();
@@ -409,6 +435,11 @@ function normalizeText(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
+function wait(ms) {
+  if (!ms) return Promise.resolve();
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function textByteLength(text) {
   return Buffer.byteLength(String(text || ''), 'utf8');
 }
@@ -490,20 +521,40 @@ async function translateBatchWithLibreTranslate(texts, language) {
   if (!target) throw new Error(`Language ${language} not supported by libretranslate`);
   const batch = (Array.isArray(texts) ? texts : []).map(normalizeText).filter(Boolean);
   if (!batch.length) return [];
-  const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/translate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      q: batch,
-      source: 'fr',
-      target,
-      format: 'text',
-      ...(LIBRETRANSLATE_KEY ? { api_key: LIBRETRANSLATE_KEY } : {}),
-    }),
-  });
-  if (!res.ok || !data.translatedText) throw new Error(data.error || 'LibreTranslate failed');
-  const translated = Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
-  return batch.map((_, index) => normalizeText(translated[index] || ''));
+  const translatedBatch = [];
+  const chunkErrors = [];
+
+  for (let offset = 0; offset < batch.length; offset += LIBRETRANSLATE_BATCH_SIZE) {
+    if (offset > 0) await wait(LIBRETRANSLATE_DELAY_MS);
+    const chunk = batch.slice(offset, offset + LIBRETRANSLATE_BATCH_SIZE);
+    try {
+      const { res, data } = await fetchJsonWithTimeout(`${LIBRETRANSLATE_URL}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: chunk.length === 1 ? chunk[0] : chunk,
+          source: 'fr',
+          target,
+          format: 'text',
+          ...(LIBRETRANSLATE_KEY ? { api_key: LIBRETRANSLATE_KEY } : {}),
+        }),
+      });
+      if (!res.ok || !data.translatedText) throw new Error(data.error || 'LibreTranslate failed');
+      const translated = Array.isArray(data.translatedText) ? data.translatedText : [data.translatedText];
+      chunk.forEach((_, index) => translatedBatch.push(normalizeText(translated[index] || '')));
+    } catch (error) {
+      const message = error.name === 'AbortError'
+        ? `LibreTranslate timeout apres ${Math.round(EXTERNAL_TRANSLATION_TIMEOUT_MS / 1000)}s`
+        : (error.message || 'LibreTranslate failed');
+      chunk.forEach(text => {
+        translatedBatch.push('');
+        chunkErrors.push({ text, error: message });
+      });
+    }
+  }
+
+  translatedBatch.errors = chunkErrors;
+  return translatedBatch;
 }
 
 async function translateWithMyMemory(text, language) {
@@ -609,10 +660,12 @@ async function translateTextsDetailed(texts, language) {
     if (apiItems.length) {
       try {
         const translatedTexts = await translateBatchWithLibreTranslate(apiItems.map(item => item.textForApi), target);
+        const batchErrors = translatedTexts.errors || [];
         apiItems.forEach((item, index) => {
           const translatedCore = translatedTexts[index] || '';
           if (!translatedCore) {
-            errors.push({ text: item.source, error: 'LibreTranslate returned an empty translation' });
+            const batchError = batchErrors.find(error => error.text === item.textForApi);
+            errors.push({ text: item.source, error: batchError?.error || 'LibreTranslate returned an empty translation' });
             return;
           }
           const translated = item.decorated.core !== item.source
