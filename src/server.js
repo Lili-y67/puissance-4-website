@@ -4611,12 +4611,12 @@ async function getDiscordRole(discordUserId, botToken) {
   } catch(e) { return 'user'; }
 }
 
-async function fetchDiscordMemberSnapshot(discordUserId, botToken) {
+async function fetchDiscordMemberSnapshot(discordUserId, botToken, options = {}) {
   try {
     if (!botToken || !discordUserId) return null;
     const cacheKey = String(discordUserId || '');
     const cached = discordMemberSnapshotCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) return cached.snapshot;
+    if (!options.force && cached && cached.expiresAt > Date.now()) return cached.snapshot;
     const [memberRes, guildRoles] = await Promise.all([
       discordRestFetch(`guild-member:${discordUserId}`, `https://discord.com/api/v10/guilds/${DISCORD_GUILD}/members/${discordUserId}`, {
         headers: { 'Authorization': 'Bot ' + botToken },
@@ -6302,6 +6302,15 @@ function discordAvatarUrl(discordUser) {
     ? Number(discordUser.discriminator) % 5
     : (BigInt(discordUser.id) >> 22n) % 6n);
   return `https://cdn.discordapp.com/embed/avatars/${fallbackIndex}.png`;
+}
+
+function discordMemberAvatarUrl(memberInfo) {
+  if (!memberInfo?.user?.id) return '';
+  if (memberInfo.avatar) {
+    const ext = String(memberInfo.avatar).startsWith('a_') ? 'gif' : 'png';
+    return `https://cdn.discordapp.com/guilds/${DISCORD_GUILD}/users/${memberInfo.user.id}/avatars/${memberInfo.avatar}.${ext}?size=512`;
+  }
+  return discordAvatarUrl(memberInfo.user);
 }
 
 function discordBannerUrl(discordUser) {
@@ -8006,6 +8015,61 @@ app.get('/api/me/discord-info', (req, res) => {
         : null,
     } : { id: player.discord_id, username: 'Inconnu', linked_at: null },
   });
+});
+
+app.post('/api/me/discord-avatar/refresh', async (req, res) => {
+  const token = req.headers['x-session-token'] || req.body?.token;
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifie.' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!player.discord_id) return res.status(400).json({ error: 'Aucun compte Discord lie.' });
+
+  const { botToken } = discordConfig();
+  if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible.' });
+
+  const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken, { force: true });
+  const memberInfo = snapshot?.memberInfo || null;
+  let discordUser = memberInfo?.user || null;
+  if (!discordUser) {
+    try {
+      const userRes = await discordRestFetch(`discord-user:${player.discord_id}:avatar-refresh`, `https://discord.com/api/v10/users/${player.discord_id}`, {
+        headers: { 'Authorization': 'Bot ' + botToken },
+      });
+      if (userRes.ok) discordUser = await userRes.json();
+    } catch(e) {}
+  }
+  const avatar = discordMemberAvatarUrl(memberInfo) || discordAvatarUrl(discordUser);
+  if (!avatar) return res.status(502).json({ error: 'Impossible de recuperer l avatar Discord.' });
+
+  pQ.updateAvatar.run({ avatar, id: player.id });
+
+  let existing = {};
+  try { existing = player.discord_info ? JSON.parse(player.discord_info) : {}; } catch(e) {}
+  const updatedInfo = {
+    ...existing,
+    id: player.discord_id,
+    username: discordUser?.username || existing.username || null,
+    global_name: discordUser?.global_name || existing.global_name || discordUser?.username || null,
+    discriminator: discordUser?.discriminator && discordUser.discriminator !== '0'
+      ? discordUser.discriminator
+      : (existing.discriminator || null),
+    public_flags: discordUser?.public_flags ?? existing.public_flags ?? 0,
+    avatar_hash: discordUser?.avatar || existing.avatar_hash || null,
+    server_avatar_hash: memberInfo?.avatar || null,
+    avatar_url: avatar,
+    server_roles: snapshot?.server_roles_rich || existing.server_roles || [],
+    server_nick: memberInfo?.nick || existing.server_nick || null,
+    server_joined: memberInfo?.joined_at || existing.server_joined || null,
+    boosting_since: memberInfo?.premium_since || null,
+    avatar_refreshed_at: new Date().toISOString(),
+  };
+  rQ.setDiscord.run(player.discord_id, JSON.stringify(updatedInfo), player.id);
+  progression.recordAction(player.id, 'profile_updates');
+
+  const fresh = pQ.getById.get(player.id);
+  res.json({ ok: true, avatar, discord: updatedInfo, player: sanitize(fresh) });
 });
 
 // Demander un code de dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAliaison Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA envoi DM via bot

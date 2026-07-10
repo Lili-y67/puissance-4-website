@@ -239,6 +239,9 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .avatar-ring.online{border-color:#30d158;box-shadow:0 0 10px rgba(48,209,88,0.5);}
 .avatar-ring.bot-online{border-color:#85EBFF;box-shadow:0 0 12px rgba(133,235,255,0.5);}
 .avatar-ring.offline{border-color:#636366;box-shadow:none;}
+.discord-avatar-refresh-btn{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(88,101,242,.36);background:rgba(88,101,242,.12);color:#c9d0ff;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .2s,border-color .2s,background .2s;max-width:126px;line-height:1.15}
+.discord-avatar-refresh-btn:hover{transform:translateY(-1px);border-color:rgba(139,156,244,.55);background:rgba(88,101,242,.2)}
+.discord-avatar-refresh-btn:disabled{opacity:.58;cursor:wait;transform:none}
 /* Badges statut */
 .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-top:5px;}
 .status-badge.online{background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.3);color:#30d158;}
@@ -2473,6 +2476,7 @@ function render(player, games, following, followers, followStatus, tournaments =
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
          <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
+         ${player.discord_id ? '<button class="discord-avatar-refresh-btn" id="btn-refresh-discord-avatar" type="button" onclick="refreshDiscordAvatar(event)">Rafraîchir Avatar Discord</button>' : ''}
        </div>`
     : `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
          <div style="position:relative;flex-shrink:0" class="avatar-wrap">
@@ -4602,6 +4606,60 @@ async function uploadAvatarData(avatarData, me) {
   PROFIL_SFX.error();
   alert(await readApiError(res, 'Erreur upload.'));
   return false;
+}
+
+async function refreshDiscordAvatar(event) {
+  event?.stopPropagation?.();
+  const token = getStoredSessionToken();
+  const btn = document.getElementById('btn-refresh-discord-avatar');
+  if (!token) return alert('Connecte-toi pour rafraîchir ton avatar Discord.');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Rafraîchissement...';
+  }
+  try {
+    const res = await fetch('/api/me/discord-avatar/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Impossible de rafraîchir l avatar Discord.');
+    const freshPlayer = data.player || {};
+    const avatar = data.avatar || freshPlayer.avatar || '';
+    const renderSrc = getRenderableMediaSrc(avatar);
+    const avatarHtml = renderSrc
+      ? '<img src="' + renderSrc + '" alt="avatar">'
+      : (freshPlayer.pseudo || currentPlayer?.pseudo || '?').slice(0, 1).toUpperCase();
+    const el = document.getElementById('avatar-el');
+    if (el) el.innerHTML = avatarHtml;
+    const base = document.getElementById('avatar-decoration-base');
+    if (base) base.innerHTML = avatarHtml;
+    const modalBase = document.getElementById('avatar-decoration-modal-base');
+    if (modalBase) modalBase.innerHTML = avatarHtml;
+
+    syncStoredPlayerPatch(freshPlayer.id ? freshPlayer : { avatar });
+    currentPlayer = { ...(currentPlayer || {}), ...(freshPlayer.id ? freshPlayer : { avatar }) };
+    if (viewerPlayer?.id && currentPlayer?.id && String(viewerPlayer.id) === String(currentPlayer.id)) {
+      viewerPlayer = { ...viewerPlayer, ...(freshPlayer.id ? freshPlayer : { avatar }) };
+    }
+    PROFIL_SFX.success();
+    loadDiscordInfo();
+    if (btn) {
+      btn.textContent = 'Avatar Discord rafraîchi';
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.textContent = 'Rafraîchir Avatar Discord';
+      }, 1600);
+    }
+  } catch (e) {
+    PROFIL_SFX.error();
+    alert(e.message || 'Erreur avatar Discord.');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Rafraîchir Avatar Discord';
+    }
+  }
 }
 
 async function uploadTokenEmojiData(imageData, me) {
