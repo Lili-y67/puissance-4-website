@@ -239,9 +239,6 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .avatar-ring.online{border-color:#30d158;box-shadow:0 0 10px rgba(48,209,88,0.5);}
 .avatar-ring.bot-online{border-color:#85EBFF;box-shadow:0 0 12px rgba(133,235,255,0.5);}
 .avatar-ring.offline{border-color:#636366;box-shadow:none;}
-.discord-avatar-refresh-btn{margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(88,101,242,.36);background:rgba(88,101,242,.12);color:#c9d0ff;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .2s,border-color .2s,background .2s;max-width:126px;line-height:1.15}
-.discord-avatar-refresh-btn:hover{transform:translateY(-1px);border-color:rgba(139,156,244,.55);background:rgba(88,101,242,.2)}
-.discord-avatar-refresh-btn:disabled{opacity:.58;cursor:wait;transform:none}
 /* Badges statut */
 .status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;margin-top:5px;}
 .status-badge.online{background:rgba(48,209,88,0.12);border:1px solid rgba(48,209,88,0.3);color:#30d158;}
@@ -1179,10 +1176,22 @@ body.search-open .profile-side{
 .upload-chooser-btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.16)}
 .upload-chooser-btn.primary{border-color:rgba(76,110,245,.28);background:rgba(76,110,245,.08)}
 .upload-chooser-btn.vip{border-color:rgba(255,214,10,.28);background:rgba(255,214,10,.08)}
+.upload-chooser-discord-btn{width:100%;padding:13px 14px;border-radius:16px;border:1px solid rgba(88,101,242,.38);background:rgba(88,101,242,.11);color:#c9d0ff;cursor:pointer;text-align:left;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;letter-spacing:1.4px;font-weight:900;display:none;gap:8px;align-items:center;justify-content:center;transition:transform .2s,border-color .2s,background .2s}
+.upload-chooser-discord-btn:hover{transform:translateY(-1px);border-color:rgba(139,156,244,.6);background:rgba(88,101,242,.18)}
+.upload-chooser-discord-btn:disabled{opacity:.55;cursor:wait;transform:none}
 .upload-chooser-btn:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none}
 .upload-chooser-btn-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .upload-chooser-btn-meta{font-size:12px;color:var(--muted);line-height:1.45}
 .upload-chooser-note{padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted);line-height:1.6}
+.queue-music-search-results{display:none;width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(8,8,16,.72);overflow:hidden}
+.queue-music-search-results.show{display:block}
+.queue-music-result{width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:var(--text);text-align:left;cursor:pointer}
+.queue-music-result:last-child{border-bottom:0}
+.queue-music-result:hover{background:rgba(88,101,242,.12)}
+.queue-music-thumb{width:52px;height:36px;border-radius:8px;background:rgba(255,255,255,.06);object-fit:cover}
+.queue-music-result-title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.queue-music-result-meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.queue-music-result-pick{font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:#85EBFF}
 @media (max-width:640px){
   .image-editor-modal{padding:18px;}
   .image-editor-head{align-items:flex-start;flex-direction:column;}
@@ -1285,6 +1294,7 @@ body.search-open .profile-side{
         <div class="upload-chooser-btn-meta" id="upload-gif-meta">Reserve VIP/VIP+ - max 5 Mo</div>
       </button>
     </div>
+    <button class="upload-chooser-discord-btn" type="button" id="upload-discord-refresh-btn" onclick="refreshDiscordMediaFromChooser()">Rafraîchir depuis Discord</button>
     <div class="upload-chooser-note" id="upload-chooser-note">Dimensions conseillees et taille max affichees ici.</div>
   </div>
 </div>
@@ -1480,6 +1490,7 @@ let queueMusicThemes = [];
 let queueMusicLibraryLoaded = false;
 let queueMusicPreviewAudio = null;
 let queueMusicPreviewTimer = null;
+let queueMusicSearchTimer = null;
 let eloHistoryDays = 7;
 let eloHistoryStartDate = '';
 let eloHistoryEndDate = '';
@@ -2476,7 +2487,6 @@ function render(player, games, following, followers, followStatus, tournaments =
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
          <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
-         ${player.discord_id ? '<button class="discord-avatar-refresh-btn" id="btn-refresh-discord-avatar" type="button" onclick="refreshDiscordAvatar(event)">Rafraîchir Avatar Discord</button>' : ''}
        </div>`
     : `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
          <div style="position:relative;flex-shrink:0" class="avatar-wrap">
@@ -2833,6 +2843,7 @@ function render(player, games, following, followers, followStatus, tournaments =
       <div class="profile-pseudo-edit-row">
         <input id="profile-pseudo-input" class="search-input" type="text" maxlength="16" oninput="refreshPseudoFontPreviews()" value="${player.pseudo.replace(/"/g, '&quot;')}">
         <button class="btn-save-color" id="btn-save-pseudo" onclick="saveProfilePseudo()">✏️ Enregistrer</button>
+        ${player.discord_id ? '<button class="btn-save-color" id="btn-refresh-discord-pseudo" type="button" onclick="refreshDiscordPseudo()" style="background:rgba(88,101,242,0.12);border-color:rgba(88,101,242,0.38);color:#c9d0ff">Rafraîchir pseudo Discord</button>' : ''}
       </div>
       <div style="font-size:11px;color:var(--muted)">3 à 16 caractères. Changement possible une fois tous les 30 jours.</div>
       ${canUsePseudoStyle(player) ? `
@@ -3021,8 +3032,13 @@ function render(player, games, following, followers, followStatus, tournaments =
           <input id="queue-music-file-input" type="file" accept="audio/*" style="display:none" onchange="useLocalQueueMusicFile(this.files && this.files[0])">
         </label>
       </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">
+        <input id="queue-music-search-input" class="search-input" style="flex:1;min-width:260px;margin:0" placeholder="Rechercher sur YouTube avec Lavalink" oninput="scheduleQueueMusicSearch(this.value)">
+        <button class="avatar-decoration-btn" id="queue-music-search-btn" type="button" onclick="searchQueueMusicNow()">Rechercher</button>
+      </div>
+      <div class="queue-music-search-results" id="queue-music-search-results"></div>
       <div style="font-size:11px;color:var(--muted);line-height:1.5">
-        YouTube fonctionne via le lecteur intégré. Un fichier local reste uniquement sur ce navigateur, sans stockage sur le site.
+        YouTube fonctionne via le lecteur intégré. La recherche utilise Lavalink si le serveur est configuré. Un fichier local reste uniquement sur ce navigateur.
       </div>
     </div>
     <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
@@ -4255,6 +4271,15 @@ function openUploadChooser(target) {
       ? `Disponible dans ${formatRemainingTime(remaining)}`
       : info.gifMeta;
   document.getElementById('upload-chooser-note').textContent = info.note;
+  const discordBtn = document.getElementById('upload-discord-refresh-btn');
+  if (discordBtn) {
+    const linked = !!currentPlayer?.discord_id;
+    discordBtn.style.display = linked ? 'flex' : 'none';
+    discordBtn.disabled = false;
+    discordBtn.textContent = target === 'banner'
+      ? 'Rafraîchir Bannière Discord'
+      : 'Rafraîchir Avatar Discord';
+  }
   const gifBtn = document.getElementById('upload-gif-btn');
   gifBtn.disabled = gifLocked;
   gifBtn.title = !hasVipMediaAccess
@@ -4608,56 +4633,116 @@ async function uploadAvatarData(avatarData, me) {
   return false;
 }
 
-async function refreshDiscordAvatar(event) {
-  event?.stopPropagation?.();
+function applyFreshPlayerPatch(freshPlayer) {
+  if (!freshPlayer || !freshPlayer.id) return;
+  syncStoredPlayerPatch(freshPlayer);
+  currentPlayer = { ...(currentPlayer || {}), ...freshPlayer };
+  if (viewerPlayer?.id && String(viewerPlayer.id) === String(freshPlayer.id)) {
+    viewerPlayer = { ...viewerPlayer, ...freshPlayer };
+  }
+}
+
+async function refreshDiscordMediaFromChooser() {
+  const target = uploadChooserTarget === 'banner' ? 'banner' : 'avatar';
   const token = getStoredSessionToken();
-  const btn = document.getElementById('btn-refresh-discord-avatar');
-  if (!token) return alert('Connecte-toi pour rafraîchir ton avatar Discord.');
+  const btn = document.getElementById('upload-discord-refresh-btn');
+  if (!token) return alert('Connecte-toi pour rafraîchir depuis Discord.');
   if (btn) {
     btn.disabled = true;
     btn.textContent = 'Rafraîchissement...';
   }
   try {
-    const res = await fetch('/api/me/discord-avatar/refresh', {
+    const res = await fetch(target === 'banner' ? '/api/me/discord-banner/refresh' : '/api/me/discord-avatar/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-session-token': token },
       body: JSON.stringify({ token }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Impossible de rafraîchir l avatar Discord.');
+    if (!res.ok) throw new Error(data.error || 'Impossible de rafraîchir depuis Discord.');
     const freshPlayer = data.player || {};
-    const avatar = data.avatar || freshPlayer.avatar || '';
-    const renderSrc = getRenderableMediaSrc(avatar);
-    const avatarHtml = renderSrc
-      ? '<img src="' + renderSrc + '" alt="avatar">'
-      : (freshPlayer.pseudo || currentPlayer?.pseudo || '?').slice(0, 1).toUpperCase();
-    const el = document.getElementById('avatar-el');
-    if (el) el.innerHTML = avatarHtml;
-    const base = document.getElementById('avatar-decoration-base');
-    if (base) base.innerHTML = avatarHtml;
-    const modalBase = document.getElementById('avatar-decoration-modal-base');
-    if (modalBase) modalBase.innerHTML = avatarHtml;
 
-    syncStoredPlayerPatch(freshPlayer.id ? freshPlayer : { avatar });
-    currentPlayer = { ...(currentPlayer || {}), ...(freshPlayer.id ? freshPlayer : { avatar }) };
-    if (viewerPlayer?.id && currentPlayer?.id && String(viewerPlayer.id) === String(currentPlayer.id)) {
-      viewerPlayer = { ...viewerPlayer, ...(freshPlayer.id ? freshPlayer : { avatar }) };
+    if (target === 'banner') {
+      const banner = data.banner || freshPlayer.banner || '';
+      const renderSrc = getRenderableMediaSrc(banner);
+      const bannerEl = document.querySelector('.profile-banner');
+      if (bannerEl && renderSrc) {
+        bannerEl.innerHTML = '<img src="' + renderSrc + '" alt="banniere"><div class="profile-banner-overlay">Modifier</div>';
+        bannerEl.onclick = () => openUploadChooser('banner');
+      }
+    } else {
+      const avatar = data.avatar || freshPlayer.avatar || '';
+      const renderSrc = getRenderableMediaSrc(avatar);
+      const avatarHtml = renderSrc
+        ? '<img src="' + renderSrc + '" alt="avatar">'
+        : (freshPlayer.pseudo || currentPlayer?.pseudo || '?').slice(0, 1).toUpperCase();
+      const el = document.getElementById('avatar-el');
+      if (el) el.innerHTML = avatarHtml;
+      const base = document.getElementById('avatar-decoration-base');
+      if (base) base.innerHTML = avatarHtml;
+      const modalBase = document.getElementById('avatar-decoration-modal-base');
+      if (modalBase) modalBase.innerHTML = avatarHtml;
     }
+
+    if (freshPlayer.id) applyFreshPlayerPatch(freshPlayer);
+    else if (target === 'banner') syncStoredPlayerPatch({ banner: data.banner || '' });
+    else syncStoredPlayerPatch({ avatar: data.avatar || '' });
     PROFIL_SFX.success();
     loadDiscordInfo();
-    if (btn) {
-      btn.textContent = 'Avatar Discord rafraîchi';
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = 'Rafraîchir Avatar Discord';
-      }, 1600);
-    }
+    closeUploadChooser();
   } catch (e) {
     PROFIL_SFX.error();
-    alert(e.message || 'Erreur avatar Discord.');
+    alert(e.message || 'Erreur Discord.');
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Rafraîchir Avatar Discord';
+      btn.textContent = target === 'banner'
+        ? 'Rafraîchir Bannière Discord'
+        : 'Rafraîchir Avatar Discord';
+    }
+  }
+}
+
+async function refreshDiscordPseudo() {
+  const token = getStoredSessionToken();
+  const btn = document.getElementById('btn-refresh-discord-pseudo');
+  if (!token) return alert('Connecte-toi pour rafraîchir ton pseudo Discord.');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Rafraîchissement...';
+  }
+  try {
+    const res = await fetch('/api/me/discord-pseudo/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Impossible de rafraîchir le pseudo Discord.');
+    const freshPlayer = data.player || {};
+    const pseudo = data.pseudo || freshPlayer.pseudo || currentPlayer?.pseudo || '';
+    if (freshPlayer.id) applyFreshPlayerPatch(freshPlayer);
+    else syncStoredPlayerPatch({ pseudo });
+    if (currentPlayer) currentPlayer.pseudo = pseudo;
+    if (viewerPlayer?.id && currentPlayer?.id && String(viewerPlayer.id) === String(currentPlayer.id)) {
+      viewerPlayer.pseudo = pseudo;
+    }
+    const input = document.getElementById('profile-pseudo-input');
+    if (input) input.value = pseudo;
+    const pseudoEl = document.querySelector('.profile-pseudo');
+    if (pseudoEl) pseudoEl.textContent = pseudo;
+    refreshPseudoFontPreviews();
+    const confirm = document.getElementById('pseudo-confirm');
+    if (confirm) {
+      confirm.style.opacity = '1';
+      setTimeout(() => confirm.style.opacity = '0', 2000);
+    }
+    PROFIL_SFX.success();
+  } catch (e) {
+    PROFIL_SFX.error();
+    alert(e.message || 'Erreur pseudo Discord.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Rafraîchir pseudo Discord';
     }
   }
 }
@@ -5869,6 +5954,105 @@ function useCustomQueueMusicUrl() {
   }
   if (select) select.value = value;
   previewQueueMusicChoice(value);
+}
+
+function formatQueueMusicDuration(ms) {
+  const total = Math.max(0, Math.round(Number(ms || 0) / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = String(total % 60).padStart(2, '0');
+  return total ? `${minutes}:${seconds}` : '--:--';
+}
+
+function scheduleQueueMusicSearch(value) {
+  if (queueMusicSearchTimer) clearTimeout(queueMusicSearchTimer);
+  const q = String(value || '').trim();
+  if (q.length < 2) {
+    renderQueueMusicSearchResults([]);
+    return;
+  }
+  queueMusicSearchTimer = setTimeout(() => searchQueueMusicNow(), 450);
+}
+
+function renderQueueMusicSearchResults(tracks, error = '') {
+  const box = document.getElementById('queue-music-search-results');
+  if (!box) return;
+  if (error) {
+    box.innerHTML = `<div style="padding:12px 14px;color:#ff6b88;font-size:12px">${escapeHtml(error)}</div>`;
+    box.classList.add('show');
+    return;
+  }
+  if (!tracks.length) {
+    box.innerHTML = '';
+    box.classList.remove('show');
+    return;
+  }
+  box.innerHTML = tracks.map(track => {
+    const payload = encodeURIComponent(JSON.stringify({
+      value: track.value,
+      title: track.title,
+      author: track.author,
+    }));
+    return `
+    <button class="queue-music-result" type="button" onclick="selectQueueMusicSearchResult(decodeURIComponent('${payload}'))">
+      ${track.artworkUrl ? `<img class="queue-music-thumb" src="${escapeHtml(track.artworkUrl)}" alt="">` : '<div class="queue-music-thumb"></div>'}
+      <span style="min-width:0">
+        <span class="queue-music-result-title">${escapeHtml(track.title)}</span>
+        <span class="queue-music-result-meta">${escapeHtml(track.author)} · ${formatQueueMusicDuration(track.durationMs)}</span>
+      </span>
+      <span class="queue-music-result-pick">Choisir</span>
+    </button>
+  `;
+  }).join('');
+  box.classList.add('show');
+}
+
+async function searchQueueMusicNow() {
+  if (queueMusicSearchTimer) {
+    clearTimeout(queueMusicSearchTimer);
+    queueMusicSearchTimer = null;
+  }
+  const input = document.getElementById('queue-music-search-input');
+  const btn = document.getElementById('queue-music-search-btn');
+  const q = String(input?.value || '').trim();
+  if (q.length < 2) return renderQueueMusicSearchResults([]);
+  const token = getStoredSessionToken();
+  if (!token) return renderQueueMusicSearchResults([], 'Connecte-toi pour rechercher.');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Recherche...';
+  }
+  try {
+    const res = await fetch(`/api/queue-music/search?q=${encodeURIComponent(q)}`, {
+      headers: { 'x-session-token': token },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Recherche indisponible.');
+    renderQueueMusicSearchResults(Array.isArray(data.tracks) ? data.tracks : []);
+  } catch (e) {
+    renderQueueMusicSearchResults([], e.message || 'Recherche impossible.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Rechercher';
+    }
+  }
+}
+
+function selectQueueMusicSearchResult(payload) {
+  let track = {};
+  try { track = JSON.parse(String(payload || '{}')); } catch(e) {}
+  const value = String(track.value || '');
+  const title = String(track.title || 'Musique YouTube');
+  const author = String(track.author || '');
+  const select = document.getElementById('queue-music-select');
+  const label = `YouTube • ${title}${author ? ' - ' + author : ''}`;
+  if (select && !Array.from(select.options).some(option => option.value === value)) {
+    select.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`);
+  }
+  if (select) select.value = value;
+  renderQueueMusicSearchResults([]);
+  previewQueueMusicChoice(value);
+  PROFIL_SFX.click();
 }
 
 async function useLocalQueueMusicFile(file) {

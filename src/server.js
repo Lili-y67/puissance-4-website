@@ -95,6 +95,8 @@ const HOSTED_BOT_THINK_MS = Math.max(400, Math.min(15_000, Number(process.env.P4
 const HOSTED_BOT_MAX_TABLE = Math.max(1_000, Math.min(120_000, Number(process.env.P4_HOST_MAX_TABLE || 60_000)));
 const LIVE_UPDATE_DEBOUNCE_MS = Math.max(250, Number(process.env.LIVE_UPDATE_DEBOUNCE_MS || 900));
 const BOT_HOST_METRIC_LIMIT = Math.max(30, Math.min(480, Number(process.env.BOT_HOST_METRIC_LIMIT || 240)));
+const LAVALINK_URL = String(process.env.LAVALINK_URL || '').trim().replace(/\/+$/, '');
+const LAVALINK_PASSWORD = String(process.env.LAVALINK_PASSWORD || process.env.LAVALINK_AUTH || '').trim();
 let nextAnonymousPlayerId = -1;
 
 function cleanGameChatMessage(message) {
@@ -6313,6 +6315,19 @@ function discordMemberAvatarUrl(memberInfo) {
   return discordAvatarUrl(memberInfo.user);
 }
 
+async function fetchDiscordUserProfile(discordUserId, botToken) {
+  try {
+    if (!discordUserId || !botToken) return null;
+    const userRes = await discordRestFetch(`discord-user:${discordUserId}:profile`, `https://discord.com/api/v10/users/${discordUserId}`, {
+      headers: { 'Authorization': 'Bot ' + botToken },
+    });
+    if (!userRes.ok) return null;
+    return await userRes.json();
+  } catch(e) {
+    return null;
+  }
+}
+
 function discordBannerUrl(discordUser) {
   if (!discordUser?.id || !discordUser?.banner) return '';
   const ext = String(discordUser.banner).startsWith('a_') ? 'gif' : 'png';
@@ -7115,6 +7130,70 @@ app.patch('/api/players/:id/profile-banner', (req, res) => {
   pQ.updateProfileBannerChangedAt.run({ changedAt: Date.now(), id });
   progression.recordAction(id, 'profile_updates');
   res.json({ ok: true });
+});
+
+function extractLavalinkTracks(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload.tracks)) return payload.tracks;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.data?.tracks)) return payload.data.tracks;
+  if (payload.data?.info) return [payload.data];
+  return [];
+}
+
+function serializeLavalinkTrack(track) {
+  const info = track?.info || track || {};
+  const uri = String(info.uri || info.url || '').trim();
+  const identifier = String(info.identifier || '').trim()
+    || (uri.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,20})/)?.[1] || '');
+  if (!identifier) return null;
+  return {
+    id: identifier,
+    value: `youtube:${identifier}`,
+    title: String(info.title || 'Titre YouTube').slice(0, 140),
+    author: String(info.author || info.uploader || 'YouTube').slice(0, 90),
+    durationMs: Number(info.length || info.duration || 0) || 0,
+    uri: uri || `https://www.youtube.com/watch?v=${identifier}`,
+    artworkUrl: String(info.artworkUrl || info.thumbnail || ''),
+  };
+}
+
+app.get('/api/queue-music/search', async (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifie.' });
+  const player = pQ.getById.get(playerId);
+  if (!isPersoPlayer(player) && !hasStaffRoleBenefits(player)) {
+    return res.status(403).json({ error: 'Reserve au grade Perso.' });
+  }
+  const q = String(req.query.q || '').trim();
+  if (q.length < 2) return res.json({ ok: true, tracks: [] });
+  if (!LAVALINK_URL || !LAVALINK_PASSWORD) {
+    return res.status(503).json({ error: 'Lavalink non configure.' });
+  }
+  try {
+    let response = await fetch(`${LAVALINK_URL}/v4/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
+      headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (response.status === 404) {
+      response = await fetch(`${LAVALINK_URL}/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
+        headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
+        signal: AbortSignal.timeout(8000),
+      });
+    }
+    const text = await response.text();
+    let payload = {};
+    try { payload = text ? JSON.parse(text) : {}; } catch(e) {}
+    if (!response.ok) return res.status(502).json({ error: `Lavalink indisponible (${response.status}).` });
+    const tracks = extractLavalinkTracks(payload)
+      .map(serializeLavalinkTrack)
+      .filter(Boolean)
+      .slice(0, 8);
+    res.json({ ok: true, tracks });
+  } catch (error) {
+    res.status(502).json({ error: 'Recherche Lavalink impossible.' });
+  }
 });
 
 app.patch('/api/players/:id/queue-music', (req, res) => {
@@ -8032,14 +8111,7 @@ app.post('/api/me/discord-avatar/refresh', async (req, res) => {
   const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken, { force: true });
   const memberInfo = snapshot?.memberInfo || null;
   let discordUser = memberInfo?.user || null;
-  if (!discordUser) {
-    try {
-      const userRes = await discordRestFetch(`discord-user:${player.discord_id}:avatar-refresh`, `https://discord.com/api/v10/users/${player.discord_id}`, {
-        headers: { 'Authorization': 'Bot ' + botToken },
-      });
-      if (userRes.ok) discordUser = await userRes.json();
-    } catch(e) {}
-  }
+  if (!discordUser) discordUser = await fetchDiscordUserProfile(player.discord_id, botToken);
   const avatar = discordMemberAvatarUrl(memberInfo) || discordAvatarUrl(discordUser);
   if (!avatar) return res.status(502).json({ error: 'Impossible de recuperer l avatar Discord.' });
 
@@ -8070,6 +8142,93 @@ app.post('/api/me/discord-avatar/refresh', async (req, res) => {
 
   const fresh = pQ.getById.get(player.id);
   res.json({ ok: true, avatar, discord: updatedInfo, player: sanitize(fresh) });
+});
+
+app.post('/api/me/discord-banner/refresh', async (req, res) => {
+  const token = req.headers['x-session-token'] || req.body?.token;
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifie.' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!player.discord_id) return res.status(400).json({ error: 'Aucun compte Discord lie.' });
+
+  const { botToken } = discordConfig();
+  if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible.' });
+
+  const discordUser = await fetchDiscordUserProfile(player.discord_id, botToken);
+  const banner = discordBannerUrl(discordUser);
+  if (!banner) return res.status(400).json({ error: 'Aucune banniere Discord recuperable pour ce compte.' });
+
+  pQ.updateBanner.run({ banner, id: player.id });
+
+  let existing = {};
+  try { existing = player.discord_info ? JSON.parse(player.discord_info) : {}; } catch(e) {}
+  const updatedInfo = {
+    ...existing,
+    id: player.discord_id,
+    username: discordUser?.username || existing.username || null,
+    global_name: discordUser?.global_name || existing.global_name || discordUser?.username || null,
+    discriminator: discordUser?.discriminator && discordUser.discriminator !== '0'
+      ? discordUser.discriminator
+      : (existing.discriminator || null),
+    banner_hash: discordUser?.banner || null,
+    banner_url: banner,
+    banner_refreshed_at: new Date().toISOString(),
+  };
+  rQ.setDiscord.run(player.discord_id, JSON.stringify(updatedInfo), player.id);
+  progression.recordAction(player.id, 'profile_updates');
+
+  const fresh = pQ.getById.get(player.id);
+  res.json({ ok: true, banner, discord: updatedInfo, player: sanitize(fresh) });
+});
+
+app.post('/api/me/discord-pseudo/refresh', async (req, res) => {
+  const token = req.headers['x-session-token'] || req.body?.token;
+  const playerId = token ? validateSession(token) : null;
+  if (!playerId) return res.status(401).json({ error: 'Non authentifie.' });
+
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  if (!player.discord_id) return res.status(400).json({ error: 'Aucun compte Discord lie.' });
+
+  const { botToken } = discordConfig();
+  if (!botToken) return res.status(503).json({ error: 'Bot Discord indisponible.' });
+
+  const discordUser = await fetchDiscordUserProfile(player.discord_id, botToken);
+  if (!discordUser?.id) return res.status(502).json({ error: 'Impossible de recuperer ton profil Discord.' });
+  const nextPseudo = normalizePseudoCandidate(discordUser?.global_name || discordUser?.username || '');
+  if (!/^[A-Za-z0-9_.-]{3,16}$/.test(nextPseudo)) {
+    return res.status(400).json({ error: 'Le pseudo Discord ne donne pas un pseudo valide sur le site.' });
+  }
+  const existing = pQ.getByPseudo.get(nextPseudo);
+  if (existing && Number(existing.id) !== player.id) return res.status(409).json({ error: 'Ce pseudo Discord est deja pris sur le site.' });
+  if (String(player.pseudo || '').toLowerCase() === nextPseudo.toLowerCase()) {
+    return res.json({ ok: true, pseudo: player.pseudo, unchanged: true, player: sanitize(player) });
+  }
+  const remaining = Number(player.pseudo_changed_at || 0) + PSEUDO_CHANGE_COOLDOWN_MS - Date.now();
+  if (remaining > 0) {
+    const days = Math.ceil(remaining / (24 * 60 * 60 * 1000));
+    return res.status(429).json({ error: `Pseudo modifiable dans ${days} jour(s).`, remainingMs: remaining });
+  }
+
+  pQ.updatePseudo.run({ pseudo: nextPseudo, id: player.id });
+  pQ.updatePseudoChangedAt.run({ changedAt: Date.now(), id: player.id });
+  try { await renameOnServer(player.discord_id, nextPseudo); } catch(e) {}
+
+  let discordInfo = {};
+  try { discordInfo = player.discord_info ? JSON.parse(player.discord_info) : {}; } catch(e) {}
+  rQ.setDiscord.run(player.discord_id, JSON.stringify({
+    ...discordInfo,
+    id: player.discord_id,
+    username: discordUser?.username || discordInfo.username || null,
+    global_name: discordUser?.global_name || discordInfo.global_name || discordUser?.username || null,
+    pseudo_refreshed_at: new Date().toISOString(),
+  }), player.id);
+  progression.recordAction(player.id, 'profile_updates');
+
+  const fresh = pQ.getById.get(player.id);
+  res.json({ ok: true, pseudo: nextPseudo, player: sanitize(fresh) });
 });
 
 // Demander un code de dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAliaison Discord AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA envoi DM via bot
