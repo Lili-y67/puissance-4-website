@@ -730,6 +730,17 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .collection-token[data-design="rune"]::before{content:'◇';inset:6px;display:grid;place-items:center;border:0;color:#fff;font-size:29px;text-shadow:0 0 8px #fff}
 .collection-token[data-design="queen"],.collection-token[data-design="queen-dark"]{background:conic-gradient(from 20deg,var(--token-a),var(--token-b),#fff2a8,var(--token-a));box-shadow:0 0 16px #fff,0 0 30px var(--token-b),inset 0 0 0 5px rgba(255,255,255,.18);animation:collectionTokenGlow 1.4s ease-in-out infinite alternate}
 .collection-token[data-design="queen"]::before,.collection-token[data-design="queen-dark"]::before{content:'♛';inset:4px;display:grid;place-items:center;border:0;color:#3a214d;font-size:30px;text-shadow:0 1px #fff,0 0 7px #fff}
+.collection-token[data-design="fantastic"],.collection-token[data-design="dragon-gem"],.collection-token[data-design="oracle"],.collection-token[data-design="crown-gem"]{background:conic-gradient(from 130deg,var(--token-a),#fff,var(--token-b),#ff83d1,var(--token-a));box-shadow:0 0 18px var(--token-a),0 0 34px rgba(255,131,209,.35),inset 0 0 0 5px rgba(255,255,255,.18);animation:collectionTokenGlow 1.8s ease-in-out infinite alternate}
+.collection-token[data-design="fantastic"]::before{content:'✦';inset:5px;display:grid;place-items:center;border:0;color:#fff;font-size:31px;text-shadow:0 0 10px var(--token-b)}
+.collection-token[data-design="dragon-gem"]::before{content:'◆';inset:5px;display:grid;place-items:center;border:0;color:#fff;font-size:28px;text-shadow:0 0 10px var(--token-a)}
+.collection-token[data-design="oracle"]::before{content:'☾';inset:5px;display:grid;place-items:center;border:0;color:#fff;font-size:32px;text-shadow:0 0 10px var(--token-b)}
+.collection-token[data-design="crown-gem"]::before{content:'♕';inset:5px;display:grid;place-items:center;border:0;color:#fff7c2;font-size:30px;text-shadow:0 0 10px var(--token-b)}
+.collection-token[data-design^="event"]{background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.82),transparent 13%),conic-gradient(from 25deg,var(--token-a),var(--token-b),#111,var(--token-a));border-color:rgba(133,235,255,.42);box-shadow:0 0 16px rgba(133,235,255,.35),inset 0 0 0 5px rgba(255,255,255,.12)}
+.collection-token[data-design^="event"]::before{content:'★';inset:7px;display:grid;place-items:center;border:1px dashed rgba(255,255,255,.52);color:#fff;font-size:24px;text-shadow:0 0 10px var(--token-a)}
+.collection-token[data-design="event-crown"]::before{content:'♛'}
+.collection-token[data-design="event-shadow"]::before{content:'◆'}
+.collection-token[data-design="image"]{background-image:var(--token-image),radial-gradient(circle at 50% 50%,var(--token-a),var(--token-b));background-size:cover;background-position:center;border-color:rgba(255,255,255,.5);box-shadow:0 0 18px var(--token-a),0 0 36px rgba(255,102,183,.38)}
+.collection-token[data-design="image"]::before{display:none}
 @keyframes collectionTokenGlow{to{filter:brightness(1.22);transform:translateY(-2px);box-shadow:0 0 22px var(--token-a),inset 0 0 0 5px rgba(255,255,255,.12)}}
 .collection-token.locked{filter:grayscale(1);opacity:.18;background:#777}
 .collection-token-qty{position:absolute;right:-7px;bottom:-5px;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:#090a13;border:1px solid rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;color:#fff;font:900 11px 'Barlow Condensed',sans-serif}
@@ -2190,7 +2201,9 @@ function renderClanSection(player, isOwnProfile) {
 }
 
 function tokenStyle(item) {
-  return `--token-a:${escapeHtml(item?.hex || '#555')};--token-b:${escapeHtml(item?.hexSecondary || item?.hex || '#555')}`;
+  const image = String(item?.image || '').trim();
+  const imageStyle = image ? `;--token-image:url('${escapeHtml(image)}')` : '';
+  return `--token-a:${escapeHtml(item?.hex || '#555')};--token-b:${escapeHtml(item?.hexSecondary || item?.hex || '#555')}${imageStyle}`;
 }
 
 function renderCollectionToken(item) {

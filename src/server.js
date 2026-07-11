@@ -3397,6 +3397,38 @@ app.patch('/api/admin/players/:id/shop-item', (req, res) => {
   res.json({ ok: true, itemKey, quantity, total: nextQty });
 });
 
+app.patch('/api/admin/players/:id/token-collection', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
+  const id = Number(req.params.id);
+  const target = pQ.getById.get(id);
+  if (!target || Number(target.deleted || 0) === 1) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  const tokenKey = String(req.body?.tokenKey || '').trim();
+  const quantity = Number(req.body?.quantity);
+  const token = TOKEN_COLOR_CATALOG.find(item => item.key === tokenKey);
+  if (!token) return res.status(400).json({ error: 'Jeton de collection invalide.' });
+  if (!Number.isFinite(quantity) || !Number.isInteger(quantity) || quantity <= 0 || quantity > 50) {
+    return res.status(400).json({ error: 'Quantite invalide.' });
+  }
+
+  const now = Date.now();
+  db.transaction(() => {
+    for (let i = 0; i < quantity; i++) {
+      tokenCollectionQ.add.run({ player_id: id, color_key: token.key, now });
+    }
+  })();
+
+  try {
+    WH.wlogAdminAction('Jeton collection donne', target.pseudo, id, [
+      ['Jeton', token.label, true],
+      ['Ajout', String(quantity), true],
+    ]);
+  } catch (e) {}
+
+  notifyPlayerProfileChanged(id, `Jeton de collection ajoute par le staff : ${token.label} x${quantity}.`);
+  res.json({ ok: true, token: { key: token.key, label: token.label }, quantity });
+});
+
 app.patch('/api/admin/players/:id/crystal', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent modifier Crystal.' });
   const id = Number(req.params.id);
@@ -5321,6 +5353,7 @@ function getTokenCollectionPayload(playerId) {
       rarityLabel: rarity?.label || color.rarity,
       spawnRate: Number(rarity?.spawnRate || 0),
       design: color.design || 'classic',
+      image: color.image || '',
       quantity: quantities.get(color.key) || 0,
     };
   });

@@ -1,11 +1,14 @@
 const TOKEN_RARITIES = Object.freeze([
-  { key: 'common', label: 'Commun', spawnRate: 50, color: '#ff5c72', design: 'classic' },
+  { key: 'common', label: 'Commun', spawnRate: 49, color: '#ff5c72', design: 'classic' },
   { key: 'rare', label: 'Rare', spawnRate: 25, color: '#4c8dff', design: 'grooved' },
   { key: 'epic', label: 'Epique', spawnRate: 12, color: '#bf5af2', design: 'star' },
   { key: 'legendary', label: 'Legendaire', spawnRate: 7, color: '#ffd60a', design: 'prism' },
   { key: 'mythic', label: 'Mythique', spawnRate: 3.5, color: '#ff2d86', design: 'mythic' },
   { key: 'artifact', label: 'Artefact', spawnRate: 1.5, color: '#72f7d4', design: 'artifact' },
   { key: 'queenpawn', label: 'QueenPawn', spawnRate: 1, color: '#fff2c7', design: 'queen' },
+  { key: 'fantastic', label: 'Fantastique', spawnRate: 0.9, color: '#6dffb8', design: 'fantastic' },
+  { key: 'unforgettable', label: 'Inoubliable', spawnRate: 0.1, color: '#ff66b7', design: 'image' },
+  { key: 'event', label: 'Evenement', spawnRate: 0, color: '#85ebff', design: 'event' },
 ]);
 
 const TOKEN_COLOR_CATALOG = Object.freeze([
@@ -49,6 +52,17 @@ const TOKEN_COLOR_CATALOG = Object.freeze([
 
   { key: 'queenpawn', label: 'QueenPawn', hex: '#fff8dd', hexSecondary: '#d39bff', theme: 'Tresors impossibles', rarity: 'queenpawn', design: 'queen', weight: 1, gemRewardMin: 15, gemRewardMax: 30 },
   { key: 'queenpawn_noire', label: 'QueenPawn Noire', hex: '#5c5278', hexSecondary: '#ff4dc4', theme: 'Tresors impossibles', rarity: 'queenpawn', design: 'queen-dark', weight: 1, gemRewardMin: 15, gemRewardMax: 30 },
+
+  { key: 'fee_sylvestre', label: 'Fee sylvestre', hex: '#79ffb1', hexSecondary: '#8b5cf6', theme: 'Fantastique', rarity: 'fantastic', design: 'fantastic', weight: 1, gemRewardMin: 18, gemRewardMax: 35 },
+  { key: 'cristal_draconique', label: 'Cristal draconique', hex: '#ff5a7a', hexSecondary: '#7df9ff', theme: 'Fantastique', rarity: 'fantastic', design: 'dragon-gem', weight: 1, gemRewardMin: 18, gemRewardMax: 35 },
+  { key: 'oracle_lunaire', label: 'Oracle lunaire', hex: '#f8f3ff', hexSecondary: '#6457ff', theme: 'Fantastique', rarity: 'fantastic', design: 'oracle', weight: 1, gemRewardMin: 18, gemRewardMax: 35 },
+  { key: 'royaume_oublie', label: 'Royaume oublie', hex: '#ffd36e', hexSecondary: '#f05cff', theme: 'Fantastique', rarity: 'fantastic', design: 'crown-gem', weight: 1, gemRewardMin: 18, gemRewardMax: 35 },
+
+  { key: 'princesse_inoubliable', label: 'Princesse inoubliable', hex: '#ff66b7', hexSecondary: '#ffd1ea', theme: 'Inoubliables', rarity: 'unforgettable', design: 'image', image: '/assets/token-inoubliable-princesse.png', weight: 1, gemRewardMin: 40, gemRewardMax: 80 },
+
+  { key: 'event_summer_2026', label: 'Festival ete 2026', hex: '#ffcc4d', hexSecondary: '#25d5ff', theme: 'Evenements', rarity: 'event', design: 'event-sun', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
+  { key: 'event_tournament_crown', label: 'Couronne tournoi', hex: '#ffe680', hexSecondary: '#7c4dff', theme: 'Evenements', rarity: 'event', design: 'event-crown', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
+  { key: 'event_shadow_drop', label: 'Drop des ombres', hex: '#504a68', hexSecondary: '#ff4dc4', theme: 'Evenements', rarity: 'event', design: 'event-shadow', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
 ]);
 
 function drawTokenColor(random = Math.random) {

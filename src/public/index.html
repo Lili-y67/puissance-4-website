@@ -1635,13 +1635,17 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 }
 .queue-music-arrival {
   display: none;
-  width: 100%;
+  min-width: 24px;
+  height: 24px;
+  line-height: 24px;
   text-align: center;
-  font-size: 11px;
-  font-weight: 800;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
   color: #85EBFF;
-  letter-spacing: 1.2px;
+  letter-spacing: 0;
   text-transform: uppercase;
+  text-shadow: 0 0 8px rgba(133,235,255,.95), 0 0 18px rgba(133,235,255,.55), 0 0 32px rgba(255,45,85,.34);
 }
 .queue-music-arrival.show {
   display: block;
@@ -4642,9 +4646,11 @@ const QueueMusic = (() => {
     const el = document.getElementById('queue-music-arrival');
     if (!el) return;
     if (arrivalRemaining > 0) {
-      el.textContent = `Arrivée de la musique dans ${arrivalRemaining}s`;
+      el.textContent = String(arrivalRemaining);
+      el.setAttribute('aria-label', `Arrivée de la musique dans ${arrivalRemaining} secondes`);
     } else {
-      el.textContent = 'Arrivée de la musique...';
+      el.textContent = '...';
+      el.setAttribute('aria-label', 'Arrivée de la musique');
     }
   }
 
@@ -4675,6 +4681,7 @@ const QueueMusic = (() => {
     if (el) {
       el.classList.remove('show');
       el.textContent = '';
+      el.removeAttribute('aria-label');
     }
     if (box) box.classList.remove('loading');
   }

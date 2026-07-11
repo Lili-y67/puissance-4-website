@@ -932,6 +932,7 @@ let adminLoginRequestId = null;
 let activeCouponsTimer = null;
 let activeCouponsTickTimer = null;
 let limitedPackItems = [];
+let adminTokenCatalog = [];
 const ADMIN_SHOP_BOOSTERS = {
   elo_custom_0_1: 'ELO x1.10',
   elo_custom_0_2: 'ELO x1.20',
@@ -1083,6 +1084,7 @@ async function showPanel() {
   });
   document.querySelector('.ops-grid')?.style.setProperty('display', myRole === 'admin' ? '' : 'none');
   if (myRole === 'admin') {
+    await loadAdminTokenCatalog();
     await loadBoostStatus();
     await loadCoinBoostStatus();
     await loadActiveCoupons();
@@ -1512,6 +1514,18 @@ function openModal(id) {
       </div>
 
       <div style="margin-bottom:14px">
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Jeton collection</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="give-token-collection" style="flex:1;min-width:220px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px;font-family:'Barlow',sans-serif;">
+            ${renderAdminTokenOptions()}
+          </select>
+          <input type="number" id="give-token-collection-qty" value="1" min="1" max="50" style="width:82px;margin-bottom:0;padding:9px 12px;font-size:13px">
+          <button class="btn-sm" style="background:rgba(255,102,183,0.16);color:#ff8ccf;border:1px solid rgba(255,102,183,0.32)" onclick="giveCollectionToken(${id})">Give</button>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:7px">Donne un pion secret, rare, événementiel ou Inoubliable directement à la collection.</div>
+      </div>
+
+      <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Mute</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
           ${[1,6,24,72].map(h => `<button class="btn-sm" style="background:rgba(255,159,10,0.12);color:var(--orange)" onclick="mute(${id},${h})">${h}h</button>`).join('')}
@@ -1594,6 +1608,32 @@ async function giveGems(id) {
   const delta = Number(document.getElementById('give-gems')?.value || 0);
   const data = await api('PATCH', `/api/admin/players/${id}/gems`, { delta });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur gemmes.');
+}
+
+async function loadAdminTokenCatalog() {
+  if (adminTokenCatalog.length) return adminTokenCatalog;
+  try {
+    const data = await api('GET', '/api/token-collection/catalog');
+    adminTokenCatalog = Array.isArray(data.items) ? data.items : [];
+  } catch (e) {
+    adminTokenCatalog = [];
+  }
+  return adminTokenCatalog;
+}
+
+function renderAdminTokenOptions() {
+  if (!adminTokenCatalog.length) return '<option value="">Catalogue indisponible</option>';
+  const grouped = adminTokenCatalog.reduce((map, item) => {
+    const theme = item.theme || 'Autres';
+    if (!map.has(theme)) map.set(theme, []);
+    map.get(theme).push(item);
+    return map;
+  }, new Map());
+  return [...grouped.entries()].map(([theme, items]) => `
+    <optgroup label="${escapeHtml(theme)}">
+      ${items.map(item => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)} · ${escapeHtml(item.rarity || '')}</option>`).join('')}
+    </optgroup>
+  `).join('');
 }
 
 async function giveBotCrystals(id) {
@@ -1732,6 +1772,13 @@ async function giveShopItem(id) {
   const quantity = Number(document.getElementById('give-shop-item-qty')?.value || 0);
   const data = await api('PATCH', `/api/admin/players/${id}/shop-item`, { itemKey, quantity });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur booster.');
+}
+
+async function giveCollectionToken(id) {
+  const tokenKey = String(document.getElementById('give-token-collection')?.value || '').trim();
+  const quantity = Number(document.getElementById('give-token-collection-qty')?.value || 0);
+  const data = await api('PATCH', `/api/admin/players/${id}/token-collection`, { tokenKey, quantity });
+  if (data.ok) closeAndReload(); else alert(data.error || 'Erreur jeton collection.');
 }
 
 async function mute(id, hours) {
