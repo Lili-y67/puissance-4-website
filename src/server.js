@@ -6,7 +6,7 @@ const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
 const os         = require('os');
-const { fork }   = require('child_process');
+const { fork, spawn } = require('child_process');
 const { Readable } = require('stream');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
@@ -98,6 +98,10 @@ const LIVE_UPDATE_DEBOUNCE_MS = Math.max(250, Number(process.env.LIVE_UPDATE_DEB
 const BOT_HOST_METRIC_LIMIT = Math.max(30, Math.min(480, Number(process.env.BOT_HOST_METRIC_LIMIT || 240)));
 const LAVALINK_URL = String(process.env.LAVALINK_URL || '').trim().replace(/\/+$/, '');
 const LAVALINK_PASSWORD = String(process.env.LAVALINK_PASSWORD || process.env.LAVALINK_AUTH || '').trim();
+const YTDLP_PATH = String(process.env.YTDLP_PATH || 'yt-dlp').trim();
+const YTDLP_FORMAT = String(process.env.YTDLP_FORMAT || 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best').trim();
+const YTDLP_NO_CHECK_CERTIFICATES = String(process.env.YTDLP_NO_CHECK_CERTIFICATES || '1') !== '0';
+const youtubeAudioUrlCache = new Map();
 let nextAnonymousPlayerId = -1;
 
 function cleanGameChatMessage(message) {
@@ -7215,6 +7219,74 @@ async function loadLavalinkTrack(identifier) {
   return extractLavalinkTracks(payload)[0] || null;
 }
 
+function resolveYoutubeAudioUrl(videoId) {
+  const cached = youtubeAudioUrlCache.get(videoId);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.url);
+  return new Promise((resolve, reject) => {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    const child = spawn(YTDLP_PATH, [
+      '--no-playlist',
+      '--no-warnings',
+      '--force-ipv4',
+      ...(YTDLP_NO_CHECK_CERTIFICATES ? ['--no-check-certificates'] : []),
+      '-f', YTDLP_FORMAT,
+      '-g',
+      url,
+    ], { windowsHide: true });
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error('yt-dlp timeout.'));
+    }, 20000);
+    child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
+    child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
+    child.on('error', error => {
+      clearTimeout(timer);
+      reject(new Error(`yt-dlp indisponible: ${error.message}`));
+    });
+    child.on('close', code => {
+      clearTimeout(timer);
+      if (code !== 0) return reject(new Error(`yt-dlp erreur ${code}: ${stderr.slice(0, 240)}`));
+      const directUrl = stdout
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .find(line => /^https?:\/\//i.test(line));
+      if (!directUrl) return reject(new Error('yt-dlp n a pas retourne d URL audio.'));
+      youtubeAudioUrlCache.set(videoId, { url: directUrl, expiresAt: Date.now() + 10 * 60 * 1000 });
+      resolve(directUrl);
+    });
+  });
+}
+
+async function proxyAudioUrl(req, res, url) {
+  if (/^https?:\/\/[^/]*googlevideo\.com\/videoplayback/i.test(url)) {
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return res.redirect(302, url);
+  }
+  const upstream = await fetch(url, {
+    headers: {
+      'User-Agent': req.get('user-agent') || 'Mozilla/5.0',
+      Range: req.get('range') || 'bytes=0-',
+    },
+    signal: AbortSignal.timeout(15000),
+  });
+  const contentType = upstream.headers.get('content-type') || 'audio/mp4';
+  if (!upstream.ok || !upstream.body) {
+    throw new Error(`Flux audio indisponible (${upstream.status}).`);
+  }
+  res.status(upstream.status === 206 ? 206 : 200);
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  const contentLength = upstream.headers.get('content-length');
+  const contentRange = upstream.headers.get('content-range');
+  const acceptRanges = upstream.headers.get('accept-ranges');
+  if (contentLength) res.setHeader('Content-Length', contentLength);
+  if (contentRange) res.setHeader('Content-Range', contentRange);
+  if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+  return Readable.fromWeb(upstream.body).pipe(res);
+}
+
 app.get('/api/queue-music/search', async (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = token ? validateSession(token) : null;
@@ -7264,32 +7336,26 @@ app.get('/api/queue-music/lavalink-stream/:videoId', async (req, res) => {
     return res.status(400).json({ error: 'ID YouTube invalide.' });
   }
   if (!LAVALINK_URL || !LAVALINK_PASSWORD) {
-    return res.status(503).json({ error: 'Lavalink non configure.' });
+    try {
+      const audioUrl = await resolveYoutubeAudioUrl(videoId);
+      return proxyAudioUrl(req, res, audioUrl);
+    } catch (error) {
+      return res.status(502).json({ error: error?.message || 'Extraction audio impossible.' });
+    }
   }
   try {
+    try {
+      const audioUrl = await resolveYoutubeAudioUrl(videoId);
+      return proxyAudioUrl(req, res, audioUrl);
+    } catch (extractError) {
+      console.warn('[QUEUE MUSIC] yt-dlp fallback Lavalink:', extractError?.message || extractError);
+    }
     const track = await loadLavalinkTrack(`https://www.youtube.com/watch?v=${videoId}`);
     const candidates = lavalinkTrackCandidates(track)
       .filter(url => !/youtube\.com\/watch|youtu\.be\//i.test(url));
     for (const url of candidates) {
       try {
-        const upstream = await fetch(url, {
-          headers: {
-            'User-Agent': req.get('user-agent') || 'Mozilla/5.0',
-            Range: req.get('range') || 'bytes=0-',
-          },
-          signal: AbortSignal.timeout(10000),
-        });
-        const contentType = upstream.headers.get('content-type') || '';
-        if (!upstream.ok || !/^audio\//i.test(contentType) || !upstream.body) continue;
-        res.status(upstream.status === 206 ? 206 : 200);
-        res.setHeader('Content-Type', contentType);
-        const contentLength = upstream.headers.get('content-length');
-        const contentRange = upstream.headers.get('content-range');
-        const acceptRanges = upstream.headers.get('accept-ranges');
-        if (contentLength) res.setHeader('Content-Length', contentLength);
-        if (contentRange) res.setHeader('Content-Range', contentRange);
-        if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
-        return Readable.fromWeb(upstream.body).pipe(res);
+        return proxyAudioUrl(req, res, url);
       } catch {}
     }
     const info = track?.info || {};
