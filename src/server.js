@@ -3152,10 +3152,10 @@ app.post('/api/admin/login', async (req, res) => {
   const stopcode = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   try {
     await sendDM(ctx.player.discord_id, [
-      '# 🛠️ **Puissance 4 - Console & Développement** 🛠️',
+      '# 🖥️ **Puissance 4 - Administration & Gestion** 🖥️',
       `**Bonjour <@${ctx.player.discord_id}> 👋**`,
       '',
-      'Vous avez demandé un accès au panel de développement ⚙️',
+      "Vous avez demandé un accès au panel d'administration 🚨",
       `🔒 Pour la sécurité, veuillez taper le code suivant : **${challengeCode}**`,
       `⏱️ Il expire <t:${Math.floor(challengeExpiresAt / 1000)}:R>. Ne le partagez avec personne.`,
       '',
