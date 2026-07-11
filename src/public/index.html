@@ -4567,6 +4567,7 @@ const QueueMusic = (() => {
   let youtubeFrame = null;
   let localObjectUrl = '';
   let volume = 0.35;
+  let usingFallback = false;
   function canUseCustomQueueMusic(player) {
     return !!(player && (Number(player.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(player.role || ''))));
   }
@@ -4633,11 +4634,12 @@ const QueueMusic = (() => {
   async function syncSource() {
     const a = get();
     if (!a) return;
+    usingFallback = false;
     const customMusic = getPlayerQueueMusic();
     let nextSrc = customMusic || DEFAULT_QUEUE_MUSIC;
     if (nextSrc.startsWith('youtube:')) {
       stopYouTube();
-      nextSrc = DEFAULT_QUEUE_MUSIC;
+      nextSrc = `/api/queue-music/lavalink-stream/${encodeURIComponent(nextSrc.slice(8))}`;
     }
     stopYouTube();
     if (nextSrc.startsWith('audio:')) nextSrc = nextSrc.slice(6);
@@ -4647,6 +4649,17 @@ const QueueMusic = (() => {
       a.setAttribute('src', nextSrc);
       a.load();
     }
+  }
+  function fallbackToDefault() {
+    const a = get();
+    if (!a || usingFallback) return;
+    usingFallback = true;
+    stopYouTube();
+    a.setAttribute('src', DEFAULT_QUEUE_MUSIC);
+    a.load();
+    a.volume = volume;
+    a.currentTime = 0;
+    a.play().catch(() => {});
   }
   function syncUI() {
     const slider = document.getElementById('queue-volume-slider');
@@ -4671,11 +4684,12 @@ const QueueMusic = (() => {
       }
       a.volume = volume;
       a.currentTime = 0;
-      a.play().catch(() => {});
+      a.play().catch(fallbackToDefault);
     },
     async start() {
       const a = get();
       if (!a) return;
+      a.onerror = fallbackToDefault;
       const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
       if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
       syncUI();
@@ -4684,7 +4698,7 @@ const QueueMusic = (() => {
       a.volume = volume;
       a.currentTime = 0;
       // Débloquer l'AudioContext si suspendu (politique autoplay navigateur)
-      const tryPlay = () => a.play().catch(() => {});
+      const tryPlay = () => a.play().catch(fallbackToDefault);
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
         const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (tmpCtx.state === 'suspended') {

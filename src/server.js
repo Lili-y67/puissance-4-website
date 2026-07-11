@@ -7,6 +7,7 @@ const path       = require('path');
 const crypto     = require('crypto');
 const os         = require('os');
 const { fork }   = require('child_process');
+const { Readable } = require('stream');
 
 const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
 const { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward } = require('./token-collection');
@@ -7173,6 +7174,47 @@ function serializeLavalinkTrack(track) {
   };
 }
 
+function lavalinkTrackCandidates(track) {
+  const info = track?.info || track || {};
+  const pluginInfo = track?.pluginInfo || {};
+  const candidates = [
+    pluginInfo.previewUrl,
+    pluginInfo.preview_url,
+    pluginInfo.streamUrl,
+    pluginInfo.stream_url,
+    pluginInfo.audioUrl,
+    pluginInfo.audio_url,
+    pluginInfo.url,
+    info.streamUrl,
+    info.audioUrl,
+    info.previewUrl,
+    info.uri,
+  ].map(value => String(value || '').trim()).filter(Boolean);
+  return [...new Set(candidates)].filter(url => /^https?:\/\//i.test(url));
+}
+
+async function loadLavalinkTrack(identifier) {
+  let response = await fetch(`${LAVALINK_URL}/v4/loadtracks?identifier=${encodeURIComponent(identifier)}`, {
+    headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (response.status === 404) {
+    response = await fetch(`${LAVALINK_URL}/loadtracks?identifier=${encodeURIComponent(identifier)}`, {
+      headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+  }
+  const text = await response.text();
+  let payload = {};
+  try { payload = text ? JSON.parse(text) : {}; } catch(e) {}
+  if (!response.ok) {
+    const error = new Error(`Lavalink indisponible (${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
+  return extractLavalinkTracks(payload)[0] || null;
+}
+
 app.get('/api/queue-music/search', async (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = token ? validateSession(token) : null;
@@ -7187,20 +7229,25 @@ app.get('/api/queue-music/search', async (req, res) => {
     return res.status(503).json({ error: 'Lavalink non configure.' });
   }
   try {
-    let response = await fetch(`${LAVALINK_URL}/v4/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
+    const response = await fetch(`${LAVALINK_URL}/v4/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
       headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
       signal: AbortSignal.timeout(8000),
-    });
+    }).catch(error => ({ error }));
+    if (response.error) throw response.error;
+    let payload = {};
     if (response.status === 404) {
-      response = await fetch(`${LAVALINK_URL}/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
+      const legacy = await fetch(`${LAVALINK_URL}/loadtracks?identifier=${encodeURIComponent(`ytsearch:${q}`)}`, {
         headers: { Authorization: LAVALINK_PASSWORD, Accept: 'application/json' },
         signal: AbortSignal.timeout(8000),
       });
+      const text = await legacy.text();
+      try { payload = text ? JSON.parse(text) : {}; } catch(e) {}
+      if (!legacy.ok) return res.status(502).json({ error: `Lavalink indisponible (${legacy.status}).` });
+    } else {
+      const text = await response.text();
+      try { payload = text ? JSON.parse(text) : {}; } catch(e) {}
+      if (!response.ok) return res.status(502).json({ error: `Lavalink indisponible (${response.status}).` });
     }
-    const text = await response.text();
-    let payload = {};
-    try { payload = text ? JSON.parse(text) : {}; } catch(e) {}
-    if (!response.ok) return res.status(502).json({ error: `Lavalink indisponible (${response.status}).` });
     const tracks = extractLavalinkTracks(payload)
       .map(serializeLavalinkTrack)
       .filter(Boolean)
@@ -7208,6 +7255,46 @@ app.get('/api/queue-music/search', async (req, res) => {
     res.json({ ok: true, tracks });
   } catch (error) {
     res.status(502).json({ error: 'Recherche Lavalink impossible.' });
+  }
+});
+
+app.get('/api/queue-music/lavalink-stream/:videoId', async (req, res) => {
+  const videoId = String(req.params.videoId || '').trim();
+  if (!/^[a-zA-Z0-9_-]{6,20}$/.test(videoId)) {
+    return res.status(400).json({ error: 'ID YouTube invalide.' });
+  }
+  if (!LAVALINK_URL || !LAVALINK_PASSWORD) {
+    return res.status(503).json({ error: 'Lavalink non configure.' });
+  }
+  try {
+    const track = await loadLavalinkTrack(`https://www.youtube.com/watch?v=${videoId}`);
+    const candidates = lavalinkTrackCandidates(track)
+      .filter(url => !/youtube\.com\/watch|youtu\.be\//i.test(url));
+    for (const url of candidates) {
+      try {
+        const upstream = await fetch(url, {
+          headers: {
+            'User-Agent': req.get('user-agent') || 'Mozilla/5.0',
+            Range: req.get('range') || 'bytes=0-',
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+        const contentType = upstream.headers.get('content-type') || '';
+        if (!upstream.ok || !/^audio\//i.test(contentType) || !upstream.body) continue;
+        res.status(upstream.status === 206 ? 206 : 200);
+        res.setHeader('Content-Type', contentType);
+        const contentLength = upstream.headers.get('content-length');
+        const contentRange = upstream.headers.get('content-range');
+        const acceptRanges = upstream.headers.get('accept-ranges');
+        if (contentLength) res.setHeader('Content-Length', contentLength);
+        if (contentRange) res.setHeader('Content-Range', contentRange);
+        if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
+        return Readable.fromWeb(upstream.body).pipe(res);
+      } catch {}
+    }
+    res.status(502).json({ error: 'Lavalink a resolu la piste, mais aucun flux audio web direct n est expose.' });
+  } catch (error) {
+    res.status(502).json({ error: error?.message || 'Lecture Lavalink impossible.' });
   }
 });
 
