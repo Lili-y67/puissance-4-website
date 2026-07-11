@@ -2762,10 +2762,11 @@ app.post('/api/dev/login', async (req, res) => {
 
   const { botToken } = discordConfig();
   const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
-  if (!snapshot?.developer && !isAdminPlayer(player)) {
+  const hasDeveloperAccess = !!snapshot?.developer || isDeveloperPlayer(player) || isAdminPlayer(player);
+  if (!hasDeveloperAccess) {
     return res.status(403).json({ error: 'Role Discord developpeur requis.' });
   }
-  applyDiscordSnapshotToPlayer(player, snapshot);
+  if (snapshot) applyDiscordSnapshotToPlayer(player, snapshot);
 
   if (requestId) {
     const challenge = developerLoginCodes.get(String(requestId));
@@ -2789,6 +2790,7 @@ app.post('/api/dev/login', async (req, res) => {
   const challengeId = crypto.randomBytes(16).toString('hex');
   const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   const challengeExpiresAt = Date.now() + 10 * 60 * 1000;
+  const stopcode = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
 
   developerLoginCodes.set(challengeId, {
     playerId: player.id,
@@ -3139,19 +3141,19 @@ app.post('/api/admin/login', async (req, res) => {
   const challengeId = crypto.randomBytes(16).toString('hex');
   const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   const challengeExpiresAt = Date.now() + 10 * 60 * 1000;
-  adminLoginCodes.set(requestToken, {
+  adminLoginCodes.set(challengeId, {
     playerId: ctx.playerId,
     role: ctx.role,
     code: challengeCode,
     expiresAt: challengeExpiresAt,
     attempts: 0,
   });
-  setTimeout(() => adminLoginCodes.delete(requestToken), 10 * 60 * 1000);
+  setTimeout(() => adminLoginCodes.delete(challengeId), 10 * 60 * 1000);
   const stopcode = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   try {
     await sendDM(ctx.player.discord_id, [
       '# 🛠️ **Puissance 4 - Console & Développement** 🛠️',
-      `**Bonjour <@${player.discord_id}> 👋**`,
+      `**Bonjour <@${ctx.player.discord_id}> 👋**`,
       '',
       'Vous avez demandé un accès au panel de développement ⚙️',
       `🔒 Pour la sécurité, veuillez taper le code suivant : **${challengeCode}**`,
@@ -3160,11 +3162,11 @@ app.post('/api/admin/login', async (req, res) => {
       `🛑 STOP ${stopcode}`,
     ].join('\n'));
   } catch (e) {
-    adminLoginCodes.delete(requestToken);
+    adminLoginCodes.delete(challengeId);
     return res.status(500).json({ error: "Impossible d'envoyer le code Discord. Verifie que le bot peut t'envoyer un DM." });
   }
 
-  res.json({ requiresCode: true, requestId: requestToken, role: ctx.role });
+  res.json({ requiresCode: true, requestId: challengeId, role: ctx.role });
 });
 
 // Route pour rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle de la session courante
