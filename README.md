@@ -66,12 +66,65 @@ la base de données et le bot Discord. Pour la production, configurez
 `BASE_URL=https://votre-domaine.fr` dans `.env`, puis placez Nginx ou Caddy
 devant le port Node.js.
 
+### Lecture YouTube des musiques de file
+
+La recherche YouTube passe par Lavalink, mais la lecture web a besoin de
+`yt-dlp` pour obtenir un vrai flux audio lisible par le navigateur.
+
+Sur un VPS Debian/Ubuntu recent, utilise `pipx` :
+
+```bash
+sudo apt update
+sudo apt install -y pipx
+pipx ensurepath
+pipx install yt-dlp
+which yt-dlp
+```
+
+Si `which yt-dlp` ne repond pas juste apres `pipx ensurepath`, reconnecte-toi
+au shell SSH ou utilise directement le chemin :
+
+```bash
+~/.local/bin/yt-dlp --version
+```
+
+Dans `.env`, laisse ou adapte :
+
+```env
+YTDLP_PATH=yt-dlp
+YTDLP_FORMAT=bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best
+YTDLP_NO_CHECK_CERTIFICATES=1
+```
+
+Si `which yt-dlp` donne par exemple `/home/p4/.local/bin/yt-dlp`, mets :
+
+```env
+YTDLP_PATH=/home/p4/.local/bin/yt-dlp
+```
+
+Alternative sans Python/pipx :
+
+```bash
+sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+sudo chmod a+rx /usr/local/bin/yt-dlp
+yt-dlp --version
+```
+
+Au démarrage, le serveur affiche `[QUEUE MUSIC] yt-dlp OK ...` si l'outil est
+trouvé. Sans `yt-dlp`, Lavalink peut encore chercher les titres, mais YouTube
+ne pourra pas être lu dans la file d'attente web.
+
 ## Variables d'environnement
 
 | Variable | Valeur par défaut | Description |
 |----------|-------------------|-------------|
 | PORT     | 3000              | Port HTTP interne du serveur |
 | BASE_URL | http://127.0.0.1:3000 | URL publique du site en production |
+| LAVALINK_URL | vide | URL Lavalink pour chercher les musiques YouTube |
+| LAVALINK_PASSWORD | vide | Mot de passe Lavalink côté serveur |
+| YTDLP_PATH | yt-dlp | Chemin vers le binaire yt-dlp |
+| YTDLP_FORMAT | bestaudio... | Format audio YouTube demandé à yt-dlp |
+| YTDLP_NO_CHECK_CERTIFICATES | 1 | Ajoute `--no-check-certificates` à yt-dlp |
 
 ## Pages
 

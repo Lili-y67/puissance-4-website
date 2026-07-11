@@ -7287,6 +7287,24 @@ async function proxyAudioUrl(req, res, url) {
   return Readable.fromWeb(upstream.body).pipe(res);
 }
 
+function logYtdlpStatus() {
+  const child = spawn(YTDLP_PATH, ['--version'], { windowsHide: true });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
+  child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
+  child.on('error', error => {
+    console.warn(`[QUEUE MUSIC] yt-dlp introuvable (${YTDLP_PATH}). Configure YTDLP_PATH ou installe yt-dlp. ${error.message}`);
+  });
+  child.on('close', code => {
+    if (code === 0) {
+      console.log(`[QUEUE MUSIC] yt-dlp OK (${YTDLP_PATH}) version ${stdout.trim() || 'inconnue'}`);
+    } else {
+      console.warn(`[QUEUE MUSIC] yt-dlp test echoue (${YTDLP_PATH}) code ${code}: ${stderr.trim().slice(0, 180)}`);
+    }
+  });
+}
+
 app.get('/api/queue-music/search', async (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = token ? validateSession(token) : null;
@@ -9971,6 +9989,7 @@ function buildDiscordBotContext() {
 initDb().then(() => {
   server.listen(PORT, () => {
     console.log(`[HTTP] http://localhost:${PORT}`);
+    logYtdlpStatus();
     if (String(process.env.DISCORD_CLEAR_CONNECTED_ON_BOOT || '0') === '1') {
       clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
     }
