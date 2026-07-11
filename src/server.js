@@ -102,6 +102,18 @@ const YTDLP_PATH = String(process.env.YTDLP_PATH || 'yt-dlp').trim();
 const YTDLP_FORMAT = String(process.env.YTDLP_FORMAT || 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best').trim();
 const YTDLP_NO_CHECK_CERTIFICATES = String(process.env.YTDLP_NO_CHECK_CERTIFICATES || '1') !== '0';
 const youtubeAudioUrlCache = new Map();
+
+function getYtdlpCandidates() {
+  const candidates = [YTDLP_PATH];
+  if (YTDLP_PATH === 'yt-dlp') {
+    candidates.push(
+      path.join(os.homedir(), '.local', 'bin', 'yt-dlp'),
+      '/usr/local/bin/yt-dlp',
+      '/usr/bin/yt-dlp'
+    );
+  }
+  return [...new Set(candidates.filter(Boolean))];
+}
 let nextAnonymousPlayerId = -1;
 
 function cleanGameChatMessage(message) {
@@ -7219,12 +7231,42 @@ async function loadLavalinkTrack(identifier) {
   return extractLavalinkTracks(payload)[0] || null;
 }
 
+function runYtdlp(args, timeoutMs = 20000) {
+  const candidates = getYtdlpCandidates();
+  let index = 0;
+  return new Promise((resolve, reject) => {
+    const tryNext = lastError => {
+      const bin = candidates[index++];
+      if (!bin) return reject(lastError || new Error('yt-dlp introuvable.'));
+      const child = spawn(bin, args, { windowsHide: true });
+      let stdout = '';
+      let stderr = '';
+      const timer = setTimeout(() => {
+        child.kill('SIGKILL');
+        reject(new Error('yt-dlp timeout.'));
+      }, timeoutMs);
+      child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
+      child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
+      child.on('error', error => {
+        clearTimeout(timer);
+        if (error?.code === 'ENOENT') return tryNext(error);
+        reject(new Error(`yt-dlp indisponible (${bin}): ${error.message}`));
+      });
+      child.on('close', code => {
+        clearTimeout(timer);
+        if (code === 0) return resolve({ bin, stdout, stderr });
+        reject(new Error(`yt-dlp erreur ${code} (${bin}): ${stderr.slice(0, 240)}`));
+      });
+    };
+    tryNext();
+  });
+}
+
 function resolveYoutubeAudioUrl(videoId) {
   const cached = youtubeAudioUrlCache.get(videoId);
   if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.url);
-  return new Promise((resolve, reject) => {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    const child = spawn(YTDLP_PATH, [
+  const url = `https://www.youtube.com/watch?v=${videoId}`;
+  return runYtdlp([
       '--no-playlist',
       '--no-warnings',
       '--force-ipv4',
@@ -7232,31 +7274,16 @@ function resolveYoutubeAudioUrl(videoId) {
       '-f', YTDLP_FORMAT,
       '-g',
       url,
-    ], { windowsHide: true });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      reject(new Error('yt-dlp timeout.'));
-    }, 20000);
-    child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
-    child.on('error', error => {
-      clearTimeout(timer);
-      reject(new Error(`yt-dlp indisponible: ${error.message}`));
-    });
-    child.on('close', code => {
-      clearTimeout(timer);
-      if (code !== 0) return reject(new Error(`yt-dlp erreur ${code}: ${stderr.slice(0, 240)}`));
+    ])
+    .then(({ stdout }) => {
       const directUrl = stdout
         .split(/\r?\n/)
         .map(line => line.trim())
         .find(line => /^https?:\/\//i.test(line));
-      if (!directUrl) return reject(new Error('yt-dlp n a pas retourne d URL audio.'));
+      if (!directUrl) throw new Error('yt-dlp n a pas retourne d URL audio.');
       youtubeAudioUrlCache.set(videoId, { url: directUrl, expiresAt: Date.now() + 10 * 60 * 1000 });
-      resolve(directUrl);
+      return directUrl;
     });
-  });
 }
 
 async function proxyAudioUrl(req, res, url) {
@@ -7288,21 +7315,13 @@ async function proxyAudioUrl(req, res, url) {
 }
 
 function logYtdlpStatus() {
-  const child = spawn(YTDLP_PATH, ['--version'], { windowsHide: true });
-  let stdout = '';
-  let stderr = '';
-  child.stdout.on('data', chunk => { stdout += chunk.toString('utf8'); });
-  child.stderr.on('data', chunk => { stderr += chunk.toString('utf8'); });
-  child.on('error', error => {
-    console.warn(`[QUEUE MUSIC] yt-dlp introuvable (${YTDLP_PATH}). Configure YTDLP_PATH ou installe yt-dlp. ${error.message}`);
-  });
-  child.on('close', code => {
-    if (code === 0) {
-      console.log(`[QUEUE MUSIC] yt-dlp OK (${YTDLP_PATH}) version ${stdout.trim() || 'inconnue'}`);
-    } else {
-      console.warn(`[QUEUE MUSIC] yt-dlp test echoue (${YTDLP_PATH}) code ${code}: ${stderr.trim().slice(0, 180)}`);
-    }
-  });
+  runYtdlp(['--version'], 8000)
+    .then(({ bin, stdout }) => {
+      console.log(`[QUEUE MUSIC] yt-dlp OK (${bin}) version ${stdout.trim() || 'inconnue'}`);
+    })
+    .catch(error => {
+      console.warn(`[QUEUE MUSIC] yt-dlp introuvable. Chemins testes: ${getYtdlpCandidates().join(', ')}. ${error.message}`);
+    });
 }
 
 app.get('/api/queue-music/search', async (req, res) => {

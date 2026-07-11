@@ -1612,6 +1612,9 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   backdrop-filter: blur(12px);
 }
 .queue-volume.show { display: flex; }
+.queue-volume.loading {
+  flex-wrap: wrap;
+}
 .queue-volume-icon {
   font-size: 16px;
   color: var(--text);
@@ -1629,6 +1632,19 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 1px;
+}
+.queue-music-arrival {
+  display: none;
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #85EBFF;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.queue-music-arrival.show {
+  display: block;
 }
 .boost-alert{
   display:none;
@@ -3508,6 +3524,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
           <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
           <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
           <span class="queue-volume-val" id="queue-volume-val">35%</span>
+          <span class="queue-music-arrival" id="queue-music-arrival" aria-live="polite"></span>
         </div>
       </div>
 
@@ -4567,6 +4584,8 @@ const QueueMusic = (() => {
   let localObjectUrl = '';
   let volume = 0.35;
   let usingFallback = false;
+  let arrivalTimer = null;
+  let arrivalRemaining = 0;
   function canUseCustomQueueMusic(player) {
     return !!(player && (Number(player.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(player.role || ''))));
   }
@@ -4615,6 +4634,51 @@ const QueueMusic = (() => {
   function stopYouTube() {
   }
 
+  function shouldShowArrivalTimer(src) {
+    return /^https?:\/\//i.test(src || '') || /\/api\/queue-music\/lavalink-stream\//i.test(src || '');
+  }
+
+  function setArrivalText() {
+    const el = document.getElementById('queue-music-arrival');
+    if (!el) return;
+    if (arrivalRemaining > 0) {
+      el.textContent = `Arrivée de la musique dans ${arrivalRemaining}s`;
+    } else {
+      el.textContent = 'Arrivée de la musique...';
+    }
+  }
+
+  function startArrivalTimer(src) {
+    stopArrivalTimer();
+    if (!shouldShowArrivalTimer(src)) return;
+    const box = document.getElementById('queue-volume');
+    const el = document.getElementById('queue-music-arrival');
+    if (!el) return;
+    arrivalRemaining = 8;
+    setArrivalText();
+    el.classList.add('show');
+    if (box) box.classList.add('loading');
+    arrivalTimer = setInterval(() => {
+      arrivalRemaining = Math.max(0, arrivalRemaining - 1);
+      setArrivalText();
+    }, 1000);
+  }
+
+  function stopArrivalTimer() {
+    if (arrivalTimer) {
+      clearInterval(arrivalTimer);
+      arrivalTimer = null;
+    }
+    arrivalRemaining = 0;
+    const el = document.getElementById('queue-music-arrival');
+    const box = document.getElementById('queue-volume');
+    if (el) {
+      el.classList.remove('show');
+      el.textContent = '';
+    }
+    if (box) box.classList.remove('loading');
+  }
+
   async function syncSource() {
     const a = get();
     if (!a) return;
@@ -4638,6 +4702,7 @@ const QueueMusic = (() => {
     const a = get();
     if (!a || usingFallback) return;
     usingFallback = true;
+    stopArrivalTimer();
     stopYouTube();
     a.setAttribute('src', DEFAULT_QUEUE_MUSIC);
     a.load();
@@ -4662,6 +4727,7 @@ const QueueMusic = (() => {
       if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
       syncUI();
       stopYouTube();
+      stopArrivalTimer();
       if ((a.getAttribute('src') || '') !== DEFAULT_QUEUE_MUSIC) {
         a.setAttribute('src', DEFAULT_QUEUE_MUSIC);
         a.load();
@@ -4680,6 +4746,12 @@ const QueueMusic = (() => {
       await syncSource();
       a.volume = volume;
       a.currentTime = 0;
+      startArrivalTimer(a.getAttribute('src') || '');
+      a.onplaying = stopArrivalTimer;
+      a.oncanplay = stopArrivalTimer;
+      a.onpause = () => {
+        if (a.currentTime === 0) stopArrivalTimer();
+      };
       // Débloquer l'AudioContext si suspendu (politique autoplay navigateur)
       const tryPlay = () => a.play().catch(fallbackToDefault);
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
@@ -4695,6 +4767,7 @@ const QueueMusic = (() => {
     },
     stop() {
       stopYouTube();
+      stopArrivalTimer();
       const a = get();
       if (!a) return;
       a.pause();
