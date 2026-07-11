@@ -4636,10 +4636,8 @@ const QueueMusic = (() => {
     const customMusic = getPlayerQueueMusic();
     let nextSrc = customMusic || DEFAULT_QUEUE_MUSIC;
     if (nextSrc.startsWith('youtube:')) {
-      a.pause();
-      a.removeAttribute('src');
-      startYouTube(nextSrc.slice(8));
-      return;
+      stopYouTube();
+      nextSrc = DEFAULT_QUEUE_MUSIC;
     }
     stopYouTube();
     if (nextSrc.startsWith('audio:')) nextSrc = nextSrc.slice(6);
@@ -4660,6 +4658,21 @@ const QueueMusic = (() => {
     if (icon) icon.textContent = pct === 0 ? '🔇' : (pct < 50 ? '🔉' : '🔊');
   }
   return {
+    prime() {
+      const a = get();
+      if (!a) return;
+      const savedVol = parseFloat(localStorage.getItem('queue_music_volume') || '');
+      if (!Number.isNaN(savedVol)) volume = Math.max(0, Math.min(savedVol, 1));
+      syncUI();
+      stopYouTube();
+      if ((a.getAttribute('src') || '') !== DEFAULT_QUEUE_MUSIC) {
+        a.setAttribute('src', DEFAULT_QUEUE_MUSIC);
+        a.load();
+      }
+      a.volume = volume;
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    },
     async start() {
       const a = get();
       if (!a) return;
@@ -5113,6 +5126,7 @@ async function connectAndQueue() {
     showError('Connecte-toi avant de rejoindre la file.');
     return;
   }
+  QueueMusic.prime();
   await refreshStoredPlayerForQueue();
   if (socket) {
     try { socket.removeAllListeners(); socket.disconnect(); } catch (e) {}
@@ -5168,8 +5182,14 @@ async function connectAndQueue() {
     window.P4DiscordPresence?.setContext(context);
     window.location.href = '/game';
   });
-  socket.on('connect_error', () => showError('Connexion à la file impossible pour le moment.'));
-  socket.on('error', ({ message }) => showError(message));
+  socket.on('connect_error', () => {
+    QueueMusic.stop();
+    showError('Connexion à la file impossible pour le moment.');
+  });
+  socket.on('error', ({ message }) => {
+    QueueMusic.stop();
+    showError(message);
+  });
 }
 
 function showQueueView(position) {

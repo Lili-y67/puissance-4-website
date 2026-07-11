@@ -743,7 +743,7 @@ function acceptDuelChallenge(challenge, accepterId) {
 gm._onAfkEnd = (result) => {
   if (!result) return;
   emitGameOver(result);
-  console.log(`[AFK] Partie ${result.gameId} terminee : winner side ${result.winner}`);
+  console.log(`[AFK] Partie ${result.gameId} terminée : winner side ${result.winner}`);
 };
 gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw, reason, payload }) => {
   try {
@@ -2771,25 +2771,35 @@ app.post('/api/dev/login', async (req, res) => {
 
   const challengeId = crypto.randomBytes(16).toString('hex');
   const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const challengeExpiresAt = Date.now() + 10 * 60 * 1000;
+
   developerLoginCodes.set(challengeId, {
     playerId: player.id,
     code: challengeCode,
-    expiresAt: Date.now() + 10 * 60 * 1000,
+    expiresAt: challengeExpiresAt,
     attempts: 0,
   });
+
   setTimeout(() => developerLoginCodes.delete(challengeId), 10 * 60 * 1000);
+
   try {
     await sendDM(player.discord_id, [
-      'Puissance 4 - Code Developer Console',
+      '# 🛠️ **Puissance 4 - Console & Développement** 🛠️',
+      `**Bonjour <@${player.discord_id}> 👋**`,
       '',
-      `Ton code de connexion est : ${challengeCode}`,
-      'Il expire dans 10 minutes. Ne le partage avec personne.',
+      'Vous avez demandé un accès au panel de développement ⚙️',
+      `🔒 Pour la sécurité, veuillez taper le code suivant : **${challengeCode}**`,
+      `⏱️ Il expire <t:${Math.floor(challengeExpiresAt / 1000)}:R>. Ne le partagez avec personne.`,
+      '',
+      `🛑 STOP ${stopcode}`,
     ].join('\n'));
-  } catch(e) {
+  } catch (e) {
     developerLoginCodes.delete(challengeId);
-    return res.status(500).json({ error: "Impossible d'envoyer le code Discord." });
+    return res.status(500).json({
+      error: "Impossible d'envoyer le code Discord.",
+    });
   }
-  res.json({ requiresCode: true, requestId: challengeId });
+  return res.json({requiresCode: true,requestId: challengeId,});
 });
 
 app.post('/api/dev/logout', (req, res) => {
@@ -3109,23 +3119,28 @@ app.post('/api/admin/login', async (req, res) => {
   }
 
   const crypto = require('crypto');
-  const requestToken = crypto.randomBytes(16).toString('hex');
+  const challengeId = crypto.randomBytes(16).toString('hex');
   const challengeCode = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+  const challengeExpiresAt = Date.now() + 10 * 60 * 1000;
   adminLoginCodes.set(requestToken, {
     playerId: ctx.playerId,
     role: ctx.role,
     code: challengeCode,
-    expiresAt: Date.now() + 10 * 60 * 1000,
+    expiresAt: challengeExpiresAt,
     attempts: 0,
   });
   setTimeout(() => adminLoginCodes.delete(requestToken), 10 * 60 * 1000);
-
+  const stopcode = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   try {
     await sendDM(ctx.player.discord_id, [
-      '🔐 Puissance 4 — Code admin',
+      '# 🛠️ **Puissance 4 - Console & Développement** 🛠️',
+      `**Bonjour <@${player.discord_id}> 👋**`,
       '',
-      `Ton code de connexion admin est : ${challengeCode}`,
-      'Il expire dans 10 minutes. Ne le partage avec personne.',
+      'Vous avez demandé un accès au panel de développement ⚙️',
+      `🔒 Pour la sécurité, veuillez taper le code suivant : **${challengeCode}**`,
+      `⏱️ Il expire <t:${Math.floor(challengeExpiresAt / 1000)}:R>. Ne le partagez avec personne.`,
+      '',
+      `🛑 STOP ${stopcode}`,
     ].join('\n'));
   } catch (e) {
     adminLoginCodes.delete(requestToken);
@@ -4720,7 +4735,7 @@ setInterval(async () => {
     const developerNow = developer ? 1 : 0;
     if (newRole !== player.role) {
       pQ.updateRole.run({ role: newRole, id: player.id });
-      console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ${newRole}`);
+      console.log(`[ROLE SYNC] ${player.pseudo} : ${player.role} -> ${newRole}`);
       WH.wlogRoleSync(player.pseudo, player.role, newRole);
     }
     if (vipNow !== Number(player.is_vip)) {
