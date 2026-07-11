@@ -7292,7 +7292,14 @@ app.get('/api/queue-music/lavalink-stream/:videoId', async (req, res) => {
         return Readable.fromWeb(upstream.body).pipe(res);
       } catch {}
     }
-    res.status(502).json({ error: 'Lavalink a resolu la piste, mais aucun flux audio web direct n est expose.' });
+    const info = track?.info || {};
+    res.status(502).json({
+      error: 'Lavalink a resolu la piste, mais aucun flux audio web direct n est expose.',
+      title: String(info.title || ''),
+      sourceName: String(info.sourceName || ''),
+      lavalinkResolved: !!track,
+      hint: 'Le Lavalink standard charge une track pour un player Discord, pas un fichier audio HTTP pour navigateur.',
+    });
   } catch (error) {
     res.status(502).json({ error: error?.message || 'Lecture Lavalink impossible.' });
   }

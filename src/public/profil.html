@@ -6118,11 +6118,13 @@ async function toggleQueueMusicPreview() {
   if (value === 'local:custom') src = await loadLocalQueueMusicObjectUrl().catch(() => '');
   if (value.startsWith('youtube:')) {
     const videoId = value.slice(8);
-    queueMusicPreviewFrame = document.createElement('iframe');
-    queueMusicPreviewFrame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&controls=1&playsinline=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
-    queueMusicPreviewFrame.allow = 'autoplay; encrypted-media; picture-in-picture';
-    queueMusicPreviewFrame.style.cssText = 'position:fixed;right:18px;bottom:18px;width:min(360px,calc(100vw - 36px));height:205px;z-index:99999;border:1px solid rgba(255,255,255,.18);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.45);background:#000;';
-    document.body.appendChild(queueMusicPreviewFrame);
+    queueMusicPreviewAudio = new Audio(`/api/queue-music/lavalink-stream/${encodeURIComponent(videoId)}`);
+    queueMusicPreviewAudio.volume = 0.55;
+    queueMusicPreviewAudio.currentTime = 0;
+    queueMusicPreviewAudio.play().catch(() => {
+      stopQueueMusicPreview();
+      alert('Lavalink a trouve la musique, mais ne fournit pas de flux audio web lisible pour cette video.');
+    });
     queueMusicPreviewTimer = setTimeout(() => stopQueueMusicPreview(), 15000);
     if (previewBtn) previewBtn.textContent = 'Stop';
     return;
