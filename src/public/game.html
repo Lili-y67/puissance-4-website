@@ -426,6 +426,74 @@ body {
 .col-btn:disabled { cursor: not-allowed; }
 .board.locked .cell { pointer-events: none; }
 .board.locked .col-btn { pointer-events: none; }
+.board-countdown-overlay{
+  position:absolute;
+  inset:40px 0 0;
+  z-index:7;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.board-countdown-overlay.show{display:flex}
+.board-countdown-card{
+  min-width:min(360px,80vw);
+  min-height:180px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border-radius:30px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(5,6,16,.72);
+  box-shadow:0 26px 90px rgba(0,0,0,.54),0 0 44px rgba(255,45,85,.16);
+  backdrop-filter:blur(12px);
+}
+.board-countdown-number{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:clamp(88px,17vw,180px);
+  font-weight:900;
+  letter-spacing:3px;
+  line-height:.78;
+  color:#fff;
+  text-shadow:0 0 34px rgba(255,45,85,.46),0 16px 44px rgba(0,0,0,.45);
+}
+.board-countdown-label{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color:rgba(238,238,245,.72);
+}
+.board-wrap.countdown-lock .board,
+.board-wrap.countdown-lock .col-buttons{
+  filter:saturate(.75) brightness(.62);
+  pointer-events:none;
+}
+.board-move-timer{
+  position:absolute;
+  left:50%;
+  top:56px;
+  z-index:6;
+  transform:translateX(-50%);
+  display:none;
+  min-width:104px;
+  padding:9px 18px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(5,6,16,.68);
+  box-shadow:0 16px 48px rgba(0,0,0,.40),0 0 24px rgba(133,235,255,.10);
+  backdrop-filter:blur(10px);
+  color:#85EBFF;
+  font:900 30px 'Barlow Condensed',sans-serif;
+  letter-spacing:2px;
+  text-align:center;
+  pointer-events:none;
+}
+.board-move-timer.show{display:block}
+.board-move-timer.danger{color:#ff4f6d;box-shadow:0 16px 48px rgba(0,0,0,.40),0 0 30px rgba(255,45,85,.22)}
 
 .board {
   width:min(100%, var(--board-max));
@@ -1123,6 +1191,13 @@ html[data-board-skin="obsidian"] .cell{border-radius:42%;background:radial-gradi
   <div class="board-wrap">
     <div class="col-buttons" id="col-btns"></div>
     <div class="board" id="board"></div>
+    <div class="board-move-timer" id="board-move-timer">00s</div>
+    <div class="board-countdown-overlay" id="board-countdown-overlay" aria-live="polite">
+      <div class="board-countdown-card">
+        <div class="board-countdown-number" id="board-countdown-number">3</div>
+        <div class="board-countdown-label">Prépare-toi</div>
+      </div>
+    </div>
     <div class="result-overlay" id="result-overlay">
       <div class="result-title"  id="result-title">VICTOIRE !</div>
       <div class="result-elo"    id="result-elo"></div>
@@ -1595,15 +1670,36 @@ function applyMoveTimerMeta(moveTimeSeconds = 0) {
   badge.classList.add('show');
 }
 
+function setBoardCountdown(value, show = true) {
+  const overlay = document.getElementById('board-countdown-overlay');
+  const number = document.getElementById('board-countdown-number');
+  const wrap = document.querySelector('.board-wrap');
+  const board = document.getElementById('board');
+  if (number) number.textContent = String(value || '');
+  overlay?.classList.toggle('show', Boolean(show));
+  wrap?.classList.toggle('countdown-lock', Boolean(show));
+  board?.classList.toggle('locked', Boolean(show));
+}
+
+function hideBoardCountdown() {
+  setBoardCountdown('', false);
+}
+
 function stopTurnTimer() {
   if (turnTimerInterval) {
     clearInterval(turnTimerInterval);
     turnTimerInterval = null;
   }
   const el = document.getElementById('turn-timer');
-  if (!el) return;
-  el.textContent = '00s';
-  el.classList.remove('show', 'danger');
+  if (el) {
+    el.textContent = '00s';
+    el.classList.remove('show', 'danger');
+  }
+  const boardTimer = document.getElementById('board-move-timer');
+  if (boardTimer) {
+    boardTimer.textContent = '00s';
+    boardTimer.classList.remove('show', 'danger');
+  }
 }
 
 function startTurnTimer() {
@@ -1613,13 +1709,22 @@ function startTurnTimer() {
   }
   stopTurnTimer();
   const el = document.getElementById('turn-timer');
-  if (!el) return;
+  const boardTimer = document.getElementById('board-move-timer');
+  if (!el && !boardTimer) return;
   turnDeadline = Date.now() + activeMoveTimeSeconds * 1000;
   const paint = () => {
     const remaining = Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
-    el.textContent = `${String(remaining).padStart(2, '0')}s`;
-    el.classList.add('show');
-    el.classList.toggle('danger', remaining <= 5);
+    const text = `${String(remaining).padStart(2, '0')}s`;
+    if (el) {
+      el.textContent = text;
+      el.classList.add('show');
+      el.classList.toggle('danger', remaining <= 5);
+    }
+    if (boardTimer) {
+      boardTimer.textContent = text;
+      boardTimer.classList.add('show');
+      boardTimer.classList.toggle('danger', remaining <= 5);
+    }
   };
   paint();
   turnTimerInterval = setInterval(() => {
@@ -1986,6 +2091,10 @@ function setupLobby(data) {
   let n = data.startsIn || 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
+  currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  renderBoard();
+  document.getElementById('lobby-overlay')?.classList.add('hidden');
+  setBoardCountdown(n, true);
   inCountdown = true;
   const iv = setInterval(() => {
     n--;
@@ -1993,9 +2102,11 @@ function setupLobby(data) {
       clearInterval(iv);
       inCountdown = false;
       SFX.go();
+      hideBoardCountdown();
       startGame(data);
     } else {
       cdEl.textContent = n;
+      setBoardCountdown(n, true);
       SFX.tick();
     }
   }, 1000);
@@ -2563,11 +2674,15 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
   let n = 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
+  currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  renderBoard();
+  document.getElementById('lobby-overlay')?.classList.add('hidden');
+  setBoardCountdown(n, true);
   const iv = setInterval(() => {
     n--;
     if (n <= 0) {
       clearInterval(iv); inCountdown = false; SFX.go();
-      document.getElementById('lobby-overlay').classList.add('hidden');
+      hideBoardCountdown();
       document.getElementById('name-p1').textContent = myPlayer.pseudo;
       setCardElo(1, myPlayer.elo || '—');
       document.getElementById('name-p2').textContent = '🤖 ' + botName;
@@ -2590,7 +2705,7 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       if (currentTurn === 2) {
         setTimeout(iaPlayBot, 520 + Math.random() * 420);
       }
-    } else { cdEl.textContent = n; SFX.tick(); }
+    } else { cdEl.textContent = n; setBoardCountdown(n, true); SFX.tick(); }
   }, 1000);
 }
 

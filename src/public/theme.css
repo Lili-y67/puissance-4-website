@@ -104,8 +104,6 @@ body.p4-wallpaper-mode .grid,
 body.p4-wallpaper-mode .wrap,
 body.p4-wallpaper-mode .container,
 body.p4-wallpaper-mode .layout,
-body.p4-wallpaper-mode .board,
-body.p4-wallpaper-mode .board-shell,
 body.p4-wallpaper-mode .stats-card,
 body.p4-wallpaper-mode .leader-card,
 body.p4-wallpaper-mode .rank-card,
@@ -153,6 +151,21 @@ body.p4-wallpaper-mode .p4-global-menu-panel {
     linear-gradient(180deg, rgba(20,20,40,.96), rgba(9,9,20,.95)) !important;
   box-shadow: -18px 0 70px rgba(0,0,0,.46) !important;
   backdrop-filter: blur(18px) !important;
+}
+
+body.p4-wallpaper-mode.cgu-page nav,
+body.p4-wallpaper-mode.cgu-page .card,
+body.p4-wallpaper-mode.cgu-page .rule-list li,
+body.p4-wallpaper-mode.cgu-page .sanction-cell,
+body.p4-wallpaper-mode.cgu-page .quick-links a,
+body.p4-wallpaper-mode.cgu-page .highlight {
+  background: linear-gradient(180deg, rgba(7,7,18,.62), rgba(7,7,18,.42)) !important;
+  box-shadow: 0 18px 54px rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+body.p4-wallpaper-mode.cgu-page .card::before {
+  display: block !important;
 }
 
 body.p4-wallpaper-mode .hero::before,

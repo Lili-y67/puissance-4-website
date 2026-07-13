@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'p4-shell-v3.5.0-wallpaper-menu-1';
+﻿const CACHE_VERSION = 'p4-shell-v3.5.0-wallpaper-game-1';
 const APP_SHELL = [
   '/',
   '/index.html',
