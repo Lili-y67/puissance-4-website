@@ -1612,6 +1612,16 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   color: var(--muted);
   letter-spacing: 1px;
 }
+.queue-music-time {
+  min-width: 78px;
+  text-align: left;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,.74);
+  white-space: nowrap;
+}
 .queue-music-arrival {
   display: none;
   min-width: 24px;
@@ -3491,6 +3501,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
           <span class="queue-volume-icon" id="queue-volume-icon">&#128266;</span>
           <input class="queue-volume-slider" id="queue-volume-slider" type="range" min="0" max="100" step="1" value="35" oninput="setQueueMusicVolume(this.value)">
           <span class="queue-volume-val" id="queue-volume-val">35%</span>
+          <span class="queue-music-time" id="queue-music-time">0:00</span>
           <span class="queue-music-arrival" id="queue-music-arrival" aria-live="polite"></span>
         </div>
       </div>
@@ -4554,6 +4565,7 @@ const QueueMusic = (() => {
   let usingFallback = false;
   let arrivalTimer = null;
   let arrivalRemaining = 0;
+  let progressTimer = null;
   function canUseCustomQueueMusic(player) {
     return !!(player && (Number(player.is_perso || 0) === 1 || ['admin', 'moderator'].includes(String(player.role || ''))));
   }
@@ -4650,6 +4662,42 @@ const QueueMusic = (() => {
     if (box) box.classList.remove('loading');
   }
 
+  function formatMusicTime(seconds) {
+    const total = Math.max(0, Math.floor(Number(seconds || 0)));
+    const minutes = Math.floor(total / 60);
+    const secs = String(total % 60).padStart(2, '0');
+    return `${minutes}:${secs}`;
+  }
+
+  function syncProgressUI() {
+    const el = document.getElementById('queue-music-time');
+    if (!el) return;
+    const a = get();
+    if (!a) {
+      el.textContent = '0:00';
+      return;
+    }
+    const current = formatMusicTime(a.currentTime || 0);
+    const duration = Number(a.duration || 0);
+    el.textContent = Number.isFinite(duration) && duration > 0
+      ? `${current} / ${formatMusicTime(duration)}`
+      : current;
+  }
+
+  function startProgressTimer() {
+    stopProgressTimer();
+    syncProgressUI();
+    progressTimer = setInterval(syncProgressUI, 500);
+  }
+
+  function stopProgressTimer() {
+    if (progressTimer) {
+      clearInterval(progressTimer);
+      progressTimer = null;
+    }
+    syncProgressUI();
+  }
+
   async function syncSource() {
     const a = get();
     if (!a) return;
@@ -4679,6 +4727,7 @@ const QueueMusic = (() => {
     a.load();
     a.volume = volume;
     a.currentTime = 0;
+    startProgressTimer();
     a.play().catch(() => {});
   }
   function syncUI() {
@@ -4689,6 +4738,7 @@ const QueueMusic = (() => {
     if (slider) slider.value = String(pct);
     if (valueEl) valueEl.textContent = pct + '%';
     if (icon) icon.textContent = pct === 0 ? '🔇' : (pct < 50 ? '🔉' : '🔊');
+    syncProgressUI();
   }
   return {
     prime() {
@@ -4699,12 +4749,16 @@ const QueueMusic = (() => {
       syncUI();
       stopYouTube();
       stopArrivalTimer();
+      stopProgressTimer();
       if ((a.getAttribute('src') || '') !== DEFAULT_QUEUE_MUSIC) {
         a.setAttribute('src', DEFAULT_QUEUE_MUSIC);
         a.load();
       }
       a.volume = volume;
       a.currentTime = 0;
+      a.onloadedmetadata = syncProgressUI;
+      a.ontimeupdate = syncProgressUI;
+      startProgressTimer();
       a.play().catch(fallbackToDefault);
     },
     async start() {
@@ -4717,6 +4771,8 @@ const QueueMusic = (() => {
       await syncSource();
       a.volume = volume;
       a.currentTime = 0;
+      a.onloadedmetadata = syncProgressUI;
+      a.ontimeupdate = syncProgressUI;
       startArrivalTimer(a.getAttribute('src') || '');
       a.onplaying = stopArrivalTimer;
       a.oncanplay = stopArrivalTimer;
@@ -4735,14 +4791,17 @@ const QueueMusic = (() => {
       } else {
         tryPlay();
       }
+      startProgressTimer();
     },
     stop() {
       stopYouTube();
       stopArrivalTimer();
+      stopProgressTimer();
       const a = get();
       if (!a) return;
       a.pause();
       a.currentTime = 0;
+      syncProgressUI();
     },
     setVolume(v) {
       volume = Math.max(0, Math.min(Number(v), 1));
