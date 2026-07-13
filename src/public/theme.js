@@ -1,6 +1,8 @@
 ﻿(function () {
   const STORAGE_KEY = 'p4_theme';
   const WALLPAPER_STORAGE_KEY = 'p4_profile_wallpaper';
+  const WALLPAPER_DESKTOP_KEY = 'p4_profile_wallpaper_desktop';
+  const WALLPAPER_MOBILE_KEY = 'p4_profile_wallpaper_mobile';
   const WALLPAPER_OPACITY_KEY = 'p4_profile_wallpaper_opacity';
   const WALLPAPER_DIM_KEY = 'p4_profile_wallpaper_dim';
   const root = document.documentElement;
@@ -83,20 +85,27 @@
     try {
       player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
     } catch (_) {}
-    let wallpaper = '';
+    let desktopWallpaper = '';
+    let mobileWallpaper = '';
     let opacity = 0.48;
     let dim = 0.28;
     try {
-      wallpaper = String(localStorage.getItem(WALLPAPER_STORAGE_KEY) || player?.profile_wallpaper || '').trim();
+      desktopWallpaper = String(localStorage.getItem(WALLPAPER_DESKTOP_KEY) || localStorage.getItem(WALLPAPER_STORAGE_KEY) || player?.profile_wallpaper_desktop || player?.profile_wallpaper || '').trim();
+      mobileWallpaper = String(localStorage.getItem(WALLPAPER_MOBILE_KEY) || player?.profile_wallpaper_mobile || '').trim();
       opacity = localStorage.getItem(WALLPAPER_OPACITY_KEY) ?? player?.profile_wallpaper_opacity ?? opacity;
       dim = localStorage.getItem(WALLPAPER_DIM_KEY) ?? player?.profile_wallpaper_dim ?? dim;
     } catch (_) {
-      wallpaper = String(player?.profile_wallpaper || '').trim();
+      desktopWallpaper = String(player?.profile_wallpaper_desktop || player?.profile_wallpaper || '').trim();
+      mobileWallpaper = String(player?.profile_wallpaper_mobile || '').trim();
       opacity = player?.profile_wallpaper_opacity ?? opacity;
       dim = player?.profile_wallpaper_dim ?? dim;
     }
+    const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
+    const wallpaper = isMobile ? (mobileWallpaper || desktopWallpaper) : desktopWallpaper;
     return {
       wallpaper,
+      desktopWallpaper,
+      mobileWallpaper,
       opacity: clampNumber(opacity, 0.48, 0.08, 1),
       dim: clampNumber(dim, 0.28, 0, 0.85),
     };
@@ -118,21 +127,30 @@
   }
 
   function saveWallpaperMode(settings = {}) {
-    const wallpaper = String(settings.wallpaper || '').trim();
+    const current = readWallpaperSettings();
+    const desktopWallpaper = typeof settings.desktopWallpaper === 'string'
+      ? settings.desktopWallpaper.trim()
+      : (typeof settings.wallpaper === 'string' ? settings.wallpaper.trim() : current.desktopWallpaper);
+    const mobileWallpaper = typeof settings.mobileWallpaper === 'string'
+      ? settings.mobileWallpaper.trim()
+      : current.mobileWallpaper;
     const opacity = clampNumber(settings.opacity, 0.48, 0.08, 1);
     const dim = clampNumber(settings.dim, 0.28, 0, 0.85);
     try {
-      if (wallpaper) {
-        localStorage.setItem(WALLPAPER_STORAGE_KEY, wallpaper);
-        localStorage.setItem(WALLPAPER_OPACITY_KEY, String(opacity));
-        localStorage.setItem(WALLPAPER_DIM_KEY, String(dim));
+      localStorage.removeItem(WALLPAPER_STORAGE_KEY);
+      if (desktopWallpaper || mobileWallpaper) {
+        if (desktopWallpaper) localStorage.setItem(WALLPAPER_DESKTOP_KEY, desktopWallpaper);
+        else localStorage.removeItem(WALLPAPER_DESKTOP_KEY);
+        if (mobileWallpaper) localStorage.setItem(WALLPAPER_MOBILE_KEY, mobileWallpaper);
+        else localStorage.removeItem(WALLPAPER_MOBILE_KEY);
       } else {
-        localStorage.removeItem(WALLPAPER_STORAGE_KEY);
-        localStorage.removeItem(WALLPAPER_OPACITY_KEY);
-        localStorage.removeItem(WALLPAPER_DIM_KEY);
+        localStorage.removeItem(WALLPAPER_DESKTOP_KEY);
+        localStorage.removeItem(WALLPAPER_MOBILE_KEY);
       }
+      localStorage.setItem(WALLPAPER_OPACITY_KEY, String(opacity));
+      localStorage.setItem(WALLPAPER_DIM_KEY, String(dim));
     } catch (_) {}
-    applyWallpaperMode({ wallpaper, opacity, dim });
+    applyWallpaperMode({ ...readWallpaperSettings(), desktopWallpaper, mobileWallpaper, opacity, dim });
   }
 
   window.P4Wallpaper = {
@@ -982,10 +1000,11 @@
   loadI18n();
   loadDiscordPresence();
   window.addEventListener('storage', event => {
-    if ([WALLPAPER_STORAGE_KEY, WALLPAPER_OPACITY_KEY, WALLPAPER_DIM_KEY, 'player'].includes(event.key)) {
+    if ([WALLPAPER_STORAGE_KEY, WALLPAPER_DESKTOP_KEY, WALLPAPER_MOBILE_KEY, WALLPAPER_OPACITY_KEY, WALLPAPER_DIM_KEY, 'player'].includes(event.key)) {
       applyWallpaperMode();
     }
   });
+  window.matchMedia?.('(max-width: 720px)').addEventListener?.('change', () => applyWallpaperMode());
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

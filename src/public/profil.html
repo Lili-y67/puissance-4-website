@@ -861,6 +861,10 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .wallpaper-preview.empty{display:grid;place-items:center;background:rgba(255,255,255,.035)}
 .wallpaper-preview.empty::before,.wallpaper-preview.empty::after{display:none}
 .wallpaper-preview.empty span{position:relative;z-index:1;color:var(--muted);font:900 12px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.wallpaper-preview.mobile{width:min(180px,100%);aspect-ratio:9/16}
+.wallpaper-preview-grid{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.wallpaper-preview-wrap{display:flex;flex-direction:column;gap:8px;min-width:150px}
+.wallpaper-preview-label{font:900 12px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .wallpaper-slider-row{display:grid;grid-template-columns:120px minmax(160px,1fr) 42px;gap:10px;align-items:center;width:100%}
 .wallpaper-slider-row label,.wallpaper-slider-row output{font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
 .wallpaper-slider-row input{width:100%}
@@ -2988,7 +2992,16 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         <span class="save-confirm" id="profile-wallpaper-confirm">✓ Appliqué !</span>
       </div>
       <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
-        <div class="wallpaper-preview" id="profile-wallpaper-preview"></div>
+        <div class="wallpaper-preview-grid">
+          <div class="wallpaper-preview-wrap">
+            <div class="wallpaper-preview-label">PC</div>
+            <div class="wallpaper-preview" id="profile-wallpaper-preview-desktop"></div>
+          </div>
+          <div class="wallpaper-preview-wrap">
+            <div class="wallpaper-preview-label">Téléphone</div>
+            <div class="wallpaper-preview mobile" id="profile-wallpaper-preview-mobile"></div>
+          </div>
+        </div>
         <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:12px">
           <div class="wallpaper-slider-row">
             <label for="profile-wallpaper-opacity">Image</label>
@@ -3001,9 +3014,11 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             <output id="profile-wallpaper-dim-value">28%</output>
           </div>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="avatar-decoration-btn" type="button" onclick="openProfileWallpaperPicker()">Choisir une image</button>
+            <button class="avatar-decoration-btn" type="button" onclick="openProfileWallpaperPicker('desktop')">Image PC</button>
+            <button class="avatar-decoration-btn" type="button" onclick="openProfileWallpaperPicker('mobile')">Image téléphone</button>
             <button class="avatar-decoration-btn" type="button" onclick="saveProfileWallpaperSettings()">Appliquer partout</button>
-            <button class="avatar-decoration-btn" type="button" onclick="removeProfileWallpaper()" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Retirer</button>
+            <button class="avatar-decoration-btn" type="button" onclick="removeProfileWallpaper('desktop')" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Retirer PC</button>
+            <button class="avatar-decoration-btn" type="button" onclick="removeProfileWallpaper('mobile')" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Retirer téléphone</button>
           </div>
         </div>
       </div>
@@ -7616,21 +7631,31 @@ function initProfileInteractionSounds() {
   });
 }
 
+let pendingProfileWallpaperTarget = 'desktop';
+
 function readProfileWallpaperSettings() {
-  const wallpaper =
-    (currentPlayer && String(currentPlayer.profile_wallpaper || '').trim()) ||
-    String(localStorage.getItem('p4_profile_wallpaper') || '').trim();
+  const desktopWallpaper =
+    (currentPlayer && String(currentPlayer.profile_wallpaper_desktop || currentPlayer.profile_wallpaper || '').trim()) ||
+    String(localStorage.getItem('p4_profile_wallpaper_desktop') || localStorage.getItem('p4_profile_wallpaper') || '').trim();
+  const mobileWallpaper =
+    (currentPlayer && String(currentPlayer.profile_wallpaper_mobile || '').trim()) ||
+    String(localStorage.getItem('p4_profile_wallpaper_mobile') || '').trim();
+  const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
+  const wallpaper = isMobile ? (mobileWallpaper || desktopWallpaper) : desktopWallpaper;
   const opacityRaw = Number(localStorage.getItem('p4_profile_wallpaper_opacity') || currentPlayer?.profile_wallpaper_opacity || 0.48);
   const dimRaw = Number(localStorage.getItem('p4_profile_wallpaper_dim') || currentPlayer?.profile_wallpaper_dim || 0.28);
   return {
     wallpaper,
+    desktopWallpaper,
+    mobileWallpaper,
     opacity: Math.min(1, Math.max(0.08, Number.isFinite(opacityRaw) ? opacityRaw : 0.48)),
     dim: Math.min(0.85, Math.max(0, Number.isFinite(dimRaw) ? dimRaw : 0.28)),
   };
 }
 
 function applyProfileWallpaperMode(settings = readProfileWallpaperSettings()) {
-  const wallpaper = String(settings.wallpaper || '').trim();
+  const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
+  const wallpaper = String(settings.wallpaper || (isMobile ? (settings.mobileWallpaper || settings.desktopWallpaper) : settings.desktopWallpaper) || '').trim();
   document.body.classList.toggle('profile-wallpaper-mode', Boolean(wallpaper));
   if (!wallpaper) {
     document.body.style.removeProperty('--profile-wallpaper-image');
@@ -7646,17 +7671,22 @@ function applyProfileWallpaperMode(settings = readProfileWallpaperSettings()) {
 
 function refreshProfileWallpaperControls() {
   const settings = readProfileWallpaperSettings();
-  const preview = document.getElementById('profile-wallpaper-preview');
+  const previewDesktop = document.getElementById('profile-wallpaper-preview-desktop');
+  const previewMobile = document.getElementById('profile-wallpaper-preview-mobile');
   const opacity = document.getElementById('profile-wallpaper-opacity');
   const dim = document.getElementById('profile-wallpaper-dim');
   if (opacity) opacity.value = String(Math.round(settings.opacity * 100));
   if (dim) dim.value = String(Math.round(settings.dim * 100));
-  if (preview) {
-    preview.classList.toggle('empty', !settings.wallpaper);
-    preview.style.backgroundImage = settings.wallpaper ? `url("${settings.wallpaper.replace(/["\\]/g, '\\$&')}")` : '';
+  [
+    [previewDesktop, settings.desktopWallpaper, 'Aucune image PC'],
+    [previewMobile, settings.mobileWallpaper, 'Aucune image téléphone'],
+  ].forEach(([preview, wallpaper, emptyLabel]) => {
+    if (!preview) return;
+    preview.classList.toggle('empty', !wallpaper);
+    preview.style.backgroundImage = wallpaper ? `url("${wallpaper.replace(/["\\]/g, '\\$&')}")` : '';
     preview.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
-    preview.innerHTML = settings.wallpaper ? '' : '<span>Aucune image</span>';
-  }
+    preview.innerHTML = wallpaper ? '' : `<span>${emptyLabel}</span>`;
+  });
   const opacityValue = document.getElementById('profile-wallpaper-opacity-value');
   const dimValue = document.getElementById('profile-wallpaper-dim-value');
   if (opacityValue) opacityValue.textContent = `${Math.round(settings.opacity * 100)}%`;
@@ -7666,6 +7696,8 @@ function refreshProfileWallpaperControls() {
 function previewProfileWallpaperSettings() {
   const current = readProfileWallpaperSettings();
   const settings = {
+    desktopWallpaper: current.desktopWallpaper,
+    mobileWallpaper: current.mobileWallpaper,
     wallpaper: current.wallpaper,
     opacity: Math.min(1, Math.max(0.08, Number(document.getElementById('profile-wallpaper-opacity')?.value || 48) / 100)),
     dim: Math.min(0.85, Math.max(0, Number(document.getElementById('profile-wallpaper-dim')?.value || 28) / 100)),
@@ -7674,24 +7706,29 @@ function previewProfileWallpaperSettings() {
   const dimValue = document.getElementById('profile-wallpaper-dim-value');
   if (opacityValue) opacityValue.textContent = `${Math.round(settings.opacity * 100)}%`;
   if (dimValue) dimValue.textContent = `${Math.round(settings.dim * 100)}%`;
-  document.getElementById('profile-wallpaper-preview')?.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
+  document.getElementById('profile-wallpaper-preview-desktop')?.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
+  document.getElementById('profile-wallpaper-preview-mobile')?.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
   applyProfileWallpaperMode(settings);
 }
 
 function saveProfileWallpaperSettings() {
   const current = readProfileWallpaperSettings();
   const settings = {
+    desktopWallpaper: current.desktopWallpaper,
+    mobileWallpaper: current.mobileWallpaper,
     wallpaper: current.wallpaper,
     opacity: Math.min(1, Math.max(0.08, Number(document.getElementById('profile-wallpaper-opacity')?.value || 48) / 100)),
     dim: Math.min(0.85, Math.max(0, Number(document.getElementById('profile-wallpaper-dim')?.value || 28) / 100)),
   };
   window.P4Wallpaper?.apply?.(settings);
   if (!window.P4Wallpaper) {
-    if (settings.wallpaper) {
-      localStorage.setItem('p4_profile_wallpaper', settings.wallpaper);
-      localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
-      localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
-    }
+    localStorage.removeItem('p4_profile_wallpaper');
+    if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
+    else localStorage.removeItem('p4_profile_wallpaper_desktop');
+    if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
+    else localStorage.removeItem('p4_profile_wallpaper_mobile');
+    localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
+    localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
     applyProfileWallpaperMode(settings);
   }
   const confirm = document.getElementById('profile-wallpaper-confirm');
@@ -7703,19 +7740,29 @@ function saveProfileWallpaperSettings() {
   PROFIL_SFX.success();
 }
 
-function removeProfileWallpaper() {
-  window.P4Wallpaper?.apply?.({ wallpaper: '' });
+function removeProfileWallpaper(target = 'all') {
+  const current = readProfileWallpaperSettings();
+  const settings = {
+    desktopWallpaper: target === 'desktop' || target === 'all' ? '' : current.desktopWallpaper,
+    mobileWallpaper: target === 'mobile' || target === 'all' ? '' : current.mobileWallpaper,
+    opacity: current.opacity,
+    dim: current.dim,
+  };
+  window.P4Wallpaper?.apply?.(settings);
   if (!window.P4Wallpaper) {
     localStorage.removeItem('p4_profile_wallpaper');
-    localStorage.removeItem('p4_profile_wallpaper_opacity');
-    localStorage.removeItem('p4_profile_wallpaper_dim');
-    applyProfileWallpaperMode({ wallpaper: '', opacity: 0.48, dim: 0.28 });
+    if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
+    else localStorage.removeItem('p4_profile_wallpaper_desktop');
+    if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
+    else localStorage.removeItem('p4_profile_wallpaper_mobile');
+    applyProfileWallpaperMode(settings);
   }
   refreshProfileWallpaperControls();
   PROFIL_SFX.click();
 }
 
-function openProfileWallpaperPicker() {
+function openProfileWallpaperPicker(target = 'desktop') {
+  pendingProfileWallpaperTarget = target === 'mobile' ? 'mobile' : 'desktop';
   document.getElementById('profile-wallpaper-input')?.click();
 }
 
@@ -7767,13 +7814,18 @@ async function handleProfileWallpaperUpload(input) {
     const wallpaper = await prepareProfileWallpaperData(file);
     const current = readProfileWallpaperSettings();
     const settings = {
-      wallpaper,
+      desktopWallpaper: pendingProfileWallpaperTarget === 'desktop' ? wallpaper : current.desktopWallpaper,
+      mobileWallpaper: pendingProfileWallpaperTarget === 'mobile' ? wallpaper : current.mobileWallpaper,
       opacity: current.opacity,
       dim: current.dim,
     };
     window.P4Wallpaper?.apply?.(settings);
     if (!window.P4Wallpaper) {
-      localStorage.setItem('p4_profile_wallpaper', settings.wallpaper);
+      localStorage.removeItem('p4_profile_wallpaper');
+      if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
+      else localStorage.removeItem('p4_profile_wallpaper_desktop');
+      if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
+      else localStorage.removeItem('p4_profile_wallpaper_mobile');
       localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
       localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
       applyProfileWallpaperMode(settings);
