@@ -94,6 +94,11 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
     { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
+    { name: 'db-reset', description: 'Reset DB admin: wallpapers ou base complete avec confirmation', default_member_permissions: '8', options: [
+      { type: 3, name: 'mode', description: 'Type de reset', required: true, choices: [{ name: 'Wallpapers seulement', value: 'wallpapers' }, { name: 'Sessions seulement', value: 'sessions' }, { name: 'DB complete', value: 'all' }] },
+      { type: 3, name: 'confirmation', description: 'Ecris CONFIRMER pour DB complete', required: false },
+      { type: 3, name: 'password', description: 'Mot de passe staff/admin si session expiree', required: false },
+    ] },
     adminCommand('coupon', 'Creer un code promotionnel boutique', [
       { type: 3, name: 'code', description: 'Code a creer, vide = aleatoire', required: false },
       { type: 3, name: 'type', description: 'Type de reduction', required: false, choices: [{ name: 'Pourcentage', value: 'discount' }, { name: 'Montant fixe', value: 'flat' }] },
@@ -1527,6 +1532,111 @@ function startDiscordBot(ctx) {
     return requireStaff(interaction, minimum);
   }
 
+  function createDbResetBackup(label = 'manual') {
+    const row = ctx.db.prepare('PRAGMA database_list').all().find(entry => entry.name === 'main');
+    const dbPath = row?.file || '';
+    if (!dbPath || !fs.existsSync(dbPath)) return null;
+    try { ctx.db.pragma('wal_checkpoint(FULL)'); } catch (_) {}
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupDir = path.join(path.dirname(dbPath), 'backups');
+    fs.mkdirSync(backupDir, { recursive: true });
+    const safeLabel = String(label || 'manual').replace(/[^a-z0-9_-]/gi, '-').slice(0, 32);
+    const backupPath = path.join(backupDir, `p4-${safeLabel}-${stamp}.db`);
+    fs.copyFileSync(dbPath, backupPath);
+    for (const suffix of ['-wal', '-shm']) {
+      const sidecar = `${dbPath}${suffix}`;
+      if (fs.existsSync(sidecar)) fs.copyFileSync(sidecar, `${backupPath}${suffix}`);
+    }
+    return backupPath;
+  }
+
+  function resetWallpaperRows() {
+    return ctx.db.prepare(`
+      UPDATE players
+      SET profile_wallpaper_desktop = '',
+          profile_wallpaper_mobile = '',
+          profile_wallpaper_opacity = 0.48,
+          profile_wallpaper_dim = 0.28
+      WHERE COALESCE(profile_wallpaper_desktop, '') != ''
+         OR COALESCE(profile_wallpaper_mobile, '') != ''
+         OR COALESCE(profile_wallpaper_opacity, 0.48) != 0.48
+         OR COALESCE(profile_wallpaper_dim, 0.28) != 0.28
+    `).run().changes || 0;
+  }
+
+  function resetRuntimeSessions() {
+    let changes = 0;
+    for (const table of ['sessions', 'reset_codes', 'unlink_codes']) {
+      try { changes += ctx.db.prepare(`DELETE FROM ${table}`).run().changes || 0; } catch (_) {}
+    }
+    return changes;
+  }
+
+  function resetWholeDatabase() {
+    const tables = ctx.db.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name NOT LIKE 'sqlite_%'
+        AND name NOT IN ('config')
+    `).all().map(row => row.name);
+    ctx.db.pragma('foreign_keys = OFF');
+    let changes = 0;
+    try {
+      for (const table of tables) {
+        changes += ctx.db.prepare(`DELETE FROM "${String(table).replace(/"/g, '""')}"`).run().changes || 0;
+      }
+      try { ctx.db.prepare(`DELETE FROM sqlite_sequence WHERE name NOT IN ('config')`).run(); } catch (_) {}
+    } finally {
+      ctx.db.pragma('foreign_keys = ON');
+    }
+    return { tables: tables.length, changes };
+  }
+
+  async function handleDbReset(interaction) {
+    const mode = optionString(interaction, 'mode', 'wallpapers') || 'wallpapers';
+    const role = await requireStaffForAdmin(interaction, 'admin');
+    if (!role) return;
+    if (mode === 'all' && optionString(interaction, 'confirmation', '') !== 'CONFIRMER') {
+      return interaction.editReply(containerMessage({
+        color: 0xff3b30,
+        title: 'Confirmation requise',
+        subtitle: 'Pour reset toute la DB, relance avec confirmation = CONFIRMER.',
+        sections: ['Conseil: utilise `mode: wallpapers` pour supprimer seulement les fonds custom qui bloquent les profils.'],
+      }));
+    }
+    let backupPath = null;
+    try {
+      backupPath = createDbResetBackup(mode);
+      let subtitle = '';
+      let sections = [];
+      if (mode === 'wallpapers') {
+        const changed = resetWallpaperRows();
+        resetRuntimeSessions();
+        subtitle = `${changed} profil(s) nettoye(s). Sessions reset pour forcer un refresh propre.`;
+      } else if (mode === 'sessions') {
+        const changed = resetRuntimeSessions();
+        subtitle = `${changed} session/code(s) supprime(s).`;
+      } else if (mode === 'all') {
+        const result = resetWholeDatabase();
+        subtitle = `DB videe: ${result.tables} table(s), ${result.changes} ligne(s) supprimee(s). Redemarre le serveur apres cette action.`;
+        sections.push('Le bot officiel et les schemas seront recréés au prochain demarrage via les migrations.');
+      } else {
+        return replyError(interaction, 'Mode invalide', mode);
+      }
+      if (backupPath) sections.push(`Backup cree: \`${backupPath}\``);
+      try { ctx.WH?.wlogAdminAction?.('DB reset Discord', interaction.user.tag || interaction.user.id, interaction.user.id, [['Mode', mode, true], ['Backup', backupPath || 'non', false]]); } catch (_) {}
+      return interaction.editReply(containerMessage({
+        color: mode === 'all' ? 0xff3b30 : 0x30d158,
+        title: mode === 'all' ? 'DB reset complet effectue' : 'DB reset effectue',
+        subtitle,
+        sections,
+      }));
+    } catch (error) {
+      return replyError(interaction, 'DB reset impossible', error.message || 'Erreur inconnue');
+    }
+  }
+
 
   async function handleAdmin(interaction) {
     const action = ADMIN_COMMAND_ACTIONS[interaction.commandName] || optionString(interaction, 'action', '');
@@ -2304,6 +2414,7 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'drop') return handleDrop(interaction);
       if (interaction.commandName === 'ticket-setup') return handleTicketSetup(interaction);
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
+      if (interaction.commandName === 'db-reset') return handleDbReset(interaction);
       if (ADMIN_COMMAND_ACTIONS[interaction.commandName]) return handleAdmin(interaction);
       if (interaction.commandName === 'admin-coupon') return handleCoupon(interaction);
       if (interaction.commandName === 'key-generate') return handleProductKey(interaction);

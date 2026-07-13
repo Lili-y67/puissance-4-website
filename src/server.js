@@ -5128,7 +5128,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
       try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const token = createSession(linkedPlayer.id);
-      const payload = toBase64Url(JSON.stringify({ token, player: sanitize(linkedPlayer), created: createdNewPlayer }));
+      const payload = toBase64Url(JSON.stringify({ token, player: stripWallpaperPayload(sanitize(linkedPlayer)), created: createdNewPlayer }));
       broadcastPresenceCounts(true);
       return res.redirect('/#discord-auth=' + payload);
     }
