@@ -2112,13 +2112,30 @@ app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/gam
 // Variables Discord lues depuis l'environnement du serveur.
 const DISCORD_FALLBACK_CLIENT_ID = '1477252548090921060';
 
+function normalizePublicUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+  return url.replace(/\/+$/, '');
+}
+
 function discordConfig() {
+  const baseUrl = normalizePublicUrl(
+    process.env.DISCORD_REDIRECT_BASE_URL
+    || process.env.PUBLIC_BASE_URL
+    || process.env.BASE_URL
+    || `http://127.0.0.1:${process.env.PORT || 3000}`
+  );
   return {
     clientId:     process.env.DISCORD_CLIENT_ID || DISCORD_FALLBACK_CLIENT_ID,
     clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
     botToken:     process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '',
-    baseUrl:      process.env.BASE_URL || process.env.PUBLIC_BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`,
+    baseUrl,
+    redirectUri:  normalizePublicUrl(process.env.DISCORD_REDIRECT_URI) || `${baseUrl}/auth/discord/callback`,
   };
+}
+
+function encodeDiscordState(payload) {
+  return Buffer.from(JSON.stringify(payload)).toString('base64');
 }
 
 function normalizeReferralId(value) {
@@ -4947,11 +4964,11 @@ function processCrystalMemberships(now = Date.now()) {
 app.get('/auth/discord/link', (req, res) => {
   const { playerId } = req.query;
   if (!playerId) return res.redirect('/profil?error=invalid');
-  const { clientId, baseUrl } = discordConfig();
-  const state  = Buffer.from(JSON.stringify({ playerId: Number(playerId), mode: 'link' })).toString('base64');
+  const { clientId, redirectUri } = discordConfig();
+  const state = encodeDiscordState({ playerId: Number(playerId), mode: 'link', redirectUri });
   const params = new URLSearchParams({
     client_id:     clientId,
-    redirect_uri:  baseUrl + '/auth/discord/callback',
+    redirect_uri:  redirectUri,
     response_type: 'code',
     scope:         'identify',
     state,
@@ -4960,11 +4977,15 @@ app.get('/auth/discord/link', (req, res) => {
 });
 
 app.get('/auth/discord/signin', (req, res) => {
-  const { clientId, baseUrl } = discordConfig();
-  const state = Buffer.from(JSON.stringify({ mode: 'signin', referrer: String(req.query.ref || req.query.referrer || '').trim().slice(0, 80) })).toString('base64');
+  const { clientId, redirectUri } = discordConfig();
+  const state = encodeDiscordState({
+    mode: 'signin',
+    referrer: String(req.query.ref || req.query.referrer || '').trim().slice(0, 80),
+    redirectUri,
+  });
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: baseUrl + '/auth/discord/callback',
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'identify',
     state,
@@ -4979,12 +5000,12 @@ app.get('/auth/discord/reset', (req, res) => {
   const player = pQ.getByPseudo.get(pseudo);
   if (!player) return res.redirect('/forgot-password?error=pseudo_introuvable');
 
-  const { clientId, baseUrl } = discordConfig();
+  const { clientId, redirectUri } = discordConfig();
   const clientIp = getClientIp(req);
-  const state  = Buffer.from(JSON.stringify({ playerId: player.id, ipHash: hashIp(clientIp) })).toString('base64');
+  const state = encodeDiscordState({ playerId: player.id, ipHash: hashIp(clientIp), redirectUri });
   const params = new URLSearchParams({
     client_id:     clientId,
-    redirect_uri:  baseUrl + '/auth/discord/callback',
+    redirect_uri:  redirectUri,
     response_type: 'code',
     scope:         'identify',
     state,
@@ -5015,7 +5036,8 @@ app.get('/auth/discord/callback', async (req, res) => {
     const player = playerId ? pQ.getById.get(playerId) : null;
     if (mode !== 'signin' && !player) return redirectDiscordError('joueur_introuvable');
 
-    const { clientId, clientSecret, baseUrl, botToken } = discordConfig();
+    const { clientId, clientSecret, redirectUri: configuredRedirectUri, botToken } = discordConfig();
+    const redirectUri = normalizePublicUrl(stateData?.redirectUri) || configuredRedirectUri;
     // AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAchanger le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
@@ -5025,7 +5047,7 @@ app.get('/auth/discord/callback', async (req, res) => {
         client_secret: clientSecret,
         grant_type:    'authorization_code',
         code,
-        redirect_uri:  baseUrl + '/auth/discord/callback',
+        redirect_uri:  redirectUri,
       }),
     });
     const tokenData = await tokenRes.json().catch(() => ({}));
@@ -5034,7 +5056,8 @@ app.get('/auth/discord/callback', async (req, res) => {
         status: tokenRes.status,
         error: String(tokenData.error || 'reponse_invalide'),
         description: String(tokenData.error_description || ''),
-        redirectUri: baseUrl + '/auth/discord/callback',
+        redirectUri,
+        configuredRedirectUri,
         clientId,
       });
       if (tokenData.error === 'invalid_client') return redirectDiscordError('discord_config');
@@ -6592,6 +6615,37 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
   res.json({ ...sanitize(freshPlayer), token, referralLinked: !!referrer });
 });
 
+const PROFILE_WALLPAPER_MAX_BYTES = 650 * 1024;
+
+function getDataUrlBytes(value) {
+  const input = String(value || '').trim();
+  const comma = input.indexOf(',');
+  if (!input || comma < 0) return 0;
+  try {
+    return Buffer.byteLength(input.slice(comma + 1), 'base64');
+  } catch {
+    return 0;
+  }
+}
+
+function safeWallpaperDataUrl(value) {
+  const input = String(value || '').trim();
+  if (!input) return '';
+  if (getDataUrlBytes(input) > PROFILE_WALLPAPER_MAX_BYTES) return '';
+  return input;
+}
+
+function stripWallpaperPayload(player) {
+  if (!player || typeof player !== 'object') return player;
+  return {
+    ...player,
+    profile_wallpaper_desktop: '',
+    profile_wallpaper_mobile: '',
+    profile_wallpaper_opacity: Number(player.profile_wallpaper_opacity || 0.48),
+    profile_wallpaper_dim: Number(player.profile_wallpaper_dim || 0.28),
+  };
+}
+
 // Ne jamais renvoyer le hash du mot de passe au client
 function sanitize(p) {
   const { password, bot_token_hash, bot_host_token, bot_host_token_hash, ...rest } = p;
@@ -6626,6 +6680,8 @@ function sanitize(p) {
   const canUseQueueMusic = isPersoPlayer(rest) || hasStaffRoleBenefits(rest);
   return {
     ...rest,
+    profile_wallpaper_desktop: safeWallpaperDataUrl(rest.profile_wallpaper_desktop || rest.profile_wallpaper || ''),
+    profile_wallpaper_mobile: safeWallpaperDataUrl(rest.profile_wallpaper_mobile || ''),
     queue_music: canUseQueueMusic ? String(rest.queue_music || '') : '',
     is_vip: isVipPlayer(rest) ? 1 : 0,
     is_vip_plus: isVipPlusPlayer(rest) ? 1 : 0,
@@ -7566,9 +7622,9 @@ function normalizeWallpaperDataUrl(value) {
     error.status = 400;
     throw error;
   }
-  const bytes = Buffer.from(input.slice(input.indexOf(',') + 1), 'base64');
-  if (bytes.length > 1.8 * 1024 * 1024) {
-    const error = new Error('Fond trop lourd apres compression (max 1.8 Mo).');
+  const bytes = getDataUrlBytes(input);
+  if (bytes > PROFILE_WALLPAPER_MAX_BYTES) {
+    const error = new Error('Fond trop lourd apres compression (max 650 Ko).');
     error.status = 413;
     throw error;
   }
@@ -8277,7 +8333,9 @@ app.get('/api/players/:id', (req, res) => {
     avg_accuracy = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
   }
 
-  const p = sanitize(player);
+  const token = String(req.headers['x-session-token'] || req.query.token || '').trim();
+  const includePrivateProfile = token && validateSession(token) === Number(player.id);
+  const p = includePrivateProfile ? sanitize(player) : stripWallpaperPayload(sanitize(player));
   const clan = serializeClan(cQ.getForPlayer.get(player.id));
   const runtime = Number(player.is_bot || 0) === 1 ? publicBotRuntime(player.id) : null;
   const online = Number(player.is_bot || 0) === 1 ? !!runtime.online : onlineSockets.has(Number(player.id));

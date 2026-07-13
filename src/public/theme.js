@@ -75,11 +75,36 @@
     });
   }
 
+  const WALLPAPER_MAX_CACHE_BYTES = 650 * 1024;
+
+  function approxDataUrlBytes(value) {
+    const input = String(value || '').trim();
+    const comma = input.indexOf(',');
+    if (!input || comma < 0) return 0;
+    return Math.ceil((input.length - comma - 1) * 0.75);
+  }
+
+  function pruneStoredHeavyWallpaper(player) {
+    if (!player || typeof player !== 'object') return player;
+    const patch = {};
+    if (approxDataUrlBytes(player.profile_wallpaper_desktop || player.profile_wallpaper || '') > WALLPAPER_MAX_CACHE_BYTES) {
+      patch.profile_wallpaper_desktop = '';
+      patch.profile_wallpaper = '';
+    }
+    if (approxDataUrlBytes(player.profile_wallpaper_mobile || '') > WALLPAPER_MAX_CACHE_BYTES) {
+      patch.profile_wallpaper_mobile = '';
+    }
+    if (!Object.keys(patch).length) return player;
+    patchStoredMenuPlayer(patch);
+    return { ...player, ...patch };
+  }
+
   function readWallpaperSettings() {
     let player = null;
     try {
       player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
     } catch (_) {}
+    player = pruneStoredHeavyWallpaper(player);
     let desktopWallpaper = '';
     let mobileWallpaper = '';
     let opacity = 0.48;

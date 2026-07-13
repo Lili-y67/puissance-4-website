@@ -2403,8 +2403,12 @@ async function load() {
   }
 
   try {
+    const sessionToken = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+    const profileFetchOptions = isOwnProfile && sessionToken
+      ? { headers: { 'x-session-token': sessionToken } }
+      : {};
     const [profileRes, followRes, tokenCollectionRes] = await Promise.all([
-      fetch(`/api/players/${playerId}`),
+      fetch(`/api/players/${playerId}`, profileFetchOptions),
       viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
       fetch(`/api/players/${playerId}/token-collection`),
     ]);
@@ -7820,16 +7824,30 @@ function loadImageElement(src) {
 async function prepareProfileWallpaperData(file) {
   const raw = await readFileAsDataUrl(file);
   const image = await loadImageElement(raw);
-  const maxSide = 1920;
-  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
-  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
-  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(image, 0, 0, width, height);
-  return canvas.toDataURL('image/jpeg', 0.84);
+  const originalWidth = image.naturalWidth || image.width;
+  const originalHeight = image.naturalHeight || image.height;
+  const attempts = [
+    { maxSide: 1400, quality: 0.76, type: 'image/webp' },
+    { maxSide: 1200, quality: 0.68, type: 'image/webp' },
+    { maxSide: 1100, quality: 0.62, type: 'image/jpeg' },
+    { maxSide: 960, quality: 0.58, type: 'image/jpeg' },
+  ];
+  let best = '';
+  for (const attempt of attempts) {
+    const scale = Math.min(1, attempt.maxSide / Math.max(originalWidth, originalHeight));
+    const width = Math.max(1, Math.round(originalWidth * scale));
+    const height = Math.max(1, Math.round(originalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.drawImage(image, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL(attempt.type, attempt.quality);
+    best = dataUrl;
+    const approxBytes = Math.ceil((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+    if (approxBytes <= 620 * 1024) return dataUrl;
+  }
+  throw new Error('Image encore trop lourde après compression. Essaie une image moins détaillée ou plus petite.');
 }
 
 async function handleProfileWallpaperUpload(input) {
@@ -7839,9 +7857,9 @@ async function handleProfileWallpaperUpload(input) {
     input.value = '';
     return alert('Image PNG, JPG ou WebP uniquement.');
   }
-  if (file.size > 8 * 1024 * 1024) {
+  if (file.size > 5 * 1024 * 1024) {
     input.value = '';
-    return alert('Fond trop lourd (max 8 Mo).');
+    return alert('Fond trop lourd (max 5 Mo avant compression).');
   }
   try {
     const wallpaper = await prepareProfileWallpaperData(file);
