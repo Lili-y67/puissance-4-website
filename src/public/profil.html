@@ -25,6 +25,88 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .orb.four{width:190px;height:190px;right:14%;bottom:4%;background:radial-gradient(circle,#30d158,transparent 70%);animation-duration:20s}
 @keyframes floatOrb{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(0,-20px,0) scale(1.05)}}
 .scanlines{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);}
+.profile-wallpaper-mode{
+  --surface: transparent;
+  --surface2: transparent;
+  --border: rgba(255,255,255,.20);
+  background:#000;
+}
+.profile-wallpaper-mode::before,
+.profile-wallpaper-mode::after{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
+.profile-wallpaper-mode::before{
+  z-index:0;
+  background:var(--profile-wallpaper-image) center/cover no-repeat fixed;
+  opacity:var(--profile-wallpaper-opacity,.48);
+}
+.profile-wallpaper-mode::after{
+  z-index:0;
+  background:rgba(0,0,0,var(--profile-wallpaper-dim,.28));
+}
+.profile-wallpaper-mode .bg-grid,
+.profile-wallpaper-mode .bg-orbs,
+.profile-wallpaper-mode .scanlines{
+  display:none;
+}
+.profile-wallpaper-mode .nav,
+.profile-wallpaper-mode .profile-side-card,
+.profile-wallpaper-mode .profile-side-link,
+.profile-wallpaper-mode .profile-side-stat,
+.profile-wallpaper-mode .profile-header,
+.profile-wallpaper-mode .social-card,
+.profile-wallpaper-mode .elo-history-card,
+.profile-wallpaper-mode .stat-card,
+.profile-wallpaper-mode .winrate-card,
+.profile-wallpaper-mode .tabs-row,
+.profile-wallpaper-mode .tab.active,
+.profile-wallpaper-mode .game-row,
+.profile-wallpaper-mode .player-row,
+.profile-wallpaper-mode .color-card,
+.profile-wallpaper-mode .shape-card,
+.profile-wallpaper-mode .avatar-decoration-card,
+.profile-wallpaper-mode .token-collection-card,
+.profile-wallpaper-mode .clan-card,
+.profile-wallpaper-mode .clan-row,
+.profile-wallpaper-mode .clan-meta-box,
+.profile-wallpaper-mode .profile-marquee,
+.profile-wallpaper-mode .profile-pill,
+.profile-wallpaper-mode .color-picker-inline,
+.profile-wallpaper-mode .color-custom-wrap,
+.profile-wallpaper-mode .color-preview-card,
+.profile-wallpaper-mode .emoji-input-wrap,
+.profile-wallpaper-mode .token-emoji-wrap,
+.profile-wallpaper-mode .token-emoji-preview,
+.profile-wallpaper-mode .avatar-decoration-preview,
+.profile-wallpaper-mode .cursor-custom-preview,
+.profile-wallpaper-mode .avatar-decoration-option,
+.profile-wallpaper-mode .pseudo-font-current,
+.profile-wallpaper-mode .pseudo-format-option span,
+.profile-wallpaper-mode .elo-history-canvas-wrap,
+.profile-wallpaper-mode .elo-history-stat,
+.profile-wallpaper-mode .elo-history-range,
+.profile-wallpaper-mode .replay-badge,
+.profile-wallpaper-mode .shape-btn,
+.profile-wallpaper-mode .toggle-wrap{
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+.profile-wallpaper-mode .profile-header::before,
+.profile-wallpaper-mode .profile-header::after,
+.profile-wallpaper-mode .profile-banner::after,
+.profile-wallpaper-mode .social-card::before,
+.profile-wallpaper-mode .stat-card::before,
+.profile-wallpaper-mode .token-collection-card::after,
+.profile-wallpaper-mode .clan-card::before{
+  display:none!important;
+}
+.profile-wallpaper-mode .profile-banner{
+  background:transparent!important;
+}
 .page{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:28px 18px 72px;display:flex;flex-direction:column;gap:22px;}
 .profile-shell{
   display:grid;
@@ -773,6 +855,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .cursor-custom-preview{position:relative;width:92px;height:92px;flex-shrink:0;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25% 75%,rgba(255,255,255,.045) 75%),linear-gradient(45deg,rgba(255,255,255,.045) 25%,transparent 25% 75%,rgba(255,255,255,.045) 75%);background-position:0 0,8px 8px;background-size:16px 16px;display:grid;place-items:center}
 .cursor-custom-preview img{width:32px;height:32px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 5px 6px rgba(0,0,0,.45))}
 .cursor-custom-preview::after{content:'32×32';position:absolute;right:7px;bottom:6px;padding:2px 5px;border-radius:6px;background:rgba(0,0,0,.62);color:rgba(255,255,255,.7);font:800 8px 'Barlow Condensed',sans-serif;letter-spacing:.8px}
+.wallpaper-preview{position:relative;width:min(360px,100%);aspect-ratio:16/9;flex-shrink:0;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:#05060d center/cover no-repeat;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+.wallpaper-preview::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,var(--wallpaper-preview-dim,.28))}
+.wallpaper-preview::after{content:"";position:absolute;left:14px;right:14px;bottom:14px;height:38px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06)}
+.wallpaper-preview.empty{display:grid;place-items:center;background:rgba(255,255,255,.035)}
+.wallpaper-preview.empty::before,.wallpaper-preview.empty::after{display:none}
+.wallpaper-preview.empty span{position:relative;z-index:1;color:var(--muted);font:900 12px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.wallpaper-slider-row{display:grid;grid-template-columns:120px minmax(160px,1fr) 42px;gap:10px;align-items:center;width:100%}
+.wallpaper-slider-row label,.wallpaper-slider-row output{font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
+.wallpaper-slider-row input{width:100%}
 .avatar-decoration-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:10px}
 .avatar-decoration-tier{grid-column:1/-1;margin:8px 0 0;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--tier-color,#85EBFF);display:flex;align-items:center;gap:8px}
 .avatar-decoration-tier::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--tier-color,#85EBFF),transparent);opacity:.35}
@@ -1286,6 +1377,7 @@ body.search-open .profile-side{
 <input type="file" id="token-emoji-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleTokenEmojiUpload(this)">
 <input type="file" id="avatar-decoration-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleAvatarDecorationUpload(this)">
 <input type="file" id="custom-cursor-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleCustomCursorUpload(this)">
+<input type="file" id="profile-wallpaper-input" accept="image/png,image/jpeg,image/jpg,image/webp" onchange="handleProfileWallpaperUpload(this)">
 <div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
   <div class="upload-chooser-modal">
     <div class="upload-chooser-head">
@@ -2328,6 +2420,7 @@ async function load() {
     profileTokenCollection = tokenCollectionData.collection || { items: [], stats: {} };
     const freshPlayer = player;
     currentPlayer = freshPlayer;
+    applyProfileWallpaperMode();
     if (isOwnProfile) {
       syncStoredPlayerPatch({ custom_cursor: String(freshPlayer.custom_cursor || ''), language: String(freshPlayer.language || 'fr') });
       await window.P4I18n?.setLanguage(String(freshPlayer.language || 'fr'));
@@ -2353,6 +2446,7 @@ async function load() {
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, totalGames);
     window.P4I18n?.apply(document.getElementById('content'));
     renderQueueMusicPicker(freshPlayer);
+    refreshProfileWallpaperControls();
     loadEloHistory(freshPlayer.id, eloHistoryDays, true);
     if (eloHistoryTimer) clearInterval(eloHistoryTimer);
     eloHistoryTimer = setInterval(() => {
@@ -2884,6 +2978,35 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
       ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
+    </div>
+    <div class="avatar-decoration-card" id="profile-wallpaper-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div>
+          <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Fond d'écran du site</span>
+          <div style="font-size:11px;color:var(--muted);margin-top:5px">Image pleine page, cartes transparentes et contours conservés sur toutes les pages.</div>
+        </div>
+        <span class="save-confirm" id="profile-wallpaper-confirm">✓ Appliqué !</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div class="wallpaper-preview" id="profile-wallpaper-preview"></div>
+        <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:12px">
+          <div class="wallpaper-slider-row">
+            <label for="profile-wallpaper-opacity">Image</label>
+            <input type="range" id="profile-wallpaper-opacity" min="8" max="100" value="48" oninput="previewProfileWallpaperSettings()">
+            <output id="profile-wallpaper-opacity-value">48%</output>
+          </div>
+          <div class="wallpaper-slider-row">
+            <label for="profile-wallpaper-dim">Sombre</label>
+            <input type="range" id="profile-wallpaper-dim" min="0" max="85" value="28" oninput="previewProfileWallpaperSettings()">
+            <output id="profile-wallpaper-dim-value">28%</output>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="avatar-decoration-btn" type="button" onclick="openProfileWallpaperPicker()">Choisir une image</button>
+            <button class="avatar-decoration-btn" type="button" onclick="saveProfileWallpaperSettings()">Appliquer partout</button>
+            <button class="avatar-decoration-btn" type="button" onclick="removeProfileWallpaper()" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Retirer</button>
+          </div>
+        </div>
+      </div>
     </div>
     ${canConfigurePersoBadge(player) ? `
     <div class="color-card" id="perso-role-card">
@@ -7493,9 +7616,181 @@ function initProfileInteractionSounds() {
   });
 }
 
+function readProfileWallpaperSettings() {
+  const wallpaper =
+    (currentPlayer && String(currentPlayer.profile_wallpaper || '').trim()) ||
+    String(localStorage.getItem('p4_profile_wallpaper') || '').trim();
+  const opacityRaw = Number(localStorage.getItem('p4_profile_wallpaper_opacity') || currentPlayer?.profile_wallpaper_opacity || 0.48);
+  const dimRaw = Number(localStorage.getItem('p4_profile_wallpaper_dim') || currentPlayer?.profile_wallpaper_dim || 0.28);
+  return {
+    wallpaper,
+    opacity: Math.min(1, Math.max(0.08, Number.isFinite(opacityRaw) ? opacityRaw : 0.48)),
+    dim: Math.min(0.85, Math.max(0, Number.isFinite(dimRaw) ? dimRaw : 0.28)),
+  };
+}
+
+function applyProfileWallpaperMode(settings = readProfileWallpaperSettings()) {
+  const wallpaper = String(settings.wallpaper || '').trim();
+  document.body.classList.toggle('profile-wallpaper-mode', Boolean(wallpaper));
+  if (!wallpaper) {
+    document.body.style.removeProperty('--profile-wallpaper-image');
+    document.body.style.removeProperty('--profile-wallpaper-opacity');
+    document.body.style.removeProperty('--profile-wallpaper-dim');
+  } else {
+    document.body.style.setProperty('--profile-wallpaper-image', `url("${wallpaper.replace(/["\\]/g, '\\$&')}")`);
+    document.body.style.setProperty('--profile-wallpaper-opacity', String(settings.opacity));
+    document.body.style.setProperty('--profile-wallpaper-dim', String(settings.dim));
+  }
+  window.P4Wallpaper?.refresh?.();
+}
+
+function refreshProfileWallpaperControls() {
+  const settings = readProfileWallpaperSettings();
+  const preview = document.getElementById('profile-wallpaper-preview');
+  const opacity = document.getElementById('profile-wallpaper-opacity');
+  const dim = document.getElementById('profile-wallpaper-dim');
+  if (opacity) opacity.value = String(Math.round(settings.opacity * 100));
+  if (dim) dim.value = String(Math.round(settings.dim * 100));
+  if (preview) {
+    preview.classList.toggle('empty', !settings.wallpaper);
+    preview.style.backgroundImage = settings.wallpaper ? `url("${settings.wallpaper.replace(/["\\]/g, '\\$&')}")` : '';
+    preview.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
+    preview.innerHTML = settings.wallpaper ? '' : '<span>Aucune image</span>';
+  }
+  const opacityValue = document.getElementById('profile-wallpaper-opacity-value');
+  const dimValue = document.getElementById('profile-wallpaper-dim-value');
+  if (opacityValue) opacityValue.textContent = `${Math.round(settings.opacity * 100)}%`;
+  if (dimValue) dimValue.textContent = `${Math.round(settings.dim * 100)}%`;
+}
+
+function previewProfileWallpaperSettings() {
+  const current = readProfileWallpaperSettings();
+  const settings = {
+    wallpaper: current.wallpaper,
+    opacity: Math.min(1, Math.max(0.08, Number(document.getElementById('profile-wallpaper-opacity')?.value || 48) / 100)),
+    dim: Math.min(0.85, Math.max(0, Number(document.getElementById('profile-wallpaper-dim')?.value || 28) / 100)),
+  };
+  const opacityValue = document.getElementById('profile-wallpaper-opacity-value');
+  const dimValue = document.getElementById('profile-wallpaper-dim-value');
+  if (opacityValue) opacityValue.textContent = `${Math.round(settings.opacity * 100)}%`;
+  if (dimValue) dimValue.textContent = `${Math.round(settings.dim * 100)}%`;
+  document.getElementById('profile-wallpaper-preview')?.style.setProperty('--wallpaper-preview-dim', String(settings.dim));
+  applyProfileWallpaperMode(settings);
+}
+
+function saveProfileWallpaperSettings() {
+  const current = readProfileWallpaperSettings();
+  const settings = {
+    wallpaper: current.wallpaper,
+    opacity: Math.min(1, Math.max(0.08, Number(document.getElementById('profile-wallpaper-opacity')?.value || 48) / 100)),
+    dim: Math.min(0.85, Math.max(0, Number(document.getElementById('profile-wallpaper-dim')?.value || 28) / 100)),
+  };
+  window.P4Wallpaper?.apply?.(settings);
+  if (!window.P4Wallpaper) {
+    if (settings.wallpaper) {
+      localStorage.setItem('p4_profile_wallpaper', settings.wallpaper);
+      localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
+      localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
+    }
+    applyProfileWallpaperMode(settings);
+  }
+  const confirm = document.getElementById('profile-wallpaper-confirm');
+  if (confirm) {
+    confirm.style.opacity = '1';
+    setTimeout(() => confirm.style.opacity = '0', 1800);
+  }
+  refreshProfileWallpaperControls();
+  PROFIL_SFX.success();
+}
+
+function removeProfileWallpaper() {
+  window.P4Wallpaper?.apply?.({ wallpaper: '' });
+  if (!window.P4Wallpaper) {
+    localStorage.removeItem('p4_profile_wallpaper');
+    localStorage.removeItem('p4_profile_wallpaper_opacity');
+    localStorage.removeItem('p4_profile_wallpaper_dim');
+    applyProfileWallpaperMode({ wallpaper: '', opacity: 0.48, dim: 0.28 });
+  }
+  refreshProfileWallpaperControls();
+  PROFIL_SFX.click();
+}
+
+function openProfileWallpaperPicker() {
+  document.getElementById('profile-wallpaper-input')?.click();
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Impossible de lire cette image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Image invalide.'));
+    image.src = src;
+  });
+}
+
+async function prepareProfileWallpaperData(file) {
+  const raw = await readFileAsDataUrl(file);
+  const image = await loadImageElement(raw);
+  const maxSide = 1920;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL('image/jpeg', 0.84);
+}
+
+async function handleProfileWallpaperUpload(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+    input.value = '';
+    return alert('Image PNG, JPG ou WebP uniquement.');
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    input.value = '';
+    return alert('Fond trop lourd (max 8 Mo).');
+  }
+  try {
+    const wallpaper = await prepareProfileWallpaperData(file);
+    const current = readProfileWallpaperSettings();
+    const settings = {
+      wallpaper,
+      opacity: current.opacity,
+      dim: current.dim,
+    };
+    window.P4Wallpaper?.apply?.(settings);
+    if (!window.P4Wallpaper) {
+      localStorage.setItem('p4_profile_wallpaper', settings.wallpaper);
+      localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
+      localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
+      applyProfileWallpaperMode(settings);
+    }
+    refreshProfileWallpaperControls();
+    PROFIL_SFX.success();
+  } catch (error) {
+    alert(error.message || 'Impossible de préparer cette image.');
+  } finally {
+    input.value = '';
+  }
+}
+
 initProfileInteractionSounds();
 const searchBotsToggle = document.getElementById('search-include-bots');
 if (searchBotsToggle) searchBotsToggle.checked = localStorage.getItem('profile_search_bots') === '1';
+applyProfileWallpaperMode();
 load();
 </script>
 <script src="/presence.js?v=session-1"></script>

@@ -46,6 +46,106 @@ body {
   overflow-x: hidden;
 }
 
+body.p4-wallpaper-mode {
+  --surface: transparent;
+  --surface2: transparent;
+  --card: transparent;
+  --border: rgba(255,255,255,.20);
+  background: #000 !important;
+  background-image: none !important;
+}
+
+body.p4-wallpaper-mode::before,
+body.p4-wallpaper-mode::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+body.p4-wallpaper-mode::before {
+  z-index: 0;
+  background: var(--p4-wallpaper-image) center / cover no-repeat fixed;
+  opacity: var(--p4-wallpaper-opacity, .48);
+}
+
+body.p4-wallpaper-mode::after {
+  z-index: 0;
+  background: rgba(0,0,0,var(--p4-wallpaper-dim, .28));
+}
+
+body.p4-wallpaper-mode > * {
+  position: relative;
+}
+
+body.p4-wallpaper-mode .bg-grid,
+body.p4-wallpaper-mode .bg-orbs,
+body.p4-wallpaper-mode .scanlines,
+body.p4-wallpaper-mode .stars,
+body.p4-wallpaper-mode .orb,
+body.p4-wallpaper-mode .noise {
+  display: none !important;
+}
+
+body.p4-wallpaper-mode .panel,
+body.p4-wallpaper-mode .card,
+body.p4-wallpaper-mode .game-card,
+body.p4-wallpaper-mode .spec-card,
+body.p4-wallpaper-mode .analysis-card,
+body.p4-wallpaper-mode .elo-history-card,
+body.p4-wallpaper-mode .admin-card,
+body.p4-wallpaper-mode .hero,
+body.p4-wallpaper-mode .hero-panel-card,
+body.p4-wallpaper-mode .hero-ticker,
+body.p4-wallpaper-mode .hero-cgu-cta,
+body.p4-wallpaper-mode .section,
+body.p4-wallpaper-mode .endpoint,
+body.p4-wallpaper-mode .grid,
+body.p4-wallpaper-mode .wrap,
+body.p4-wallpaper-mode .container,
+body.p4-wallpaper-mode .layout,
+body.p4-wallpaper-mode .board,
+body.p4-wallpaper-mode .board-shell,
+body.p4-wallpaper-mode .stats-card,
+body.p4-wallpaper-mode .leader-card,
+body.p4-wallpaper-mode .rank-card,
+body.p4-wallpaper-mode .shop-card,
+body.p4-wallpaper-mode .product-card,
+body.p4-wallpaper-mode .news-card,
+body.p4-wallpaper-mode .rule-card,
+body.p4-wallpaper-mode .progress-card,
+body.p4-wallpaper-mode .quest-card,
+body.p4-wallpaper-mode .player-card,
+body.p4-wallpaper-mode .duel-card,
+body.p4-wallpaper-mode .auth-card,
+body.p4-wallpaper-mode .modal,
+body.p4-wallpaper-mode [class*="panel"],
+body.p4-wallpaper-mode [class*="card"],
+body.p4-wallpaper-mode [class*="tile"],
+body.p4-wallpaper-mode [class*="box"] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+body.p4-wallpaper-mode .hero::before,
+body.p4-wallpaper-mode .hero::after,
+body.p4-wallpaper-mode .card::before,
+body.p4-wallpaper-mode .card::after,
+body.p4-wallpaper-mode .panel::before,
+body.p4-wallpaper-mode .panel::after,
+body.p4-wallpaper-mode [class*="card"]::before,
+body.p4-wallpaper-mode [class*="card"]::after {
+  display: none !important;
+}
+
+body.p4-wallpaper-mode input,
+body.p4-wallpaper-mode select,
+body.p4-wallpaper-mode textarea {
+  background: transparent !important;
+}
+
 *,
 *::before,
 *::after {

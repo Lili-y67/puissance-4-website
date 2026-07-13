@@ -1,5 +1,8 @@
 ﻿(function () {
   const STORAGE_KEY = 'p4_theme';
+  const WALLPAPER_STORAGE_KEY = 'p4_profile_wallpaper';
+  const WALLPAPER_OPACITY_KEY = 'p4_profile_wallpaper_opacity';
+  const WALLPAPER_DIM_KEY = 'p4_profile_wallpaper_dim';
   const root = document.documentElement;
   let deferredInstallPrompt = null;
 
@@ -60,6 +63,83 @@
     }
     style.textContent = `html,body,body *{cursor:url("${cursor}") 0 0,auto!important}`;
   }
+
+  function clampNumber(value, fallback, min, max) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, number));
+  }
+
+  function cssUrl(value) {
+    return String(value || '').replace(/["\\\n\r]/g, char => {
+      if (char === '"') return '\\"';
+      if (char === '\\') return '\\\\';
+      return '';
+    });
+  }
+
+  function readWallpaperSettings() {
+    let player = null;
+    try {
+      player = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || 'null');
+    } catch (_) {}
+    let wallpaper = '';
+    let opacity = 0.48;
+    let dim = 0.28;
+    try {
+      wallpaper = String(localStorage.getItem(WALLPAPER_STORAGE_KEY) || player?.profile_wallpaper || '').trim();
+      opacity = localStorage.getItem(WALLPAPER_OPACITY_KEY) ?? player?.profile_wallpaper_opacity ?? opacity;
+      dim = localStorage.getItem(WALLPAPER_DIM_KEY) ?? player?.profile_wallpaper_dim ?? dim;
+    } catch (_) {
+      wallpaper = String(player?.profile_wallpaper || '').trim();
+      opacity = player?.profile_wallpaper_opacity ?? opacity;
+      dim = player?.profile_wallpaper_dim ?? dim;
+    }
+    return {
+      wallpaper,
+      opacity: clampNumber(opacity, 0.48, 0.08, 1),
+      dim: clampNumber(dim, 0.28, 0, 0.85),
+    };
+  }
+
+  function applyWallpaperMode(settings = readWallpaperSettings()) {
+    if (!document.body) return;
+    const wallpaper = String(settings?.wallpaper || '').trim();
+    document.body.classList.toggle('p4-wallpaper-mode', Boolean(wallpaper));
+    if (!wallpaper) {
+      document.body.style.removeProperty('--p4-wallpaper-image');
+      document.body.style.removeProperty('--p4-wallpaper-opacity');
+      document.body.style.removeProperty('--p4-wallpaper-dim');
+      return;
+    }
+    document.body.style.setProperty('--p4-wallpaper-image', `url("${cssUrl(wallpaper)}")`);
+    document.body.style.setProperty('--p4-wallpaper-opacity', String(clampNumber(settings.opacity, 0.48, 0.08, 1)));
+    document.body.style.setProperty('--p4-wallpaper-dim', String(clampNumber(settings.dim, 0.28, 0, 0.85)));
+  }
+
+  function saveWallpaperMode(settings = {}) {
+    const wallpaper = String(settings.wallpaper || '').trim();
+    const opacity = clampNumber(settings.opacity, 0.48, 0.08, 1);
+    const dim = clampNumber(settings.dim, 0.28, 0, 0.85);
+    try {
+      if (wallpaper) {
+        localStorage.setItem(WALLPAPER_STORAGE_KEY, wallpaper);
+        localStorage.setItem(WALLPAPER_OPACITY_KEY, String(opacity));
+        localStorage.setItem(WALLPAPER_DIM_KEY, String(dim));
+      } else {
+        localStorage.removeItem(WALLPAPER_STORAGE_KEY);
+        localStorage.removeItem(WALLPAPER_OPACITY_KEY);
+        localStorage.removeItem(WALLPAPER_DIM_KEY);
+      }
+    } catch (_) {}
+    applyWallpaperMode({ wallpaper, opacity, dim });
+  }
+
+  window.P4Wallpaper = {
+    apply: saveWallpaperMode,
+    refresh: () => applyWallpaperMode(),
+    get: readWallpaperSettings,
+  };
 
   function ensurePwaMetadata() {
     const head = document.head;
@@ -901,14 +981,21 @@
   registerPwa();
   loadI18n();
   loadDiscordPresence();
+  window.addEventListener('storage', event => {
+    if ([WALLPAPER_STORAGE_KEY, WALLPAPER_OPACITY_KEY, WALLPAPER_DIM_KEY, 'player'].includes(event.key)) {
+      applyWallpaperMode();
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      applyWallpaperMode();
       mountButton();
       mountGlobalMenu();
       mountPageEasterEgg();
     });
   } else {
+    applyWallpaperMode();
     mountButton();
     mountGlobalMenu();
     mountPageEasterEgg();
