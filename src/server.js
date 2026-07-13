@@ -6606,6 +6606,10 @@ function sanitize(p) {
       profile_banner: '',
       queue_music: '',
       custom_cursor: '',
+      profile_wallpaper_desktop: '',
+      profile_wallpaper_mobile: '',
+      profile_wallpaper_opacity: 0.48,
+      profile_wallpaper_dim: 0.28,
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -7552,6 +7556,52 @@ app.patch('/api/players/:id/custom-cursor', (req, res) => {
   pQ.updateCustomCursor.run({ cursor, id });
   progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, custom_cursor: cursor });
+});
+
+function normalizeWallpaperDataUrl(value) {
+  const input = String(value || '').trim();
+  if (!input) return '';
+  if (!/^data:image\/(jpeg|jpg|png|webp);base64,[a-z0-9+/=]+$/i.test(input)) {
+    const error = new Error('Fond invalide : image PNG, JPG ou WebP requise.');
+    error.status = 400;
+    throw error;
+  }
+  const bytes = Buffer.from(input.slice(input.indexOf(',') + 1), 'base64');
+  if (bytes.length > 1.8 * 1024 * 1024) {
+    const error = new Error('Fond trop lourd apres compression (max 1.8 Mo).');
+    error.status = 413;
+    throw error;
+  }
+  return input;
+}
+
+function normalizeWallpaperNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+app.patch('/api/players/:id/wallpaper', (req, res) => {
+  const id = Number(req.params.id);
+  const token = String(req.body?.token || '');
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  try {
+    const desktop = normalizeWallpaperDataUrl(req.body?.desktopWallpaper);
+    const mobile = normalizeWallpaperDataUrl(req.body?.mobileWallpaper);
+    const opacity = normalizeWallpaperNumber(req.body?.opacity, 0.48, 0.08, 1);
+    const dim = normalizeWallpaperNumber(req.body?.dim, 0.28, 0, 0.85);
+    pQ.updateProfileWallpaper.run({ desktop, mobile, opacity, dim, id });
+    progression.recordAction(id, 'profile_updates');
+    res.json({
+      ok: true,
+      profile_wallpaper_desktop: desktop,
+      profile_wallpaper_mobile: mobile,
+      profile_wallpaper_opacity: opacity,
+      profile_wallpaper_dim: dim,
+    });
+  } catch (error) {
+    res.status(error.status || 400).json({ error: error.message || 'Fond invalide.' });
+  }
 });
 
 // Autocomplete pseudo AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA min 3 chars, max 8 rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsultats, exclu bots et supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs

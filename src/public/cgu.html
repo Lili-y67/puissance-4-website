@@ -60,6 +60,20 @@ nav{position:sticky;top:0;z-index:10;background:rgba(6,6,14,.78);backdrop-filter
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=eggs-14">
+<style>
+body.cgu-page.p4-wallpaper-mode nav,
+body.cgu-page.p4-wallpaper-mode .card,
+body.cgu-page.p4-wallpaper-mode .rule-list li,
+body.cgu-page.p4-wallpaper-mode .sanction-cell,
+body.cgu-page.p4-wallpaper-mode .quick-links a,
+body.cgu-page.p4-wallpaper-mode .highlight{
+  background:linear-gradient(180deg,rgba(7,7,18,.72),rgba(7,7,18,.54))!important;
+  box-shadow:0 18px 54px rgba(0,0,0,.30)!important;
+  backdrop-filter:blur(12px)!important;
+}
+body.cgu-page.p4-wallpaper-mode .card::before{display:block!important}
+body.cgu-page.p4-wallpaper-mode .card-icon{background:rgba(255,255,255,.08)!important}
+</style>
 </head>
 <body class="cgu-page">
 <div class="bg-grid"></div>

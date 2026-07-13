@@ -1,10 +1,5 @@
 ﻿(function () {
   const STORAGE_KEY = 'p4_theme';
-  const WALLPAPER_STORAGE_KEY = 'p4_profile_wallpaper';
-  const WALLPAPER_DESKTOP_KEY = 'p4_profile_wallpaper_desktop';
-  const WALLPAPER_MOBILE_KEY = 'p4_profile_wallpaper_mobile';
-  const WALLPAPER_OPACITY_KEY = 'p4_profile_wallpaper_opacity';
-  const WALLPAPER_DIM_KEY = 'p4_profile_wallpaper_dim';
   const root = document.documentElement;
   let deferredInstallPrompt = null;
 
@@ -89,17 +84,10 @@
     let mobileWallpaper = '';
     let opacity = 0.48;
     let dim = 0.28;
-    try {
-      desktopWallpaper = String(localStorage.getItem(WALLPAPER_DESKTOP_KEY) || localStorage.getItem(WALLPAPER_STORAGE_KEY) || player?.profile_wallpaper_desktop || player?.profile_wallpaper || '').trim();
-      mobileWallpaper = String(localStorage.getItem(WALLPAPER_MOBILE_KEY) || player?.profile_wallpaper_mobile || '').trim();
-      opacity = localStorage.getItem(WALLPAPER_OPACITY_KEY) ?? player?.profile_wallpaper_opacity ?? opacity;
-      dim = localStorage.getItem(WALLPAPER_DIM_KEY) ?? player?.profile_wallpaper_dim ?? dim;
-    } catch (_) {
-      desktopWallpaper = String(player?.profile_wallpaper_desktop || player?.profile_wallpaper || '').trim();
-      mobileWallpaper = String(player?.profile_wallpaper_mobile || '').trim();
-      opacity = player?.profile_wallpaper_opacity ?? opacity;
-      dim = player?.profile_wallpaper_dim ?? dim;
-    }
+    desktopWallpaper = String(player?.profile_wallpaper_desktop || player?.profile_wallpaper || '').trim();
+    mobileWallpaper = String(player?.profile_wallpaper_mobile || '').trim();
+    opacity = player?.profile_wallpaper_opacity ?? opacity;
+    dim = player?.profile_wallpaper_dim ?? dim;
     const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
     const wallpaper = isMobile ? (mobileWallpaper || desktopWallpaper) : desktopWallpaper;
     return {
@@ -136,21 +124,13 @@
       : current.mobileWallpaper;
     const opacity = clampNumber(settings.opacity, 0.48, 0.08, 1);
     const dim = clampNumber(settings.dim, 0.28, 0, 0.85);
-    try {
-      localStorage.removeItem(WALLPAPER_STORAGE_KEY);
-      if (desktopWallpaper || mobileWallpaper) {
-        if (desktopWallpaper) localStorage.setItem(WALLPAPER_DESKTOP_KEY, desktopWallpaper);
-        else localStorage.removeItem(WALLPAPER_DESKTOP_KEY);
-        if (mobileWallpaper) localStorage.setItem(WALLPAPER_MOBILE_KEY, mobileWallpaper);
-        else localStorage.removeItem(WALLPAPER_MOBILE_KEY);
-      } else {
-        localStorage.removeItem(WALLPAPER_DESKTOP_KEY);
-        localStorage.removeItem(WALLPAPER_MOBILE_KEY);
-      }
-      localStorage.setItem(WALLPAPER_OPACITY_KEY, String(opacity));
-      localStorage.setItem(WALLPAPER_DIM_KEY, String(dim));
-    } catch (_) {}
-    applyWallpaperMode({ ...readWallpaperSettings(), desktopWallpaper, mobileWallpaper, opacity, dim });
+    patchStoredMenuPlayer({
+      profile_wallpaper_desktop: desktopWallpaper,
+      profile_wallpaper_mobile: mobileWallpaper,
+      profile_wallpaper_opacity: opacity,
+      profile_wallpaper_dim: dim,
+    });
+    applyWallpaperMode({ desktopWallpaper, mobileWallpaper, opacity, dim });
   }
 
   window.P4Wallpaper = {
@@ -158,6 +138,18 @@
     refresh: () => applyWallpaperMode(),
     get: readWallpaperSettings,
   };
+
+  function clearLegacyWallpaperStorage() {
+    try {
+      [
+        'p4_profile_wallpaper',
+        'p4_profile_wallpaper_desktop',
+        'p4_profile_wallpaper_mobile',
+        'p4_profile_wallpaper_opacity',
+        'p4_profile_wallpaper_dim',
+      ].forEach(key => localStorage.removeItem(key));
+    } catch (_) {}
+  }
 
   function ensurePwaMetadata() {
     const head = document.head;
@@ -995,12 +987,13 @@
 
   applyTheme(root.dataset.theme || getSavedTheme());
   applyCustomCursor();
+  clearLegacyWallpaperStorage();
   ensureThemeStylesheet();
   registerPwa();
   loadI18n();
   loadDiscordPresence();
   window.addEventListener('storage', event => {
-    if ([WALLPAPER_STORAGE_KEY, WALLPAPER_DESKTOP_KEY, WALLPAPER_MOBILE_KEY, WALLPAPER_OPACITY_KEY, WALLPAPER_DIM_KEY, 'player'].includes(event.key)) {
+    if (event.key === 'player') {
       applyWallpaperMode();
     }
   });

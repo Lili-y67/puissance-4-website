@@ -1595,6 +1595,7 @@ let profileBannerLibraryLoaded = false;
 let queueMusicLibrary = [];
 let queueMusicThemes = [];
 let queueMusicLibraryLoaded = false;
+let queueMusicSearchResultsCache = [];
 let queueMusicPreviewAudio = null;
 let queueMusicPreviewTimer = null;
 let queueMusicSearchTimer = null;
@@ -5318,6 +5319,7 @@ function logout() {
   localStorage.removeItem('player');
   sessionStorage.removeItem('player');
   sessionStorage.removeItem('match');
+  window.P4Wallpaper?.apply?.({ desktopWallpaper: '', mobileWallpaper: '', opacity: 0.48, dim: 0.28 });
   window.location.href = '/';
 }
 
@@ -6025,7 +6027,7 @@ async function renderQueueMusicPicker(player = currentPlayer) {
     ? entries
     : entries.filter(entry => entry.theme === themeSelect.value);
   const options = [`<option value="">Musique par défaut du site • Musique Chambre</option>`]
-    .concat(filteredEntries.map(entry => `<option value="${entry.src}" ${entry.src === currentValue ? 'selected' : ''}>${escapeHtml(entry.themeLabel)} • ${escapeHtml(entry.label)}</option>`));
+    .concat(filteredEntries.map(entry => `<option value="${escapeHtml(entry.src)}" ${entry.src === currentValue ? 'selected' : ''}>${escapeHtml(entry.themeLabel)} • ${escapeHtml(entry.label)}</option>`));
   if (currentValue && !entries.some(entry => entry.src === currentValue)) {
     options.push(`<option value="${escapeHtml(currentValue)}" selected>Personnalisée • ${escapeHtml(formatQueueMusicLabel(currentValue))}</option>`);
   }
@@ -6096,18 +6098,21 @@ function renderQueueMusicSearchResults(tracks, error = '') {
     return;
   }
   if (!tracks.length) {
+    queueMusicSearchResultsCache = [];
     box.innerHTML = '';
     box.classList.remove('show');
     return;
   }
-  box.innerHTML = tracks.map(track => {
-    const payload = encodeURIComponent(JSON.stringify({
-      value: track.value,
-      title: track.title,
-      author: track.author,
-    }));
+  queueMusicSearchResultsCache = tracks.map(track => ({
+    value: String(track?.value || ''),
+    title: String(track?.title || 'Musique YouTube'),
+    author: String(track?.author || ''),
+    artworkUrl: String(track?.artworkUrl || ''),
+    durationMs: Number(track?.durationMs || 0),
+  })).filter(track => track.value);
+  box.innerHTML = queueMusicSearchResultsCache.map((track, index) => {
     return `
-    <button class="queue-music-result" type="button" onclick="selectQueueMusicSearchResult(decodeURIComponent('${payload}'))">
+    <button class="queue-music-result" type="button" data-queue-music-index="${index}">
       ${track.artworkUrl ? `<img class="queue-music-thumb" src="${escapeHtml(track.artworkUrl)}" alt="">` : '<div class="queue-music-thumb"></div>'}
       <span style="min-width:0">
         <span class="queue-music-result-title">${escapeHtml(track.title)}</span>
@@ -6118,6 +6123,12 @@ function renderQueueMusicSearchResults(tracks, error = '') {
   `;
   }).join('');
   box.classList.add('show');
+  box.querySelectorAll('[data-queue-music-index]').forEach(button => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.queueMusicIndex);
+      selectQueueMusicSearchResult(queueMusicSearchResultsCache[index]);
+    });
+  });
 }
 
 async function searchQueueMusicNow() {
@@ -6153,8 +6164,10 @@ async function searchQueueMusicNow() {
 }
 
 function selectQueueMusicSearchResult(payload) {
-  let track = {};
-  try { track = JSON.parse(String(payload || '{}')); } catch(e) {}
+  let track = payload && typeof payload === 'object' ? payload : {};
+  if (!track.value && typeof payload === 'string') {
+    try { track = JSON.parse(payload || '{}'); } catch(e) {}
+  }
   const value = String(track.value || '');
   const title = String(track.title || 'Musique YouTube');
   const author = String(track.author || '');
@@ -7635,15 +7648,13 @@ let pendingProfileWallpaperTarget = 'desktop';
 
 function readProfileWallpaperSettings() {
   const desktopWallpaper =
-    (currentPlayer && String(currentPlayer.profile_wallpaper_desktop || currentPlayer.profile_wallpaper || '').trim()) ||
-    String(localStorage.getItem('p4_profile_wallpaper_desktop') || localStorage.getItem('p4_profile_wallpaper') || '').trim();
+    (currentPlayer && String(currentPlayer.profile_wallpaper_desktop || currentPlayer.profile_wallpaper || '').trim()) || '';
   const mobileWallpaper =
-    (currentPlayer && String(currentPlayer.profile_wallpaper_mobile || '').trim()) ||
-    String(localStorage.getItem('p4_profile_wallpaper_mobile') || '').trim();
+    (currentPlayer && String(currentPlayer.profile_wallpaper_mobile || '').trim()) || '';
   const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
   const wallpaper = isMobile ? (mobileWallpaper || desktopWallpaper) : desktopWallpaper;
-  const opacityRaw = Number(localStorage.getItem('p4_profile_wallpaper_opacity') || currentPlayer?.profile_wallpaper_opacity || 0.48);
-  const dimRaw = Number(localStorage.getItem('p4_profile_wallpaper_dim') || currentPlayer?.profile_wallpaper_dim || 0.28);
+  const opacityRaw = Number(currentPlayer?.profile_wallpaper_opacity || 0.48);
+  const dimRaw = Number(currentPlayer?.profile_wallpaper_dim || 0.28);
   return {
     wallpaper,
     desktopWallpaper,
@@ -7711,36 +7722,66 @@ function previewProfileWallpaperSettings() {
   applyProfileWallpaperMode(settings);
 }
 
-function saveProfileWallpaperSettings() {
+async function persistProfileWallpaperSettings(settings) {
+  const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  if (!me.id || !token) {
+    alert('Connecte-toi pour enregistrer un fond de compte.');
+    return false;
+  }
+  const res = await fetch(`/api/players/${Number(me.id)}/wallpaper`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+    body: JSON.stringify({
+      token,
+      desktopWallpaper: settings.desktopWallpaper || '',
+      mobileWallpaper: settings.mobileWallpaper || '',
+      opacity: settings.opacity,
+      dim: settings.dim,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(data.error || 'Impossible d enregistrer le fond.');
+    return false;
+  }
+  const patch = {
+    profile_wallpaper_desktop: data.profile_wallpaper_desktop || '',
+    profile_wallpaper_mobile: data.profile_wallpaper_mobile || '',
+    profile_wallpaper_opacity: Number(data.profile_wallpaper_opacity || settings.opacity || 0.48),
+    profile_wallpaper_dim: Number(data.profile_wallpaper_dim || settings.dim || 0.28),
+  };
+  syncStoredPlayerPatch(patch);
+  if (currentPlayer) Object.assign(currentPlayer, patch);
+  window.P4Wallpaper?.apply?.({
+    desktopWallpaper: patch.profile_wallpaper_desktop,
+    mobileWallpaper: patch.profile_wallpaper_mobile,
+    opacity: patch.profile_wallpaper_opacity,
+    dim: patch.profile_wallpaper_dim,
+  });
+  refreshProfileWallpaperControls();
+  return true;
+}
+
+async function saveProfileWallpaperSettings() {
   const current = readProfileWallpaperSettings();
   const settings = {
     desktopWallpaper: current.desktopWallpaper,
     mobileWallpaper: current.mobileWallpaper,
-    wallpaper: current.wallpaper,
     opacity: Math.min(1, Math.max(0.08, Number(document.getElementById('profile-wallpaper-opacity')?.value || 48) / 100)),
     dim: Math.min(0.85, Math.max(0, Number(document.getElementById('profile-wallpaper-dim')?.value || 28) / 100)),
   };
-  window.P4Wallpaper?.apply?.(settings);
-  if (!window.P4Wallpaper) {
-    localStorage.removeItem('p4_profile_wallpaper');
-    if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
-    else localStorage.removeItem('p4_profile_wallpaper_desktop');
-    if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
-    else localStorage.removeItem('p4_profile_wallpaper_mobile');
-    localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
-    localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
-    applyProfileWallpaperMode(settings);
-  }
+  const ok = await persistProfileWallpaperSettings(settings);
+  if (!ok) return;
   const confirm = document.getElementById('profile-wallpaper-confirm');
   if (confirm) {
     confirm.style.opacity = '1';
     setTimeout(() => confirm.style.opacity = '0', 1800);
   }
-  refreshProfileWallpaperControls();
   PROFIL_SFX.success();
 }
 
-function removeProfileWallpaper(target = 'all') {
+async function removeProfileWallpaper(target = 'all') {
   const current = readProfileWallpaperSettings();
   const settings = {
     desktopWallpaper: target === 'desktop' || target === 'all' ? '' : current.desktopWallpaper,
@@ -7748,16 +7789,8 @@ function removeProfileWallpaper(target = 'all') {
     opacity: current.opacity,
     dim: current.dim,
   };
-  window.P4Wallpaper?.apply?.(settings);
-  if (!window.P4Wallpaper) {
-    localStorage.removeItem('p4_profile_wallpaper');
-    if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
-    else localStorage.removeItem('p4_profile_wallpaper_desktop');
-    if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
-    else localStorage.removeItem('p4_profile_wallpaper_mobile');
-    applyProfileWallpaperMode(settings);
-  }
-  refreshProfileWallpaperControls();
+  const ok = await persistProfileWallpaperSettings(settings);
+  if (!ok) return;
   PROFIL_SFX.click();
 }
 
@@ -7819,19 +7852,8 @@ async function handleProfileWallpaperUpload(input) {
       opacity: current.opacity,
       dim: current.dim,
     };
-    window.P4Wallpaper?.apply?.(settings);
-    if (!window.P4Wallpaper) {
-      localStorage.removeItem('p4_profile_wallpaper');
-      if (settings.desktopWallpaper) localStorage.setItem('p4_profile_wallpaper_desktop', settings.desktopWallpaper);
-      else localStorage.removeItem('p4_profile_wallpaper_desktop');
-      if (settings.mobileWallpaper) localStorage.setItem('p4_profile_wallpaper_mobile', settings.mobileWallpaper);
-      else localStorage.removeItem('p4_profile_wallpaper_mobile');
-      localStorage.setItem('p4_profile_wallpaper_opacity', String(settings.opacity));
-      localStorage.setItem('p4_profile_wallpaper_dim', String(settings.dim));
-      applyProfileWallpaperMode(settings);
-    }
-    refreshProfileWallpaperControls();
-    PROFIL_SFX.success();
+    const ok = await persistProfileWallpaperSettings(settings);
+    if (ok) PROFIL_SFX.success();
   } catch (error) {
     alert(error.message || 'Impossible de préparer cette image.');
   } finally {

@@ -153,6 +153,10 @@ try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner TEXT NOT NULL DEFAU
 try { db.exec(`ALTER TABLE players ADD COLUMN profile_banner_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN queue_music TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN custom_cursor TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_wallpaper_desktop TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_wallpaper_mobile TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_wallpaper_opacity REAL NOT NULL DEFAULT 0.48`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN profile_wallpaper_dim REAL NOT NULL DEFAULT 0.28`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN language TEXT NOT NULL DEFAULT 'fr'`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_guest INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -403,6 +407,7 @@ const pQ = {
   updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
   updateQueueMusic: db.prepare(`UPDATE players SET queue_music = @music WHERE id = @id`),
   updateCustomCursor: db.prepare(`UPDATE players SET custom_cursor = @cursor WHERE id = @id`),
+  updateProfileWallpaper: db.prepare(`UPDATE players SET profile_wallpaper_desktop = @desktop, profile_wallpaper_mobile = @mobile, profile_wallpaper_opacity = @opacity, profile_wallpaper_dim = @dim WHERE id = @id`),
   updateLanguage: db.prepare(`UPDATE players SET language = @language WHERE id = @id`),
   updateColorSecondary: db.prepare(`UPDATE players SET color_secondary = @color_secondary WHERE id = @id`),
   updateGuest:    db.prepare(`UPDATE players SET is_guest = @is_guest WHERE id = @id`),
