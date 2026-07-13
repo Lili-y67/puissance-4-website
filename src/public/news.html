@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.4.0 | Puissance 4 Ranked</title>
+<title>News 3.5.0 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -76,13 +76,13 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.4.0</span></h1>
-      <p>La progression prend une nouvelle dimension avec des quetes liees aux bots, a la boutique et au profil. L'accueil gagne aussi un menu complet, des easter eggs, et le compagnon Discord RPC raconte maintenant ton activite directement sur ton profil Discord.</p>
-      <div class="hero-actions"><a class="btn-main" href="/progression">Voir les quetes</a><a class="btn-ghost" href="/downloads/puissance4-discord-rpc.zip">Telecharger le RPC</a></div>
+      <h1>Mise a jour <span>3.5.0</span></h1>
+      <p>La 3.5.0 stabilise les sessions, nettoie les anciennes surfaces tournois et affine le confort de jeu : chrono optionnel en local, musique de file plus lisible, presence plus fiable et interface dev revue.</p>
+      <div class="hero-actions"><a class="btn-main" href="/local">Tester le local</a><a class="btn-ghost" href="/dev">Console dev</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.4.0</div><h2>Quetes & bots</h2><p>Chaque victoire contre un bot, achat et modification de profil peut maintenant faire progresser de nouveaux contrats quotidiens ou hebdomadaires.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>14 juin</strong></div><div class="meta-box"><span>Focus</span><strong>Progression</strong></div><div class="meta-box"><span>Type</span><strong>Contenu</strong></div></div>
+      <div><div class="version-orb">3.5.0</div><h2>Stabilite</h2><p>Les sessions inactives expirent vraiment apres 10 minutes, et la presence en ligne ne reste plus accrochee a un profil fantome.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>13 juillet</strong></div><div class="meta-box"><span>Focus</span><strong>Sessions</strong></div><div class="meta-box"><span>Type</span><strong>Qualite</strong></div></div>
     </aside>
   </section>
 
@@ -92,33 +92,33 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
         <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Nouvelles quetes quotidiennes : battre un bot, acheter un article et modifier son profil.</div>
-          <div class="news-bubble"><span>&#10022;</span>Nouvelles quetes hebdomadaires pour jouer plusieurs parties contre des bots et visiter la boutique.</div>
-          <div class="news-bubble"><span>&#10022;</span>Les parties contre l'ordinateur alimentent maintenant directement la progression du joueur connecte.</div>
-          <div class="news-bubble"><span>&#10022;</span>Le menu principal regroupe Accueil, Progression, Joueurs, Clans, Analyse, Boutique, News et API.</div>
-          <div class="news-bubble"><span>&#10022;</span>L'accueil affiche en direct les bots en ligne et le nombre total de bots inscrits.</div>
-          <div class="news-bubble"><span>&#10022;</span>Le bot Discord affiche desormais la version 3.4.0 dans son statut rotatif.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le mode local propose maintenant un temps de reflexion optionnel avant de lancer la partie.</div>
+          <div class="news-bubble"><span>&#10022;</span>Si le chrono local tombe a zero, un coup automatique facile est joue dans une colonne legale.</div>
+          <div class="news-bubble"><span>&#10022;</span>La barre de musique de file affiche le temps ecoule et la duree en temps reel, sans requete serveur repetee.</div>
+          <div class="news-bubble"><span>&#10022;</span>La page de connexion dev adopte une interface Security Gate plus claire et plus immersive.</div>
+          <div class="news-bubble"><span>&#10022;</span>Les pages publiques et le bot Discord affichent maintenant la version 3.5.0.</div>
+          <div class="news-bubble"><span>&#10022;</span>Les anciennes entrees tournois ont ete retirees des menus, stats, docs, profils et commandes Discord.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
         <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Les achats ne comptent pour une quete qu'une fois la transaction validee avec succes.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les changements de couleur, forme, avatar, banniere, pseudo ou musique comptent comme personnalisation du profil.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les quetes bots distinguent les parties terminees des victoires reellement obtenues.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les recompenses de progression restent composees de coins et d'XP recuperables.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le menu News indique maintenant clairement la version active 3.4.0.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les animations secretes respectent le reglage systeme de reduction des mouvements.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les sessions joueur sont maintenant limitees par l'inactivite serveur, avec extension seulement quand l'utilisateur est actif.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les sockets expirent proprement et retirent la presence en ligne quand la session n'est plus valide.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les routes tournoi redirigent ou repondent en mode retire pour eviter de remettre l'ancienne feature en avant.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les anciennes parties avec metadata tournoi retombent sur un affichage ranked/friendly normal.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le cache PWA a ete incremente pour forcer les nouvelles surfaces 3.5.0.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les textes API, i18n, menu et ticker ont ete harmonises avec la version active.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
         <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>La progression des actions est enregistree cote serveur pour eviter les compteurs uniquement visuels.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les bots eux-memes ne peuvent pas valider les quetes reservees aux joueurs humains.</div>
-          <div class="news-bubble"><span>&#10003;</span>Une meme partie serveur ne peut pas etre traitee deux fois par le systeme de progression.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les easter eggs restent au-dessus du decor sans bloquer les controles principaux.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les textes de version du site et du statut Discord sont maintenant synchronises en 3.4.0.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le logout automatique de 10 minutes ne depend plus uniquement du navigateur.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le profil ne reste plus marque en ligne apres expiration de session.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le service worker recharge aussi les assets de presence au lieu de garder une ancienne logique.</div>
+          <div class="news-bubble"><span>&#10003;</span>Le controle de musique de file arrete son timer quand la musique s'arrete.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les scripts inline des pages modifiees restent valides apres la mise a jour.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#8b9cf4;--soft:rgba(88,101,242,.18)">
@@ -136,8 +136,9 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
     </div>
   </section>
 
-  <div class="footer-note">Version 3.4.0 : nouvelles quetes bots, boutique et profil, progression serveur enrichie, statut Discord actualise, compagnon Rich Presence pour PC, menu complet et easter eggs decoratifs.</div>
+  <div class="footer-note">Version 3.5.0 : sessions 10 minutes fiabilisees, presence nettoyee, tournois retires des surfaces publiques, chrono local optionnel, musique de file avec temps reel, login dev modernise et textes de version synchronises.</div>
 </main>
 <script src="/theme.js?v=eggs-14"></script>
 </body>
 </html>
+

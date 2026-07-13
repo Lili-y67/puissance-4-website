@@ -61,7 +61,7 @@ const SOURCE = {
   'menu.stats.label': 'Stats',
   'menu.stats.sub': 'Données du site',
   'menu.news.label': 'News',
-  'menu.news.sub': 'Mise a jour 3.4.0',
+  'menu.news.sub': 'Mise a jour 3.5.0',
   'menu.rules.label': 'Règles',
   'menu.rules.sub': 'Jeu et gains',
   'menu.api.label': 'API',
@@ -130,7 +130,7 @@ const TRANSLATIONS = {
     'menu.stats.label': 'Stats',
     'menu.stats.sub': 'Site data',
     'menu.news.label': 'News',
-    'menu.news.sub': 'Update 3.4.0',
+    'menu.news.sub': 'Update 3.5.0',
     'menu.rules.label': 'Rules',
     'menu.rules.sub': 'Game and rewards',
     'menu.api.label': 'API',
@@ -197,7 +197,7 @@ const TRANSLATIONS = {
     'menu.stats.label': 'Estadísticas',
     'menu.stats.sub': 'Datos del sitio',
     'menu.news.label': 'Noticias',
-    'menu.news.sub': 'Actualización 3.4.0',
+    'menu.news.sub': 'Actualización 3.5.0',
     'menu.rules.label': 'Reglas',
     'menu.rules.sub': 'Juego y recompensas',
     'menu.api.label': 'API',
@@ -332,7 +332,7 @@ const LOCAL_MACHINE_TRANSLATIONS = {
     'Spectateur': 'Spectator',
     'Live en direct': 'Live',
     'Progression': 'Progression',
-    'Quêtes 3.4.0': 'Quests 3.4.0',
+    'Sessions 3.5.0': 'Sessions 3.5.0',
     'Communauté': 'Community',
     'Clans & events': 'Clans & events',
     'Règles & CGU à jour': 'Rules & terms updated',
@@ -352,7 +352,7 @@ const LOCAL_MACHINE_TRANSLATIONS = {
     'Ou': 'Or',
     'Mode ranked compétitif': 'Competitive ranked mode',
     'Connexion classique ou Discord': 'Classic login or Discord',
-    'Bot configurable par difficulté ou ELO': 'Bot configurable by difficulty or ELO',    'Quêtes bots, boutique et profil en 3.4.0': 'Bot quests, shop and profile in 3.4.0',
+    'Bot configurable par difficulté ou ELO': 'Bot configurable by difficulty or ELO',    'Sessions, local et musique en 3.5.0': 'Sessions, local mode and music in 3.5.0',
   },
   es: {
     'Jouez en ligne': 'Juega en línea',
@@ -360,7 +360,7 @@ const LOCAL_MACHINE_TRANSLATIONS = {
     'Duels rapides': 'Duelos rápidos',
     'Parties classées': 'Partidas clasificatorias',
     'Live en direct': 'Directo',
-    'Quêtes 3.4.0': 'Misiones 3.4.0',
+    'Sessions 3.5.0': 'Sesiones 3.5.0',
     'Règles & CGU à jour': 'Reglas y condiciones actualizadas',
     'Lire les CGU': 'Leer las condiciones',
     'Entrée immédiate': 'Entrada inmediata',
@@ -792,4 +792,6 @@ module.exports = {
   translateTexts,
   translateTextsDetailed,
 };
+
+
 

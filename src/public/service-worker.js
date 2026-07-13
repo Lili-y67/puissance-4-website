@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'p4-shell-v3.4.0-local-clean-1';
+﻿const CACHE_VERSION = 'p4-shell-v3.5.0-news-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -92,5 +92,6 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
 
 

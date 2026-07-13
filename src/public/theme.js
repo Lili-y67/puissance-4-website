@@ -208,7 +208,7 @@
     'menu.stats.label': 'Stats',
     'menu.stats.sub': 'Données du site',
     'menu.news.label': 'News',
-    'menu.news.sub': 'Mise a jour 3.4.0',
+    'menu.news.sub': 'Mise a jour 3.5.0',
     'menu.rules.label': 'Règles',
     'menu.rules.sub': 'Jeu et gains',
     'menu.api.label': 'API',
@@ -914,3 +914,4 @@
     mountPageEasterEgg();
   }
 })();
+

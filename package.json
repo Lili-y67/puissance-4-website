@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "puissance4",
-  "version": "3.4.0",
+  "version": "3.5.0",
   "description": "Puissance 4 multijoueur en ligne",
   "main": "index.js",
   "engines": {
@@ -26,3 +26,4 @@
     "nodemon": "^3.1.0"
   }
 }
+

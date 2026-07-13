@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const STORAGE_KEY = 'p4_language';
   const DEFAULT_LANGUAGE = 'fr';
 
@@ -59,7 +59,7 @@
     'menu.stats.label': 'Stats',
     'menu.stats.sub': 'Données du site',
     'menu.news.label': 'News',
-    'menu.news.sub': 'Mise a jour 3.4.0',
+    'menu.news.sub': 'Mise a jour 3.5.0',
     'menu.rules.label': 'Règles',
     'menu.rules.sub': 'Jeu et gains',
     'menu.api.label': 'API',
@@ -118,7 +118,7 @@
       'menu.stats.label': 'Stats',
       'menu.stats.sub': 'Site data',
       'menu.news.label': 'News',
-      'menu.news.sub': 'Update 3.4.0',
+      'menu.news.sub': 'Update 3.5.0',
       'menu.rules.label': 'Rules',
       'menu.rules.sub': 'Game and rewards',
       'menu.api.label': 'API',
@@ -171,7 +171,7 @@
       'menu.stats.label': 'Estadísticas',
       'menu.stats.sub': 'Datos del sitio',
       'menu.news.label': 'Noticias',
-      'menu.news.sub': 'Actualización 3.4.0',
+      'menu.news.sub': 'Actualización 3.5.0',
       'menu.rules.label': 'Reglas',
       'menu.rules.sub': 'Juego y recompensas',
       'menu.api.label': 'API',
@@ -706,3 +706,4 @@
 
   setLanguage(getLanguage());
 })();
+
