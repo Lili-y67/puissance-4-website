@@ -1524,7 +1524,6 @@ let currentGamesCache = [];
 let currentFollowingCache = [];
 let currentFollowersCache = [];
 let currentFollowStatusCache = { isFollowing: false, followers: 0, following: 0 };
-let currentTournamentsCache = [];
 
 const PROFILE_LANGUAGE_FALLBACKS = [
   { code: 'fr', name: 'Français', country: 'France' },
@@ -2307,10 +2306,9 @@ async function load() {
   }
 
   try {
-    const [profileRes, followRes, tournamentsRes, tokenCollectionRes] = await Promise.all([
+    const [profileRes, followRes, tokenCollectionRes] = await Promise.all([
       fetch(`/api/players/${playerId}`),
       viewerPlayer ? fetch(`/api/players/${playerId}/follow-status?viewerId=${viewerPlayer.id}`) : Promise.resolve(null),
-      fetch(`/api/players/${playerId}/tournaments`),
       fetch(`/api/players/${playerId}/token-collection`),
     ]);
     if (profileRes.status === 404) {
@@ -2325,7 +2323,6 @@ async function load() {
     if (!profileRes.ok) throw new Error();
     const { player, games, games_total, following, followers } = await profileRes.json();
     const totalGames = Number(games_total ?? player.games_total ?? (games || []).length);
-    const tournamentData = tournamentsRes.ok ? await tournamentsRes.json() : { tournaments: [] };
     const tokenCollectionData = tokenCollectionRes.ok ? await tokenCollectionRes.json() : { collection: { items: [], stats: {} } };
     const followStatus = followRes ? await followRes.json() : { isFollowing: false, followers: 0, following: 0 };
     profileTokenCollection = tokenCollectionData.collection || { items: [], stats: {} };
@@ -2351,10 +2348,9 @@ async function load() {
     currentFollowingCache = following || [];
     currentFollowersCache = followers || [];
     currentFollowStatusCache = followStatus || { isFollowing: false, followers: 0, following: 0 };
-    currentTournamentsCache = tournamentData.tournaments || [];
     pendingAvatarDecoration = null;
 
-    render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
+    render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, totalGames);
     window.P4I18n?.apply(document.getElementById('content'));
     renderQueueMusicPicker(freshPlayer);
     loadEloHistory(freshPlayer.id, eloHistoryDays, true);
@@ -2473,7 +2469,7 @@ async function checkDiscordRpcStatus(manual = false) {
   if (manual) PROFIL_SFX.discord();
 }
 
-function render(player, games, following, followers, followStatus, tournaments = [], gamesTotalOverride = null) {
+function render(player, games, following, followers, followStatus, gamesTotalOverride = null) {
   const total = player.wins + player.losses + player.draws;
   const wr    = total > 0 ? Math.round((player.wins / total) * 100) : 0;
   const gamesTotal = Number(gamesTotalOverride ?? player.games_total ?? games.length);
@@ -2804,39 +2800,6 @@ function render(player, games, following, followers, followStatus, tournaments =
     </section>
 
     ${renderClanSection(player, isOwnProfile)}
-
-    ${tournaments.length ? `
-    <section class="profile-section" id="section-tournaments">
-    <div class="profile-section-head">
-      <div>
-        <div class="profile-section-title">Tournois</div>
-        <div class="profile-section-sub">Tes performances dans les events et les sessions classees.</div>
-      </div>
-    </div>
-    <div class="color-card" id="tournament-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Tournois</span>
-        <a href="/tournoi" style="font-size:11px;color:#8b9cf4;text-decoration:none;letter-spacing:1px;text-transform:uppercase">Voir la page tournoi</a>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${tournaments.slice(0, 6).map(t => `
-          <a href="/tournoi/${encodeURIComponent(t.public_id || t.id)}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 13px;border-radius:12px;background:var(--surface2);border:1px solid rgba(255,255,255,0.05);text-decoration:none;color:inherit">
-            <div style="min-width:0;display:flex;flex-direction:column;gap:4px">
-              <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.name)}</div>
-              <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(t.public_id || ('TRN-' + t.id))} · ${t.participants || 0} joueurs · ${t.move_time_seconds || 0}s/coup</div>
-              <div style="font-size:11px;color:var(--muted)">Score ${t.score} · ${t.wins} wins · streak ${t.streak}${t.place ? ` · top ${t.place}` : ''}</div>
-              <div style="font-size:11px;color:var(--muted)">${t.status === 'active' ? 'Fin' : 'Debut'} ${formatTournamentDate(t.status === 'active' ? t.ends_at : t.starts_at)}</div>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <div style="font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:${getTournamentStatusColor(t.status)}">${getTournamentStatusLabel(t.status)}</div>
-              <div style="font-size:10px;color:var(--muted)">#${t.id}</div>
-              <div style="font-size:10px;color:#ffd60a;margin-top:3px">${(t.rewards && t.rewards[0]) ? `Top 1 ${t.rewards[0]}c` : ''}</div>
-            </div>
-          </a>
-        `).join('')}
-      </div>
-    </div>
-    </section>` : ''}
 
     <!-- Changement de couleur (propre profil uniquement) -->
     ${isOwnProfile ? `
@@ -5416,7 +5379,7 @@ async function activateOwnedBooster(itemKey, meta = {}) {
     await loadProfileShopInventory();
     if (typeof render === 'function' && currentPlayer) {
       const totalGames = Number(currentPlayer.wins || 0) + Number(currentPlayer.losses || 0) + Number(currentPlayer.draws || 0);
-      render(currentPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, currentTournamentsCache, totalGames);
+      render(currentPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, totalGames);
     }
   } catch(e) {
     alert('Erreur reseau.');
@@ -7535,7 +7498,7 @@ const searchBotsToggle = document.getElementById('search-include-bots');
 if (searchBotsToggle) searchBotsToggle.checked = localStorage.getItem('profile_search_bots') === '1';
 load();
 </script>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 <script src="/theme.js?v=eggs-14"></script>
 </body>
 </html>

@@ -397,7 +397,7 @@ input:focus,select:focus{
 .admin-stack>.table-wrap:nth-child(3){grid-column:span 12}
 .admin-stack>.table-wrap:nth-child(4){grid-column:span 12}
 .admin-stack>.pill-tabs{grid-column:span 12}
-#admin-games-section,#admin-tournaments-section,#admin-players-section{grid-column:span 12}
+#admin-games-section,#admin-players-section{grid-column:span 12}
 .table-wrap{
   position:relative;overflow:hidden;
   background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)),rgba(12,12,27,.82);
@@ -614,8 +614,8 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   .btn-sm{padding:8px 11px;font-size:11px}
   .mobile-card{align-items:flex-start;flex-wrap:wrap}
   .mobile-card-elo{width:100%;text-align:left}
-  #admin-games-section .table-wrap,#admin-tournaments-section .table-wrap{border-radius:20px}
-  #admin-games-section table,#admin-tournaments-section table{min-width:760px}
+  #admin-games-section .table-wrap{border-radius:20px}
+  #admin-games-section table{min-width:760px}
   .admin-section-title{font-size:24px}
   .admin-section-copy{font-size:12px}
 }
@@ -680,7 +680,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <div>
       <div class="admin-hero-kicker">Centre de controle</div>
       <div class="admin-hero-title">Operations Puissance 4</div>
-      <div class="admin-hero-copy">Surveille les joueurs, gere les boosts, les coins, les tournois, les bots, les cosmetiques premium et les alertes serveur depuis une interface unique.</div>
+      <div class="admin-hero-copy">Surveille les joueurs, gere les boosts, les coins, les bots, les cosmetiques premium et les alertes serveur depuis une interface unique.</div>
     </div>
     <div class="admin-hero-orb">⚙</div>
   </section>
@@ -708,7 +708,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       <div class="ops-tag">Live</div>
       <div class="ops-icon">🤖</div>
       <div class="ops-title">Bots & parties</div>
-      <div class="ops-copy">Bots competitifs, parties live, replays, reversions ELO et suivi tournoi restent accessibles rapidement.</div>
+      <div class="ops-copy">Bots competitifs, parties live, replays et reversions ELO restent accessibles rapidement.</div>
     </article>
   </section>
 
@@ -862,10 +862,6 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       style="background:rgba(255,255,255,0.05);color:var(--muted);">
       Parties
     </button>
-    <button id="tab-tournaments-btn" class="pill-tab admin-only-panel" onclick="switchAdminTab('tournaments')"
-      style="background:rgba(255,255,255,0.05);color:var(--muted);">
-      Tournois
-    </button>
   </div>
 
   <!-- Section Parties -->
@@ -888,17 +884,6 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
       </table>
     </div>
     <div id="games-pagination-admin" style="display:flex;justify-content:center;gap:8px;margin-top:10px;"></div>
-  </div>
-
-  <div id="admin-tournaments-section" style="display:none;margin-bottom:20px;">
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>#</th><th>Nom</th><th>Statut</th><th>Inscrits</th><th>File</th><th>Temps/coup</th><th>Fin</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="tournaments-body"></tbody>
-      </table>
-    </div>
   </div>
 
   <div id="admin-players-section">
@@ -1811,8 +1796,6 @@ function closeAndReload() {
   document.getElementById('admin-modal')?.remove();
   if (currentAdminTab === 'games') {
     loadAdminGames();
-  } else if (currentAdminTab === 'tournaments') {
-    loadAdminTournaments();
   } else {
     loadPlayers();
   }
@@ -1823,18 +1806,13 @@ function switchAdminTab(tab) {
   currentAdminTab = tab;
   const isPlayers = tab === 'players';
   const isGames = tab === 'games';
-  const isTournaments = tab === 'tournaments';
   document.getElementById('admin-players-section').style.display = isPlayers ? 'block' : 'none';
   document.getElementById('admin-games-section').style.display   = isGames ? 'block' : 'none';
-  document.getElementById('admin-tournaments-section').style.display = isTournaments ? 'block' : 'none';
   document.getElementById('tab-players-btn').style.background    = isPlayers ? 'var(--red)' : 'rgba(255,255,255,0.05)';
   document.getElementById('tab-players-btn').style.color         = isPlayers ? '#fff' : 'var(--muted)';
   document.getElementById('tab-games-btn').style.background      = isGames ? 'rgba(76,110,245,0.2)' : 'rgba(255,255,255,0.05)';
   document.getElementById('tab-games-btn').style.color           = isGames ? '#8b9cf4' : 'var(--muted)';
-  document.getElementById('tab-tournaments-btn').style.background = isTournaments ? 'rgba(255,214,10,0.18)' : 'rgba(255,255,255,0.05)';
-  document.getElementById('tab-tournaments-btn').style.color      = isTournaments ? 'var(--yellow)' : 'var(--muted)';
   if (isGames) loadAdminGames();
-  if (isTournaments) loadAdminTournaments();
 }
 
 // Gestion des parties
@@ -1929,69 +1907,6 @@ ${res.p2.pseudo} -> ${res.p2.eloBefore} ELO`);
   } catch(e) {
     alert('Erreur : ' + (e.message || 'Inconnue'));
   }
-}
-
-async function loadAdminTournaments() {
-  const rows = await api('GET', '/api/admin/tournaments');
-  const tbody = document.getElementById('tournaments-body');
-  if (!Array.isArray(rows) || !rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucun tournoi</td></tr>';
-    return;
-  }
-  const statusMeta = {
-    active: { label: 'Actif', bg: 'rgba(48,209,88,0.12)', border: 'rgba(48,209,88,0.28)', color: 'var(--green)' },
-    pending: { label: 'Bientot', bg: 'rgba(255,214,10,0.10)', border: 'rgba(255,214,10,0.22)', color: 'var(--yellow)' },
-    paused: { label: 'Pause', bg: 'rgba(255,159,10,0.10)', border: 'rgba(255,159,10,0.24)', color: '#ff9f0a' },
-    finished: { label: 'Termine', bg: 'rgba(255,255,255,0.08)', border: 'rgba(255,255,255,0.12)', color: 'var(--muted)' },
-  };
-  tbody.innerHTML = rows.map(t => `
-    <tr>
-      <td style="color:var(--muted)">${t.public_id || ('#' + t.id)}</td>
-      <td>
-        <div style="font-weight:700">${t.name}</div>
-        <div style="font-size:11px;color:var(--muted)">Par ${t.creator_pseudo || 'Inconnu'}${t.has_password ? ' · Privé' : ' · Public'}</div>
-      </td>
-      <td><span class="badge" style="background:${(statusMeta[t.status] || statusMeta.finished).bg};border:1px solid ${(statusMeta[t.status] || statusMeta.finished).border};color:${(statusMeta[t.status] || statusMeta.finished).color}">${(statusMeta[t.status] || statusMeta.finished).label}</span></td>
-      <td><strong>${Number(t.participants || 0)}</strong></td>
-      <td><strong style="color:#85EBFF">${Number(t.queue || 0)}</strong></td>
-      <td>${Number(t.move_time_seconds || 0)}s</td>
-      <td style="font-size:11px;color:var(--muted)">${t.status === 'pending' ? `Commence ${new Date(t.starts_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}` : t.ends_at ? new Date(t.ends_at).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '-'}</td>
-      <td>
-        <div class="actions">
-          ${myRole === 'admin' && t.status === 'active' ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="pauseTournament('${t.public_id || t.id}')">Pause</button>` : ''}
-          ${myRole === 'admin' && t.status === 'paused' ? `<button class="btn-sm" style="background:rgba(48,209,88,0.15);color:var(--green);border:1px solid rgba(48,209,88,0.3)" onclick="resumeTournament('${t.public_id || t.id}')">Reprendre</button>` : ''}
-          ${myRole === 'admin' && t.status === 'active' ? `<button class="btn-sm" style="background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)" onclick="finishTournament(${t.id})">Forcer fin</button>` : ''}
-          ${myRole === 'admin' ? `<button class="btn-sm" style="background:rgba(255,45,85,0.12);color:var(--red);border:1px solid rgba(255,45,85,0.26)" onclick="deleteTournament('${t.public_id || t.id}')">Supprimer</button>` : ''} 
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
-
-async function finishTournament(id) {
-  if (!confirm(`Clôturer immédiatement le tournoi #${id} ?`)) return;
-  const data = await api('POST', `/api/admin/tournaments/${id}/finish`, {});
-  if (data.ok) loadAdminTournaments();
-  else alert(data.error || 'Erreur tournoi.');
-}
-
-async function pauseTournament(id) {
-  const data = await api('POST', `/api/admin/tournaments/${id}/pause`, {});
-  if (data.ok) loadAdminTournaments();
-  else alert(data.error || 'Erreur tournoi.');
-}
-
-async function resumeTournament(id) {
-  const data = await api('POST', `/api/admin/tournaments/${id}/resume`, {});
-  if (data.ok) loadAdminTournaments();
-  else alert(data.error || 'Erreur tournoi.');
-}
-
-async function deleteTournament(id) {
-  if (!confirm(`Supprimer le tournoi #${id} ? Cette action est définitive.`)) return;
-  const data = await api('DELETE', `/api/admin/tournaments/${id}`);
-  if (data.ok) loadAdminTournaments();
-  else alert(data.error || 'Erreur suppression.');
 }
 
 // Boost ELO global
@@ -2161,7 +2076,7 @@ async function setCoinBoost(mult, durationMinutes) {
 
 </script>
 <script src="/theme.js?v=eggs-14"></script>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 </body>
 </html>
 

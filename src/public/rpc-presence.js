@@ -27,7 +27,6 @@
     '/players': ['Parcourt les joueurs', 'Observe la communauté'],
     '/leaderboard': ['Consulte le classement', 'Vise le sommet'],
     '/clan': ['Dans son clan', 'Avec son équipe'],
-    '/tournoi': ['Dans l’arène tournoi', 'Prépare la compétition'],
     '/analyse': ['Analyse une position', 'Étudie ses prochains coups'],
     '/boutique': ['Dans la boutique', 'Choisit ses cosmétiques'],
     '/stats': ['Consulte les statistiques', 'Décortique les chiffres'],
@@ -48,7 +47,6 @@
   const adminSections = {
     'tab-players-btn': 'Gestion des joueurs',
     'tab-games-btn': 'Supervision des parties',
-    'tab-tournaments-btn': 'Gestion des tournois',
   };
 
   const devSections = {
@@ -246,7 +244,7 @@
   });
   window.addEventListener('pageshow', () => publish(true));
   document.addEventListener('click', event => {
-    if (event.target.closest('#tab-players-btn,#tab-games-btn,#tab-tournaments-btn,#tab-performance,#tab-bots,#tab-sources')) {
+    if (event.target.closest('#tab-players-btn,#tab-games-btn,#tab-performance,#tab-bots,#tab-sources')) {
       setTimeout(refresh, 0);
     }
   });

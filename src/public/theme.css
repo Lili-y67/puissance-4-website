@@ -520,7 +520,6 @@ pre {
 .p4-global-menu-link[href="/players"]:hover .p4-global-menu-emoji { animation:p4MenuPeople .7s ease; }
 .p4-global-menu-link[href="/leaderboard"]:hover .p4-global-menu-emoji { animation:p4MenuTrophy .75s ease; }
 .p4-global-menu-link[href="/clan"]:hover .p4-global-menu-emoji { animation:p4MenuShield .75s ease; }
-.p4-global-menu-link[href="/tournoi"]:hover .p4-global-menu-emoji { animation:p4MenuStadium .75s ease; }
 .p4-global-menu-link[href="/analyse"]:hover .p4-global-menu-emoji { animation:p4MenuBrain .8s ease; }
 .p4-global-menu-link[href="/boutique"]:hover .p4-global-menu-emoji { animation:p4MenuCart .75s ease; }
 .p4-global-menu-link[href="/stats"]:hover .p4-global-menu-emoji { animation:p4MenuStats .75s ease; }

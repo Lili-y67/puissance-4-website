@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 const fs = require('fs');
 const path = require('path');
@@ -54,10 +54,7 @@ const SOURCE = {
   'menu.leaderboard.label': 'Classement',
   'menu.leaderboard.sub': 'Membres et bots',
   'menu.clan.label': 'Clan',
-  'menu.clan.sub': 'Equipe et tchat',
-  'menu.tournaments.label': 'Tournois',
-  'menu.tournaments.sub': 'Arènes events',
-  'menu.analysis.label': 'Analyse',
+  'menu.clan.sub': 'Equipe et tchat',  'menu.analysis.label': 'Analyse',
   'menu.analysis.sub': 'Moteur de coups',
   'menu.shop.label': 'Boutique',
   'menu.shop.sub': 'Coins et gemmes',
@@ -126,10 +123,7 @@ const TRANSLATIONS = {
     'menu.leaderboard.label': 'Leaderboard',
     'menu.leaderboard.sub': 'Members and bots',
     'menu.clan.label': 'Clan',
-    'menu.clan.sub': 'Team and chat',
-    'menu.tournaments.label': 'Tournaments',
-    'menu.tournaments.sub': 'Event arenas',
-    'menu.analysis.label': 'Analysis',
+    'menu.clan.sub': 'Team and chat',    'menu.analysis.label': 'Analysis',
     'menu.analysis.sub': 'Move engine',
     'menu.shop.label': 'Shop',
     'menu.shop.sub': 'Coins and gems',
@@ -196,10 +190,7 @@ const TRANSLATIONS = {
     'menu.leaderboard.label': 'Clasificación',
     'menu.leaderboard.sub': 'Miembros y bots',
     'menu.clan.label': 'Clan',
-    'menu.clan.sub': 'Equipo y chat',
-    'menu.tournaments.label': 'Torneos',
-    'menu.tournaments.sub': 'Arenas de eventos',
-    'menu.analysis.label': 'Análisis',
+    'menu.clan.sub': 'Equipo y chat',    'menu.analysis.label': 'Análisis',
     'menu.analysis.sub': 'Motor de jugadas',
     'menu.shop.label': 'Tienda',
     'menu.shop.sub': 'Monedas y gemas',
@@ -361,9 +352,7 @@ const LOCAL_MACHINE_TRANSLATIONS = {
     'Ou': 'Or',
     'Mode ranked compétitif': 'Competitive ranked mode',
     'Connexion classique ou Discord': 'Classic login or Discord',
-    'Bot configurable par difficulté ou ELO': 'Bot configurable by difficulty or ELO',
-    'Tournois publics et profils premium': 'Public tournaments and premium profiles',
-    'Quêtes bots, boutique et profil en 3.4.0': 'Bot quests, shop and profile in 3.4.0',
+    'Bot configurable par difficulté ou ELO': 'Bot configurable by difficulty or ELO',    'Quêtes bots, boutique et profil en 3.4.0': 'Bot quests, shop and profile in 3.4.0',
   },
   es: {
     'Jouez en ligne': 'Juega en línea',
@@ -803,3 +792,4 @@ module.exports = {
   translateTexts,
   translateTextsDetailed,
 };
+

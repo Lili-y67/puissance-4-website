@@ -19,10 +19,10 @@ body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(255,45,8
 .intro{padding:26px}.eyebrow{font:900 12px "Barlow Condensed";letter-spacing:4px;text-transform:uppercase;color:var(--red);margin-bottom:12px}
 h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.accent{color:var(--yellow);text-shadow:0 0 24px rgba(255,214,10,.28)}
 .sub{color:var(--muted);line-height:1.55;max-width:520px}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
-.setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.emoji-input{width:62px;text-align:center;font-size:22px;padding:8px 6px}.color{width:52px;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);cursor:pointer;padding:3px}.color.secondary{filter:saturate(1.25);box-shadow:0 0 16px rgba(133,235,255,.08)}
+.setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px}.time-row{grid-template-columns:1fr}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.emoji-input{width:62px;text-align:center;font-size:22px;padding:8px 6px}.color{width:52px;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);cursor:pointer;padding:3px}.color.secondary{filter:saturate(1.25);box-shadow:0 0 16px rgba(133,235,255,.08)}.setup-hint{margin-top:8px;font-size:12px;line-height:1.45;color:var(--muted)}
 .score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
 .local-replays{margin-top:14px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.035);padding:13px;display:none;gap:8px;flex-direction:column}.local-replays.show{display:flex}.local-replays-title{font:900 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.local-replay-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.055);border-radius:13px;padding:9px 10px;background:rgba(0,0,0,.12)}.local-replay-row strong{display:block;font:900 15px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.local-replay-row span{font-size:12px;color:var(--muted)}.local-replay-row button{border:1px solid rgba(133,235,255,.24);border-radius:10px;background:rgba(133,235,255,.08);color:var(--blue);padding:8px 10px;font:900 12px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;cursor:pointer}
-.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:0 0 auto;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}.token-dot.emoji{width:24px;height:24px;border-radius:0;background:transparent!important;font-size:20px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}.token-dot.emoji canvas{width:100%;height:100%;display:block}
+.game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.turn-clock{margin-top:7px;font:900 12px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;color:var(--blue)}.turn-clock.warning{color:var(--yellow)}.turn-clock.danger{color:var(--red);animation:pulse-online .75s ease-in-out infinite}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:0 0 auto;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}.token-dot.emoji{width:24px;height:24px;border-radius:0;background:transparent!important;font-size:20px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}.token-dot.emoji canvas{width:100%;height:100%;display:block}
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
 .board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
@@ -66,6 +66,21 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
           <label>Joueur 2</label>
           <div class="row"><input class="input" id="p2-name" value="Joueur 2" maxlength="16"><input class="emoji-input input" id="p2-emoji" placeholder="💎" maxlength="4" title="Emoji de pion"><input class="color" id="p2-color" type="color" value="#ffd60a" title="Couleur 1"><input class="color secondary" id="p2-color2" type="color" value="#85ebff" title="Couleur 2"></div>
         </div>
+        <div class="player-box">
+          <label>Temps de réflexion maximum</label>
+          <div class="row time-row">
+            <select class="input" id="turn-time-limit" onchange="restartTurnClock()">
+              <option value="0">Aucun chrono</option>
+              <option value="5">5 secondes</option>
+              <option value="10">10 secondes</option>
+              <option value="15">15 secondes</option>
+              <option value="30">30 secondes</option>
+              <option value="45">45 secondes</option>
+              <option value="60">60 secondes</option>
+            </select>
+          </div>
+          <div class="setup-hint">Facultatif. Si le chrono tombe à zéro, un coup automatique facile est joué dans une colonne légale.</div>
+        </div>
       </div>
       <div class="score">
         <div class="score-card"><b id="score-p1">0</b><span>Joueur 1</span></div>
@@ -83,6 +98,7 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
         <div class="turn">
           <small id="status-label">Tour actuel</small>
           <strong id="status-text"><span class="token-dot"></span>Joueur 1</strong>
+          <div class="turn-clock" id="turn-clock">Chrono libre</div>
         </div>
         <div class="actions">
           <button class="btn" type="button" id="undo-btn" onclick="undoMove()">Annuler</button>
@@ -107,12 +123,17 @@ let scores = { 1: 0, 2: 0, draw: 0 };
 let nextStarter = 1;
 let localReplays = [];
 let localReplayTimer = null;
+let turnTimer = null;
+let turnDeadline = 0;
+let turnTimeLimitMs = 0;
+let autoMoveLocked = false;
 
 const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
 const statusLabel = document.getElementById('status-label');
 const undoBtn = document.getElementById('undo-btn');
 const phoneNote = document.getElementById('phone-note');
+const turnClock = document.getElementById('turn-clock');
 const mobileTurnView = window.matchMedia('(max-width: 860px)');
 
 function playerName(player) {
@@ -144,6 +165,55 @@ function initGrid() {
   history = [];
   current = nextStarter;
   ended = false;
+  autoMoveLocked = false;
+  turnTimeLimitMs = selectedTurnTimeLimitMs();
+}
+
+function selectedTurnTimeLimitMs() {
+  return Math.max(0, Number(document.getElementById('turn-time-limit')?.value || 0)) * 1000;
+}
+
+function clearTurnTimer() {
+  if (turnTimer) clearInterval(turnTimer);
+  turnTimer = null;
+  turnDeadline = 0;
+}
+
+function restartTurnClock() {
+  turnTimeLimitMs = selectedTurnTimeLimitMs();
+  startTurnTimer();
+}
+
+function startTurnTimer() {
+  clearTurnTimer();
+  if (!turnClock) return;
+  turnClock.className = 'turn-clock';
+  if (ended || !turnTimeLimitMs) {
+    turnClock.textContent = 'Chrono libre';
+    return;
+  }
+  turnDeadline = Date.now() + turnTimeLimitMs;
+  updateTurnClock();
+  turnTimer = setInterval(updateTurnClock, 200);
+}
+
+function updateTurnClock() {
+  if (!turnClock || ended || !turnTimeLimitMs) return;
+  const remaining = Math.max(0, turnDeadline - Date.now());
+  const seconds = Math.ceil(remaining / 1000);
+  turnClock.textContent = `Temps restant : ${seconds}s`;
+  turnClock.className = `turn-clock${seconds <= 3 ? ' danger' : seconds <= 8 ? ' warning' : ''}`;
+  if (remaining <= 0) handleTurnTimeout();
+}
+
+function handleTurnTimeout() {
+  if (ended || autoMoveLocked) return;
+  clearTurnTimer();
+  autoMoveLocked = true;
+  const col = chooseEasyAutoColumn(current);
+  if (col < 0) return;
+  updateStatus(`${playerName(current)} depasse le chrono`, 'Coup automatique');
+  setTimeout(() => playColumn(col, { automatic: true }), 280);
 }
 
 function shouldFlipBoard() {
@@ -272,10 +342,41 @@ function lowestRow(col) {
   return -1;
 }
 
-function playColumn(col) {
-  if (ended) return;
+function legalColumns() {
+  return Array.from({ length: COLS }, (_, col) => col).filter(col => lowestRow(col) >= 0);
+}
+
+function wouldWinColumn(col, player) {
   const row = lowestRow(col);
-  if (row < 0) return;
+  if (row < 0) return false;
+  grid[row][col] = player;
+  const wins = checkWin(row, col, player).length > 0;
+  grid[row][col] = 0;
+  return wins;
+}
+
+function chooseEasyAutoColumn(player) {
+  const legal = legalColumns();
+  if (!legal.length) return -1;
+  const winning = legal.filter(col => wouldWinColumn(col, player));
+  if (winning.length && Math.random() < 0.65) return winning[Math.floor(Math.random() * winning.length)];
+  const opponent = player === 1 ? 2 : 1;
+  const blocking = legal.filter(col => wouldWinColumn(col, opponent));
+  if (blocking.length && Math.random() < 0.45) return blocking[Math.floor(Math.random() * blocking.length)];
+  const centerBias = legal.filter(col => [3, 2, 4].includes(col));
+  const pool = centerBias.length && Math.random() < 0.35 ? centerBias : legal;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function playColumn(col, options = {}) {
+  if (ended) return;
+  clearTurnTimer();
+  autoMoveLocked = false;
+  const row = lowestRow(col);
+  if (row < 0) {
+    startTurnTimer();
+    return;
+  }
   grid[row][col] = current;
   history.push({ row, col, player: current });
   const win = checkWin(row, col, current);
@@ -300,7 +401,8 @@ function playColumn(col) {
   }
   current = current === 1 ? 2 : 1;
   renderBoard();
-  updateStatus();
+  updateStatus(options.automatic ? `${playerName(current)} reprend la main` : null, options.automatic ? 'Tour actuel' : 'Tour actuel');
+  startTurnTimer();
 }
 
 function checkWin(row, col, player) {
@@ -323,18 +425,22 @@ function checkWin(row, col, player) {
 
 function undoMove() {
   if (ended || !history.length) return;
+  clearTurnTimer();
   const last = history.pop();
   grid[last.row][last.col] = 0;
   current = last.player;
   renderBoard();
   updateStatus();
+  startTurnTimer();
 }
 
 function newRound() {
   stopLocalReplayPlayback();
+  clearTurnTimer();
   initGrid();
   renderBoard();
   updateStatus();
+  startTurnTimer();
 }
 
 function resetAll() {
@@ -390,6 +496,7 @@ function renderLocalReplays() {
 }
 
 function stopLocalReplayPlayback() {
+  clearTurnTimer();
   if (localReplayTimer) {
     clearTimeout(localReplayTimer);
     localReplayTimer = null;
@@ -410,6 +517,7 @@ function playLocalReplay(index) {
   const replay = localReplays[index];
   if (!replay) return;
   stopLocalReplayPlayback();
+  clearTurnTimer();
   applyReplayPlayerSettings(replay);
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
@@ -425,6 +533,10 @@ function playLocalReplay(index) {
       renderBoard(replay.winCells || []);
       current = replay.winner || (replay.moves.at(-1)?.player || 1);
       updateStatus(replay.winner ? `${replay.players[replay.winner].name} gagne !` : 'Match nul', 'Replay termine');
+      if (turnClock) {
+        turnClock.className = 'turn-clock';
+        turnClock.textContent = 'Replay';
+      }
       return;
     }
     grid[move.row][move.col] = move.player;
@@ -453,6 +565,6 @@ mobileTurnView.addEventListener?.('change', () => {
 newRound();
 </script>
 <script src="/theme.js?v=eggs-14"></script>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 </body>
 </html>

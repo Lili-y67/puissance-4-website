@@ -49,10 +49,6 @@ const ADMIN_COMMAND_ACTIONS = {
   'admin-boost-coins': 'boost-coins',
   'admin-give-item': 'give-item',
   'admin-crystal': 'crystal',
-  'admin-tournoi-finish': 'tournoi-finish',
-  'admin-tournoi-pause': 'tournoi-pause',
-  'admin-tournoi-resume': 'tournoi-resume',
-  'admin-tournoi-delete': 'tournoi-delete',
   'admin-backups': 'backups',
   'admin-maintenance-on': 'maintenance-on',
   'admin-maintenance-off': 'maintenance-off',
@@ -65,7 +61,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
   const valueOption = (description = 'Valeur') => ({ type: 10, name: 'valeur', description, required: true });
   const optionalValueOption = (description = 'Valeur') => ({ type: 10, name: 'valeur', description, required: false });
   const reasonOption = (description = 'Raison ou detail') => ({ type: 3, name: 'raison', description, required: false });
-  const idOption = (description = 'ID tournoi, partie ou ressource') => ({ type: 3, name: 'id', description, required: true });
+  const idOption = (description = 'ID partie ou ressource') => ({ type: 3, name: 'id', description, required: true });
   const adminCommand = (name, description, options = []) => ({ name: `admin-${name}`, description, options });
 
   return [
@@ -95,8 +91,6 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       { type: 4, name: 'quantite', description: 'Quantite ou montant', required: false },
     ] },
     { name: 'ticket-setup', description: 'Installer le panneau de tickets Puissance 4', default_member_permissions: '16' },
-    { name: 'tournois', description: 'Lister les tournois officiels' },
-    { name: 'tournoi', description: 'Afficher le detail d un tournoi', options: [{ type: 3, name: 'id', description: 'ID public ou interne', required: true }] },
     { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
     { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
@@ -132,10 +126,6 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       pseudoOption(true),
       optionalValueOption('Duree en jours, defaut 30'),
     ]),
-    adminCommand('tournoi-finish', 'Terminer un tournoi', [idOption('ID public ou interne du tournoi')]),
-    adminCommand('tournoi-pause', 'Mettre un tournoi en pause', [idOption('ID public ou interne du tournoi')]),
-    adminCommand('tournoi-resume', 'Reprendre un tournoi pause', [idOption('ID public ou interne du tournoi')]),
-    adminCommand('tournoi-delete', 'Supprimer un tournoi', [idOption('ID public ou interne du tournoi')]),
     adminCommand('backups', 'Afficher les backups disponibles'),
     adminCommand('maintenance-on', 'Activer l alerte maintenance', [reasonOption('Message affiche aux joueurs')]),
     adminCommand('maintenance-off', 'Desactiver l alerte maintenance'),
@@ -560,7 +550,7 @@ function startDiscordBot(ctx) {
         return {
           details: 'Competition',
           state: 'Mode',
-          large: 'Tournoi',
+          large: 'Competition',
           small: 'Classement',
           elapsed: 'Match',
           since: 'En cours depuis',
@@ -1293,42 +1283,9 @@ function startDiscordBot(ctx) {
       subtitle: 'HTTP, Bot API, duels, boutique, stats et Socket.IO.',
       sections: [
         '### Bot API\nCreation de bots, token affiche une seule fois, ping, file, game state et coups.',
-        '### Site API\nProfils, classements, boutique, tournois, live, stats et endpoints admin.',
+        '### Site API\nProfils, classements, boutique, live, stats et endpoints admin.',
       ],
       buttons: [linkButton('Documentation API', `${api}/api-doc`, '🧪'), linkButton('Client bot JS', `${api}/downloads/p4-bot-client.js`, '🤖')],
-    });
-  }
-
-  function tournamentsPayload() {
-    const rows = ctx.tQ.listAll.all().slice(0, 8);
-    const lines = rows.map(t => {
-      const status = String(t.status || '').toUpperCase();
-      const starts = Number(t.starts_at || 0) > Date.now() ? `debut <t:${Math.floor(Number(t.starts_at) / 1000)}:R>` : status;
-      return `${code(t.public_id || t.id)} **${t.name}** | ${starts} | ${t.duration_minutes || 60}m | ${t.move_time_seconds || 30}s/coup`;
-    });
-    return containerMessage({
-      color: 0x30d158,
-      title: 'Tournois officiels',
-      subtitle: 'Publics automatiques et tournois Perso.',
-      sections: [lines.join('\n') || 'Aucun tournoi programme.'],
-      buttons: [linkButton('Page tournois', `${api}/tournoi`, '🏟️')],
-    });
-  }
-
-  function tournamentPayload(ref) {
-    const tournament = ctx.findTournamentByRef(String(ref || ''));
-    if (!tournament) return null;
-    const standings = ctx.tQ.standings.all(tournament.id).slice(0, 5);
-    const lines = standings.map((entry, index) => `${index + 1}. **${entry.pseudo}** - ${entry.score || 0} pts (${entry.wins || 0}V)`);
-    return containerMessage({
-      color: 0x30d158,
-      title: tournament.name,
-      subtitle: `${code(tournament.public_id || tournament.id)} | ${String(tournament.status || '').toUpperCase()}`,
-      sections: [
-        `### Configuration\nDuree: **${tournament.duration_minutes || 60}m** | Par coup: **${tournament.move_time_seconds || 30}s**\nRewards: **${tournament.reward_1 || 0} / ${tournament.reward_2 || 0} / ${tournament.reward_3 || 0} coins**`,
-        `### Classement\n${lines.join('\n') || 'Aucun participant classe.'}`,
-      ],
-      buttons: [linkButton('Ouvrir tournoi', `${api}/tournoi/${tournament.public_id || tournament.id}`, '🏟️')],
     });
   }
 
@@ -1370,7 +1327,7 @@ function startDiscordBot(ctx) {
       subtitle: 'Puissance 4 Ranked sur Discord',
       sections: [
         '### Joueurs\n`/profil`, `/moi`, `/ui`, `/classement`, `/stats`, `/live`, `/replay`, `/duel-lien`',
-        '### Systeme\n`/boutique`, `/boosts`, `/tournois`, `/tournoi`, `/cosmetiques`, `/api`, `/bots`',
+        '### Systeme\n`/boutique`, `/boosts`, `/cosmetiques`, `/api`, `/bots`',
         `### Staff\n\`/login\`, puis commandes dediees: ${adminNames}\nEvents: \`/giveaway\`, \`/drop\`. Coupon: \`/admin-coupon\`. Session 10 min + verification du role Discord.`,
       ],
       buttons: [linkButton('Ouvrir le site', api, '🎮'), linkButton('Doc API', `${api}/api-doc`, '🧪')],
@@ -1578,7 +1535,7 @@ function startDiscordBot(ctx) {
     const reason = optionString(interaction, 'raison', '') || '';
     const resourceId = optionString(interaction, 'id');
     const itemKey = optionString(interaction, 'item');
-    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'crystal', 'tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
+    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'crystal', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
     const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
@@ -1620,26 +1577,6 @@ function startDiscordBot(ctx) {
       ctx.WH.wlogBoost('coins', multiplier, 'Puissance4-Booster', expiresAt ? `${minutes} min` : 'desactive');
       return interaction.editReply(boostsPayload());
     }
-    if (['tournoi-finish', 'tournoi-pause', 'tournoi-resume', 'tournoi-delete'].includes(action)) {
-      const tournament = ctx.findTournamentByRef(resourceId);
-      if (!tournament) return replyError(interaction, 'Tournoi introuvable', String(resourceId || '-'));
-      if (action === 'tournoi-finish') {
-        ctx.finalizeTournament(tournament.id, Date.now());
-        ctx.clearTournamentQueue(tournament.id);
-      } else if (action === 'tournoi-pause') {
-        ctx.tQ.markPaused.run({ id: tournament.id, paused_at: Date.now() });
-        ctx.clearTournamentQueue(tournament.id);
-      } else if (action === 'tournoi-resume') {
-        const delta = Number(tournament.paused_at || 0) > 0 ? Date.now() - Number(tournament.paused_at || 0) : 0;
-        ctx.tQ.resumePaused.run({ id: tournament.id, ends_at: Number(tournament.ends_at || 0) + delta });
-      } else if (action === 'tournoi-delete') {
-        ctx.db.prepare(`DELETE FROM tournaments WHERE id=?`).run(tournament.id);
-        ctx.tournamentQueues.delete(Number(tournament.id));
-      }
-      ctx.WH.wlogTournament(tournament.name, tournament.public_id || tournament.id, action);
-      return interaction.editReply(tournamentPayload(tournament.public_id || tournament.id) || tournamentsPayload());
-    }
-
     const target = playerByPseudo(pseudo);
     if (!target) return replyError(interaction, 'Joueur introuvable', pseudo || 'Aucun pseudo fourni.');
     if (action === 'player') return interaction.editReply(profilePayload(target));
@@ -2366,12 +2303,6 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'giveaway') return handleGiveaway(interaction);
       if (interaction.commandName === 'drop') return handleDrop(interaction);
       if (interaction.commandName === 'ticket-setup') return handleTicketSetup(interaction);
-      if (interaction.commandName === 'tournois') return interaction.editReply(tournamentsPayload());
-      if (interaction.commandName === 'tournoi') {
-        const payload = tournamentPayload(interaction.options.getString('id', true));
-        if (!payload) return replyError(interaction, 'Tournoi introuvable');
-        return interaction.editReply(payload);
-      }
       if (interaction.commandName === 'aide') return interaction.editReply(helpPayload());
       if (ADMIN_COMMAND_ACTIONS[interaction.commandName]) return handleAdmin(interaction);
       if (interaction.commandName === 'admin-coupon') return handleCoupon(interaction);

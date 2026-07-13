@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'p4-shell-v3.4.0-eggs-14';
+﻿const CACHE_VERSION = 'p4-shell-v3.4.0-local-clean-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -40,6 +40,7 @@ function shouldBypass(request, url) {
 function isLiveShellAsset(url) {
   return url.pathname === '/theme.js'
     || url.pathname === '/theme.css'
+    || url.pathname === '/presence.js'
     || url.pathname === '/service-worker.js';
 }
 
@@ -91,3 +92,5 @@ self.addEventListener('fetch', event => {
     })
   );
 });
+
+

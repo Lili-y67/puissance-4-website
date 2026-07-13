@@ -793,7 +793,6 @@ body{
         <div class="metric"><div class="top"><span class="name">Perso</span><span class="emoji">&#10024;</span></div><div class="num" id="persoCount">-</div><div class="hint">Comptes personnalises.</div></div>
         <div class="metric"><div class="top"><span class="name">Boosts VIP actifs</span><span class="emoji">&#9889;</span></div><div class="num" id="activeVipBoosts">-</div><div class="hint">Boosts individuels en cours.</div></div>
         <div class="metric"><div class="top"><span class="name">Suivis</span><span class="emoji">&#128106;</span></div><div class="num" id="follows">-</div><div class="hint">Liens sociaux crees.</div></div>
-        <div class="metric"><div class="top"><span class="name">Tournois</span><span class="emoji">&#127967;&#65039;</span></div><div class="num" id="tournaments">-</div><div class="hint">Evenements generes.</div></div>
         <div class="metric"><div class="top"><span class="name">Crystal</span><span class="emoji">&#128142;</span></div><div class="num" id="crystalCount">-</div><div class="hint">Abonnements Crystal actifs.</div></div>
       </div>
     </article>
@@ -850,7 +849,6 @@ function renderTicker(data) {
     `&#127922; ${numberFormat.format(data.totalGames)} parties lancees`,
     `&#129504; ${numberFormat.format(data.analysedGames)} parties analysees`,
     `&#128176; ${numberFormat.format(data.totalCoins)} coins en circulation`,
-    `&#127967;&#65039; ${numberFormat.format(data.tournaments)} tournois references`,
     `&#11088; ${numberFormat.format(data.vipCount + data.vipPlusCount + data.persoCount)} comptes premium`
   ];
   root.innerHTML = [...lines, ...lines].map(line => `<div class="ticker-item"><span>${line}</span></div>`).join('');
@@ -931,7 +929,6 @@ function populate(data, weekly) {
   setText('crystalCount', data.crystalCount || 0);
   setText('activeVipBoosts', data.activeVipBoosts);
   setText('follows', data.follows);
-  setText('tournaments', data.tournaments);
   document.getElementById('updatedAt').textContent = `Mise a jour: ${new Date(data.updatedAt).toLocaleString('fr-FR')}`;
   renderHeroBadges(data);
   renderTicker(data);
@@ -1027,6 +1024,6 @@ setInterval(loadStats, 30000);
 })();
 </script>
 <script src="/theme.js?v=eggs-14"></script>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 </body>
 </html>

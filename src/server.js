@@ -96,6 +96,8 @@ const HOSTED_BOT_THINK_MS = Math.max(400, Math.min(15_000, Number(process.env.P4
 const HOSTED_BOT_MAX_TABLE = Math.max(1_000, Math.min(120_000, Number(process.env.P4_HOST_MAX_TABLE || 60_000)));
 const LIVE_UPDATE_DEBOUNCE_MS = Math.max(250, Number(process.env.LIVE_UPDATE_DEBOUNCE_MS || 900));
 const BOT_HOST_METRIC_LIMIT = Math.max(30, Math.min(480, Number(process.env.BOT_HOST_METRIC_LIMIT || 240)));
+const SESSION_IDLE_MS = Math.max(60_000, Number(process.env.SESSION_IDLE_MS || 10 * 60_000));
+const TOURNAMENTS_ENABLED = String(process.env.TOURNAMENTS_ENABLED || '0') === '1';
 const LAVALINK_URL = String(process.env.LAVALINK_URL || '').trim().replace(/\/+$/, '');
 const LAVALINK_PASSWORD = String(process.env.LAVALINK_PASSWORD || process.env.LAVALINK_AUTH || '').trim();
 const YTDLP_PATH = String(process.env.YTDLP_PATH || 'yt-dlp').trim();
@@ -209,6 +211,40 @@ function getTournamentQueue(tournamentId) {
 
 function getOnlineSocketIds(playerId) {
   return [...(onlineSockets.get(Number(playerId)) || new Set())];
+}
+
+function removeSocketPresence(socket, { notifyExpired = false } = {}) {
+  if (!socket?.playerId) return false;
+  const playerId = Number(socket.playerId);
+  const before = `${getPresenceCounts().onlinePlayers}:${getPresenceCounts().visitors}`;
+  if (!isAnonymousPlayerId(playerId)) rQ.updateLastSeen.run(Date.now(), playerId);
+  const sockets = onlineSockets.get(playerId);
+  if (sockets) {
+    sockets.delete(socket.id);
+    if (sockets.size === 0) {
+      onlineSockets.delete(playerId);
+      if (!isAnonymousPlayerId(playerId)) {
+        scheduleDiscordConnectedRemoval(playerId);
+        scheduleCrystalLoginClear(playerId);
+      }
+    }
+  }
+  socket.playerId = null;
+  socket.playerData = null;
+  socket.sessionToken = null;
+  const afterCounts = getPresenceCounts();
+  const after = `${afterCounts.onlinePlayers}:${afterCounts.visitors}`;
+  if (before !== after) broadcastPresenceCounts();
+  if (notifyExpired) socket.emit('session_expired', { message: "Session expirée après 10 minutes d'inactivité. Reconnecte-toi." });
+  return true;
+}
+
+function expireSocketSession(socket) {
+  if (!socket) return;
+  socket.emit('session_expired', { message: "Session expirée après 10 minutes d'inactivité. Reconnecte-toi." });
+  setTimeout(() => {
+    if (socket.connected) socket.disconnect(true);
+  }, 25);
 }
 
 function notifyPlayerProfileChanged(playerId, reason, details = {}) {
@@ -927,9 +963,21 @@ function genToken() {
 }
 function createSession(playerId) {
   const token   = genToken();
-  const expires = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const expires = Date.now() + SESSION_IDLE_MS;
   sQ.set.run(token, playerId, expires);
   return token;
+}
+
+function touchSession(token) {
+  if (!token) return null;
+  const row = sQ.get.get(token);
+  if (!row) return null;
+  if (Date.now() > row.expires) {
+    sQ.del.run(token);
+    return null;
+  }
+  sQ.touch.run(Date.now() + SESSION_IDLE_MS, token);
+  return Number(row.player_id);
 }
 
 function generateGuestPseudo() {
@@ -992,7 +1040,7 @@ app.post('/api/auth/guest', security.routeGuard('guest'), (req, res) => {
   }
 });
 
-function validateSession(token) {
+function validateSession(token, { touch = true } = {}) {
   if (!token) return null;
   purgeExpiredAnonymousSessions();
   const anonSession = anonymousSessions.get(token);
@@ -1007,7 +1055,8 @@ function validateSession(token) {
   const row = sQ.get.get(token);
   if (!row) return null;
   if (Date.now() > row.expires) { sQ.del.run(token); return null; }
-  return row.player_id;
+  if (touch) sQ.touch.run(Date.now() + SESSION_IDLE_MS, token);
+  return Number(row.player_id);
 }
 
 function hashBotToken(token) {
@@ -4304,11 +4353,13 @@ function serializeTournament(row, playerId = null) {
 }
 
 function getPublicActiveTournament() {
+  if (!TOURNAMENTS_ENABLED) return null;
   const row = tQ.listAll.all().find(entry => entry.status === 'active' && !entry.password);
   return row ? serializeTournament(row, null) : null;
 }
 
 function getPublicPendingTournament() {
+  if (!TOURNAMENTS_ENABLED) return null;
   const row = tQ.listAll.all().find(entry => entry.status === 'pending' && !entry.password);
   return row ? serializeTournament(row, null) : null;
 }
@@ -4318,6 +4369,7 @@ function clearTournamentQueue(tournamentId) {
 }
 
 function ensureAutoTournaments() {
+  if (!TOURNAMENTS_ENABLED) return;
   if (!BOT_PLAYER_ID) return;
   const candidates = [];
   for (const dayOffset of [0, 1, 2]) {
@@ -4357,6 +4409,7 @@ function ensureAutoTournaments() {
 }
 
 function activatePendingTournaments() {
+  if (!TOURNAMENTS_ENABLED) return;
   const now = Date.now();
   const pending = tQ.listPendingToStart.all(now);
   for (const tournament of pending) {
@@ -4382,6 +4435,7 @@ const finalizeTournament = db.transaction((tournamentId, finishedAt) => {
 });
 
 function finalizeExpiredTournaments() {
+  if (!TOURNAMENTS_ENABLED) return;
   ensureAutoTournaments();
   activatePendingTournaments();
   const now = Date.now();
@@ -4397,6 +4451,7 @@ function finalizeExpiredTournaments() {
 }
 
 const applyTournamentResult = db.transaction((gameId, player1Id, player2Id, winnerId, isDraw) => {
+  if (!TOURNAMENTS_ENABLED) return;
   const tournaments = tQ.listActiveForPair.all(player1Id, player2Id, Date.now());
   for (const tournament of tournaments) {
     if (tQ.hasMatch.get(tournament.id, gameId)) continue;
@@ -5224,8 +5279,8 @@ app.get('/analyse',     (_, res) => res.sendFile(path.join(__dirname, 'public/an
 app.get('/analyse.html',(_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
 app.get('/progression',  (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
 app.get('/progression.html', (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
-app.get('/tournoi',     (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
-app.get('/tournoi/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/tournoi.html')));
+app.get('/tournoi',     (_, res) => res.redirect('/'));
+app.get('/tournoi/:id', (_, res) => res.redirect('/'));
 app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
 app.get('/duel-auth/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/duel-auth.html')));
 app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
@@ -5247,7 +5302,7 @@ db.exec(`
 
 const EASTER_EGG_REWARD_PATHS = new Set([
   '/profil', '/boutique', '/progression', '/leaderboard', '/players',
-  '/analyse', '/stats', '/news', '/tournoi', '/regles', '/api-doc',
+  '/analyse', '/stats', '/news', '/regles', '/api-doc',
   '/local', '/replay', '/cgu', '/duel', '/forgot-password',
   '/reset-password', '/404',
 ]);
@@ -5411,6 +5466,13 @@ app.get('/api/musics', (_, res) => {
     .sort((a, b) => getQueueMusicThemeSortIndex(a.id) - getQueueMusicThemeSortIndex(b.id));
   res.json({ musics, themes });
 });
+
+function tournamentRemoved(req, res) {
+  return res.status(410).json({ error: 'Les tournois ont ete retires du site.' });
+}
+
+app.use('/api/tournaments', tournamentRemoved);
+app.use('/api/admin/tournaments', tournamentRemoved);
 
 app.get('/api/tournaments', (req, res) => {
   finalizeExpiredTournaments();
@@ -8173,6 +8235,7 @@ app.get('/api/players/:id', (req, res) => {
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {
+  if (!TOURNAMENTS_ENABLED) return res.json({ tournaments: [] });
   const playerId = Number(req.params.id);
   const rows = db.prepare(`
     SELECT
@@ -9131,7 +9194,6 @@ function getStatsOverview() {
   const averageDuration = Number(db.prepare(`SELECT ROUND(AVG(duration), 0) AS v FROM games WHERE status = 'finished' AND duration > 0`).get()?.v || 0);
   const averageMoves = Number(db.prepare(`SELECT ROUND(AVG(move_count), 0) AS v FROM games WHERE status = 'finished' AND move_count > 0`).get()?.v || 0);
   const follows = Number(db.prepare(`SELECT COUNT(*) AS c FROM follows`).get()?.c || 0);
-  const tournaments = Number(db.prepare(`SELECT COUNT(*) AS c FROM tournaments`).get()?.c || 0);
   const totalCoins = Number(db.prepare(`SELECT COALESCE(SUM(coins), 0) AS v FROM players WHERE deleted = 0 AND is_guest = 0 AND id != ?`).get(BOT_PLAYER_ID)?.v || 0);
   const vipCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_vip = 1 AND is_vip_plus = 0`).get()?.c || 0);
   const vipPlusCount = Number(db.prepare(`SELECT COUNT(*) AS c FROM players WHERE deleted = 0 AND is_guest = 0 AND is_vip_plus = 1`).get()?.c || 0);
@@ -9188,7 +9250,6 @@ function getStatsOverview() {
     bestAccuracy,
     analysedGames,
     follows,
-    tournaments,
     registeredPlayers,
     registeredDiscordPlayers,
     totalCoins,
@@ -9308,8 +9369,35 @@ app.get('/api/stats/weekly', (_, res) => {
   }
 });
 
+setInterval(() => {
+  const now = Date.now();
+  try { sQ.purge.run(now); } catch {}
+  for (const socket of io.sockets.sockets.values()) {
+    if (!socket.playerId || !socket.sessionToken || isAnonymousPlayerId(socket.playerId)) continue;
+    if (validateSession(socket.sessionToken, { touch: false }) !== Number(socket.playerId)) {
+      expireSocketSession(socket);
+    }
+  }
+}, Math.min(60_000, Math.max(10_000, Math.floor(SESSION_IDLE_MS / 2))));
+
 io.on('connection', socket => {
   socket.emit('presence_counts', getPresenceCounts());
+
+  socket.use((packet, next) => {
+    const eventName = String(packet?.[0] || '');
+    if (
+      socket.sessionToken
+      && socket.playerId
+      && !['presence_ping', 'visitor_presence', 'identify', 'dev_metrics_subscribe', 'dev_metrics_unsubscribe'].includes(eventName)
+    ) {
+      const validId = touchSession(socket.sessionToken);
+      if (validId !== Number(socket.playerId)) {
+        expireSocketSession(socket);
+        return;
+      }
+    }
+    next();
+  });
 
   socket.on('dev_metrics_subscribe', ({ token } = {}) => {
     const player = getDeveloperSessionByToken(token);
@@ -9374,14 +9462,18 @@ io.on('connection', socket => {
 
   socket.on('identify', ({ playerId, token }) => {
     // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier le token de session
-    const validId = token ? validateSession(token) : null;
+    const validId = token ? validateSession(token, { touch: false }) : null;
     if (!validId || validId !== Number(playerId)) {
+      if (socket.playerId) expireSocketSession(socket);
+      else socket.emit('session_expired', { message: "Session expirée après 10 minutes d'inactivité. Reconnecte-toi." });
       return socket.emit('error', { message: 'Session invalide. Reconnecte-toi.' });
     }
     const player = getPlayerRecord(Number(playerId));
     if (!player) return socket.emit('error', { message: 'Joueur introuvable.' });
+    if (socket.playerId && Number(socket.playerId) !== Number(playerId)) removeSocketPresence(socket);
     socket.playerId   = Number(playerId);
     socket.playerData = sanitize(player);
+    socket.sessionToken = String(token || '');
     // Stocker l'IP en mémoire (X-Forwarded-For est fourni par le reverse proxy du VPS)
     const clientIp = (socket.handshake.headers['x-forwarded-for'] || '').split(',')[0].trim()
                    || socket.handshake.address;
@@ -9415,8 +9507,16 @@ io.on('connection', socket => {
   });
 
   // Heartbeat de prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsence (pages hors jeu)
-  socket.on('presence_ping', () => {
-    if (socket.playerId && !isAnonymousPlayerId(socket.playerId)) rQ.updateLastSeen.run(Date.now(), socket.playerId);
+  socket.on('presence_ping', ({ active } = {}) => {
+    if (!socket.playerId || isAnonymousPlayerId(socket.playerId)) return;
+    const validId = socket.sessionToken ? validateSession(socket.sessionToken, { touch: false }) : null;
+    if (validId !== Number(socket.playerId)) {
+      expireSocketSession(socket);
+      return;
+    }
+    if (active === true && touchSession(socket.sessionToken) === Number(socket.playerId)) {
+      rQ.updateLastSeen.run(Date.now(), socket.playerId);
+    }
   });
 
   socket.on('game_latency_probe', (_sentAt, ack) => {
@@ -9522,6 +9622,7 @@ io.on('connection', socket => {
   socket.on('queue_leave', () => { mm.leave(socket.id); socket.emit('queue_left'); });
 
   socket.on('tournament_queue_join', ({ tournamentId, shape, tokenEmojiImage } = {}) => {
+    if (!TOURNAMENTS_ENABLED) return socket.emit('error', { message: 'Les tournois ont ete retires du site.' });
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const id = Number(tournamentId || 0);
     const tournament = tQ.getById.get(id);
@@ -9553,6 +9654,7 @@ io.on('connection', socket => {
   });
 
   socket.on('tournament_queue_leave', ({ tournamentId } = {}) => {
+    if (!TOURNAMENTS_ENABLED) return socket.emit('tournament_queue_left');
     const id = Number(tournamentId || socket.tournamentQueueId || 0);
     if (id) getTournamentQueue(id).leave(socket.id);
     socket.tournamentQueueId = null;

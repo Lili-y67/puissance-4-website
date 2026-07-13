@@ -175,7 +175,6 @@
     { href: '/players', icon: '👥', labelKey: 'menu.players.label', subKey: 'menu.players.sub' },
     { href: '/leaderboard', icon: '🏆', labelKey: 'menu.leaderboard.label', subKey: 'menu.leaderboard.sub' },
     { href: '/clan', icon: '🛡️', labelKey: 'menu.clan.label', subKey: 'menu.clan.sub' },
-    { href: '/tournoi', icon: '🏟️', labelKey: 'menu.tournaments.label', subKey: 'menu.tournaments.sub' },
     { href: '/analyse', icon: '🧠', labelKey: 'menu.analysis.label', subKey: 'menu.analysis.sub' },
     { href: '/boutique', icon: '🛒', labelKey: 'menu.shop.label', subKey: 'menu.shop.sub' },
     { href: '/stats', icon: '📈', labelKey: 'menu.stats.label', subKey: 'menu.stats.sub' },
@@ -202,8 +201,6 @@
     'menu.leaderboard.sub': 'Membres et bots',
     'menu.clan.label': 'Clan',
     'menu.clan.sub': 'Equipe et tchat',
-    'menu.tournaments.label': 'Tournois',
-    'menu.tournaments.sub': 'Arènes events',
     'menu.analysis.label': 'Analyse',
     'menu.analysis.sub': 'Moteur de coups',
     'menu.shop.label': 'Boutique',
@@ -489,7 +486,6 @@
     '/analyse': 'Pion tacticien trouvé : son analyse était « joue au milieu ».',
     '/stats': 'Pion statistique trouvé : 100 % des pions cachés détestent les graphiques.',
     '/news': 'Pion journaliste trouvé : exclusivité, il était caché ici.',
-    '/tournoi': 'Pion de tournoi trouvé : éliminé pour avoir roulé hors du plateau.',
     '/regles': 'Pion réglementaire trouvé : il avait lu les règles, lui.',
     '/api-doc': 'Pion développeur trouvé : réponse HTTP 204, aucune stratégie.',
     '/local': 'Pion local trouvé : aucune connexion internet requise pour le surprendre.',
@@ -499,7 +495,7 @@
 
   function normalizedPath() {
     const path = window.location.pathname.replace(/\.html$/, '').replace(/\/+$/, '') || '/';
-    return ['/replay', '/tournoi', '/duel'].find(base => path === base || path.startsWith(`${base}/`)) || path;
+    return ['/replay', '/duel'].find(base => path === base || path.startsWith(`${base}/`)) || path;
   }
 
   function eggAllowed(path) {
@@ -800,7 +796,7 @@
 
     const rewardPaths = new Set([
       '/profil', '/boutique', '/progression', '/leaderboard', '/players',
-      '/analyse', '/stats', '/news', '/tournoi', '/regles', '/api-doc',
+      '/analyse', '/stats', '/news', '/regles', '/api-doc',
       '/local', '/replay', '/cgu', '/duel', '/forgot-password',
       '/reset-password', '/404',
     ]);

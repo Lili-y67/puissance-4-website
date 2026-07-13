@@ -4,9 +4,34 @@
  */
 (function () {
   const visitorStorageKey = 'p4_visitor_id';
+  const sessionIdleMs = 10 * 60 * 1000;
+  let lastInteractionAt = Number(localStorage.getItem('last_active') || 0) || 0;
+
+  function recordActivity() {
+    lastInteractionAt = Date.now();
+    try { localStorage.setItem('last_active', String(lastInteractionAt)); } catch (e) {}
+  }
+
+  function hasRecentActivity() {
+    return !!lastInteractionAt && Date.now() - lastInteractionAt <= sessionIdleMs;
+  }
+
+  function clearStoredAuth() {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('player');
+      localStorage.removeItem('last_active');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('player');
+    } catch (e) {}
+  }
+
+  ['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(eventName => {
+    window.addEventListener(eventName, recordActivity, { passive: true });
+  });
 
   function getStoredAuth() {
-    const token = localStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || '';
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token') || sessionStorage.getItem('duel_guest_token') || '';
     const playerRaw = getStoredPlayerRaw();
     let player = null;
     try {
@@ -26,6 +51,10 @@
       || sessionStorage.getItem('duel_guest_player')
       || sessionStorage.getItem('player')
       || '';
+  }
+
+  function isGuestToken(token) {
+    return !!token && token === sessionStorage.getItem('duel_guest_token');
   }
 
   function getVisitorId() {
@@ -245,6 +274,11 @@
     function identifyFromStorage() {
       const auth = getStoredAuth();
       if (auth.token && auth.playerId) {
+        if (!isGuestToken(auth.token) && !hasRecentActivity()) {
+          clearStoredAuth();
+          socket.emit('visitor_presence', { visitorId });
+          return;
+        }
         socket.emit('identify', { playerId: auth.playerId, token: auth.token });
       } else {
         socket.emit('visitor_presence', { visitorId });
@@ -263,6 +297,16 @@
     });
 
     socket.on('identified', () => {
+      if (typeof window._reloadStatus === 'function') {
+        setTimeout(window._reloadStatus, 100);
+      }
+    });
+
+    socket.on('session_expired', ({ message } = {}) => {
+      clearStoredAuth();
+      try {
+        window.dispatchEvent(new CustomEvent('p4:session-expired', { detail: { message } }));
+      } catch (e) {}
       if (typeof window._reloadStatus === 'function') {
         setTimeout(window._reloadStatus, 100);
       }
@@ -351,7 +395,7 @@
       if (!socket.connected) return;
       const auth = getStoredAuth();
       if (auth.token && auth.playerId) {
-        socket.emit('presence_ping');
+        socket.emit('presence_ping', { active: isGuestToken(auth.token) ? true : hasRecentActivity() });
       } else {
         socket.emit('visitor_presence', { visitorId });
       }

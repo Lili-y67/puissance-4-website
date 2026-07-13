@@ -94,7 +94,6 @@ ul{padding-left:18px}
         <a href="#games">Parties / Replay <span>&rarr;</span></a>
         <a href="#shop">Boutique / Boosters <span>&rarr;</span></a>
         <a href="#duels">Duels <span>&rarr;</span></a>
-        <a href="#tournaments">Tournois <span>&rarr;</span></a>
         <a href="#clans">Clans <span>&rarr;</span></a>
         <a href="#discord">Discord <span>&rarr;</span></a>
         <a href="#bot-api">Bot API <span>&rarr;</span></a>
@@ -114,7 +113,6 @@ ul{padding-left:18px}
         <a href="#games">Parties, live et replay</a>
         <a href="#shop">Boutique, coins et boosters</a>
         <a href="#duels">Duels</a>
-        <a href="#tournaments">Tournois</a>
         <a href="#clans">Clans</a>
         <a href="#discord">Discord</a>
         <a href="#bot-api">Bot API</a>
@@ -241,7 +239,6 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/players/:id/follow</span></div><p>Retire un follow.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/follow-status</span></div><p>Retourne l&rsquo;&eacute;tat de follow entre le joueur courant et le profil cibl&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/status</span></div><p>Retourne l&rsquo;&eacute;tat live d&rsquo;un joueur.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/tournaments</span></div><p>Liste les tournois li&eacute;s &agrave; ce joueur.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/players/:id/vip-boost</span></div><p>Active le boost premium individuel du joueur courant selon son pack actif.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/vip-boost</span></div><p>Retourne l&rsquo;&eacute;tat du boost premium individuel : actif, multiplicateur, temps restant, cooldown.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/referral/me</span></div><p>Retourne le lien de parrainage du joueur, son parrain actif, ses filleuls et les bonus boutique disponibles.</p><div class="note ok">Le filleul obtient une remise boutique, et le parrain profite aussi de son avantage quand le lien a servi au login.</div></article>
@@ -329,12 +326,6 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="note">Les duels ranked demandent une connexion. Si un visiteur ouvre un lien ranked, il passe par <code>/duel-auth/:id</code> avant de revenir automatiquement sur le lien.</div></article>
         <article class="endpoint"><div class="note">Le cycle complet du duel passe ensuite par Socket.IO : invitation push, acceptation/refus, expiration, puis <code>match_found</code> si accept&eacute;.</div></article>
       </div></section>
-      <section class="section" id="tournaments"><div class="section-head"><div><h2>Tournois</h2><p>Cr&eacute;ation, lecture, inscription et gestion du mode tournoi.</p></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments</span></div><p>Liste les tournois disponibles pour <code>tournoi.html</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments/:id</span></div><p>D&eacute;tail d&rsquo;un tournoi via id public ou interne.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments</span></div><p>Cr&eacute;e un tournoi. Erreurs typiques : non autoris&eacute;, session invalide, param&egrave;tres invalides.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments/:id/join</span></div><p>Inscrit le joueur au tournoi. G&egrave;re aussi le mot de passe si tournoi priv&eacute;.</p></article>
-      </div></section>
       <section class="section" id="clans"><div class="section-head"><div><h2>Clans</h2><p>Gestion des clans, membres, salon interne et leaderboard de groupe.</p></div><div class="legend"><span class="chip get">GET</span><span class="chip post">POST</span><span class="chip patch">PATCH</span><span class="chip delete">DELETE</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans</span></div><p>Liste publique des clans avec membres, ELO moyen et &eacute;tat de recrutement.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans/leaderboard</span></div><p>Classement des clans par activit&eacute;, victoires et niveau global.</p></article>
@@ -396,13 +387,11 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
         <article class="endpoint"><div class="topline"><span class="chip post">Public</span><span class="route">/drop titre recompense</span></div><p>Cr&eacute;e un drop instantan&eacute; : le premier membre qui clique re&ccedil;oit la r&eacute;compense si son Discord est li&eacute;.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/live</span></div><p>Affiche les parties actives, reli&eacute; &agrave; <code>GET /api/live</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/boutique</span></div><p>Lien vers la boutique coins / boosters.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournois</span></div><p>Liste les tournois officiels, reli&eacute; &agrave; <code>GET /api/tournaments</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">Public</span><span class="route">/tournoi id</span></div><p>D&eacute;tail d&rsquo;un tournoi et top actuel, reli&eacute; &agrave; <code>GET /api/tournaments/:id</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin-role-generator</span></div><p>G&eacute;n&egrave;re les r&ocirc;les Discord de rang ELO sans les recr&eacute;er s&rsquo;ils existent d&eacute;j&agrave;. Retourne un r&eacute;sum&eacute; trouv&eacute;s / manquants / cr&eacute;&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin-crystal</span></div><p>Give, retire ou prolonge le rang Crystal d&rsquo;un joueur depuis Discord avec dur&eacute;e optionnelle.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin action password ...</span></div><p>Commandes staff prot&eacute;g&eacute;es par mot de passe admin + r&ocirc;le Discord. Actions disponibles : <code>stats</code>, <code>player</code>, <code>mute</code>, <code>unmute</code>, <code>ban</code>, <code>unban</code>, <code>coins</code>, <code>gems</code>, <code>elo</code>, <code>give-item</code>, <code>crystal</code>, <code>boost-elo</code>, <code>boost-coins</code>, <code>tournoi-finish</code>, <code>tournoi-pause</code>, <code>tournoi-resume</code>, <code>tournoi-delete</code>, <code>backups</code>, <code>maintenance-on</code>, <code>maintenance-off</code>, <code>reload</code>.</p><div class="note">Les actions sensibles demandent le r&ocirc;le Admin Discord. Les actions de lecture/mod&eacute;ration simples acceptent Admin ou Modo selon le cas.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">Admin</span><span class="route">/admin action password ...</span></div><p>Commandes staff prot&eacute;g&eacute;es par mot de passe admin + r&ocirc;le Discord. Actions disponibles : <code>stats</code>, <code>player</code>, <code>mute</code>, <code>unmute</code>, <code>ban</code>, <code>unban</code>, <code>coins</code>, <code>gems</code>, <code>elo</code>, <code>give-item</code>, <code>crystal</code>, <code>boost-elo</code>, <code>boost-coins</code>, <code>backups</code>, <code>maintenance-on</code>, <code>maintenance-off</code>, <code>reload</code>.</p><div class="note">Les actions sensibles demandent le r&ocirc;le Admin Discord. Les actions de lecture/mod&eacute;ration simples acceptent Admin ou Modo selon le cas.</div></article>
       </div></section>
-      <section class="section" id="admin"><div class="section-head"><div><h2>Administration</h2><p>Panel admin, joueurs, coins, boosters, boosts globaux, games et tournois.</p></div></div><div class="group">
+      <section class="section" id="admin"><div class="section-head"><div><h2>Administration</h2><p>Panel admin, joueurs, coins, boosters, boosts globaux et games.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/login</span></div><p>Connexion admin / mod&eacute;ration. Erreurs typiques : mot de passe invalide, droits insuffisants.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/players</span></div><p>Liste enrichie des joueurs pour le panel admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/me</span></div><p>Retourne l&rsquo;&eacute;tat de la session admin courante.</p></article>
@@ -458,11 +447,6 @@ P4_BOT_TOKEN=p4bot_xxx node p4-bot-client.js</code></pre><pre><code><a href="/do
   -H "x-admin-token: ADMIN_TOKEN" ^
   -d "{\"code\":\"FLASH20\",\"value\":20,\"maxUses\":25,\"durationHours\":12,\"label\":\"Pack week-end\"}"</code></pre></div></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/vip-boosts</span></div><p>Liste les boosts premium individuels actifs (VIP / VIP+ / Perso).</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/tournaments</span></div><p>Liste les tournois c&ocirc;t&eacute; admin.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/finish</span></div><p>Force la fin d&rsquo;un tournoi.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/pause</span></div><p>Met un tournoi en pause.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/resume</span></div><p>Reprend un tournoi en pause.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/admin/tournaments/:id</span></div><p>Supprime un tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/backups</span></div><p>Liste les bases / sauvegardes exportables depuis le panel admin.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/backups/:key</span></div><p>T&eacute;l&eacute;charge un backup cibl&eacute; (ex. base principale, WAL, SHM).</p></article>
       </div></section>
@@ -518,7 +502,7 @@ LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 
       <section class="section" id="system"><div class="section-head"><div><h2>Syst&egrave;me</h2><p>Endpoints transverses utilis&eacute;s par l&rsquo;UI, le live et les alertes.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/system-status</span></div><p>&Eacute;tat manuel du serveur : maintenance / red&eacute;marrage / message flottant.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/system-status</span></div><p>Met &agrave; jour l&rsquo;alerte serveur affich&eacute;e en front.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/site-stats</span></div><p>Retourne les stats globales rapides : joueurs en ligne, visiteurs, total de pr&eacute;sence, parties live, boost global et tournoi public.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/site-stats</span></div><p>Retourne les stats globales rapides : joueurs en ligne, visiteurs, total de pr&eacute;sence, parties live, boost global.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/stats/overview</span></div><p>Vue agr&eacute;g&eacute;e compl&egrave;te utilis&eacute;e par <code>stats.html</code> : joueurs, visiteurs, parties, coins, boosters, Elo moyen, pr&eacute;cision moyenne, suspicions, bot games, etc.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/stats/weekly</span></div><p>Rythme hebdomadaire sur 2 semaines : inscriptions, parties, parties termin&eacute;es, joueurs actifs et moyenne quotidienne.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard</span></div><p>Classement ELO principal.</p></article>
@@ -526,7 +510,7 @@ LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard/bots</span></div><p>Classement sp&eacute;cifique des bots API et bots pr&eacute;configur&eacute;s.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/bot-id</span></div><p>Retourne l&rsquo;ID du bot joueur utilis&eacute; c&ocirc;t&eacute; site.</p></article>
       </div></section>
-      <section class="section" id="socketio"><div class="section-head"><div><h2>Socket.IO</h2><p>&Eacute;v&eacute;nements utilis&eacute;s par la file d&rsquo;attente, les parties live, le tournoi et les alertes syst&egrave;me.</p></div><div class="legend"><span class="chip socket">SOCKET</span></div></div><div class="group">
+      <section class="section" id="socketio"><div class="section-head"><div><h2>Socket.IO</h2><p>&Eacute;v&eacute;nements utilis&eacute;s par la file d&rsquo;attente, les parties live et les alertes syst&egrave;me.</p></div><div class="legend"><span class="chip socket">SOCKET</span></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">identify</span></div><p>Identifie la socket avec <code>playerId</code> + <code>token</code>.</p><pre><code>socket.emit('identify', {
   playerId: myPlayer.id,
   token: localStorage.getItem('token')
@@ -548,10 +532,6 @@ LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">duel_accept / duel_decline</span></div><p>Accepte ou refuse un duel en attente.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">duel_invite_accepted / duel_invite_declined / duel_invite_expired</span></div><p>Cycle complet de vie du duel avant le lancement d&rsquo;une partie.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">duel_invite_error</span></div><p>Erreur cibl&eacute;e sur un duel: joueur hors ligne, duel expir&eacute;, joueur d&eacute;j&agrave; occup&eacute;, etc.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_join</span></div><p>Rejoint la file d&rsquo;un tournoi actif.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">tournament_queue_joined</span></div><p>Confirmation d&rsquo;entr&eacute;e en file tournoi.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">tournament_queue_leave</span></div><p>Quitte la file tournoi.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">tournament_queue_left</span></div><p>Confirmation de sortie de file tournoi.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">play_move</span></div><p>Joue un coup en envoyant une colonne.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">game_chat_send</span></div><p>Envoie un message de tchat &agrave; l&rsquo;adversaire pendant la partie.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">game_chat_message</span></div><p>Message de tchat diffus&eacute; aux deux joueurs de la partie.</p></article>
@@ -569,13 +549,15 @@ LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 
         <article class="endpoint"><div class="topline"><span class="chip socket">Client &rarr; Serveur</span><span class="route">join_live_game / leave_live_game</span></div><p>Inscrit ou retire un spectateur d&rsquo;une partie pr&eacute;cise. Les connect&eacute;s affichent leur pseudo, les autres apparaissent en Anonyme.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">live_update</span></div><p>Demande au client de relire <code>/api/live</code>.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">system_status_update</span></div><p>Mise &agrave; jour push de l&rsquo;alerte syst&egrave;me / red&eacute;marrage.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">error</span></div><p>Erreur g&eacute;n&eacute;rique temps r&eacute;el.</p><pre><code>{ "message": "Session invalide. Reconnecte-toi." }</code></pre><div class="note warn">Cas fr&eacute;quents : session invalide, compte banni, d&eacute;j&agrave; en file, tournoi indisponible, coup invalide, game not found.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip socket">Serveur &rarr; Client</span><span class="route">error</span></div><p>Erreur g&eacute;n&eacute;rique temps r&eacute;el.</p><pre><code>{ "message": "Session invalide. Reconnecte-toi." }</code></pre><div class="note warn">Cas fr&eacute;quents : session invalide, compte banni, d&eacute;j&agrave; en file, coup invalide, game not found.</div></article>
       </div></section>
-      <div class="foot">Cette doc colle au backend actuel du projet. Elle couvre les routes utiles, les erreurs probables, les &eacute;v&eacute;nements Socket.IO et des exemples d&rsquo;int&eacute;gration.<ul><li>Headers priv&eacute;s : <code>x-session-token</code> pour le joueur, <code>x-admin-token</code> pour l&rsquo;admin.</li><li>Beaucoup de routes front acceptent aussi <code>token</code> dans le body JSON.</li><li>Les pages HTML publiques restent accessibles via <code>/</code>, <code>/profil</code>, <code>/game</code>, <code>/live</code>, <code>/boutique</code>, <code>/tournoi</code>, etc.</li></ul></div>
+      <div class="foot">Cette doc colle au backend actuel du projet. Elle couvre les routes utiles, les erreurs probables, les &eacute;v&eacute;nements Socket.IO et des exemples d&rsquo;int&eacute;gration.<ul><li>Headers priv&eacute;s : <code>x-session-token</code> pour le joueur, <code>x-admin-token</code> pour l&rsquo;admin.</li><li>Beaucoup de routes front acceptent aussi <code>token</code> dans le body JSON.</li><li>Les pages HTML publiques restent accessibles via <code>/</code>, <code>/profil</code>, <code>/game</code>, <code>/live</code>, <code>/boutique</code>, etc.</li></ul></div>
     </main>
   </div>
 </div>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 <script src="/theme.js?v=eggs-14"></script>
 </body>
 </html>
+
+

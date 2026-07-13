@@ -563,14 +563,6 @@ module.exports = {
     ], { subtitle: 'Economie coins', buttons: profileButtons(id) })]);
   },
 
-  wlogTournament(name, id, status) {
-    send([mkContainer(0x30d158, 'Tournoi', [
-      ['Nom', name, true],
-      ['ID', id, true],
-      ['Statut', status, true],
-    ], { subtitle: 'Evenement tournoi', buttons: [linkButton('Voir tournoi', `${BASE}/tournoi?id=${id}`, EMOJI.trophy)] })], 'games');
-  },
-
   wlogDuel(sender, target, type) {
     send([mkContainer(0x8b9cf4, 'Duel', [
       ['Createur', sender, true],
@@ -614,7 +606,6 @@ module.exports = {
       `Comptes: **${Number(details.players || 0)}**`,
       `Comptes Discord lies: **${Number(details.linkedDiscord || 0)}**`,
       `Parties finies: **${Number(details.finishedGames || 0)}**`,
-      `Tournois actifs: **${Number(details.activeTournaments || 0)}**`,
     ] : [];
     send([mkContainer(details.color || 0xff3b30, `${clean(details.emoji, EMOJI.warning)} Etat serveur`, [
       ['Statut', status, true],

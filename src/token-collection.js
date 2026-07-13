@@ -1,4 +1,4 @@
-const TOKEN_RARITIES = Object.freeze([
+﻿const TOKEN_RARITIES = Object.freeze([
   { key: 'common', label: 'Commun', spawnRate: 49, color: '#ff5c72', design: 'classic' },
   { key: 'rare', label: 'Rare', spawnRate: 25, color: '#4c8dff', design: 'grooved' },
   { key: 'epic', label: 'Epique', spawnRate: 12, color: '#bf5af2', design: 'star' },
@@ -61,7 +61,7 @@ const TOKEN_COLOR_CATALOG = Object.freeze([
   { key: 'princesse_inoubliable', label: 'Princesse inoubliable', hex: '#ff66b7', hexSecondary: '#ffd1ea', theme: 'Inoubliables', rarity: 'unforgettable', design: 'image', image: '/assets/token-inoubliable-princesse.png', weight: 1, gemRewardMin: 40, gemRewardMax: 80 },
 
   { key: 'event_summer_2026', label: 'Festival ete 2026', hex: '#ffcc4d', hexSecondary: '#25d5ff', theme: 'Evenements', rarity: 'event', design: 'event-sun', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
-  { key: 'event_tournament_crown', label: 'Couronne tournoi', hex: '#ffe680', hexSecondary: '#7c4dff', theme: 'Evenements', rarity: 'event', design: 'event-crown', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
+  { key: 'event_crown', label: 'Couronne evenement', hex: '#ffe680', hexSecondary: '#7c4dff', theme: 'Evenements', rarity: 'event', design: 'event-crown', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
   { key: 'event_shadow_drop', label: 'Drop des ombres', hex: '#504a68', hexSecondary: '#ff4dc4', theme: 'Evenements', rarity: 'event', design: 'event-shadow', weight: 0, gemRewardMin: 0, gemRewardMax: 0 },
 ]);
 
@@ -101,3 +101,4 @@ function drawTokenGemReward(token, random = Math.random) {
 }
 
 module.exports = { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColor, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward };
+

@@ -724,27 +724,6 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   box-shadow:0 0 0 4px rgba(255,45,85,0.12);
   animation:badge-pulse-pink 2s ease-in-out infinite;
 }
-.tournament-notice{
-  position:fixed;
-  left:18px;
-  bottom:18px;
-  z-index:12;
-  width:min(320px,calc(100vw - 28px));
-  padding:14px 14px 12px;
-  border-radius:18px;
-  background:rgba(13,13,28,0.92);
-  border:1px solid rgba(48,209,88,0.18);
-  box-shadow:0 18px 42px rgba(0,0,0,0.34);
-  display:none;
-  flex-direction:column;
-  gap:8px;
-}
-.tournament-notice.show{display:flex}
-.tournament-notice-head{display:flex;align-items:center;gap:8px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#30d158}
-.tournament-notice-dot{width:8px;height:8px;border-radius:50%;background:#30d158;box-shadow:0 0 0 0 rgba(48,209,88,.42);animation:pulse-online 1.6s infinite}
-.tournament-notice-body{font-size:12px;line-height:1.55;color:var(--muted)}
-.tournament-notice-actions{display:flex;gap:8px;flex-wrap:wrap}
-.tournament-notice .btn{padding:10px 14px;font-size:13px}
 @keyframes badge-float{
   0%,100%{transform:translateY(0);box-shadow:0 10px 22px rgba(0,0,0,0.18);}
   50%{transform:translateY(-2px);box-shadow:0 14px 28px rgba(0,0,0,0.24);}
@@ -2422,9 +2401,6 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 .side-quick-link[href="/leaderboard"]:hover .side-quick-emoji {
   animation: sideQuickTrophyHop 0.7s ease;
 }
-.side-quick-link[href="/tournoi"]:hover .side-quick-emoji {
-  animation: sideQuickMedalSpin 0.85s ease;
-}
 .side-quick-link[href="/boutique"]:hover .side-quick-emoji {
   animation: sideQuickCartRoll 0.75s ease;
 }
@@ -2685,7 +2661,6 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   .queue-avatar-shell{width:48px;height:48px}
   .queue-avatar-deco{inset:-8px}
   .queue-avatar-core{width:48px;height:48px;font-size:20px}
-  .tournament-notice { left: 10px; bottom: 10px; width: min(330px, calc(100vw - 20px)); padding: 12px; }
   .side-quick-menu { right: 10px; top: auto; bottom: 14px; transform: none; align-items: flex-end; }
   .side-quick-toggle { width: 50px; height: 50px; border-radius: 14px; }
   .side-quick-toggle-text { display: none; }
@@ -3169,18 +3144,6 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 <button class="egg-peeker" id="egg-peeker" type="button" aria-label="Jeton mystérieux" hidden></button>
 <div class="egg-toast" id="egg-toast" role="status" aria-live="polite"></div>
 
-<div class="tournament-notice" id="tournament-notice">
-  <div class="tournament-notice-head">
-    <span class="tournament-notice-dot"></span>
-    <span>Tournoi public en cours</span>
-  </div>
-  <div class="tournament-notice-body" id="tournament-notice-body">Une arène publique est disponible.</div>
-  <div class="tournament-notice-actions">
-    <button class="btn btn-ghost" type="button" onclick="openPublicTournamentNotice()">Voir</button>
-    <button class="btn btn-play" type="button" onclick="joinPublicTournamentNotice()">Rejoindre</button>
-  </div>
-</div>
-
 <div class="welcome-tour" id="welcome-tour" aria-hidden="true">
   <div class="welcome-stage welcome-cinema">
     <button class="welcome-skip" type="button" onclick="finishWelcomeTour()">Passer</button>
@@ -3334,12 +3297,12 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Mode ranked compétitif</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Connexion classique ou Discord</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Bot configurable par difficulté ou ELO</span></div>
-        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Tournois publics et profils premium</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Clans, live et profils premium</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Quêtes bots, boutique et profil en 3.4.0</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Mode ranked compétitif</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Connexion classique ou Discord</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Bot configurable par difficulté ou ELO</span></div>
-        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Tournois publics et profils premium</span></div>
+        <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Clans, live et profils premium</span></div>
         <div class="hero-ticker-item"><span class="hero-ticker-dot"></span><span>Quêtes bots, boutique et profil en 3.4.0</span></div>
       </div>
     </div>
@@ -3851,7 +3814,6 @@ let authMode = 'login'; // 'login' | 'register'
 const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf5af2', '#ff9f0a', '#00c7be', '#ff375f'];
 let selectedRegisterColor = '#ff2d55';
 let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
-let publicTournamentNotice = null;
 let siteStatsInterval = null;
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
@@ -3955,6 +3917,7 @@ async function handleAuth() {
     const { token, ...playerData } = data;
     myPlayer = playerData;
     if (token) localStorage.setItem('token', token);
+    localStorage.setItem('last_active', String(Date.now()));
     try { localStorage.removeItem('p4_referrer'); } catch {}
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
@@ -4019,6 +3982,7 @@ function tryCompleteDiscordAuth() {
     if (!payload?.token || !payload?.player) throw new Error('invalid payload');
     myPlayer = payload.player;
     localStorage.setItem('token', payload.token);
+    localStorage.setItem('last_active', String(Date.now()));
     localStorage.setItem('player', JSON.stringify(payload.player));
     sessionStorage.setItem('player', JSON.stringify(payload.player));
     try { localStorage.removeItem('p4_referrer'); } catch {}
@@ -5024,39 +4988,6 @@ function showQueueVolume(show) {
   if (show) QueueMusic.syncUI();
 }
 
-function renderPublicTournamentNotice(tournament) {
-  const box = document.getElementById('tournament-notice');
-  const body = document.getElementById('tournament-notice-body');
-  if (!box || !body) return;
-  publicTournamentNotice = tournament || null;
-  if (!tournament) {
-    box.classList.remove('show');
-    return;
-  }
-  body.textContent = `${tournament.name} · ${tournament.participants || 0} inscrits · ${Math.max(0, Number(tournament.move_time_seconds || 0))}s par coup`;
-  box.classList.add('show');
-}
-
-function openPublicTournamentNotice() {
-  if (!publicTournamentNotice?.id) return;
-  location.href = `/tournoi/${publicTournamentNotice.id}`;
-}
-
-async function joinPublicTournamentNotice() {
-  if (!publicTournamentNotice?.id) return;
-  const token = localStorage.getItem('token') || '';
-  if (token) {
-    try {
-      await fetch(`/api/tournaments/${publicTournamentNotice.id}/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, password: '' }),
-      });
-    } catch (_) {}
-  }
-  location.href = `/tournoi/${publicTournamentNotice.id}`;
-}
-
 async function refreshSiteStats() {
   try {
     const res = await fetch('/api/site-stats', { cache: 'no-store' });
@@ -5067,7 +4998,6 @@ async function refreshSiteStats() {
     currentGlobalBoost = data.boost && data.boost.active ? data.boost : null;
     currentCoinBoost = data.coinBoost && data.coinBoost.active ? data.coinBoost : null;
     renderQueueBoostAlert(currentGlobalBoost, currentCoinBoost);
-    renderPublicTournamentNotice(data.publicTournament || null);
   } catch (_) {}
 }
 
@@ -5456,7 +5386,7 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
   <!-- Musique d'attente queue -->
   <audio id="queue-music" src="/sounds/puissance4-song.mp3" loop preload="none" style="display:none"></audio>
-<script src="/presence.js"></script>
+<script src="/presence.js?v=session-1"></script>
 <script src="/theme.js?v=eggs-14"></script>
 </body>
 </html>

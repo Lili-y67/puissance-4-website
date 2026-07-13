@@ -869,6 +869,7 @@ const abQ = {
 const sQ = {
   set:   db.prepare('INSERT OR REPLACE INTO sessions (token, player_id, expires) VALUES (?, ?, ?)'),
   get:   db.prepare('SELECT player_id, expires FROM sessions WHERE token = ?'),
+  touch: db.prepare('UPDATE sessions SET expires = ? WHERE token = ?'),
   del:   db.prepare('DELETE FROM sessions WHERE token = ?'),
   purge: db.prepare('DELETE FROM sessions WHERE expires < ?'),
 };
