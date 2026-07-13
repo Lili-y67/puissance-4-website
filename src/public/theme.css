@@ -74,7 +74,7 @@ body.p4-wallpaper-mode::after {
   background: rgba(0,0,0,var(--p4-wallpaper-dim, .28));
 }
 
-body.p4-wallpaper-mode > * {
+body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel) {
   position: relative;
 }
 
@@ -127,6 +127,32 @@ body.p4-wallpaper-mode [class*="box"] {
   background-image: none !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
+}
+
+body.p4-wallpaper-mode .p4-global-menu-toggle {
+  position: fixed;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255,45,85,.18), transparent 42%),
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025)),
+    rgba(10,10,22,.86) !important;
+  box-shadow: 0 18px 46px rgba(0,0,0,.34) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+body.p4-wallpaper-mode .p4-global-menu-backdrop {
+  position: fixed;
+  background: rgba(0,0,0,.28) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+body.p4-wallpaper-mode .p4-global-menu-panel {
+  position: fixed;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255,45,85,.18), transparent 34%),
+    radial-gradient(circle at 100% 42%, rgba(133,235,255,.12), transparent 38%),
+    linear-gradient(180deg, rgba(20,20,40,.96), rgba(9,9,20,.95)) !important;
+  box-shadow: -18px 0 70px rgba(0,0,0,.46) !important;
+  backdrop-filter: blur(18px) !important;
 }
 
 body.p4-wallpaper-mode .hero::before,
