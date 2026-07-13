@@ -5072,8 +5072,6 @@ app.get('/auth/discord/callback', async (req, res) => {
     const discordUser = await userRes.json();
     if (!discordUser.id) return redirectDiscordError('discord_id');
 
-    const freshPlayer = pQ.getById.get(playerId);
-
     if (mode === 'signin') {
       const memberSnapshot = await fetchDiscordMemberSnapshot(discordUser.id, botToken);
       const memberInfo = memberSnapshot?.memberInfo || null;
@@ -5134,6 +5132,9 @@ app.get('/auth/discord/callback', async (req, res) => {
       broadcastPresenceCounts(true);
       return res.redirect('/#discord-auth=' + payload);
     }
+
+    const freshPlayer = playerId ? pQ.getById.get(playerId) : null;
+    if (!freshPlayer) return redirectDiscordError('joueur_introuvable');
 
     if (mode === 'link') {
       // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer les infos du membre sur le serveur Discord
@@ -5255,7 +5256,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     res.redirect('/reset-password?playerId=' + playerId);
   } catch (e) {
     console.error('[DISCORD RESET]', e);
-    redirectDiscordError('erreur_serveur');
+    return redirectDiscordError('erreur_serveur');
   }
 });
 
