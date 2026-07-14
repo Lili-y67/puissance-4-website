@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-22';
+    link.href = '/theme.css?v=eggs-23';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-22', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-23', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -835,26 +835,30 @@
     toast.setAttribute('aria-live', 'polite');
 
     function showToast(message) {
+      if (!document.body.contains(toast)) document.body.appendChild(toast);
       toast.textContent = message;
+      toast.classList.remove('show');
+      void toast.offsetWidth;
       toast.classList.add('show');
       clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => toast.classList.remove('show'), 3600);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 5200);
     }
 
     function sparks(rect) {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      for (let index = 0; index < 24; index++) {
+      for (let index = 0; index < 38; index++) {
         const spark = document.createElement('i');
-        const angle = Math.PI * 2 * index / 24;
-        const distance = 70 + Math.random() * 130;
-        spark.className = 'p4-egg-spark';
+        const angle = Math.PI * 2 * index / 38;
+        const distance = 80 + Math.random() * 170;
+        spark.className = `p4-egg-spark ${index % 3 === 0 ? 'confetti' : ''}`;
         spark.style.left = `${rect.left + rect.width / 2}px`;
         spark.style.top = `${rect.top + rect.height / 2}px`;
-        spark.style.background = index % 2 ? '#ffd60a' : '#ff2d55';
+        spark.style.background = ['#ffd60a', '#ff2d55', '#85ebff', '#30d158', '#bf5af2'][index % 5];
         spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
         spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
+        spark.style.setProperty('--spark-rotate', `${180 + Math.random() * 720}deg`);
         document.body.appendChild(spark);
-        setTimeout(() => spark.remove(), 1300);
+        setTimeout(() => spark.remove(), 1600);
       }
     }
 

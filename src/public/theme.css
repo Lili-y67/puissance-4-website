@@ -1369,7 +1369,7 @@ body.p4-egg-chaos .page,
 body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
 .p4-egg-banner {
   position: fixed;
-  z-index: 208;
+  z-index: 100018;
   left: 50%;
   top: 18px;
   padding: 10px 18px;
@@ -1386,7 +1386,7 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
 
 .p4-egg-toast {
   position: fixed;
-  z-index: 210;
+  z-index: 100020;
   left: 50%;
   bottom: 24px;
   width: min(440px, calc(100vw - 24px));
@@ -1395,10 +1395,11 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
   border-radius: 18px;
   background: rgba(12,10,27,.94);
   color: #fff;
-  font: 800 14px/1.35 "Barlow Condensed", sans-serif;
+  font: 900 15px/1.35 "Barlow Condensed", sans-serif;
   letter-spacing: .5px;
   text-align: center;
-  box-shadow: 0 22px 60px rgba(0,0,0,.45);
+  text-shadow: 0 1px 0 rgba(0,0,0,.35);
+  box-shadow: 0 22px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06) inset;
   backdrop-filter: blur(18px);
   transform: translate(-50%, 30px);
   opacity: 0;
@@ -1409,16 +1410,26 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
 .p4-egg-toast.show { transform: translate(-50%, 0); opacity: 1; }
 .p4-egg-spark {
   position: fixed;
-  z-index: 205;
+  z-index: 100015;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   pointer-events: none;
-  animation: p4EggSpark 1.15s ease-out forwards;
+  box-shadow: 0 0 14px currentColor;
+  animation: p4EggSpark 1.45s cubic-bezier(.16,.84,.28,1) forwards;
+}
+
+.p4-egg-spark.confetti {
+  width: 10px;
+  height: 18px;
+  border-radius: 3px;
+  box-shadow: 0 0 10px currentColor;
 }
 
 @keyframes p4EggSpark {
-  to { transform: translate(var(--spark-x), var(--spark-y)) rotate(480deg) scale(.2); opacity: 0; }
+  0% { transform: translate(-50%, -50%) rotate(0deg) scale(.9); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(calc(var(--spark-x) - 50%), calc(var(--spark-y) - 50%)) rotate(var(--spark-rotate, 540deg)) scale(.22); opacity: 0; }
 }
 @keyframes p4EggEpic { 50% { transform:translateY(-4px) rotate(5deg);filter:brightness(1.2) } }
 @keyframes p4EggLegendary { to { transform:scale(1.12) rotate(-6deg);filter:brightness(1.25) } }
