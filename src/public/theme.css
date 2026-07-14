@@ -1401,13 +1401,18 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
   text-shadow: 0 1px 0 rgba(0,0,0,.35);
   box-shadow: 0 22px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06) inset;
   backdrop-filter: blur(18px);
-  transform: translate(-50%, -110%) scale(.96);
+  transform: translate(-50%, 8px) scale(.96);
   opacity: 0;
   pointer-events: none;
   transition: .3s ease;
 }
 
-.p4-egg-toast.show { transform: translate(-50%, -110%) scale(1); opacity: 1; }
+.p4-egg-toast.in-box {
+  background: linear-gradient(135deg, rgba(255,45,85,.92), rgba(12,10,27,.96));
+  border-color: rgba(255,255,255,.24);
+}
+
+.p4-egg-toast.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
 .p4-egg-spark {
   --mini-egg-color: #ffd60a;
   position: fixed;
@@ -1416,6 +1421,7 @@ body.p4-egg-chaos .wrap { animation: p4EggPageWobble .7s ease-in-out 4; }
   height: 18px;
   border-radius: 50%;
   pointer-events: none;
+  background-color: var(--mini-egg-color);
   background:
     radial-gradient(circle at 34% 26%, rgba(255,255,255,.9) 0 9%, transparent 11%),
     radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--mini-egg-color) 82%, white) 0 46%, var(--mini-egg-color) 66%, color-mix(in srgb, var(--mini-egg-color) 55%, black) 100%);

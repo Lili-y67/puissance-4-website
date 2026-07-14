@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-clan-empty-random-eggs-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-box-toast-burst-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-25',
-  '/theme.js?v=eggs-25',
+  '/theme.css?v=eggs-26',
+  '/theme.js?v=eggs-26',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',

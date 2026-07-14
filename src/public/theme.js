@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-25';
+    link.href = '/theme.css?v=eggs-26';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-25', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-26', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -841,9 +841,23 @@
       const anchor = rect || fallback || { left: window.innerWidth / 2, top: 120, width: 0, height: 0 };
       const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
       const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
+      const x = Math.min(width - 24, Math.max(24, anchor.left + anchor.width / 2));
+      const y = Math.min(height - 24, Math.max(24, anchor.top + anchor.height / 2));
+      const box = document.elementsFromPoint(x, y)
+        .map(element => element.closest?.('.profile-header,.profile-section,.profile-card,.profile-side-card,.social-card,.elo-history-card,.token-collection-card,.clan-card,.board-card,.rank-card,.card,.panel,.hero,section,main'))
+        .find(element => element && !element.classList?.contains('p4-page-egg') && !element.classList?.contains('p4-egg-toast'));
+      if (box) {
+        const boxRect = box.getBoundingClientRect();
+        return {
+          left: Math.round(Math.min(width - 170, Math.max(170, boxRect.left + boxRect.width / 2))),
+          top: Math.round(Math.min(height - 92, Math.max(84, boxRect.top + 18))),
+          inBox: true,
+        };
+      }
       return {
         left: Math.round(Math.min(width - 150, Math.max(150, anchor.left + anchor.width / 2))),
-        top: Math.round(Math.min(height - 90, Math.max(82, anchor.top - 14))),
+        top: Math.round(Math.min(height - 92, Math.max(84, anchor.top + anchor.height + 12))),
+        inBox: false,
       };
     }
 
@@ -852,6 +866,7 @@
       const anchor = toastAnchor(rect);
       toast.style.setProperty('--egg-toast-left', `${anchor.left}px`);
       toast.style.setProperty('--egg-toast-top', `${anchor.top}px`);
+      toast.classList.toggle('in-box', Boolean(anchor.inBox));
       toast.textContent = message;
       toast.classList.remove('show');
       void toast.offsetWidth;
@@ -860,12 +875,15 @@
       showToast.timer = setTimeout(() => toast.classList.remove('show'), 5200);
     }
 
-    function sparks(rect) {
+    function sparks(rect, burst = 'big') {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      for (let index = 0; index < 38; index++) {
+      const count = burst === 'small' ? 18 : 42;
+      const baseDistance = burst === 'small' ? 42 : 86;
+      const randomDistance = burst === 'small' ? 82 : 175;
+      for (let index = 0; index < count; index++) {
         const spark = document.createElement('i');
-        const angle = Math.PI * 2 * index / 38;
-        const distance = 80 + Math.random() * 170;
+        const angle = Math.PI * 2 * index / count;
+        const distance = baseDistance + Math.random() * randomDistance;
         spark.className = `p4-egg-spark ${index % 4 === 0 ? 'big' : ''}`;
         const color = ['#ffd60a', '#ff2d55', '#85ebff', '#30d158', '#bf5af2'][index % 5];
         spark.style.left = `${rect.left + rect.width / 2}px`;
@@ -882,8 +900,10 @@
 
     egg.addEventListener('click', async () => {
       if (dodges > 0) {
+        const rect = egg.getBoundingClientRect();
         dodges -= 1;
         dodgeAttempt += 1;
+        sparks(rect, 'small');
         hideEggInContent(egg, `${path}:traveler:${dodgeSeed}`, dodgeAttempt + 1);
         egg.classList.remove('escaping');
         void egg.offsetWidth;
@@ -899,7 +919,7 @@
         const remaining = dodges > 0
           ? ` Encore ${dodges} esquive${dodges > 1 ? 's' : ''} possible${dodges > 1 ? 's' : ''}.`
           : ' Le prochain clic sera le bon.';
-        showToast(`${dodgeMessages[(dodgeAttempt - 1) % dodgeMessages.length]}${remaining}`, egg.getBoundingClientRect());
+        showToast(`${dodgeMessages[(dodgeAttempt - 1) % dodgeMessages.length]}${remaining}`, rect);
         return;
       }
       const rect = egg.getBoundingClientRect();
