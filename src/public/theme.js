@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-19';
+    link.href = '/theme.css?v=eggs-20';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-19', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-20', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -597,7 +597,7 @@
     updateInstallButton();
   }
 
-  const EGG_EXCLUDED_PATHS = ['/live', '/admin', '/dev', '/game', '/clan', '/'];
+  const EGG_EXCLUDED_PATHS = ['/admin', '/dev', '/game', '/'];
   const EGG_MESSAGES = {
     '/profil': 'Pion de profil trouvé : il voulait essayer ta décoration d’avatar.',
     '/boutique': 'Pion de boutique trouvé : non, il n’était pas en promotion.',
