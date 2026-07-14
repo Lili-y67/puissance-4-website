@@ -980,9 +980,9 @@ body.p4-menu-mounted .home-dock .dock-links {
 .p4-page-egg {
   --egg-color: #ffd60a;
   position: fixed;
-  z-index: 180;
+  z-index: 99994;
   left: var(--egg-left, 22px);
-  top: var(--egg-top, 72%);
+  top: var(--egg-top, 44%);
   width: 46px;
   height: 46px;
   padding: 0;
@@ -1184,6 +1184,32 @@ body.p4-menu-mounted .home-dock .dock-links {
 .p4-page-egg.p4-coin-egg::after { inset: 8px; border-width: 1px; }
 .p4-page-egg.p4-coin-egg:hover,
 .p4-page-egg.p4-coin-egg:focus-visible { opacity: 1; filter: saturate(1.2); }
+
+@media (max-width: 720px) {
+  .p4-page-egg {
+    width: 38px;
+    height: 38px;
+    border-width: 2px;
+    box-shadow: 0 0 18px color-mix(in srgb, var(--egg-color) 45%, transparent), inset 0 0 0 4px rgba(255,255,255,.08), inset 0 -6px 9px rgba(0,0,0,.28);
+  }
+
+  .p4-page-egg::before { inset: 6px; }
+  .p4-page-egg::after { inset: 12px; }
+  .p4-page-egg[data-design="queen"]::after,
+  .p4-page-egg[data-design="queen-dark"]::after,
+  .p4-page-egg[data-design="fantastic"]::after,
+  .p4-page-egg[data-design="oracle"]::after,
+  .p4-page-egg[data-design="crown-gem"]::after,
+  .p4-page-egg[data-design^="event"]::after {
+    font-size: 21px;
+  }
+
+  .p4-page-egg.p4-coin-egg {
+    width: 24px;
+    height: 24px;
+    opacity: .72;
+  }
+}
 
 @keyframes p4EggEscape {
   0% { transform: rotate(0deg) scale(1); }
