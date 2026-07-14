@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-23';
+    link.href = '/theme.css?v=eggs-24';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-23', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-24', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -834,8 +834,22 @@
     toast.setAttribute('role', 'status');
     toast.setAttribute('aria-live', 'polite');
 
-    function showToast(message) {
+    function toastAnchor(rect) {
+      const fallback = egg?.isConnected ? egg.getBoundingClientRect() : null;
+      const anchor = rect || fallback || { left: window.innerWidth / 2, top: 120, width: 0, height: 0 };
+      const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
+      const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
+      return {
+        left: Math.round(Math.min(width - 150, Math.max(150, anchor.left + anchor.width / 2))),
+        top: Math.round(Math.min(height - 90, Math.max(82, anchor.top - 14))),
+      };
+    }
+
+    function showToast(message, rect = null) {
       if (!document.body.contains(toast)) document.body.appendChild(toast);
+      const anchor = toastAnchor(rect);
+      toast.style.setProperty('--egg-toast-left', `${anchor.left}px`);
+      toast.style.setProperty('--egg-toast-top', `${anchor.top}px`);
       toast.textContent = message;
       toast.classList.remove('show');
       void toast.offsetWidth;
@@ -850,10 +864,12 @@
         const spark = document.createElement('i');
         const angle = Math.PI * 2 * index / 38;
         const distance = 80 + Math.random() * 170;
-        spark.className = `p4-egg-spark ${index % 3 === 0 ? 'confetti' : ''}`;
+        spark.className = `p4-egg-spark ${index % 4 === 0 ? 'big' : ''}`;
+        const color = ['#ffd60a', '#ff2d55', '#85ebff', '#30d158', '#bf5af2'][index % 5];
         spark.style.left = `${rect.left + rect.width / 2}px`;
         spark.style.top = `${rect.top + rect.height / 2}px`;
-        spark.style.background = ['#ffd60a', '#ff2d55', '#85ebff', '#30d158', '#bf5af2'][index % 5];
+        spark.style.setProperty('--mini-egg-color', color);
+        spark.style.color = color;
         spark.style.setProperty('--spark-x', `${Math.cos(angle) * distance}px`);
         spark.style.setProperty('--spark-y', `${Math.sin(angle) * distance}px`);
         spark.style.setProperty('--spark-rotate', `${180 + Math.random() * 720}deg`);
@@ -881,7 +897,7 @@
         const remaining = dodges > 0
           ? ` Encore ${dodges} esquive${dodges > 1 ? 's' : ''} possible${dodges > 1 ? 's' : ''}.`
           : ' Le prochain clic sera le bon.';
-        showToast(`${dodgeMessages[(dodgeAttempt - 1) % dodgeMessages.length]}${remaining}`);
+        showToast(`${dodgeMessages[(dodgeAttempt - 1) % dodgeMessages.length]}${remaining}`, egg.getBoundingClientRect());
         return;
       }
       const rect = egg.getBoundingClientRect();
@@ -902,7 +918,7 @@
             const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
             setCooldownRemaining('traveler', data.retryAfterMs || EGG_RESPAWN_MS);
             playEggSound('blocked');
-            showToast(`Ce pion voyageur reviendra dans environ ${minutes} minute(s).`);
+            showToast(`Ce pion voyageur reviendra dans environ ${minutes} minute(s).`, rect);
             egg.classList.add('caught');
             setTimeout(() => egg.remove(), 500);
             return;
@@ -920,7 +936,7 @@
         } catch (error) {
           egg.disabled = false;
           playEggSound('blocked');
-          showToast(error.message);
+          showToast(error.message, egg.getBoundingClientRect());
           return;
         }
       }
@@ -934,7 +950,7 @@
       const collectionText = collectible
         ? ` ${collectible.label} rejoint ta collection${gems > 0 ? ` et rapporte +${gems} gemmes` : ''}.`
         : ` Collection locale : ${caught} pion(s).`;
-      showToast(`${travelerRarity.label} trouvé ! ${EGG_MESSAGES[path] || 'Le pion voyageur préparait quelque chose de très peu stratégique.'}${collectionText}`);
+      showToast(`${travelerRarity.label} trouvé ! ${EGG_MESSAGES[path] || 'Le pion voyageur préparait quelque chose de très peu stratégique.'}${collectionText}`, rect);
       setTimeout(() => egg.remove(), 500);
     });
 
@@ -964,7 +980,7 @@
         const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
         if (!token) {
           playEggSound('blocked');
-          showToast('Ce mini-pion contient des coins, mais il ne reconnaît que les joueurs connectés.');
+          showToast('Ce mini-pion contient des coins, mais il ne reconnaît que les joueurs connectés.', rect);
           return;
         }
         coinEgg.disabled = true;
@@ -982,13 +998,13 @@
             const minutes = Math.max(1, Math.ceil(Number(data.retryAfterMs || EGG_RESPAWN_MS) / 60000));
             setCooldownRemaining('coins', data.retryAfterMs || EGG_RESPAWN_MS);
             playEggSound('blocked');
-            showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`);
+            showToast(`Ce mini-pion recharge ses poches. Retour dans environ ${minutes} minute(s).`, rect);
           } else {
             startCooldown('coins');
             playEggSound('coin');
             if (Number(data.gems || 0) > 0) window.setTimeout(() => playEggSound('gem'), 150);
             const gemText = Number(data.gems || 0) > 0 ? ` Coup de chance rarissime : +${Number(data.gems)} gemmes !` : '';
-            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}`);
+            showToast(`Trésor minuscule trouvé : +${Number(data.reward || 0)} coins.${gemText}`, rect);
             try {
               const player = JSON.parse(localStorage.getItem('player') || '{}');
               if (player?.id) {
@@ -1003,7 +1019,7 @@
         } catch (error) {
           coinEgg.disabled = false;
           playEggSound('blocked');
-          showToast(error.message);
+          showToast(error.message, coinEgg.getBoundingClientRect());
         }
       });
       hideEggInContent(coinEgg, `${path}:coins`, 3);
