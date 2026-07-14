@@ -37,6 +37,8 @@ textarea,
 html {
   width: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -44,6 +46,7 @@ body {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  overflow-y: visible;
 }
 
 body.p4-wallpaper-mode {
@@ -535,6 +538,7 @@ pre {
   background: rgba(0,0,0,.28);
   backdrop-filter: blur(2px);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transition: opacity .22s ease;
 }
@@ -560,19 +564,24 @@ pre {
   backdrop-filter: blur(18px);
   transform: translateX(calc(100% + 32px));
   opacity: .65;
+  visibility: hidden;
   pointer-events: none;
-  transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .22s ease;
+  transition: transform .28s cubic-bezier(.22,1,.36,1), opacity .22s ease, visibility 0s linear .28s;
 }
 
 .p4-global-menu-open .p4-global-menu-backdrop {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .p4-global-menu-open .p4-global-menu-panel {
   transform: translateX(0);
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .p4-global-menu-head {
@@ -991,6 +1000,14 @@ body.p4-menu-mounted .home-dock .dock-links {
 }
 
 /* Pions voyageurs: easter eggs partages entre les pages publiques. */
+#p4-egg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 99940;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .p4-page-egg {
   --egg-color: #ffd60a;
   position: relative;
@@ -1015,6 +1032,21 @@ body.p4-menu-mounted .home-dock .dock-links {
   cursor: pointer;
   opacity: .56;
   transition: transform .2s ease, opacity .3s ease, filter .2s ease;
+}
+
+.p4-page-egg.p4-egg-layered {
+  position: absolute;
+  left: var(--egg-layer-left, 32px);
+  top: var(--egg-layer-top, 96px);
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  max-width: 30px;
+  max-height: 30px;
+  margin: 0;
+  pointer-events: auto;
+  opacity: .66;
 }
 
 .p4-page-egg::before,
@@ -1237,6 +1269,15 @@ body.p4-menu-mounted .home-dock .dock-links {
     min-width: 16px;
     min-height: 16px;
     box-shadow: 0 0 8px color-mix(in srgb, var(--egg-color) 38%, transparent), inset 0 0 0 2px rgba(255,255,255,.08), inset 0 -3px 5px rgba(0,0,0,.28);
+  }
+
+  .p4-page-egg.p4-egg-layered {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+    max-width: 26px;
+    max-height: 26px;
   }
 
   .p4-page-egg::before { inset: 23%; }

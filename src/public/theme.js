@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-17';
+    link.href = '/theme.css?v=eggs-19';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-17', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-19', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -658,11 +658,47 @@
       .slice(0, isPhone ? 10 : 14);
   }
 
+  function eggViewportPlacement(key, attempt = 0) {
+    const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
+    const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
+    const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
+    const size = isPhone ? 28 : 32;
+    const sidePad = isPhone ? 18 : 36;
+    const topMin = isPhone ? 78 : 92;
+    const topMax = Math.max(topMin, Math.min(height * (isPhone ? 0.44 : 0.38), isPhone ? 300 : 340));
+    const seed = eggSeed(`${key}:${attempt}`);
+    return {
+      left: Math.round(sidePad + ((seed * 17) % Math.max(1, Math.round(width - size - sidePad * 2)))),
+      top: Math.round(topMin + ((seed * 29) % Math.max(1, Math.round(topMax - topMin)))),
+    };
+  }
+
+  function eggLayer() {
+    let layer = document.getElementById('p4-egg-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = 'p4-egg-layer';
+      layer.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(layer);
+    }
+    return layer;
+  }
+
   function hideEggInContent(element, key, attempt = 0) {
     const targets = eggContentTargets();
-    if (!targets.length) return false;
-    const target = targets[eggSeed(`${key}:${attempt}`) % targets.length];
-    target.appendChild(element);
+    element.style.removeProperty('--egg-layer-left');
+    element.style.removeProperty('--egg-layer-top');
+    element.classList.remove('p4-egg-layered');
+    if (targets.length) {
+      const target = targets[eggSeed(`${key}:${attempt}`) % targets.length];
+      target.appendChild(element);
+      return true;
+    }
+    const position = eggViewportPlacement(key, attempt);
+    element.classList.add('p4-egg-layered');
+    element.style.setProperty('--egg-layer-left', `${position.left}px`);
+    element.style.setProperty('--egg-layer-top', `${position.top}px`);
+    eggLayer().appendChild(element);
     return true;
   }
 

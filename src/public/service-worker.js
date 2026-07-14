@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-menu-theme-egg-targets-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-single-scroll-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-17',
-  '/theme.js?v=eggs-17',
+  '/theme.css?v=eggs-19',
+  '/theme.js?v=eggs-19',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',
