@@ -617,39 +617,38 @@
     return !EGG_EXCLUDED_PATHS.some(excluded => path === excluded || (excluded !== '/' && path.startsWith(`${excluded}/`)));
   }
 
-  function eggViewportSize() {
-    const viewport = window.visualViewport;
-    return {
-      width: Math.max(320, Number(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280)),
-      height: Math.max(360, Number(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 720)),
-    };
+  function eggSeed(value) {
+    return [...String(value)].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
   }
 
-  function eggPosition(path, attempt = 0) {
-    const seed = [...path].reduce((total, char) => total + char.charCodeAt(0), 0) + attempt * 97;
-    const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
-    const { width, height } = eggViewportSize();
-    const eggSize = isMobile ? 38 : 46;
-    const xMin = isMobile ? 20 : 42;
-    const xMax = Math.max(xMin, width - eggSize - (isMobile ? 20 : 42));
-    const yMin = isMobile ? 76 : 92;
-    const yLimit = Math.min(height * (isMobile ? 0.34 : 0.30), isMobile ? 250 : 280);
-    const yMax = Math.max(yMin, yLimit);
-    return {
-      left: Math.round(xMin + ((seed * 17) % Math.max(1, Math.round(xMax - xMin)))),
-      top: Math.round(yMin + ((seed * 29) % Math.max(1, Math.round(yMax - yMin)))),
-    };
+  function eggContentTargets() {
+    const selectors = [
+      'main h1', 'main h2', 'main h3',
+      'main p', 'main li',
+      'main .card', 'main .profile-card', 'main .panel', 'main section',
+      'h1', 'h2', 'h3', 'p', 'li',
+    ];
+    const blocked = '.p4-global-menu, .p4-egg-toast, .p4-page-egg, .p4-chaos-egg, script, style, input, textarea, select, button, a';
+    const seen = new Set();
+    return selectors
+      .flatMap(selector => Array.from(document.querySelectorAll(selector)))
+      .filter(element => {
+        if (seen.has(element) || element.closest(blocked)) return false;
+        seen.add(element);
+        const text = element.textContent?.trim() || '';
+        const rect = element.getBoundingClientRect();
+        return text.length >= 8 && rect.width > 80 && rect.height > 12;
+      });
   }
 
-  function setEggPosition(element, position) {
-    element.style.setProperty('--egg-left', `${position.left}px`);
-    element.style.setProperty('--egg-top', `${position.top}px`);
-  }
-
-  function setChaosPosition(element, position) {
-    const { width, height } = eggViewportSize();
-    element.style.setProperty('--chaos-left', `${Math.round(Math.min(width - 50, Math.max(14, position.left)))}px`);
-    element.style.setProperty('--chaos-top', `${Math.round(Math.min(height - 64, Math.max(70, position.top)))}px`);
+  function hideEggInContent(element, key, attempt = 0) {
+    const targets = eggContentTargets();
+    if (!targets.length) {
+      document.body.appendChild(element);
+      return;
+    }
+    const target = targets[eggSeed(`${key}:${attempt}`) % targets.length];
+    target.appendChild(element);
   }
 
   let eggAudioContext = null;
@@ -804,7 +803,6 @@
     const travelerReady = cooldownReady('traveler');
     const egg = document.createElement('button');
     const toast = document.createElement('div');
-    const position = eggPosition(path);
     const travelerRarity = rarityFor(`${path}:traveler`);
     const dodgeRanges = {
       common: [0, 1],
@@ -828,7 +826,6 @@
     egg.dataset.rarity = travelerRarity.key;
     egg.dataset.design = designForRarity(travelerRarity.key);
     egg.setAttribute('aria-label', `Pion voyageur ${travelerRarity.label}`);
-    setEggPosition(egg, position);
     egg.style.setProperty('--egg-color', travelerRarity.color);
 
     toast.className = 'p4-egg-toast';
@@ -863,8 +860,7 @@
       if (dodges > 0) {
         dodges -= 1;
         dodgeAttempt += 1;
-        const next = eggPosition(`${path}:traveler:${dodgeSeed}`, dodgeAttempt + 1);
-        setEggPosition(egg, next);
+        hideEggInContent(egg, `${path}:traveler:${dodgeSeed}`, dodgeAttempt + 1);
         egg.classList.remove('escaping');
         void egg.offsetWidth;
         egg.classList.add('escaping');
@@ -937,7 +933,7 @@
     });
 
     if (travelerReady) {
-      document.body.appendChild(egg);
+      hideEggInContent(egg, `${path}:traveler`);
     }
     document.body.appendChild(toast);
 
@@ -950,14 +946,12 @@
 
     if (rewardPaths.has(path) && cooldownReady('coins')) {
       const coinEgg = document.createElement('button');
-      const coinPosition = eggPosition(`${path}:coins`, 3);
       const coinRarity = rarityFor(`${path}:coins`);
       coinEgg.className = 'p4-page-egg p4-coin-egg';
       coinEgg.type = 'button';
       coinEgg.dataset.rarity = coinRarity.key;
       coinEgg.dataset.design = designForRarity(coinRarity.key);
       coinEgg.setAttribute('aria-label', `Mini pion brillant ${coinRarity.label}`);
-      setEggPosition(coinEgg, coinPosition);
       coinEgg.style.setProperty('--egg-color', coinRarity.color);
       coinEgg.addEventListener('click', async () => {
         const rect = coinEgg.getBoundingClientRect();
@@ -1006,18 +1000,16 @@
           showToast(error.message);
         }
       });
-      document.body.appendChild(coinEgg);
+      hideEggInContent(coinEgg, `${path}:coins`, 3);
     }
 
     if (cooldownReady('chaos')) {
       const chaosEgg = document.createElement('button');
-      const chaosPosition = eggPosition(`${path}:chaos`, 5);
       const chaosIcons = ['?', '4', '!', '☻'];
       chaosEgg.className = 'p4-chaos-egg';
       chaosEgg.type = 'button';
       chaosEgg.textContent = chaosIcons[path.length % chaosIcons.length];
       chaosEgg.setAttribute('aria-label', 'Bouton très suspect');
-      setChaosPosition(chaosEgg, chaosPosition);
       chaosEgg.addEventListener('click', () => {
         const banner = document.createElement('div');
         const chaosMessages = [
@@ -1036,7 +1028,7 @@
         setTimeout(() => banner.remove(), 3300);
         chaosEgg.remove();
       });
-      document.body.appendChild(chaosEgg);
+      hideEggInContent(chaosEgg, `${path}:chaos`, 5);
     }
   }
 
