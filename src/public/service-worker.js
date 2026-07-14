@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-egg-first-screen-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-egg-fixed-px-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-14',
-  '/theme.js?v=eggs-14',
+  '/theme.css?v=eggs-15',
+  '/theme.js?v=eggs-15',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',

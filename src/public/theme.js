@@ -617,17 +617,39 @@
     return !EGG_EXCLUDED_PATHS.some(excluded => path === excluded || (excluded !== '/' && path.startsWith(`${excluded}/`)));
   }
 
+  function eggViewportSize() {
+    const viewport = window.visualViewport;
+    return {
+      width: Math.max(320, Number(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280)),
+      height: Math.max(360, Number(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 720)),
+    };
+  }
+
   function eggPosition(path, attempt = 0) {
     const seed = [...path].reduce((total, char) => total + char.charCodeAt(0), 0) + attempt * 97;
     const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
-    const leftMin = isMobile ? 12 : 8;
-    const leftRange = isMobile ? 76 : 78;
-    const topMin = isMobile ? 12 : 9;
-    const topRange = isMobile ? 24 : 20;
+    const { width, height } = eggViewportSize();
+    const eggSize = isMobile ? 38 : 46;
+    const xMin = isMobile ? 20 : 42;
+    const xMax = Math.max(xMin, width - eggSize - (isMobile ? 20 : 42));
+    const yMin = isMobile ? 76 : 92;
+    const yLimit = Math.min(height * (isMobile ? 0.34 : 0.30), isMobile ? 250 : 280);
+    const yMax = Math.max(yMin, yLimit);
     return {
-      left: leftMin + (seed * 17 % leftRange),
-      top: topMin + (seed * 29 % topRange),
+      left: Math.round(xMin + ((seed * 17) % Math.max(1, Math.round(xMax - xMin)))),
+      top: Math.round(yMin + ((seed * 29) % Math.max(1, Math.round(yMax - yMin)))),
     };
+  }
+
+  function setEggPosition(element, position) {
+    element.style.setProperty('--egg-left', `${position.left}px`);
+    element.style.setProperty('--egg-top', `${position.top}px`);
+  }
+
+  function setChaosPosition(element, position) {
+    const { width, height } = eggViewportSize();
+    element.style.setProperty('--chaos-left', `${Math.round(Math.min(width - 50, Math.max(14, position.left)))}px`);
+    element.style.setProperty('--chaos-top', `${Math.round(Math.min(height - 64, Math.max(70, position.top)))}px`);
   }
 
   let eggAudioContext = null;
@@ -806,8 +828,7 @@
     egg.dataset.rarity = travelerRarity.key;
     egg.dataset.design = designForRarity(travelerRarity.key);
     egg.setAttribute('aria-label', `Pion voyageur ${travelerRarity.label}`);
-    egg.style.setProperty('--egg-left', `${position.left}vw`);
-    egg.style.setProperty('--egg-top', `${position.top}vh`);
+    setEggPosition(egg, position);
     egg.style.setProperty('--egg-color', travelerRarity.color);
 
     toast.className = 'p4-egg-toast';
@@ -843,8 +864,7 @@
         dodges -= 1;
         dodgeAttempt += 1;
         const next = eggPosition(`${path}:traveler:${dodgeSeed}`, dodgeAttempt + 1);
-        egg.style.setProperty('--egg-left', `${next.left}vw`);
-        egg.style.setProperty('--egg-top', `${next.top}vh`);
+        setEggPosition(egg, next);
         egg.classList.remove('escaping');
         void egg.offsetWidth;
         egg.classList.add('escaping');
@@ -937,8 +957,7 @@
       coinEgg.dataset.rarity = coinRarity.key;
       coinEgg.dataset.design = designForRarity(coinRarity.key);
       coinEgg.setAttribute('aria-label', `Mini pion brillant ${coinRarity.label}`);
-      coinEgg.style.setProperty('--egg-left', `${coinPosition.left}vw`);
-      coinEgg.style.setProperty('--egg-top', `${coinPosition.top}vh`);
+      setEggPosition(coinEgg, coinPosition);
       coinEgg.style.setProperty('--egg-color', coinRarity.color);
       coinEgg.addEventListener('click', async () => {
         const rect = coinEgg.getBoundingClientRect();
@@ -998,8 +1017,7 @@
       chaosEgg.type = 'button';
       chaosEgg.textContent = chaosIcons[path.length % chaosIcons.length];
       chaosEgg.setAttribute('aria-label', 'Bouton très suspect');
-      chaosEgg.style.setProperty('--chaos-left', `${chaosPosition.left}vw`);
-      chaosEgg.style.setProperty('--chaos-top', `${chaosPosition.top}vh`);
+      setChaosPosition(chaosEgg, chaosPosition);
       chaosEgg.addEventListener('click', () => {
         const banner = document.createElement('div');
         const chaosMessages = [

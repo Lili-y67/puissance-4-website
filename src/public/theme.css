@@ -981,8 +981,10 @@ body.p4-menu-mounted .home-dock .dock-links {
   --egg-color: #ffd60a;
   position: fixed;
   z-index: 99994;
-  left: var(--egg-left, 22px);
-  top: var(--egg-top, 44%);
+  left: var(--egg-left, 42px) !important;
+  top: var(--egg-top, 96px) !important;
+  right: auto !important;
+  bottom: auto !important;
   width: 46px;
   height: 46px;
   padding: 0;
