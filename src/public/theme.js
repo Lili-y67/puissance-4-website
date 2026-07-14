@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-24';
+    link.href = '/theme.css?v=eggs-25';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-24', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-25', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -627,6 +627,8 @@
     return [...String(value)].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
   }
 
+  const EGG_PAGE_SALT = `${Date.now()}:${Math.random()}`;
+
   function eggViewportPlacement(key, attempt = 0) {
     const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
     const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
@@ -635,7 +637,7 @@
     const sidePad = isPhone ? 18 : 42;
     const topMin = isPhone ? 82 : 96;
     const topMax = Math.max(topMin, Math.min(height * (isPhone ? 0.50 : 0.42), isPhone ? 360 : 420));
-    const seed = eggSeed(`${key}:${attempt}`);
+    const seed = eggSeed(`${key}:${attempt}:${EGG_PAGE_SALT}`);
     return {
       left: Math.round(sidePad + ((seed * 17) % Math.max(1, Math.round(width - size - sidePad * 2)))),
       top: Math.round(topMin + ((seed * 29) % Math.max(1, Math.round(topMax - topMin)))),

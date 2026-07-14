@@ -6,7 +6,7 @@
 <title>Puissance 4 - Clan</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/theme.css?v=eggs-24">
+<link rel="stylesheet" href="/theme.css?v=eggs-25">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#080910;--surface:#111522;--surface2:#171d2b;--line:rgba(255,255,255,.10);--text:#f7f8ff;--muted:rgba(247,248,255,.62);--red:#ff3b5f;--gold:#ffd166;--cyan:#85ebff}
@@ -28,11 +28,33 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:li
 .chat-box{height:420px;overflow:auto;display:flex;flex-direction:column;gap:10px;padding-right:4px;scrollbar-color:var(--clan-color,#85ebff) rgba(255,255,255,.05)}.msg{padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.075)}.msg-head{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}.msg strong{color:var(--clan-color,#85ebff)}.msg-text{line-height:1.45;overflow-wrap:anywhere}
 .chat-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:12px}.input,textarea{width:100%;min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(8,10,18,.88);color:var(--text);padding:11px 12px;font-family:inherit;outline:none}.input:focus,textarea:focus{border-color:var(--clan-border,rgba(133,235,255,.45))}textarea{min-height:82px;resize:vertical}.manage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) 104px 104px;gap:10px}.manage-grid textarea{grid-column:1/-1}.danger{border-color:rgba(255,45,85,.3);color:#ff8da2;background:rgba(255,45,85,.08)}
 .notice{padding:13px;border-radius:12px;background:rgba(255,209,102,.08);border:1px solid rgba(255,209,102,.20);color:#ffe3a1;font-weight:700;line-height:1.45}.hidden{display:none!important}
+body.clan-page.p4-wallpaper-mode .nav,
+body.clan-page.p4-wallpaper-mode .hero,
+body.clan-page.p4-wallpaper-mode .card,
+body.clan-page.p4-wallpaper-mode .stat,
+body.clan-page.p4-wallpaper-mode .member,
+body.clan-page.p4-wallpaper-mode .msg,
+body.clan-page.p4-wallpaper-mode .notice,
+body.clan-page.p4-wallpaper-mode .input,
+body.clan-page.p4-wallpaper-mode textarea{
+  background:linear-gradient(180deg,rgba(10,12,22,.76),rgba(6,8,16,.66))!important;
+  border-color:rgba(133,235,255,.18)!important;
+  box-shadow:0 18px 58px rgba(0,0,0,.32)!important;
+  backdrop-filter:blur(10px)!important;
+}
+body.clan-page.p4-wallpaper-mode .hero{background:linear-gradient(135deg,var(--clan-bg,rgba(133,235,255,.15)),rgba(6,8,16,.58) 42%),rgba(6,8,16,.68)!important}
+body.clan-empty .layout,
+body.clan-empty #manage{display:none!important}
+body.clan-empty .page{max-width:980px;padding-top:clamp(24px,6vh,72px)}
+body.clan-empty .hero{min-height:360px;display:flex;flex-direction:column;justify-content:center}
+body.clan-empty .hero .stats{display:none}
+body.clan-empty .desc{font-size:17px;max-width:620px}
+body.clan-empty .tag::after{content:" - cree ou rejoins un clan depuis ton profil"}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nav{align-items:stretch;flex-direction:column}.nav-actions{display:grid;grid-template-columns:1fr 1fr}.chat-box{height:min(420px,58vh)}.manage-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.page{padding:16px 10px 44px}.hero{padding:18px;border-radius:18px}.clan-title-row{grid-template-columns:1fr}.blason{width:68px;height:68px;font-size:32px}.stats{grid-template-columns:1fr 1fr}.member{grid-template-columns:40px minmax(0,1fr)}.member>div:last-child{grid-column:1/-1}.role{text-align:left}.mini-actions{justify-content:flex-start}.chat-form,.manage-grid,.nav-actions{grid-template-columns:1fr}.card{padding:15px}.card-title{font-size:24px}}
 </style>
 </head>
-<body>
+<body class="clan-page">
 <div class="page">
   <nav class="nav">
     <a class="logo" href="/">Puissance <span>4</span></a>
@@ -156,6 +178,7 @@ async function api(path, options = {}) {
 }
 function renderClan() {
   if (!clan) return;
+  document.body.classList.remove('clan-empty');
   setAccent(clan.color);
   document.getElementById('clan-blason').textContent = clan.blason || 'CL';
   document.getElementById('clan-name').textContent = clan.name || 'Clan';
@@ -205,6 +228,7 @@ async function loadClan() {
     id = data.clan?.id || '';
   }
   if (!id) {
+    document.body.classList.add('clan-empty');
     document.getElementById('clan-name').textContent = 'Aucun clan';
     document.getElementById('clan-desc').textContent = 'Rejoins ou cree un clan depuis ton profil.';
     return;
@@ -334,7 +358,7 @@ loadClan().catch(error => {
 });
 </script>
 <script src="/presence.js?v=session-1"></script>
-<script src="/theme.js?v=eggs-24"></script>
+<script src="/theme.js?v=eggs-25"></script>
 </body>
 </html>
 
