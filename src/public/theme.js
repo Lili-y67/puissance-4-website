@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-20';
+    link.href = '/theme.css?v=eggs-21';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-20', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-21', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -662,10 +662,10 @@
     const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
     const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
     const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
-    const size = isPhone ? 28 : 32;
-    const sidePad = isPhone ? 18 : 36;
-    const topMin = isPhone ? 78 : 92;
-    const topMax = Math.max(topMin, Math.min(height * (isPhone ? 0.44 : 0.38), isPhone ? 300 : 340));
+    const size = isPhone ? 36 : 44;
+    const sidePad = isPhone ? 18 : 42;
+    const topMin = isPhone ? 82 : 96;
+    const topMax = Math.max(topMin, Math.min(height * (isPhone ? 0.50 : 0.42), isPhone ? 360 : 420));
     const seed = eggSeed(`${key}:${attempt}`);
     return {
       left: Math.round(sidePad + ((seed * 17) % Math.max(1, Math.round(width - size - sidePad * 2)))),
@@ -685,15 +685,8 @@
   }
 
   function hideEggInContent(element, key, attempt = 0) {
-    const targets = eggContentTargets();
     element.style.removeProperty('--egg-layer-left');
     element.style.removeProperty('--egg-layer-top');
-    element.classList.remove('p4-egg-layered');
-    if (targets.length) {
-      const target = targets[eggSeed(`${key}:${attempt}`) % targets.length];
-      target.appendChild(element);
-      return true;
-    }
     const position = eggViewportPlacement(key, attempt);
     element.classList.add('p4-egg-layered');
     element.style.setProperty('--egg-layer-left', `${position.left}px`);
