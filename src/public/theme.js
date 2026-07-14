@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-21';
+    link.href = '/theme.css?v=eggs-22';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-21', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-22', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -627,37 +627,6 @@
     return [...String(value)].reduce((total, char) => ((total * 31) + char.charCodeAt(0)) >>> 0, 2166136261);
   }
 
-  function eggContentTargets() {
-    const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
-    const selectors = isPhone
-      ? [
-        'main h1', 'main h2', 'main h3',
-        'main p', 'main li',
-        'main [class*="title"]', 'main [class*="name"]', 'main [class*="label"]',
-      ]
-      : [
-        'main h1', 'main h2', 'main h3',
-        'main p', 'main li',
-        'main [class*="title"]', 'main [class*="name"]', 'main [class*="label"]',
-        'main .card', 'main .profile-card', 'main .panel',
-      ];
-    const blocked = '.p4-global-menu, .p4-egg-toast, .p4-page-egg, .p4-chaos-egg, script, style, input, textarea, select, button, a';
-    const seen = new Set();
-    const viewportHeight = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
-    return selectors
-      .flatMap(selector => Array.from(document.querySelectorAll(selector)))
-      .filter(element => {
-        if (seen.has(element) || element.closest(blocked)) return false;
-        seen.add(element);
-        const text = element.textContent?.trim() || '';
-        const rect = element.getBoundingClientRect();
-        const isVisible = rect.width > 80 && rect.height > 12 && rect.bottom > 56 && rect.top < viewportHeight * (isPhone ? 0.72 : 0.66);
-        return text.length >= (isPhone ? 5 : 8) && isVisible;
-      })
-      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
-      .slice(0, isPhone ? 10 : 14);
-  }
-
   function eggViewportPlacement(key, attempt = 0) {
     const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
     const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
@@ -673,25 +642,14 @@
     };
   }
 
-  function eggLayer() {
-    let layer = document.getElementById('p4-egg-layer');
-    if (!layer) {
-      layer = document.createElement('div');
-      layer.id = 'p4-egg-layer';
-      layer.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(layer);
-    }
-    return layer;
-  }
-
   function hideEggInContent(element, key, attempt = 0) {
     element.style.removeProperty('--egg-layer-left');
     element.style.removeProperty('--egg-layer-top');
     const position = eggViewportPlacement(key, attempt);
-    element.classList.add('p4-egg-layered');
     element.style.setProperty('--egg-layer-left', `${position.left}px`);
     element.style.setProperty('--egg-layer-top', `${position.top}px`);
-    eggLayer().appendChild(element);
+    element.classList.add('p4-egg-fixed');
+    document.body.appendChild(element);
     return true;
   }
 

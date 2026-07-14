@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-egg-visual-refresh-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-eggs-original-bg-fix-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-21',
-  '/theme.js?v=eggs-21',
+  '/theme.css?v=eggs-22',
+  '/theme.js?v=eggs-22',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',
