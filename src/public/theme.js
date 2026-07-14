@@ -731,13 +731,15 @@
     };
     const rarityFor = value => {
       const rarities = [
-        { key: 'common', label: 'Commun', color: '#ff5c72', rate: 50 },
+        { key: 'common', label: 'Commun', color: '#ff5c72', rate: 49 },
         { key: 'rare', label: 'Rare', color: '#4c8dff', rate: 25 },
         { key: 'epic', label: 'Épique', color: '#bf5af2', rate: 12 },
         { key: 'legendary', label: 'Légendaire', color: '#ffd60a', rate: 7 },
         { key: 'mythic', label: 'Mythique', color: '#ff2d86', rate: 3.5 },
         { key: 'artifact', label: 'Artefact', color: '#72f7d4', rate: 1.5 },
         { key: 'queenpawn', label: 'QueenPawn', color: '#fff2c7', rate: 1 },
+        { key: 'fantastic', label: 'Fantastique', color: '#6dffb8', rate: .9 },
+        { key: 'unforgettable', label: 'Inoubliable', color: '#ff66b7', rate: .1 },
       ];
       const roll = (hourlySeed(value) % 10000) / 100;
       let cursor = 0;
@@ -755,6 +757,9 @@
       mythic: 'mythic',
       artifact: 'artifact',
       queenpawn: 'queen',
+      fantastic: 'fantastic',
+      unforgettable: 'prism',
+      event: 'event',
     }[rarity] || 'classic');
     const caughtCount = () => {
       try {
@@ -782,6 +787,8 @@
       mythic: [4, 5],
       artifact: [5, 6],
       queenpawn: [7, 9],
+      fantastic: [8, 10],
+      unforgettable: [10, 12],
     };
     const [minimumDodges, maximumDodges] = dodgeRanges[travelerRarity.key] || [1, 2];
     const dodgeSeed = hourlySeed(`${path}:traveler:dodges`);

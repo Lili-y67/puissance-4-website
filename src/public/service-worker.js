@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'p4-shell-v3.5.0-wallpaper-light-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-clan-api-tokens-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -92,8 +92,3 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
-
-
-
-

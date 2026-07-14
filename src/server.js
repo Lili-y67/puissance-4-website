@@ -5422,8 +5422,21 @@ app.get('/api/decorations', (_, res) => {
 function getTokenCollectionPayload(playerId) {
   const rows = tokenCollectionQ.getAllForPlayer.all(Number(playerId || 0));
   const quantities = new Map(rows.map(row => [String(row.color_key), Number(row.quantity || 0)]));
+  const rarityCounts = new Map(TOKEN_RARITIES.map(rarity => [rarity.key, { key: rarity.key, label: rarity.label, total: 0, collected: 0, copies: 0 }]));
+  const themeCounts = new Map();
   const items = TOKEN_COLOR_CATALOG.map(color => {
     const rarity = TOKEN_RARITIES.find(entry => entry.key === color.rarity);
+    const quantity = quantities.get(color.key) || 0;
+    const rarityInfo = rarityCounts.get(color.rarity) || { key: color.rarity, label: color.rarity, total: 0, collected: 0, copies: 0 };
+    rarityInfo.total += 1;
+    rarityInfo.collected += quantity > 0 ? 1 : 0;
+    rarityInfo.copies += quantity;
+    rarityCounts.set(color.rarity, rarityInfo);
+    const themeInfo = themeCounts.get(color.theme) || { key: color.theme, label: color.theme, total: 0, collected: 0, copies: 0 };
+    themeInfo.total += 1;
+    themeInfo.collected += quantity > 0 ? 1 : 0;
+    themeInfo.copies += quantity;
+    themeCounts.set(color.theme, themeInfo);
     return {
       key: color.key,
       label: color.label,
@@ -5435,13 +5448,17 @@ function getTokenCollectionPayload(playerId) {
       spawnRate: Number(rarity?.spawnRate || 0),
       design: color.design || 'classic',
       image: color.image || '',
-      quantity: quantities.get(color.key) || 0,
+      quantity,
     };
   });
   const collected = items.filter(item => item.quantity > 0).length;
   const totalCopies = items.reduce((sum, item) => sum + item.quantity, 0);
+  const collectedItems = items.filter(item => item.quantity > 0);
   return {
     items,
+    collectedItems,
+    rarities: Array.from(rarityCounts.values()).filter(entry => entry.total > 0),
+    themes: Array.from(themeCounts.values()).filter(entry => entry.total > 0),
     stats: {
       collected,
       total: items.length,
@@ -5457,6 +5474,10 @@ app.get('/api/token-collection/catalog', (_, res) => {
   res.json({
     items: TOKEN_COLOR_CATALOG.map(({ weight, ...color }) => color),
     rarities: TOKEN_RARITIES,
+    themes: Array.from(new Set(TOKEN_COLOR_CATALOG.map(color => color.theme).filter(Boolean))).map(theme => ({
+      label: theme,
+      total: TOKEN_COLOR_CATALOG.filter(color => color.theme === theme).length,
+    })),
     total: TOKEN_COLOR_CATALOG.length,
   });
 });
