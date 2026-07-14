@@ -44,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-26';
+    link.href = '/theme.css?v=eggs-27';
     document.head.appendChild(link);
   }
 
@@ -245,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-26', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-27', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -629,14 +629,20 @@
 
   const EGG_PAGE_SALT = `${Date.now()}:${Math.random()}`;
 
+  function eggIsPhoneLayout() {
+    return Boolean(window.matchMedia?.('(max-width: 768px), (pointer: coarse)').matches);
+  }
+
   function eggViewportPlacement(key, attempt = 0) {
-    const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
+    const isPhone = eggIsPhoneLayout();
     const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
     const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
-    const size = isPhone ? 36 : 44;
-    const sidePad = isPhone ? 18 : 42;
-    const topMin = isPhone ? 82 : 96;
-    const topMax = Math.max(topMin, Math.min(height * (isPhone ? 0.50 : 0.42), isPhone ? 360 : 420));
+    const size = isPhone ? 38 : 46;
+    const sidePad = isPhone ? 16 : 56;
+    const topMin = isPhone ? 92 : 112;
+    const topMax = isPhone
+      ? Math.max(topMin, Math.min(height - 130, height * 0.58, 430))
+      : Math.max(topMin, Math.min(height - 170, height * 0.62, 560));
     const seed = eggSeed(`${key}:${attempt}:${EGG_PAGE_SALT}`);
     return {
       left: Math.round(sidePad + ((seed * 17) % Math.max(1, Math.round(width - size - sidePad * 2)))),
@@ -651,8 +657,20 @@
     element.style.setProperty('--egg-layer-left', `${position.left}px`);
     element.style.setProperty('--egg-layer-top', `${position.top}px`);
     element.classList.add('p4-egg-fixed');
+    element.dataset.eggPlacementKey = key;
+    element.dataset.eggPlacementAttempt = String(attempt);
     document.body.appendChild(element);
     return true;
+  }
+
+  function refreshFixedEggPlacements() {
+    document.querySelectorAll('.p4-egg-fixed[data-egg-placement-key]').forEach(element => {
+      const key = element.dataset.eggPlacementKey;
+      const attempt = Number(element.dataset.eggPlacementAttempt || 0);
+      const position = eggViewportPlacement(key, attempt);
+      element.style.setProperty('--egg-layer-left', `${position.left}px`);
+      element.style.setProperty('--egg-layer-top', `${position.top}px`);
+    });
   }
 
   let eggAudioContext = null;
@@ -844,13 +862,14 @@
       const x = Math.min(width - 24, Math.max(24, anchor.left + anchor.width / 2));
       const y = Math.min(height - 24, Math.max(24, anchor.top + anchor.height / 2));
       const box = document.elementsFromPoint(x, y)
-        .map(element => element.closest?.('.profile-header,.profile-section,.profile-card,.profile-side-card,.social-card,.elo-history-card,.token-collection-card,.clan-card,.board-card,.rank-card,.card,.panel,.hero,section,main'))
+        .map(element => element.closest?.('.profile-header,.profile-section,.profile-card,.profile-side-card,.profile-layout,.profile-main,.social-card,.elo-history-card,.token-collection-card,.clan-card,.clan-shell,.clan-layout,.leaderboard-card,.leaderboard-shell,.board-card,.rank-card,.card,.panel,.hero,section,main'))
         .find(element => element && !element.classList?.contains('p4-page-egg') && !element.classList?.contains('p4-egg-toast'));
       if (box) {
         const boxRect = box.getBoundingClientRect();
+        const phone = eggIsPhoneLayout();
         return {
           left: Math.round(Math.min(width - 170, Math.max(170, boxRect.left + boxRect.width / 2))),
-          top: Math.round(Math.min(height - 92, Math.max(84, boxRect.top + 18))),
+          top: Math.round(Math.min(height - (phone ? 110 : 92), Math.max(phone ? 76 : 84, boxRect.top + (phone ? 10 : 18)))),
           inBox: true,
         };
       }
@@ -1089,6 +1108,9 @@
     }
   });
   window.matchMedia?.('(max-width: 720px)').addEventListener?.('change', () => applyWallpaperMode());
+  window.matchMedia?.('(max-width: 768px)').addEventListener?.('change', refreshFixedEggPlacements);
+  window.visualViewport?.addEventListener?.('resize', refreshFixedEggPlacements);
+  window.addEventListener('resize', refreshFixedEggPlacements);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

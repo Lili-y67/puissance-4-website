@@ -210,6 +210,32 @@ function startDiscordBot(ctx) {
     return { ...payload, flags: Number(payload.flags || 0) | MessageFlags.Ephemeral };
   }
 
+  function elapsedApiMs(startedAt) {
+    return Math.max(0, Math.round(Number(process.hrtime.bigint() - startedAt) / 1e6));
+  }
+
+  function appendApiLatency(payload, startedAt) {
+    const line = `-# API Puissance 4 : **${fmt(elapsedApiMs(startedAt))} ms**`;
+    if (typeof payload === 'string') return { content: `${payload}\n${line}` };
+    if (!payload || typeof payload !== 'object') return payload;
+
+    const container = Array.isArray(payload.components) ? payload.components[0] : null;
+    if (container?.addSeparatorComponents && container?.addTextDisplayComponents) {
+      container.addSeparatorComponents(new SeparatorBuilder());
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(line));
+      return payload;
+    }
+
+    const next = { ...payload };
+    next.content = next.content ? `${next.content}\n${line}` : line;
+    return next;
+  }
+
+  function trackSlashApiLatency(interaction, startedAt) {
+    const editReply = interaction.editReply.bind(interaction);
+    interaction.editReply = payload => editReply(appendApiLatency(payload, startedAt));
+  }
+
   function optionValue(interaction, name, fallback = null) {
     const option = interaction.options?.get(name, false);
     return option ? option.value : fallback;
@@ -2368,6 +2394,7 @@ function startDiscordBot(ctx) {
       }
       if (!interaction.isChatInputCommand()) return;
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      trackSlashApiLatency(interaction, process.hrtime.bigint());
 
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));
