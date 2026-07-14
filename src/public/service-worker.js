@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-egg-mobile-position-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-egg-first-screen-1';
 const APP_SHELL = [
   '/',
   '/index.html',

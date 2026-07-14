@@ -620,10 +620,10 @@
   function eggPosition(path, attempt = 0) {
     const seed = [...path].reduce((total, char) => total + char.charCodeAt(0), 0) + attempt * 97;
     const isMobile = window.matchMedia?.('(max-width: 720px)').matches;
-    const leftMin = isMobile ? 12 : 7;
-    const leftRange = isMobile ? 76 : 82;
-    const topMin = isMobile ? 18 : 14;
-    const topRange = isMobile ? 38 : 52;
+    const leftMin = isMobile ? 12 : 8;
+    const leftRange = isMobile ? 76 : 78;
+    const topMin = isMobile ? 12 : 9;
+    const topRange = isMobile ? 24 : 20;
     return {
       left: leftMin + (seed * 17 % leftRange),
       top: topMin + (seed * 29 % topRange),
