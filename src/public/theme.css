@@ -444,29 +444,43 @@ pre {
   border-color: rgba(76,110,245,.24) !important;
 }
 
-#p4-theme-toggle {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 99998;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 999px;
-  background: rgba(12,12,28,.72);
-  color: #f1f1f7;
-  backdrop-filter: blur(12px);
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: inline-flex;
+.p4-theme-menu-button {
+  width: 100%;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font: 900 18px "Barlow Condensed", sans-serif;
+  gap: 10px;
+  min-height: 54px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+  color: #f4f4fb;
   cursor: pointer;
-  box-shadow: 0 12px 30px rgba(0,0,0,.22);
+  text-align: left;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  transition: transform .18s ease, border-color .18s ease, background .18s ease;
 }
 
-:root[data-theme="light"] #p4-theme-toggle {
-  background: rgba(255,255,255,.86);
+.p4-theme-menu-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,.22);
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04));
+}
+
+.p4-theme-menu-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  font-size: 18px;
+}
+
+:root[data-theme="light"] .p4-theme-menu-button {
+  background: rgba(255,255,255,.64);
   color: #171423;
   border-color: rgba(38,31,62,.14);
 }

@@ -20,7 +20,13 @@
 
     const btn = document.getElementById('p4-theme-toggle');
     if (btn) {
-      btn.textContent = next === 'light' ? '☀️' : '🌙';
+      const icon = btn.querySelector('.p4-theme-menu-icon');
+      const label = btn.querySelector('.p4-theme-menu-label');
+      const sub = btn.querySelector('.p4-theme-menu-sub');
+      if (icon) icon.textContent = next === 'light' ? '☀️' : '🌙';
+      if (label) label.textContent = next === 'light' ? 'Mode clair' : 'Mode sombre';
+      if (sub) sub.textContent = next === 'light' ? 'Cliquer pour passer en sombre' : 'Cliquer pour passer en clair';
+      if (!icon && !label) btn.textContent = next === 'light' ? '☀️' : '🌙';
       btn.title = next === 'light' ? 'Mode clair' : 'Mode sombre';
       btn.setAttribute('aria-label', next === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair');
     }
@@ -38,7 +44,7 @@
     if (hasThemeCss) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-14';
+    link.href = '/theme.css?v=eggs-17';
     document.head.appendChild(link);
   }
 
@@ -239,7 +245,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-14', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-17', { scope: '/' }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();
@@ -269,16 +275,6 @@
     script.dataset.p4I18n = '1';
     script.addEventListener('load', () => window.P4I18n?.apply(document.body));
     document.head.appendChild(script);
-  }
-
-  function mountButton() {
-    if (document.getElementById('p4-theme-toggle')) return;
-    const btn = document.createElement('button');
-    btn.id = 'p4-theme-toggle';
-    btn.type = 'button';
-    btn.addEventListener('click', () => applyTheme(root.dataset.theme === 'light' ? 'dark' : 'light'));
-    document.body.appendChild(btn);
-    applyTheme(root.dataset.theme || getSavedTheme());
   }
 
   const MENU_ITEMS = [
@@ -504,6 +500,7 @@
     if (!shouldMountGlobalMenu()) return;
     if (document.getElementById('p4-global-menu-toggle')) return;
     ensureThemeStylesheet();
+    document.getElementById('p4-theme-toggle')?.remove();
     document.body.classList.add('p4-menu-mounted');
     const currentLanguage = window.P4I18n?.getLanguage?.() || readMenuPlayer()?.language || localStorage.getItem('p4_language') || 'fr';
     const currentLanguageLabel = languageInputValue(currentLanguage);
@@ -554,6 +551,13 @@
           <span class="p4-global-menu-sub p4-install-sub" data-i18n="menu.install.sub">Ouvrir comme une vraie application</span>
         </span>
       </button>
+      <button class="p4-theme-menu-button" id="p4-theme-toggle" type="button">
+        <span class="p4-theme-menu-icon">🌙</span>
+        <span class="p4-global-menu-copy">
+          <span class="p4-global-menu-label p4-theme-menu-label">Mode sombre</span>
+          <span class="p4-global-menu-sub p4-theme-menu-sub">Cliquer pour passer en clair</span>
+        </span>
+      </button>
       <div class="p4-menu-language-box">
         <div class="p4-menu-language-head">
           <span class="p4-menu-language-icon">🌐</span>
@@ -579,6 +583,7 @@
     backdrop.addEventListener('click', () => setMenuOpen(false));
     panel.querySelector('.p4-global-menu-close')?.addEventListener('click', () => setMenuOpen(false));
     panel.querySelector('#p4-install-app')?.addEventListener('click', installApplication);
+    panel.querySelector('#p4-theme-toggle')?.addEventListener('click', () => applyTheme(root.dataset.theme === 'light' ? 'dark' : 'light'));
     panel.querySelector('#p4-menu-language-save')?.addEventListener('click', saveMenuLanguage);
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') setMenuOpen(false);
@@ -588,6 +593,7 @@
     document.body.appendChild(backdrop);
     document.body.appendChild(panel);
     window.P4I18n?.apply(panel);
+    applyTheme(root.dataset.theme || getSavedTheme());
     updateInstallButton();
   }
 
@@ -622,14 +628,22 @@
   }
 
   function eggContentTargets() {
-    const selectors = [
-      'main h1', 'main h2', 'main h3',
-      'main p', 'main li',
-      'main .card', 'main .profile-card', 'main .panel', 'main section',
-      'h1', 'h2', 'h3', 'p', 'li',
-    ];
+    const isPhone = window.matchMedia?.('(max-width: 720px), (pointer: coarse)').matches;
+    const selectors = isPhone
+      ? [
+        'main h1', 'main h2', 'main h3',
+        'main p', 'main li',
+        'main [class*="title"]', 'main [class*="name"]', 'main [class*="label"]',
+      ]
+      : [
+        'main h1', 'main h2', 'main h3',
+        'main p', 'main li',
+        'main [class*="title"]', 'main [class*="name"]', 'main [class*="label"]',
+        'main .card', 'main .profile-card', 'main .panel',
+      ];
     const blocked = '.p4-global-menu, .p4-egg-toast, .p4-page-egg, .p4-chaos-egg, script, style, input, textarea, select, button, a';
     const seen = new Set();
+    const viewportHeight = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
     return selectors
       .flatMap(selector => Array.from(document.querySelectorAll(selector)))
       .filter(element => {
@@ -637,18 +651,19 @@
         seen.add(element);
         const text = element.textContent?.trim() || '';
         const rect = element.getBoundingClientRect();
-        return text.length >= 8 && rect.width > 80 && rect.height > 12;
-      });
+        const isVisible = rect.width > 80 && rect.height > 12 && rect.bottom > 56 && rect.top < viewportHeight * (isPhone ? 0.72 : 0.66);
+        return text.length >= (isPhone ? 5 : 8) && isVisible;
+      })
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
+      .slice(0, isPhone ? 10 : 14);
   }
 
   function hideEggInContent(element, key, attempt = 0) {
     const targets = eggContentTargets();
-    if (!targets.length) {
-      document.body.appendChild(element);
-      return;
-    }
+    if (!targets.length) return false;
     const target = targets[eggSeed(`${key}:${attempt}`) % targets.length];
     target.appendChild(element);
+    return true;
   }
 
   let eggAudioContext = null;
@@ -1049,13 +1064,11 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       applyWallpaperMode();
-      mountButton();
       mountGlobalMenu();
       mountPageEasterEgg();
     });
   } else {
     applyWallpaperMode();
-    mountButton();
     mountGlobalMenu();
     mountPageEasterEgg();
   }
