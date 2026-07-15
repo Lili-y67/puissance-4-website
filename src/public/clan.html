@@ -6,7 +6,7 @@
 <title>Puissance 4 - Clan</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/theme.css?v=eggs-27">
+<link rel="stylesheet" href="/theme.css?v=eggs-28">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#080910;--surface:#111522;--surface2:#171d2b;--line:rgba(255,255,255,.10);--text:#f7f8ff;--muted:rgba(247,248,255,.62);--red:#ff3b5f;--gold:#ffd166;--cyan:#85ebff}
@@ -36,13 +36,19 @@ body.clan-page.p4-wallpaper-mode .member,
 body.clan-page.p4-wallpaper-mode .msg,
 body.clan-page.p4-wallpaper-mode .notice,
 body.clan-page.p4-wallpaper-mode .input,
-body.clan-page.p4-wallpaper-mode textarea{
-  background:linear-gradient(180deg,rgba(10,12,22,.76),rgba(6,8,16,.66))!important;
+body.clan-page.p4-wallpaper-mode textarea,
+body.clan-page.p4-wallpaper-mode .nav-btn,
+body.clan-page.p4-wallpaper-mode .btn,
+body.clan-page.p4-wallpaper-mode .tag,
+body.clan-page.p4-wallpaper-mode .blason{
+  background:transparent!important;
+  background-image:none!important;
   border-color:rgba(133,235,255,.18)!important;
-  box-shadow:0 18px 58px rgba(0,0,0,.32)!important;
-  backdrop-filter:blur(10px)!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
 }
-body.clan-page.p4-wallpaper-mode .hero{background:linear-gradient(135deg,var(--clan-bg,rgba(133,235,255,.15)),rgba(6,8,16,.58) 42%),rgba(6,8,16,.68)!important}
+body.clan-page.p4-wallpaper-mode .hero{background:transparent!important;background-image:none!important}
+body.clan-page.p4-wallpaper-mode::before{display:none!important}
 body.clan-empty .layout,
 body.clan-empty #manage{display:none!important}
 body.clan-empty .page{max-width:980px;padding-top:clamp(24px,6vh,72px)}
@@ -358,7 +364,7 @@ loadClan().catch(error => {
 });
 </script>
 <script src="/presence.js?v=session-1"></script>
-<script src="/theme.js?v=eggs-27"></script>
+<script src="/theme.js?v=eggs-28"></script>
 </body>
 </html>
 

@@ -2,8 +2,8 @@ const CACHE_VERSION = 'p4-shell-v3.5.0-split-eggs-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-27',
-  '/theme.js?v=eggs-27',
+  '/theme.css?v=eggs-28',
+  '/theme.js?v=eggs-28',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',

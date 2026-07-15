@@ -69,11 +69,21 @@ body.p4-wallpaper-mode::before {
   z-index: 0;
   background: var(--p4-wallpaper-image) center / cover no-repeat fixed;
   opacity: var(--p4-wallpaper-opacity, .48);
+  width: auto !important;
+  height: auto !important;
+  inset: 0 !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 body.p4-wallpaper-mode::after {
   z-index: 0;
   background: rgba(0,0,0,var(--p4-wallpaper-dim, .28));
+  width: auto !important;
+  height: auto !important;
+  inset: 0 !important;
+  transform: none !important;
+  filter: none !important;
 }
 
 body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel) {
@@ -118,6 +128,10 @@ body.p4-wallpaper-mode .quest-card,
 body.p4-wallpaper-mode .player-card,
 body.p4-wallpaper-mode .duel-card,
 body.p4-wallpaper-mode .auth-card,
+body.leaderboard-page.p4-wallpaper-mode .nav,
+body.leaderboard-page.p4-wallpaper-mode .tabs,
+body.leaderboard-page.p4-wallpaper-mode .list-row,
+body.leaderboard-page.p4-wallpaper-mode .clan-row,
 body.p4-wallpaper-mode .modal,
 body.p4-wallpaper-mode [class*="panel"],
 body.p4-wallpaper-mode [class*="card"],
