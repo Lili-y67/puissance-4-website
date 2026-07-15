@@ -77,19 +77,39 @@ body{
 }
 .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 12px var(--red);animation:pulse-red 1.4s ease-in-out infinite}
 h1{
+  position:relative;
+  display:inline-block;
   margin-top:22px;
   font-family:"Barlow Condensed",Impact,sans-serif;
-  font-size:clamp(116px,19vw,224px);
+  font-size:clamp(136px,21vw,252px);
   line-height:.78;
   letter-spacing:0;
   font-weight:900;
   color:transparent;
-  background:linear-gradient(112deg,var(--red),#ff7a92 32%,var(--yellow) 66%,var(--cyan));
+  background:linear-gradient(112deg,#fff 0%,#ff6b86 20%,var(--red) 38%,#ff9f3f 56%,var(--yellow) 76%,#fff 100%);
   background-size:190% 100%;
   -webkit-background-clip:text;
   background-clip:text;
-  filter:drop-shadow(0 0 34px rgba(255,45,85,.22));
-  animation:headline-shift 4.8s ease-in-out infinite;
+  -webkit-text-stroke:2px rgba(255,255,255,.16);
+  filter:
+    drop-shadow(0 0 18px rgba(255,45,85,.82))
+    drop-shadow(0 0 46px rgba(255,214,10,.34));
+  text-shadow:
+    0 0 10px rgba(255,45,85,.68),
+    0 0 28px rgba(255,45,85,.42),
+    0 0 56px rgba(255,214,10,.24);
+  animation:headline-shift 4.8s ease-in-out infinite,neon-glitch 2.7s steps(1,end) infinite;
+}
+h1::after{
+  content:attr(data-text);
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  color:transparent;
+  -webkit-text-stroke:7px rgba(255,45,85,.18);
+  filter:blur(10px);
+  transform:translate(4px,5px);
+  opacity:.9;
 }
 .title{
   margin-top:20px;
@@ -132,6 +152,7 @@ button.btn{font:inherit}
 .btn.primary{background:rgba(255,45,85,.18);border-color:rgba(255,45,85,.38);color:#fff;box-shadow:0 18px 44px rgba(255,45,85,.14)}
 .btn:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.085)}
 .btn.primary:hover{border-color:rgba(255,45,85,.58);box-shadow:0 22px 54px rgba(255,45,85,.24)}
+.btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important;box-shadow:none!important}
 .hint{
   margin-top:18px;
   display:flex;
@@ -152,6 +173,7 @@ button.btn{font:inherit}
   font-family:inherit;
   font-size:12px;
 }
+.hint strong{color:var(--yellow);font-weight:800}
 .arena{position:relative;min-height:560px;display:grid;place-items:center;perspective:900px}
 .halo{
   position:absolute;
@@ -170,6 +192,36 @@ button.btn{font:inherit}
   transform:rotateX(8deg) rotateY(-10deg);
   transform-style:preserve-3d;
   animation:board-float 4.6s ease-in-out infinite;
+}
+.drop-lane{
+  position:absolute;
+  inset:-170px -70px -80px;
+  pointer-events:none;
+  overflow:hidden;
+  transform:translateZ(50px);
+}
+.falling-token{
+  position:absolute;
+  top:-72px;
+  left:var(--x,50%);
+  width:var(--s,34px);
+  height:var(--s,34px);
+  border-radius:50%;
+  background:radial-gradient(circle at 32% 26%,#fff3a2 0 9%,#ffe568 18%,var(--yellow) 66%,#d5a700);
+  box-shadow:
+    0 0 18px rgba(255,214,10,.55),
+    inset 0 -4px 8px rgba(0,0,0,.22);
+  opacity:.92;
+  animation:token-rain var(--d,4s) cubic-bezier(.18,.82,.16,1) infinite;
+  animation-delay:var(--delay,0s);
+}
+.falling-token.red{
+  background:radial-gradient(circle at 32% 26%,#ffc4cf 0 9%,#ff6f88 18%,var(--red) 66%,#bd1538);
+  box-shadow:0 0 20px rgba(255,45,85,.6),inset 0 -4px 8px rgba(0,0,0,.22);
+}
+.falling-token.cyan{
+  background:radial-gradient(circle at 32% 26%,#d8fbff 0 10%,var(--cyan) 24%,#38b6d4 70%,#17657c);
+  box-shadow:0 0 20px rgba(133,235,255,.58),inset 0 -4px 8px rgba(0,0,0,.22);
 }
 .board{
   display:grid;
@@ -256,6 +308,25 @@ button.btn{font:inherit}
 .status-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:7px;font-weight:800}
 .status-line span:last-child{color:var(--green)}
 .status-line.danger span:last-child{color:var(--red)}
+.status-line.warn span:last-child{color:var(--yellow)}
+.status-line.locked span:last-child{color:var(--yellow);text-shadow:0 0 14px rgba(255,214,10,.45)}
+.dots::after{
+  content:"...";
+  display:inline-block;
+  width:1.3em;
+  overflow:hidden;
+  text-align:left;
+  vertical-align:bottom;
+  animation:dots 1s steps(4,end) infinite;
+}
+.status-detail{
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.08);
+  color:rgba(243,243,248,.52);
+  font-size:12px;
+  line-height:1.35;
+}
 .orb{
   position:absolute;
   width:34px;
@@ -271,8 +342,21 @@ button.btn{font:inherit}
 @keyframes scan{0%,100%{transform:translateY(-45%);opacity:0}18%,72%{opacity:1}50%{transform:translateY(245%)}}
 @keyframes pulse-red{50%{transform:scale(1.35);box-shadow:0 0 22px var(--red)}}
 @keyframes headline-shift{50%{background-position:100% 0;filter:drop-shadow(0 0 42px rgba(255,214,10,.18))}}
+@keyframes neon-glitch{
+  0%,89%,100%{transform:translate(0);opacity:1}
+  90%{transform:translate(2px,-1px);opacity:.92}
+  91%{transform:translate(-2px,1px);opacity:1}
+  92%{transform:translate(0);opacity:.96}
+}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes board-float{0%,100%{transform:rotateX(8deg) rotateY(-10deg) translateY(0)}50%{transform:rotateX(11deg) rotateY(-7deg) translateY(-14px)}}
+@keyframes token-rain{
+  0%{transform:translate3d(0,-30px,0) rotate(0deg) scale(.88);opacity:0}
+  9%{opacity:.95}
+  76%{transform:translate3d(var(--drift,0px),500px,0) rotate(var(--rot,280deg)) scale(1)}
+  84%{transform:translate3d(calc(var(--drift,0px) + 8px),474px,0) rotate(var(--rot,280deg)) scale(1.14,.82)}
+  100%{transform:translate3d(calc(var(--drift,0px) - 4px),522px,0) rotate(var(--rot,280deg)) scale(.9);opacity:0}
+}
 @keyframes drop{
   0%{transform:translateY(-20px) scale(.92);opacity:0}
   14%{opacity:1}
@@ -286,6 +370,7 @@ button.btn{font:inherit}
   72%{opacity:1}
   100%{opacity:0;transform:translate(-50%,-50%) scale(2.2)}
 }
+@keyframes dots{0%{width:0}25%{width:.45em}50%{width:.9em}75%,100%{width:1.35em}}
 @keyframes orbit-a{50%{transform:translate(34px,22px) scale(1.25)}}
 @keyframes orbit-b{50%{transform:translate(-42px,38px) scale(.78)}}
 @keyframes orbit-c{50%{transform:translate(-26px,-46px) scale(1.14)}}
@@ -302,6 +387,8 @@ button.btn{font:inherit}
   .slot{width:34px;height:34px}
   .ghost-token{width:40px;height:40px;left:calc(50% - 20px)}
   .status-panel{position:relative;right:auto;bottom:auto;margin:18px auto 0}
+  .drop-lane{inset:-130px -24px -50px}
+  .falling-token{--s:28px}
   @keyframes board-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
   @keyframes drop{0%{transform:translateY(-16px);opacity:0}14%{opacity:1}68%{transform:translateY(184px)}75%{transform:translateY(170px) scale(1.1,.86)}100%{transform:translateY(184px);opacity:0}}
   .impact{top:137px}
@@ -322,30 +409,38 @@ button.btn{font:inherit}
 <main class="shell">
   <section class="copy" aria-label="Panel hors ligne">
     <div class="eyebrow">Panel hors ligne</div>
-    <h1>502</h1>
+    <h1 data-text="502">502</h1>
     <div class="title">Le serveur est tombe hors du plateau.</div>
     <p class="subtitle">
       Nginx est encore debout, mais le panel Puissance 4 ne repond plus derriere.
       Refresh dans quelques secondes : si Node revient, la partie reprend direct.
     </p>
     <div class="actions">
-      <button class="btn primary" type="button" onclick="location.reload()">Reessayer</button>
+      <button class="btn primary" type="button" id="retryBtn">Reessayer</button>
       <a class="btn" href="/">Retour accueil</a>
     </div>
-    <div class="hint"><kbd>R</kbd><span>relance la connexion au panel</span></div>
+    <div class="hint"><kbd>R</kbd><span>relance la connexion au panel. A <strong>10 essais</strong>, diagnostic backend.</span></div>
   </section>
 
   <section class="arena" aria-label="Animation Puissance 4">
     <div class="halo"></div>
     <div class="board-wrap">
+      <div class="drop-lane" aria-hidden="true">
+        <i class="falling-token red" style="--x:7%;--d:4.2s;--delay:-.4s;--drift:42px;--rot:260deg"></i>
+        <i class="falling-token" style="--x:23%;--s:30px;--d:3.7s;--delay:-2.1s;--drift:-30px;--rot:-310deg"></i>
+        <i class="falling-token cyan" style="--x:41%;--s:26px;--d:4.8s;--delay:-1.2s;--drift:24px;--rot:390deg"></i>
+        <i class="falling-token red" style="--x:62%;--s:38px;--d:4.4s;--delay:-3.4s;--drift:-36px;--rot:-240deg"></i>
+        <i class="falling-token" style="--x:81%;--s:32px;--d:3.9s;--delay:-.9s;--drift:26px;--rot:330deg"></i>
+      </div>
       <div class="ghost-token" id="ghostToken"></div>
       <div class="impact"></div>
       <div class="board" id="board"></div>
       <div class="status-panel">
         <div class="status-label">Diagnostic</div>
-        <div class="status-line danger"><span>Backend</span><span>OFF</span></div>
+        <div class="status-line danger" id="backendLine"><span>Backend</span><span id="backendState">OFF</span></div>
         <div class="status-line"><span>Nginx</span><span>OK</span></div>
-        <div class="status-line"><span>Essais</span><span id="counter">3 refresh</span></div>
+        <div class="status-line" id="attemptLine"><span>Essais</span><span id="counter">0 / 10</span></div>
+        <div class="status-detail" id="statusDetail">R relance vite. Au 10e essai, le diagnostic bloque le raccourci pendant 3 secondes.</div>
       </div>
     </div>
   </section>
@@ -355,6 +450,11 @@ button.btn{font:inherit}
 const board = document.getElementById('board');
 const token = document.getElementById('ghostToken');
 const counter = document.getElementById('counter');
+const retryBtn = document.getElementById('retryBtn');
+const backendLine = document.getElementById('backendLine');
+const backendState = document.getElementById('backendState');
+const attemptLine = document.getElementById('attemptLine');
+const statusDetail = document.getElementById('statusDetail');
 const pattern = [
   [0,0,1,0,2,0,0],
   [0,2,0,0,0,1,0],
@@ -363,7 +463,10 @@ const pattern = [
   [1,2,2,0,1,1,2],
   [2,1,1,0,2,1,1],
 ];
-let drops = 3;
+let attempts = 0;
+let diagnosing = false;
+const DIAGNOSE_AT = 10;
+const DIAGNOSE_WAIT = 3000;
 
 function renderBoard() {
   board.textContent = '';
@@ -376,18 +479,91 @@ function renderBoard() {
   });
 }
 
+function setBackendState(state) {
+  backendLine.classList.remove('danger', 'warn', 'locked');
+  backendState.className = '';
+  if (state === 'diagnose') {
+    backendLine.classList.add('warn', 'locked');
+    backendState.innerHTML = '<span class="dots">DIAGNOSE</span>';
+    return;
+  }
+  if (state === 'ok') {
+    backendState.textContent = 'OK';
+    return;
+  }
+  backendLine.classList.add('danger');
+  backendState.textContent = 'OFF';
+}
+
+function updateCounter() {
+  counter.textContent = attempts + ' / ' + DIAGNOSE_AT;
+  attemptLine.classList.toggle('warn', attempts >= DIAGNOSE_AT - 2 && !diagnosing);
+}
+
 function restartDrop() {
-  drops += 1;
-  counter.textContent = drops + ' refresh';
+  if (diagnosing) return;
+  attempts = Math.min(DIAGNOSE_AT, attempts + 1);
+  updateCounter();
   token.style.animation = 'none';
   void token.offsetWidth;
   token.style.animation = '';
+  statusDetail.textContent = attempts >= DIAGNOSE_AT
+    ? 'Seuil atteint : diagnostic backend lance, R est bloque quelques secondes.'
+    : 'Nouvel essai envoye. Encore ' + (DIAGNOSE_AT - attempts) + ' avant le diagnostic backend.';
+  if (attempts >= DIAGNOSE_AT) runBackendDiagnose();
+}
+
+async function probeBackend() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 2400);
+  try {
+    const url = '/?offline_probe=' + Date.now();
+    const response = await fetch(url, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      signal: controller.signal,
+      headers: { 'x-p4-offline-probe': '1' },
+    });
+    const text = await response.clone().text().catch(() => '');
+    return response.ok && !/Panel hors ligne|Le serveur est tombe|offline_probe/i.test(text);
+  } catch (error) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function runBackendDiagnose() {
+  if (diagnosing) return;
+  diagnosing = true;
+  retryBtn.disabled = true;
+  setBackendState('diagnose');
+  statusDetail.textContent = 'Diagnostic backend en cours... le raccourci R est bloque pendant 3 secondes.';
+  await new Promise(resolve => setTimeout(resolve, DIAGNOSE_WAIT));
+  const ok = await probeBackend();
+  if (ok) {
+    setBackendState('ok');
+    statusDetail.textContent = 'Backend OK. Renvoi vers le panel...';
+    setTimeout(() => window.location.replace('/'), 450);
+    return;
+  }
+  setBackendState('off');
+  diagnosing = false;
+  retryBtn.disabled = false;
+  attempts = 0;
+  updateCounter();
+  statusDetail.textContent = 'Toujours OFF. R est debloque, tu peux relancer une serie de 10 essais.';
 }
 
 renderBoard();
+updateCounter();
 token.addEventListener('click', restartDrop);
+retryBtn.addEventListener('click', restartDrop);
 window.addEventListener('keydown', event => {
-  if (event.key && event.key.toLowerCase() === 'r') restartDrop();
+  if (event.key && event.key.toLowerCase() === 'r') {
+    event.preventDefault();
+    restartDrop();
+  }
 });
 </script>
 </body>
