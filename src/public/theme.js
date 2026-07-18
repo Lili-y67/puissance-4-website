@@ -67,6 +67,84 @@
     style.textContent = `html,body,body *{cursor:url("${cursor}") 0 0,auto!important}`;
   }
 
+  const FPS_STORAGE_KEY = 'p4_show_fps';
+  let fpsFrameId = 0;
+  let fpsLastFrame = 0;
+  let fpsLastPaint = 0;
+  let fpsFrames = 0;
+  let fpsMeter = null;
+
+  function fpsEnabled() {
+    try {
+      return localStorage.getItem(FPS_STORAGE_KEY) === 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function ensureFpsMeter() {
+    if (fpsMeter?.isConnected) return fpsMeter;
+    fpsMeter = document.createElement('div');
+    fpsMeter.id = 'p4-fps-meter';
+    fpsMeter.className = 'p4-fps-meter';
+    fpsMeter.setAttribute('aria-label', 'Images par seconde');
+    fpsMeter.textContent = 'FPS --';
+    document.body.appendChild(fpsMeter);
+    return fpsMeter;
+  }
+
+  function paintFpsMeter(fps) {
+    const meter = ensureFpsMeter();
+    meter.textContent = `FPS ${fps}`;
+    meter.dataset.state = fps >= 55 ? 'good' : fps >= 35 ? 'ok' : 'bad';
+  }
+
+  function stopFpsMeter() {
+    if (fpsFrameId) cancelAnimationFrame(fpsFrameId);
+    fpsFrameId = 0;
+    fpsLastFrame = 0;
+    fpsLastPaint = 0;
+    fpsFrames = 0;
+    fpsMeter?.remove();
+  }
+
+  function tickFpsMeter(now) {
+    if (!fpsEnabled()) {
+      stopFpsMeter();
+      return;
+    }
+    if (!fpsLastFrame) {
+      fpsLastFrame = now;
+      fpsLastPaint = now;
+    }
+    fpsFrames += 1;
+    if (now - fpsLastPaint >= 500) {
+      const fps = Math.round((fpsFrames * 1000) / Math.max(1, now - fpsLastPaint));
+      paintFpsMeter(fps);
+      fpsFrames = 0;
+      fpsLastPaint = now;
+    }
+    fpsLastFrame = now;
+    fpsFrameId = requestAnimationFrame(tickFpsMeter);
+  }
+
+  function setFpsMeterEnabled(enabled) {
+    try {
+      localStorage.setItem(FPS_STORAGE_KEY, enabled ? 'true' : 'false');
+    } catch (_) {}
+    if (!enabled) {
+      stopFpsMeter();
+      return;
+    }
+    ensureFpsMeter();
+    if (!fpsFrameId) fpsFrameId = requestAnimationFrame(tickFpsMeter);
+  }
+
+  window.P4FpsCounter = {
+    setEnabled: setFpsMeterEnabled,
+    isEnabled: fpsEnabled,
+  };
+
   function clampNumber(value, fallback, min, max) {
     const number = Number(value);
     if (!Number.isFinite(number)) return fallback;
@@ -1099,12 +1177,19 @@
   applyCustomCursor();
   clearLegacyWallpaperStorage();
   ensureThemeStylesheet();
+  if (fpsEnabled()) {
+    if (document.body) setFpsMeterEnabled(true);
+    else document.addEventListener('DOMContentLoaded', () => setFpsMeterEnabled(true), { once: true });
+  }
   registerPwa();
   loadI18n();
   loadDiscordPresence();
   window.addEventListener('storage', event => {
     if (event.key === 'player') {
       applyWallpaperMode();
+    }
+    if (event.key === FPS_STORAGE_KEY) {
+      setFpsMeterEnabled(event.newValue === 'true');
     }
   });
   window.matchMedia?.('(max-width: 720px)').addEventListener?.('change', () => applyWallpaperMode());

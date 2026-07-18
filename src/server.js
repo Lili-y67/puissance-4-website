@@ -1845,6 +1845,15 @@ archiveOldGames();
 setInterval(archiveOldGames, 60 * 60 * 1000);
 
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
+app.get('/profil.html', renderProfilePage);
+app.get('/leaderboard.html', renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
+app.get('/players.html', renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
+app.get('/boutique.html', renderStaticPage('boutique.html', { title: 'Boutique - Puissance 4', description: 'Personnalise ton profil Puissance 4 avec des cosmetiques.' }));
+app.get('/regles.html', renderStaticPage('regles.html', { title: 'Regles - Puissance 4', description: 'Apprends les regles du Puissance 4 et les bases pour gagner.' }));
+app.get('/stats.html', renderStaticPage('stats.html', { title: 'Statistiques - Puissance 4', description: 'Explore les statistiques globales de Puissance 4.' }));
+app.get('/news.html', renderStaticPage('news.html', { title: 'Nouveautes - Puissance 4', description: 'Decouvre les dernieres nouveautes de Puissance 4.' }));
+app.get('/analyse.html', renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
+app.get('/progression.html', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
   lastModified: true,
@@ -2027,17 +2036,17 @@ app.get('/api/system-status', (_, res) => {
 });
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA SPA routing AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
-app.get('/',           (_, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
-app.get('/game',       (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
-app.get('/game/bot',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
-app.get('/local',      (_, res) => res.sendFile(path.join(__dirname, 'public/local.html')));
+app.get('/',           renderStaticPage('index.html', { title: 'Puissance 4', description: 'Joue au Puissance 4 en ligne, defie tes amis, grimpe le classement et personnalise ton profil.' }));
+app.get('/game',       renderStaticPage('game.html', { title: 'Partie - Puissance 4', description: 'Lance ou rejoins une partie Puissance 4 en ligne.' }));
+app.get('/game/bot',   renderStaticPage('game.html', { title: 'Bot - Puissance 4', description: 'Affronte un bot Puissance 4 et entraine-toi.' }));
+app.get('/local',      renderStaticPage('local.html', { title: 'Mode local - Puissance 4', description: 'Joue au Puissance 4 sur le meme appareil.' }));
 app.get('/spec/:id', (req, res) => {
   const gameId = Number(req.params.id);
   const state = gm.games.get(gameId);
   if (!state || state.status !== 'active') {
     return res.sendFile(path.join(__dirname, 'public/404.html'));
   }
-  res.sendFile(path.join(__dirname, 'public/live.html'));
+  renderStaticPage('live.html', { title: 'Spectateur - Puissance 4', description: 'Regarde une partie Puissance 4 en direct.' })(req, res);
 });
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -2104,7 +2113,7 @@ function writeSystemStatus(nextStatus) {
   fs.writeFileSync(SYSTEM_STATUS_PATH, JSON.stringify(payload, null, 2), 'utf8');
   return payload;
 }
-app.get('/game/:id',   (_, res) => res.sendFile(path.join(__dirname, 'public/game.html')));
+app.get('/game/:id',   renderStaticPage('game.html', { title: 'Partie - Puissance 4', description: 'Rejoins cette partie Puissance 4 en ligne.' }));
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAAAasAA...AAAaAAasAA
 // DISCORD RESET MOT DE PASSE
@@ -2183,6 +2192,106 @@ function getEligibleReferrer(referrerRef, playerId = 0) {
   if (!referrer || Number(referrer.id) === Number(playerId || 0)) return null;
   if (!referrer || Number(referrer.deleted || 0) === 1 || Number(referrer.is_guest || 0) === 1 || Number(referrer.is_bot || 0) === 1) return null;
   return referrer;
+}
+
+function htmlEscape(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function publicBaseUrlFromReq(req) {
+  const configured = normalizePublicUrl(process.env.PUBLIC_BASE_URL || process.env.BASE_URL || process.env.DISCORD_REDIRECT_BASE_URL);
+  if (configured) return configured;
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim() || 'https';
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
+  return host ? `${proto}://${host}`.replace(/\/+$/, '') : 'https://77.93.141.48';
+}
+
+function absolutePublicUrl(req, value, fallback = '/assets/pwa-icon-512.png') {
+  const raw = String(value || fallback || '').trim();
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (/^data:/i.test(raw)) return absolutePublicUrl(req, fallback, '');
+  const baseUrl = publicBaseUrlFromReq(req);
+  return `${baseUrl}${raw.startsWith('/') ? raw : `/${raw}`}`;
+}
+
+function renderHtmlWithMeta(fileName, req, res, meta = {}) {
+  const filePath = path.join(__dirname, 'public', fileName);
+  fs.readFile(filePath, 'utf8', (error, html) => {
+    if (error) return res.status(500).send('Erreur serveur');
+    const title = meta.title || 'Puissance 4';
+    const description = meta.description || 'Joue au Puissance 4 en ligne, defie tes amis et grimpe le classement.';
+    const url = meta.url || absolutePublicUrl(req, req.originalUrl || req.path || '/');
+    const image = meta.image || absolutePublicUrl(req, '/assets/pwa-icon-512.png');
+    const type = meta.type || 'website';
+    const card = meta.twitterCard || 'summary';
+    const tags = [
+      `<title>${htmlEscape(title)}</title>`,
+      `<meta name="description" content="${htmlEscape(description)}">`,
+      `<meta property="og:type" content="${htmlEscape(type)}">`,
+      `<meta property="og:site_name" content="Puissance 4">`,
+      `<meta property="og:title" content="${htmlEscape(title)}">`,
+      `<meta property="og:description" content="${htmlEscape(description)}">`,
+      `<meta property="og:url" content="${htmlEscape(url)}">`,
+      `<meta property="og:image" content="${htmlEscape(image)}">`,
+      `<meta property="og:image:secure_url" content="${htmlEscape(image)}">`,
+      `<meta name="twitter:card" content="${htmlEscape(card)}">`,
+      `<meta name="twitter:title" content="${htmlEscape(title)}">`,
+      `<meta name="twitter:description" content="${htmlEscape(description)}">`,
+      `<meta name="twitter:image" content="${htmlEscape(image)}">`,
+    ].join('\n');
+    const cleaned = html
+      .replace(/<title>[\s\S]*?<\/title>\s*/i, '')
+      .replace(/<meta\s+(?:name|property)=["'](?:description|og:[^"']+|twitter:[^"']+)["'][^>]*>\s*/gi, '');
+    res.type('html').send(cleaned.replace('</head>', `${tags}\n</head>`));
+  });
+}
+
+function resolveProfilePreviewPlayer(ref) {
+  const raw = String(ref || '').trim();
+  if (!raw) return null;
+  if (/^\d+$/.test(raw)) return pQ.getById.get(Number(raw));
+  return pQ.getByPseudo.get(decodeURIComponent(raw));
+}
+
+function renderProfilePage(req, res) {
+  const ref = req.params.ref || req.query.id || '';
+  const player = resolveProfilePreviewPlayer(ref);
+  if (!player || (Number(player.deleted || 0) === 1 && Number(player.id) !== Number(BOT_PLAYER_ID))) {
+    return renderHtmlWithMeta('profil.html', req, res, {
+      title: 'Profil introuvable - Puissance 4',
+      description: 'Ce profil Puissance 4 est introuvable ou a ete supprime.',
+      url: absolutePublicUrl(req, req.originalUrl || '/profil'),
+    });
+  }
+  const safe = sanitize(player);
+  const totalGames = Number(safe.wins || 0) + Number(safe.losses || 0) + Number(safe.draws || 0);
+  const rank = getRank(Number(safe.elo || 0));
+  const rankName = typeof rank === 'string' ? rank : (rank?.name || rank?.label || rank?.title || 'Classement');
+  const profilePath = `/profil?id=${encodeURIComponent(String(safe.id))}`;
+  const description = `${Number(safe.elo || 0)} ELO - ${rankName} - ${Number(safe.wins || 0)} victoires, ${Number(safe.losses || 0)} defaites, ${Number(safe.draws || 0)} nuls (${totalGames} parties).`;
+  const imageSource = safe.avatar || safe.profile_banner || safe.banner || '/assets/pwa-icon-512.png';
+  renderHtmlWithMeta('profil.html', req, res, {
+    title: `${safe.pseudo} - Profil Puissance 4`,
+    description,
+    url: absolutePublicUrl(req, profilePath),
+    image: absolutePublicUrl(req, imageSource),
+    twitterCard: 'summary',
+  });
+}
+
+function renderStaticPage(fileName, meta = {}) {
+  return (req, res) => renderHtmlWithMeta(fileName, req, res, {
+    title: meta.title || 'Puissance 4',
+    description: meta.description || 'Joue au Puissance 4 en ligne, defie tes amis et grimpe le classement.',
+    url: absolutePublicUrl(req, req.originalUrl || req.path || '/'),
+    image: absolutePublicUrl(req, meta.image || '/assets/pwa-icon-512.png'),
+    twitterCard: meta.twitterCard || 'summary',
+  });
 }
 
 function assignReferrerIfPossible(playerId, referrerId) {
@@ -5286,33 +5395,34 @@ app.post('/api/reset-password', security.routeGuard('reset'), (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/profil',     (_, res) => res.sendFile(path.join(__dirname, 'public/profil.html')));
-app.get('/replay/:id',     (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
-app.get('/replay-bot/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/replay.html')));
-app.get('/regles',     (_, res) => res.sendFile(path.join(__dirname, 'public/regles.html')));
-app.get('/live',        (_, res) => res.sendFile(path.join(__dirname, 'public/live.html')));
-app.get('/local',      (_, res) => res.sendFile(path.join(__dirname, 'public/local.html')));
-app.get('/leaderboard', (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
-app.get('/classement',  (_, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
-app.get('/clan',        (_, res) => res.sendFile(path.join(__dirname, 'public/clan.html')));
-app.get('/clan/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/clan.html')));
-app.get('/players',     (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
-app.get('/bots',        (_, res) => res.sendFile(path.join(__dirname, 'public/players.html')));
-app.get('/boutique',    (_, res) => res.sendFile(path.join(__dirname, 'public/boutique.html')));
-app.get('/analyse',     (_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
-app.get('/analyse.html',(_, res) => res.sendFile(path.join(__dirname, 'public/analyse.html')));
-app.get('/progression',  (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
-app.get('/progression.html', (_, res) => res.sendFile(path.join(__dirname, 'public/progression.html')));
+app.get('/profil',     renderProfilePage);
+app.get('/profil/:ref', renderProfilePage);
+app.get('/replay/:id',     renderStaticPage('replay.html', { title: 'Replay - Puissance 4', description: 'Revois une partie Puissance 4 coup par coup.' }));
+app.get('/replay-bot/:id', renderStaticPage('replay.html', { title: 'Replay bot - Puissance 4', description: 'Analyse une partie jouee contre un bot Puissance 4.' }));
+app.get('/regles',     renderStaticPage('regles.html', { title: 'Regles - Puissance 4', description: 'Apprends les regles du Puissance 4 et les bases pour gagner.' }));
+app.get('/live',       renderStaticPage('live.html', { title: 'Live - Puissance 4', description: 'Regarde les parties Puissance 4 en direct.' }));
+app.get('/local',      renderStaticPage('local.html', { title: 'Mode local - Puissance 4', description: 'Joue au Puissance 4 sur le meme appareil.' }));
+app.get('/leaderboard', renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
+app.get('/classement',  renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
+app.get('/clan',       renderStaticPage('clan.html', { title: 'Clans - Puissance 4', description: 'Cree ou rejoins un clan et progresse avec ton equipe.' }));
+app.get('/clan/:id',   renderStaticPage('clan.html', { title: 'Clan - Puissance 4', description: 'Decouvre ce clan Puissance 4 et ses membres.' }));
+app.get('/players',    renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
+app.get('/bots',       renderStaticPage('players.html', { title: 'Bots - Puissance 4', description: 'Defie les bots Puissance 4 et compare leurs niveaux.' }));
+app.get('/boutique',   renderStaticPage('boutique.html', { title: 'Boutique - Puissance 4', description: 'Personnalise ton profil Puissance 4 avec des cosmetiques.' }));
+app.get('/analyse',    renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
+app.get('/analyse.html', renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
+app.get('/progression', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
+app.get('/progression.html', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
 app.get('/tournoi',     (_, res) => res.redirect('/'));
 app.get('/tournoi/:id', (_, res) => res.redirect('/'));
-app.get('/duel/:id',    (_, res) => res.sendFile(path.join(__dirname, 'public/duel.html')));
-app.get('/duel-auth/:id', (_, res) => res.sendFile(path.join(__dirname, 'public/duel-auth.html')));
-app.get('/cgu',         (_, res) => res.sendFile(path.join(__dirname, 'public/cgu.html')));
-app.get('/api-doc',     (_, res) => res.sendFile(path.join(__dirname, 'public/api-doc.html')));
-app.get('/stats',       (_, res) => res.sendFile(path.join(__dirname, 'public/stats.html')));
-app.get('/news',        (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
-app.get('/news.html',   (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
-app.get('/nouveautes',  (_, res) => res.sendFile(path.join(__dirname, 'public/news.html')));
+app.get('/duel/:id',    renderStaticPage('duel.html', { title: 'Duel - Puissance 4', description: 'Rejoins une invitation de duel Puissance 4.' }));
+app.get('/duel-auth/:id', renderStaticPage('duel-auth.html', { title: 'Duel prive - Puissance 4', description: 'Connecte-toi pour rejoindre ce duel Puissance 4.' }));
+app.get('/cgu',         renderStaticPage('cgu.html', { title: 'CGU - Puissance 4', description: 'Consulte les conditions generales d utilisation de Puissance 4.' }));
+app.get('/api-doc',     renderStaticPage('api-doc.html', { title: 'API - Puissance 4', description: 'Documentation de l API publique Puissance 4.' }));
+app.get('/stats',       renderStaticPage('stats.html', { title: 'Statistiques - Puissance 4', description: 'Explore les statistiques globales de Puissance 4.' }));
+app.get('/news',        renderStaticPage('news.html', { title: 'Nouveautes - Puissance 4', description: 'Decouvre les dernieres nouveautes de Puissance 4.' }));
+app.get('/news.html',   renderStaticPage('news.html', { title: 'Nouveautes - Puissance 4', description: 'Decouvre les dernieres nouveautes de Puissance 4.' }));
+app.get('/nouveautes',  renderStaticPage('news.html', { title: 'Nouveautes - Puissance 4', description: 'Decouvre les dernieres nouveautes de Puissance 4.' }));
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS easter_egg_claims (

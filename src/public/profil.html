@@ -2388,9 +2388,16 @@ function formatRemainingTime(ms) {
 async function load() {
   const saved    = localStorage.getItem('player') || sessionStorage.getItem('player');
   const urlId    = new URLSearchParams(location.search).get('id');
+  const pathProfileRef = decodeURIComponent((location.pathname.match(/^\/profil\/([^/?#]+)/) || [])[1] || '').trim();
   viewerPlayer   = saved ? JSON.parse(saved) : null;
-  const playerId = urlId || (viewerPlayer?.id ?? null);
-  isOwnProfile   = viewerPlayer && (!urlId || String(urlId) === String(viewerPlayer.id));
+  let playerId = urlId || (/^\d+$/.test(pathProfileRef) ? pathProfileRef : '') || (viewerPlayer?.id ?? null);
+  if (!playerId && pathProfileRef) {
+    try {
+      const pseudoRes = await fetch(`/api/players/by-pseudo/${encodeURIComponent(pathProfileRef)}`);
+      if (pseudoRes.ok) playerId = (await pseudoRes.json()).id || null;
+    } catch {}
+  }
+  isOwnProfile   = viewerPlayer && ((!urlId && !pathProfileRef) || String(playerId) === String(viewerPlayer.id));
   await loadProfileShopInventory();
 
   if (isOwnProfile) {
@@ -2761,6 +2768,16 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             </div>
             <div class="toggle-switch">
               <input type="checkbox" id="auto-rejoin-toggle" onchange="onAutoRejoinChange(this.checked)">
+              <span class="toggle-slider"></span>
+            </div>
+          </label>
+          <label class="toggle-wrap" style="margin-top:4px;">
+            <div>
+              <div class="toggle-label">Afficher les FPS</div>
+              <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à droite</div>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
               <span class="toggle-slider"></span>
             </div>
           </label>` : ''}
@@ -5537,6 +5554,7 @@ function initAutoRejoinToggle() {
   const val = localStorage.getItem('auto_rejoin');
   toggle.checked = (val === null || val === 'true');
   updateAutoRejoinSub(toggle.checked);
+  initFpsCounterToggle();
 }
 
 function onAutoRejoinChange(checked) {
@@ -5549,6 +5567,27 @@ function updateAutoRejoinSub(checked) {
   if (sub) sub.textContent = checked
     ? 'Rejoindre la queue automatiquement'
     : 'Attendre sur l\'écran d\'accueil';
+}
+
+function initFpsCounterToggle() {
+  const toggle = document.getElementById('fps-counter-toggle');
+  if (!toggle) return;
+  const enabled = localStorage.getItem('p4_show_fps') === 'true';
+  toggle.checked = enabled;
+  updateFpsCounterSub(enabled);
+}
+
+function onFpsCounterChange(checked) {
+  localStorage.setItem('p4_show_fps', checked ? 'true' : 'false');
+  updateFpsCounterSub(checked);
+  window.P4FpsCounter?.setEnabled?.(checked);
+}
+
+function updateFpsCounterSub(checked) {
+  const sub = document.getElementById('fps-counter-sub');
+  if (sub) sub.textContent = checked
+    ? 'FPS visibles en haut à droite'
+    : 'Compteur FPS masqué';
 }
 
 async function searchPlayer() {
