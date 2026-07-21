@@ -1,0 +1,52 @@
+/* Live page board transparency overrides loaded after board-skins.css. */
+.live-board,
+.live-board[class*="board-skin-"] {
+  background:
+    radial-gradient(circle at 7% 80%, color-mix(in srgb, var(--board-a-soft) 58%, transparent), transparent 32%),
+    radial-gradient(circle at 94% 18%, color-mix(in srgb, var(--board-b-soft) 54%, transparent), transparent 34%),
+    rgba(6,7,18,.24) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 18px 48px rgba(0,0,0,.24) !important;
+  outline: 0 !important;
+  clip-path: none !important;
+}
+
+.live-board::before,
+.live-board[class*="board-skin-"]::before {
+  background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.024) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 42px) !important;
+  opacity: .20 !important;
+  animation: none !important;
+}
+
+.live-board::after,
+.live-board[class*="board-skin-"]::after {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--board-a) 10%, transparent), transparent 32%, transparent 68%, color-mix(in srgb, var(--board-b) 10%, transparent)) !important;
+  box-shadow: none !important;
+  opacity: .38 !important;
+  animation: none !important;
+}
+
+.live-board .live-cell,
+.live-board[class*="board-skin-"] .live-cell {
+  background: radial-gradient(circle at 50% 66%, rgba(0,0,0,.20), transparent 38%), rgba(7,8,22,.32) !important;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,.54), inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 1px rgba(255,255,255,.035) !important;
+}
+
+.live-board .live-cell::before,
+.live-board[class*="board-skin-"] .live-cell::before {
+  opacity: .24 !important;
+  animation: none !important;
+}
+
+body.p4-wallpaper-mode .live-board,
+body.p4-wallpaper-mode .live-board[class*="board-skin-"] {
+  background: rgba(4,5,14,.14) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 42px rgba(0,0,0,.16) !important;
+}
+
+body.p4-wallpaper-mode .live-board .live-cell,
+body.p4-wallpaper-mode .live-board[class*="board-skin-"] .live-cell {
+  background: radial-gradient(circle at 50% 66%, rgba(0,0,0,.16), transparent 38%), rgba(7,8,22,.26) !important;
+}

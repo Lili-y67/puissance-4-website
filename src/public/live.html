@@ -226,10 +226,20 @@ img,canvas,svg{max-width:100%}
   .game-card:hover{transform:none;box-shadow:0 18px 42px rgba(0,0,0,.30)}
   .scanlines{display:none}
 }
+/* Transparent live board over custom wallpapers. */
+.board-wrap{background:rgba(8,8,18,.18);border-color:rgba(255,255,255,.06);backdrop-filter:blur(2px)}
+.live-board{background:radial-gradient(circle at 7% 80%,color-mix(in srgb,var(--board-a-soft) 60%,transparent),transparent 32%),radial-gradient(circle at 94% 18%,color-mix(in srgb,var(--board-b-soft) 56%,transparent),transparent 34%),rgba(6,7,18,.26);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 18px 48px rgba(0,0,0,.26)}
+.live-board::before{opacity:.22}
+.live-board::after{opacity:.42}
+.live-cell{background:radial-gradient(circle at 50% 66%,rgba(0,0,0,.22),transparent 38%),radial-gradient(circle at 35% 35%,rgba(255,255,255,.08),rgba(6,7,22,.48) 70%);box-shadow:inset 0 4px 12px rgba(0,0,0,.58),inset 0 0 0 1px rgba(255,255,255,.08),0 0 0 1px rgba(255,255,255,.035);backdrop-filter:blur(1px)}
+body.p4-wallpaper-mode .board-wrap{background:rgba(0,0,0,.08);border-color:rgba(255,255,255,.08);box-shadow:none}
+body.p4-wallpaper-mode .live-board{background:rgba(4,5,14,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 42px rgba(0,0,0,.18)}
+body.p4-wallpaper-mode .live-cell{background:radial-gradient(circle at 50% 66%,rgba(0,0,0,.18),transparent 38%),rgba(7,8,22,.34)}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=eggs-27">
 <link rel="stylesheet" href="/board-skins.css?v=2">
+<link rel="stylesheet" href="/live-transparent.css?v=1">
 <script src="/board-skins.js?v=2"></script>
 </head>
 <body>
@@ -1077,9 +1087,11 @@ function renderBoardInto(board, game, large = true) {
   const p1 = game.players[1], p2 = game.players[2];
   const cellClass = large ? 'live-cell' : 'mini-cell';
   const tokenClass = large ? 'live-token' : 'mini-token';
+  const wasReady = board.dataset.liveReady === '1';
   applyBoardPalette(board, `game-${game.id || ''}-${game.players?.[1]?.id || game.players?.[1]?.pseudo || ''}-${game.players?.[2]?.id || game.players?.[2]?.pseudo || ''}`);
   if (board.children.length !== 42) {
     board.innerHTML = '';
+    board.dataset.liveReady = '0';
     for (let r = 0; r < 6; r++) {
       for (let c = 0; c < 7; c++) {
         const cell = document.createElement('div');
@@ -1091,15 +1103,18 @@ function renderBoardInto(board, game, large = true) {
     }
   }
 
+  let animatedToken = false;
   for (const cell of board.children) {
     const r = Number(cell.dataset.row);
     const c = Number(cell.dataset.col);
+    const previousValue = Number(cell.dataset.value || 0);
     const val = game.grid?.[r]?.[c] ?? 0;
     const player = val === 1 ? p1 : val === 2 ? p2 : null;
     const styleKey = player ? tokenStyleKey(player) : '';
     cell.classList.toggle('win-cell', isWinCell(game, r, c));
 
-    if (Number(cell.dataset.value || 0) !== val || cell.dataset.styleKey !== styleKey) {
+    if (previousValue !== val || cell.dataset.styleKey !== styleKey) {
+      const shouldAnimate = large && wasReady && !animatedToken && previousValue === 0 && val !== 0;
       cell.dataset.value = String(val);
       cell.dataset.styleKey = styleKey;
       cell.replaceChildren();
@@ -1108,11 +1123,15 @@ function renderBoardInto(board, game, large = true) {
         token.className = tokenClass;
         cell.appendChild(token);
         applyTokenStyle(token, player, large);
-        requestAnimationFrame(() => token.classList.add('token-drop'));
-        token.addEventListener('animationend', () => token.classList.remove('token-drop'), { once: true });
+        if (shouldAnimate) {
+          animatedToken = true;
+          requestAnimationFrame(() => token.classList.add('token-drop'));
+          token.addEventListener('animationend', () => token.classList.remove('token-drop'), { once: true });
+        }
       }
     }
   }
+  board.dataset.liveReady = '1';
 }
 
 function renderList(games) {
