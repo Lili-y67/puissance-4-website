@@ -33,19 +33,29 @@
   }
 
   function ensureThemeStylesheet() {
-    const hasThemeCss = [...document.styleSheets].some(sheet => {
+    const stylesheets = [
+      { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-29', match: '/theme.css' },
+      { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=1', match: '/theme-pc.css', media: '(min-width: 721px)' },
+      { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=1', match: '/theme-phone.css', media: '(max-width: 720px)' },
+    ];
+
+    const hasStylesheet = match => [...document.styleSheets].some(sheet => {
       try {
-        return typeof sheet.href === 'string' && sheet.href.includes('/theme.css');
+        return typeof sheet.href === 'string' && sheet.href.includes(match);
       } catch (error) {
         return false;
       }
-    }) || !!document.querySelector('link[href="/theme.css"]');
+    }) || !!document.querySelector(`link[href*="${match}"]`);
 
-    if (hasThemeCss) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = '/theme.css?v=eggs-28';
-    document.head.appendChild(link);
+    stylesheets.forEach(sheet => {
+      if (hasStylesheet(sheet.match) || document.getElementById(sheet.id)) return;
+      const link = document.createElement('link');
+      link.id = sheet.id;
+      link.rel = 'stylesheet';
+      link.href = sheet.href;
+      if (sheet.media) link.media = sheet.media;
+      document.head.appendChild(link);
+    });
   }
 
   function applyCustomCursor() {

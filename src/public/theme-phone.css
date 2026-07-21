@@ -1,0 +1,65 @@
+/* Phone overrides loaded after theme.css. Keep compact controls fixed and out of the page flow. */
+@media (max-width: 720px) {
+  html,
+  body {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body.p4-wallpaper-mode > .p4-fps-meter,
+  .p4-fps-meter {
+    position: fixed !important;
+    top: max(8px, env(safe-area-inset-top, 0px)) !important;
+    left: max(8px, env(safe-area-inset-left, 0px)) !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    max-width: calc(100vw - 76px);
+    white-space: nowrap;
+    z-index: 100020 !important;
+  }
+
+  body.p4-menu-mounted .p4-fps-meter {
+    top: max(8px, env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .p4-global-menu-toggle {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    min-height: 42px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .p4-global-menu-toggle-text {
+    max-width: 62px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fps-toggle-row {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+  }
+
+  .fps-config-btn {
+    width: max-content;
+    min-width: 112px;
+    margin-left: 8px;
+  }
+
+  .fps-config-modal {
+    align-items: end;
+    padding: 12px;
+  }
+
+  .fps-config-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
+    border-radius: 20px;
+  }
+}

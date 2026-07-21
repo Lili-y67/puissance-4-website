@@ -1,0 +1,34 @@
+/* Desktop overrides loaded after theme.css. Keep page logic in theme.css, fix desktop placement here. */
+@media (min-width: 721px) {
+  html,
+  body {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  body.p4-wallpaper-mode > .p4-fps-meter,
+  .p4-fps-meter {
+    position: fixed !important;
+    top: max(12px, env(safe-area-inset-top, 0px)) !important;
+    left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    margin: 0 !important;
+    z-index: 100020 !important;
+  }
+
+  body.p4-menu-mounted .p4-fps-meter {
+    top: max(12px, env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .p4-global-menu-toggle {
+    top: max(18px, env(safe-area-inset-top, 0px));
+    right: max(18px, env(safe-area-inset-right, 0px));
+  }
+
+  .fps-toggle-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+  }
+}

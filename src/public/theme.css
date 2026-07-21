@@ -86,7 +86,7 @@ body.p4-wallpaper-mode::after {
   filter: none !important;
 }
 
-body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel) {
+body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel):not(.p4-fps-meter) {
   position: relative;
 }
 
