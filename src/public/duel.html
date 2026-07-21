@@ -307,6 +307,9 @@ async function acceptDuel() {
       }
     }
     setState('Duel valide. Preparation de la partie...', 'ok');
+    if (data?.gameUrl) {
+      window.setTimeout(() => { window.location.href = data.gameUrl; }, 250);
+    }
   } catch (error) {
     setState('Erreur reseau pendant la validation.', 'err');
     btn.disabled = false;

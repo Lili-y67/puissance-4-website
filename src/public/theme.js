@@ -360,7 +360,12 @@
     if (!button) return;
     const canInstall = Boolean(deferredInstallPrompt);
     const showIosHelp = isIosDevice() && !isStandalone();
-    button.hidden = isStandalone() || (!canInstall && !showIosHelp);
+    const canShowInstallEntry = !isStandalone() && (
+      canInstall
+      || showIosHelp
+      || (window.location.protocol === 'https:' || ['localhost', '127.0.0.1'].includes(window.location.hostname))
+    );
+    button.hidden = !canShowInstallEntry;
     button.querySelector('.p4-install-label').textContent = showIosHelp && !canInstall
       ? (window.P4I18n?.t('menu.install.ios') || 'Installer sur iPhone')
       : (window.P4I18n?.t('menu.install.label') || 'Installer l’application');
@@ -379,7 +384,9 @@
     }
     if (isIosDevice()) {
       alert('Sur iPhone ou iPad : ouvre le menu Partager de Safari, puis touche « Sur l’écran d’accueil ».');
+      return;
     }
+    alert('Pour ouvrir Puissance 4 en mode application, utilise le bouton d’installation de ton navigateur (icône écran/flèche dans la barre d’adresse, ou menu ⋮ > Installer l’application).');
   }
 
   function registerPwa() {

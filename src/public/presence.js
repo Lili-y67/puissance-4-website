@@ -16,6 +16,10 @@
     return !!lastInteractionAt && Date.now() - lastInteractionAt <= sessionIdleMs;
   }
 
+  function hasPersistentLogin() {
+    return !!localStorage.getItem('token') && !!localStorage.getItem('player');
+  }
+
   function clearStoredAuth() {
     try {
       localStorage.removeItem('token');
@@ -274,11 +278,6 @@
     function identifyFromStorage() {
       const auth = getStoredAuth();
       if (auth.token && auth.playerId) {
-        if (!isGuestToken(auth.token) && !hasRecentActivity()) {
-          clearStoredAuth();
-          socket.emit('visitor_presence', { visitorId });
-          return;
-        }
         socket.emit('identify', { playerId: auth.playerId, token: auth.token });
       } else {
         socket.emit('visitor_presence', { visitorId });
@@ -395,7 +394,7 @@
       if (!socket.connected) return;
       const auth = getStoredAuth();
       if (auth.token && auth.playerId) {
-        socket.emit('presence_ping', { active: isGuestToken(auth.token) ? true : hasRecentActivity() });
+        socket.emit('presence_ping', { active: isGuestToken(auth.token) || hasPersistentLogin() || hasRecentActivity() });
       } else {
         socket.emit('visitor_presence', { visitorId });
       }
