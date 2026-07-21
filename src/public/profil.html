@@ -1289,17 +1289,26 @@ body.search-open .profile-side{
 .upload-chooser-btn-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .upload-chooser-btn-meta{font-size:12px;color:var(--muted);line-height:1.45}
 .upload-chooser-note{padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted);line-height:1.6}
-.fps-config-btn{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);color:var(--text);font-size:15px;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
-.fps-config-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.08)}
-.fps-config-panel{margin:6px 0 2px;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(8,8,16,.38)}
-.fps-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.fps-config-grid label{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
-.fps-config-grid input{min-width:0;height:30px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--text);padding:0 8px}
-.fps-config-grid input[type="color"]{width:42px;padding:2px}
-.fps-config-grid input[type="number"]{width:64px}
+.fps-toggle-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin-top:4px}
+.fps-toggle-row .toggle-wrap{margin-top:0!important;min-width:0}
+.fps-config-btn{min-width:112px;height:38px;display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;border-radius:12px;border:1px solid rgba(133,235,255,.20);background:rgba(133,235,255,.075);color:#85EBFF;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s,opacity .18s}
+.fps-config-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.42);background:rgba(133,235,255,.13)}
+.fps-config-btn[hidden]{display:none!important}
+.fps-config-modal{position:fixed;inset:0;z-index:100050;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.58);backdrop-filter:blur(6px)}
+.fps-config-modal[hidden]{display:none!important}
+.fps-config-dialog{width:min(460px,100%);border:1px solid rgba(255,255,255,.10);border-radius:22px;background:linear-gradient(180deg,rgba(18,18,38,.98),rgba(9,9,20,.98));box-shadow:0 32px 90px rgba(0,0,0,.54),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden}
+.fps-config-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:16px 16px 12px;border-bottom:1px solid rgba(255,255,255,.07)}
+.fps-config-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:var(--text)}
+.fps-config-sub{margin-top:2px;font-size:12px;color:var(--muted);line-height:1.35}
+.fps-config-close{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--text);font-size:18px;cursor:pointer}
+.fps-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px}
+.fps-config-grid label{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.fps-config-grid input{min-width:0;height:34px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--text);padding:0 9px}
+.fps-config-grid input[type="color"]{width:46px;padding:2px}
+.fps-config-grid input[type="number"]{width:72px}
 .fps-config-grid .fps-rgb-toggle{grid-column:1/-1;justify-content:flex-start;text-transform:none;letter-spacing:0;color:var(--text)}
 .fps-config-grid .fps-rgb-toggle input{width:18px;height:18px}
-@media(max-width:620px){.fps-config-grid{grid-template-columns:1fr}.fps-config-grid input[type="number"]{width:90px}}
+@media(max-width:620px){.fps-toggle-row{grid-template-columns:1fr}.fps-config-btn{width:max-content;margin-left:8px}.fps-config-grid{grid-template-columns:1fr}.fps-config-grid input[type="number"]{width:94px}}
 .queue-music-search-results{display:none;width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(8,8,16,.72);overflow:hidden}
 .queue-music-search-results.show{display:block}
 .queue-music-result{width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:var(--text);text-align:left;cursor:pointer}
@@ -2782,26 +2791,37 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
               <span class="toggle-slider"></span>
             </div>
           </label>
-          <label class="toggle-wrap" style="margin-top:4px;">
-            <div>
-              <div class="toggle-label">Afficher les FPS</div>
-              <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à gauche</div>
-            </div>
-            <button class="fps-config-btn" id="fps-config-btn" type="button" onclick="toggleFpsConfigPanel()" aria-label="Configurer le compteur FPS">⚙</button>
-            <div class="toggle-switch">
-              <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
-              <span class="toggle-slider"></span>
-            </div>
-          </label>
-          <div class="fps-config-panel" id="fps-config-panel" hidden>
-            <div class="fps-config-grid">
-              <label>Texte <input id="fps-config-text" maxlength="18" oninput="saveFpsConfigFromUi()"></label>
-              <label>Stable <input id="fps-color-good" type="color" oninput="saveFpsConfigFromUi()"></label>
-              <label>Moyen <input id="fps-color-ok" type="color" oninput="saveFpsConfigFromUi()"></label>
-              <label>Bas <input id="fps-color-bad" type="color" oninput="saveFpsConfigFromUi()"></label>
-              <label>Stable dès <input id="fps-threshold-good" type="number" min="1" max="240" step="1" oninput="saveFpsConfigFromUi()"></label>
-              <label>Moyen dès <input id="fps-threshold-ok" type="number" min="1" max="239" step="1" oninput="saveFpsConfigFromUi()"></label>
-              <label class="fps-rgb-toggle"><input id="fps-rgb-toggle" type="checkbox" onchange="saveFpsConfigFromUi()"> RGB animé</label>
+          <div class="fps-toggle-row">
+            <label class="toggle-wrap">
+              <div>
+                <div class="toggle-label">Afficher les FPS</div>
+                <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à gauche</div>
+              </div>
+              <div class="toggle-switch">
+                <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
+                <span class="toggle-slider"></span>
+              </div>
+            </label>
+            <button class="fps-config-btn" id="fps-config-btn" type="button" onclick="toggleFpsConfigPanel()" aria-label="Configurer le compteur FPS">⚙ Configurer</button>
+          </div>
+          <div class="fps-config-modal" id="fps-config-panel" hidden onclick="if(event.target===this) closeFpsConfigPanel()" role="dialog" aria-modal="true" aria-labelledby="fps-config-title">
+            <div class="fps-config-dialog">
+              <div class="fps-config-head">
+                <div>
+                  <div class="fps-config-title" id="fps-config-title">Compteur FPS</div>
+                  <div class="fps-config-sub">Texte, couleurs et seuils de changement.</div>
+                </div>
+                <button class="fps-config-close" type="button" onclick="closeFpsConfigPanel()" aria-label="Fermer">×</button>
+              </div>
+              <div class="fps-config-grid">
+                <label>Texte <input id="fps-config-text" maxlength="18" oninput="saveFpsConfigFromUi()"></label>
+                <label>Stable <input id="fps-color-good" type="color" oninput="saveFpsConfigFromUi()"></label>
+                <label>Moyen <input id="fps-color-ok" type="color" oninput="saveFpsConfigFromUi()"></label>
+                <label>Bas <input id="fps-color-bad" type="color" oninput="saveFpsConfigFromUi()"></label>
+                <label>Stable dès <input id="fps-threshold-good" type="number" min="1" max="240" step="1" oninput="saveFpsConfigFromUi()"></label>
+                <label>Moyen dès <input id="fps-threshold-ok" type="number" min="1" max="239" step="1" oninput="saveFpsConfigFromUi()"></label>
+                <label class="fps-rgb-toggle"><input id="fps-rgb-toggle" type="checkbox" onchange="saveFpsConfigFromUi()"> RGB animé</label>
+              </div>
             </div>
           </div>` : ''}
           ${followBtn}
@@ -5622,9 +5642,20 @@ function toggleFpsConfigPanel() {
   const panel = document.getElementById('fps-config-panel');
   if (!panel) return;
   panel.hidden = !panel.hidden;
-  if (!panel.hidden) syncFpsConfigUi();
+  if (!panel.hidden) {
+    syncFpsConfigUi();
+    document.getElementById('fps-config-text')?.focus?.();
+  }
 }
 
+function closeFpsConfigPanel() {
+  const panel = document.getElementById('fps-config-panel');
+  if (panel) panel.hidden = true;
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeFpsConfigPanel();
+});
 function syncFpsConfigUi() {
   const cfg = window.P4FpsCounter?.getConfig?.() || {};
   const set = (id, value, prop = 'value') => {
