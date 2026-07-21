@@ -1289,6 +1289,17 @@ body.search-open .profile-side{
 .upload-chooser-btn-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .upload-chooser-btn-meta{font-size:12px;color:var(--muted);line-height:1.45}
 .upload-chooser-note{padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted);line-height:1.6}
+.fps-config-btn{width:34px;height:34px;display:grid;place-items:center;flex-shrink:0;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.055);color:var(--text);font-size:15px;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
+.fps-config-btn:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.08)}
+.fps-config-panel{margin:6px 0 2px;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(8,8,16,.38)}
+.fps-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fps-config-grid label{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.fps-config-grid input{min-width:0;height:30px;border-radius:10px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--text);padding:0 8px}
+.fps-config-grid input[type="color"]{width:42px;padding:2px}
+.fps-config-grid input[type="number"]{width:64px}
+.fps-config-grid .fps-rgb-toggle{grid-column:1/-1;justify-content:flex-start;text-transform:none;letter-spacing:0;color:var(--text)}
+.fps-config-grid .fps-rgb-toggle input{width:18px;height:18px}
+@media(max-width:620px){.fps-config-grid{grid-template-columns:1fr}.fps-config-grid input[type="number"]{width:90px}}
 .queue-music-search-results{display:none;width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(8,8,16,.72);overflow:hidden}
 .queue-music-search-results.show{display:block}
 .queue-music-result{width:100%;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:0;border-bottom:1px solid rgba(255,255,255,.06);background:transparent;color:var(--text);text-align:left;cursor:pointer}
@@ -2774,13 +2785,25 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
           <label class="toggle-wrap" style="margin-top:4px;">
             <div>
               <div class="toggle-label">Afficher les FPS</div>
-              <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à droite</div>
+              <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à gauche</div>
             </div>
+            <button class="fps-config-btn" id="fps-config-btn" type="button" onclick="toggleFpsConfigPanel()" aria-label="Configurer le compteur FPS">⚙</button>
             <div class="toggle-switch">
               <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
               <span class="toggle-slider"></span>
             </div>
-          </label>` : ''}
+          </label>
+          <div class="fps-config-panel" id="fps-config-panel" hidden>
+            <div class="fps-config-grid">
+              <label>Texte <input id="fps-config-text" maxlength="18" oninput="saveFpsConfigFromUi()"></label>
+              <label>Stable <input id="fps-color-good" type="color" oninput="saveFpsConfigFromUi()"></label>
+              <label>Moyen <input id="fps-color-ok" type="color" oninput="saveFpsConfigFromUi()"></label>
+              <label>Bas <input id="fps-color-bad" type="color" oninput="saveFpsConfigFromUi()"></label>
+              <label>Stable dès <input id="fps-threshold-good" type="number" min="1" max="240" step="1" oninput="saveFpsConfigFromUi()"></label>
+              <label>Moyen dès <input id="fps-threshold-ok" type="number" min="1" max="239" step="1" oninput="saveFpsConfigFromUi()"></label>
+              <label class="fps-rgb-toggle"><input id="fps-rgb-toggle" type="checkbox" onchange="saveFpsConfigFromUi()"> RGB animé</label>
+            </div>
+          </div>` : ''}
           ${followBtn}
         </div>
       </div>
@@ -5575,19 +5598,59 @@ function initFpsCounterToggle() {
   const enabled = localStorage.getItem('p4_show_fps') === 'true';
   toggle.checked = enabled;
   updateFpsCounterSub(enabled);
+  syncFpsConfigUi();
 }
 
 function onFpsCounterChange(checked) {
   localStorage.setItem('p4_show_fps', checked ? 'true' : 'false');
   updateFpsCounterSub(checked);
   window.P4FpsCounter?.setEnabled?.(checked);
+  const panel = document.getElementById('fps-config-panel');
+  if (panel && !checked) panel.hidden = true;
 }
 
 function updateFpsCounterSub(checked) {
   const sub = document.getElementById('fps-counter-sub');
   if (sub) sub.textContent = checked
-    ? 'FPS visibles en haut à droite'
+    ? 'FPS visibles en haut à gauche'
     : 'Compteur FPS masqué';
+  const btn = document.getElementById('fps-config-btn');
+  if (btn) btn.hidden = !checked;
+}
+
+function toggleFpsConfigPanel() {
+  const panel = document.getElementById('fps-config-panel');
+  if (!panel) return;
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) syncFpsConfigUi();
+}
+
+function syncFpsConfigUi() {
+  const cfg = window.P4FpsCounter?.getConfig?.() || {};
+  const set = (id, value, prop = 'value') => {
+    const el = document.getElementById(id);
+    if (el) el[prop] = value;
+  };
+  set('fps-config-text', cfg.text || 'FPS');
+  set('fps-color-good', cfg.colorGood || '#30d158');
+  set('fps-color-ok', cfg.colorOk || '#ffd60a');
+  set('fps-color-bad', cfg.colorBad || '#ff2d55');
+  set('fps-threshold-good', cfg.goodMin || 55);
+  set('fps-threshold-ok', cfg.okMin || 35);
+  set('fps-rgb-toggle', Boolean(cfg.animateRgb), 'checked');
+}
+
+function saveFpsConfigFromUi() {
+  const value = id => document.getElementById(id)?.value;
+  window.P4FpsCounter?.setConfig?.({
+    text: value('fps-config-text') || 'FPS',
+    colorGood: value('fps-color-good') || '#30d158',
+    colorOk: value('fps-color-ok') || '#ffd60a',
+    colorBad: value('fps-color-bad') || '#ff2d55',
+    goodMin: Number(value('fps-threshold-good') || 55),
+    okMin: Number(value('fps-threshold-ok') || 35),
+    animateRgb: Boolean(document.getElementById('fps-rgb-toggle')?.checked),
+  });
 }
 
 async function searchPlayer() {

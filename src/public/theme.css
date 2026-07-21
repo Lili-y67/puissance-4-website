@@ -497,17 +497,16 @@ pre {
 
 .p4-fps-meter {
   position: fixed;
-  top: 12px;
-  right: 12px;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
   z-index: 100020;
   min-width: 68px;
   padding: 6px 9px;
   border: 1px solid rgba(255,255,255,.16);
   border-radius: 10px;
   background: rgba(8,8,18,.74);
-  color: #e8fff0;
+  color: var(--p4-fps-good, #30d158);
   font: 800 11px/1 "Barlow", system-ui, sans-serif;
-  letter-spacing: .4px;
   text-align: center;
   pointer-events: none;
   box-shadow: 0 10px 30px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
@@ -515,19 +514,22 @@ pre {
 }
 
 body.p4-menu-mounted .p4-fps-meter {
-  top: 72px;
+  top: max(12px, env(safe-area-inset-top));
 }
 
 .p4-fps-meter[data-state="ok"] {
-  color: #fff2b0;
+  color: var(--p4-fps-ok, #ffd60a);
   border-color: rgba(255,214,10,.28);
 }
 
 .p4-fps-meter[data-state="bad"] {
-  color: #ffb8c8;
+  color: var(--p4-fps-bad, #ff2d55);
   border-color: rgba(255,45,85,.32);
 }
 
+.p4-fps-meter.rgb {
+  animation: p4FpsRgb 2.2s linear infinite;
+}
 :root[data-theme="light"] .p4-theme-menu-button {
   background: rgba(255,255,255,.64);
   color: #171423;
@@ -536,9 +538,24 @@ body.p4-menu-mounted .p4-fps-meter {
 
 :root[data-theme="light"] .p4-fps-meter {
   background: rgba(255,255,255,.82);
-  color: #143b23;
   border-color: rgba(35,27,60,.16);
   box-shadow: 0 10px 26px rgba(34,25,70,.15), inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+
+@keyframes p4FpsRgb {
+  to { filter: hue-rotate(360deg); }
+}
+
+@media (max-width: 720px) {
+  .p4-fps-meter {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: auto;
+    bottom: auto;
+    max-width: calc(100vw - 82px);
+    white-space: nowrap;
+  }
 }
 
 .p4-global-menu-toggle {

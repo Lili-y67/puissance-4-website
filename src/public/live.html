@@ -211,6 +211,21 @@ img,canvas,svg{max-width:100%}
   .analysis-stat-value{font-size:26px}
   .card-footer{flex-direction:column;align-items:flex-start;gap:6px}
 }
+@media (max-width:720px), (prefers-reduced-motion:reduce){
+  .live-dot,
+  .mini-cell.win-cell,
+  .live-cell.win-cell,
+  .game-card,
+  .token-drop,
+  html[data-board-skin] .mini-board,
+  html[data-board-skin] .mini-board::before,
+  html[data-board-skin] .mini-board::after,
+  html[data-board-skin] .live-board,
+  html[data-board-skin] .live-board::before,
+  html[data-board-skin] .live-board::after{animation:none!important}
+  .game-card:hover{transform:none;box-shadow:0 18px 42px rgba(0,0,0,.30)}
+  .scanlines{display:none}
+}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=eggs-27">
@@ -384,6 +399,9 @@ let liveSoundEnabled = localStorage.getItem('p4_live_sound') !== '0';
 let lastSpecGameId = null;
 let liveVariantCount = Math.max(1, Math.min(3, Number(localStorage.getItem('p4_live_variant_count') || 2)));
 let lastVariantGame = null;
+let refreshInFlight = false;
+let refreshQueued = false;
+let lastLiveListSignature = '';
 
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
@@ -1312,10 +1330,28 @@ function showReaction(reaction) {
   setTimeout(() => el.remove(), 1400);
 }
 
+function liveListSignature(games = []) {
+  return games.map(game => `${game.id}:${game.status}:${game.moves}:${game.current}:${game.spectators?.length || 0}`).join('|');
+}
+
 async function refresh() {
+  if (refreshInFlight) {
+    refreshQueued = true;
+    return;
+  }
+  refreshInFlight = true;
   try {
     const games = await fetch('/api/live', { cache: 'no-store' }).then(r => r.json());
-    renderList(games);
+    const signature = liveListSignature(games);
+    if (!selectedGameId && signature !== lastLiveListSignature) {
+      renderList(games);
+      lastLiveListSignature = signature;
+    } else if (!selectedGameId) {
+      const activeCount = games.filter(g => g.status === 'active').length;
+      const count = document.getElementById('count');
+      if (count) count.textContent = activeCount;
+      updateLiveDiscordPresence(null, activeCount);
+    }
 
     if (selectedGameId) {
       const selected = games.find(g => Number(g.id) === Number(selectedGameId));
@@ -1335,6 +1371,12 @@ async function refresh() {
     }
   } catch (e) {
     console.error('live', e);
+  } finally {
+    refreshInFlight = false;
+    if (refreshQueued) {
+      refreshQueued = false;
+      setTimeout(refresh, 120);
+    }
   }
 }
 

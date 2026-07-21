@@ -68,6 +68,16 @@
   }
 
   const FPS_STORAGE_KEY = 'p4_show_fps';
+  const FPS_CONFIG_KEY = 'p4_fps_config';
+  const DEFAULT_FPS_CONFIG = {
+    text: 'FPS',
+    animateRgb: false,
+    colorGood: '#30d158',
+    colorOk: '#ffd60a',
+    colorBad: '#ff2d55',
+    goodMin: 55,
+    okMin: 35,
+  };
   let fpsFrameId = 0;
   let fpsLastFrame = 0;
   let fpsLastPaint = 0;
@@ -80,6 +90,44 @@
     } catch (_) {
       return false;
     }
+  }
+
+  function isHexColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || ''));
+  }
+
+  function readFpsConfig() {
+    let raw = null;
+    try {
+      raw = JSON.parse(localStorage.getItem(FPS_CONFIG_KEY) || 'null');
+    } catch (_) {}
+    const config = { ...DEFAULT_FPS_CONFIG, ...(raw && typeof raw === 'object' ? raw : {}) };
+    config.text = String(config.text || DEFAULT_FPS_CONFIG.text).trim().slice(0, 18) || DEFAULT_FPS_CONFIG.text;
+    config.colorGood = isHexColor(config.colorGood) ? config.colorGood : DEFAULT_FPS_CONFIG.colorGood;
+    config.colorOk = isHexColor(config.colorOk) ? config.colorOk : DEFAULT_FPS_CONFIG.colorOk;
+    config.colorBad = isHexColor(config.colorBad) ? config.colorBad : DEFAULT_FPS_CONFIG.colorBad;
+    config.goodMin = clampNumber(config.goodMin, DEFAULT_FPS_CONFIG.goodMin, 1, 240);
+    config.okMin = Math.min(config.goodMin - 1, clampNumber(config.okMin, DEFAULT_FPS_CONFIG.okMin, 1, 239));
+    config.animateRgb = Boolean(config.animateRgb);
+    return config;
+  }
+
+  function saveFpsConfig(next = {}) {
+    const config = { ...readFpsConfig(), ...(next && typeof next === 'object' ? next : {}) };
+    try {
+      localStorage.setItem(FPS_CONFIG_KEY, JSON.stringify(config));
+    } catch (_) {}
+    applyFpsConfig(readFpsConfig());
+    return readFpsConfig();
+  }
+
+  function applyFpsConfig(config = readFpsConfig()) {
+    const meter = fpsMeter?.isConnected ? fpsMeter : null;
+    if (!meter) return;
+    meter.style.setProperty('--p4-fps-good', config.colorGood);
+    meter.style.setProperty('--p4-fps-ok', config.colorOk);
+    meter.style.setProperty('--p4-fps-bad', config.colorBad);
+    meter.classList.toggle('rgb', config.animateRgb);
   }
 
   function ensureFpsMeter() {
@@ -95,8 +143,10 @@
 
   function paintFpsMeter(fps) {
     const meter = ensureFpsMeter();
-    meter.textContent = `FPS ${fps}`;
-    meter.dataset.state = fps >= 55 ? 'good' : fps >= 35 ? 'ok' : 'bad';
+    const config = readFpsConfig();
+    applyFpsConfig(config);
+    meter.textContent = `${config.text} ${fps}`;
+    meter.dataset.state = fps >= config.goodMin ? 'good' : fps >= config.okMin ? 'ok' : 'bad';
   }
 
   function stopFpsMeter() {
@@ -143,6 +193,8 @@
   window.P4FpsCounter = {
     setEnabled: setFpsMeterEnabled,
     isEnabled: fpsEnabled,
+    getConfig: readFpsConfig,
+    setConfig: saveFpsConfig,
   };
 
   function clampNumber(value, fallback, min, max) {

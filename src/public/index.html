@@ -4732,6 +4732,40 @@ const QueueMusic = (() => {
       a.load();
     }
   }
+  function shouldFallbackAudioError(error) {
+    const name = String(error?.name || '');
+    const message = String(error?.message || '');
+    return !/NotAllowedError|AbortError/i.test(name) && !/user gesture|interrupted|not allowed|permission/i.test(message);
+  }
+
+  function armMobileUnlock() {
+    const a = get();
+    if (!a) return;
+    const retry = () => {
+      if (!a.paused) return cleanup();
+      a.play().then(cleanup).catch(error => {
+        if (shouldFallbackAudioError(error)) fallbackToDefault();
+      });
+    };
+    const cleanup = () => {
+      window.removeEventListener('pointerdown', retry, true);
+      window.removeEventListener('touchstart', retry, true);
+      window.removeEventListener('keydown', retry, true);
+    };
+    window.addEventListener('pointerdown', retry, true);
+    window.addEventListener('touchstart', retry, true);
+    window.addEventListener('keydown', retry, true);
+  }
+
+  function playQueueAudio() {
+    const a = get();
+    if (!a) return;
+    a.play().catch(error => {
+      if (shouldFallbackAudioError(error)) fallbackToDefault();
+      else armMobileUnlock();
+    });
+  }
+
   function fallbackToDefault() {
     const a = get();
     if (!a || usingFallback) return;
@@ -4743,7 +4777,7 @@ const QueueMusic = (() => {
     a.volume = volume;
     a.currentTime = 0;
     startProgressTimer();
-    a.play().catch(() => {});
+    playQueueAudio();
   }
   function syncUI() {
     const slider = document.getElementById('queue-volume-slider');
@@ -4774,7 +4808,7 @@ const QueueMusic = (() => {
       a.onloadedmetadata = syncProgressUI;
       a.ontimeupdate = syncProgressUI;
       startProgressTimer();
-      a.play().catch(fallbackToDefault);
+      playQueueAudio();
     },
     async start() {
       const a = get();
@@ -4795,11 +4829,11 @@ const QueueMusic = (() => {
         if (a.currentTime === 0) stopArrivalTimer();
       };
       // Débloquer l'AudioContext si suspendu (politique autoplay navigateur)
-      const tryPlay = () => a.play().catch(fallbackToDefault);
+      const tryPlay = () => playQueueAudio();
       if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
         const tmpCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (tmpCtx.state === 'suspended') {
-          tmpCtx.resume().then(tryPlay);
+          tmpCtx.resume().then(tryPlay).catch(tryPlay);
         } else {
           tryPlay();
         }
