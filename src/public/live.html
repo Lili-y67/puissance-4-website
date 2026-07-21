@@ -411,7 +411,6 @@ let liveVariantCount = Math.max(1, Math.min(3, Number(localStorage.getItem('p4_l
 let lastVariantGame = null;
 let refreshInFlight = false;
 let refreshQueued = false;
-let lastLiveListSignature = '';
 
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
@@ -1349,10 +1348,6 @@ function showReaction(reaction) {
   setTimeout(() => el.remove(), 1400);
 }
 
-function liveListSignature(games = []) {
-  return games.map(game => `${game.id}:${game.status}:${game.moves}:${game.current}:${game.spectators?.length || 0}`).join('|');
-}
-
 async function refresh() {
   if (refreshInFlight) {
     refreshQueued = true;
@@ -1361,16 +1356,7 @@ async function refresh() {
   refreshInFlight = true;
   try {
     const games = await fetch('/api/live', { cache: 'no-store' }).then(r => r.json());
-    const signature = liveListSignature(games);
-    if (!selectedGameId && signature !== lastLiveListSignature) {
-      renderList(games);
-      lastLiveListSignature = signature;
-    } else if (!selectedGameId) {
-      const activeCount = games.filter(g => g.status === 'active').length;
-      const count = document.getElementById('count');
-      if (count) count.textContent = activeCount;
-      updateLiveDiscordPresence(null, activeCount);
-    }
+    renderList(games);
 
     if (selectedGameId) {
       const selected = games.find(g => Number(g.id) === Number(selectedGameId));
@@ -1394,7 +1380,7 @@ async function refresh() {
     refreshInFlight = false;
     if (refreshQueued) {
       refreshQueued = false;
-      setTimeout(refresh, 120);
+      setTimeout(refresh, 0);
     }
   }
 }
