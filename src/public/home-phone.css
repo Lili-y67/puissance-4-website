@@ -1,0 +1,75 @@
+/* Accueil téléphone : chargé uniquement jusqu'à 720 px. */
+html,
+body {
+  min-height: 100%;
+  background-attachment: scroll;
+}
+
+.page {
+  width: 100%;
+  min-height: 100dvh;
+  padding: calc(72px + env(safe-area-inset-top, 0px)) 10px calc(28px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hero,
+.card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+
+/* Ces décors permanents provoquaient les principales chutes de fluidité. */
+.bg-grid,
+.bg-orbs,
+.tokens-bg,
+.scanlines { display: none !important; }
+
+.hero-ticker-track { animation-duration: 38s !important; }
+
+.duel-modal,
+.training-modal,
+#bot-modal {
+  align-items: flex-end !important;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 8px max(8px, env(safe-area-inset-bottom, 0px)) !important;
+  backdrop-filter: blur(5px) !important;
+}
+
+.duel-dialog,
+.training-dialog,
+#bot-modal .bot-dialog {
+  width: 100% !important;
+  max-width: none !important;
+  max-height: calc(100dvh - 16px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  border-radius: 20px 20px 14px 14px !important;
+  padding: 16px 14px !important;
+}
+
+.duel-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.duel-dialog-actions .btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.p4-egg-toast.after-catch-zone {
+  width: calc(100vw - 20px);
+  font-size: 14px;
+}
+
+html.modal-open,
+html.modal-open body {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-ticker-track { animation: none !important; }
+}

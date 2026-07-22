@@ -1,0 +1,25 @@
+/* Accueil ordinateur : chargé uniquement à partir de 721 px. */
+.page {
+  width: min(1440px, calc(100% - 48px));
+  margin-inline: auto;
+  align-items: start;
+}
+
+.bg-grid,
+.bg-orbs,
+.tokens-bg { contain: strict; }
+
+.orb,
+.token-fall,
+.hero-ticker-track { will-change: transform; }
+
+.duel-dialog,
+.training-dialog,
+#bot-modal .bot-dialog {
+  max-height: calc(100dvh - 36px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+html.modal-open,
+html.modal-open body { overflow: hidden !important; }

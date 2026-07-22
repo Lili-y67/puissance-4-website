@@ -34,9 +34,9 @@
 
   function ensureThemeStylesheet() {
     const stylesheets = [
-      { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-29', match: '/theme.css' },
-      { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=1', match: '/theme-pc.css', media: '(min-width: 721px)' },
-      { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=1', match: '/theme-phone.css', media: '(max-width: 720px)' },
+      { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-30', match: '/theme.css' },
+      { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=2', match: '/theme-pc.css', media: '(min-width: 721px)' },
+      { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=2', match: '/theme-phone.css', media: '(max-width: 720px)' },
     ];
 
     const hasStylesheet = match => [...document.styleSheets].some(sheet => {
@@ -1018,11 +1018,11 @@
         .find(element => element && !element.classList?.contains('p4-page-egg') && !element.classList?.contains('p4-egg-toast'));
       if (box) {
         const boxRect = box.getBoundingClientRect();
-        const phone = eggIsPhoneLayout();
         return {
           left: Math.round(Math.min(width - 170, Math.max(170, boxRect.left + boxRect.width / 2))),
-          top: Math.round(Math.min(height - (phone ? 110 : 92), Math.max(phone ? 76 : 84, boxRect.top + (phone ? 10 : 18)))),
-          inBox: true,
+          top: Math.round(Math.min(height - 84, Math.max(76, boxRect.bottom + 12))),
+          inBox: false,
+          afterCatchZone: true,
         };
       }
       return {
@@ -1038,6 +1038,7 @@
       toast.style.setProperty('--egg-toast-left', `${anchor.left}px`);
       toast.style.setProperty('--egg-toast-top', `${anchor.top}px`);
       toast.classList.toggle('in-box', Boolean(anchor.inBox));
+      toast.classList.toggle('after-catch-zone', Boolean(anchor.afterCatchZone));
       toast.textContent = message;
       toast.classList.remove('show');
       void toast.offsetWidth;

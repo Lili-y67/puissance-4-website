@@ -3152,7 +3152,9 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 /* ── IA overlay ── */
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
-<link rel="stylesheet" href="/theme.css?v=eggs-27">
+<link rel="stylesheet" href="/theme.css?v=eggs-30">
+<link rel="stylesheet" href="/home-pc.css?v=1" media="(min-width: 721px)">
+<link rel="stylesheet" href="/home-phone.css?v=1" media="(max-width: 720px)">
 </head>
 <body>
 
@@ -3406,7 +3408,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 
       <!-- Modal sélection difficulté bot -->
       <div id="bot-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
+        <div class="bot-dialog" style="background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;color:var(--text);">&#129302; MODE IA</div>
 
           <!-- Tabs -->
@@ -3465,7 +3467,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
             </button>
           </div>
 
-          <button onclick="document.getElementById('bot-modal').style.display='none'"
+          <button onclick="closeBotModal()"
             style="padding:8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;">
             Annuler
           </button>
@@ -3637,7 +3639,9 @@ const SFX = (() => {
 
 function spawnTokens() {
   const bg = document.getElementById('tokens-bg');
-  for (let i = 0; i < 18; i++) {
+  if (!bg || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const tokenCount = matchMedia('(max-width: 720px)').matches ? 4 : 8;
+  for (let i = 0; i < tokenCount; i++) {
     const t = document.createElement('div');
     t.className = 'token-fall ' + (Math.random() > 0.5 ? 'red' : 'yellow');
     t.style.left = Math.random() * 100 + 'vw';
@@ -4273,6 +4277,7 @@ function closeDuelModal() {
   if (input) input.value = '';
   if (resultsEl) resultsEl.innerHTML = '<div class="duel-empty">Tape au moins 3 caractères pour chercher un joueur.</div>';
   if (sendBtn) sendBtn.disabled = true;
+  syncModalPageLock();
 }
 
 function openDuelModal() {
@@ -4280,6 +4285,7 @@ function openDuelModal() {
   if (!modal) return;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
+  syncModalPageLock();
   selectDuelType(duelGameType);
   const input = document.getElementById('duel-search-input');
   if (input) setTimeout(() => input.focus(), 40);
@@ -4491,6 +4497,8 @@ function openBotModal(options = {}) {
   if (!modal) return;
   const initialElo = Number.isFinite(Number(options.elo)) ? Number(options.elo) : 1200;
   modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  syncModalPageLock();
   if (options.tab === 'elo') {
     const slider = document.getElementById('bot-elo-slider');
     if (slider) slider.value = String(initialElo);
@@ -4499,6 +4507,20 @@ function openBotModal(options = {}) {
     setBotTab('preset');
   }
   updateBotEloDisplay(initialElo);
+}
+
+function closeBotModal() {
+  const modal = document.getElementById('bot-modal');
+  if (!modal) return;
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
+  syncModalPageLock();
+}
+
+function syncModalPageLock() {
+  const botOpen = document.getElementById('bot-modal')?.style.display === 'flex';
+  const panelOpen = document.querySelector('.duel-modal.open, .training-modal.open');
+  document.documentElement.classList.toggle('modal-open', Boolean(botOpen || panelOpen));
 }
 
 function consumePendingBotModal() {
@@ -4551,7 +4573,7 @@ function updateBotEloDisplay(elo) {
 }
 
 function startVsIA(difficulty = 'hard', targetElo = null) {
-  document.getElementById('bot-modal').style.display = 'none';
+  closeBotModal();
   // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
   const guestPlayer = saved ? JSON.parse(saved) : {
@@ -5078,6 +5100,7 @@ function openTrainingOverlay() {
   if (!modal) return;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
+  syncModalPageLock();
   if (!trainingGrid.length || trainingEnded) trainingNewRound();
   else trainingRender();
 }
@@ -5087,6 +5110,7 @@ function closeTrainingOverlay() {
   if (!modal) return;
   modal.classList.remove('open');
   modal.setAttribute('aria-hidden', 'true');
+  syncModalPageLock();
 }
 
 function showQueueVolume(show) {
@@ -5432,14 +5456,17 @@ function handleLeaveQueue() {
 }
 
 document.addEventListener('click', (e) => {
+  const botModal = document.getElementById('bot-modal');
   const duelModal = document.getElementById('duel-modal');
   const trainingModal = document.getElementById('training-modal');
+  if (botModal && botModal.style.display === 'flex' && e.target === botModal) closeBotModal();
   if (duelModal?.classList.contains('open') && e.target === duelModal) closeDuelModal();
   if (trainingModal?.classList.contains('open') && e.target === trainingModal) closeTrainingOverlay();
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
+  closeBotModal();
   closeDuelModal();
   closeTrainingOverlay();
 });
