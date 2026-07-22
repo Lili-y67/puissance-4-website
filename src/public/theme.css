@@ -76,6 +76,10 @@ body.p4-wallpaper-mode::before {
   filter: none !important;
 }
 
+body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel):not(.p4-fps-meter) {
+  position: relative;
+}
+
 body.p4-wallpaper-mode::after {
   z-index: 0;
   background: rgba(0,0,0,var(--p4-wallpaper-dim, .28));
@@ -93,6 +97,52 @@ body.p4-wallpaper-mode .stars,
 body.p4-wallpaper-mode .orb,
 body.p4-wallpaper-mode .noise {
   display: none !important;
+}
+
+/* Historical wallpaper treatment restored from d57b200:
+   page furniture becomes transparent while gameplay boards keep their own skin. */
+body.p4-wallpaper-mode .panel,
+body.p4-wallpaper-mode .card,
+body.p4-wallpaper-mode .game-card,
+body.p4-wallpaper-mode .spec-card,
+body.p4-wallpaper-mode .analysis-card,
+body.p4-wallpaper-mode .elo-history-card,
+body.p4-wallpaper-mode .admin-card,
+body.p4-wallpaper-mode .hero,
+body.p4-wallpaper-mode .hero-panel-card,
+body.p4-wallpaper-mode .hero-ticker,
+body.p4-wallpaper-mode .hero-cgu-cta,
+body.p4-wallpaper-mode .section,
+body.p4-wallpaper-mode .endpoint,
+body.p4-wallpaper-mode .grid,
+body.p4-wallpaper-mode .wrap,
+body.p4-wallpaper-mode .container,
+body.p4-wallpaper-mode .layout,
+body.p4-wallpaper-mode .stats-card,
+body.p4-wallpaper-mode .leader-card,
+body.p4-wallpaper-mode .rank-card,
+body.p4-wallpaper-mode .shop-card,
+body.p4-wallpaper-mode .product-card,
+body.p4-wallpaper-mode .news-card,
+body.p4-wallpaper-mode .rule-card,
+body.p4-wallpaper-mode .progress-card,
+body.p4-wallpaper-mode .quest-card,
+body.p4-wallpaper-mode .player-card,
+body.p4-wallpaper-mode .duel-card,
+body.p4-wallpaper-mode .auth-card,
+body.leaderboard-page.p4-wallpaper-mode .nav,
+body.leaderboard-page.p4-wallpaper-mode .tabs,
+body.leaderboard-page.p4-wallpaper-mode .list-row,
+body.leaderboard-page.p4-wallpaper-mode .clan-row,
+body.p4-wallpaper-mode .modal,
+body.p4-wallpaper-mode [class*="panel"],
+body.p4-wallpaper-mode [class*="card"],
+body.p4-wallpaper-mode [class*="tile"],
+body.p4-wallpaper-mode [class*="box"] {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 
 body.p4-wallpaper-mode .p4-global-menu-toggle {
@@ -166,11 +216,6 @@ canvas {
   max-width: 100%;
 }
 
-img,
-video {
-  height: auto;
-}
-
 html,
 body {
   max-width: 100%;
@@ -185,26 +230,6 @@ select,
 textarea,
 button {
   font: inherit;
-}
-
-button,
-[role="button"],
-summary {
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-button:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
-  cursor: not-allowed !important;
-  opacity: .58;
-}
-
-:where(a, button, input, select, textarea, summary, [role="button"]):focus-visible {
-  outline: 3px solid rgba(133,235,255,.72);
-  outline-offset: 3px;
 }
 
 pre,
@@ -222,42 +247,6 @@ pre {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-/* Shared modal guardrails. Individual pages keep their own visual identity. */
-:where(
-  #bot-modal,
-  #duel-modal,
-  #training-modal,
-  #unlink-modal-bg,
-  .modal-bg,
-  .preview-modal-bg,
-  .token-collection-modal-bg,
-  .pseudo-font-modal-bg,
-  .avatar-decoration-modal-bg,
-  .fps-config-modal
-) {
-  overscroll-behavior: contain;
-}
-
-:where(
-  #bot-modal,
-  #duel-modal,
-  #training-modal,
-  #unlink-modal-bg,
-  .modal-bg,
-  .preview-modal-bg,
-  .token-collection-modal-bg,
-  .pseudo-font-modal-bg,
-  .avatar-decoration-modal-bg,
-  .fps-config-modal
-) > :where(div, section, article) {
-  max-width: calc(100vw - 24px);
-  max-height: calc(100dvh - 24px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
 
 @media (max-width: 720px) {
@@ -1543,7 +1532,8 @@ body.p4-wallpaper-mode #bot-modal,
 body.p4-wallpaper-mode #duel-modal,
 body.p4-wallpaper-mode #training-modal,
 body.p4-wallpaper-mode .modal-bg,
-body.p4-wallpaper-mode .preview-modal-bg {
+body.p4-wallpaper-mode .preview-modal-bg,
+body.p4-wallpaper-mode [role="dialog"] {
   position: fixed !important;
   inset: 0 !important;
   z-index: 100100 !important;
@@ -1617,25 +1607,13 @@ body.p4-wallpaper-mode .p4-global-menu-panel {
     max-height: calc(100dvh - 24px);
   }
 
+  body.p4-wallpaper-mode .p4-egg-toast,
   body.p4-wallpaper-mode .egg-toast {
     left: 50% !important;
     top: auto !important;
     bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
     max-height: calc(100dvh - 90px);
     overflow-y: auto;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html:focus-within { scroll-behavior: auto !important; }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
-    transition-duration: .01ms !important;
   }
 }
 /* Keep normal prose intact on desktop; use aggressive wrapping only where narrow screens need it. */

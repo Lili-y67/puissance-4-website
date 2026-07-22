@@ -21,9 +21,14 @@ body {
   min-width: 0;
 }
 
-/* Ces décors permanents provoquaient les principales chutes de fluidité. */
-.bg-grid,
-.bg-orbs,
+/* Le décor reste visible, mais devient statique pour préserver la fluidité. */
+.bg-grid { animation: none !important; }
+
+.bg-orbs .orb {
+  animation: none !important;
+  opacity: .14;
+}
+
 .tokens-bg,
 .scanlines { display: none !important; }
 

@@ -31,23 +31,4 @@
     grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 16px;
   }
-
-  :where(
-    #bot-modal,
-    #duel-modal,
-    #training-modal,
-    #unlink-modal-bg,
-    .modal-bg,
-    .preview-modal-bg,
-    .token-collection-modal-bg,
-    .pseudo-font-modal-bg,
-    .avatar-decoration-modal-bg,
-    .fps-config-modal
-  ) > :where(div, section, article) {
-    max-height: calc(100dvh - 36px);
-  }
-
-  :where(.table-wrap, .admin-table-wrap, pre) {
-    scrollbar-width: thin;
-  }
 }

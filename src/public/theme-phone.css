@@ -8,27 +8,6 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  body {
-    min-height: 100dvh;
-  }
-
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
-  select,
-  textarea {
-    font-size: max(16px, 1em);
-  }
-
-  button,
-  .btn,
-  [role="button"] {
-    min-height: 42px;
-  }
-
-  :where(.table-wrap, .admin-table-wrap, .duel-results, pre) {
-    overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
-  }
-
   body.p4-wallpaper-mode > .p4-fps-meter,
   .p4-fps-meter {
     position: fixed !important;
@@ -82,41 +61,5 @@
     max-height: calc(100dvh - 24px);
     overflow: auto;
     border-radius: 20px;
-  }
-
-  :where(
-    #bot-modal,
-    #duel-modal,
-    #training-modal,
-    #unlink-modal-bg,
-    .modal-bg,
-    .preview-modal-bg,
-    .token-collection-modal-bg,
-    .pseudo-font-modal-bg,
-    .avatar-decoration-modal-bg,
-    .fps-config-modal
-  ) {
-    padding:
-      max(8px, env(safe-area-inset-top, 0px))
-      max(8px, env(safe-area-inset-right, 0px))
-      max(8px, env(safe-area-inset-bottom, 0px))
-      max(8px, env(safe-area-inset-left, 0px));
-  }
-
-  :where(
-    #bot-modal,
-    #duel-modal,
-    #training-modal,
-    #unlink-modal-bg,
-    .modal-bg,
-    .preview-modal-bg,
-    .token-collection-modal-bg,
-    .pseudo-font-modal-bg,
-    .avatar-decoration-modal-bg,
-    .fps-config-modal
-  ) > :where(div, section, article) {
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100dvh - 16px);
   }
 }
