@@ -1049,7 +1049,7 @@
 
     function sparks(rect, burst = 'big') {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      const count = burst === 'small' ? 18 : 42;
+      const count = burst === 'small' ? 14 : 28;
       const baseDistance = burst === 'small' ? 42 : 86;
       const randomDistance = burst === 'small' ? 82 : 175;
       for (let index = 0; index < count; index++) {

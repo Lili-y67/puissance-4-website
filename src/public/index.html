@@ -128,7 +128,7 @@ html, body {
 .tokens-bg {
   position: fixed;
   inset: 0;
-  z-index: 12;
+  z-index: 3;
   pointer-events: none;
   overflow: hidden;
 }
@@ -3640,7 +3640,7 @@ const SFX = (() => {
 function spawnTokens() {
   const bg = document.getElementById('tokens-bg');
   if (!bg || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const tokenCount = matchMedia('(max-width: 720px)').matches ? 4 : 8;
+  const tokenCount = matchMedia('(max-width: 720px)').matches ? 3 : 5;
   for (let i = 0; i < tokenCount; i++) {
     const t = document.createElement('div');
     t.className = 'token-fall ' + (Math.random() > 0.5 ? 'red' : 'yellow');
@@ -5522,7 +5522,7 @@ window.addEventListener('DOMContentLoaded', () => {
   <!-- Musique d'attente queue -->
   <audio id="queue-music" src="/sounds/puissance4-song.mp3" loop preload="none" style="display:none"></audio>
 <script src="/presence.js?v=session-1"></script>
-<script src="/theme.js?v=eggs-29"></script>
+<script src="/theme.js?v=eggs-31"></script>
 </body>
 </html>
 
