@@ -392,7 +392,12 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=eggs-28', { scope: '/' }).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=eggs-29', {
+        scope: '/',
+        updateViaCache: 'none',
+      }).then(registration => {
+        registration.update().catch(() => {});
+      }).catch(() => {});
     }
     window.addEventListener('beforeinstallprompt', event => {
       event.preventDefault();

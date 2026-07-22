@@ -1,9 +1,9 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-split-eggs-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-pwa-fix-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-28',
-  '/theme.js?v=eggs-28',
+  '/theme.css?v=eggs-29',
+  '/theme.js?v=eggs-29',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',
