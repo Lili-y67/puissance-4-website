@@ -2,7 +2,7 @@
 .page {
   width: min(1440px, calc(100% - 48px));
   margin-inline: auto;
-  align-items: start;
+  align-items: center;
 }
 
 .bg-grid,
