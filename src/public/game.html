@@ -2746,9 +2746,38 @@ function iaPlayHuman(col) {
   setTimeout(iaPlayBot, 400 + Math.random() * 300);
 }
 
-function iaPlayBot() {
+let iaWorker = null;
+let iaWorkerRequestId = 0;
+
+function iaChooseInWorker() {
+  const params = eloToParams(iaTargetElo);
+  if (params.depth < 3 || typeof Worker === 'undefined') return Promise.resolve(iaChoose());
+  if (!iaWorker) iaWorker = new Worker('/bot-worker.js?v=1');
+  const id = ++iaWorkerRequestId;
+  return new Promise(resolve => {
+    const timeout = setTimeout(() => resolve(iaChooseSafeFallback()), 1800);
+    const onMessage = event => {
+      if (event.data?.id !== id) return;
+      iaWorker.removeEventListener('message', onMessage);
+      clearTimeout(timeout);
+      resolve(Number.isInteger(event.data.col) ? event.data.col : iaChooseSafeFallback());
+    };
+    iaWorker.addEventListener('message', onMessage);
+    iaWorker.postMessage({ id, board: iaGrid, depth: params.depth, budgetMs: params.depth >= 9 ? 1150 : 700 });
+  });
+}
+
+function iaChooseSafeFallback() {
+  const valid = [3, 2, 4, 1, 5, 0, 6].filter(col => iaGetRow(col) !== -1);
+  for (const col of valid) if (iaSimulate(col, 2)) return col;
+  for (const col of valid) if (iaSimulate(col, 1)) return col;
+  return valid[0] ?? 0;
+}
+
+async function iaPlayBot() {
   if (gameOver) return;
-  const col = iaChoose();
+  const col = await iaChooseInWorker();
+  if (gameOver || currentTurn !== 2) return;
   const row = iaGetRow(col);
   if (row === -1) return;
   iaGrid[row][col] = 2;

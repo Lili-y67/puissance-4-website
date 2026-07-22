@@ -1011,24 +1011,11 @@
       const anchor = rect || fallback || { left: window.innerWidth / 2, top: 120, width: 0, height: 0 };
       const width = Math.max(320, window.visualViewport?.width || window.innerWidth || document.documentElement.clientWidth || 1280);
       const height = Math.max(420, window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight || 720);
-      const x = Math.min(width - 24, Math.max(24, anchor.left + anchor.width / 2));
-      const y = Math.min(height - 24, Math.max(24, anchor.top + anchor.height / 2));
-      const box = document.elementsFromPoint(x, y)
-        .map(element => element.closest?.('.profile-header,.profile-section,.profile-card,.profile-side-card,.profile-layout,.profile-main,.social-card,.elo-history-card,.token-collection-card,.clan-card,.clan-shell,.clan-layout,.leaderboard-card,.leaderboard-shell,.board-card,.rank-card,.card,.panel,.hero,section,main'))
-        .find(element => element && !element.classList?.contains('p4-page-egg') && !element.classList?.contains('p4-egg-toast'));
-      if (box) {
-        const boxRect = box.getBoundingClientRect();
-        return {
-          left: Math.round(Math.min(width - 170, Math.max(170, boxRect.left + boxRect.width / 2))),
-          top: Math.round(Math.min(height - 84, Math.max(76, boxRect.bottom + 12))),
-          inBox: false,
-          afterCatchZone: true,
-        };
-      }
       return {
-        left: Math.round(Math.min(width - 150, Math.max(150, anchor.left + anchor.width / 2))),
-        top: Math.round(Math.min(height - 92, Math.max(84, anchor.top + anchor.height + 12))),
+        left: Math.round(Math.min(width - 170, Math.max(170, anchor.left + anchor.width / 2))),
+        top: Math.round(Math.min(height - 84, Math.max(76, anchor.top + anchor.height + 14))),
         inBox: false,
+        afterCatchZone: true,
       };
     }
 
