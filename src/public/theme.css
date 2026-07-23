@@ -48,6 +48,42 @@ body {
   overflow-x: hidden;
 }
 
+/* Keep pop-ups attached to the viewport, never to an animated card. */
+.p4-modal-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  z-index: 100100 !important;
+}
+
+.p4-modal-layer > :first-child {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html:has(.p4-modal-layer.show),
+html:has(.p4-modal-layer.open) {
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .p4-modal-layer {
+    padding: max(10px, env(safe-area-inset-top, 0px))
+      max(10px, env(safe-area-inset-right, 0px))
+      max(10px, env(safe-area-inset-bottom, 0px))
+      max(10px, env(safe-area-inset-left, 0px)) !important;
+  }
+
+  .p4-modal-layer > :first-child {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 20px);
+  }
+}
+
 body.p4-wallpaper-mode {
   --surface: transparent;
   --surface2: transparent;

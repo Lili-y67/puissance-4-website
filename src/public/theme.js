@@ -77,6 +77,34 @@
     style.textContent = `html,body,body *{cursor:url("${cursor}") 0 0,auto!important}`;
   }
 
+  const MODAL_LAYER_SELECTOR = [
+    '#bot-modal', '#duel-modal', '#training-modal', '#unlink-modal-bg',
+    '.modal-bg', '.preview-modal-bg', '.token-collection-modal-bg',
+    '.pseudo-font-modal-bg', '.avatar-decoration-modal-bg', '.elo-sim-bg',
+    '.image-editor-bg', '.upload-chooser-bg', '.fps-config-modal',
+  ].join(',');
+
+  function mountModalLayers(scope = document) {
+    if (!document.body) return;
+    const candidates = [];
+    if (scope instanceof Element && scope.matches(MODAL_LAYER_SELECTOR)) candidates.push(scope);
+    scope.querySelectorAll?.(MODAL_LAYER_SELECTOR).forEach(element => candidates.push(element));
+    candidates.forEach(layer => {
+      layer.classList.add('p4-modal-layer');
+      if (layer.parentElement !== document.body) document.body.appendChild(layer);
+    });
+  }
+
+  function watchModalLayers() {
+    mountModalLayers();
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => mutation.addedNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE) mountModalLayers(node);
+      }));
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
   const FPS_STORAGE_KEY = 'p4_show_fps';
   const FPS_CONFIG_KEY = 'p4_fps_config';
   const DEFAULT_FPS_CONFIG = {
@@ -1262,11 +1290,13 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       applyWallpaperMode();
+      watchModalLayers();
       mountGlobalMenu();
       mountPageEasterEgg();
     });
   } else {
     applyWallpaperMode();
+    watchModalLayers();
     mountGlobalMenu();
     mountPageEasterEgg();
   }
