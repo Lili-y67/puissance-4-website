@@ -101,6 +101,37 @@ body.p4-wallpaper-mode::after {
   pointer-events: none;
 }
 
+/* Profil automatique pour GPU anciens/intégrés. La composition et les couleurs
+   restent intactes ; on évite surtout les flous et repaints continus. */
+html.p4-performance-lite *,
+html.p4-performance-lite *::before,
+html.p4-performance-lite *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.p4-performance-lite .bg-grid,
+html.p4-performance-lite .bg-orbs,
+html.p4-performance-lite .orb,
+html.p4-performance-lite .stars,
+html.p4-performance-lite .scanlines,
+html.p4-performance-lite .noise,
+html.p4-performance-lite .tokens-bg,
+html.p4-performance-lite .hero-ticker-track,
+html.p4-performance-lite .player-card.active,
+html.p4-performance-lite .cell:not(.drop):not(.winning)::before {
+  animation: none !important;
+}
+html.p4-performance-lite .bg-orbs,
+html.p4-performance-lite .orb,
+html.p4-performance-lite .scanlines,
+html.p4-performance-lite .noise,
+html.p4-performance-lite .tokens-bg {
+  display: none !important;
+}
+html.p4-performance-lite body.p4-wallpaper-mode::before {
+  background-attachment: scroll !important;
+}
+
 body.p4-wallpaper-mode::before {
   z-index: 0;
   background: var(--p4-wallpaper-image) center / cover no-repeat fixed;
