@@ -471,27 +471,23 @@ body {
   pointer-events:none;
 }
 .board-move-timer{
-  position:absolute;
-  left:50%;
-  top:56px;
-  z-index:6;
-  transform:translateX(-50%);
   display:none;
-  min-width:104px;
-  padding:9px 18px;
+  min-width:64px;
+  margin-top:5px;
+  padding:3px 10px 4px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,.18);
   background:rgba(5,6,16,.68);
-  box-shadow:0 16px 48px rgba(0,0,0,.40),0 0 24px rgba(133,235,255,.10);
-  backdrop-filter:blur(10px);
+  box-shadow:0 8px 22px rgba(0,0,0,.32),0 0 16px rgba(133,235,255,.10);
   color:#85EBFF;
-  font:900 30px 'Barlow Condensed',sans-serif;
-  letter-spacing:2px;
+  font:900 18px 'Barlow Condensed',sans-serif;
+  line-height:1.05;
+  letter-spacing:1px;
   text-align:center;
   pointer-events:none;
 }
 .board-move-timer.show{display:block}
-.board-move-timer.danger{color:#ff4f6d;box-shadow:0 16px 48px rgba(0,0,0,.40),0 0 30px rgba(255,45,85,.22)}
+.board-move-timer.danger{color:#ff4f6d;box-shadow:0 8px 22px rgba(0,0,0,.32),0 0 20px rgba(255,45,85,.22)}
 
 .board {
   width:min(100%, var(--board-max));
@@ -1188,6 +1184,7 @@ html.p4-performance-lite .board::after {
     <div class="turn-mid">
       <div class="vs-sm">VS</div>
       <div class="turn-lbl" id="turn-lbl">—</div>
+      <div class="board-move-timer" id="board-move-timer">00s</div>
       <div class="turn-badge" id="turn-badge">Partie</div>
     </div>
     <div class="player-card p2" id="card-p2">
@@ -1239,7 +1236,6 @@ html.p4-performance-lite .board::after {
   <div class="board-wrap">
     <div class="col-buttons" id="col-btns"></div>
     <div class="board" id="board"></div>
-    <div class="board-move-timer" id="board-move-timer">00s</div>
     <div class="board-countdown-overlay" id="board-countdown-overlay" aria-live="polite">
       <div class="board-countdown-card">
         <div class="board-countdown-number" id="board-countdown-number">3</div>
