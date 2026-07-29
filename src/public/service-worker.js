@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-pwa-fix-1';
+const CACHE_VERSION = 'p4-shell-v3.5.0-rpc-port-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -41,6 +41,7 @@ function isLiveShellAsset(url) {
   return url.pathname === '/theme.js'
     || url.pathname === '/theme.css'
     || url.pathname === '/presence.js'
+    || url.pathname === '/rpc-presence.js'
     || url.pathname === '/service-worker.js';
 }
 

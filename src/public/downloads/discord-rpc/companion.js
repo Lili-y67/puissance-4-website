@@ -2,7 +2,7 @@ const http = require('http');
 const RPC = require('discord-rpc');
 
 const HOST = '127.0.0.1';
-const PORT = 6464;
+const PORT = 6465;
 const CLIENT_ID = '1477252548090921060';
 const LARGE_IMAGE = 'site-logo';
 const BASE_URL = (process.env.P4_SITE_URL || process.env.BASE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');

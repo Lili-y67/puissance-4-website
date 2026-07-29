@@ -2543,7 +2543,7 @@ function discordRpcCardHtml() {
         <div class="discord-rpc-actions">
           <a class="discord-rpc-btn primary" href="/downloads/puissance4-discord-rpc.zip" download>Télécharger le RPC</a>
           <button class="discord-rpc-btn primary" type="button" onclick="checkDiscordRpcStatus(true)">Vérifier le RPC</button>
-          <a class="discord-rpc-btn" href="http://127.0.0.1:6464/" target="_blank" rel="noopener">Diagnostic local</a>
+          <a class="discord-rpc-btn" href="http://127.0.0.1:6465/" target="_blank" rel="noopener">Diagnostic local</a>
           <a class="discord-rpc-btn" href="discord://-/channels/@me">Ouvrir Discord</a>
         </div>
       </div>
@@ -2565,7 +2565,7 @@ async function checkDiscordRpcStatus(manual = false) {
     description.innerHTML = 'Chrome peut demander <strong>Autoriser ce site à accéder aux appareils de votre réseau local</strong>. Clique sur <strong>Autoriser</strong>.';
   }
   try {
-    const response = await fetch('http://127.0.0.1:6464/status', {
+    const response = await fetch('http://127.0.0.1:6465/status', {
       cache: 'no-store',
       mode: 'cors',
       signal: AbortSignal.timeout(10000),
