@@ -6,6 +6,10 @@ const PORT = 6465;
 const CLIENT_ID = '1477252548090921060';
 const LARGE_IMAGE = 'site-logo';
 const BASE_URL = (process.env.P4_SITE_URL || process.env.BASE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
+const ALLOWED_SITE_ORIGINS = new Set([
+  'https://77.93.141.48',
+  new URL(BASE_URL).origin,
+]);
 const LARGE_IMAGE_TEXT = `${BASE_URL}/`;
 const STALE_AFTER_MS = 45_000;
 const MIN_DISCORD_UPDATE_MS = 5_000;
@@ -67,7 +71,7 @@ function safeUrl(value) {
 function allowedOrigin(origin) {
   try {
     const url = new URL(origin);
-    return url.origin === new URL(BASE_URL).origin
+    return ALLOWED_SITE_ORIGINS.has(url.origin)
       || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
   } catch {
     return false;
