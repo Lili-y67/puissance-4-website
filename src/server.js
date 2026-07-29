@@ -3920,6 +3920,7 @@ const DISCORD_CONNECTED_ROLE_ID = process.env.DISCORD_CONNECTED_ROLE_ID || '1508
 const DISCORD_CONNECTED_ROLE_NAME = process.env.DISCORD_CONNECTED_ROLE_NAME || 'Connect\u00e9e';
 const DISCORD_GUILD_OWNER_ID = process.env.DISCORD_GUILD_OWNER_ID || '1147963951989149796';
 const DISCORD_REST_DELAY_MS = Number(process.env.DISCORD_REST_DELAY_MS || 650);
+const DISCORD_REST_TIMEOUT_MS = Math.max(3000, Number(process.env.DISCORD_REST_TIMEOUT_MS || 10000));
 const DISCORD_REST_LOG_RATELIMIT = String(process.env.DISCORD_REST_LOG_RATELIMIT || '0') === '1';
 const discordRestQueues = new Map();
 const DISCORD_CONNECTED_RECONCILE_INTERVAL_MS = Math.max(10_000, Number(process.env.DISCORD_CONNECTED_RECONCILE_INTERVAL_MS || 10_000));
@@ -4012,7 +4013,10 @@ async function discordRestFetch(bucket, url, options = {}) {
   try {
     let res = null;
     for (let attempt = 0; attempt < 4; attempt++) {
-      res = await fetch(url, options);
+      res = await fetch(url, {
+        ...options,
+        signal: options.signal || AbortSignal.timeout(DISCORD_REST_TIMEOUT_MS),
+      });
       if (res.status !== 429) break;
       const body = await res.json().catch(() => ({}));
       const waitMs = Math.ceil(Number(body.retry_after || 1) * 1000) + 200;
@@ -5157,10 +5161,12 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     const { clientId, clientSecret, redirectUri: configuredRedirectUri, botToken } = discordConfig();
     const redirectUri = normalizePublicUrl(stateData?.redirectUri) || configuredRedirectUri;
+    console.log('[Discord OAuth] Callback reçu', { mode, redirectUri });
     // AAaAa AaaAAaA AAAasAAazAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAchanger le code contre un access_token
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      signal: AbortSignal.timeout(DISCORD_REST_TIMEOUT_MS),
       body: new URLSearchParams({
         client_id:     clientId,
         client_secret: clientSecret,
@@ -5187,6 +5193,7 @@ app.get('/auth/discord/callback', async (req, res) => {
     // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer l'identitAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA Discord
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: 'Bearer ' + tokenData.access_token },
+      signal: AbortSignal.timeout(DISCORD_REST_TIMEOUT_MS),
     });
     const discordUser = await userRes.json();
     if (!discordUser.id) return redirectDiscordError('discord_id');
@@ -5374,7 +5381,11 @@ app.get('/auth/discord/callback', async (req, res) => {
 
     res.redirect('/reset-password?playerId=' + playerId);
   } catch (e) {
-    console.error('[DISCORD RESET]', e);
+    console.error('[Discord OAuth] Échec callback', {
+      mode,
+      name: String(e?.name || 'Error'),
+      message: String(e?.message || e),
+    });
     return redirectDiscordError('erreur_serveur');
   }
 });

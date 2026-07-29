@@ -138,6 +138,7 @@ Le fichier `.env.example` contient les valeurs a recopier dans `.env`.
 | `DISCORD_BOT_TOKEN` | token du bot Discord |
 | `DISCORD_REDIRECT_URI` | optionnel, force exactement le callback configure dans le portail Discord |
 | `DISCORD_ROLE_DEVELOPER` | role autorise pour la console dev/admin |
+| `DISCORD_REST_TIMEOUT_MS` | delai maximal d'un appel HTTP Discord, 10000 ms par defaut |
 
 Le callback normal est :
 
