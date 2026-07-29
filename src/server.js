@@ -350,6 +350,16 @@ function getPresenceCounts() {
   };
 }
 
+function getOnlinePlayers() {
+  return [...onlineSockets.keys()]
+    .map(playerId => getPlayerRecord(playerId))
+    .filter(player => player && !isAnonymousPlayerId(player.id) && Number(player.is_bot || 0) !== 1)
+    .map(player => ({
+      id: Number(player.id),<
+      pseudo: String(player.pseudo || `Joueur ${player.id}`),
+    }));
+}
+
 function getActiveGameCount() {
   if (gm?.games instanceof Map) {
     return [...gm.games.values()].filter(game => game?.status === 'active').length;
@@ -10364,6 +10374,7 @@ function buildDiscordBotContext() {
     syncPlayerDiscordRankRole,
     syncOnlineDiscordConnectedRoles,
     getPresenceCounts,
+    getOnlinePlayers,
     publicBotRuntime,
     getBoostDisplayName,
     gm,

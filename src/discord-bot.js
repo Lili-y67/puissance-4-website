@@ -19,6 +19,7 @@
   TextInputStyle,
   MessageFlags,
   PermissionsBitField,
+  EmbedBuilder,
 } = require('discord.js');
 const {DefaultWebSocketManagerOptions}=require('@discordjs/ws')
 DefaultWebSocketManagerOptions.identifyProperties.browser = 'Discord Android'
@@ -36,6 +37,11 @@ const GIVEAWAY_MINUTES_MAX = 10080;
 const TICKET_CATEGORY_ID = process.env.DISCORD_TICKET_CATEGORY_ID || '1524802853338616079';
 const TICKET_SUPPORT_ROLE_ID = process.env.DISCORD_TICKET_SUPPORT_ROLE_ID || '1480180483613655181';
 const TICKET_TRANSCRIPT_CHANNEL_ID = process.env.DISCORD_TICKET_TRANSCRIPT_CHANNEL_ID || '1508532192349913119';
+const CONNECTED_COUNT_CHANNEL_ID = process.env.DISCORD_CONNECTED_COUNT_CHANNEL_ID || '1531954706752999434';
+const configuredConnectedCountInterval = Number(process.env.DISCORD_CONNECTED_COUNT_INTERVAL_MS || 30_000);
+const CONNECTED_COUNT_INTERVAL_MS = Number.isFinite(configuredConnectedCountInterval)
+  ? Math.max(30_000, configuredConnectedCountInterval)
+  : 30_000;
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
   'admin-player': 'player',
@@ -158,6 +164,63 @@ function startDiscordBot(ctx) {
   const activeGiveaways = new Map();
   const activeDrops = new Map();
   const STAFF_SESSION_TTL_MS = 10 * 60 * 1000;
+  let connectedCountTimer = null;
+  let previousOnlinePlayers = null;
+  let connectedCountUpdateRunning = false;
+
+  async function updateConnectedCountChannel() {
+    if (connectedCountUpdateRunning || !CONNECTED_COUNT_CHANNEL_ID) return;
+    connectedCountUpdateRunning = true;
+    try {
+      const channel = await bot.channels.fetch(CONNECTED_COUNT_CHANNEL_ID).catch(() => null);
+      if (!channel) {
+        console.warn(`[BOT CONNECTES] Salon introuvable : ${CONNECTED_COUNT_CHANNEL_ID}`);
+        return;
+      }
+
+      const players = typeof ctx.getOnlinePlayers === 'function' ? ctx.getOnlinePlayers() : [];
+      const current = new Map(players.map(player => [Number(player.id), String(player.pseudo)]));
+      const expectedName = `🟢・Connectés : ${current.size}`;
+
+      if (channel.name !== expectedName && typeof channel.setName === 'function') {
+        await channel.setName(expectedName, 'Mise à jour du nombre de joueurs connectés au site');
+      }
+
+      if (previousOnlinePlayers !== null) {
+        const joined = [...current]
+          .filter(([id]) => !previousOnlinePlayers.has(id))
+          .map(([, pseudo]) => pseudo);
+        const left = [...previousOnlinePlayers]
+          .filter(([id]) => !current.has(id))
+          .map(([, pseudo]) => pseudo);
+
+        if ((joined.length || left.length) && typeof channel.send === 'function') {
+          const lines = [
+            ...joined.map(pseudo => `[+] ${pseudo}`),
+            ...left.map(pseudo => `[-] ${pseudo}`),
+          ];
+          const overflow = Math.max(0, lines.length - 50);
+          const description = [
+            ...lines.slice(0, 50),
+            ...(overflow ? [`… et ${overflow} autre(s) changement(s)`] : []),
+          ].join('\n');
+          const embed = new EmbedBuilder()
+            .setColor(joined.length && !left.length ? 0x30d158 : (!joined.length && left.length ? 0xff453a : 0xffd60a))
+            .setTitle('Présence sur Puissance 4')
+            .setDescription(description)
+            .setFooter({ text: `${current.size} joueur${current.size > 1 ? 's' : ''} connecté${current.size > 1 ? 's' : ''}` })
+            .setTimestamp();
+          await channel.send({ embeds: [embed] });
+        }
+      }
+
+      previousOnlinePlayers = current;
+    } catch (error) {
+      console.warn('[BOT CONNECTES]', error.message);
+    } finally {
+      connectedCountUpdateRunning = false;
+    }
+  }
 
   function normalizeCouponCode(value) {
     return String(value || '')
@@ -2367,6 +2430,9 @@ function startDiscordBot(ctx) {
     }
     updateStatus();
     setInterval(updateStatus, 10000);
+    await updateConnectedCountChannel();
+    connectedCountTimer = setInterval(updateConnectedCountChannel, CONNECTED_COUNT_INTERVAL_MS);
+    connectedCountTimer.unref?.();
   });
 
   bot.on('interactionCreate', async interaction => {
