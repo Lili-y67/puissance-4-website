@@ -124,8 +124,8 @@ Le fichier `.env.example` contient les valeurs a recopier dans `.env`.
 | Variable | Exemple | Description |
 |---|---|---|
 | `PORT` | `3000` | Port HTTP interne |
-| `BASE_URL` | `https://votre-domaine.fr` | URL publique principale |
-| `PUBLIC_BASE_URL` | `https://votre-domaine.fr` | URL publique exposee aux helpers |
+| `BASE_URL` | `https://puissance4.croustygame.fr` | URL publique principale |
+| `PUBLIC_BASE_URL` | `https://puissance4.croustygame.fr` | URL publique exposee aux helpers |
 | `PUBLIC_SITE_URL` | optionnel | URL exacte du site quand certains modules en ont besoin |
 
 ### Discord OAuth
@@ -141,13 +141,13 @@ Le fichier `.env.example` contient les valeurs a recopier dans `.env`.
 Le callback normal est :
 
 ```text
-https://votre-domaine.fr/auth/discord/callback
+https://puissance4.croustygame.fr/auth/discord/callback
 ```
 
 Si le portail Discord impose une URL exacte, renseigne :
 
 ```env
-DISCORD_REDIRECT_URI=https://votre-domaine.fr/auth/discord/callback
+DISCORD_REDIRECT_URI=https://puissance4.croustygame.fr/auth/discord/callback
 ```
 
 ### Traduction automatique
@@ -409,7 +409,7 @@ Le site gere plusieurs entrees Discord :
 Depuis les dernieres mises a jour, le callback peut etre force avec :
 
 ```env
-DISCORD_REDIRECT_URI=https://votre-domaine.fr/auth/discord/callback
+DISCORD_REDIRECT_URI=https://puissance4.croustygame.fr/auth/discord/callback
 ```
 
 Cela evite les problemes quand Discord exige une URL de redirection strictement identique a celle inscrite dans le portail developpeur.
@@ -923,8 +923,8 @@ Il charge le serveur principal, la base, Socket.IO et les modules lies.
 
 ```env
 PORT=3000
-BASE_URL=https://votre-domaine.fr
-PUBLIC_BASE_URL=https://votre-domaine.fr
+BASE_URL=https://puissance4.croustygame.fr
+PUBLIC_BASE_URL=https://puissance4.croustygame.fr
 DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 DISCORD_BOT_TOKEN=...
@@ -1393,4 +1393,3 @@ src/discord-bot.js
 src/discord-rpc-companion.js
 src/register-commands.js
 ```
-

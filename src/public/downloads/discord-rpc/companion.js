@@ -7,7 +7,7 @@ const CLIENT_ID = '1477252548090921060';
 const LARGE_IMAGE = 'site-logo';
 const BASE_URL = (process.env.P4_SITE_URL || process.env.BASE_URL || 'http://127.0.0.1:3000').replace(/\/+$/, '');
 const ALLOWED_SITE_ORIGINS = new Set([
-  'https://77.93.141.48',
+  'https://puissance4.croustygame.fr',
   new URL(BASE_URL).origin,
 ]);
 const LARGE_IMAGE_TEXT = `${BASE_URL}/`;

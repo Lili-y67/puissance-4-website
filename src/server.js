@@ -2218,7 +2218,7 @@ function publicBaseUrlFromReq(req) {
   if (configured) return configured;
   const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim() || 'https';
   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim();
-  return host ? `${proto}://${host}`.replace(/\/+$/, '') : 'https://77.93.141.48';
+  return host ? `${proto}://${host}`.replace(/\/+$/, '') : 'https://puissance4.croustygame.fr';
 }
 
 function absolutePublicUrl(req, value, fallback = '/assets/pwa-icon-512.png') {
