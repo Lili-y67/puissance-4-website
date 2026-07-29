@@ -4732,6 +4732,21 @@ async function syncPlayerDiscordRankRole(playerOrId, currentRoleIds = null) {
   return syncDiscordRankRole(player.discord_id, getRank(Number(player.elo || 0)), null, currentRoleIds);
 }
 
+function scheduleDiscordPostAuthSync(discordUserId, player, currentRoleIds = []) {
+  Promise.allSettled([
+    renameOnServer(discordUserId, player?.pseudo),
+    syncPlayerDiscordRankRole(player, currentRoleIds),
+  ]).then(results => {
+    const failed = results.filter(result => result.status === 'rejected');
+    if (failed.length) {
+      console.warn('[Discord OAuth] Synchronisation différée incomplète', {
+        playerId: Number(player?.id || 0),
+        failures: failed.map(result => String(result.reason?.message || result.reason)),
+      });
+    }
+  });
+}
+
 async function findGuildRoleByName(roleName, botToken = null) {
   const token = botToken || discordConfig().botToken;
   if (!token || !roleName) return null;
@@ -5189,6 +5204,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       if (tokenData.error === 'invalid_grant') return redirectDiscordError('discord_redirect');
       return redirectDiscordError('discord_token');
     }
+    console.log('[Discord OAuth] Jeton reçu', { mode });
 
     // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer l'identitAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA Discord
     const userRes = await fetch('https://discord.com/api/users/@me', {
@@ -5197,9 +5213,11 @@ app.get('/auth/discord/callback', async (req, res) => {
     });
     const discordUser = await userRes.json();
     if (!discordUser.id) return redirectDiscordError('discord_id');
+    console.log('[Discord OAuth] Identité reçue', { mode, discordUserId: discordUser.id });
 
     if (mode === 'signin') {
       const memberSnapshot = await fetchDiscordMemberSnapshot(discordUser.id, botToken);
+      console.log('[Discord OAuth] Snapshot serveur terminé', { mode, available: Boolean(memberSnapshot) });
       const memberInfo = memberSnapshot?.memberInfo || null;
       const server_roles_rich = memberSnapshot?.server_roles_rich || [];
       const discordInfo = {
@@ -5251,11 +5269,11 @@ app.get('/auth/discord/callback', async (req, res) => {
       claimDiscordIdentity(discordUser.id, discordInfo, targetPlayer.id);
       assignReferrerIfPossible(targetPlayer.id, stateData?.referrer);
       const linkedPlayer = applyDiscordSnapshotToPlayer(pQ.getById.get(targetPlayer.id), memberSnapshot) || pQ.getById.get(targetPlayer.id);
-      try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
-      try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
       const token = createSession(linkedPlayer.id);
       const payload = toBase64Url(JSON.stringify({ token, player: stripWallpaperPayload(sanitize(linkedPlayer)), created: createdNewPlayer }));
       broadcastPresenceCounts(true);
+      scheduleDiscordPostAuthSync(discordUser.id, linkedPlayer, memberInfo?.roles || []);
+      console.log('[Discord OAuth] Connexion terminée, redirection envoyée', { playerId: linkedPlayer.id });
       return res.redirect('/#discord-auth=' + payload);
     }
 
@@ -5291,9 +5309,7 @@ app.get('/auth/discord/callback', async (req, res) => {
       // Liaison depuis le profil AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA lier + envoyer DM de confirmation
       claimDiscordIdentity(discordUser.id, discordInfo, playerId);
       const linkedPlayer = applyDiscordSnapshotToPlayer(pQ.getById.get(playerId), memberSnapshot) || pQ.getById.get(playerId);
-      // Renommer le membre sur le serveur Discord avec son pseudo en jeu
-      try { await renameOnServer(discordUser.id, linkedPlayer.pseudo); } catch(e) {}
-      try { await syncPlayerDiscordRankRole(linkedPlayer, memberInfo?.roles || []); } catch(e) {}
+      scheduleDiscordPostAuthSync(discordUser.id, linkedPlayer, memberInfo?.roles || []);
       broadcastPresenceCounts(true);
       const { botToken } = discordConfig();
       try {
