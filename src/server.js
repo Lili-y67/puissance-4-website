@@ -355,7 +355,7 @@ function getOnlinePlayers() {
     .map(playerId => getPlayerRecord(playerId))
     .filter(player => player && !isAnonymousPlayerId(player.id) && Number(player.is_bot || 0) !== 1)
     .map(player => ({
-      id: Number(player.id),<
+      id: Number(player.id),
       pseudo: String(player.pseudo || `Joueur ${player.id}`),
     }));
 }
