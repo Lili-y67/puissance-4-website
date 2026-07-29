@@ -123,7 +123,8 @@ Le fichier `.env.example` contient les valeurs a recopier dans `.env`.
 
 | Variable | Exemple | Description |
 |---|---|---|
-| `PORT` | `3000` | Port HTTP interne |
+| `SERVER_PORT` | `25000` | Port alloue par Pterodactyl, prioritaire sur `PORT` |
+| `PORT` | `25000` | Port HTTP interne |
 | `BASE_URL` | `https://puissance4.croustygame.fr` | URL publique principale |
 | `PUBLIC_BASE_URL` | `https://puissance4.croustygame.fr` | URL publique exposee aux helpers |
 | `PUBLIC_SITE_URL` | optionnel | URL exacte du site quand certains modules en ont besoin |
@@ -922,7 +923,8 @@ Il charge le serveur principal, la base, Socket.IO et les modules lies.
 ### Variables minimales production
 
 ```env
-PORT=3000
+SERVER_PORT=25000
+PORT=25000
 BASE_URL=https://puissance4.croustygame.fr
 PUBLIC_BASE_URL=https://puissance4.croustygame.fr
 DISCORD_CLIENT_ID=...

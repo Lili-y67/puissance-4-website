@@ -2142,7 +2142,7 @@ function discordConfig() {
     process.env.DISCORD_REDIRECT_BASE_URL
     || process.env.PUBLIC_BASE_URL
     || process.env.BASE_URL
-    || `http://127.0.0.1:${process.env.PORT || 3000}`
+    || `http://127.0.0.1:${process.env.SERVER_PORT || process.env.PORT || 3000}`
   );
   return {
     clientId:     process.env.DISCORD_CLIENT_ID || DISCORD_FALLBACK_CLIENT_ID,
@@ -10356,7 +10356,8 @@ app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public/404.html'));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.SERVER_PORT || process.env.PORT || 3000);
+const HTTP_HOST = process.env.SERVER_HOST || '0.0.0.0';
 function buildDiscordBotContext() {
   return {
     db,
@@ -10397,8 +10398,8 @@ function buildDiscordBotContext() {
 }
 
 initDb().then(() => {
-  server.listen(PORT, () => {
-    console.log(`[HTTP] http://localhost:${PORT}`);
+  server.listen(PORT, HTTP_HOST, () => {
+    console.log(`[HTTP] http://${HTTP_HOST}:${PORT}`);
     logYtdlpStatus();
     if (String(process.env.DISCORD_CLEAR_CONNECTED_ON_BOOT || '0') === '1') {
       clearAllDiscordConnectedRoles().catch(error => console.warn('[DISCORD CONNECTED ROLE]', error.message));
