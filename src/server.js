@@ -5270,7 +5270,11 @@ app.get('/auth/discord/callback', async (req, res) => {
       assignReferrerIfPossible(targetPlayer.id, stateData?.referrer);
       const linkedPlayer = applyDiscordSnapshotToPlayer(pQ.getById.get(targetPlayer.id), memberSnapshot) || pQ.getById.get(targetPlayer.id);
       const token = createSession(linkedPlayer.id);
-      const payload = toBase64Url(JSON.stringify({ token, player: stripWallpaperPayload(sanitize(linkedPlayer)), created: createdNewPlayer }));
+      const payload = toBase64Url(JSON.stringify({
+        token,
+        playerId: linkedPlayer.id,
+        created: createdNewPlayer,
+      }));
       broadcastPresenceCounts(true);
       scheduleDiscordPostAuthSync(discordUser.id, linkedPlayer, memberInfo?.roles || []);
       console.log('[Discord OAuth] Connexion terminée, redirection envoyée', { playerId: linkedPlayer.id });
@@ -6782,6 +6786,15 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
   const token = createSession(player.id);
   security.recordLoginSuccess(req, player.id);
   res.json({ ...sanitize(freshPlayer), token, referralLinked: !!referrer });
+});
+
+app.get('/api/auth/session', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.query.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide ou expirée.' });
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  return res.json({ player: stripWallpaperPayload(sanitize(player)) });
 });
 
 const PROFILE_WALLPAPER_MAX_BYTES = 650 * 1024;

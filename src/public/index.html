@@ -4004,18 +4004,24 @@ function showDiscordQueryError() {
   history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params.toString() : '') + location.hash);
 }
 
-function tryCompleteDiscordAuth() {
+async function tryCompleteDiscordAuth() {
   const hash = String(location.hash || '');
   const prefix = '#discord-auth=';
   if (!hash.startsWith(prefix)) return false;
   try {
     const payload = JSON.parse(decodeBase64Url(hash.slice(prefix.length)));
-    if (!payload?.token || !payload?.player) throw new Error('invalid payload');
-    myPlayer = payload.player;
+    if (!payload?.token) throw new Error('invalid payload');
+    const response = await fetch('/api/auth/session', {
+      headers: { 'x-session-token': payload.token },
+      cache: 'no-store',
+    });
+    const session = await response.json().catch(() => ({}));
+    if (!response.ok || !session?.player) throw new Error(session?.error || 'invalid session');
+    myPlayer = session.player;
     localStorage.setItem('token', payload.token);
     localStorage.setItem('last_active', String(Date.now()));
-    localStorage.setItem('player', JSON.stringify(payload.player));
-    sessionStorage.setItem('player', JSON.stringify(payload.player));
+    localStorage.setItem('player', JSON.stringify(session.player));
+    sessionStorage.setItem('player', JSON.stringify(session.player));
     try { localStorage.removeItem('p4_referrer'); } catch {}
     history.replaceState(null, '', location.pathname + location.search);
     redirectAfterAuthOrQueue({ welcome: Boolean(payload.created || payload.newAccount || payload.isNew) });
@@ -5475,12 +5481,12 @@ document.addEventListener('keydown', (e) => {
 // ═══════════════════════════════════════════════════════════════════
 //  INIT — auto-login si localStorage
 // ═══════════════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   initRegisterColorPicker();
   startSiteStatsPolling();
   captureReferralLink();
   showDiscordQueryError();
-  if (tryCompleteDiscordAuth()) return;
+  if (await tryCompleteDiscordAuth()) return;
   // Auto-login depuis localStorage
   const saved = localStorage.getItem('player');
   const token = localStorage.getItem('token');
