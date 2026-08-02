@@ -1099,7 +1099,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   right:auto;
   width:min(1080px,calc(100vw - 48px));
   transform:translateX(-50%);
-  grid-template-columns:repeat(3,minmax(0,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),340px));
+  justify-content:center;
   gap:10px;
   z-index:2147483000;
   background:transparent;
