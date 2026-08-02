@@ -7898,15 +7898,22 @@ app.get('/api/players/search', (req, res) => {
     // Autoriser alphanum + _ + - + . (suffisant, pas de regex bloquante)
     if (q.length > 20) return res.json([]);
     const rows = db.prepare(`
-      SELECT id, pseudo, elo, avatar, color, profile_banner, search_nameplate, is_bot
+      SELECT id, pseudo, elo, avatar, color, profile_banner, search_nameplate,
+             pseudo_font, pseudo_format, pseudo_color, pseudo_color_secondary, pseudo_rgb, is_bot
       FROM players
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
         AND is_guest = 0
         AND (? = 1 OR is_bot = 0)
-      ORDER BY elo DESC LIMIT 8
+      ORDER BY elo DESC LIMIT 3
     `).all(q.replace(/%/g, '') + '%', includeBots ? 1 : 0);
-    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '', search_nameplate: p.search_nameplate || '', is_bot: Number(p.is_bot || 0) })));
+    res.json(rows.map(p => ({
+      id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color,
+      profile_banner: p.profile_banner || '', search_nameplate: p.search_nameplate || '',
+      pseudo_font: p.pseudo_font || '', pseudo_format: p.pseudo_format || '',
+      pseudo_color: p.pseudo_color || '', pseudo_color_secondary: p.pseudo_color_secondary || '',
+      pseudo_rgb: Number(p.pseudo_rgb || 0), is_bot: Number(p.is_bot || 0),
+    })));
   } catch(e) {
     console.error('[search]', e.message);
     res.json([]);
