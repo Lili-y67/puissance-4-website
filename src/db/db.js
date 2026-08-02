@@ -133,6 +133,8 @@ try { db.exec(`ALTER TABLE players ADD COLUMN token_emoji_changed_at INTEGER NOT
 try { db.exec(`ALTER TABLE players ADD COLUMN vip_media_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN avatar_decoration_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN search_nameplate TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+try { db.exec(`ALTER TABLE players ADD COLUMN search_nameplate_changed_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN color_secondary TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN coins INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN gems INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -403,6 +405,8 @@ const pQ = {
   updateVipMediaChangedAt: db.prepare(`UPDATE players SET vip_media_changed_at = @changedAt WHERE id = @id`),
   updateAvatarDecoration: db.prepare(`UPDATE players SET avatar_decoration = @image WHERE id = @id`),
   updateAvatarDecorationChangedAt: db.prepare(`UPDATE players SET avatar_decoration_changed_at = @changedAt WHERE id = @id`),
+  updateSearchNameplate: db.prepare(`UPDATE players SET search_nameplate = @image WHERE id = @id`),
+  updateSearchNameplateChangedAt: db.prepare(`UPDATE players SET search_nameplate_changed_at = @changedAt WHERE id = @id`),
   updateProfileBanner: db.prepare(`UPDATE players SET profile_banner = @image WHERE id = @id`),
   updateProfileBannerChangedAt: db.prepare(`UPDATE players SET profile_banner_changed_at = @changedAt WHERE id = @id`),
   updateQueueMusic: db.prepare(`UPDATE players SET queue_music = @music WHERE id = @id`),

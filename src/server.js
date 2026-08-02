@@ -1193,6 +1193,7 @@ const PSEUDO_FONT_CATALOG = [
   'unifraktur', 'medieval', 'jacquard', 'metalmania', 'creepster', 'imfell',
 ];
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
+const SEARCH_NAMEPLATES_DIR = path.join(__dirname, 'public', 'nameplates');
 const PROFILE_BANNERS_DIR = path.join(__dirname, 'public', 'banners');
 const QUEUE_MUSICS_DIR = path.join(__dirname, 'public', 'sounds');
 const DEFAULT_QUEUE_MUSIC_FILE = 'Musique Chambre.mp3';
@@ -1271,6 +1272,17 @@ function getAvatarDecorationPaths() {
     return fs.readdirSync(DECORATIONS_DIR, { withFileTypes: true })
       .filter(entry => entry.isFile() && /\.(png|jpe?g|webp)$/i.test(entry.name))
       .map(entry => `/decorations/${entry.name}`)
+      .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+  } catch {
+    return [];
+  }
+}
+
+function getSearchNameplatePaths() {
+  try {
+    return fs.readdirSync(SEARCH_NAMEPLATES_DIR, { withFileTypes: true })
+      .filter(entry => entry.isFile() && /^[a-zA-Z0-9._ -]+$/.test(entry.name) && /\.(png|jpe?g|webp|gif)$/i.test(entry.name))
+      .map(entry => `/nameplates/${entry.name}`)
       .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
   } catch {
     return [];
@@ -4732,6 +4744,13 @@ async function syncPlayerDiscordRankRole(playerOrId, currentRoleIds = null) {
   return syncDiscordRankRole(player.discord_id, getRank(Number(player.elo || 0)), null, currentRoleIds);
 }
 
+function getSearchNameplateRemainingMs(player) {
+  if (hasStaffRoleBenefits(player)) return 0;
+  const lastChanged = Number(player?.search_nameplate_changed_at || 0);
+  const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
 function scheduleDiscordPostAuthSync(discordUserId, player, currentRoleIds = []) {
   Promise.allSettled([
     renameOnServer(discordUserId, player?.pseudo),
@@ -5568,6 +5587,11 @@ app.post('/api/easter-eggs/claim', (req, res) => {
 app.get('/api/decorations', (_, res) => {
   res.set('Cache-Control', 'public, max-age=300');
   res.json({ decorations: getAvatarDecorationPaths() });
+});
+
+app.get('/api/nameplates', (_, res) => {
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ nameplates: getSearchNameplatePaths() });
 });
 
 function getTokenCollectionPayload(playerId) {
@@ -7482,6 +7506,29 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   res.json({ ok: true });
 });
 
+app.patch('/api/players/:id/search-nameplate', (req, res) => {
+  const { image, token } = req.body || {};
+  const id = Number(req.params.id);
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
+  const player = pQ.getById.get(id);
+  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) {
+    return res.status(403).json({ error: 'Plaque nominative reservee au VIP+.' });
+  }
+  const nextNameplate = String(image || '').trim();
+  if (nextNameplate && !getSearchNameplatePaths().includes(nextNameplate)) {
+    return res.status(400).json({ error: 'Plaque nominative invalide.' });
+  }
+  if (nextNameplate === String(player?.search_nameplate || '')) return res.json({ ok: true });
+  const remaining = getSearchNameplateRemainingMs(player);
+  if (remaining > 0) {
+    return res.status(429).json({ error: `Plaque nominative disponible dans ${formatCooldownHours(remaining)}.` });
+  }
+  pQ.updateSearchNameplate.run({ image: nextNameplate, id });
+  pQ.updateSearchNameplateChangedAt.run({ changedAt: Date.now(), id });
+  progression.recordAction(id, 'profile_updates');
+  res.json({ ok: true, search_nameplate: nextNameplate });
+});
+
 app.patch('/api/players/:id/profile-banner', (req, res) => {
   const { image, token } = req.body;
   const id = Number(req.params.id);
@@ -7851,7 +7898,7 @@ app.get('/api/players/search', (req, res) => {
     // Autoriser alphanum + _ + - + . (suffisant, pas de regex bloquante)
     if (q.length > 20) return res.json([]);
     const rows = db.prepare(`
-      SELECT id, pseudo, elo, avatar, color, profile_banner, is_bot
+      SELECT id, pseudo, elo, avatar, color, profile_banner, search_nameplate, is_bot
       FROM players
       WHERE pseudo LIKE ? COLLATE NOCASE
         AND deleted = 0
@@ -7859,7 +7906,7 @@ app.get('/api/players/search', (req, res) => {
         AND (? = 1 OR is_bot = 0)
       ORDER BY elo DESC LIMIT 8
     `).all(q.replace(/%/g, '') + '%', includeBots ? 1 : 0);
-    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '', is_bot: Number(p.is_bot || 0) })));
+    res.json(rows.map(p => ({ id: p.id, pseudo: p.pseudo, elo: p.elo, avatar: p.avatar, color: p.color, profile_banner: p.profile_banner || '', search_nameplate: p.search_nameplate || '', is_bot: Number(p.is_bot || 0) })));
   } catch(e) {
     console.error('[search]', e.message);
     res.json([]);
