@@ -1040,7 +1040,8 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .bot-token-box.show{display:block;animation:slide-in .25s cubic-bezier(.22,1,.36,1) both}
 .bot-token-value{margin:10px 0;padding:12px;border-radius:12px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);color:#85EBFF;font-family:Consolas,monospace;font-size:12px;word-break:break-all}
 .search-label{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);}
-.search-row{display:flex;gap:8px;position:relative;z-index:120;overflow:visible;}
+.search-row{display:flex;gap:8px;position:relative;z-index:120;overflow:visible;width:min(100%,480px);}
+#search-input{flex:0 1 360px;min-width:0;}
 .search-input{
   flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
   padding:10px 14px;color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;
@@ -1073,12 +1074,20 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .mini-bot-badge{display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 6px;border-radius:999px;background:rgba(133,235,255,.1);border:1px solid rgba(133,235,255,.3);color:#85ebff;font:900 9px Barlow,sans-serif;letter-spacing:.8px;vertical-align:middle}
 .search-result{
   display:none;align-items:center;gap:12px;
-  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px;text-decoration:none;color:var(--text);
+  width:min(100%,480px);background:transparent;border:0;border-radius:10px;
+  padding:0;text-decoration:none;color:var(--text);
   transition:all 0.2s;cursor:pointer;position:relative;overflow:hidden;isolation:isolate;
 }
-.search-result:hover{border-color:var(--accent);}
+.search-result::before{content:"";position:absolute;z-index:0;left:0;top:3px;bottom:3px;width:min(360px,calc(100% - 74px));border-radius:11px;background-image:var(--result-nameplate);background-size:100% 100%;background-repeat:no-repeat;opacity:0;pointer-events:none;}
+.search-result.nameplate-result::before{opacity:1;}
+.search-result:hover .search-result-view{color:#fff;text-shadow:0 0 12px #85ebff;}
 .search-result.show{display:flex;}
+.search-result-content{min-height:60px;}
+.search-result-plate-core{display:flex;align-items:center;gap:10px;width:min(360px,calc(100% - 74px));padding:10px 14px;min-width:0;}
+.search-result-copy{display:flex;flex-direction:column;min-width:0;line-height:1.05;}
+.search-result-copy #sr-pseudo{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.search-result-copy #sr-elo{margin-top:5px;font:900 11px 'Barlow Condensed',sans-serif;color:#ffd60a;text-shadow:0 0 8px rgba(255,214,10,.9),0 0 16px rgba(255,214,10,.45);letter-spacing:.5px;}
+.search-result-view{margin-left:auto;padding:0 8px;font-size:11px;color:var(--accent);letter-spacing:1px;white-space:nowrap;transition:.2s;}
 .search-error{font-size:12px;color:var(--red);display:none;}
 .search-error.show{display:block;}
 .autocomplete-list{
@@ -1086,14 +1095,15 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
   position:absolute;
   top:calc(100% + 8px);
   left:0;
-  right:0;
+  right:auto;
+  width:min(360px,100%);
   z-index:2147483000;
-  background:linear-gradient(180deg,rgba(20,22,40,.98),rgba(10,12,24,.98));
-  border:1px solid rgba(133,235,255,.18);
+  background:transparent;
+  border:0;
   border-radius:16px;
   overflow:hidden;
-  box-shadow:0 22px 48px rgba(0,0,0,.42),0 0 0 1px rgba(255,255,255,.03) inset;
-  backdrop-filter:blur(12px);
+  box-shadow:none;
+  backdrop-filter:none;
   max-height:min(320px,50vh);
   overflow-y:auto;
 }
@@ -1113,9 +1123,9 @@ body.search-open .profile-side{
   transition:background .14s ease;
   overflow:hidden;
 }
-.ac-item + .ac-item{border-top:1px solid rgba(255,255,255,.05);}
-.ac-item:hover{background:rgba(133,235,255,.08);}
-.ac-item.active{background:rgba(133,235,255,.12);}
+.ac-item + .ac-item{border-top:0;}
+.ac-item:hover{background:rgba(133,235,255,.05);border-radius:11px;}
+.ac-item.active{background:rgba(133,235,255,.08);border-radius:11px;}
 .ac-nameplate{
   min-height:60px;
   padding:9px 14px;
@@ -1130,7 +1140,7 @@ body.search-open .profile-side{
 .ac-player-avatar{width:34px;height:34px;flex:0 0 34px;border-radius:50%;object-fit:cover;}
 .ac-player-copy{display:flex;flex-direction:column;min-width:0;line-height:1.05;}
 .ac-player-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
-.ac-player-elo{font-size:10px;color:rgba(255,255,255,.7);margin-top:5px;letter-spacing:.4px;}
+.ac-player-elo{font:900 11px 'Barlow Condensed',sans-serif;color:#ffd60a;margin-top:5px;letter-spacing:.5px;text-shadow:0 0 8px rgba(255,214,10,.9),0 0 16px rgba(255,214,10,.45);}
 .nameplate-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;}
 .nameplate-option{position:relative;height:52px;overflow:hidden;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;padding:0;transition:.16s;}
 .nameplate-option img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;}
@@ -1404,13 +1414,14 @@ body.search-open .profile-side{
     <div class="search-error" id="search-error">Joueur introuvable.</div>
     <a class="search-result" id="search-result" href="#">
       <div class="search-result-content">
-        <div class="player-mini-avatar" id="sr-avatar" style="width:36px;height:36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:900;"></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:14px" id="sr-pseudo"></div>
-          <div style="font-size:11px;color:var(--muted)" id="sr-stats"></div>
+        <div class="search-result-plate-core">
+          <div class="player-mini-avatar" id="sr-avatar" style="width:36px;height:36px;flex:0 0 36px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:900;"></div>
+          <div class="search-result-copy">
+            <div id="sr-pseudo"></div>
+            <div id="sr-elo"></div>
+          </div>
         </div>
-        <div style="font-family:Barlow Condensed,sans-serif;font-size:20px;font-weight:800;color:var(--yellow)" id="sr-elo"></div>
-        <div style="font-size:11px;color:var(--accent);letter-spacing:1px">Voir →</div>
+        <div class="search-result-view">Voir →</div>
       </div>
     </a>
   </div>
@@ -5838,8 +5849,6 @@ async function searchPlayer() {
 
     // Afficher le résultat
     const color   = player.color || '#ff2d55';
-    const total   = (player.wins||0) + (player.losses||0) + (player.draws||0);
-    const wr      = total > 0 ? Math.round(((player.wins||0)/total)*100) : 0;
     const avatar  = document.getElementById('sr-avatar');
     const avatarSrc = getRenderableMediaSrc(player.avatar);
 
@@ -5851,9 +5860,11 @@ async function searchPlayer() {
       : player.pseudo[0].toUpperCase();
 
     document.getElementById('sr-pseudo').innerHTML = `${escapeHtml(player.pseudo)}${Number(player.is_bot || 0) === 1 ? '<span class="mini-bot-badge">BOT</span>' : ''}`;
-    document.getElementById('sr-stats').innerHTML    = renderResultMiniStats(player.wins, player.losses, player.draws, wr);
-    document.getElementById('sr-elo').textContent    = player.elo;
+    document.getElementById('sr-elo').textContent    = `${player.elo} ELO`;
     document.getElementById('search-result').href    = `/profil?id=${player.id}`;
+    const nameplate = String(player.search_nameplate || '');
+    result.classList.toggle('nameplate-result', nameplate.startsWith('/nameplates/'));
+    result.style.setProperty('--result-nameplate', nameplate ? `url('${nameplate}')` : 'none');
     result.classList.add('show');
 
   } catch {
