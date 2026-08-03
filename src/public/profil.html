@@ -321,6 +321,8 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .profile-nameplate-identity .profile-pseudo{font-size:clamp(34px,4.2vw,46px)}
 .profile-nameplate-identity .status-badge{margin-top:3px;padding:2px 7px;font-size:9px;gap:4px}
 .profile-nameplate-identity .status-lastseen{font-size:9px}
+.profile-nameplate-status{min-height:18px;margin-top:5px;text-align:left}
+.profile-nameplate-status .status-badge{margin-top:0}
 .profile-header-main>.profile-badges{margin:0;padding-inline:4px;min-height:0}
 .profile-header-main>.profile-badges:not(:has(.profile-badge)){display:none}
 .profile-header-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:0;width:100%;padding-inline:4px}
@@ -2732,7 +2734,6 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
            <div class="avatar-overlay">Photo</div>
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
-         <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
        </div>`
     : `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
          <div style="position:relative;flex-shrink:0" class="avatar-wrap">
@@ -2740,7 +2741,6 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
            <div class="profile-avatar" style="border-color:${player.color||'var(--red)'}" id="avatar-el">${avatarHtml}</div>
            <div class="avatar-ring" id="avatar-ring"></div>
          </div>
-         <div id="status-badge-wrap" style="margin-top:6px;text-align:center"></div>
        </div>`;
 
   const followBtn = !isOwnProfile && viewerPlayer
@@ -2824,6 +2824,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             ${avatarSection}
             <div class="profile-info">
               <div class="profile-pseudo ${Number(player.pseudo_rgb || 0) === 1 ? 'pseudo-rgb-wave' : ''}" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
+              <div class="profile-nameplate-status" id="status-badge-wrap"></div>
             </div>
           </div>
           <div class="profile-badges">
