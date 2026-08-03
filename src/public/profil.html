@@ -311,11 +311,13 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
   display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:26px 28px 30px;
 }
 .profile-header-main{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.profile-nameplate-identity{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:20px;width:100%;max-width:680px;min-height:116px;padding:16px 22px;border-radius:18px;overflow:hidden}
-.profile-nameplate-identity.has-nameplate{border:1px solid rgba(255,255,255,.08);box-shadow:0 16px 36px rgba(0,0,0,.2)}
-.profile-nameplate-image{position:absolute;inset:0;z-index:-1;width:100%;height:100%;object-fit:fill;pointer-events:none}
-.profile-nameplate-identity.has-nameplate::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(5,5,12,.08),rgba(5,5,12,.02) 64%,rgba(5,5,12,.12));pointer-events:none}
+.profile-nameplate-identity{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:18px;width:100%;max-width:680px;min-height:92px;padding:10px 20px;border-radius:18px;overflow:visible}
+.profile-nameplate-identity.has-nameplate{min-height:0;aspect-ratio:6/1;box-shadow:0 16px 36px rgba(0,0,0,.2)}
+.profile-nameplate-image{position:absolute;inset:0;z-index:-1;width:100%;height:100%;object-fit:fill;border-radius:18px;pointer-events:none}
+.profile-nameplate-identity.has-nameplate::after{content:'';position:absolute;inset:0;z-index:-1;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:linear-gradient(90deg,rgba(5,5,12,.08),rgba(5,5,12,.02) 64%,rgba(5,5,12,.12));pointer-events:none}
 .profile-nameplate-identity .profile-info{position:relative;z-index:1}
+.profile-nameplate-identity .profile-badges:not(:has(.profile-badge)){display:none}
+.profile-nameplate-identity .profile-badges{margin-top:8px;min-height:0}
 .profile-header-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:0;width:100%;padding-inline:4px}
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
@@ -1100,12 +1102,9 @@ input[type="color"]{width:0;height:0;opacity:0;position:absolute;pointer-events:
 .search-error.show{display:block;}
 .autocomplete-list{
   display:none;
-  position:absolute;
-  top:calc(100% + 8px);
-  left:50%;
-  right:auto;
-  width:min(var(--ac-width,340px),calc(100vw - 48px));
-  transform:translateX(-50%);
+  position:static;
+  width:min(var(--ac-width,340px),100%);
+  margin:2px auto 0;
   grid-template-columns:repeat(var(--ac-count,1),minmax(0,340px));
   justify-content:center;
   gap:10px;
@@ -1279,11 +1278,10 @@ body.search-open .profile-side{
   #profile-pseudo-input{width:100%!important;max-width:none;font-size:16px}
   .profile-pseudo-edit-row .btn-save-color{width:100%;justify-content:center}
   .search-btn { width:auto;padding-inline:14px; }
-  #autocomplete-list { right:auto;left:0;width:100%;transform:none; }
+  #autocomplete-list { width:100%;transform:none; }
   .autocomplete-list{
-    position:absolute;
-    top:calc(100% + 4px);
-    margin-top:0;
+    position:static;
+    margin-top:2px;
     max-height:260px;
   }
   .profile-header { border-radius: 22px; }
@@ -1296,6 +1294,7 @@ body.search-open .profile-side{
   }
   .profile-header-main{width:100%;align-items:stretch}
   .profile-nameplate-identity{grid-template-columns:auto minmax(0,1fr);gap:14px;min-height:104px;padding:14px 16px;text-align:left}
+  .profile-nameplate-identity.has-nameplate{aspect-ratio:auto;min-height:104px}
   .profile-nameplate-identity .profile-info{align-items:flex-start;text-align:left}
   .profile-nameplate-identity .profile-pseudo{text-align:left}
   .profile-nameplate-identity .profile-badges{justify-content:flex-start}
@@ -1456,8 +1455,8 @@ body.search-open .profile-side{
         onkeydown="onSearchKey(event)"
       />
       <button class="search-btn" id="search-btn" onclick="searchPlayer()">Chercher</button>
-      <div id="autocomplete-list" class="autocomplete-list"></div>
     </div>
+    <div id="autocomplete-list" class="autocomplete-list"></div>
     <div class="search-error" id="search-error">Joueur introuvable.</div>
     <a class="search-result" id="search-result" href="#">
       <div class="search-result-content">
