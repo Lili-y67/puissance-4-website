@@ -1148,7 +1148,9 @@ body.search-open .profile-side{
 .ac-player-copy{display:flex;flex-direction:column;min-width:0;line-height:1.05;}
 .ac-player-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
 .ac-player-elo{font:900 11px 'Barlow Condensed',sans-serif;color:#ffd60a;margin-top:5px;letter-spacing:.5px;text-shadow:0 0 8px rgba(255,214,10,.9),0 0 16px rgba(255,214,10,.45);}
-.nameplate-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;}
+.nameplate-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));column-gap:12px;row-gap:14px;align-content:start;min-width:0;padding:2px 2px 10px}
+.nameplate-gallery .avatar-decoration-tier{margin:18px 0 0;padding-top:2px}
+.nameplate-gallery .avatar-decoration-tier:first-child{margin-top:0}
 .nameplate-setting-preview,.nameplate-modal-preview{position:relative;overflow:hidden;width:100%;height:68px;border-radius:12px;background:var(--surface2);border:1px solid rgba(255,255,255,.07)}
 .nameplate-setting-preview{max-width:360px}
 .nameplate-modal-preview{height:76px}
@@ -1157,6 +1159,20 @@ body.search-open .profile-side{
 .nameplate-option{position:relative;height:60px;overflow:hidden;border-radius:10px;border:1px solid var(--rarity-border,var(--border));background:var(--surface2);cursor:pointer;padding:0;transition:.16s;box-shadow:inset 0 0 18px var(--rarity-bg,transparent)}
 .nameplate-option img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;}
 .nameplate-option:hover,.nameplate-option.active{border-color:var(--rarity-color,#85ebff);box-shadow:0 0 0 2px var(--rarity-border,rgba(133,235,255,.13)),0 0 20px var(--rarity-glow,rgba(133,235,255,.12));transform:translateY(-1px);}
+#search-nameplate-modal-bg .avatar-decoration-modal{width:min(1040px,100%);padding:28px}
+#search-nameplate-modal-bg .avatar-decoration-modal-head{margin-bottom:24px}
+#search-nameplate-modal-bg .avatar-decoration-modal-layout{grid-template-columns:220px minmax(0,1fr);gap:28px;align-items:start}
+#search-nameplate-modal-bg .avatar-decoration-sidecard{align-self:start;position:sticky;top:0;gap:16px}
+#search-nameplate-modal-bg .avatar-decoration-modal-actions{margin-top:4px}
+#search-nameplate-modal-bg .avatar-decoration-modal-actions .avatar-decoration-btn{width:100%;min-height:42px}
+@media(max-width:760px){
+  #search-nameplate-modal-bg{padding:10px}
+  #search-nameplate-modal-bg .avatar-decoration-modal{padding:18px 16px;max-height:92vh}
+  #search-nameplate-modal-bg .avatar-decoration-modal-head{margin-bottom:18px}
+  #search-nameplate-modal-bg .avatar-decoration-modal-layout{grid-template-columns:1fr;gap:20px}
+  #search-nameplate-modal-bg .avatar-decoration-sidecard{position:static}
+  .nameplate-gallery{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:9px;row-gap:12px}
+}
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
 
 @media (max-width: 480px) {
@@ -2569,9 +2585,9 @@ async function load() {
     loadStatus(freshPlayer.id);
     startProfileLivePolling(freshPlayer.id);
 
-    // Charger les infos Discord si profil own + discord lié
-    if (isOwnProfile && freshPlayer.discord_id) {
-      loadDiscordInfo();
+    // Charger les infos Discord du profil lie (vue personnelle ou publique).
+    if (freshPlayer.discord_id) {
+      loadDiscordInfo(freshPlayer.id);
     }
     if ((isOwnProfile || isAdminTier(viewerPlayer)) && Number(freshPlayer.is_bot || 0) !== 1) {
       loadReferralInfo();
@@ -7377,17 +7393,23 @@ function discordServerRoleChip(role) {
   </span>`;
 }
 
-async function loadDiscordInfo() {
+async function loadDiscordInfo(profileId = currentPlayer?.id) {
   const zone = document.getElementById('discord-info-zone');
   if (!zone) return;
-  const token = localStorage.getItem('token');
-  if (!token) return;
+  const requestedPlayerId = Number(profileId || 0);
+  if (!requestedPlayerId) return;
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+  const ownRequest = isOwnProfile && !!token;
   const DISCORD_INVITE = 'https://discord.gg/ap73mMTX7a';
 
   try {
-    const res  = await fetch('/api/me/discord-info', { headers: { 'x-session-token': token } });
+    const endpoint = ownRequest ? '/api/me/discord-info' : `/api/players/${requestedPlayerId}/discord-info`;
+    const options = ownRequest ? { headers: { 'x-session-token': token } } : {};
+    const res = await fetch(endpoint, options);
+    if (!res.ok) throw new Error('Discord indisponible');
     const data = await res.json();
     const d    = data.discord;
+    if (Number(currentPlayer?.id || 0) !== requestedPlayerId) return;
     if (!d) { zone.innerHTML = '<div style="font-size:12px;color: var(--muted)">Infos indisponibles</div>'; return; }
 
     const tag        = d.discriminator ? `${d.username}#${d.discriminator}` : `@${d.username}`;
