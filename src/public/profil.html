@@ -1123,6 +1123,8 @@ body.search-open .profile-side{
   display:flex;
   align-items:center;
   gap:10px;
+  height:60px;
+  box-sizing:border-box;
   padding:12px 14px;
   cursor:pointer;
   transition:background .14s ease;
@@ -1132,7 +1134,7 @@ body.search-open .profile-side{
 .ac-item:hover{background:rgba(133,235,255,.05);border-radius:11px;}
 .ac-item.active{background:rgba(133,235,255,.08);border-radius:11px;}
 .ac-nameplate{
-  min-height:60px;
+  height:60px;
   padding:9px 14px;
 }
 .ac-nameplate::before{
@@ -1147,10 +1149,14 @@ body.search-open .profile-side{
 .ac-player-name{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
 .ac-player-elo{font:900 11px 'Barlow Condensed',sans-serif;color:#ffd60a;margin-top:5px;letter-spacing:.5px;text-shadow:0 0 8px rgba(255,214,10,.9),0 0 16px rgba(255,214,10,.45);}
 .nameplate-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:9px;}
-.nameplate-option{position:relative;height:52px;overflow:hidden;border-radius:10px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;padding:0;transition:.16s;}
+.nameplate-setting-preview,.nameplate-modal-preview{position:relative;overflow:hidden;width:100%;height:68px;border-radius:12px;background:var(--surface2);border:1px solid rgba(255,255,255,.07)}
+.nameplate-setting-preview{max-width:360px}
+.nameplate-modal-preview{height:76px}
+.nameplate-setting-preview>img,.nameplate-modal-preview>img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill}
+.nameplate-preview-player{position:relative;z-index:1;display:flex;align-items:center;gap:10px;height:100%;padding:10px 14px;min-width:0}
+.nameplate-option{position:relative;height:60px;overflow:hidden;border-radius:10px;border:1px solid var(--rarity-border,var(--border));background:var(--surface2);cursor:pointer;padding:0;transition:.16s;box-shadow:inset 0 0 18px var(--rarity-bg,transparent)}
 .nameplate-option img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;}
-.nameplate-option span{position:absolute;z-index:1;left:8px;bottom:6px;max-width:calc(100% - 16px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:800 9px Barlow,sans-serif;color:#fff;text-shadow:0 1px 4px #000;}
-.nameplate-option:hover,.nameplate-option.active{border-color:#85ebff;box-shadow:0 0 0 2px rgba(133,235,255,.13);transform:translateY(-1px);}
+.nameplate-option:hover,.nameplate-option.active{border-color:var(--rarity-color,#85ebff);box-shadow:0 0 0 2px var(--rarity-border,rgba(133,235,255,.13)),0 0 20px var(--rarity-glow,rgba(133,235,255,.12));transform:translateY(-1px);}
 .loading{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px;letter-spacing:2px;text-transform:uppercase;}
 
 @media (max-width: 480px) {
@@ -1239,16 +1245,22 @@ body.search-open .profile-side{
     flex-wrap: wrap;
   }
   .search-wrap { padding: 12px; }
-  .search-row { flex-direction: column; gap: 6px; }
-  .search-input { width: 100%; }
+  .search-row {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:6px;
+    width:min(100%,360px);
+  }
+  #search-input { width:100%; }
   .profile-pseudo-edit-row{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
   #profile-pseudo-input{width:100%!important;max-width:none;font-size:16px}
   .profile-pseudo-edit-row .btn-save-color{width:100%;justify-content:center}
-  .search-btn { width: 100%; }
-  #autocomplete-list { right:auto;left:50%;width:min(360px,calc(100vw - 24px)); }
+  .search-btn { width:auto;padding-inline:14px; }
+  #autocomplete-list { right:auto;left:0;width:100%;transform:none; }
   .autocomplete-list{
-    position:static;
-    margin-top:6px;
+    position:absolute;
+    top:calc(100% + 4px);
+    margin-top:0;
     max-height:260px;
   }
   .profile-header { border-radius: 22px; }
@@ -3234,15 +3246,14 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Plaque nominative VIP+</span>
         <span class="save-confirm" id="search-nameplate-confirm"></span>
       </div>
-      <div class="nameplate-setting-preview" id="search-nameplate-preview" style="position:relative;overflow:hidden;min-height:60px;max-width:360px;border-radius:12px;background:var(--surface2)">
-        <img id="search-nameplate-preview-image" src="${escapeHtml(player.search_nameplate || '')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:fill;${player.search_nameplate ? '' : 'display:none'}">
-        <div style="position:relative;z-index:1;display:flex;align-items:center;gap:10px;padding:12px 14px;max-width:300px"><div style="width:34px;height:34px;flex:0 0 34px;border-radius:50%;overflow:hidden;background:${pc}22;border:2px solid ${pc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${pc}">${avatarSrc ? `<img src="${avatarSrc}" alt="" style="width:100%;height:100%;object-fit:cover">` : escapeHtml(player.pseudo[0].toUpperCase())}</div><div style="min-width:0"><div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(player.pseudo)}</div><div style="font-size:10px;color:rgba(255,255,255,.72);margin-top:4px">${Number(player.elo || 0)} ELO</div></div></div>
+      <div class="nameplate-setting-preview" id="search-nameplate-preview">
+        <img id="search-nameplate-preview-image" src="${escapeHtml(player.search_nameplate || '')}" alt="" style="${player.search_nameplate ? '' : 'display:none'}">
+        <div class="nameplate-preview-player"><div style="width:34px;height:34px;flex:0 0 34px;border-radius:50%;overflow:hidden;background:${pc}22;border:2px solid ${pc};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:${pc}">${avatarSrc ? `<img src="${avatarSrc}" alt="" style="width:100%;height:100%;object-fit:cover">` : escapeHtml(player.pseudo[0].toUpperCase())}</div><div style="min-width:0"><div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(player.pseudo)}</div><div style="font-size:10px;color:rgba(255,255,255,.72);margin-top:4px">${Number(player.elo || 0)} ELO</div></div></div>
       </div>
-      <div class="avatar-decoration-meta" id="search-nameplate-meta">Affiche cette plaque animee derrière ton avatar et ton pseudo dans les résultats de recherche. Changement toutes les 24h.</div>
-      <div class="nameplate-gallery" id="search-nameplate-gallery"><span style="font-size:11px;color:var(--muted)">Chargement des plaques…</span></div>
+      <div class="avatar-decoration-meta" id="search-nameplate-meta">Affiche cette plaque derrière ton avatar et ton pseudo dans les recherches et en partie. Changement toutes les 24h.</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="avatar-decoration-btn" id="search-nameplate-btn" type="button" onclick="saveSelectedSearchNameplate()">Appliquer la sélection</button>
-        <button class="avatar-decoration-btn" id="search-nameplate-remove-btn" type="button" onclick="selectSearchNameplate('')" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Aucune plaque</button>
+        <button class="avatar-decoration-btn" id="search-nameplate-change-btn" type="button" onclick="openSearchNameplatePicker()">Changer la plaque</button>
+        <button class="avatar-decoration-btn" id="search-nameplate-remove-btn" type="button" onclick="removeSearchNameplate()" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b88">Retirer la plaque</button>
       </div>
     </div>
     <div class="avatar-decoration-card" id="custom-cursor-card">
@@ -3319,6 +3330,30 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             </div>
           </div>
           <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
+        </div>
+      </div>
+    </div>
+    <div class="avatar-decoration-modal-bg" id="search-nameplate-modal-bg" onclick="if(event.target===this)closeSearchNameplatePicker()">
+      <div class="avatar-decoration-modal">
+        <div class="avatar-decoration-modal-head">
+          <div>
+            <div class="avatar-decoration-modal-title">Plaques nominatives</div>
+            <div class="avatar-decoration-modal-sub">Choisis une plaque VIP+ classée par rareté. Elle sera visible dans les recherches et sur tes cartes de partie.</div>
+          </div>
+          <button class="avatar-decoration-modal-close" type="button" onclick="closeSearchNameplatePicker()">×</button>
+        </div>
+        <div class="avatar-decoration-modal-layout">
+          <div class="avatar-decoration-sidecard">
+            <div class="nameplate-modal-preview">
+              <img id="search-nameplate-modal-preview-image" src="${escapeHtml(player.search_nameplate || '')}" alt="" style="${player.search_nameplate ? '' : 'display:none'}">
+              <div class="nameplate-preview-player"><div style="width:34px;height:34px;flex:0 0 34px;border-radius:50%;overflow:hidden;background:${pc}22;border:2px solid ${pc};display:flex;align-items:center;justify-content:center;font-weight:900;color:${pc}">${avatarSrc ? `<img src="${avatarSrc}" alt="" style="width:100%;height:100%;object-fit:cover">` : escapeHtml(player.pseudo[0].toUpperCase())}</div><strong style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(player.pseudo)}</strong></div>
+            </div>
+            <div class="avatar-decoration-meta" id="search-nameplate-modal-meta">Sélectionne une plaque pour la prévisualiser.</div>
+            <div class="avatar-decoration-modal-actions">
+              <button class="avatar-decoration-btn" id="search-nameplate-btn" type="button" onclick="saveSelectedSearchNameplate()">Appliquer</button>
+            </div>
+          </div>
+          <div class="nameplate-gallery" id="search-nameplate-gallery"><span style="font-size:11px;color:var(--muted)">Chargement des plaques…</span></div>
         </div>
       </div>
     </div>
@@ -5683,18 +5718,30 @@ function initAutoRejoinToggle() {
   initFpsCounterToggle();
 }
 
-function searchNameplateLabel(src) {
-  const file = String(src || '').split('/').pop() || 'Plaque';
-  return file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-}
-
 function renderSearchNameplateGallery(player = currentPlayer) {
   const gallery = document.getElementById('search-nameplate-gallery');
   if (!gallery) return;
   const selected = pendingSearchNameplate === null ? String(player?.search_nameplate || '') : pendingSearchNameplate;
-  gallery.innerHTML = searchNameplateLibrary.length
-    ? searchNameplateLibrary.map(src => `<button type="button" class="nameplate-option ${selected === src ? 'active' : ''}" onclick="selectSearchNameplate('${src}')" title="${escapeHtml(searchNameplateLabel(src))}"><img src="${src}" alt=""><span>${escapeHtml(searchNameplateLabel(src))}</span></button>`).join('')
-    : '<span style="font-size:11px;color:var(--muted)">Aucune plaque disponible.</span>';
+  const tiers = [
+    { key:'common', label:'Commun', icon:'◆', color:'#8e8e93' },
+    { key:'rare', label:'Rare', icon:'✦', color:'#5ac8fa' },
+    { key:'epic', label:'Épique', icon:'✧', color:'#bf5af2' },
+    { key:'legendary', label:'Légendaire', icon:'✹', color:'#ffd60a' },
+    { key:'mythic', label:'Mythique', icon:'✺', color:'#ff2d55' },
+  ];
+  const tierForIndex = index => index % 7 === 0 ? tiers[4] : index % 5 === 0 ? tiers[3] : index % 3 === 0 ? tiers[2] : index % 2 === 0 ? tiers[1] : tiers[0];
+  const grouped = new Map(tiers.map(tier => [tier.key, []]));
+  searchNameplateLibrary.forEach((src, index) => grouped.get(tierForIndex(index + 1).key).push(src));
+  const cards = [];
+  for (const tier of tiers) {
+    const items = grouped.get(tier.key) || [];
+    if (!items.length) continue;
+    cards.push(`<div class="avatar-decoration-tier" style="--tier-color:${tier.color}"><span>${tier.icon}</span>${tier.label}</div>`);
+    for (const src of items) {
+      cards.push(`<button type="button" class="nameplate-option ${selected === src ? 'active' : ''}" style="${rarityStyle(tier.key)}" onclick="selectSearchNameplate('${src}')" aria-label="Choisir cette plaque ${tier.label.toLowerCase()}"><img src="${src}" alt=""></button>`);
+    }
+  }
+  gallery.innerHTML = cards.join('') || '<span style="font-size:11px;color:var(--muted)">Aucune plaque disponible.</span>';
 }
 
 function selectSearchNameplate(src) {
@@ -5707,8 +5754,9 @@ async function saveSelectedSearchNameplate() {
   const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
   if (!me.id) return;
   if (!isVipPlus(me) && !isAdminTier(me)) return alert('La plaque nominative est reservee au VIP+.');
-  const nextValue = pendingSearchNameplate === null ? String(me.search_nameplate || '') : pendingSearchNameplate;
-  if (nextValue === String(me.search_nameplate || '')) return;
+  const equippedValue = String(currentPlayer?.search_nameplate || me.search_nameplate || '');
+  const nextValue = pendingSearchNameplate === null ? equippedValue : pendingSearchNameplate;
+  if (nextValue === equippedValue) return;
   const res = await fetch(`/api/players/${me.id}/search-nameplate`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -5725,12 +5773,24 @@ async function saveSelectedSearchNameplate() {
   sessionStorage.setItem('player', JSON.stringify(me));
   refreshSearchNameplateSetting(me);
   renderSearchNameplateGallery(me);
+  closeSearchNameplatePicker();
+}
+
+async function removeSearchNameplate() {
+  const player = currentPlayer || {};
+  if (!player.search_nameplate) return;
+  pendingSearchNameplate = '';
+  await saveSelectedSearchNameplate();
 }
 
 function refreshSearchNameplateSetting(player = currentPlayer) {
   const btn = document.getElementById('search-nameplate-btn');
   const meta = document.getElementById('search-nameplate-meta');
+  const modalMeta = document.getElementById('search-nameplate-modal-meta');
   const previewImage = document.getElementById('search-nameplate-preview-image');
+  const modalPreviewImage = document.getElementById('search-nameplate-modal-preview-image');
+  const changeBtn = document.getElementById('search-nameplate-change-btn');
+  const removeBtn = document.getElementById('search-nameplate-remove-btn');
   if (!btn || !meta) return;
   const allowed = isVipPlus(player) || isAdminTier(player);
   const active = !!player?.search_nameplate;
@@ -5741,8 +5801,14 @@ function refreshSearchNameplateSetting(player = currentPlayer) {
     previewImage.src = selected;
     previewImage.style.display = selected ? 'block' : 'none';
   }
+  if (modalPreviewImage) {
+    modalPreviewImage.src = selected;
+    modalPreviewImage.style.display = selected ? 'block' : 'none';
+  }
   btn.disabled = !allowed || remaining > 0 || !changed;
-  btn.textContent = changed ? 'Appliquer la sélection' : 'Sélection enregistrée';
+  btn.textContent = changed ? 'Appliquer' : 'Plaque appliquée';
+  if (changeBtn) changeBtn.disabled = !allowed || remaining > 0;
+  if (removeBtn) removeBtn.disabled = !allowed || remaining > 0 || !active;
   meta.textContent = !allowed
     ? 'Fonction reservee au VIP+.'
     : remaining > 0
@@ -5750,6 +5816,9 @@ function refreshSearchNameplateSetting(player = currentPlayer) {
       : changed
         ? 'Sélection prête. Clique sur Appliquer pour l’enregistrer.'
         : `Plaque ${active ? 'active' : 'inactive'}. Tu peux la modifier toutes les 24h.`;
+  if (modalMeta) modalMeta.textContent = changed
+    ? 'Plaque sélectionnée. Clique sur Appliquer.'
+    : active ? 'Cette plaque est actuellement équipée.' : 'Sélectionne une plaque pour la prévisualiser.';
 }
 
 function onAutoRejoinChange(checked) {
@@ -6606,6 +6675,26 @@ async function openAvatarDecorationPicker() {
 function closeAvatarDecorationPicker() {
   PROFIL_SFX.popupClose();
   document.getElementById('avatar-decoration-modal-bg')?.classList.remove('show');
+}
+
+async function openSearchNameplatePicker() {
+  const bg = document.getElementById('search-nameplate-modal-bg');
+  if (!bg) return;
+  PROFIL_SFX.popupOpen();
+  await loadSearchNameplateLibrary();
+  pendingSearchNameplate = String(currentPlayer?.search_nameplate || '');
+  bg.classList.add('show');
+  renderSearchNameplateGallery(currentPlayer);
+  refreshSearchNameplateSetting(currentPlayer);
+}
+
+function closeSearchNameplatePicker() {
+  const bg = document.getElementById('search-nameplate-modal-bg');
+  if (!bg?.classList.contains('show')) return;
+  PROFIL_SFX.popupClose();
+  bg.classList.remove('show');
+  pendingSearchNameplate = null;
+  refreshSearchNameplateSetting(currentPlayer);
 }
 
 async function toggleAdminPwd() {

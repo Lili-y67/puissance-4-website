@@ -666,6 +666,7 @@ function buildPlayableSocketPayload(player) {
     shape: fresh.shape || 'circle',
     token_emoji_image: fresh.token_emoji_image || '',
     avatar_decoration: fresh.avatar_decoration || '',
+    search_nameplate: fresh.search_nameplate || '',
     profile_banner: fresh.profile_banner || '',
     color_secondary: fresh.color_secondary || '',
   };
@@ -1014,6 +1015,7 @@ function createAnonymousGuestSession() {
     role: 'user',
     shape: 'circle',
     avatar_decoration: '',
+    search_nameplate: '',
     token_emoji_image: '',
     profile_banner: '',
     queue_music: '',
@@ -1460,6 +1462,7 @@ function buildBotGamePayload(player, socketId = null) {
     shape: clean.shape || 'circle',
     token_emoji_image: clean.token_emoji_image || '',
     avatar_decoration: clean.avatar_decoration || '',
+    search_nameplate: clean.search_nameplate || '',
     profile_banner: clean.profile_banner || '',
     color_secondary: clean.color_secondary || '',
     botSkill: Number(clean.bot_skill || clean.elo || 1000),
@@ -6601,8 +6604,8 @@ app.get('/api/live', (_, res) => {
         // Si les deux joueurs ont la mAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme couleur, forcer p2 en jaune
         if (c1.toLowerCase() === c2.toLowerCase()) c2 = '#ffd60a';
         return {
-          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle', token_emoji_image: state.players[1].token_emoji_image || '', token_rgb: Number(state.players[1].pseudo_rgb || 0) === 1, avatar_decoration: state.players[1].avatar_decoration || '', profile_banner: state.players[1].profile_banner || '', color_secondary: state.players[1].color_secondary || '', is_bot: Number(state.players[1].is_bot || 0) },
-          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', token_rgb: Number(state.players[2].pseudo_rgb || 0) === 1, avatar_decoration: state.players[2].avatar_decoration || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '', is_bot: Number(state.players[2].is_bot || 0) },
+          1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, color: c1, avatar: state.players[1].avatar || '', shape: state.players[1].shape || 'circle', token_emoji_image: state.players[1].token_emoji_image || '', token_rgb: Number(state.players[1].pseudo_rgb || 0) === 1, avatar_decoration: state.players[1].avatar_decoration || '', search_nameplate: state.players[1].search_nameplate || '', profile_banner: state.players[1].profile_banner || '', color_secondary: state.players[1].color_secondary || '', is_bot: Number(state.players[1].is_bot || 0) },
+          2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', token_rgb: Number(state.players[2].pseudo_rgb || 0) === 1, avatar_decoration: state.players[2].avatar_decoration || '', search_nameplate: state.players[2].search_nameplate || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '', is_bot: Number(state.players[2].is_bot || 0) },
         };
       })(),
       grid:    state.board.grid,
@@ -9160,6 +9163,7 @@ app.get('/api/bot-id', (_, res) => {
     shape: bot?.shape || 'circle',
     avatar: bot?.avatar || BOT_AVATAR,
     avatar_decoration: bot?.avatar_decoration || '',
+    search_nameplate: bot?.search_nameplate || '',
     profile_banner: bot?.profile_banner || '',
     token_emoji_image: bot?.token_emoji_image || '',
     token_rgb: Number(bot?.pseudo_rgb || 0) === 1,
@@ -10224,8 +10228,8 @@ io.on('connection', socket => {
           moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 0,
         } : null,
         players: {
-          1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
-          2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
+          1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color || '#ff2d55', avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', search_nameplate: p1.search_nameplate || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
+          2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color || '#ffd60a', avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', search_nameplate: p2.search_nameplate || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
         },
         grid:    state.board.grid,
         current: state.current,
@@ -10420,8 +10424,8 @@ function _startMatch(p1, p2, options = {}) {
       moveTimeSeconds: Number(options.moveTimeSeconds || 0) || 0,
     } : null,
     players: {
-      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
-      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
+      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: _c1, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', search_nameplate: p1.search_nameplate || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
+      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: _c2, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', search_nameplate: p2.search_nameplate || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
     },
     latencies: getGameLatencyPayload(state),
     startsIn: 3,
