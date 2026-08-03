@@ -308,8 +308,15 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 }
 .profile-banner:hover .profile-banner-overlay{opacity:1;}
 .profile-header-inner{
-  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:24px;padding:26px 28px 30px;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;padding:26px 28px 30px;
 }
+.profile-header-main{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.profile-nameplate-identity{position:relative;isolation:isolate;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:20px;width:100%;max-width:680px;min-height:116px;padding:16px 22px;border-radius:18px;overflow:hidden}
+.profile-nameplate-identity.has-nameplate{border:1px solid rgba(255,255,255,.08);box-shadow:0 16px 36px rgba(0,0,0,.2)}
+.profile-nameplate-image{position:absolute;inset:0;z-index:-1;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.profile-nameplate-identity.has-nameplate::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(5,5,12,.08),rgba(5,5,12,.02) 64%,rgba(5,5,12,.12));pointer-events:none}
+.profile-nameplate-identity .profile-info{position:relative;z-index:1}
+.profile-header-meta{display:flex;flex-direction:column;align-items:flex-start;min-width:0;width:100%;padding-inline:4px}
 .avatar-wrap{position:relative;flex-shrink:0;cursor:pointer;}
 .avatar-wrap:hover .avatar-overlay{opacity:1;}
 .profile-avatar{position:relative;z-index:1;width:72px;height:72px;border-radius:50%;background:var(--player-color-dim,var(--red-dim));border:3px solid transparent;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:900;color:var(--player-color,var(--red));overflow:hidden;transition:border-color 0.4s,background 0.4s,color 0.4s;}
@@ -1287,6 +1294,12 @@ body.search-open .profile-side{
     text-align: center;
     padding: 18px 16px 20px;
   }
+  .profile-header-main{width:100%;align-items:stretch}
+  .profile-nameplate-identity{grid-template-columns:auto minmax(0,1fr);gap:14px;min-height:104px;padding:14px 16px;text-align:left}
+  .profile-nameplate-identity .profile-info{align-items:flex-start;text-align:left}
+  .profile-nameplate-identity .profile-pseudo{text-align:left}
+  .profile-nameplate-identity .profile-badges{justify-content:flex-start}
+  .profile-header-meta{align-items:center;text-align:center;padding-inline:0}
   .profile-info { width: 100%; min-width: 0; align-items: center; text-align: center; }
   .profile-pseudo { font-size: 26px; text-align: center; }
   .profile-badges { justify-content: center; }
@@ -2801,27 +2814,34 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         ${isOwnProfile ? '<div class="profile-banner-overlay">Modifier</div>' : ''}
       </div>
       <div class="profile-header-inner">
-        ${avatarSection}
-        <div class="profile-info">
-          <div class="profile-pseudo ${Number(player.pseudo_rgb || 0) === 1 ? 'pseudo-rgb-wave' : ''}" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
-          <div class="profile-badges">
-            ${renderBotBadge(player)}
-            ${renderVipBadge(player)}
-            ${renderClanBadge(player.clan)}
-            ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
-            ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
-            ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
-            ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><img src="/assets/developer-badge.png" alt="">DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
-            ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso ${getPersoRoleAccent(player).rgb ? 'badge-rgb-wave' : ''}" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+        <div class="profile-header-main">
+          <div class="profile-nameplate-identity ${player.search_nameplate ? 'has-nameplate' : ''}" id="profile-nameplate-identity">
+            ${player.search_nameplate ? `<img class="profile-nameplate-image" src="${escapeHtml(player.search_nameplate)}" alt="">` : ''}
+            ${avatarSection}
+            <div class="profile-info">
+              <div class="profile-pseudo ${Number(player.pseudo_rgb || 0) === 1 ? 'pseudo-rgb-wave' : ''}" style="${getPseudoDisplayStyle(player)}">${escapeHtml(player.pseudo)}</div>
+              <div class="profile-badges">
+                ${renderBotBadge(player)}
+                ${renderVipBadge(player)}
+                ${renderClanBadge(player.clan)}
+                ${player.is_perso && !hasCustomPersoRole(player) ? `<span class="profile-badge perso"><span class="badge-icon">&#10024;</span>${getPersoAccent().label}</span>` : ''}
+                ${player.role === 'moderator' ? '<span class="profile-badge modo"><span class="badge-icon">&#128737;&#65039;</span>MODO</span>' : ''}
+                ${player.role === 'admin'     ? '<span class="profile-badge staff"><span class="badge-icon">&#9889;</span>ADMIN</span>' : ''}
+                ${isDeveloper(player) ? `${isOwnProfile ? '<a href="/dev"' : '<span'} class="profile-badge dev" title="Développeur"><img src="/assets/developer-badge.png" alt="">DEV${isOwnProfile ? '</a>' : '</span>'}` : ''}
+                ${Number(player.is_bot || 0) !== 1 && player.custom_role_text && player.custom_role_color ? `<span class="profile-badge perso ${getPersoRoleAccent(player).rgb ? 'badge-rgb-wave' : ''}" style="--badge-color:${getPersoRoleAccent(player).color};--badge-bg:${getPersoRoleAccent(player).bg};--badge-border:${getPersoRoleAccent(player).border};--badge-glow:${getPersoRoleAccent(player).glow}">${getPersoRoleAccent(player).emoji ? `<span class="badge-icon">${getPersoRoleAccent(player).emoji}</span>` : ''}${getPersoRoleAccent(player).label}</span>` : ''}
+              </div>
+            </div>
           </div>
-          ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
-          <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
-          ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
-          <div class="profile-pill-row">
-            <div class="profile-pill"><span>🏆</span><strong>${player.rank?.label || 'UNRANKED'}</strong></div>
-            <div class="profile-pill"><span>🎮</span><strong>${gamesTotal} parties</strong></div>
-            <div class="profile-pill"><span>📈</span><strong>${wr}% WR</strong></div>
-            <div class="profile-pill"><span>✨</span><strong>${player.avg_accuracy != null ? `${player.avg_accuracy}% precision` : 'Analyse a venir'}</strong></div>
+          <div class="profile-header-meta">
+            ${player.is_vip && !player.is_vip_plus && player.vip_expires_at ? `<div class="profile-media-note" style="color:${getVipAccent(player).color};margin-top:6px">${getVipExpiryLabel(player)}</div>` : ''}
+            <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
+            ${isOwnProfile ? '<div class="profile-media-note">Photo · Bannière (clic sur chacune)</div>' : ''}
+            <div class="profile-pill-row">
+              <div class="profile-pill"><span>🏆</span><strong>${player.rank?.label || 'UNRANKED'}</strong></div>
+              <div class="profile-pill"><span>🎮</span><strong>${gamesTotal} parties</strong></div>
+              <div class="profile-pill"><span>📈</span><strong>${wr}% WR</strong></div>
+              <div class="profile-pill"><span>✨</span><strong>${player.avg_accuracy != null ? `${player.avg_accuracy}% precision` : 'Analyse a venir'}</strong></div>
+            </div>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
@@ -5787,9 +5807,29 @@ async function saveSelectedSearchNameplate() {
   pendingSearchNameplate = null;
   localStorage.setItem('player', JSON.stringify(me));
   sessionStorage.setItem('player', JSON.stringify(me));
+  refreshProfileHeaderNameplate(me);
   refreshSearchNameplateSetting(me);
   renderSearchNameplateGallery(me);
   closeSearchNameplatePicker();
+}
+
+function refreshProfileHeaderNameplate(player = currentPlayer) {
+  const identity = document.getElementById('profile-nameplate-identity');
+  if (!identity) return;
+  const src = String(player?.search_nameplate || '');
+  let image = identity.querySelector('.profile-nameplate-image');
+  identity.classList.toggle('has-nameplate', !!src);
+  if (!src) {
+    image?.remove();
+    return;
+  }
+  if (!image) {
+    image = document.createElement('img');
+    image.className = 'profile-nameplate-image';
+    image.alt = '';
+    identity.prepend(image);
+  }
+  image.src = src;
 }
 
 async function removeSearchNameplate() {
