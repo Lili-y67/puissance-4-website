@@ -1927,7 +1927,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
   lastModified: true,
   setHeaders(res, filePath) {
-    if (/(?:service-worker\.js|manifest\.webmanifest|theme\.css|theme\.js)$/i.test(filePath)) {
+    if (/(?:service-worker\.js|manifest\.webmanifest|theme\.css|theme\.js|beta-game\.html)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     } else if (/\.(?:png|jpe?g|webp|gif|svg|ico|mp3|wav|ogg|m4a|woff2?)$/i.test(filePath)) {
       res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
@@ -2108,7 +2108,11 @@ app.get('/api/system-status', (_, res) => {
 app.get('/',           renderStaticPage('index.html', { title: 'Puissance 4', description: 'Joue au Puissance 4 en ligne, defie tes amis, grimpe le classement et personnalise ton profil.' }));
 app.get('/game',       renderStaticPage('game.html', { title: 'Partie - Puissance 4', description: 'Lance ou rejoins une partie Puissance 4 en ligne.' }));
 app.get('/game/bot',   renderStaticPage('game.html', { title: 'Bot - Puissance 4', description: 'Affronte un bot Puissance 4 et entraine-toi.' }));
-app.get('/beta-game',  renderStaticPage('beta-game.html', { title: 'Laboratoire beta - Puissance 4', description: 'Teste les variantes experimentales du Puissance 4.' }));
+app.get('/beta-game',  (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  next();
+}, renderStaticPage('beta-game.html', { title: 'Laboratoire beta - Puissance 4', description: 'Teste les variantes experimentales du Puissance 4.' }));
 app.get('/local',      renderStaticPage('local.html', { title: 'Mode local - Puissance 4', description: 'Joue au Puissance 4 sur le meme appareil.' }));
 app.get('/spec/:id', (req, res) => {
   const gameId = Number(req.params.id);
