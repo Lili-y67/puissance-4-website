@@ -1870,6 +1870,50 @@ archiveOldGames();
 setInterval(archiveOldGames, 60 * 60 * 1000);
 
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
+
+// Laboratoire de variantes : acces volontairement separe des comptes et des parties classees.
+// Le jeton reste en memoire et expire rapidement ; aucun profil ni resultat n'est persiste.
+const betaAccessTokens = new Map();
+const betaLoginAttempts = new Map();
+const BETA_ACCESS_TTL_MS = 6 * 60 * 60 * 1000;
+const BETA_GAME_PASSWORD = String(process.env.BETA_GAME_PASSWORD || 'beta4');
+
+function safeSecretEqual(left, right) {
+  const a = Buffer.from(String(left || ''));
+  const b = Buffer.from(String(right || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function betaClientKey(req) {
+  return String((req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown');
+}
+
+app.post('/api/beta-game/login', (req, res) => {
+  const key = betaClientKey(req);
+  const attempt = betaLoginAttempts.get(key) || { count: 0, resetAt: 0 };
+  if (Date.now() > attempt.resetAt) Object.assign(attempt, { count: 0, resetAt: Date.now() + 10 * 60 * 1000 });
+  if (attempt.count >= 8) return res.status(429).json({ error: 'Trop de tentatives. Reessaie dans quelques minutes.' });
+  if (!safeSecretEqual(req.body?.password, BETA_GAME_PASSWORD)) {
+    attempt.count += 1;
+    betaLoginAttempts.set(key, attempt);
+    return res.status(401).json({ error: 'Mot de passe incorrect.' });
+  }
+  betaLoginAttempts.delete(key);
+  const token = crypto.randomBytes(32).toString('hex');
+  betaAccessTokens.set(token, Date.now() + BETA_ACCESS_TTL_MS);
+  res.json({ token, expiresIn: BETA_ACCESS_TTL_MS });
+});
+
+app.get('/api/beta-game/session', (req, res) => {
+  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const expiresAt = betaAccessTokens.get(token) || 0;
+  if (!token || expiresAt <= Date.now()) {
+    if (token) betaAccessTokens.delete(token);
+    return res.status(401).json({ valid: false });
+  }
+  res.json({ valid: true, expiresAt });
+});
+
 app.get('/profil.html', renderProfilePage);
 app.get('/leaderboard.html', renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
 app.get('/players.html', renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
