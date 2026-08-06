@@ -298,9 +298,10 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 </div>
 
 <script>
-const ROWS = 6, COLS = 7;
-let moves = [], gameData = null;
+let ROWS = 6, COLS = 7;
+let moves = [], actions = [], gameData = null;
 let moveIndex = 0;
+let actionIndex = 0;
 let replayTimeout = null;
 // Cap think time for replay: min 400ms, max 3000ms (to not bore the viewer)
 const MIN_THINK = 400;
@@ -336,6 +337,10 @@ async function init() {
     const data = await res.json();
     gameData = data.game;
     moves    = data.moves;
+    actions  = data.actions || [];
+    const sizes = { classic:[6,7], rotate:[7,7], anti:[9,9], bomb:[6,7], mission:[7,7], simultaneous:[6,7] };
+    [ROWS, COLS] = sizes[gameData.variant || 'classic'] || sizes.classic;
+    board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
 
     // Détecter si c'est une partie bot
     const botRes = await fetch('/api/bot-id').catch(() => null);
@@ -633,6 +638,9 @@ function renderShell() {
 function renderBoard() {
   const el = document.getElementById('board');
   if (!el) return;
+  el.style.gridTemplateColumns = `repeat(${COLS},minmax(0,1fr))`;
+  el.style.gridTemplateRows = `repeat(${ROWS},minmax(0,1fr))`;
+  el.style.aspectRatio = `${COLS}/${ROWS}`;
   el.innerHTML = '';
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -680,6 +688,7 @@ function placeToken(row, col, player) {
 function startReplay() {
   board      = Array.from({length:ROWS}, () => Array(COLS).fill(0));
   moveIndex  = 0;
+  actionIndex = 0;
   renderBoard();
   scheduleNextMove();
 }
@@ -867,6 +876,8 @@ function setSpeed(s) {
 }
 
 function scheduleNextMove() {
+  const nextNumber = Number(moves[moveIndex]?.move_number || Infinity);
+  applyReplayActions(nextNumber - 1);
   if (moveIndex >= moves.length) {
     finishReplay();
     return;
@@ -907,6 +918,7 @@ function playMoveInReplay(move, player) {
   SFX.drop();
   placeToken(move.row, move.col, player);
   moveIndex++;
+  applyReplayActions(Number(move.move_number || moveIndex));
 
   // Update progress
   const pct = (moveIndex / moves.length) * 100;
@@ -922,7 +934,20 @@ function playMoveInReplay(move, player) {
   replayTimeout = setTimeout(scheduleNextMove, Math.round(200 / replaySpeed));
 }
 
+function applyReplayActions(upTo) {
+  while (actionIndex < actions.length && Number(actions[actionIndex].action_number || 0) <= upTo) {
+    const action = actions[actionIndex++];
+    const snapshot = action.payload?.board || action.payload?.grid;
+    if (Array.isArray(snapshot)) {
+      board = Array.from({length:ROWS}, (_, r) => Array.from({length:COLS}, (_, c) => Number(snapshot?.[r]?.[c] || 0)));
+      renderBoard();
+      for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(board[r][c]) placeToken(r,c,board[r][c]);
+    }
+  }
+}
+
 function finishReplay() {
+  applyReplayActions(Infinity);
   updateReplayDiscordPresence(true);
   // Son de fin
   if (gameData.winner_id === null) SFX.draw();

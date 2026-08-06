@@ -101,6 +101,32 @@ try { db.exec(`ALTER TABLE players ADD COLUMN last_seen    INTEGER`); } catch(e)
 try { db.exec(`ALTER TABLE games ADD COLUMN p1_accuracy REAL`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN p2_accuracy REAL`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN analysis_data TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN variant TEXT NOT NULL DEFAULT 'classic'`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN variant_state TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS player_variant_stats (
+    player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    variant TEXT NOT NULL,
+    elo INTEGER NOT NULL DEFAULT 1000,
+    best_elo INTEGER NOT NULL DEFAULT 1000,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0,
+    draws INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (player_id, variant)
+  );
+  CREATE INDEX IF NOT EXISTS idx_variant_stats_rank
+    ON player_variant_stats(variant, elo DESC);
+  CREATE TABLE IF NOT EXISTS game_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+    player_id INTEGER,
+    action_number INTEGER NOT NULL,
+    action_type TEXT NOT NULL,
+    payload TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_game_actions_game ON game_actions(game_id, action_number);
+`);
 try { db.exec(`ALTER TABLE players ADD COLUMN discord_info TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE players ADD COLUMN deleted     INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`); } catch(e) {}
@@ -289,6 +315,52 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_clan_messages_clan ON clan_messages(clan_id, created_at);
 `);
 
+// Groupes prives : cercles d'amis independants des clans competitifs.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS friend_groups (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    emoji       TEXT NOT NULL DEFAULT '🎮',
+    owner_id    INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    created_at  INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS friend_group_members (
+    group_id    INTEGER NOT NULL REFERENCES friend_groups(id) ON DELETE CASCADE,
+    player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    role        TEXT NOT NULL DEFAULT 'member',
+    joined_at   INTEGER NOT NULL,
+    PRIMARY KEY (group_id, player_id)
+  );
+  CREATE TABLE IF NOT EXISTS friend_group_invites (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id    INTEGER NOT NULL REFERENCES friend_groups(id) ON DELETE CASCADE,
+    sender_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    target_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  INTEGER NOT NULL,
+    responded_at INTEGER
+  );
+  CREATE TABLE IF NOT EXISTS friend_group_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id    INTEGER NOT NULL REFERENCES friend_groups(id) ON DELETE CASCADE,
+    player_id   INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    message     TEXT NOT NULL,
+    created_at  INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS friend_group_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id    INTEGER NOT NULL REFERENCES friend_groups(id) ON DELETE CASCADE,
+    created_by  INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+    type        TEXT NOT NULL,
+    title       TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'open',
+    created_at  INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_friend_group_members_player ON friend_group_members(player_id);
+  CREATE INDEX IF NOT EXISTS idx_friend_group_invites_target ON friend_group_invites(target_id, status);
+  CREATE INDEX IF NOT EXISTS idx_friend_group_messages_group ON friend_group_messages(group_id, id DESC);
+`);
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS player_token_collection (
     player_id        INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
@@ -441,7 +513,7 @@ const pQ = {
 
 // ── Games ─────────────────────────────────────────────────────────────────────
 const gQ = {
-  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape, tournament_id, tournament_move_time_seconds, game_type) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape, @tournament_id, @tournament_move_time_seconds, @game_type)`),
+  create: db.prepare(`INSERT INTO games (player1_id, player2_id, p1_color, p2_color, p1_shape, p2_shape, tournament_id, tournament_move_time_seconds, game_type, variant) VALUES (@p1, @p2, @p1_color, @p2_color, @p1_shape, @p2_shape, @tournament_id, @tournament_move_time_seconds, @game_type, @variant)`),
   getById: db.prepare(`
     SELECT g.*,
       p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
@@ -521,6 +593,32 @@ const fQ = {
   `),
   countFollowing: db.prepare(`SELECT COUNT(*) as n FROM follows WHERE follower_id  = ?`),
   countFollowers: db.prepare(`SELECT COUNT(*) as n FROM follows WHERE following_id = ?`),
+};
+
+const variantQ = {
+  ensure: db.prepare(`INSERT OR IGNORE INTO player_variant_stats (player_id, variant) VALUES (?, ?)`),
+  get: db.prepare(`SELECT * FROM player_variant_stats WHERE player_id = ? AND variant = ?`),
+  listForPlayer: db.prepare(`SELECT variant, elo, best_elo, wins, losses, draws FROM player_variant_stats WHERE player_id = ? ORDER BY variant`),
+  leaderboard: db.prepare(`
+    SELECT s.*, p.pseudo, p.avatar, p.color, p.shape
+    FROM player_variant_stats s JOIN players p ON p.id = s.player_id
+    WHERE s.variant = ? AND p.deleted = 0 AND p.is_guest = 0 AND p.is_bot = 0
+    ORDER BY s.elo DESC LIMIT ?
+  `),
+  updateResult: db.prepare(`
+    UPDATE player_variant_stats SET
+      elo = MAX(0, elo + @delta),
+      best_elo = MAX(best_elo, MAX(0, elo + @delta)),
+      wins = wins + @wins,
+      losses = losses + @losses,
+      draws = draws + @draws
+    WHERE player_id = @player_id AND variant = @variant
+  `),
+};
+
+const aQ = {
+  insert: db.prepare(`INSERT INTO game_actions (game_id, player_id, action_number, action_type, payload) VALUES (@game_id, @player_id, @action_number, @action_type, @payload)`),
+  getByGame: db.prepare(`SELECT * FROM game_actions WHERE game_id = ? ORDER BY action_number, id`),
 };
 
 const cQ = {
@@ -679,18 +777,28 @@ function getActiveShopBooster(playerId, boostType) {
   `).get(playerId, boostType, Date.now());
 }
 
-const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false, resultReason = '') => {
+const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duration, isDraw, isSuspect = false, resultReason = '', requestedVariant = 'classic', variantState = null) => {
   const game = gQ.getById.get(gameId);
+  const variant = String(requestedVariant || game?.variant || 'classic');
+  const usesVariantRating = variant !== 'classic';
   const player1 = pQ.getById.get(game.player1_id);
   const player2 = pQ.getById.get(game.player2_id);
   const winner = pQ.getById.get(winnerId);
   const loser  = pQ.getById.get(loserId);
+  if (usesVariantRating) {
+    variantQ.ensure.run(game.player1_id, variant);
+    variantQ.ensure.run(game.player2_id, variant);
+  }
+  const p1Rating = usesVariantRating ? variantQ.get.get(game.player1_id, variant).elo : player1.elo;
+  const p2Rating = usesVariantRating ? variantQ.get.get(game.player2_id, variant).elo : player2.elo;
+  const winnerRating = winnerId === game.player1_id ? p1Rating : p2Rating;
+  const loserRating = loserId === game.player1_id ? p1Rating : p2Rating;
   const isFriendly = String(game?.game_type || 'ranked') === 'friendly';
   const shopEloActive = !isFriendly && !isDraw ? getActiveShopBooster(winnerId, 'elo') : null;
   const shopEloMultiplier = shopEloActive ? Math.max(1, Number(shopEloActive.multiplier || 1)) : 1;
   const eloCalc = isFriendly
     ? { dW: 0, dL: 0, globalMultiplier: 1, vipApplied: false, vipAppliedTo: null, vipMultiplier: 1, vipTier: null }
-    : calcElo(winner.elo, loser.elo, isDraw, isDraw ? null : winnerId);
+    : calcElo(winnerRating, loserRating, isDraw, isDraw ? null : winnerId);
   const dW = !isFriendly && !isDraw && shopEloMultiplier > 1 ? Math.ceil(Number(eloCalc.dW || 0) * shopEloMultiplier) : eloCalc.dW;
   const dL = eloCalc.dL;
   const vipApplied = !isFriendly && !isDraw ? !!vipQ.getActive.get(winnerId, Date.now()) : false;
@@ -723,16 +831,23 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
   const p2Coins = isFriendly || isSuspect || p2IsBot ? 0 : Math.ceil((1 + Math.floor(Math.random() * 3)) * p2CoinMultiplier);
   if (!isFriendly && !isSuspect) {
     // ELO et stats appliqués seulement si partie légitime
-    pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
-    pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
+    if (usesVariantRating) {
+      variantQ.updateResult.run({ player_id: game.player1_id, variant, delta: p1Delta, wins: !isDraw && winnerId === game.player1_id ? 1 : 0, losses: !isDraw && loserId === game.player1_id ? 1 : 0, draws: isDraw ? 1 : 0 });
+      variantQ.updateResult.run({ player_id: game.player2_id, variant, delta: p2Delta, wins: !isDraw && winnerId === game.player2_id ? 1 : 0, losses: !isDraw && loserId === game.player2_id ? 1 : 0, draws: isDraw ? 1 : 0 });
+    } else {
+      pQ.updateElo.run({ delta: p1Delta, id: game.player1_id });
+      pQ.updateElo.run({ delta: p2Delta, id: game.player2_id });
+    }
     if (p1Coins > 0) pQ.addCoins.run({ delta: p1Coins, id: game.player1_id });
     if (p2Coins > 0) pQ.addCoins.run({ delta: p2Coins, id: game.player2_id });
-    if (isDraw) {
-      pQ.draw.run(game.player1_id);
-      pQ.draw.run(game.player2_id);
-    } else {
-      pQ.win.run(winnerId);
-      pQ.loss.run(loserId);
+    if (!usesVariantRating) {
+      if (isDraw) {
+        pQ.draw.run(game.player1_id);
+        pQ.draw.run(game.player2_id);
+      } else {
+        pQ.win.run(winnerId);
+        pQ.loss.run(loserId);
+      }
     }
     if (!isDraw && winner && Number(winner.is_bot || 0) === 1 && Number(winner.bot_owner_id || 0) > 0) {
       const owner = pQ.getById.get(Number(winner.bot_owner_id || 0));
@@ -747,7 +862,7 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
 
   // Stocker l'ELO avant la partie pour permettre un revert
   db.prepare(`UPDATE games SET elo_before_p1=?, elo_before_p2=? WHERE id=?`)
-    .run(player1.elo, player2.elo, gameId);
+    .run(p1Rating, p2Rating, gameId);
 
   gQ.finish.run({
     id: gameId, winner_id: isDraw ? null : winnerId,
@@ -759,6 +874,11 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     p2_shape: game.p2_shape || 'circle',
     result_reason: String(resultReason || ''),
   });
+  db.prepare(`UPDATE games SET variant = ?, variant_state = ? WHERE id = ?`).run(
+    variant,
+    variantState ? JSON.stringify(variantState) : '',
+    gameId,
+  );
 
   // Marquer la partie comme suspecte en DB
   if (isSuspect) {
@@ -789,10 +909,11 @@ const finishGame = db.transaction((gameId, winnerId, loserId, moveCount, duratio
     },
     player1CoinsNow: pQ.getById.get(game.player1_id).coins,
     player2CoinsNow: pQ.getById.get(game.player2_id).coins,
-    player1EloNow: pQ.getById.get(game.player1_id).elo,
-    player2EloNow: pQ.getById.get(game.player2_id).elo,
-    winnerEloNow: pQ.getById.get(winnerId).elo,
-    loserEloNow: pQ.getById.get(loserId).elo,
+    player1EloNow: usesVariantRating ? variantQ.get.get(game.player1_id, variant).elo : pQ.getById.get(game.player1_id).elo,
+    player2EloNow: usesVariantRating ? variantQ.get.get(game.player2_id, variant).elo : pQ.getById.get(game.player2_id).elo,
+    winnerEloNow: usesVariantRating ? variantQ.get.get(winnerId, variant).elo : pQ.getById.get(winnerId).elo,
+    loserEloNow: usesVariantRating ? variantQ.get.get(loserId, variant).elo : pQ.getById.get(loserId).elo,
+    variant,
   };
 });
 
@@ -1018,4 +1139,4 @@ const tQ = {
 
 function initDb() { return Promise.resolve(); }
 
-module.exports = { initDb, db, pQ, gQ, mQ, bQ, vipQ, fQ, cQ, sQ, abQ, rQ, tQ, tokenCollectionQ, calcElo, finishGame };
+module.exports = { initDb, db, pQ, gQ, mQ, aQ, variantQ, bQ, vipQ, fQ, cQ, sQ, abQ, rQ, tQ, tokenCollectionQ, calcElo, finishGame };

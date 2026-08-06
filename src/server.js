@@ -9,7 +9,7 @@ const os         = require('os');
 const { fork, spawn } = require('child_process');
 const { Readable } = require('stream');
 
-const { initDb, db, pQ, gQ, mQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
+const { initDb, db, pQ, gQ, mQ, aQ, variantQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
 const { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward } = require('./token-collection');
 const { getRank, getAllRankRoleNames } = require('./rank');
 const { createSecurity } = require('./security');
@@ -30,6 +30,7 @@ const apiAuditRecent = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
+const { normalizeVariant, getVariant, publicVariants, MISSION_DEFINITIONS } = require('./game/variants');
 const { createProgression }    = require('./progression');
 
 const MAIN_DB_PATH = path.join(__dirname, '../data/p4.db');
@@ -456,6 +457,7 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
     JOIN players p2 ON p2.id = g.player2_id
     WHERE (g.player1_id = ? OR g.player2_id = ?)
       AND g.status = 'finished'
+      AND COALESCE(g.variant, 'classic') = 'classic'
       AND g.finished_at IS NOT NULL
     ORDER BY g.finished_at ASC, g.id ASC
   `).all(id, id);
@@ -5518,6 +5520,8 @@ app.get('/leaderboard', renderStaticPage('leaderboard.html', { title: 'Classemen
 app.get('/classement',  renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
 app.get('/clan',       renderStaticPage('clan.html', { title: 'Clans - Puissance 4', description: 'Cree ou rejoins un clan et progresse avec ton equipe.' }));
 app.get('/clan/:id',   renderStaticPage('clan.html', { title: 'Clan - Puissance 4', description: 'Decouvre ce clan Puissance 4 et ses membres.' }));
+app.get('/groups',     renderStaticPage('groups.html', { title: 'Groupes - Puissance 4', description: 'Retrouve tes amis, discute et organise des parties privees.' }));
+app.get('/groups.html', renderStaticPage('groups.html', { title: 'Groupes - Puissance 4', description: 'Retrouve tes amis, discute et organise des parties privees.' }));
 app.get('/players',    renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
 app.get('/bots',       renderStaticPage('players.html', { title: 'Bots - Puissance 4', description: 'Defie les bots Puissance 4 et compare leurs niveaux.' }));
 app.get('/boutique',   renderStaticPage('boutique.html', { title: 'Boutique - Puissance 4', description: 'Personnalise ton profil Puissance 4 avec des cosmetiques.' }));
@@ -6658,6 +6662,10 @@ app.get('/api/live', (_, res) => {
         };
       })(),
       grid:    state.board.grid,
+      variant: state.variant || 'classic',
+      variantConfig: state.variantConfig || getVariant(state.variant),
+      antiScores: state.antiScores || null,
+      bombs: state.bombs || null,
       current: state.current,
       moves:   state.moveCount,
       gameType: state.gameType || 'ranked',
@@ -6862,6 +6870,28 @@ app.post('/api/auth/login', security.routeGuard('login'), (req, res) => {
   const token = createSession(player.id);
   security.recordLoginSuccess(req, player.id);
   res.json({ ...sanitize(freshPlayer), token, referralLinked: !!referrer });
+});
+
+app.get('/api/variants', (_req, res) => {
+  res.json({ variants: publicVariants(), missions: MISSION_DEFINITIONS });
+});
+
+app.get('/api/players/:id/variant-stats', (req, res) => {
+  const playerId = Number(req.params.id || 0);
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const stored = new Map(variantQ.listForPlayer.all(playerId).map(row => [row.variant, row]));
+  const stats = publicVariants().map(variant => {
+    if (variant.id === 'classic') return { ...variant, elo: player.elo, best_elo: Math.max(1000, player.elo), wins: player.wins, losses: player.losses, draws: player.draws };
+    return { ...variant, ...(stored.get(variant.id) || { elo: 1000, best_elo: 1000, wins: 0, losses: 0, draws: 0 }) };
+  });
+  res.json({ playerId, stats });
+});
+
+app.get('/api/leaderboard/variant/:variant', (req, res) => {
+  const variant = normalizeVariant(req.params.variant);
+  if (variant === 'classic') return res.json({ variant, players: pQ.leaderboard.all() });
+  res.json({ variant, players: variantQ.leaderboard.all(variant, 50) });
 });
 
 app.get('/api/auth/session', (req, res) => {
@@ -8386,6 +8416,106 @@ app.post('/api/clans/leave', security.routeGuard('clan'), (req, res) => {
   }
 });
 
+function groupSession(req) {
+  const token = String(req.body?.token || req.query?.token || req.headers['x-session-token'] || '');
+  const playerId = validateSession(token);
+  if (!playerId || isAnonymousPlayerId(playerId)) return null;
+  return { playerId: Number(playerId), player: pQ.getById.get(playerId) };
+}
+
+function serializeFriendGroup(groupId, viewerId) {
+  const group = db.prepare(`SELECT g.*, p.pseudo owner_pseudo FROM friend_groups g JOIN players p ON p.id=g.owner_id WHERE g.id=?`).get(groupId);
+  if (!group) return null;
+  const members = db.prepare(`SELECT p.id,p.pseudo,p.avatar,p.color,p.elo,m.role,m.joined_at FROM friend_group_members m JOIN players p ON p.id=m.player_id WHERE m.group_id=? AND p.deleted=0 ORDER BY m.role='owner' DESC,p.pseudo`).all(groupId);
+  const events = db.prepare(`SELECT e.*,p.pseudo creator_pseudo FROM friend_group_events e JOIN players p ON p.id=e.created_by WHERE e.group_id=? ORDER BY e.id DESC LIMIT 12`).all(groupId);
+  return { ...group, id:Number(group.id), owner_id:Number(group.owner_id), created_at:Number(group.created_at), members, events, viewer_role: members.find(m => Number(m.id) === Number(viewerId))?.role || '' };
+}
+
+app.get('/api/groups', (req, res) => {
+  const session = groupSession(req);
+  if (!session) return res.status(401).json({ error: 'Connecte-toi pour voir tes groupes.' });
+  const ids = db.prepare(`SELECT group_id FROM friend_group_members WHERE player_id=? ORDER BY joined_at DESC`).all(session.playerId);
+  res.json({ groups: ids.map(row => serializeFriendGroup(row.group_id, session.playerId)).filter(Boolean) });
+});
+
+app.post('/api/groups', security.routeGuard('group'), (req, res) => {
+  const session = groupSession(req);
+  if (!session) return res.status(401).json({ error: 'Session invalide.' });
+  const name = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 28);
+  const emoji = String(req.body?.emoji || '🎮').trim().slice(0, 8) || '🎮';
+  if (name.length < 3) return res.status(400).json({ error: 'Choisis un nom de 3 caracteres minimum.' });
+  const now = Date.now();
+  const create = db.transaction(() => {
+    const info = db.prepare(`INSERT INTO friend_groups(name,emoji,owner_id,created_at) VALUES(?,?,?,?)`).run(name, emoji, session.playerId, now);
+    db.prepare(`INSERT INTO friend_group_members(group_id,player_id,role,joined_at) VALUES(?,?, 'owner',?)`).run(info.lastInsertRowid, session.playerId, now);
+    return Number(info.lastInsertRowid);
+  });
+  const id = create();
+  res.json({ ok:true, group: serializeFriendGroup(id, session.playerId) });
+});
+
+app.post('/api/groups/:id/invites', security.routeGuard('group'), (req, res) => {
+  const session = groupSession(req);
+  if (!session) return res.status(401).json({ error: 'Session invalide.' });
+  const groupId = Number(req.params.id), targetId = Number(req.body?.targetId);
+  const member = db.prepare(`SELECT role FROM friend_group_members WHERE group_id=? AND player_id=?`).get(groupId, session.playerId);
+  if (!member) return res.status(403).json({ error: 'Tu ne fais pas partie de ce groupe.' });
+  const target = pQ.getById.get(targetId);
+  if (!target || target.deleted || targetId === session.playerId) return res.status(400).json({ error: 'Joueur invalide.' });
+  if (db.prepare(`SELECT 1 FROM friend_group_members WHERE group_id=? AND player_id=?`).get(groupId,targetId)) return res.status(409).json({ error: 'Ce joueur est deja membre.' });
+  const pending = db.prepare(`SELECT id FROM friend_group_invites WHERE group_id=? AND target_id=? AND status='pending'`).get(groupId,targetId);
+  if (pending) return res.status(409).json({ error: 'Invitation deja envoyee.' });
+  const info = db.prepare(`INSERT INTO friend_group_invites(group_id,sender_id,target_id,status,created_at) VALUES(?,?,?,'pending',?)`).run(groupId,session.playerId,targetId,Date.now());
+  getOnlineSocketsForPlayer(targetId).forEach(socket => socket.emit('group_invite', { id:Number(info.lastInsertRowid), groupId, sender:session.player.pseudo }));
+  res.json({ ok:true });
+});
+
+app.get('/api/group-notifications', (req, res) => {
+  const session = groupSession(req);
+  if (!session) return res.json({ notifications:[], unread:0 });
+  const rows = db.prepare(`SELECT i.id,i.group_id,i.created_at,g.name,g.emoji,p.pseudo sender_pseudo FROM friend_group_invites i JOIN friend_groups g ON g.id=i.group_id JOIN players p ON p.id=i.sender_id WHERE i.target_id=? AND i.status='pending' ORDER BY i.id DESC`).all(session.playerId);
+  res.json({ notifications:rows, unread:rows.length });
+});
+
+app.post('/api/group-notifications/:id/respond', security.routeGuard('group'), (req, res) => {
+  const session = groupSession(req);
+  if (!session) return res.status(401).json({ error: 'Session invalide.' });
+  const invite = db.prepare(`SELECT * FROM friend_group_invites WHERE id=? AND target_id=? AND status='pending'`).get(Number(req.params.id),session.playerId);
+  if (!invite) return res.status(404).json({ error: 'Invitation expiree ou introuvable.' });
+  const accept = req.body?.accept === true;
+  const respond = db.transaction(() => {
+    db.prepare(`UPDATE friend_group_invites SET status=?,responded_at=? WHERE id=?`).run(accept?'accepted':'declined',Date.now(),invite.id);
+    if (accept) db.prepare(`INSERT OR IGNORE INTO friend_group_members(group_id,player_id,role,joined_at) VALUES(?,?,'member',?)`).run(invite.group_id,session.playerId,Date.now());
+  });
+  respond();
+  res.json({ ok:true, accepted:accept, groupId:Number(invite.group_id) });
+});
+
+app.get('/api/groups/:id/messages', (req, res) => {
+  const session = groupSession(req), groupId = Number(req.params.id);
+  if (!session || !db.prepare(`SELECT 1 FROM friend_group_members WHERE group_id=? AND player_id=?`).get(groupId,session.playerId)) return res.status(403).json({ error: 'Acces refuse.' });
+  const messages = db.prepare(`SELECT m.id,m.message,m.created_at,p.id player_id,p.pseudo,p.avatar,p.color FROM friend_group_messages m JOIN players p ON p.id=m.player_id WHERE m.group_id=? ORDER BY m.id DESC LIMIT 80`).all(groupId).reverse();
+  res.json({ messages });
+});
+
+app.post('/api/groups/:id/messages', security.routeGuard('group-chat'), (req, res) => {
+  const session = groupSession(req), groupId = Number(req.params.id);
+  if (!session || !db.prepare(`SELECT 1 FROM friend_group_members WHERE group_id=? AND player_id=?`).get(groupId,session.playerId)) return res.status(403).json({ error: 'Acces refuse.' });
+  const message = String(req.body?.message || '').trim().replace(/\s+/g,' ').slice(0,300);
+  if (!message) return res.status(400).json({ error: 'Message vide.' });
+  db.prepare(`INSERT INTO friend_group_messages(group_id,player_id,message,created_at) VALUES(?,?,?,?)`).run(groupId,session.playerId,message,Date.now());
+  res.json({ ok:true });
+});
+
+app.post('/api/groups/:id/events', security.routeGuard('group'), (req, res) => {
+  const session = groupSession(req), groupId = Number(req.params.id);
+  if (!session || !db.prepare(`SELECT 1 FROM friend_group_members WHERE group_id=? AND player_id=?`).get(groupId,session.playerId)) return res.status(403).json({ error: 'Acces refuse.' });
+  const type = req.body?.type === 'tournament' ? 'tournament' : 'duel';
+  const title = String(req.body?.title || (type === 'tournament' ? 'Tournoi entre amis' : 'Duel amical')).trim().slice(0,60);
+  db.prepare(`INSERT INTO friend_group_events(group_id,created_by,type,title,status,created_at) VALUES(?,?,?,?, 'open',?)`).run(groupId,session.playerId,type,title,Date.now());
+  res.json({ ok:true });
+});
+
 app.post('/api/duels/challenge', security.routeGuard('duel'), (req, res) => {
   try {
     const token = String(req.body?.token || '');
@@ -8704,6 +8834,11 @@ app.post('/api/games/:id/analysis', (req, res) => {
   const { results, evalHistory, accuracy } = req.body;
   const gameId = Number(req.params.id);
   if (!gameId) return res.status(400).json({ error: 'ID invalide' });
+  const analysedGame = gQ.getById.get(gameId);
+  if (!analysedGame) return res.status(404).json({ error: 'Partie introuvable' });
+  if (normalizeVariant(analysedGame.variant) !== 'classic') {
+    return res.status(409).json({ error: 'L’analyse stratégique automatisée est actuellement réservée au mode classique.', variant: analysedGame.variant });
+  }
   const data = JSON.stringify({ results, evalHistory, accuracy });
   rQ.saveAnalysis.run(data, gameId);
   // Sauvegarder aussi la prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcision
@@ -9064,7 +9199,11 @@ app.get('/api/games/:id/replay-view', (req, res) => {
 app.get('/api/games/:id/moves', (req, res) => {
   const game = gQ.getById.get(Number(req.params.id));
   if (!game) return res.status(404).json({ error: 'Introuvable' });
-  res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)) });
+  const actions = aQ.getByGame.all(Number(req.params.id)).map(action => {
+    try { return { ...action, payload: JSON.parse(action.payload || '{}') }; }
+    catch { return { ...action, payload: {} }; }
+  });
+  res.json({ game, moves: mQ.getByGame.all(Number(req.params.id)), actions });
 });
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Bot replay (sans stats ELO) AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -9333,7 +9472,14 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
 
   try {
     // Restaurer l'ELO d'avant la partie
-    db.prepare(`UPDATE players SET elo = ?, wins   = MAX(0, wins   - ?), losses = MAX(0, losses - ?), draws = MAX(0, draws - ?) WHERE id = ?`)
+    const revertVariant = normalizeVariant(game.variant);
+    if (revertVariant !== 'classic') {
+      variantQ.ensure.run(game.player1_id, revertVariant);
+      variantQ.ensure.run(game.player2_id, revertVariant);
+      db.prepare(`UPDATE player_variant_stats SET elo=?, wins=MAX(0,wins-?), losses=MAX(0,losses-?), draws=MAX(0,draws-?) WHERE player_id=? AND variant=?`).run(game.elo_before_p1, game.winner_id === game.player1_id ? 1 : 0, game.winner_id === game.player2_id ? 1 : 0, game.winner_id === null ? 1 : 0, game.player1_id, revertVariant);
+      db.prepare(`UPDATE player_variant_stats SET elo=?, wins=MAX(0,wins-?), losses=MAX(0,losses-?), draws=MAX(0,draws-?) WHERE player_id=? AND variant=?`).run(game.elo_before_p2, game.winner_id === game.player2_id ? 1 : 0, game.winner_id === game.player1_id ? 1 : 0, game.winner_id === null ? 1 : 0, game.player2_id, revertVariant);
+    } else {
+      db.prepare(`UPDATE players SET elo = ?, wins   = MAX(0, wins   - ?), losses = MAX(0, losses - ?), draws = MAX(0, draws - ?) WHERE id = ?`)
       .run(game.elo_before_p1,
         game.winner_id === game.player1_id ? 1 : 0,
         game.winner_id === game.player2_id ? 1 : 0,
@@ -9345,6 +9491,7 @@ app.post('/api/admin/games/:id/revert', (req, res) => {
         game.winner_id === game.player1_id ? 1 : 0,
         game.winner_id === null ? 1 : 0,
         game.player2_id);
+    }
 
     // Marquer la partie comme revertAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe
     db.prepare(`UPDATE games SET reverted = 1 WHERE id = ?`).run(gameId);
@@ -10013,7 +10160,7 @@ io.on('connection', socket => {
     getOnlineSocketsForPlayer(challenge.targetId).forEach(s => s.emit('duel_invite_declined', { id: challenge.id }));
   });
 
-  socket.on('queue_join', ({ shape, tokenEmojiImage } = {}) => {
+  socket.on('queue_join', ({ shape, tokenEmojiImage, variant: requestedVariant } = {}) => {
     if (!socket.playerData) return socket.emit('error', { message: 'Identifie-toi d\'abord.' });
     const freshPlayer = pQ.getById.get(socket.playerId);
     // VAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArifier ban/mute
@@ -10032,9 +10179,10 @@ io.on('connection', socket => {
     if (tokenEmojiImage && socket.playerData.shape === 'emoji_image') {
       socket.playerData.token_emoji_image = tokenEmojiImage;
     }
-    const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id });
+    const variant = normalizeVariant(requestedVariant);
+    const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id, variant });
     if (!joined) return socket.emit('error', { message: 'DAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  en queue.' });
-    socket.emit('queue_joined', { position: mm.position(socket.id) });
+    socket.emit('queue_joined', { position: mm.position(socket.id), variant });
     const match = mm.tryMatch();
     if (match) _startMatch(match.p1, match.p2);
   });
@@ -10084,7 +10232,8 @@ io.on('connection', socket => {
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
-    if (result.type === 'move')      io.to('game:' + result.gameId).emit('move_played', result);
+    if (['move', 'simultaneous_round'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
+    if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
     if (result.type === 'game_over') emitGameOver(result);
     const activeState = result.gameId ? gm.games.get(result.gameId) : null;
     if (result.type === 'move' && activeState && builtinBotIds.has(Number(activeState.players?.[activeState.current]?.id))) {
@@ -10092,6 +10241,21 @@ io.on('connection', socket => {
     }
     // Notifier les spectateurs live. Les fins de partie le font via emitGameOver().
     if (result.type !== 'game_over') emitLiveUpdate();
+  });
+
+  socket.on('game_use_bomb', ({ row, col } = {}) => {
+    const result = gm.useBomb(socket.id, row, col);
+    if (result.error) return socket.emit('game_action_error', { message: result.error });
+    if (result.type === 'game_over') return emitGameOver(result);
+    io.to('game:' + result.gameId).emit('bomb_used', result);
+    emitLiveUpdate();
+  });
+
+  socket.on('game_select_mission', ({ missionId } = {}) => {
+    const result = gm.selectMission(socket.id, missionId);
+    if (result.error) return socket.emit('game_action_error', { message: result.error });
+    socket.emit('mission_confirmed', result);
+    io.to('game:' + result.gameId).emit('mission_ready_state', { side: result.side, ready: result.ready });
   });
 
   socket.on('game_chat_send', ({ message } = {}) => {
@@ -10167,7 +10331,7 @@ io.on('connection', socket => {
     const targetId = myId === p1Id ? p2Id : p1Id;
     if (!targetId || targetId === myId) return socket.emit('game_action_error', { message: 'Adversaire introuvable.' });
     const id = `${last.gameId}:${myId}:${targetId}`;
-    const request = { id, gameId: last.gameId, fromId: myId, targetId, gameType: last.gameType, createdAt: Date.now() };
+    const request = { id, gameId: last.gameId, fromId: myId, targetId, gameType: last.gameType, variant: normalizeVariant(last.variant), createdAt: Date.now() };
     gameRematchRequests.set(id, request);
     const from = getPlayerRecord(myId) || socket.playerData || {};
     socket.emit('game_action_notice', { type: 'rematch_sent', message: 'Demande de revanche envoyee.' });
@@ -10205,7 +10369,7 @@ io.on('connection', socket => {
     _startMatch(
       { ...sanitize(p1), socketId: s1.id },
       { ...sanitize(p2), socketId: s2.id },
-      { gameType: String(request.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked' }
+      { gameType: String(request.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked', variant: request.variant }
     );
   });
 
@@ -10246,7 +10410,9 @@ io.on('connection', socket => {
       if (!gameRow || gameRow.status !== 'active') return socket.emit('game_not_found');
       const moves = mQ.getByGame.all(gameId);
       const { Board } = require('./game/Board');
-      const board = new Board();
+      const variant = normalizeVariant(gameRow.variant);
+      const variantConfig = getVariant(variant);
+      const board = new Board(variantConfig);
       moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
       const firstMoveSide = moves[0]
         ? (Number(gameRow.player1_id) === Number(moves[0].player_id) ? 1 : 2)
@@ -10256,9 +10422,16 @@ io.on('connection', socket => {
         : (firstMoveSide === 1 ? 2 : 1);
       const p1db = pQ.getById.get(gameRow.player1_id);
       const p2db = pQ.getById.get(gameRow.player2_id);
+      if (variant !== 'classic') {
+        variantQ.ensure.run(p1db.id, variant);
+        variantQ.ensure.run(p2db.id, variant);
+        p1db.elo = variantQ.get.get(p1db.id, variant).elo;
+        p2db.elo = variantQ.get.get(p2db.id, variant).elo;
+      }
       const tournamentRow = gameRow.tournament_id ? tQ.getById.get(gameRow.tournament_id) : null;
       state = {
         id: gameId, board,
+        variant, variantConfig,
         players: {
           1: { ...sanitize(p1db), color: gameRow.p1_color || p1db.color || '#ff2d55', shape: gameRow.p1_shape || p1db.shape || 'circle', socketId: null },
           2: { ...sanitize(p2db), color: gameRow.p2_color || p2db.color || '#ffd60a', shape: gameRow.p2_shape || p2db.shape || 'circle', socketId: null },
@@ -10272,6 +10445,8 @@ io.on('connection', socket => {
         moveTimeSeconds: Number(gameRow.tournament_move_time_seconds || 0) || 60,
         turnTimeLimitMs: (Number(gameRow.tournament_move_time_seconds || 0) || 60) * 1000,
         persisted: true,
+        bombs: { 1: true, 2: true }, antiSegments: { 1: new Set(), 2: new Set() }, antiScores: { 1: 0, 2: 0 },
+        missions: { 1: null, 2: null }, simultaneousChoices: { 1: null, 2: null }, initiative: nextSide,
       };
       gm.games.set(gameId, state);
     }
@@ -10289,6 +10464,10 @@ io.on('connection', socket => {
       const p1 = state.players[1], p2 = state.players[2];
       socket.emit('game_rejoined', {
         gameId,
+        variant: state.variant,
+        variantConfig: state.variantConfig,
+        missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
+        selectedMissionId: state.variant === 'mission' ? state.missions?.[side] || null : null,
         side,
         gameType: String(state.gameType || 'ranked'),
         moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
@@ -10306,6 +10485,8 @@ io.on('connection', socket => {
         moves:   state.moveCount,
         startsIn: 0,
         latencies: getGameLatencyPayload(state),
+        antiScores: state.antiScores,
+        bombs: state.bombs,
       });
 
       // Notifier l'adversaire
@@ -10418,6 +10599,13 @@ io.on('connection', socket => {
 });
 
 function _startMatch(p1, p2, options = {}) {
+  options.variant = normalizeVariant(options.variant || p1.variant || p2.variant);
+  if (options.variant !== 'classic') {
+    variantQ.ensure.run(p1.id, options.variant);
+    variantQ.ensure.run(p2.id, options.variant);
+    p1.elo = variantQ.get.get(p1.id, options.variant).elo;
+    p2.elo = variantQ.get.get(p2.id, options.variant).elo;
+  }
   // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA MAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme IP AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ELO annulAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA direct AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
   const ip1 = playerToIp.get(p1.id);
   const ip2 = playerToIp.get(p2.id);
@@ -10486,6 +10674,9 @@ function _startMatch(p1, p2, options = {}) {
 
   const base = {
     gameId: state.id,
+    variant: state.variant,
+    variantConfig: state.variantConfig,
+    missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
     gameType: String(state.gameType || options.gameType || 'ranked'),
     moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
     tournament: options.tournamentId ? {

@@ -1300,7 +1300,11 @@ const SFX = (() => {
   };
 })();
 
-const ROWS = 6, COLS = 7;
+let ROWS = 6, COLS = 7;
+let currentVariant = 'classic';
+let bombTargeting = false;
+let simultaneousWaiting = false;
+let forcedColumns = [];
 let socket, myPlayer, mySide, gameId, currentTurn;
 let gameOver    = false;
 let lobbyData   = null;
@@ -1321,6 +1325,50 @@ let pendingActionOffer = null;
 let currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 let latencyProbeTimer = null;
 let latencyProbePending = false;
+
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+
+function configureVariant(data = {}) {
+  currentVariant = data.variant || 'classic';
+  ROWS = Number(data.variantConfig?.rows || data.grid?.length || 6);
+  COLS = Number(data.variantConfig?.cols || data.grid?.[0]?.length || 7);
+  const board = document.getElementById('board');
+  const cols = document.getElementById('col-btns');
+  board?.style.setProperty('grid-template-columns', `repeat(${COLS}, minmax(0, 1fr))`);
+  board?.style.setProperty('grid-template-rows', `repeat(${ROWS}, minmax(0, 1fr))`);
+  board?.style.setProperty('aspect-ratio', `${COLS}/${ROWS}`);
+  cols?.style.setProperty('grid-template-columns', `repeat(${COLS}, minmax(0, 1fr))`);
+  document.getElementById('turn-badge')?.setAttribute('data-variant', currentVariant);
+  const badge = document.getElementById('turn-badge');
+  if (badge) badge.textContent = VARIANT_LABELS[currentVariant] || 'Classique';
+  ensureVariantControls(data);
+}
+
+function ensureVariantControls(data = {}) {
+  document.getElementById('variant-controls')?.remove();
+  const controls = document.createElement('div');
+  controls.id = 'variant-controls';
+  controls.style.cssText = 'display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:8px 0;color:var(--muted);font:800 13px "Barlow Condensed",sans-serif';
+  if (currentVariant === 'bomb') controls.innerHTML = '<button type="button" class="btn-action ghost" id="bomb-button">💣 Utiliser ma bombe</button><span id="bomb-state">1 disponible</span>';
+  if (currentVariant === 'anti') controls.innerHTML = '<span id="anti-score">Alignements : 0 — 0</span>';
+  if (currentVariant === 'rotate') controls.innerHTML = '<span>Rotation imprévisible tous les 4 coups</span>';
+  if (currentVariant === 'simultaneous') controls.innerHTML = '<span id="simultaneous-state">Choisis une colonne en secret</span>';
+  document.querySelector('.board-wrap')?.prepend(controls);
+  document.getElementById('bomb-button')?.addEventListener('click', () => { bombTargeting = !bombTargeting; setStatus(bombTargeting ? 'Clique le jeton central de la bombe' : ''); });
+  if (currentVariant === 'mission' && Array.isArray(data.missions) && data.missions.length) {
+    const alreadySelected = data.missions.find(m => m.id === data.selectedMissionId);
+    if (alreadySelected) {
+      controls.innerHTML = `<span id="mission-state">Ta mission : ${alreadySelected.label}</span>`;
+      return;
+    }
+    const choices = data.missions.map((m, i) => `${i + 1}. ${m.label} — ${m.description}`).join('\n');
+    setTimeout(() => {
+      const picked = Math.max(1, Math.min(data.missions.length, Number(prompt(`Choisis ta mission personnelle :\n${choices}`, '1')) || 1));
+      socket?.emit('game_select_mission', { missionId: data.missions[picked - 1].id });
+    }, 250);
+    controls.innerHTML = '<span id="mission-state">Choisis ta mission personnelle…</span>';
+  }
+}
 
 function setStatus(message = '', allowHtml = false) {
   const el = document.getElementById('status');
@@ -1368,9 +1416,10 @@ function applyLatencyUpdate(latencies = {}) {
 }
 
 function getGameModeLabel() {
+  const variantLabel = VARIANT_LABELS[currentVariant] || 'Classique';
   if (currentGameMode === 'friendly') return 'Amical';
   if (currentGameMode === 'bot') return 'Bot';
-  return 'Ranked';
+  return currentVariant === 'classic' ? 'Ranked' : variantLabel;
 }
 
 setGameMode('ranked');
@@ -1908,6 +1957,7 @@ function connectSocket(pendingMatch) {
     gameId = data.gameId;
     mySide = data.side;
     gameOver = false;
+    configureVariant(data);
     applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
 
     // Appliquer couleurs et shapes
@@ -1979,6 +2029,29 @@ function connectSocket(pendingMatch) {
   });
 
   socket.on('move_played', onMovePlayed);
+  socket.on('simultaneous_waiting', () => {
+    simultaneousWaiting = true;
+    const state = document.getElementById('simultaneous-state');
+    if (state) state.textContent = 'Choix envoyé · attente de l’adversaire…';
+    updateTurnUI();
+  });
+  socket.on('bomb_used', data => {
+    restoreBoard(data.board);
+    currentTurn = data.next;
+    const mineAvailable = data.bombs?.[mySide] !== false;
+    const button = document.getElementById('bomb-button');
+    if (button) button.disabled = !mineAvailable;
+    const state = document.getElementById('bomb-state');
+    if (state) state.textContent = mineAvailable ? '1 disponible' : 'Bombe utilisée';
+    updateTurnUI();
+  });
+  socket.on('mission_confirmed', data => {
+    const state = document.getElementById('mission-state');
+    if (state) state.textContent = `Ta mission : ${data.mission.label}`;
+  });
+  socket.on('mission_ready_state', ({ ready } = {}) => {
+    if (ready) setStatus('Les deux missions sont choisies. À toi de jouer !');
+  });
   socket.on('game_over',   onGameOver);
   socket.on('game_chat_message', (msg) => appendChatMessage(msg));
   socket.on('game_action_offer', (offer) => {
@@ -2080,6 +2153,7 @@ function setupLobby(data) {
   }
   SFX.matchFound();
   lobbyData = data;
+  configureVariant(data);
   gameId    = data.gameId;
   mySide    = data.yourSide;
   applyLatencyUpdate(data.latencies || {});
@@ -2203,7 +2277,14 @@ function renderBoard() {
       cell.className    = 'cell';
       cell.dataset.row  = r;
       cell.dataset.col  = c;
-      cell.onclick      = () => playMove(c);
+      cell.onclick      = () => {
+        if (currentVariant === 'bomb' && bombTargeting && currentGrid[r]?.[c]) {
+          socket.emit('game_use_bomb', { row: r, col: c });
+          bombTargeting = false;
+          return;
+        }
+        playMove(c);
+      };
       cell.appendChild(Object.assign(document.createElement('div'), { className: 'token' }));
       boardEl.appendChild(cell);
     }
@@ -2224,7 +2305,7 @@ function restoreBoard(grid) {
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col) {
-  if (gameOver || currentTurn !== mySide) return;
+  if (gameOver || (currentVariant !== 'simultaneous' && currentTurn !== mySide) || simultaneousWaiting) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
   if (iaMode) { iaPlayHuman(col); return; }
   SFX.drop();
@@ -2232,13 +2313,45 @@ function playMove(col) {
 }
 
 function onMovePlayed(data) {
+  if (data.type === 'simultaneous_round') {
+    simultaneousWaiting = false;
+    restoreBoard(data.board);
+    const state = document.getElementById('simultaneous-state');
+    if (state) state.textContent = 'Nouveau tour : choisis une colonne';
+    updateTurnUI();
+    return;
+  }
   if (data.player === mySide) SFX.drop();
   else SFX.opponentDrop();
   applyToken(data.row, data.col, data.player);
   if (currentGrid[data.row]) currentGrid[data.row][data.col] = data.player;
   currentTurn = data.next;
+  if (data.board && data.rotation) animateRotation(data.rotation, data.board);
+  else if (data.board && currentVariant !== 'classic') restoreBoard(data.board);
+  if (data.antiScores) {
+    const score = document.getElementById('anti-score');
+    if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0}`;
+  }
+  forcedColumns = Array.isArray(data.forcedCols) ? data.forcedCols.map(Number) : [];
   updateTurnUI();
   updateGameDiscordPresence();
+}
+
+function animateRotation(rotation, finalGrid) {
+  const board = document.getElementById('board');
+  if (!board) return restoreBoard(finalGrid);
+  board.classList.add('locked');
+  board.style.transition = 'transform 1100ms cubic-bezier(.22,.7,.2,1)';
+  board.style.transform = `rotate(${rotation.direction > 0 ? 90 : -90}deg)`;
+  setTimeout(() => {
+    board.style.transition = 'none';
+    board.style.transform = 'rotate(0deg)';
+    restoreBoard(finalGrid);
+    requestAnimationFrame(() => {
+      board.style.transition = '';
+      board.classList.remove('locked');
+    });
+  }, 1120);
 }
 
 // ── Emoji → pion teinté ──────────────────────────────────────────────────────
@@ -2403,16 +2516,24 @@ function applyToken(row, col, player, animate = true) {
 }
 
 function updateTurnUI() {
-  const isMe = currentTurn === mySide;
+  const isMe = currentVariant === 'simultaneous' ? !simultaneousWaiting : currentTurn === mySide;
   document.getElementById('card-p1').classList.toggle('active', currentTurn === 1);
   document.getElementById('card-p2').classList.toggle('active', currentTurn === 2);
 
   for (let c = 0; c < COLS; c++) {
     const b = document.getElementById('cb' + c);
-    if (b) b.disabled = !isMe || gameOver;
+    if (b) {
+      const forcedElsewhere = currentVariant === 'anti' && forcedColumns.length && !forcedColumns.includes(c);
+      b.disabled = !isMe || gameOver || forcedElsewhere;
+      b.style.boxShadow = forcedColumns.includes(c) ? 'inset 0 0 0 3px #85ebff,0 0 18px rgba(133,235,255,.45)' : '';
+      b.title = forcedColumns.includes(c) ? 'Coup obligatoire' : '';
+    }
   }
 
-  if (isMe) {
+  if (currentVariant === 'simultaneous') {
+    document.getElementById('turn-lbl').textContent = simultaneousWaiting ? 'CHOIX ENVOYÉ' : 'CHOISIS EN SECRET';
+    setStatus(simultaneousWaiting ? 'Attente du choix adverse…' : 'Sélectionne une colonne');
+  } else if (isMe) {
     document.getElementById('turn-lbl').textContent = '← TON TOUR';
     setStatus('');
   } else {

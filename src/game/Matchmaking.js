@@ -24,7 +24,7 @@ class Matchmaking {
     // Chercher deux joueurs avec des IDs différents (anti self-match)
     for (let i = 0; i < this.queue.length; i++) {
       for (let j = i + 1; j < this.queue.length; j++) {
-        if (this.queue[i].id !== this.queue[j].id) {
+        if (this.queue[i].id !== this.queue[j].id && String(this.queue[i].variant || 'classic') === String(this.queue[j].variant || 'classic')) {
           const p1 = this.queue.splice(j, 1)[0];
           const p2 = this.queue.splice(i, 1)[0];
           return { p1: p2, p2: p1 };
@@ -35,7 +35,12 @@ class Matchmaking {
   }
 
   size()     { return this.queue.length; }
-  position(socketId) { return this.queue.findIndex(p => p.socketId === socketId) + 1; }
+  position(socketId) {
+    const player = this.queue.find(p => p.socketId === socketId);
+    if (!player) return 0;
+    const variant = String(player.variant || 'classic');
+    return this.queue.filter(p => String(p.variant || 'classic') === variant).findIndex(p => p.socketId === socketId) + 1;
+  }
 }
 
 module.exports = { Matchmaking };

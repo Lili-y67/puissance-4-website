@@ -2589,6 +2589,7 @@ async function load() {
     pendingAvatarDecoration = null;
 
     render(freshPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, totalGames);
+    loadVariantStats(freshPlayer.id);
     window.P4I18n?.apply(document.getElementById('content'));
     renderQueueMusicPicker(freshPlayer);
     refreshProfileWallpaperControls();
@@ -2622,6 +2623,24 @@ async function load() {
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="empty-state">Erreur de chargement.</div>';
   }
+}
+
+async function loadVariantStats(playerId) {
+  try {
+    const response = await fetch(`/api/players/${encodeURIComponent(playerId)}/variant-stats`);
+    if (!response.ok) return;
+    const { stats = [] } = await response.json();
+    const classicStats = document.querySelector('.stats-grid');
+    if (!classicStats || !stats.length) return;
+    const section = document.createElement('div');
+    section.id = 'variant-ratings';
+    section.style.cssText = 'margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';
+    section.innerHTML = stats.map(item => {
+      const games = Number(item.wins || 0) + Number(item.losses || 0) + Number(item.draws || 0);
+      return `<div class="elo-history-stat"><strong>${Number(item.elo || 1000)} ELO</strong><span>${escapeHtml(item.label)} · ${games} partie${games > 1 ? 's' : ''}</span></div>`;
+    }).join('');
+    classicStats.insertAdjacentElement('afterend', section);
+  } catch {}
 }
 
 function discordRpcCardHtml() {
@@ -2748,6 +2767,9 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
          onclick="toggleFollow(${player.id})">
          ${followStatus.isFollowing ? '✓ Suivi' : '+ Suivre'}
        </button>`
+    : '';
+  const groupBtn = !isOwnProfile && viewerPlayer
+    ? `<a class="btn-follow not-following" style="text-decoration:none" href="/groups?invite=${Number(player.id)}&pseudo=${encodeURIComponent(player.pseudo || '')}">👥 Ajouter au groupe</a>`
     : '';
   const boosterCounts = isOwnProfile ? getProfileBoosterCounts() : { elo: 0, coins: 0 };
   const marqueeItems = [
@@ -2940,6 +2962,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             </div>
           </div>` : ''}
           ${followBtn}
+          ${groupBtn}
         </div>
       </div>
       <div class="profile-marquee">
