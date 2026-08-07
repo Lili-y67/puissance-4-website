@@ -320,6 +320,9 @@ function updateReplayDiscordPresence() {
   window.P4DiscordPresence?.setContext(context);
 }
 let replaySpeed = 1; // multiplicateur de vitesse
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+function replayVariant(){return String(gameData?.variant || 'classic')}
+function isClassicReplay(){return replayVariant()==='classic'}
 
 // ── Board state ───────────────────────────────────────────────────────────────
 let board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
@@ -369,7 +372,7 @@ async function init() {
     renderShell();
     setTimeout(startReplay, 800);
     // Charger l'analyse existante si dispo
-    loadExistingAnalysis();
+    if (isClassicReplay()) loadExistingAnalysis();
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="loading">Partie introuvable.</div>';
   }
@@ -521,12 +524,14 @@ function renderShell() {
   const p2Won = g.winner_id === g.player2_id;
   const isDraw = g.winner_id === null;
   const gameType = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
+  const variantLabel = VARIANT_LABELS[g.variant || 'classic'] || 'Classique';
   const reason = String(g.result_reason || '');
+  const variantWinLabel = { mission:'MISSION ACCOMPLIE', anti:'VICTOIRE AU SCORE', rotate:'VICTOIRE APRÈS ROTATION', bomb:'VICTOIRE EXPLOSIVE', simultaneous:'VICTOIRE SIMULTANÉE' }[g.variant] || 'VICTOIRE PAR ALIGNEMENT';
   const resultLabel = (won) => isDraw
     ? (reason === 'agreement_draw' ? 'NUL PAR ACCORD' : 'POSITION NULLE')
     : won
-      ? (reason === 'resign' ? 'VICTOIRE PAR ABANDON' : 'VICTOIRE PAR ALIGNEMENT')
-      : (reason === 'resign' ? 'DÉFAITE PAR ABANDON' : 'DÉFAITE PAR ALIGNEMENT');
+      ? (reason === 'resign' ? 'VICTOIRE PAR ABANDON' : variantWinLabel)
+      : (reason === 'resign' ? 'DÉFAITE PAR ABANDON' : variantWinLabel.replace('VICTOIRE','DÉFAITE'));
 
   const date = g.finished_at
     ? new Date(g.finished_at).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})
@@ -551,6 +556,7 @@ function renderShell() {
       </div>
       <div class="replay-meta">
         <div class="rmeta">Type <strong>${gameType}</strong></div>
+        <div class="rmeta">Variante <strong>${variantLabel}</strong></div>
         <div class="rmeta">Date <strong>${date}</strong></div>
         <div class="rmeta">Coups <strong>${g.move_count} coups</strong></div>
         <div class="rmeta">Temps <strong>${g.duration}s</strong></div>
@@ -602,19 +608,19 @@ function renderShell() {
     </div>
 
     <!-- Bouton lancer l'analyse -->
-    <div class="analyse-controls" id="analyse-controls">
+    <div class="analyse-controls${isClassicReplay() ? '' : ' show'}" id="analyse-controls">
       <div>
-        <div class="analyse-depth-label">Puissance de calcul</div>
-        <select class="analyse-depth-select" id="analyse-depth">
+        <div class="analyse-depth-label">${isClassicReplay() ? 'Puissance de calcul' : 'Analyse désactivée pour cette variante'}</div>
+        <select class="analyse-depth-select" id="analyse-depth" ${isClassicReplay() ? '' : 'disabled'}>
           <option value="10">Rapide - profondeur 10</option>
           <option value="12" selected>Standard - profondeur 12</option>
           <option value="14">Forte - profondeur 14</option>
           <option value="16">Max - profondeur 16</option>
         </select>
-        <div class="analyse-mini-note">Plus la profondeur est haute, plus l'analyse est fiable, mais plus elle prend du temps.</div>
+        <div class="analyse-mini-note">${isClassicReplay() ? "Plus la profondeur est haute, plus l'analyse est fiable, mais plus elle prend du temps." : `Le moteur d’analyse est actuellement réservé au mode Classique. Le replay ${variantLabel} reste entièrement consultable.`}</div>
       </div>
-      <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" style="display:none">
-        Analyser la partie
+      <button class="analyse-btn" id="analyse-btn" onclick="startAnalysis()" ${isClassicReplay() ? 'style="display:none"' : 'disabled'}>
+        ${isClassicReplay() ? 'Analyser la partie' : 'Analyse indisponible'}
       </button>
     </div>
 
@@ -937,6 +943,12 @@ function playMoveInReplay(move, player) {
 function applyReplayActions(upTo) {
   while (actionIndex < actions.length && Number(actions[actionIndex].action_number || 0) <= upTo) {
     const action = actions[actionIndex++];
+    const actionLabels = { rotation:'Rotation du plateau', bomb:'Explosion et gravité', simultaneous_round:'Résolution simultanée', mission:'Mission sélectionnée' };
+    const actionLabel = actionLabels[action.action_type];
+    if (actionLabel) {
+      const text = document.getElementById('think-text');
+      if (text) text.textContent = actionLabel;
+    }
     const snapshot = action.payload?.board || action.payload?.grid;
     if (Array.isArray(snapshot)) {
       board = Array.from({length:ROWS}, (_, r) => Array.from({length:COLS}, (_, c) => Number(snapshot?.[r]?.[c] || 0)));
@@ -992,7 +1004,7 @@ function finishReplay() {
     // N'afficher le bouton que si l'analyse n'a pas encore ete faite
     const btn = document.getElementById('analyse-btn');
     const controls = document.getElementById('analyse-controls');
-    if (btn && controls && analysisResults.length === 0) {
+    if (isClassicReplay() && btn && controls && analysisResults.length === 0) {
       btn.style.display = 'flex';
       controls.classList.add('show');
     }
@@ -1111,6 +1123,7 @@ function accColor(pct) {
 }
 
 function startAnalysis() {
+  if (!isClassicReplay()) return;
   const btn      = document.getElementById('analyse-btn');
   const controls = document.getElementById('analyse-controls');
   const progWrap = document.getElementById('analyse-progress');

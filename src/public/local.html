@@ -28,6 +28,7 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
 .board-shell{padding:clamp(10px,2vw,18px);border:1px solid rgba(255,255,255,.1);border-radius:28px;background:linear-gradient(180deg,rgba(22,22,48,.96),rgba(11,11,25,.96));box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 60px rgba(0,0,0,.35)}
 .board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
 .cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.filled.emoji-token::after{display:none}.local-emoji-token{position:absolute;inset:6%;display:grid;place-items:center;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 11px 18px rgba(255,255,255,.22),inset 0 -14px 20px rgba(0,0,0,.26),0 0 24px var(--piece-glow,var(--piece));filter:drop-shadow(0 0 14px var(--piece-glow,var(--piece))) drop-shadow(0 3px 8px rgba(0,0,0,.5));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.local-emoji-token::before{content:"";position:absolute;inset:10%;border-radius:50%;background:radial-gradient(circle at 34% 24%,rgba(255,255,255,.42),transparent 28%),radial-gradient(circle at 50% 70%,rgba(0,0,0,.18),transparent 55%);pointer-events:none}.local-emoji-token canvas{position:relative;z-index:1;width:78%;height:78%;display:block;transition:transform .18s ease;filter:drop-shadow(0 2px 5px rgba(0,0,0,.42))}.board.mobile-flipped .local-emoji-token canvas{transform:rotate(180deg)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}.cell.win .local-emoji-token{filter:drop-shadow(0 0 20px var(--green)) drop-shadow(0 0 8px #fff)}
+.variant-setup{display:grid;gap:8px}.variant-missions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cell.forced{box-shadow:inset 0 0 0 3px #ff9f0a,0 0 22px rgba(255,159,10,.38)}.cell.bomb-target{box-shadow:inset 0 0 0 3px #ff453a,0 0 22px rgba(255,69,58,.4)}.board.rotating{transition:transform 1.15s cubic-bezier(.22,.72,.2,1);transform:rotate(90deg)}.board.rotating.ccw{transform:rotate(-90deg)}
 body.p4-wallpaper-mode .board-shell{background:linear-gradient(180deg,rgba(18,18,42,.76),rgba(8,9,24,.72));border-color:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 48px rgba(0,0,0,.28);backdrop-filter:blur(2px)}
 body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.06),rgba(8,9,27,.82) 66%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.09),inset 0 9px 20px rgba(0,0,0,.48)}
 @keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
@@ -61,6 +62,12 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
         <div class="chip">Score local</div>
       </div>
       <div class="setup">
+        <div class="player-box variant-setup">
+          <label>Variante locale</label>
+          <select class="input" id="local-variant" onchange="onVariantChange()"><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option></select>
+          <div class="variant-missions hidden" id="variant-missions"><select class="input" id="mission-p1"><option value="square">J1 · Carré 2×2</option><option value="center">J1 · 4 cases centrales</option><option value="high4">J1 · Ligne de 4 hors du bas</option></select><select class="input" id="mission-p2"><option value="square">J2 · Carré 2×2</option><option value="center">J2 · 4 cases centrales</option><option value="high4">J2 · Ligne de 4 hors du bas</option></select></div>
+          <div class="setup-hint" id="variant-hint">Règles classiques : le premier alignement de 4 gagne.</div>
+        </div>
         <div class="player-box">
           <label>Joueur 1</label>
           <div class="row"><input class="input" id="p1-name" value="Joueur 1" maxlength="16"><input class="emoji-input input" id="p1-emoji" placeholder="⭐" maxlength="4" title="Emoji de pion"><input class="color" id="p1-color" type="color" value="#ff2d55" title="Couleur 1"><input class="color secondary" id="p1-color2" type="color" value="#ff8fab" title="Couleur 2"></div>
@@ -105,6 +112,7 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
         </div>
         <div class="actions">
           <button class="btn" type="button" id="undo-btn" onclick="undoMove()">Annuler</button>
+          <button class="btn hidden" type="button" id="variant-action" onclick="toggleVariantAction()">Bombe</button>
           <button class="btn primary" type="button" onclick="newRound()">Nouvelle manche</button>
         </div>
       </div>
@@ -116,8 +124,8 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
   </section>
 </main>
 <script>
-const ROWS = 6;
-const COLS = 7;
+let ROWS = 6;
+let COLS = 7;
 let grid = [];
 let current = 1;
 let ended = false;
@@ -130,6 +138,15 @@ let turnTimer = null;
 let turnDeadline = 0;
 let turnTimeLimitMs = 0;
 let autoMoveLocked = false;
+let variant = 'classic';
+let moveCount = 0;
+let antiScores = { 1: 0, 2: 0 };
+let antiSegments = { 1: new Set(), 2: new Set() };
+let bombs = { 1: true, 2: true };
+let bombArmed = false;
+let simultaneousChoices = { 1: null, 2: null };
+let simultaneousChooser = 1;
+let replayFrames = [];
 
 const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
@@ -164,12 +181,39 @@ function playerEmoji(player) {
 }
 
 function initGrid() {
+  variant = document.getElementById('local-variant')?.value || 'classic';
+  ROWS = variant === 'anti' ? 9 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
+  COLS = variant === 'anti' ? 9 : 7;
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
   current = nextStarter;
   ended = false;
   autoMoveLocked = false;
+  moveCount = 0;
+  antiScores = { 1: 0, 2: 0 };
+  antiSegments = { 1: new Set(), 2: new Set() };
+  bombs = { 1: true, 2: true };
+  bombArmed = false;
+  simultaneousChoices = { 1: null, 2: null };
+  simultaneousChooser = 1;
+  replayFrames = [];
+  boardEl.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
   turnTimeLimitMs = selectedTurnTimeLimitMs();
+}
+
+function onVariantChange() {
+  const selected = document.getElementById('local-variant')?.value || 'classic';
+  const hints = { classic:'Le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Grille 9×9 : le joueur avec le moins de lignes gagne.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.' };
+  document.getElementById('variant-hint').textContent = hints[selected];
+  document.getElementById('variant-missions').classList.toggle('hidden', selected !== 'mission');
+  newRound();
+}
+
+function toggleVariantAction() {
+  if (variant !== 'bomb' || ended || !bombs[current]) return;
+  bombArmed = !bombArmed;
+  renderBoard();
+  updateStatus(bombArmed ? 'Choisis le pion central de l’explosion' : null, bombArmed ? 'Bombe armée' : 'Tour actuel');
 }
 
 function selectedTurnTimeLimitMs() {
@@ -225,6 +269,7 @@ function shouldFlipBoard() {
 
 function renderBoard(winCells = []) {
   const winSet = new Set(winCells.map(([r, c]) => `${r}:${c}`));
+  const forcedSet = new Set(forcedColumns().map(c => `${lowestRow(c)}:${c}`));
   boardEl.innerHTML = '';
   const flipped = shouldFlipBoard();
   boardEl.classList.toggle('mobile-flipped', flipped);
@@ -241,7 +286,7 @@ function renderBoard(winCells = []) {
       const emoji = value ? playerEmoji(value) : '';
       const cell = document.createElement('button');
       cell.type = 'button';
-      cell.className = `cell${value ? ' filled' : ''}${emoji ? ' emoji-token' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}`;
+      cell.className = `cell${value ? ' filled' : ''}${emoji ? ' emoji-token' : ''}${winSet.has(`${r}:${c}`) ? ' win' : ''}${forcedSet.has(`${r}:${c}`) ? ' forced' : ''}${variant === 'bomb' && bombArmed && value ? ' bomb-target' : ''}`;
       cell.style.setProperty('--piece', value ? playerColor(value) : 'transparent');
       cell.style.setProperty('--piece-glow', value ? playerColor2(value) : 'transparent');
       cell.style.setProperty('--piece-gradient', value ? playerGradient(value) : 'transparent');
@@ -252,11 +297,15 @@ function renderBoard(winCells = []) {
         cell.appendChild(token);
       }
       cell.setAttribute('aria-label', `Colonne ${c + 1}`);
-      cell.addEventListener('click', () => playColumn(c));
+      cell.addEventListener('click', () => variant === 'bomb' && bombArmed ? detonateLocal(r, c) : playColumn(c));
       boardEl.appendChild(cell);
     }
   }
-  undoBtn.disabled = ended || history.length === 0;
+  undoBtn.disabled = ended || history.length === 0 || variant !== 'classic';
+  const action = document.getElementById('variant-action');
+  action.classList.toggle('hidden', variant !== 'bomb');
+  action.disabled = variant !== 'bomb' || !bombs[current];
+  action.textContent = bombArmed ? 'Annuler bombe' : `Bombe · ${bombs[current] ? 'prête' : 'utilisée'}`;
 }
 
 function makeGradientEmojiToken(target, emoji, colorA, colorB) {
@@ -371,28 +420,68 @@ function chooseEasyAutoColumn(player) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function allSegments(player, size = 4) {
+  const out = [];
+  for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) for(const [dr,dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+    const cells=[];
+    for(let i=0;i<size;i++){const rr=r+dr*i,cc=c+dc*i;if(rr<0||rr>=ROWS||cc<0||cc>=COLS||grid[rr][cc]!==player){cells.length=0;break}cells.push([rr,cc]);}
+    if(cells.length) out.push({ key:cells.map(x=>x.join(':')).join('|'), cells });
+  }
+  return out;
+}
+
+function forcedColumns() {
+  if (variant !== 'anti' || ended) return [];
+  return legalColumns().filter(col => { const row=lowestRow(col);grid[row][col]=current;const forced=allSegments(current).some(s=>!antiSegments[current].has(s.key));grid[row][col]=0;return forced; });
+}
+
+function missionComplete(player) {
+  const id = document.getElementById(`mission-p${player}`)?.value || 'square';
+  if(id==='square')for(let r=0;r<ROWS-1;r++)for(let c=0;c<COLS-1;c++){const cells=[[r,c],[r+1,c],[r,c+1],[r+1,c+1]];if(cells.every(([rr,cc])=>grid[rr][cc]===player))return cells;}
+  if(id==='center'){const mr=Math.floor(ROWS/2),mc=Math.floor(COLS/2),cells=[];for(let r=mr-1;r<=mr+1;r++)for(let c=mc-1;c<=mc+1;c++)if(grid[r]?.[c]===player)cells.push([r,c]);if(cells.length>=4)return cells;}
+  if(id==='high4'){const line=allSegments(player).find(s=>s.cells.every(([r])=>r!==ROWS-1));if(line)return line.cells;}
+  return [];
+}
+
+function applyLocalGravity(){for(let c=0;c<COLS;c++){const pieces=[];for(let r=ROWS-1;r>=0;r--)if(grid[r][c])pieces.push(grid[r][c]);for(let r=ROWS-1,i=0;r>=0;r--)grid[r][c]=pieces[i++]||0;}}
+
+function rotateLocalBoard(direction){const next=Array.from({length:ROWS},()=>Array(COLS).fill(0));for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){if(direction>0)next[c][ROWS-1-r]=grid[r][c];else next[ROWS-1-c][r]=grid[r][c];}grid=next;applyLocalGravity();}
+
+function detonateLocal(row,col){if(variant!=='bomb'||!bombArmed||!bombs[current]||!grid[row][col])return;clearTurnTimer();history.push({snapshot:grid.map(line=>[...line]),player:current,type:'bomb',row,col});for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const rr=row+dr,cc=col+dc;if(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS)grid[rr][cc]=0;}bombs[current]=false;bombArmed=false;applyLocalGravity();replayFrames.push(grid.map(line=>[...line]));const winner=[1,2].find(p=>allSegments(p).length);if(winner)return finishLocal(winner,allSegments(winner)[0].cells,'Victoire après explosion');advanceTurn();}
+
+function finishLocal(winner, cells = [], label = 'Victoire locale') { ended=true;scores[winner]++;nextStarter=winner;saveLocalReplay(winner,cells);renderBoard(cells);updateScores();updateStatus(`${playerName(winner)} gagne !`,label);clearTurnTimer(); }
+
+function advanceTurn(options={}){current=current===1?2:1;renderBoard();const label=variant==='anti'?`Anti-P4 · lignes ${antiScores[1]} — ${antiScores[2]}`:variant==='rotate'?`Rotation dans ${4-(moveCount%4)} coups`:variant==='simultaneous'?'Placement simultané':'Tour actuel';updateStatus(options.automatic?`${playerName(current)} reprend la main`:null,label);startTurnTimer();}
+
 function playColumn(col, options = {}) {
   if (ended) return;
+  if (variant === 'simultaneous') return playSimultaneousLocal(col);
   clearTurnTimer();
   autoMoveLocked = false;
+  const forced = forcedColumns();
+  if (forced.length && !forced.includes(col)) { startTurnTimer(); return; }
   const row = lowestRow(col);
   if (row < 0) {
     startTurnTimer();
     return;
   }
+  const snapshot = grid.map(line=>[...line]);
   grid[row][col] = current;
-  history.push({ row, col, player: current });
+  history.push({ row, col, player: current, snapshot });
+  replayFrames.push(grid.map(line=>[...line]));
+  moveCount++;
+  if (variant === 'anti') {
+    const fresh=allSegments(current).filter(s=>!antiSegments[current].has(s.key));fresh.forEach(s=>antiSegments[current].add(s.key));antiScores[current]+=fresh.length;
+    if(!legalColumns().length){const winner=antiScores[1]===antiScores[2]?0:(antiScores[1]<antiScores[2]?1:2);if(winner)finishLocal(winner,[],`Anti-P4 · ${antiScores[1]} à ${antiScores[2]}`);else{ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Anti-P4');}return;}
+    advanceTurn(options);return;
+  }
+  if (variant === 'mission') { const mission=missionComplete(current);if(mission.length){finishLocal(current,mission,'Mission accomplie');return;}advanceTurn(options);return; }
   const win = checkWin(row, col, current);
   if (win.length) {
-    ended = true;
-    scores[current]++;
-    nextStarter = current;
-    saveLocalReplay(current, win);
-    renderBoard(win);
-    updateScores();
-    updateStatus(`${playerName(current)} gagne !`, 'Victoire locale');
+    finishLocal(current,win);
     return;
   }
+  if(variant==='rotate'&&moveCount%4===0){ended=true;renderBoard();updateStatus('Le plateau tourne…','Rotation');const direction=Math.random()<.5?1:-1;boardEl.classList.toggle('ccw',direction<0);requestAnimationFrame(()=>boardEl.classList.add('rotating'));setTimeout(()=>{rotateLocalBoard(direction);replayFrames[replayFrames.length-1]=grid.map(line=>[...line]);boardEl.classList.remove('rotating','ccw');ended=false;const winner=[1,2].find(p=>allSegments(p).length);if(winner)finishLocal(winner,allSegments(winner)[0].cells,'Victoire après rotation');else advanceTurn(options)},1180);return;}
   if (grid[0].every(Boolean)) {
     ended = true;
     scores.draw++;
@@ -402,11 +491,10 @@ function playColumn(col, options = {}) {
     updateStatus('Match nul', 'Fin de manche');
     return;
   }
-  current = current === 1 ? 2 : 1;
-  renderBoard();
-  updateStatus(options.automatic ? `${playerName(current)} reprend la main` : null, options.automatic ? 'Tour actuel' : 'Tour actuel');
-  startTurnTimer();
+  advanceTurn(options);
 }
+
+function playSimultaneousLocal(col){if(lowestRow(col)<0)return;simultaneousChoices[simultaneousChooser]=col;if(simultaneousChooser===1){simultaneousChooser=2;current=2;renderBoard();updateStatus(`Passe l’écran à ${playerName(2)} puis choisis une colonne`,'Choix du joueur 1 masqué');return;}const snapshot=grid.map(line=>[...line]);for(const player of [1,2]){const chosen=simultaneousChoices[player],row=lowestRow(chosen);if(row>=0){grid[row][chosen]=player;history.push({row,col:chosen,player,snapshot:player===1?snapshot:null});moveCount++;}}replayFrames.push(grid.map(line=>[...line]));const winners=[1,2].filter(p=>allSegments(p).length);if(winners.length===1){finishLocal(winners[0],allSegments(winners[0])[0].cells,'Placement simultané');return;}if(winners.length===2){ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Double alignement','Match nul');return;}simultaneousChoices={1:null,2:null};simultaneousChooser=1;current=1;renderBoard();updateStatus(null,'Nouveau round · Joueur 1');startTurnTimer();}
 
 function checkWin(row, col, player) {
   const dirs = [[0,1],[1,0],[1,1],[1,-1]];
@@ -427,7 +515,7 @@ function checkWin(row, col, player) {
 }
 
 function undoMove() {
-  if (ended || !history.length) return;
+  if (ended || !history.length || variant !== 'classic') return;
   clearTurnTimer();
   const last = history.pop();
   grid[last.row][last.col] = 0;
@@ -465,9 +553,11 @@ function updateScores() {
 function saveLocalReplay(winner, winCells = []) {
   const replay = {
     id: Date.now(),
+    variant,
     winner,
     winCells,
     moves: history.map(move => ({ ...move })),
+    frames: replayFrames.map(frame => frame.map(line => [...line])),
     players: {
       1: { name: playerName(1), color: playerColor(1), color2: playerColor2(1), emoji: playerEmoji(1) },
       2: { name: playerName(2), color: playerColor(2), color2: playerColor2(2), emoji: playerEmoji(2) },
@@ -490,7 +580,7 @@ function renderLocalReplays() {
       <div class="local-replay-row">
         <div>
           <strong>${label}</strong>
-          <span>${replay.moves.length} coups - ${escapeHtml(replay.createdAt)}</span>
+          <span>${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané'}[replay.variant]||'Classique')} · ${replay.moves.length} coups - ${escapeHtml(replay.createdAt)}</span>
         </div>
         <button type="button" onclick="playLocalReplay(${index})">Replay</button>
       </div>
@@ -522,15 +612,37 @@ function playLocalReplay(index) {
   stopLocalReplayPlayback();
   clearTurnTimer();
   applyReplayPlayerSettings(replay);
+  variant = replay.variant || 'classic';
+  document.getElementById('local-variant').value = variant;
+  ROWS = variant === 'anti' ? 9 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
+  COLS = variant === 'anti' ? 9 : 7;
+  boardEl.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
   current = replay.moves[0]?.player || 1;
   ended = true;
   let step = 0;
+  const frames = Array.isArray(replay.frames) && replay.frames.length ? replay.frames : null;
   renderBoard();
   updateStatus('Replay en cours...', 'Replay local');
 
   const next = () => {
+    if (frames) {
+      const frame = frames[step];
+      if (!frame) {
+        renderBoard(replay.winCells || []);
+        current = replay.winner || 1;
+        updateStatus(replay.winner ? `${replay.players[replay.winner].name} gagne !` : 'Match nul', 'Replay terminé');
+        if (turnClock) turnClock.textContent = `Replay · ${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané'}[replay.variant]||'Classique')}`;
+        return;
+      }
+      grid = frame.map(line => [...line]);
+      renderBoard();
+      updateStatus(`Étape ${step + 1} / ${frames.length}`, `Replay · ${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané'}[replay.variant]||'Classique')}`);
+      step += 1;
+      localReplayTimer = setTimeout(next, 520);
+      return;
+    }
     const move = replay.moves[step];
     if (!move) {
       renderBoard(replay.winCells || []);
