@@ -498,6 +498,14 @@ input[type="file"]{display:none;}
 
 .profile-elo{font-family:Barlow Condensed,sans-serif;font-size:62px;font-weight:900;letter-spacing:2px;color:var(--yellow);text-shadow:0 0 20px var(--yel-glow);text-align:right;flex-shrink:0;line-height:.9;}
 .profile-elo-lbl{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);text-align:right;margin-top:4px;}
+.profile-variant-select{width:100%;min-width:170px;padding:8px 10px;border-radius:10px;border:1px solid rgba(133,235,255,.24);background:rgba(133,235,255,.07);color:var(--text);font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;outline:none;cursor:pointer}
+.profile-variant-select:focus{border-color:rgba(133,235,255,.58);box-shadow:0 0 0 3px rgba(133,235,255,.08)}
+.profile-action-btn{width:100%;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.045);color:var(--muted);font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.18s}
+.profile-action-btn:hover{color:var(--text);border-color:rgba(255,255,255,.24);transform:translateY(-1px)}
+.booster-choice-list{display:grid;gap:9px;padding:16px}
+.booster-choice{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:12px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--text);cursor:pointer}
+.booster-choice:hover{border-color:rgba(133,235,255,.34);background:rgba(133,235,255,.07)}
+.booster-choice small{display:block;color:var(--muted);margin-top:3px}.booster-choice strong{font-family:'Barlow Condensed',sans-serif;letter-spacing:.7px}.booster-choice span{color:#85EBFF;font-weight:900;white-space:nowrap}
 
 /* ── Social counts ── */
 .social-row{
@@ -1729,6 +1737,8 @@ let currentGamesCache = [];
 let currentFollowingCache = [];
 let currentFollowersCache = [];
 let currentFollowStatusCache = { isFollowing: false, followers: 0, following: 0 };
+let profileVariantStats = [];
+let selectedProfileVariant = localStorage.getItem('p4_profile_variant') || 'classic';
 
 const PROFILE_LANGUAGE_FALLBACKS = [
   { code: 'fr', name: 'Français', country: 'France' },
@@ -2630,18 +2640,56 @@ async function loadVariantStats(playerId) {
     const response = await fetch(`/api/players/${encodeURIComponent(playerId)}/variant-stats`);
     if (!response.ok) return;
     const { stats = [] } = await response.json();
-    const classicStats = document.querySelector('.stats-grid');
-    if (!classicStats || !stats.length) return;
-    const section = document.createElement('div');
-    section.id = 'variant-ratings';
-    section.style.cssText = 'margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px';
-    section.innerHTML = stats.map(item => {
-      const games = Number(item.wins || 0) + Number(item.losses || 0) + Number(item.draws || 0);
-      return `<div class="elo-history-stat"><strong>${Number(item.elo || 1000)} ELO</strong><span>${escapeHtml(item.label)} · ${games} partie${games > 1 ? 's' : ''}</span></div>`;
-    }).join('');
-    classicStats.insertAdjacentElement('afterend', section);
+    profileVariantStats = stats;
+    const select = document.getElementById('profile-variant-select');
+    if (select && stats.some(item => item.id === selectedProfileVariant)) select.value = selectedProfileVariant;
+    else selectedProfileVariant = 'classic';
+    applyProfileVariant(selectedProfileVariant, false);
   } catch {}
 }
+
+function applyProfileVariant(variant = 'classic', reloadHistory = true) {
+  const selected = profileVariantStats.find(item => item.id === variant)
+    || profileVariantStats.find(item => item.id === 'classic');
+  if (!selected) return;
+  selectedProfileVariant = selected.id;
+  localStorage.setItem('p4_profile_variant', selected.id);
+  const select = document.getElementById('profile-variant-select');
+  if (select) select.value = selected.id;
+  const elo = Number(selected.elo || 1000);
+  const wins = Number(selected.wins || 0), losses = Number(selected.losses || 0), draws = Number(selected.draws || 0);
+  const total = wins + losses + draws;
+  const winrate = total ? Math.round(wins / total * 100) : 0;
+  const rank = getSimRank(elo);
+  const setText = (id, value) => { const element = document.getElementById(id); if (element) element.textContent = value; };
+  setText('profile-main-elo', elo);
+  setText('profile-main-elo-label', `ELO · ${selected.label}`);
+  setText('profile-rank-label', rank.displayLabel);
+  setText('profile-rank-progress-label', `${rank.progress}%${rank.next ? ` → ${rank.next} ELO` : ' MAX'}`);
+  setText('variant-wins', wins); setText('variant-losses', losses); setText('variant-draws', draws); setText('variant-winrate', `${winrate}%`);
+  setText('elo-history-title', `Courbe ELO · ${selected.label}`);
+  const eloElement = document.getElementById('profile-main-elo');
+  if (eloElement) { eloElement.style.color = rank.color; eloElement.style.textShadow = `0 0 20px ${rank.color}66`; }
+  const rankLabel = document.getElementById('profile-rank-label'); if (rankLabel) rankLabel.style.color = rank.color;
+  const rankImage = document.getElementById('profile-rank-image');
+  if (rankImage) { rankImage.src = `/ranks/${rank.key}_${rank.level + 1}.png`; rankImage.alt = rank.displayLabel; rankImage.title = rank.displayLabel; rankImage.style.filter = `drop-shadow(0 0 8px ${rank.color}55)`; }
+  const progress = document.getElementById('profile-rank-progress'); if (progress) { progress.style.width = `${rank.progress}%`; progress.style.background = rank.color; }
+  const fill = document.getElementById('wr-fill'); if (fill) fill.style.width = `${winrate}%`;
+  if (reloadHistory && currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
+}
+
+async function openBoosterModal() {
+  await loadProfileShopInventory();
+  const modal = document.getElementById('booster-modal');
+  const list = document.getElementById('booster-choice-list');
+  if (!modal || !list) return;
+  const entries = ['elo', 'coins', 'global'].flatMap(kind => getProfileBoosterEntries(kind).map(entry => ({ ...entry, kind })));
+  const premium = getPremiumTier(currentPlayer) ? `<button class="booster-choice" onclick="activateVipBoost();closeBoosterModal()"><div><strong>Boost ${escapeHtml(getPremiumTier(currentPlayer).toUpperCase())}</strong><small>Bonus premium quotidien</small></div><span>Activer</span></button>` : '';
+  list.innerHTML = premium + entries.map(entry => `<button class="booster-choice" onclick="activateOwnedBooster('${escapeHtml(entry.key)}',${JSON.stringify(entry.meta).replace(/"/g, '&quot;')});closeBoosterModal()"><div><strong>${escapeHtml(entry.meta.label)}</strong><small>${entry.qty} disponible${entry.qty > 1 ? 's' : ''} · ${profileActiveBoosters?.[entry.kind] ? 'un boost est déjà actif' : '2 heures'}</small></div><span>Activer</span></button>`).join('') || '<div class="empty-state">Aucun booster disponible.</div>';
+  modal.hidden = false;
+}
+
+function closeBoosterModal() { const modal = document.getElementById('booster-modal'); if (modal) modal.hidden = true; }
 
 function discordRpcCardHtml() {
   return `
@@ -2874,62 +2922,37 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin-left:auto;min-width:120px">
           <!-- ELO + badge côte à côte -->
           <div style="display:flex;align-items:center;gap:10px">
-            ${player.rank ? `<img src="${player.rank.image}" alt="${player.rank.displayLabel || player.rank.label}" title="${player.rank.displayLabel || player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
+            ${player.rank ? `<img id="profile-rank-image" src="${player.rank.image}" alt="${player.rank.displayLabel || player.rank.label}" title="${player.rank.displayLabel || player.rank.label}" style="width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 8px ${player.rank.color}55)">` : ''}
             <div style="text-align:right">
-              <div class="profile-elo" style="${player.rank ? `color:${player.rank.color};text-shadow:0 0 20px ${player.rank.color}66` : ``}">${player.elo}</div>
-              <div class="profile-elo-lbl">ELO</div>
-              ${player.rank ? `<div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.displayLabel || player.rank.label}</div>` : ''}
+              <div class="profile-elo" id="profile-main-elo" style="${player.rank ? `color:${player.rank.color};text-shadow:0 0 20px ${player.rank.color}66` : ``}">${player.elo}</div>
+              <div class="profile-elo-lbl" id="profile-main-elo-label">ELO · CLASSIQUE</div>
+              ${player.rank ? `<div id="profile-rank-label" style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:${player.rank.color};margin-top:1px">${player.rank.displayLabel || player.rank.label}</div>` : ''}
             </div>
           </div>
           <!-- Barre de progression -->
           ${player.rank ? `
           <div style="width:100%">
             <div style="width:100%;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden" title="${player.rank.progress}% vers le rang suivant">
-              <div style="height:100%;width:${player.rank.progress}%;background:${player.rank.color};border-radius:2px;transition:width 0.6s ease"></div>
+              <div id="profile-rank-progress" style="height:100%;width:${player.rank.progress}%;background:${player.rank.color};border-radius:2px;transition:width 0.6s ease"></div>
             </div>
-            <div style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
+            <div id="profile-rank-progress-label" style="font-size:9px;color:var(--muted);text-align:right;margin-top:2px;letter-spacing:0.5px">${player.rank.progress}%${player.rank.next ? ' → ' + player.rank.next + ' ELO' : ' MAX'}</div>
           </div>` : ''}
+          <select class="profile-variant-select" id="profile-variant-select" onchange="applyProfileVariant(this.value)">
+            <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option>
+          </select>
           <!-- Bouton simulateur ELO -->
           <button onclick="openEloSim()" style="margin-top:2px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;color: var(--muted);font-size:10px;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;cursor:pointer;transition:all 0.2s;width:100%" onmouseover="this.style.color='rgba(238,238,245,0.8)';this.style.borderColor='rgba(255,255,255,0.2)'" onmouseout="this.style.color='rgba(238,238,245,0.4)';this.style.borderColor='rgba(255,255,255,0.1)'">
             Simulateur ELO
           </button>
-          ${isOwnProfile && getPremiumTier(player) ? `
-          <div id="vip-boost-wrap" style="margin-top:4px;">
-            <button id="vip-boost-btn" onclick="activateVipBoost()"
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${isPerso(player) ? getPersoRoleAccent(player).border : isVipPlus(player) ? 'rgba(133,235,255,0.35)' : 'rgba(255,214,10,0.3)'};background:${isPerso(player) ? getPersoRoleAccent(player).bg : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'};color:${isPerso(player) ? getPersoRoleAccent(player).color : isVipPlus(player) ? '#85EBFF' : '#ffd60a'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:pointer;transition:all 0.2s;"
-              onmouseover="this.style.background='${isPerso(player) ? `${getPersoRoleAccent(player).color}28` : isVipPlus(player) ? 'rgba(133,235,255,0.15)' : 'rgba(255,214,10,0.15)'}'" onmouseout="this.style.background='${isPerso(player) ? getPersoRoleAccent(player).bg : isVipPlus(player) ? 'rgba(133,235,255,0.08)' : 'rgba(255,214,10,0.08)'}'">
-              &#9889; BOOST ${isPerso(player) ? 'PERSO' : isVipPlus(player) ? 'VIP+' : 'VIP'}
-            </button>
-            <div id="vip-boost-status" style="font-size:10px;color:var(--muted);text-align:center;margin-top:3px;"></div>
-          </div>` : ''}
+          ${isOwnProfile ? `<button class="profile-action-btn" type="button" onclick="openBoosterModal()">⚡ Activer un booster · ${boosterCounts.elo + boosterCounts.coins + (boosterCounts.global || 0)}</button>` : ''}
           ${isOwnProfile ? `
-          <div id="profile-boosters-wrap" style="margin-top:4px;display:flex;flex-direction:column;gap:6px;width:100%">
-            <button id="profile-elo-booster-btn" onclick="openOwnedBooster('elo')" ${boosterCounts.elo <= 0 ? 'disabled' : ''}
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.elo > 0 ? 'rgba(255,214,10,0.32)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.elo > 0 ? 'rgba(255,214,10,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.elo > 0 ? '#ffd60a' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.elo > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
-              ⚡ Booster ELO${boosterCounts.elo > 0 ? ` · ${boosterCounts.elo}` : ''}
-            </button>
-            <button id="profile-coin-booster-btn" onclick="openOwnedBooster('coins')" ${boosterCounts.coins <= 0 ? 'disabled' : ''}
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.35)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.coins > 0 ? 'rgba(255,159,10,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.coins > 0 ? '#ff9f0a' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.coins > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
-              🪙 Booster Coins${boosterCounts.coins > 0 ? ` · ${boosterCounts.coins}` : ''}
-            </button>
-            <button id="profile-global-booster-btn" onclick="openOwnedBooster('global')" ${boosterCounts.global <= 0 ? 'disabled' : ''}
-              style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid ${boosterCounts.global > 0 ? 'rgba(133,235,255,0.35)' : 'rgba(255,255,255,0.08)'};background:${boosterCounts.global > 0 ? 'rgba(133,235,255,0.08)' : 'rgba(255,255,255,0.03)'};color:${boosterCounts.global > 0 ? '#85EBFF' : 'rgba(238,238,245,0.35)'};font-size:11px;font-weight:700;letter-spacing:1px;font-family:'Barlow Condensed',sans-serif;text-transform:uppercase;cursor:${boosterCounts.global > 0 ? 'pointer' : 'not-allowed'};transition:all 0.2s;">
-              🌍 Booster Global${boosterCounts.global > 0 ? ` · ${boosterCounts.global}` : ''}
-            </button>
-          </div>` : ''}
-          ${isOwnProfile ? `
-          <label class="toggle-wrap" style="margin-top:4px;">
-            <div>
-              <div class="toggle-label">Auto-rejoin</div>
-              <div class="toggle-sub" id="auto-rejoin-sub">Rejoindre la queue automatiquement</div>
-            </div>
-            <div class="toggle-switch">
-              <input type="checkbox" id="auto-rejoin-toggle" onchange="onAutoRejoinChange(this.checked)">
-              <span class="toggle-slider"></span>
-            </div>
-          </label>
-          <div class="fps-toggle-row">
-            <label class="toggle-wrap">
+          <button class="profile-action-btn" type="button" onclick="toggleFpsConfigPanel()">⚙ Configurer</button>
+          <div class="fps-config-modal" id="fps-config-panel" hidden onclick="if(event.target===this) closeFpsConfigPanel()" role="dialog" aria-modal="true" aria-labelledby="fps-config-title">
+            <div class="fps-config-dialog">
+              <div class="fps-config-head"><div><div class="fps-config-title" id="fps-config-title">Configuration</div><div class="fps-config-sub">Réglages de navigation et d’affichage.</div></div><button class="fps-config-close" type="button" onclick="closeFpsConfigPanel()">×</button></div>
+              <div class="fps-config-grid">
+                <label class="toggle-wrap" style="grid-column:1/-1"><div><div class="toggle-label">Auto-rejoin</div><div class="toggle-sub" id="auto-rejoin-sub">Rejoindre automatiquement</div></div><div class="toggle-switch"><input type="checkbox" id="auto-rejoin-toggle" onchange="onAutoRejoinChange(this.checked)"><span class="toggle-slider"></span></div></label>
+                <label class="toggle-wrap" style="grid-column:1/-1">
               <div>
                 <div class="toggle-label">Afficher les FPS</div>
                 <div class="toggle-sub" id="fps-counter-sub">Compteur discret en haut à gauche</div>
@@ -2938,19 +2961,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
                 <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
                 <span class="toggle-slider"></span>
               </div>
-            </label>
-            <button class="fps-config-btn" id="fps-config-btn" type="button" onclick="toggleFpsConfigPanel()" aria-label="Configurer le compteur FPS">⚙ Configurer</button>
-          </div>
-          <div class="fps-config-modal" id="fps-config-panel" hidden onclick="if(event.target===this) closeFpsConfigPanel()" role="dialog" aria-modal="true" aria-labelledby="fps-config-title">
-            <div class="fps-config-dialog">
-              <div class="fps-config-head">
-                <div>
-                  <div class="fps-config-title" id="fps-config-title">Compteur FPS</div>
-                  <div class="fps-config-sub">Texte, couleurs et seuils de changement.</div>
-                </div>
-                <button class="fps-config-close" type="button" onclick="closeFpsConfigPanel()" aria-label="Fermer">×</button>
-              </div>
-              <div class="fps-config-grid">
+                </label>
                 <label>Texte <input id="fps-config-text" maxlength="18" oninput="saveFpsConfigFromUi()"></label>
                 <label>Stable <input id="fps-color-good" type="color" oninput="saveFpsConfigFromUi()"></label>
                 <label>Moyen <input id="fps-color-ok" type="color" oninput="saveFpsConfigFromUi()"></label>
@@ -2999,7 +3010,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
       <div class="elo-history-head">
         <div>
           <div class="elo-history-kicker">Progression en temps reel</div>
-          <div class="elo-history-title">Courbe ELO</div>
+          <div class="elo-history-title" id="elo-history-title">Courbe ELO · Classique</div>
           <div class="elo-history-sub">Le graphe se compresse selon l'intervalle choisi.</div>
         </div>
         <div class="elo-history-actions">
@@ -3080,9 +3091,9 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
 
     <!-- Stats -->
     <div class="stats-grid" style="${player.avg_accuracy != null ? 'grid-template-columns:repeat(4,1fr)' : ''}">
-      <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.webp" alt="Victoires"><div class="stat-val">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card losses"><img class="stat-icon-img" src="/badges/stat-defeat.webp" alt="Défaites"><div class="stat-val">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
-      <div class="stat-card draws"><img class="stat-icon-img" src="/badges/stat-draw.webp" alt="Nuls"><div class="stat-val">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
+      <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.webp" alt="Victoires"><div class="stat-val" id="variant-wins">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
+      <div class="stat-card losses"><img class="stat-icon-img" src="/badges/stat-defeat.webp" alt="Défaites"><div class="stat-val" id="variant-losses">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
+      <div class="stat-card draws"><img class="stat-icon-img" src="/badges/stat-draw.webp" alt="Nuls"><div class="stat-val" id="variant-draws">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
       ${player.avg_accuracy != null ? `
       <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
         <div class="stat-val">${player.avg_accuracy}%</div>
@@ -3094,7 +3105,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
     <div class="winrate-card">
       <div class="winrate-header">
         <span class="wr-label">Winrate</span>
-        <span class="wr-pct">${wr}%</span>
+        <span class="wr-pct" id="variant-winrate">${wr}%</span>
       </div>
       <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
     </div>
@@ -3693,6 +3704,13 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
       </div>
     </section>`}
 
+    <div class="fps-config-modal" id="booster-modal" hidden onclick="if(event.target===this)closeBoosterModal()" role="dialog" aria-modal="true">
+      <div class="fps-config-dialog">
+        <div class="fps-config-head"><div><div class="fps-config-title">Activer un booster</div><div class="fps-config-sub">Choisis un boost possédé. Il sera actif pendant 2 heures.</div></div><button class="fps-config-close" type="button" onclick="closeBoosterModal()">×</button></div>
+        <div class="booster-choice-list" id="booster-choice-list"></div>
+      </div>
+    </div>
+
     <!-- Popup simulateur ELO -->
     <div class="elo-sim-bg" id="elo-sim-bg" onclick="if(event.target===this)closeEloSim()">
       <div class="elo-sim-modal">
@@ -3894,6 +3912,7 @@ async function loadEloHistory(playerId, days = 7, silent = false) {
   if (!eloHistoryStartDate || !eloHistoryEndDate) setEloHistoryButtonState(days);
   try {
     const params = new URLSearchParams({ days: String(days) });
+    params.set('variant', selectedProfileVariant);
     if (eloHistoryStartDate && eloHistoryEndDate) {
       params.set('start', eloHistoryStartDate);
       params.set('end', eloHistoryEndDate);
@@ -4193,6 +4212,7 @@ function formatHistoryResult(result) {
 
 function getEloHistoryExportQuery() {
   const params = new URLSearchParams({ days: String(eloHistoryDays) });
+  params.set('variant', selectedProfileVariant);
   if (eloHistoryStartDate && eloHistoryEndDate) {
     params.set('start', eloHistoryStartDate);
     params.set('end', eloHistoryEndDate);
@@ -5711,11 +5731,8 @@ async function activateVipBoost() {
       ? getPersoRoleAccent(me).color
       : data.tier === 'vip_plus' ? '#85EBFF' : '#ffd60a';
     const mins = Math.ceil(((data.expiresAt || Date.now()) - Date.now()) / 60000);
-    btn.disabled = true;
-    btn.style.opacity = '0.5';
-    btn.textContent = '\u26A1 BOOST ACTIF';
-    stat.textContent = `Se termine dans ${mins} min`;
-    stat.style.color = accent;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = '\u26A1 BOOST ACTIF'; }
+    if (stat) { stat.textContent = `Se termine dans ${mins} min`; stat.style.color = accent; }
   } catch(e) { alert('Erreur réseau'); }
 }
 
@@ -5766,6 +5783,7 @@ async function activateOwnedBooster(itemKey, meta = {}) {
     if (typeof render === 'function' && currentPlayer) {
       const totalGames = Number(currentPlayer.wins || 0) + Number(currentPlayer.losses || 0) + Number(currentPlayer.draws || 0);
       render(currentPlayer, currentGamesCache, currentFollowingCache, currentFollowersCache, currentFollowStatusCache, totalGames);
+      loadVariantStats(currentPlayer.id);
     }
   } catch(e) {
     alert('Erreur reseau.');
@@ -5930,8 +5948,6 @@ function onFpsCounterChange(checked) {
   localStorage.setItem('p4_show_fps', checked ? 'true' : 'false');
   updateFpsCounterSub(checked);
   window.P4FpsCounter?.setEnabled?.(checked);
-  const panel = document.getElementById('fps-config-panel');
-  if (panel && !checked) panel.hidden = true;
 }
 
 function updateFpsCounterSub(checked) {
@@ -5959,7 +5975,7 @@ function closeFpsConfigPanel() {
 }
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') closeFpsConfigPanel();
+  if (event.key === 'Escape') { closeFpsConfigPanel(); closeBoosterModal(); }
 });
 function syncFpsConfigUi() {
   const cfg = window.P4FpsCounter?.getConfig?.() || {};
@@ -6953,7 +6969,7 @@ function openEloSim() {
   if (!bg) return;
   bg.classList.add('show');
   // Init slider à l'ELO actuel du joueur affiché
-  const elo = currentPlayer?.elo || 1000;
+  const elo = Number(profileVariantStats.find(item => item.id === selectedProfileVariant)?.elo ?? currentPlayer?.elo ?? 1000);
   const slider = document.getElementById('elo-sim-slider');
   if (slider) { slider.value = elo; }
   updateEloSim(elo);

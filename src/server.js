@@ -430,11 +430,13 @@ function parseHistoryDateBound(value, endOfDay = false) {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
+function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}, requestedVariant = 'classic') {
   const id = Number(playerId || 0);
+  const variant = normalizeVariant(requestedVariant);
   let days = [1, 7, 15].includes(Number(daysRaw)) ? Number(daysRaw) : 7;
   const player = pQ.getById.get(id);
   if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return null;
+  const variantStats = variant === 'classic' ? null : (variantQ.get.get(id, variant) || { elo: 1000, wins: 0, losses: 0, draws: 0 });
 
   const realNow = Date.now();
   let now = realNow;
@@ -457,16 +459,16 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
     JOIN players p2 ON p2.id = g.player2_id
     WHERE (g.player1_id = ? OR g.player2_id = ?)
       AND g.status = 'finished'
-      AND COALESCE(g.variant, 'classic') = 'classic'
+      AND COALESCE(g.variant, 'classic') = ?
       AND g.finished_at IS NOT NULL
     ORDER BY g.finished_at ASC, g.id ASC
-  `).all(id, id);
+  `).all(id, id, variant);
 
   const games = rows
     .map(game => ({ ...game, finishedMs: parseSqliteDateMs(game.finished_at) }))
     .filter(game => game.finishedMs >= start && game.finishedMs <= now);
   const deltas = games.map(game => Number(game.player1_id) === id ? Number(game.elo_p1 || 0) : Number(game.elo_p2 || 0));
-  const currentElo = Number(player.elo || 0);
+  const currentElo = Number(variantStats?.elo ?? player.elo ?? 1000);
   let running = currentElo - deltas.reduce((sum, delta) => sum + delta, 0);
   const points = [{
     t: start,
@@ -538,13 +540,14 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}) {
       elo_curve_rgb_speed: Number(player.elo_curve_rgb_speed || 1) || 1,
       elo_curve_rgb_direction: ['forward', 'reverse'].includes(String(player.elo_curve_rgb_direction || 'forward')) ? String(player.elo_curve_rgb_direction || 'forward') : 'forward',
       elo: currentElo,
-      wins: Number(player.wins || 0),
-      losses: Number(player.losses || 0),
-      draws: Number(player.draws || 0),
+      wins: Number(variantStats?.wins ?? player.wins ?? 0),
+      losses: Number(variantStats?.losses ?? player.losses ?? 0),
+      draws: Number(variantStats?.draws ?? player.draws ?? 0),
       isBot: Number(player.is_bot || 0) === 1,
       rank: getRank(currentElo),
     },
     days,
+    variant,
     range: {
       start: new Date(start).toISOString(),
       end: new Date(now).toISOString(),
@@ -8676,13 +8679,13 @@ app.get('/api/players/by-pseudo/:pseudo', (req, res) => {
 });
 
 app.get('/api/players/:id/elo-history', (req, res) => {
-  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end });
+  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end }, req.query.variant);
   if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
   res.json(history);
 });
 
 app.get('/api/players/:id/elo-history/export', (req, res) => {
-  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end });
+  const history = buildPlayerEloHistory(req.params.id, req.query.days, { start: req.query.start, end: req.query.end }, req.query.variant);
   if (!history) return res.status(404).json({ error: 'Joueur introuvable' });
   const format = String(req.query.format || 'json').toLowerCase();
   const safePseudo = String(history.player?.pseudo || `player-${req.params.id}`)
