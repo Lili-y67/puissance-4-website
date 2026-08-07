@@ -67,6 +67,7 @@ function getQueueCounts() {
 }
 function broadcastQueueCounts() {
   io.emit('queue_counts', getQueueCounts());
+  broadcastPresenceCounts(true);
 }
 const progression = createProgression({ db, pQ, cQ });
 const security = createSecurity({
@@ -351,12 +352,15 @@ function getPresenceCounts() {
   const onlineBots = getOnlineBotCount();
   const visitors = Number(getVisitorCount() || 0);
   const registrations = getRegistrationCounts();
+  const queueCounts = getQueueCounts();
   return {
     onlinePlayers,
     onlineBots,
     visitors,
     totalPresent: onlinePlayers + onlineBots + visitors,
     activeGames: getActiveGameCount(),
+    queue: queueCounts.total,
+    queueByVariant: queueCounts.byVariant,
     ...registrations,
     registeredPlayers: registrations.registeredHumans + registrations.registeredBots,
   };
@@ -417,6 +421,8 @@ function broadcastPresenceCounts(force = false) {
     counts.registeredHumans,
     counts.registeredDiscordPlayers,
     counts.registeredBots,
+    counts.queue,
+    JSON.stringify(counts.queueByVariant || {}),
   ].join(':');
   if (!force && signature === lastPresenceSignature) return counts;
   lastPresenceSignature = signature;
@@ -3927,13 +3933,24 @@ app.patch('/api/admin/players/:id/pseudo', async (req, res) => {
 // Reset ELO
 app.patch('/api/admin/players/:id/elo', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Action reservee aux admins.' });
-  const { elo } = req.body;
-  const _pe = pQ.getById.get(Number(req.params.id));
-  WH.wlogAdminAction('ELO reset', _pe?.pseudo || req.params.id, req.params.id, [['Ancien ELO', _pe?.elo ?? '?', true], ['Nouveau ELO', elo, true]]);
-  db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(Number(elo) || 1000, Number(req.params.id));
-  syncPlayerDiscordRankRole(Number(req.params.id)).catch(() => {});
-  notifyPlayerProfileChanged(Number(req.params.id), `ELO modifie par le staff : ${Number(elo) || 1000}.`);
-  res.json({ ok: true });
+  const playerId = Number(req.params.id);
+  const nextElo = Number(req.body?.elo) || 1000;
+  const variant = normalizeVariant(req.body?.variant);
+  const player = pQ.getById.get(playerId);
+  if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const oldElo = variant === 'classic' ? Number(player.elo || 1000) : Number(variantQ.get.get(playerId, variant)?.elo || 1000);
+  if (variant === 'classic') {
+    db.prepare('UPDATE players SET elo = ? WHERE id = ?').run(nextElo, playerId);
+    syncPlayerDiscordRankRole(playerId).catch(() => {});
+  } else {
+    variantQ.ensure.run(playerId, variant);
+    db.prepare('UPDATE player_variant_stats SET elo = ?, best_elo = MAX(best_elo, ?) WHERE player_id = ? AND variant = ?')
+      .run(nextElo, nextElo, playerId, variant);
+  }
+  const variantLabel = getVariant(variant).label;
+  WH.wlogAdminAction('ELO reset', player.pseudo, playerId, [['Variante', variantLabel, true], ['Ancien ELO', oldElo, true], ['Nouvel ELO', nextElo, true]]);
+  notifyPlayerProfileChanged(playerId, `ELO ${variantLabel} modifie par le staff : ${nextElo}.`);
+  res.json({ ok: true, variant, elo: nextElo });
 });
 
 // Mute temporaire (interdit de jouer)
@@ -6311,7 +6328,13 @@ app.post('/api/shop/buy', async (req, res) => {
   } else if (pack === 'perso') {
     pQ.updatePerso.run({ is_perso: 1, id: recipientId });
   } else if (pack === 'elo_reset') {
-    pQ.setElo.run({ elo: 1000, id: recipientId });
+    const resetVariant = normalizeVariant(req.body?.variant);
+    if (resetVariant === 'classic') {
+      pQ.setElo.run({ elo: 1000, id: recipientId });
+    } else {
+      variantQ.ensure.run(recipientId, resetVariant);
+      db.prepare('UPDATE player_variant_stats SET elo = 1000 WHERE player_id = ? AND variant = ?').run(recipientId, resetVariant);
+    }
   } else if (pack === 'limited_offer' && Array.isArray(item.grants)) {
     for (const grant of item.grants) applyLimitedPackEntry(recipientId, grant, { now, player: recipient });
   } else if (Array.isArray(item.grants)) {
@@ -10488,6 +10511,7 @@ io.on('connection', socket => {
         variantConfig: state.variantConfig,
         missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
         selectedMissionId: state.variant === 'mission' ? state.missions?.[side] || null : null,
+        missionReady: state.variant === 'mission' ? !!(state.missions?.[1] && state.missions?.[2]) : false,
         side,
         gameType: String(state.gameType || 'ranked'),
         moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
@@ -10660,6 +10684,7 @@ function _startMatch(p1, p2, options = {}) {
       // Tenter immAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAdiatement un autre match si d'autres joueurs sont en queue
       const next = mm.tryMatch();
       if (next) _startMatch(next.p1, next.p2);
+      broadcastQueueCounts();
       return;
     }
   } catch(e) { /* ignore si DB pas encore prAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAte */ }
@@ -10743,6 +10768,7 @@ function buildDiscordBotContext() {
     pQ,
     gQ,
     mQ,
+    variantQ,
     bQ,
     tQ,
     shopItemQ,

@@ -491,6 +491,18 @@ body {
 }
 .board-move-timer.show{display:block}
 .board-move-timer.danger{color:#ff4f6d;box-shadow:0 8px 22px rgba(0,0,0,.32),0 0 20px rgba(255,45,85,.22)}
+.mission-picker-bg{position:fixed;inset:0;z-index:100500;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(3,4,12,.78);backdrop-filter:blur(12px)}
+.mission-picker-bg.show{display:flex}
+.mission-picker{width:min(620px,100%);max-height:min(760px,calc(100vh - 36px));overflow:auto;padding:24px;border:1px solid rgba(191,90,242,.34);border-radius:24px;background:linear-gradient(180deg,rgba(24,17,42,.99),rgba(8,8,20,.99));box-shadow:0 34px 100px rgba(0,0,0,.65),0 0 48px rgba(191,90,242,.14)}
+.mission-picker h2{margin:0;font:900 clamp(28px,6vw,42px) 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase}
+.mission-picker>p{margin:7px 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
+.mission-options{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mission-option{display:flex;flex-direction:column;gap:5px;min-height:96px;padding:14px;border:1px solid rgba(255,255,255,.10);border-radius:16px;background:rgba(255,255,255,.045);color:var(--text);text-align:left;cursor:pointer;transition:.18s}
+.mission-option:hover{transform:translateY(-2px);border-color:rgba(191,90,242,.55);background:rgba(191,90,242,.10)}
+.mission-option strong{font:900 18px 'Barlow Condensed',sans-serif;letter-spacing:.7px;color:#e8c6ff}
+.mission-option span{color:var(--muted);font-size:12px;line-height:1.4}
+.mission-option:disabled{opacity:.45;cursor:wait;transform:none}
+@media(max-width:600px){.mission-picker-bg{padding:8px}.mission-picker{max-height:calc(100vh - 16px);padding:18px 14px;border-radius:20px}.mission-options{grid-template-columns:1fr}.mission-option{min-height:0;padding:12px}.mission-picker h2{font-size:30px}}
 
 .board {
   width:min(100%, var(--board-max));
@@ -547,6 +559,24 @@ body {
 }
 .cell.drop .token { transform: scale(1); animation: token-land .38s cubic-bezier(.22,1,.36,1); }
 @keyframes token-land{0%{transform:translateY(-38%) scale(.72);filter:brightness(1.25)}70%{transform:translateY(4%) scale(1.08)}100%{transform:translateY(0) scale(1)}}
+.cell.bomb-armed{overflow:visible;z-index:8}
+.cell.bomb-armed>.token{filter:brightness(.35) saturate(.55)}
+.bomb-charge{position:absolute;inset:7%;z-index:9;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 28%,#62626d 0 8%,#24242d 32%,#08080d 72%);border:2px solid rgba(255,255,255,.28);box-shadow:inset 0 -8px 13px rgba(0,0,0,.7),0 0 0 3px rgba(255,45,85,.18),0 0 28px rgba(255,45,85,.62);animation:bomb-arm .72s cubic-bezier(.2,.9,.2,1) both,bomb-tick .32s .72s ease-in-out infinite alternate}
+.bomb-charge b{width:82%;padding:3px 0;border-radius:4px;background:linear-gradient(#ff5a71,#c70d30);border:1px solid rgba(255,255,255,.28);color:#fff;font:900 clamp(9px,2vw,15px) 'Barlow Condensed',sans-serif;letter-spacing:1px;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.8);box-shadow:0 3px 8px rgba(0,0,0,.42)}
+.bomb-fuse{position:absolute;width:34%;height:34%;right:-10%;top:-13%;border-top:4px solid #b88b55;border-radius:50%;transform:rotate(-26deg)}
+.bomb-fuse::after{content:"";position:absolute;right:-3px;top:-6px;width:9px;height:9px;border-radius:50%;background:#fff6a0;box-shadow:0 0 7px #fff,0 0 14px #ffb000,0 0 24px #ff2d55;animation:fuse-spark .16s steps(2) infinite}
+.cell.bomb-hit>.token{animation:bomb-token-blast .48s cubic-bezier(.2,.8,.2,1) forwards!important}
+.board.bomb-shock{animation:bomb-board-shock .46s cubic-bezier(.2,.8,.2,1)}
+.cell.bomb-falling>.token{animation:bomb-gravity-fall .62s cubic-bezier(.2,.75,.25,1) both!important;animation-delay:var(--bomb-fall-delay,0ms)!important}
+.cell.rotation-falling>.token{animation:rotation-gravity-fall .68s cubic-bezier(.16,.78,.24,1) both!important;animation-delay:var(--rotation-fall-delay,0ms)!important}
+@keyframes bomb-arm{from{opacity:0;transform:scale(.15) rotate(-35deg)}70%{transform:scale(1.12) rotate(5deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes bomb-tick{from{transform:scale(.96);filter:brightness(.9)}to{transform:scale(1.06);filter:brightness(1.28)}}
+@keyframes fuse-spark{from{transform:scale(.65) rotate(0)}to{transform:scale(1.35) rotate(90deg)}}
+@keyframes bomb-token-blast{0%{transform:scale(1);opacity:1;filter:brightness(1)}38%{transform:scale(1.38);opacity:1;filter:brightness(3) saturate(0)}100%{transform:scale(.05);opacity:0;filter:brightness(4);box-shadow:0 0 48px #ff9f0a}}
+@keyframes bomb-board-shock{0%{transform:scale(1)}18%{transform:scale(1.035) rotate(.7deg);filter:brightness(1.8)}42%{transform:scale(.985) rotate(-.6deg)}70%{transform:scale(1.008) rotate(.25deg)}100%{transform:scale(1)}}
+@keyframes bomb-gravity-fall{from{transform:translateY(var(--bomb-fall-from)) scale(1);filter:brightness(1.35)}75%{transform:translateY(4%) scale(1.05)}to{transform:translateY(0) scale(1);filter:brightness(1)}}
+@keyframes rotation-gravity-fall{from{transform:translateY(var(--rotation-fall-from)) scale(.96);filter:brightness(1.3)}72%{transform:translateY(5%) scale(1.04)}to{transform:translateY(0) scale(1);filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.bomb-charge,.bomb-fuse::after,.cell.bomb-hit>.token,.board.bomb-shock,.cell.bomb-falling>.token,.cell.rotation-falling>.token{animation-duration:.01ms!important;animation-delay:0ms!important}}
 
 /* Formes via clip-path + border-radius */
 .cell.p1 .token {
@@ -1255,7 +1285,7 @@ html.p4-performance-lite .board::after {
     <div class="board-countdown-overlay" id="board-countdown-overlay" aria-live="polite">
       <div class="board-countdown-card">
         <div class="board-countdown-number" id="board-countdown-number">3</div>
-        <div class="board-countdown-label">Prépare-toi</div>
+        <div class="board-countdown-label" id="board-countdown-label">Prépare-toi</div>
       </div>
     </div>
     <div class="result-overlay" id="result-overlay">
@@ -1271,6 +1301,14 @@ html.p4-performance-lite .board::after {
         <a class="btn-action ghost" id="btn-replay" href="#">📽️ Replay</a>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="mission-picker-bg" id="mission-picker-bg" role="dialog" aria-modal="true" aria-labelledby="mission-picker-title">
+  <div class="mission-picker">
+    <h2 id="mission-picker-title">Choisis ta mission</h2>
+    <p>Ton choix reste personnel. La partie démarre uniquement lorsque les deux joueurs ont choisi.</p>
+    <div class="mission-options" id="mission-options"></div>
   </div>
 </div>
 
@@ -1303,6 +1341,8 @@ const SFX = (() => {
     tick()        { beep(900, 0.04, 0.07, 'square'); },
     go()          { [523,659,784].forEach((f,i) => setTimeout(() => beep(f, 0.25, 0.13), i*70)); },
     matchFound()  { [440,554,659].forEach((f,i) => setTimeout(() => beep(f, 0.35, 0.13), i*90)); },
+    bombTick()    { beep(760, 0.055, 0.08, 'square'); },
+    explosion()   { beep(92, .42, .22, 'sawtooth', .002); setTimeout(() => beep(58, .5, .16, 'square', .002), 35); },
     win()         { [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.14), i*110)); },
     lose()        { [392,349,311,261].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.12, 'sawtooth'), i*120)); },
     draw()        { beep(350, 0.18, 0.1, 'triangle'); setTimeout(() => beep(350, 0.18, 0.08, 'triangle'), 240); },
@@ -1318,6 +1358,8 @@ let socket, myPlayer, mySide, gameId, currentTurn;
 let gameOver    = false;
 let lobbyData   = null;
 let inCountdown = false; // true pendant le 3-2-1
+let missionCountdownStarted = false;
+let missionSelectionPending = false;
 let p1Shape   = 'circle';
 let p2Shape   = 'circle';
 let p1Emoji   = '⭐';
@@ -1370,13 +1412,37 @@ function ensureVariantControls(data = {}) {
       controls.innerHTML = `<span id="mission-state">Ta mission : ${alreadySelected.label}</span>`;
       return;
     }
-    const choices = data.missions.map((m, i) => `${i + 1}. ${m.label} — ${m.description}`).join('\n');
-    setTimeout(() => {
-      const picked = Math.max(1, Math.min(data.missions.length, Number(prompt(`Choisis ta mission personnelle :\n${choices}`, '1')) || 1));
-      socket?.emit('game_select_mission', { missionId: data.missions[picked - 1].id });
-    }, 250);
     controls.innerHTML = '<span id="mission-state">Choisis ta mission personnelle…</span>';
   }
+}
+
+function openMissionPicker(missions = []) {
+  const background = document.getElementById('mission-picker-bg');
+  const list = document.getElementById('mission-options');
+  if (!background || !list || !missions.length) return;
+  list.innerHTML = '';
+  missions.forEach(mission => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'mission-option';
+    const title = document.createElement('strong');
+    const description = document.createElement('span');
+    title.textContent = mission.label;
+    description.textContent = mission.description;
+    button.append(title, description);
+    button.addEventListener('click', () => {
+      if (missionSelectionPending) return;
+      missionSelectionPending = true;
+      list.querySelectorAll('button').forEach(item => { item.disabled = true; });
+      socket?.emit('game_select_mission', { missionId: mission.id });
+    });
+    list.appendChild(button);
+  });
+  background.classList.add('show');
+}
+
+function closeMissionPicker() {
+  document.getElementById('mission-picker-bg')?.classList.remove('show');
 }
 
 function setStatus(message = '', allowHtml = false) {
@@ -1581,11 +1647,12 @@ function updateGameDiscordPresence(extra = {}) {
   const opponent = players?.[opponentSide];
   const activeMode = document.body.dataset.gameMode || 'ranked';
   const mode = iaMode ? 'contre une IA' : activeMode === 'friendly' ? 'en amical' : 'en ranked';
+  const variantLabel = VARIANT_LABELS[currentVariant] || 'Classique';
   const p1Elo = Number.isFinite(Number(players?.[1]?.elo)) ? Math.round(Number(players[1].elo)) : '—';
   const p2Elo = Number.isFinite(Number(players?.[2]?.elo)) ? Math.round(Number(players[2].elo)) : '—';
   const context = {
-    details: opponent?.pseudo ? `Joue ${mode} contre ${opponent.pseudo}` : `Joue ${mode}`,
-    state: `${p1Elo} ELO • ${p2Elo} ELO`,
+    details: opponent?.pseudo ? `${variantLabel} · ${mode} contre ${opponent.pseudo}` : `${variantLabel} · ${mode}`,
+    state: `${p1Elo} ELO • ${p2Elo} ELO · ${variantLabel}`,
     hideIdentity: true,
     url: location.href,
   };
@@ -2025,6 +2092,21 @@ function connectSocket(pendingMatch) {
     // Initialiser lobbyData pour que opponent_reconnected etc. fonctionnent
     lobbyData = data;
 
+    if (currentVariant === 'mission' && !data.missionReady) {
+      inCountdown = true;
+      const label = document.getElementById('board-countdown-label');
+      if (data.selectedMissionId) {
+        if (label) label.textContent = 'Attente du choix adverse';
+        setBoardCountdown('…', true);
+      } else {
+        if (label) label.textContent = 'Choisis ta mission';
+        setBoardCountdown('?', true);
+        openMissionPicker(data.missions || []);
+      }
+      setStatus('La partie attend le choix des deux missions.');
+      return;
+    }
+
     setStatus(currentTurn === mySide ? 'Ton tour' : 'Tour adversaire');
     updateGameDiscordPresence({ players: data.players });
   });
@@ -2044,8 +2126,8 @@ function connectSocket(pendingMatch) {
     if (state) state.textContent = 'Choix envoyé · attente de l’adversaire…';
     updateTurnUI();
   });
-  socket.on('bomb_used', data => {
-    restoreBoard(data.board);
+  socket.on('bomb_used', async data => {
+    await animateBombUse(data);
     currentTurn = data.next;
     const mineAvailable = data.bombs?.[mySide] !== false;
     const button = document.getElementById('bomb-button');
@@ -2055,11 +2137,19 @@ function connectSocket(pendingMatch) {
     updateTurnUI();
   });
   socket.on('mission_confirmed', data => {
+    missionSelectionPending = false;
+    closeMissionPicker();
     const state = document.getElementById('mission-state');
     if (state) state.textContent = `Ta mission : ${data.mission.label}`;
+    const label = document.getElementById('board-countdown-label');
+    if (label) label.textContent = 'Attente du choix adverse';
+    setBoardCountdown('…', true);
   });
   socket.on('mission_ready_state', ({ ready } = {}) => {
-    if (ready) setStatus('Les deux missions sont choisies. À toi de jouer !');
+    if (ready) {
+      setStatus('Les deux missions sont choisies. La partie démarre !');
+      beginGameCountdown(lobbyData);
+    }
   });
   socket.on('game_over',   onGameOver);
   socket.on('game_chat_message', (msg) => appendChatMessage(msg));
@@ -2072,6 +2162,10 @@ function connectSocket(pendingMatch) {
     if (message) appendChatMessage({ system: true, message });
   });
   socket.on('game_action_error', ({ message } = {}) => {
+    if (currentVariant === 'mission' && missionSelectionPending) {
+      missionSelectionPending = false;
+      openMissionPicker(lobbyData?.missions || []);
+    }
     if (message) appendChatMessage({ system: true, message });
   });
   socket.on('color_updated', ({ playerId, color }) => {
@@ -2149,6 +2243,8 @@ function startLatencyProbe() {
 
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 function setupLobby(data) {
+  missionCountdownStarted = false;
+  missionSelectionPending = false;
   // Mettre à jour l'URL avec le gameId pour permettre le reload (pas en mode IA)
   if (data.gameId && !iaMode && history.replaceState) {
     history.replaceState(null, '', '/game/' + data.gameId);
@@ -2216,13 +2312,40 @@ function setupLobby(data) {
     }
   });
 
+  currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+  renderBoard();
+  document.getElementById('lobby-overlay')?.classList.add('hidden');
+  if (currentVariant === 'mission' && !data.selectedMissionId) {
+    inCountdown = true;
+    const label = document.getElementById('board-countdown-label');
+    if (label) label.textContent = 'Choisis ta mission';
+    setBoardCountdown('?', true);
+    openMissionPicker(data.missions || []);
+    return;
+  }
+  if (currentVariant === 'mission' && data.selectedMissionId && !data.missionReady) {
+    inCountdown = true;
+    const label = document.getElementById('board-countdown-label');
+    if (label) label.textContent = 'Attente du choix adverse';
+    setBoardCountdown('…', true);
+    return;
+  }
+  beginGameCountdown(data);
+}
+
+function beginGameCountdown(data) {
+  if (!data) return;
+  if (currentVariant === 'mission') {
+    if (missionCountdownStarted) return;
+    missionCountdownStarted = true;
+  }
+  closeMissionPicker();
+  const label = document.getElementById('board-countdown-label');
+  if (label) label.textContent = 'Prépare-toi';
   // Countdown — on affiche n, attend 1s, affiche n-1, etc.
   let n = data.startsIn || 3;
   const cdEl = document.getElementById('countdown');
   cdEl.textContent = n;
-  currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-  renderBoard();
-  document.getElementById('lobby-overlay')?.classList.add('hidden');
   setBoardCountdown(n, true);
   inCountdown = true;
   const iv = setInterval(() => {
@@ -2346,21 +2469,83 @@ function onMovePlayed(data) {
   updateGameDiscordPresence();
 }
 
-function animateRotation(rotation, finalGrid) {
+async function animateRotation(rotation, finalGrid) {
   const board = document.getElementById('board');
   if (!board) return restoreBoard(finalGrid);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   board.classList.add('locked');
-  board.style.transition = 'transform 1100ms cubic-bezier(.22,.7,.2,1)';
+  board.style.transition = 'transform 1050ms cubic-bezier(.22,.7,.2,1)';
   board.style.transform = `rotate(${rotation.direction > 0 ? 90 : -90}deg)`;
-  setTimeout(() => {
-    board.style.transition = 'none';
-    board.style.transform = 'rotate(0deg)';
-    restoreBoard(finalGrid);
-    requestAnimationFrame(() => {
-      board.style.transition = '';
-      board.classList.remove('locked');
-    });
-  }, 1120);
+  await pause(1070);
+  board.style.transition = 'none';
+  board.style.transform = 'rotate(0deg)';
+  restoreBoard(finalGrid);
+  const sampleCell = document.querySelector('.cell');
+  const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
+  (Array.isArray(rotation.falls) ? rotation.falls : []).forEach((fall, index) => {
+    const cell = document.querySelector(`.cell[data-row="${Number(fall.row)}"][data-col="${Number(fall.col)}"]`);
+    if (!cell) return;
+    cell.classList.add('rotation-falling');
+    cell.style.setProperty('--rotation-fall-delay', `${Math.min(index * 28, 180)}ms`);
+    cell.style.setProperty('--rotation-fall-from', `${(Number(fall.fromRow) - Number(fall.row)) * step}px`);
+  });
+  requestAnimationFrame(() => { board.style.transition = ''; });
+  await pause(850);
+  document.querySelectorAll('.cell.rotation-falling').forEach(cell => {
+    cell.classList.remove('rotation-falling');
+    cell.style.removeProperty('--rotation-fall-delay');
+    cell.style.removeProperty('--rotation-fall-from');
+  });
+  board.classList.remove('locked');
+}
+
+async function animateBombUse(data = {}) {
+  const board = document.getElementById('board');
+  if (!board) return restoreBoard(data.board);
+  const target = document.querySelector(`.cell[data-row="${Number(data.row)}"][data-col="${Number(data.col)}"]`);
+  if (!target) return restoreBoard(data.board);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  board.classList.add('locked');
+  target.classList.add('bomb-armed');
+  const charge = document.createElement('div');
+  charge.className = 'bomb-charge';
+  charge.setAttribute('aria-hidden', 'true');
+  charge.innerHTML = '<span class="bomb-fuse"></span><b>TNT</b>';
+  target.appendChild(charge);
+  setStatus('Bombe armée…');
+  SFX.bombTick();
+  await pause(320);
+  SFX.bombTick();
+  await pause(320);
+  SFX.bombTick();
+  await pause(300);
+
+  board.classList.add('bomb-shock');
+  SFX.explosion();
+  (Array.isArray(data.removed) ? data.removed : []).forEach(({ row, col }) => {
+    document.querySelector(`.cell[data-row="${Number(row)}"][data-col="${Number(col)}"]`)?.classList.add('bomb-hit');
+  });
+  setStatus('BOUM ! La gravité s’applique…');
+  await pause(480);
+
+  restoreBoard(data.board);
+  const sampleCell = document.querySelector('.cell');
+  const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
+  (Array.isArray(data.falls) ? data.falls : []).forEach((fall, index) => {
+    const cell = document.querySelector(`.cell[data-row="${Number(fall.row)}"][data-col="${Number(fall.col)}"]`);
+    if (!cell) return;
+    cell.classList.add('bomb-falling');
+    cell.style.setProperty('--bomb-fall-delay', `${Math.min(index * 32, 190)}ms`);
+    cell.style.setProperty('--bomb-fall-from', `${(Number(fall.fromRow) - Number(fall.row)) * step}px`);
+  });
+  await pause(850);
+  document.querySelectorAll('.cell.bomb-falling').forEach(cell => {
+    cell.classList.remove('bomb-falling');
+    cell.style.removeProperty('--bomb-fall-delay');
+    cell.style.removeProperty('--bomb-fall-from');
+  });
+  board.classList.remove('bomb-shock', 'locked');
+  setStatus('');
 }
 
 // ── Emoji → pion teinté ──────────────────────────────────────────────────────
@@ -2584,11 +2769,17 @@ function getCardElo(side) {
   return Number.isFinite(numeric) ? numeric : null;
 }
 
-function onGameOver(data) {
+async function onGameOver(data) {
   gameOver = true;
   stopTurnTimer();
   setGameActionState('ended');
   closeActionOffer();
+
+  if (data?.bomb && Array.isArray(data?.board)) {
+    await animateBombUse({ ...data.bomb, board: data.board });
+  } else if (data?.rotation && Array.isArray(data?.board)) {
+    await animateRotation(data.rotation, data.board);
+  }
 
   const dcBanner = document.getElementById('disconnect-banner');
   if (dcBanner) {

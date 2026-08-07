@@ -1918,6 +1918,11 @@ function renderCard(pack) {
         ${item.type === 'booster' ? `<div class="feature"><div class="feature-emoji">📉</div><div class="feature-copy"><strong>Stock restant</strong><span>${stock} encore disponible(s) · inventaire perso ${inv}.</span></div></div>` : ''}
         ${bundleStockHtml}
       </div>
+      ${pack === 'elo_reset' ? `<label style="display:grid;gap:7px;margin:4px 0 14px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Variante à réinitialiser
+        <select id="elo-reset-variant" style="width:100%;padding:11px 13px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:#11101d;color:#fff;font:700 14px 'Barlow Condensed',sans-serif">
+          <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option>
+        </select>
+      </label>` : ''}
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
@@ -2133,11 +2138,13 @@ async function purchasePack(pack, giftTo = '', giftToId = 0) {
     return false;
   }
   const coupon = appliedCouponCode;
+  const resetVariant = pack === 'elo_reset' ? (document.getElementById('elo-reset-variant')?.value || 'classic') : undefined;
+  const resetVariantLabel = resetVariant ? ({ classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' }[resetVariant] || 'Classique') : '';
   const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
   const priceText = price === 0 ? 'gratuitement' : `pour ${price} ${currencyLabel}${promoText}`;
-  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
+  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${resetVariant ? ` pour la variante ${resetVariantLabel}` : ''}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
 
   const btn = giftTo ? null : document.getElementById(`buy-${pack}`);
   const btnInitialHtml = btn?.innerHTML || '';
@@ -2167,6 +2174,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0) {
         giftTo: giftTo || undefined,
         giftToId: Number(giftToId || 0) || undefined,
         botId: pack === 'bot_host_1m' ? Number(shopBotHosts?.[0]?.id || 0) : undefined,
+        variant: resetVariant,
       }),
     });
     const data = await res.json();

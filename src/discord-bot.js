@@ -28,6 +28,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { getAllRankRoleNames, RANKS } = require('./rank');
+const { normalizeVariant, getVariant, publicVariants } = require('./game/variants');
 
 const DEFAULT_API = `http://127.0.0.1:${process.env.PORT || 3000}`;
 const STAFF_ORDER = { user: 0, moderator: 1, admin: 2 };
@@ -69,12 +70,19 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
   const reasonOption = (description = 'Raison ou detail') => ({ type: 3, name: 'raison', description, required: false });
   const idOption = (description = 'ID partie ou ressource') => ({ type: 3, name: 'id', description, required: true });
   const adminCommand = (name, description, options = []) => ({ name: `admin-${name}`, description, options });
+  const variantOption = () => ({
+    type: 3,
+    name: 'variante',
+    description: 'Variante et classement ELO',
+    required: false,
+    choices: publicVariants().map(variant => ({ name: variant.label, value: variant.id })),
+  });
 
   return [
-    { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }] },
-    { name: 'moi', description: 'Afficher ton profil lie Discord' },
+    { name: 'profil', description: 'Afficher le profil Puissance 4 d un joueur', options: [{ type: 3, name: 'pseudo', description: 'Pseudo du joueur', required: true, autocomplete: true }, variantOption()] },
+    { name: 'moi', description: 'Afficher ton profil lie Discord', options: [variantOption()] },
     { name: 'ui', description: 'Afficher en francais les informations Discord d un membre', options: [{ type: 6, name: 'utilisateur', description: 'Membre a inspecter', required: false }] },
-    { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
+    { name: 'classement', description: 'Afficher le top ELO Puissance 4', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }, variantOption()] },
     { name: 'stats', description: 'Afficher les statistiques du site' },
     { name: 'systeme', description: 'Afficher l etat public du serveur' },
     { name: 'live', description: 'Afficher les parties en direct' },
@@ -97,7 +105,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       { type: 4, name: 'quantite', description: 'Quantite ou montant', required: false },
     ] },
     { name: 'ticket-setup', description: 'Installer le panneau de tickets Puissance 4', default_member_permissions: '16' },
-    { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }] },
+    { name: 'leaderboard', description: 'Alias du classement officiel', options: [{ type: 3, name: 'type', description: 'Classement a afficher', required: false, choices: [{ name: 'Membres', value: 'humans' }, { name: 'Bots', value: 'bots' }] }, variantOption()] },
     { name: 'bots', description: 'Afficher les bots API et preconfigures' },
     { name: 'login', description: 'Ouvrir une session staff Discord pendant 10 minutes', options: [{ type: 3, name: 'password', description: 'Mot de passe de ton compte Puissance 4', required: true }] },
     { name: 'db-reset', description: 'Reset DB admin: wallpapers ou base complete avec confirmation', default_member_permissions: '8', options: [
@@ -159,6 +167,14 @@ function startDiscordBot(ctx) {
   const code = value => `\`${String(value == null ? '-' : value).replace(/`/g, '')}\``;
   const playerUrl = player => `${api}/profil?id=${player.id}`;
   const rankOf = elo => ctx.getRank(Number(elo || 0)) || { label: 'Non classe', color: '#8b9cf4' };
+  const variantMeta = value => getVariant(normalizeVariant(value));
+  const variantLabel = value => variantMeta(value).label;
+  const playerVariantStats = (player, value) => {
+    const variant = normalizeVariant(value);
+    if (variant === 'classic') return { variant, elo: Number(player.elo || 0), wins: Number(player.wins || 0), losses: Number(player.losses || 0), draws: Number(player.draws || 0) };
+    const stats = ctx.variantQ?.get?.get(player.id, variant) || {};
+    return { variant, elo: Number(stats.elo ?? 1000), wins: Number(stats.wins || 0), losses: Number(stats.losses || 0), draws: Number(stats.draws || 0) };
+  };
   const discordEmojiCache = new Map();
   const staffSessions = new Map();
   const activeGiveaways = new Map();
@@ -1031,12 +1047,13 @@ function startDiscordBot(ctx) {
     return row?.accuracy != null ? `${Math.round(Number(row.accuracy))}%` : '--';
   }
 
-  function latestGames(playerId) {
+  function latestGames(playerId, requestedVariant = 'classic') {
+    const variant = normalizeVariant(requestedVariant);
     return ctx.db.prepare(`
       WITH recent AS (
-        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player1_id=?
+        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player1_id=? AND COALESCE(games.variant,'classic')=?
         UNION
-        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player2_id=?
+        SELECT games.id AS game_id FROM games WHERE games.status='finished' AND games.player2_id=? AND COALESCE(games.variant,'classic')=?
         ORDER BY game_id DESC
         LIMIT 25
       )
@@ -1046,6 +1063,7 @@ function startDiscordBot(ctx) {
              games.winner_id AS winner_id,
              games.move_count AS move_count,
              games.duration AS duration,
+             COALESCE(games.variant,'classic') AS variant,
              games.elo_p1 AS elo_p1,
              games.elo_p2 AS elo_p2,
              p1.pseudo AS p1_pseudo,
@@ -1057,7 +1075,7 @@ function startDiscordBot(ctx) {
       JOIN players p2 ON p2.id = games.player2_id
       ORDER BY games.id DESC
       LIMIT 25
-    `).all(playerId, playerId);
+    `).all(playerId, variant, playerId, variant);
   }
 
   function profileRows(player, games) {
@@ -1084,7 +1102,7 @@ function startDiscordBot(ctx) {
         };
         return new StringSelectMenuOptionBuilder()
           .setLabel(`${result} vs ${opponent} / ${delta >= 0 ? '+' : ''}${delta} ELO`.slice(0, 100))
-          .setDescription(`#${game.id} / ${game.move_count || 0} coups / ${game.duration || 0}s`.slice(0, 100))
+          .setDescription(`${variantLabel(game.variant)} / #${game.id} / ${game.move_count || 0} coups / ${game.duration || 0}s`.slice(0, 100))
           .setValue(`game:${game.id}`)
           .setEmoji(emojiMap[result]);
       }));
@@ -1127,10 +1145,12 @@ function startDiscordBot(ctx) {
     return `### 🤖 Bot API\nOwner ID: ${owner} | Etat: **${online}** | Suspendu: **${suspended}**\nCristaux owner: **${fmt(player.bot_crystals || 0)}** | Dernier ping: **${player.bot_last_seen ? formatDiscordTimestamp(Number(player.bot_last_seen), 'R') : 'Jamais'}**`;
   }
 
-  function profilePayload(player) {
-    const rank = rankOf(player.elo);
+  function profilePayload(player, requestedVariant = 'classic') {
+    const selectedStats = playerVariantStats(player, requestedVariant);
+    const statPlayer = { ...player, ...selectedStats };
+    const rank = rankOf(selectedStats.elo);
     const rankIcon = rankEmoji(rank);
-    const games = latestGames(player.id);
+    const games = latestGames(player.id, selectedStats.variant);
     const follows = ctx.db.prepare(
       'SELECT (SELECT COUNT(*) FROM follows WHERE follower_id=?) AS following, (SELECT COUNT(*) FROM follows WHERE following_id=?) AS followers'
     ).get(player.id, player.id);
@@ -1147,10 +1167,10 @@ function startDiscordBot(ctx) {
       : `Parrainage: ${api}/?ref=${encodeURIComponent(player.id)}`;
     return containerMessage({
       color: parseInt(String(player.color || '#ff2d55').replace('#', ''), 16) || 0xff2d55,
-      title: `${rankIcon ? `${rankIcon} ` : ''}${player.pseudo} - ${fmt(player.elo)} ELO`,
-      subtitle: `Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)}`,
+      title: `${rankIcon ? `${rankIcon} ` : ''}${player.pseudo} - ${fmt(selectedStats.elo)} ELO`,
+      subtitle: `${variantLabel(selectedStats.variant)} | Rang: ${rankIcon ? `${rankIcon} ` : ''}**${rank.label}** | Badges: ${roleBadges(player)}`,
       sections: [
-        `### 📊 Statistiques\nVictoires: **${player.wins || 0}** | Defaites: **${player.losses || 0}** | Nuls: **${player.draws || 0}**\nParties: **${totalGames(player)}** | Winrate: **${winRate(player)}** | Precision: **${playerAccuracy(player.id)}**`,
+        `### 📊 Statistiques · ${variantLabel(selectedStats.variant)}\nVictoires: **${selectedStats.wins}** | Defaites: **${selectedStats.losses}** | Nuls: **${selectedStats.draws}**\nParties: **${totalGames(statPlayer)}** | Winrate: **${winRate(statPlayer)}** | Precision globale: **${playerAccuracy(player.id)}**`,
         `### 👤 Profil\n${linkedLine}\n${premiumSummary(player)}\n${economyLine}\nDerniere presence site: **${player.last_seen ? formatDiscordTimestamp(Number(player.last_seen), 'R') : 'Inconnue'}**`,
         `### 🎨 Cosmetiques\n${profileCosmeticsSummary(player)}`,
         `### 🔗 Social\nSuivis: **${follows?.following || 0}** | Abonnes: **${follows?.followers || 0}**\n${referralLine}\n${lastLine}`,
@@ -1188,13 +1208,17 @@ function startDiscordBot(ctx) {
     const presence = ctx.getPresenceCounts();
     const activeGames = Number(ctx.db.prepare(`SELECT COUNT(*) AS c FROM games WHERE status='active'`).get()?.c || 0);
     const queueCount = Number(ctx.mm?.queue?.length || ctx.mm?.q?.length || 0);
+    const queueDetails = publicVariants().map(variant => {
+      const count = (ctx.mm?.queue || ctx.mm?.q || []).filter(player => normalizeVariant(player?.variant) === variant.id).length;
+      return count ? `${variant.label}: **${count}**` : null;
+    }).filter(Boolean).join(' | ');
     const status = typeof ctx.readSystemStatus === 'function' ? ctx.readSystemStatus() : null;
     return containerMessage({
       color: status?.restarting ? 0xff9f0a : 0x30d158,
       title: status?.restarting ? 'Maintenance signalee' : 'Systeme operationnel',
       subtitle: status?.message || 'Aucune alerte serveur active.',
       sections: [
-        `### Temps reel\nPresents: **${presence.totalPresent || 0}** | Visiteurs: **${presence.visitors || 0}**\nFile: **${queueCount}** | Parties actives: **${activeGames}**`,
+        `### Temps reel\nPresents: **${presence.totalPresent || 0}** | Visiteurs: **${presence.visitors || 0}**\nFile: **${queueCount}** | Parties actives: **${activeGames}**${queueDetails ? `\n${queueDetails}` : ''}`,
         '### Securite\nLes webhooks Discord ne publient aucune IP ni donnee reseau privee.',
       ],
       buttons: [linkButton('Stats', `${api}/stats`, '📈'), linkButton('Live', `${api}/live`, '🔴')],
@@ -1228,7 +1252,7 @@ function startDiscordBot(ctx) {
       const p2 = game.players?.[2];
       if (!p1 || !p2) return null;
       const current = game.current === 1 ? p1.pseudo : p2.pseudo;
-      return `${code(`#${game.id || '?'}`)} **${p1.pseudo}** vs **${p2.pseudo}** | tour: **${current}** | coups: **${game.moveCount || game.moves?.length || 0}**`;
+      return `${code(`#${game.id || '?'}`)} **${p1.pseudo}** vs **${p2.pseudo}** | **${variantLabel(game.variant)}** | tour: **${current}** | coups: **${game.moveCount || game.moves?.length || 0}**`;
     }).filter(Boolean);
     return containerMessage({
       color: 0xff2d55,
@@ -1239,14 +1263,17 @@ function startDiscordBot(ctx) {
     });
   }
 
-  function leaderboardPayload(type = 'humans') {
+  function leaderboardPayload(type = 'humans', requestedVariant = 'classic') {
     const bots = type === 'bots';
-    const rows = ctx.db.prepare(`
-      SELECT * FROM players
-      WHERE deleted=0 AND is_guest=0 AND is_bot=?
-      ORDER BY elo DESC, wins DESC
-      LIMIT 10
-    `).all(bots ? 1 : 0);
+    const variant = normalizeVariant(requestedVariant);
+    const rows = variant === 'classic'
+      ? ctx.db.prepare(`SELECT * FROM players WHERE deleted=0 AND is_guest=0 AND is_bot=? ORDER BY elo DESC, wins DESC LIMIT 10`).all(bots ? 1 : 0)
+      : ctx.db.prepare(`
+          SELECT p.*, s.elo AS elo, s.wins AS wins, s.losses AS losses, s.draws AS draws
+          FROM player_variant_stats s JOIN players p ON p.id=s.player_id
+          WHERE s.variant=? AND p.deleted=0 AND p.is_guest=0 AND p.is_bot=?
+          ORDER BY s.elo DESC, s.wins DESC LIMIT 10
+        `).all(variant, bots ? 1 : 0);
     const medals = ['🥇', '🥈', '🥉'];
     const lines = rows.map((p, i) => {
       const rank = rankOf(p.elo);
@@ -1255,7 +1282,7 @@ function startDiscordBot(ctx) {
     return containerMessage({
       color: bots ? 0x85ebff : 0xffd60a,
       title: bots ? 'Classement des bots' : 'Classement des membres',
-      subtitle: 'Top 10 officiel',
+      subtitle: `Top 10 officiel · ${variantLabel(variant)}`,
       sections: [lines.join('\n') || 'Aucun joueur classe.'],
       buttons: [linkButton('Page classement', `${api}/leaderboard`, '🏆')],
     });
@@ -1297,16 +1324,19 @@ function startDiscordBot(ctx) {
   }
 
   function boardFromMoves(game, moves) {
-    const board = Array.from({ length: 6 }, () => Array(7).fill(0));
+    const config = variantMeta(game.variant);
+    const rows = Number(config.rows || 6);
+    const cols = Number(config.cols || 7);
+    const board = Array.from({ length: rows }, () => Array(cols).fill(0));
     for (const [index, move] of moves.entries()) {
       const col = Number(move.col);
-      if (!Number.isInteger(col) || col < 0 || col > 6) continue;
+      if (!Number.isInteger(col) || col < 0 || col >= cols) continue;
       let row = Number(move.row);
       const playerId = Number(move.player_id);
       const side = playerId === Number(game.player1_id) ? 1 : playerId === Number(game.player2_id) ? 2 : (index % 2) + 1;
-      if (!Number.isInteger(row) || row < 0 || row > 5 || board[row][col] !== 0) {
+      if (!Number.isInteger(row) || row < 0 || row >= rows || board[row][col] !== 0) {
         row = -1;
-        for (let r = 5; r >= 0; r--) {
+        for (let r = rows - 1; r >= 0; r--) {
           if (board[r][col] === 0) {
             row = r;
             break;
@@ -1324,15 +1354,18 @@ function startDiscordBot(ctx) {
     const p2Emoji = tokenEmojiFromColor(game.p2_color, '🟡');
     const emptyEmoji = '⚫';
     const board = boardFromMoves(game, moves);
+    const config = variantMeta(game.variant);
+    const numberEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
     const grid = board
       .map(row => row.map(cell => (cell === 1 ? p1Emoji : cell === 2 ? p2Emoji : emptyEmoji)).join(''))
       .join('\n');
     return [
-      '### Plateau final',
+      `### Plateau · ${config.label} (${config.rows}×${config.cols})`,
       `${p1Emoji} **${game.p1_pseudo}**  vs  ${p2Emoji} **${game.p2_pseudo}**`,
       grid,
-      '1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣',
-    ].join('\n');
+      numberEmojis.slice(0, config.cols).join(''),
+      game.variant && game.variant !== 'classic' ? '_Les actions spéciales sont détaillées dans le replay du site._' : '',
+    ].filter(Boolean).join('\n');
   }
 
   function replayPayload(id) {
@@ -1342,7 +1375,7 @@ function startDiscordBot(ctx) {
     return containerMessage({
       color: game.winner_id == null ? 0xffd60a : 0x30d158,
       title: `Replay #${game.id}`,
-      subtitle: winner,
+      subtitle: `${winner} · ${variantLabel(game.variant)}`,
       sections: [
         `### Match\n**${game.p1_pseudo}** (${game.p1_elo || 0}) vs **${game.p2_pseudo}** (${game.p2_elo || 0})`,
         replayGridSection(game),
@@ -2465,16 +2498,16 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));
         if (!player) return replyError(interaction, 'Joueur introuvable');
-        return interaction.editReply(profilePayload(player));
+        return interaction.editReply(profilePayload(player, interaction.options.getString('variante') || 'classic'));
       }
       if (interaction.commandName === 'moi') {
         const player = playerByDiscord(interaction.user.id);
         if (!player) return replyError(interaction, 'Compte non lie', `Lie ton compte depuis ${api}/profil`);
-        return interaction.editReply(profilePayload(player));
+        return interaction.editReply(profilePayload(player, interaction.options.getString('variante') || 'classic'));
       }
       if (interaction.commandName === 'ui') return interaction.editReply(await userInfoPayload(interaction));
-      if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
-      if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans'));
+      if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans', interaction.options.getString('variante') || 'classic'));
+      if (interaction.commandName === 'leaderboard') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans', interaction.options.getString('variante') || 'classic'));
       if (interaction.commandName === 'stats') return interaction.editReply(statsPayload());
       if (interaction.commandName === 'systeme') return interaction.editReply(systemPayload());
       if (interaction.commandName === 'live') return interaction.editReply(livePayload());

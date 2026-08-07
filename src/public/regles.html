@@ -32,12 +32,26 @@ html,body{min-height:100%;background:
 .hero-title{font-family:'Barlow Condensed',sans-serif;font-size:clamp(58px,10vw,116px);font-weight:900;letter-spacing:-1px;line-height:.86;text-transform:uppercase;text-shadow:0 28px 80px rgba(0,0,0,.42)}
 .hero-title span{color:var(--red)}
 .hero-sub{font-size:13px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+.demo-picker{width:min(100%,860px);margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px}
+.demo-tabs{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.demo-tab{padding:9px 13px;border:1px solid rgba(255,255,255,.10);border-radius:11px;background:rgba(13,13,28,.76);color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;transition:.18s}
+.demo-tab:hover,.demo-tab.active{transform:translateY(-1px);border-color:rgba(133,235,255,.42);background:rgba(133,235,255,.10);color:#bff7ff;box-shadow:0 10px 28px rgba(0,0,0,.24)}
+.demo-caption{text-align:center;min-height:48px}
+.demo-caption strong{display:block;font:900 22px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}
+.demo-caption span{display:block;margin-top:3px;color:var(--muted);font-size:12px;line-height:1.45}
 .board-demo{width:min(100%,760px);margin:0 auto 6px;display:grid;grid-template-columns:repeat(7,1fr);gap:8px;background:linear-gradient(135deg,rgba(76,110,245,.16),rgba(255,45,85,.08)),rgba(26,26,58,.82);border-radius:26px;padding:18px;border:1px solid rgba(255,255,255,.10);box-shadow:0 26px 80px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(10px)}
 .bd-cell{aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.06),var(--cell) 62%);box-shadow:inset 0 5px 14px rgba(0,0,0,.76),inset 0 1px 3px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.055);position:relative;overflow:hidden}
 .bd-cell .tok{position:absolute;inset:3px;border-radius:50%;transform:scale(0);transition:transform .32s cubic-bezier(.22,1,.36,1),filter .28s ease,box-shadow .28s ease}
 .bd-cell.r .tok{background:radial-gradient(circle at 35% 30%, #ff6b85, var(--red));box-shadow:0 0 12px rgba(255,45,85,.4);transform:scale(1)}
 .bd-cell.y .tok{background:radial-gradient(circle at 35% 30%, #ffe566, var(--yellow));box-shadow:0 0 12px rgba(255,214,10,.4);transform:scale(1)}
 .bd-cell.win .tok{animation:rule-win-pulse .75s ease-in-out infinite alternate;filter:brightness(1.18)}
+.bd-cell.forced::after{content:"";position:absolute;inset:15%;z-index:3;border:3px solid #85ebff;border-radius:50%;background:rgba(133,235,255,.08);box-shadow:0 0 18px rgba(133,235,255,.72);animation:rule-win-pulse .75s ease-in-out infinite alternate}
+.bd-cell.bomb .tok{box-shadow:0 0 0 4px rgba(255,159,10,.78),0 0 28px rgba(255,159,10,.75)}
+.bd-cell.blast{box-shadow:inset 0 0 0 3px rgba(255,159,10,.68),0 0 20px rgba(255,159,10,.26)}
+.bd-cell.mission{box-shadow:inset 0 0 0 3px rgba(191,90,242,.82),0 0 18px rgba(191,90,242,.36)}
+.bd-cell.sim-choice::after{content:"↓";position:absolute;inset:0;z-index:4;display:grid;place-items:center;color:#85ebff;font:900 clamp(15px,3vw,28px) 'Barlow Condensed';text-shadow:0 0 14px #85ebff;animation:rule-win-pulse .7s ease-in-out infinite alternate}
+.board-demo[data-mode="anti"]{width:min(100%,680px);gap:5px;padding:12px}
+.board-demo[data-mode="rotate"],.board-demo[data-mode="mission"]{width:min(100%,700px)}
 @keyframes rule-win-pulse{from{transform:scale(1)}to{transform:scale(1.1)}}
 .card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.052),rgba(255,255,255,.018)),rgba(13,13,28,.84);border:1px solid rgba(255,255,255,.085);border-radius:24px;padding:26px 24px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 70px rgba(0,0,0,.38),inset 0 1px 0 rgba(255,255,255,.045);backdrop-filter:blur(12px);overflow:hidden;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .card::before{content:'';position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,var(--red),var(--yellow),#85EBFF);opacity:.65}
@@ -82,7 +96,7 @@ html,body{min-height:100%;background:
 .cta-title{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;letter-spacing:3px;text-transform:uppercase}
 .cta-sub{font-size:13px;color:var(--muted)}
 .btn-play{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:14px 32px;border-radius:12px;background:var(--red);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 24px rgba(255,45,85,.4);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
-@media (max-width:720px){.page{max-width:640px}.rank-grid{grid-template-columns:1fr}.board-demo{gap:6px;padding:12px;border-radius:20px}.card{border-radius:20px}}
+@media (max-width:720px){.page{max-width:640px}.rank-grid{grid-template-columns:1fr}.board-demo{gap:5px;padding:10px;border-radius:20px}.board-demo[data-mode="anti"]{gap:3px;padding:7px}.demo-tabs{gap:6px}.demo-tab{padding:8px 9px;font-size:10px}.card{border-radius:20px}}
 @media (max-width:480px){.page{padding:20px 10px 48px}.hero{padding-top:18px}.hero-title{font-size:clamp(44px,14vw,80px)}.card{padding:18px 14px}.elo-grid,.shop-grid{grid-template-columns:1fr}.nav{flex-direction:column;align-items:stretch;gap:10px}.logo-sm,.btn-back{text-align:center}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -103,7 +117,11 @@ html,body{min-height:100%;background:
     <div class="hero-sub">Tout ce qu'il faut savoir pour jouer</div>
   </div>
 
-  <div class="board-demo" id="board-demo"></div>
+  <div class="demo-picker">
+    <div class="demo-tabs" id="demo-tabs" role="tablist" aria-label="Choisir une variante"></div>
+    <div class="demo-caption"><strong id="demo-title">Classique</strong><span id="demo-description"></span></div>
+  </div>
+  <div class="board-demo" id="board-demo" data-mode="classic"></div>
 
   <div class="card">
     <div class="card-header">
@@ -113,7 +131,7 @@ html,body{min-height:100%;background:
         <div class="card-sub">Le but du jeu</div>
       </div>
     </div>
-    <div class="card-body">
+    <div class="card-body" id="variant-objective">
       Aligne <strong>4 jetons</strong> de ta couleur avant ton adversaire. L'alignement peut etre horizontal, vertical ou diagonal.
     </div>
   </div>
@@ -438,58 +456,25 @@ html,body{min-height:100%;background:
   </div>
 </div>
 <script>
-const DEMO_ROWS = 6;
-const DEMO_COLS = 7;
 const demo = document.getElementById('board-demo');
-const WIN_SCENARIOS = [
-  {
-    name: 'horizontal',
-    cells: [
-      { r: 5, c: 1, p: 'y' }, { r: 4, c: 1, p: 'r' },
-      { r: 5, c: 2, p: 'y' }, { r: 4, c: 2, p: 'r' },
-      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'r' },
-      { r: 5, c: 4, p: 'y' }, { r: 4, c: 4, p: 'r' },
-    ],
-    win: [[4,1],[4,2],[4,3],[4,4]],
-  },
-  {
-    name: 'vertical',
-    cells: [
-      { r: 5, c: 3, p: 'y' }, { r: 5, c: 2, p: 'r' },
-      { r: 4, c: 3, p: 'y' }, { r: 5, c: 4, p: 'r' },
-      { r: 3, c: 3, p: 'y' }, { r: 5, c: 1, p: 'r' },
-      { r: 2, c: 3, p: 'y' },
-    ],
-    win: [[5,3],[4,3],[3,3],[2,3]],
-  },
-  {
-    name: 'diag-left',
-    cells: [
-      { r: 5, c: 0, p: 'r' },
-      { r: 5, c: 1, p: 'y' }, { r: 4, c: 1, p: 'r' },
-      { r: 5, c: 2, p: 'y' }, { r: 4, c: 2, p: 'y' }, { r: 3, c: 2, p: 'r' },
-      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'y' }, { r: 3, c: 3, p: 'y' }, { r: 2, c: 3, p: 'r' },
-    ],
-    win: [[5,0],[4,1],[3,2],[2,3]],
-  },
-  {
-    name: 'diag-right',
-    cells: [
-      { r: 5, c: 6, p: 'r' },
-      { r: 5, c: 5, p: 'y' }, { r: 4, c: 5, p: 'r' },
-      { r: 5, c: 4, p: 'y' }, { r: 4, c: 4, p: 'y' }, { r: 3, c: 4, p: 'r' },
-      { r: 5, c: 3, p: 'y' }, { r: 4, c: 3, p: 'y' }, { r: 3, c: 3, p: 'y' }, { r: 2, c: 3, p: 'r' },
-    ],
-    win: [[5,6],[4,5],[3,4],[2,3]],
-  }
-];
+const DEMO_MODES = {
+  classic:{label:'Classique',icon:'●',rows:6,cols:7,description:'Aligne 4 jetons horizontalement, verticalement ou en diagonale.',objective:'Aligne <strong>4 jetons</strong> de ta couleur avant ton adversaire. L\'alignement peut être horizontal, vertical ou diagonal.',cells:[[5,0,'y'],[5,1,'r'],[5,2,'r'],[5,3,'r'],[5,4,'r'],[4,1,'y'],[4,2,'y'],[4,3,'y']],win:[[5,1],[5,2],[5,3],[5,4]]},
+  rotate:{label:'Rotatif',icon:'↻',rows:7,cols:7,description:'Tous les 4 coups, la grille pivote de 90° et la gravité replace les jetons.',objective:'Forme une ligne de <strong>4 jetons</strong>, mais anticipe la rotation imprévisible de la grille et la nouvelle chute des pions.',cells:[[6,1,'r'],[6,2,'y'],[6,3,'r'],[6,4,'y'],[5,2,'r'],[5,3,'y'],[4,3,'r'],[3,3,'y']],win:[]},
+  anti:{label:'Anti-P4',icon:'⊘',rows:9,cols:9,description:'Évite les lignes : le cercle cyan montre la case obligatoire.',objective:'Chaque ligne distincte de 4 ajoute un <strong>point pénalisant</strong>. À la fin, le joueur qui possède le moins de lignes gagne.',cells:[[8,2,'r'],[8,3,'r'],[8,4,'r'],[8,6,'y'],[7,3,'y'],[7,4,'y'],[7,6,'r'],[6,4,'r']],forced:[[8,5]]},
+  bomb:{label:'Bombe',icon:'✹',rows:6,cols:7,description:'Le jeton cerclé d’orange est ciblé ; ses huit voisins exploseront.',objective:'Aligne 4 jetons normalement. Une fois par partie, utilise ta <strong>bombe</strong> sur un jeton : ses voisins disparaissent puis la gravité agit.',cells:[[5,1,'r'],[5,2,'y'],[5,3,'r'],[5,4,'y'],[4,2,'r'],[4,3,'y'],[4,4,'r'],[3,3,'y']],bomb:[4,3],blast:[[3,2],[3,3],[3,4],[4,2],[4,4],[5,2],[5,3],[5,4]]},
+  mission:{label:'Mission',icon:'◆',rows:7,cols:7,description:'Exemple : réussir la mission « former un carré de 2 × 2 ».',objective:'Choisis une <strong>mission personnelle</strong> avant la partie. Le premier joueur qui accomplit son propre objectif gagne.',cells:[[6,2,'r'],[6,3,'r'],[5,2,'r'],[5,3,'r'],[6,4,'y'],[5,4,'y']],mission:[[6,2],[6,3],[5,2],[5,3]]},
+  simultaneous:{label:'Simultané',icon:'⇊',rows:6,cols:7,description:'Les deux flèches représentent les choix secrets révélés ensemble.',objective:'Les deux joueurs choisissent leur colonne <strong>en secret</strong>. Les jetons tombent ensemble et la priorité alterne à chaque manche.',cells:[[5,1,'r'],[5,2,'y'],[5,4,'r'],[5,5,'y'],[4,2,'r'],[4,4,'y']],choices:[[3,2],[3,4]]},
+};
+let activeDemoMode = localStorage.getItem('p4_rules_variant') || 'classic';
+let demoRenderId = 0;
 
-let demoCycleTimeout = null;
-
-function buildDemoBoard() {
+function buildDemoBoard(mode) {
+  const renderId = ++demoRenderId;
   demo.innerHTML = '';
-  for (let r = 0; r < DEMO_ROWS; r += 1) {
-    for (let c = 0; c < DEMO_COLS; c += 1) {
+  demo.dataset.mode = activeDemoMode;
+  demo.style.gridTemplateColumns = `repeat(${mode.cols},minmax(0,1fr))`;
+  for (let r = 0; r < mode.rows; r += 1) {
+    for (let c = 0; c < mode.cols; c += 1) {
       const cell = document.createElement('div');
       cell.className = 'bd-cell';
       cell.id = `rules-cell-${r}-${c}`;
@@ -499,60 +484,30 @@ function buildDemoBoard() {
       demo.appendChild(cell);
     }
   }
+  mode.cells.forEach(([r,c,p],index)=>setTimeout(()=>{
+    if(renderId===demoRenderId) document.getElementById(`rules-cell-${r}-${c}`)?.classList.add(p);
+  },70*index));
+  (mode.win||[]).forEach(([r,c])=>document.getElementById(`rules-cell-${r}-${c}`)?.classList.add('win'));
+  (mode.forced||[]).forEach(([r,c])=>document.getElementById(`rules-cell-${r}-${c}`)?.classList.add('forced'));
+  (mode.blast||[]).forEach(([r,c])=>document.getElementById(`rules-cell-${r}-${c}`)?.classList.add('blast'));
+  (mode.mission||[]).forEach(([r,c])=>document.getElementById(`rules-cell-${r}-${c}`)?.classList.add('mission'));
+  (mode.choices||[]).forEach(([r,c])=>document.getElementById(`rules-cell-${r}-${c}`)?.classList.add('sim-choice'));
+  if(mode.bomb) document.getElementById(`rules-cell-${mode.bomb[0]}-${mode.bomb[1]}`)?.classList.add('bomb');
 }
 
-function clearDemoBoard() {
-  for (let r = 0; r < DEMO_ROWS; r += 1) {
-    for (let c = 0; c < DEMO_COLS; c += 1) {
-      const cell = document.getElementById(`rules-cell-${r}-${c}`);
-      if (cell) cell.className = 'bd-cell';
-    }
-  }
+function selectDemoMode(key) {
+  activeDemoMode = DEMO_MODES[key] ? key : 'classic';
+  localStorage.setItem('p4_rules_variant',activeDemoMode);
+  const mode = DEMO_MODES[activeDemoMode];
+  document.querySelectorAll('.demo-tab').forEach(button=>button.classList.toggle('active',button.dataset.mode===activeDemoMode));
+  document.getElementById('demo-title').textContent = `${mode.icon} ${mode.label} · ${mode.rows}×${mode.cols}`;
+  document.getElementById('demo-description').textContent = mode.description;
+  document.getElementById('variant-objective').innerHTML = mode.objective;
+  buildDemoBoard(mode);
 }
 
-function paintCell(r, c, player) {
-  const cell = document.getElementById(`rules-cell-${r}-${c}`);
-  if (!cell) return;
-  cell.classList.remove('r', 'y', 'win');
-  cell.classList.add(player);
-}
-
-function highlightWin(line) {
-  line.forEach(([r, c]) => {
-    const cell = document.getElementById(`rules-cell-${r}-${c}`);
-    if (cell) cell.classList.add('win');
-  });
-}
-
-function wait(ms) {
-  return new Promise(resolve => {
-    demoCycleTimeout = setTimeout(resolve, ms);
-  });
-}
-
-async function playScenario(scenario) {
-  clearDemoBoard();
-  await wait(220);
-  for (const move of scenario.cells) {
-    paintCell(move.r, move.c, move.p);
-    await wait(180);
-  }
-  highlightWin(scenario.win);
-  await wait(3000);
-}
-
-async function runDemoLoop() {
-  buildDemoBoard();
-  while (true) {
-    const ordered = [...WIN_SCENARIOS].sort(() => Math.random() - 0.5);
-    for (const scenario of ordered) {
-      await playScenario(scenario);
-      await wait(280);
-    }
-  }
-}
-
-runDemoLoop();
+document.getElementById('demo-tabs').innerHTML = Object.entries(DEMO_MODES).map(([key,mode])=>`<button type="button" class="demo-tab" data-mode="${key}" role="tab" onclick="selectDemoMode('${key}')">${mode.icon} ${mode.label}</button>`).join('');
+selectDemoMode(activeDemoMode);
 </script>
 <script src="/presence.js?v=session-1"></script>
 <script src="/theme.js?v=eggs-33"></script>

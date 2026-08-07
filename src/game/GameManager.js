@@ -17,6 +17,7 @@ class GameManager {
       const now = Date.now();
       for (const [gameId, state] of this.games) {
         if (state.status !== 'active') continue;
+        if (state.variant === 'mission' && (!state.missions[1] || !state.missions[2])) continue;
         const moveTimerLimit = Number(state.turnTimeLimitMs || 0);
         const limit = moveTimerLimit > 0 ? moveTimerLimit : AFK_LIMIT;
         if (now - state.lastMoveAt > limit) {
@@ -210,7 +211,12 @@ class GameManager {
     if (state.moveCount > 0 || state.missions[side]) return { error: 'La mission ne peut plus être modifiée.' };
     state.missions[side] = mission.id;
     this._recordAction(state, side, 'mission', { missionId: mission.id });
-    return { type: 'mission_selected', gameId: state.id, side, mission, ready: !!(state.missions[1] && state.missions[2]) };
+    const ready = !!(state.missions[1] && state.missions[2]);
+    if (ready) {
+      state.startedAt = Date.now();
+      state.lastMoveAt = Date.now();
+    }
+    return { type: 'mission_selected', gameId: state.id, side, mission, ready };
   }
 
   submitSimultaneous(socketId, col) {

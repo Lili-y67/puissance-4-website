@@ -132,9 +132,11 @@
       const match = readMatch();
       const opponent = opponentName(player, match);
       const versusBot = Boolean(sessionStorage.getItem('vs_ia'));
+      const variantNames = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+      const variant = variantNames[String(match?.variant || 'classic')] || 'Classique';
       return [
-        versusBot ? 'Affronte une intelligence artificielle' : 'Dispute une partie en ligne',
-        opponent ? `Contre ${opponent}` : 'La partie est en cours',
+        versusBot ? `${variant} · affronte une intelligence artificielle` : `${variant} · partie en ligne`,
+        opponent ? `Contre ${opponent}` : `Partie ${variant} en cours`,
       ];
     }
 

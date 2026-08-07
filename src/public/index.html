@@ -3855,6 +3855,9 @@ let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 let siteStatsInterval = null;
 let latestQueueCounts = { total: 0, byVariant: {} };
 let currentQueuePosition = 0;
+let activeQueueVariant = localStorage.getItem('p4_queue_variant') || 'classic';
+let queueVariantProfileStats = null;
+const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
 let duelSearchTimer = null;
@@ -5198,7 +5201,7 @@ function renderWaitingPlayersCount() {
   const queueView = document.getElementById('view-queue');
   const queueSub = document.getElementById('queue-sub');
   if (queueSub && queueView?.style.display !== 'none' && currentQueuePosition > 0) {
-    queueSub.textContent = `Position #${currentQueuePosition} · ${count} joueur${count > 1 ? 's' : ''} dans cette file`;
+    queueSub.textContent = `${QUEUE_VARIANT_LABELS[activeQueueVariant] || 'Classique'} · position #${currentQueuePosition} · ${count} joueur${count > 1 ? 's' : ''}`;
   }
 }
 
@@ -5305,13 +5308,20 @@ async function refreshStoredPlayerForQueue() {
   const id = myPlayer?.id || JSON.parse(localStorage.getItem('player') || '{}')?.id;
   if (!token || !id) return;
   try {
-    const res = await fetch(`/api/players/${encodeURIComponent(id)}`, { headers: { 'x-session-token': token } });
+    const [res, variantRes] = await Promise.all([
+      fetch(`/api/players/${encodeURIComponent(id)}`, { headers: { 'x-session-token': token } }),
+      fetch(`/api/players/${encodeURIComponent(id)}/variant-stats`, { cache: 'no-store' }),
+    ]);
     if (!res.ok) return;
     const data = await res.json();
     if (!data?.player) return;
     myPlayer = { ...myPlayer, ...data.player };
     localStorage.setItem('player', JSON.stringify(myPlayer));
     sessionStorage.setItem('player', JSON.stringify(myPlayer));
+    if (variantRes.ok) {
+      const variantData = await variantRes.json();
+      queueVariantProfileStats = (variantData.stats || []).find(item => item.id === activeQueueVariant) || null;
+    }
   } catch {}
 }
 
@@ -5321,6 +5331,9 @@ async function connectAndQueue() {
     return;
   }
   QueueMusic.prime();
+  activeQueueVariant = document.getElementById('queue-variant')?.value || localStorage.getItem('p4_queue_variant') || 'classic';
+  localStorage.setItem('p4_queue_variant', activeQueueVariant);
+  queueVariantProfileStats = null;
   await refreshStoredPlayerForQueue();
   if (socket) {
     try { socket.removeAllListeners(); socket.disconnect(); } catch (e) {}
@@ -5342,7 +5355,7 @@ async function connectAndQueue() {
     socket.emit('queue_join', {
       shape: lsPlayer.shape || 'circle',
       tokenEmojiImage: lsPlayer.token_emoji_image || '',
-      variant: document.getElementById('queue-variant')?.value || localStorage.getItem('p4_queue_variant') || 'classic',
+      variant: activeQueueVariant,
     });
   });
   if (socket.connected) socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
@@ -5351,8 +5364,8 @@ async function connectAndQueue() {
     QueueMusic.start();
     showQueueView(position);
     const context = {
-      details: 'Recherche un adversaire',
-      state: `Position #${position} dans la file`,
+      details: `Recherche · ${QUEUE_VARIANT_LABELS[activeQueueVariant] || 'Classique'}`,
+      state: `Position #${position} dans la file ${QUEUE_VARIANT_LABELS[activeQueueVariant] || 'Classique'}`,
       url: location.href,
     };
     window.__p4RpcContext = context;
@@ -5370,8 +5383,8 @@ async function connectAndQueue() {
     const players = Object.values(data.players || {});
     const opponent = players.find(player => String(player?.id) !== String(myPlayer?.id));
     const context = {
-      details: opponent?.pseudo ? `Adversaire trouvé : ${opponent.pseudo}` : 'Adversaire trouvé',
-      state: 'La partie va commencer',
+      details: opponent?.pseudo ? `${QUEUE_VARIANT_LABELS[data.variant || activeQueueVariant] || 'Classique'} · ${opponent.pseudo}` : `Adversaire trouvé · ${QUEUE_VARIANT_LABELS[data.variant || activeQueueVariant] || 'Classique'}`,
+      state: `La partie ${QUEUE_VARIANT_LABELS[data.variant || activeQueueVariant] || 'Classique'} va commencer`,
       url: location.href,
     };
     window.__p4RpcContext = context;
@@ -5405,7 +5418,7 @@ function showQueueView(position) {
     queueView.style.display = 'block';
     queueView.classList.add('fade-in');
     showQueueVolume(true);
-    document.getElementById('queue-sub').textContent  = `Position #${position} dans la file`;
+    document.getElementById('queue-sub').textContent = `${QUEUE_VARIANT_LABELS[activeQueueVariant] || 'Classique'} · position #${position}`;
     renderQueueBoostAlert(currentGlobalBoost, currentCoinBoost);
 
     // Avatar dans la queue
@@ -5432,16 +5445,18 @@ function showQueueView(position) {
         avatarDeco.innerHTML = deco ? `<img src="${deco}" alt="">` : '';
       }
       if (pseudoEl) pseudoEl.textContent = myPlayer.pseudo;
-      const games = Number(myPlayer.wins || 0) + Number(myPlayer.losses || 0) + Number(myPlayer.draws || 0);
-      const wins = Number(myPlayer.wins || 0);
-      const losses = Number(myPlayer.losses || 0);
-      const draws = Number(myPlayer.draws || 0);
-      const rank = getQueueRank(myPlayer.elo);
+      const selectedStats = queueVariantProfileStats || myPlayer;
+      const selectedElo = Number(selectedStats.elo ?? myPlayer.elo ?? 1000);
+      const games = Number(selectedStats.wins || 0) + Number(selectedStats.losses || 0) + Number(selectedStats.draws || 0);
+      const wins = Number(selectedStats.wins || 0);
+      const losses = Number(selectedStats.losses || 0);
+      const draws = Number(selectedStats.draws || 0);
+      const rank = getQueueRank(selectedElo);
       if (rankEl) {
         rankEl.style.color = rank.color;
         rankEl.style.borderColor = `${rank.color}55`;
         rankEl.style.background = `${rank.color}18`;
-        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.displayLabel || rank.label)} · ${Number(myPlayer.elo || 0)} ELO</span>`;
+        rankEl.innerHTML = `<img class="queue-rank-img" src="${escapeHtml(rank.image)}" alt=""><span class="queue-rank-text">${escapeHtml(rank.displayLabel || rank.label)} · ${selectedElo} ELO · ${escapeHtml(QUEUE_VARIANT_LABELS[activeQueueVariant] || 'Classique')}</span>`;
       }
       renderQueuePiecePreview(myPlayer);
       if (winrateEl) {

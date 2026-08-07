@@ -1441,7 +1441,12 @@ function openModal(id) {
 
       <div style="margin-bottom:14px">
         <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Reset ELO</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:grid;grid-template-columns:minmax(120px,1fr) minmax(110px,1fr) auto;gap:8px">
+          <select id="new-elo-variant" style="margin-bottom:0;padding:9px 12px;font-size:13px">
+            <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option>
+            <option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option>
+            <option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option>
+          </select>
           <input type="number" id="new-elo" value="1000" min="0" max="9999" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
           <button class="btn-sm" style="background:rgba(255,214,10,0.15);color:var(--yellow)" onclick="resetElo(${id})">Reset</button>
         </div>
@@ -1580,7 +1585,8 @@ async function clearCustomRole(id) {
 
 async function resetElo(id) {
   const elo = Number(document.getElementById('new-elo').value);
-  const data = await api('PATCH', `/api/admin/players/${id}/elo`, { elo });
+  const variant = document.getElementById('new-elo-variant')?.value || 'classic';
+  const data = await api('PATCH', `/api/admin/players/${id}/elo`, { elo, variant });
   if (data.ok) closeAndReload(); else alert(data.error || 'Erreur ELO.');
 }
 
