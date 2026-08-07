@@ -1606,6 +1606,11 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
   box-shadow: 0 18px 36px rgba(0,0,0,0.35);
   backdrop-filter: blur(12px);
 }
+.queue-variant-select{color-scheme:dark;width:100%;margin-top:7px;padding:12px 38px 12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background-color:#11111d;color:#f7f3ff;font:800 15px 'Barlow Condensed',sans-serif;outline:none;cursor:pointer}
+.queue-variant-select:focus{border-color:rgba(133,235,255,.55);box-shadow:0 0 0 3px rgba(133,235,255,.09)}
+.queue-variant-select option{background:#11111d!important;color:#f7f3ff!important;font-weight:700}
+.queue-waiting-count{width:100%;margin-top:-6px;padding:8px 11px;border:1px solid rgba(133,235,255,.14);border-radius:10px;background:rgba(133,235,255,.055);color:var(--muted);font:700 12px 'Barlow Condensed',sans-serif;letter-spacing:.6px;text-align:center}
+.queue-waiting-count strong{color:#85ebff;font-size:14px}
 .queue-volume.show { display: flex; }
 .queue-volume.loading {
   flex-wrap: wrap;
@@ -3848,6 +3853,8 @@ const REGISTER_COLOR_PRESETS = ['#ff2d55', '#ffd60a', '#30d158', '#0a84ff', '#bf
 let selectedRegisterColor = '#ff2d55';
 let socket = null, myPlayer = null, queueStart = null, timerInterval = null;
 let siteStatsInterval = null;
+let latestQueueCounts = { total: 0, byVariant: {} };
+let currentQueuePosition = 0;
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
 let duelSearchTimer = null;
@@ -5158,6 +5165,11 @@ function applySitePresenceCounts(data = {}) {
 }
 
 function applySiteStatsSnapshot(data = {}) {
+  latestQueueCounts = {
+    total: Math.max(0, Number(data.queue) || 0),
+    byVariant: data.queueByVariant && typeof data.queueByVariant === 'object' ? data.queueByVariant : {},
+  };
+  renderWaitingPlayersCount();
   const gamesCount = document.getElementById('site-games-count');
   const registeredCount = document.getElementById('site-registered-count');
   const discordCount = document.getElementById('site-discord-count');
@@ -5174,6 +5186,19 @@ function applySiteStatsSnapshot(data = {}) {
   }
   if (botsCount) {
     botsCount.textContent = String(Math.max(0, Number(data.registeredBots) || 0));
+  }
+}
+
+function renderWaitingPlayersCount() {
+  const el = document.getElementById('queue-waiting-count');
+  if (!el) return;
+  const variant = document.getElementById('queue-variant')?.value || 'classic';
+  const count = Math.max(0, Number(latestQueueCounts.byVariant?.[variant]) || 0);
+  el.innerHTML = `<strong>${count}</strong> joueur${count > 1 ? 's' : ''} en attente sur cette variante`;
+  const queueView = document.getElementById('view-queue');
+  const queueSub = document.getElementById('queue-sub');
+  if (queueSub && queueView?.style.display !== 'none' && currentQueuePosition > 0) {
+    queueSub.textContent = `Position #${currentQueuePosition} · ${count} joueur${count > 1 ? 's' : ''} dans cette file`;
   }
 }
 
@@ -5239,7 +5264,7 @@ function showLoggedInView(p) {
       </div>
       <label style="width:100%;font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;">
         Variante
-        <select id="queue-variant" style="width:100%;margin-top:7px;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#11111d;color:var(--text);font:800 15px 'Barlow Condensed',sans-serif;">
+        <select id="queue-variant" class="queue-variant-select">
           <option value="classic">Classique · 6×7</option>
           <option value="rotate">Plateau rotatif · 7×7</option>
           <option value="anti">Anti-Puissance 4 · 9×9</option>
@@ -5248,6 +5273,7 @@ function showLoggedInView(p) {
           <option value="simultaneous">Placement simultané · 6×7</option>
         </select>
       </label>
+      <div class="queue-waiting-count" id="queue-waiting-count" aria-live="polite"><strong>0</strong> joueur en attente sur cette variante</div>
       <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
         <span>&#9889;</span> <span data-i18n="home.joinGame">Rejoindre la partie</span>
       </button>
@@ -5265,8 +5291,12 @@ function showLoggedInView(p) {
   const variantSelect = document.getElementById('queue-variant');
   if (variantSelect) {
     variantSelect.value = localStorage.getItem('p4_queue_variant') || 'classic';
-    variantSelect.addEventListener('change', () => localStorage.setItem('p4_queue_variant', variantSelect.value));
+    variantSelect.addEventListener('change', () => {
+      localStorage.setItem('p4_queue_variant', variantSelect.value);
+      renderWaitingPlayersCount();
+    });
   }
+  renderWaitingPlayersCount();
   window.P4I18n?.apply?.(loginView);
 }
 
@@ -5317,6 +5347,7 @@ async function connectAndQueue() {
   });
   if (socket.connected) socket.emit('identify', { playerId: myPlayer.id, token: localStorage.getItem('token') });
   socket.on('queue_joined', ({ position, reason }) => {
+    currentQueuePosition = Math.max(1, Number(position) || 1);
     QueueMusic.start();
     showQueueView(position);
     const context = {
@@ -5351,6 +5382,13 @@ async function connectAndQueue() {
     QueueMusic.stop();
     showError('Connexion à la file impossible pour le moment.');
   });
+  socket.on('queue_counts', ({ total, byVariant } = {}) => {
+    latestQueueCounts = {
+      total: Math.max(0, Number(total) || 0),
+      byVariant: byVariant && typeof byVariant === 'object' ? byVariant : {},
+    };
+    renderWaitingPlayersCount();
+  });
   socket.on('error', ({ message }) => {
     QueueMusic.stop();
     showError(message);
@@ -5358,6 +5396,7 @@ async function connectAndQueue() {
 }
 
 function showQueueView(position) {
+  currentQueuePosition = Math.max(1, Number(position) || 1);
   const loginView = document.getElementById('view-login');
   const queueView = document.getElementById('view-queue');
   loginView.classList.add('fade-out');
@@ -5436,6 +5475,7 @@ function updateTimer() {
 }
 
 function handleLeaveQueue() {
+  currentQueuePosition = 0;
   QueueMusic.stop();
   showQueueVolume(false);
   if (socket) {

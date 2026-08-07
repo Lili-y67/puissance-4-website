@@ -83,7 +83,7 @@
     el.style.cssText = [
       'display:none',
       'position:fixed',
-      'left:12px',
+      'right:12px',
       'bottom:12px',
       'z-index:99999',
       'width:min(330px,calc(100vw - 24px))',
@@ -101,8 +101,8 @@
         @keyframes codexSystemPulse{0%,100%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 0 var(--p4-alert-halo)}50%{box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 0 10px rgba(255,255,255,0)}}
         @keyframes codexSystemGlow{0%,100%{filter:saturate(1);box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 24px var(--p4-alert-halo)}50%{filter:saturate(1.25);box-shadow:0 18px 58px rgba(0,0,0,.52),0 0 46px var(--p4-alert-halo)}}
         @keyframes codexSystemShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
-        @keyframes codexSystemSlide{0%{transform:translateX(-18px);opacity:0}100%{transform:translateX(0);opacity:1}}
-        @media (max-width:640px){#global-system-status{left:10px!important;bottom:10px!important;border-radius:13px!important;padding:9px 10px!important}}
+        @keyframes codexSystemSlide{0%{transform:translateX(18px);opacity:0}100%{transform:translateX(0);opacity:1}}
+        @media (max-width:640px){#global-system-status,#global-crystal-login{right:10px!important;left:auto!important;bottom:10px!important;border-radius:13px!important;padding:9px 10px!important}}
       `;
       document.head.appendChild(style);
     }
@@ -188,7 +188,7 @@
       el.id = 'global-crystal-login';
       el.style.cssText = [
         'position:fixed',
-        'left:12px',
+        'right:12px',
         'bottom:12px',
         'z-index:99998',
         'width:min(330px,calc(100vw - 24px))',

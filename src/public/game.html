@@ -108,7 +108,7 @@ body {
   animation: lobby-card-in .55s cubic-bezier(.22,1,.36,1) both;
 }
 .lobby-player::before{content:"";position:absolute;inset:-1px;opacity:.55;pointer-events:none;background:linear-gradient(145deg,rgba(255,255,255,.12),transparent 36%,rgba(255,255,255,.04))}
-.game-nameplate{display:none;position:absolute;inset:3px;z-index:0;border-radius:inherit;background-image:var(--game-nameplate);background-size:100% 100%;background-position:center;background-repeat:no-repeat;pointer-events:none}
+.game-nameplate{display:none;position:absolute;inset:3px;z-index:0;border-radius:inherit;background-image:var(--game-nameplate);background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
 .has-nameplate>.game-nameplate{display:block}
 .lobby-player.has-nameplate::before,.player-card.has-nameplate::before{opacity:.18}
 .lobby-player.p1 { border-color: rgba(255,45,85,.46); box-shadow: 0 0 32px var(--p1-dim), 0 26px 70px rgba(0,0,0,0.40); }
@@ -596,6 +596,15 @@ body {
 }
 .cell.winning .token { animation: win-pulse 0.7s ease-in-out infinite alternate; }
 @keyframes win-pulse { from { transform: scale(1); } to { transform: scale(1.12); filter: brightness(1.34) saturate(1.15); } }
+.cell.anti-forced::after{
+  inset:14%;
+  opacity:1;
+  border:3px solid #85ebff;
+  background:rgba(133,235,255,.07);
+  box-shadow:0 0 0 2px rgba(6,7,20,.62),0 0 18px rgba(133,235,255,.68),inset 0 0 14px rgba(133,235,255,.15);
+  animation:anti-forced-pulse .9s ease-in-out infinite alternate;
+}
+@keyframes anti-forced-pulse{from{transform:scale(.88);filter:brightness(.92)}to{transform:scale(1);filter:brightness(1.28)}}
 
 /* ── Result overlay ── */
 .result-overlay {
@@ -2525,10 +2534,11 @@ function updateTurnUI() {
     if (b) {
       const forcedElsewhere = currentVariant === 'anti' && forcedColumns.length && !forcedColumns.includes(c);
       b.disabled = !isMe || gameOver || forcedElsewhere;
-      b.style.boxShadow = forcedColumns.includes(c) ? 'inset 0 0 0 3px #85ebff,0 0 18px rgba(133,235,255,.45)' : '';
-      b.title = forcedColumns.includes(c) ? 'Coup obligatoire' : '';
+      b.style.boxShadow = '';
+      b.title = isMe && forcedColumns.includes(c) ? 'Coup obligatoire' : '';
     }
   }
+  updateAntiForcedMarkers(isMe);
 
   if (currentVariant === 'simultaneous') {
     document.getElementById('turn-lbl').textContent = simultaneousWaiting ? 'CHOIX ENVOYÉ' : 'CHOISIS EN SECRET';
@@ -2877,6 +2887,25 @@ async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = n
       }
     } else { cdEl.textContent = n; setBoardCountdown(n, true); SFX.tick(); }
   }, 1000);
+}
+
+function updateAntiForcedMarkers(isMe) {
+  document.querySelectorAll('.cell.anti-forced').forEach(cell => {
+    cell.classList.remove('anti-forced');
+    cell.removeAttribute('title');
+  });
+  if (currentVariant !== 'anti' || !isMe || gameOver || !forcedColumns.length) return;
+  forcedColumns.forEach(col => {
+    for (let row = ROWS - 1; row >= 0; row--) {
+      if (Number(currentGrid[row]?.[col] || 0) !== 0) continue;
+      const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+      if (cell) {
+        cell.classList.add('anti-forced');
+        cell.title = 'Case obligatoire';
+      }
+      break;
+    }
+  });
 }
 
 function iaPlayHuman(col) {

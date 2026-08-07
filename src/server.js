@@ -57,6 +57,17 @@ io.engine.on('connection', connection => {
 
 const mm = new Matchmaking();
 const gm = new GameManager();
+function getQueueCounts() {
+  const byVariant = mm.queue.reduce((counts, player) => {
+    const variant = normalizeVariant(player?.variant);
+    counts[variant] = (counts[variant] || 0) + 1;
+    return counts;
+  }, {});
+  return { total: mm.size(), byVariant };
+}
+function broadcastQueueCounts() {
+  io.emit('queue_counts', getQueueCounts());
+}
 const progression = createProgression({ db, pQ, cQ });
 const security = createSecurity({
   dataDir: path.join(__dirname, '../data'),
@@ -9714,6 +9725,7 @@ app.get('/api/site-stats', (_, res) => {
   const coinBoostExpiresAt = Number(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_expires_at'`).get()?.value || 0);
   const coinBoostAppliedByRaw = String(db.prepare(`SELECT value FROM config WHERE key = 'coin_boost_applied_by'`).get()?.value || '');
   const coinBoostActive = coinBoostExpiresAt > now && coinBoostMultiplier > 1;
+  const queueCounts = getQueueCounts();
   res.json({
     online: presence.onlinePlayers,
     onlinePlayers: presence.onlinePlayers,
@@ -9724,7 +9736,8 @@ app.get('/api/site-stats', (_, res) => {
     registeredHumans: presence.registeredHumans,
     registeredDiscordPlayers: presence.registeredDiscordPlayers,
     registeredBots: presence.registeredBots,
-    queue: mm?.queue?.length || 0,
+    queue: queueCounts.total,
+    queueByVariant: queueCounts.byVariant,
     activeGames: presence.activeGames,
     publicTournament,
     upcomingPublicTournament,
@@ -10188,9 +10201,13 @@ io.on('connection', socket => {
     socket.emit('queue_joined', { position: mm.position(socket.id), variant });
     const match = mm.tryMatch();
     if (match) _startMatch(match.p1, match.p2);
+    broadcastQueueCounts();
   });
 
-  socket.on('queue_leave', () => { mm.leave(socket.id); socket.emit('queue_left'); });
+  socket.on('queue_leave', () => {
+    if (mm.leave(socket.id)) broadcastQueueCounts();
+    socket.emit('queue_left');
+  });
 
   socket.on('tournament_queue_join', ({ tournamentId, shape, tokenEmojiImage } = {}) => {
     if (!TOURNAMENTS_ENABLED) return socket.emit('error', { message: 'Les tournois ont ete retires du site.' });
@@ -10535,7 +10552,7 @@ io.on('connection', socket => {
         if (players) players.delete(socket.playerId);
       }
     }
-    mm.leave(socket.id);
+    if (mm.leave(socket.id)) broadcastQueueCounts();
     if (socket.tournamentQueueId) {
       getTournamentQueue(socket.tournamentQueueId).leave(socket.id);
       socket.tournamentQueueId = null;
