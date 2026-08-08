@@ -10,6 +10,7 @@ const zlib       = require('zlib');
 const Database   = require('better-sqlite3');
 const { fork, spawn } = require('child_process');
 const { Readable } = require('stream');
+const { Worker } = require('worker_threads');
 
 const { initDb, db, pQ, gQ, mQ, aQ, variantQ, fQ, cQ, sQ, abQ, rQ, bQ, vipQ, tQ, tokenCollectionQ } = require('./db/db');
 const { TOKEN_RARITIES, TOKEN_COLOR_CATALOG, drawTokenColorForRarity, drawTokenRarity, drawTokenGemReward } = require('./token-collection');
@@ -93,6 +94,7 @@ const botHostCrashWindows = new Map();
 const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
+const botSearchWorkers = new Map();
 const devMachineMetrics = [];
 let devMachineCpuBase = process.cpuUsage();
 let devMachineCpuAt = Date.now();
@@ -1800,14 +1802,59 @@ function assignDistinctMatchColors(p1, p2) {
   p2.color = randomMatchColor([p1.color]);
 }
 
+function chooseBuiltinBotMoveAsync(state, side) {
+  const gameId = Number(state?.id || 0);
+  if (!gameId || botSearchWorkers.has(gameId)) return Promise.resolve(null);
+  const depth = getBuiltinBotSearchDepth(state, side);
+  const budgetMs = getBuiltinBotTimeBudget(state, side);
+  const worker = new Worker(path.join(__dirname, 'game', 'bot-search-worker.js'), {
+    workerData: { grid: state.board.grid, player: side, depth, budgetMs },
+  });
+  botSearchWorkers.set(gameId, worker);
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (botSearchWorkers.get(gameId) === worker) botSearchWorkers.delete(gameId);
+      worker.terminate().catch(() => {});
+      resolve(result);
+    };
+    const timeout = setTimeout(() => finish(null), budgetMs + 2500);
+    timeout.unref?.();
+    worker.once('message', message => {
+      if (!message?.ok || !Number.isInteger(message.col)) return finish(null);
+      state.lastBotSearch = {
+        player: state.players[side]?.pseudo || 'Bot',
+        depthTarget: Number(message.depthTarget || depth),
+        depthCompleted: Number(message.depthCompleted || 0),
+        score: Number(message.score || 0),
+      };
+      finish(Number(message.col));
+    });
+    worker.once('error', error => {
+      console.error('[BOT WORKER]', error.message);
+      finish(null);
+    });
+    worker.once('exit', code => {
+      if (!settled && code !== 0) console.error('[BOT WORKER]', `sortie code ${code}`);
+      if (!settled) finish(null);
+    });
+  });
+}
+
 function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
-  setTimeout(() => {
+  setTimeout(async () => {
     const state = gm.games.get(gameId);
     if (!state || state.status !== 'active') return;
     const side = state.current;
     const player = state.players[side];
     if (!builtinBotIds.has(Number(player?.id))) return;
-    const col = chooseBuiltinBotMove(state, side);
+    let col = await chooseBuiltinBotMoveAsync(state, side);
+    const freshState = gm.games.get(gameId);
+    if (!freshState || freshState !== state || state.status !== 'active' || state.current !== side) return;
+    if (col === null || !state.board.canPlay(col)) col = state.board.getValidCols()[0] ?? null;
     if (col === null) return;
     const result = gm.playMove(player.socketId, col);
     if (result?.gameId) {
