@@ -1846,29 +1846,36 @@ function chooseBuiltinBotMoveAsync(state, side) {
 
 function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
   setTimeout(async () => {
-    const state = gm.games.get(gameId);
-    if (!state || state.status !== 'active') return;
-    const side = state.current;
-    const player = state.players[side];
-    if (!builtinBotIds.has(Number(player?.id))) return;
-    let col = await chooseBuiltinBotMoveAsync(state, side);
-    const freshState = gm.games.get(gameId);
-    if (!freshState || freshState !== state || state.status !== 'active' || state.current !== side) return;
-    if (col === null || !state.board.canPlay(col)) col = state.board.getValidCols()[0] ?? null;
-    if (col === null) return;
-    const result = gm.playMove(player.socketId, col);
-    if (result?.gameId) {
-      if (result.type === 'game_over') emitGameOver(result);
-      else io.to('game:' + result.gameId).emit('move_played', result);
-      if (result.type === 'game_over') {
-        const now = Date.now();
-        for (const sideId of [state.players?.[1]?.id, state.players?.[2]?.id]) {
-          if (builtinBotIds.has(Number(sideId))) botArenaRestUntil.set(Number(sideId), now + BOT_ARENA_REST_MS);
+    try {
+      const state = gm.games.get(gameId);
+      if (!state || state.status !== 'active') return;
+      const side = state.current;
+      const player = state.players[side];
+      if (!builtinBotIds.has(Number(player?.id))) return;
+      let col = await chooseBuiltinBotMoveAsync(state, side);
+      const freshState = gm.games.get(gameId);
+      if (!freshState || freshState !== state || state.status !== 'active' || state.current !== side) return;
+      const validCols = state.board.getValidCols();
+      if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
+      if (col === null) return;
+      const result = gm.playMove(player.socketId, col);
+      if (result?.gameId) {
+        if (result.type === 'game_over') emitGameOver(result);
+        else io.to('game:' + result.gameId).emit('move_played', result);
+        if (result.type === 'game_over') {
+          const now = Date.now();
+          for (const sideId of [state.players?.[1]?.id, state.players?.[2]?.id]) {
+            if (builtinBotIds.has(Number(sideId))) botArenaRestUntil.set(Number(sideId), now + BOT_ARENA_REST_MS);
+          }
         }
       }
+      if (result?.type !== 'game_over') emitLiveUpdate();
+      scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
+    } catch (error) {
+      console.error('[BOT TURN]', error.message);
+      const state = gm.games.get(gameId);
+      if (state?.status === 'active') scheduleBuiltinBotTurn(gameId, 1000);
     }
-    if (result?.type !== 'game_over') emitLiveUpdate();
-    scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
   }, delayMs);
 }
 
