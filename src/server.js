@@ -6935,8 +6935,19 @@ app.get('/api/players/:id/variant-stats', (req, res) => {
 
 app.get('/api/leaderboard/variant/:variant', (req, res) => {
   const variant = normalizeVariant(req.params.variant);
-  if (variant === 'classic') return res.json({ variant, players: pQ.leaderboard.all() });
-  res.json({ variant, players: variantQ.leaderboard.all(variant, 50) });
+  const rows = variant === 'classic'
+    ? pQ.leaderboard.all().filter(player => !player.is_bot && player.id !== BOT_PLAYER_ID)
+    : variantQ.leaderboard.all(variant, 50);
+  const players = rows.map(row => ({
+    ...row,
+    id: Number(row.id || row.player_id),
+    elo: Number(row.elo || 1000),
+    wins: Number(row.wins || 0),
+    losses: Number(row.losses || 0),
+    draws: Number(row.draws || 0),
+    rank: getRank(Number(row.elo || 1000)),
+  }));
+  res.json({ variant, variantLabel: getVariant(variant).label, players });
 });
 
 app.get('/api/auth/session', (req, res) => {
@@ -9589,6 +9600,7 @@ app.get('/api/admin/games', (req, res) => {
 
   const games = db.prepare(`
     SELECT g.id, g.winner_id, g.status, g.move_count, g.duration, g.finished_at,
+           COALESCE(g.variant, 'classic') AS variant,
            g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2, g.reverted, g.suspicious,
            p1.pseudo AS p1_pseudo, p1.id AS player1_id,
            p2.pseudo AS p2_pseudo, p2.id AS player2_id

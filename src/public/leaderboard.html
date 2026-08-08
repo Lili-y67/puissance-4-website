@@ -171,6 +171,7 @@ body::after {
 }
 .board-card > * { position: relative; z-index: 1; }
 .board-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+.variant-filter{display:grid;gap:6px;min-width:210px}.variant-filter label{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:900;letter-spacing:1.7px;text-transform:uppercase;color:var(--muted)}.variant-select{width:100%;padding:11px 34px 11px 12px;border:1px solid rgba(133,235,255,.22);border-radius:12px;background:#101226;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.7px;outline:none;cursor:pointer}.variant-select:focus{border-color:#85ebff;box-shadow:0 0 0 3px rgba(133,235,255,.1)}.variant-select option{background:#101226;color:#fff}.variant-loading{opacity:.62;pointer-events:none}
 .board-kicker { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 900; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; }
 .board-title { font-family: 'Barlow Condensed', sans-serif; font-size: 34px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; }
 .board-note { color: var(--muted); font-size: 12px; line-height: 1.4; margin-top: 4px; }
@@ -471,9 +472,10 @@ body::after {
       <div class="board-head">
         <div>
           <div class="board-kicker">Membres</div>
-          <div class="board-title">Classement joueurs</div>
-          <div class="board-note">Les comptes humains uniquement, sans les bots.</div>
+          <div class="board-title" id="player-board-title">Classement joueurs</div>
+          <div class="board-note" id="player-board-note">Les comptes humains uniquement, sans les bots.</div>
         </div>
+        <div class="variant-filter"><label for="leaderboard-variant">Variante classée</label><select class="variant-select" id="leaderboard-variant" onchange="selectVariant(this.value)"><option value="classic">Classique</option></select></div>
       </div>
       <div class="tabs">
         <button class="tab-btn active" id="tab-elo"      onclick="switchTab('elo')">🏆 ELO</button>
@@ -521,27 +523,64 @@ let allPlayers = [];
 let allBots = [];
 let allClans = [];
 let currentTab = 'elo';
+let currentVariant = 'classic';
+let currentVariantLabel = 'Classique';
+const variantLeaderboardCache = new Map();
 let botPage = 1;
 const BOTS_PER_PAGE = 6;
 
 async function load() {
   try {
-    const [res, botRes, clanRes] = await Promise.all([
-      fetch('/api/leaderboard'),
+    const [variantRes, res, botRes, clanRes] = await Promise.all([
+      fetch('/api/variants'),
+      fetch('/api/leaderboard/variant/classic'),
       fetch('/api/leaderboard/bots'),
       fetch('/api/clans/leaderboard')
     ]);
+    const variantsPayload = variantRes.ok ? await variantRes.json() : { variants: [] };
     const data = await res.json();
     const bots = botRes.ok ? await botRes.json() : [];
     const clans = clanRes.ok ? await clanRes.json() : { clans: [] };
     // Charger aussi les wins (la route leaderboard retourne wins/losses/draws)
-    allPlayers = data;
+    allPlayers = data.players || [];
+    variantLeaderboardCache.set('classic', allPlayers);
     allBots = bots;
     allClans = clans.clans || [];
+    const select = document.getElementById('leaderboard-variant');
+    if (select && Array.isArray(variantsPayload.variants) && variantsPayload.variants.length) {
+      select.innerHTML = variantsPayload.variants.map(variant => `<option value="${variant.id}">${variant.label}</option>`).join('');
+      select.value = currentVariant;
+    }
     render();
     renderBots();
     renderClans();
   } catch(e) { console.error(e); }
+}
+
+async function selectVariant(variant) {
+  const select = document.getElementById('leaderboard-variant');
+  currentVariant = String(variant || 'classic');
+  currentVariantLabel = select?.selectedOptions?.[0]?.textContent || 'Classique';
+  const card = select?.closest('.board-card');
+  card?.classList.add('variant-loading');
+  try {
+    if (!variantLeaderboardCache.has(currentVariant)) {
+      const response = await fetch(`/api/leaderboard/variant/${encodeURIComponent(currentVariant)}`, { cache: 'no-store' });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Classement indisponible.');
+      variantLeaderboardCache.set(currentVariant, payload.players || []);
+      currentVariantLabel = payload.variantLabel || currentVariantLabel;
+    }
+    allPlayers = variantLeaderboardCache.get(currentVariant) || [];
+    document.getElementById('player-board-title').textContent = `Classement ${currentVariantLabel}`;
+    document.getElementById('player-board-note').textContent = `ELO et résultats propres à la variante ${currentVariantLabel}.`;
+    render();
+  } catch (error) {
+    allPlayers = [];
+    document.getElementById('list-wrap').innerHTML = `<div class="empty"><div class="empty-title">${error.message}</div></div>`;
+  } finally {
+    card?.classList.remove('variant-loading');
+  }
 }
 
 function sorted() {

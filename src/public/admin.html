@@ -550,6 +550,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
 .games-kind-tabs{display:flex;gap:8px;padding:5px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);border-radius:999px}
 .games-kind-tabs button{border:0;border-radius:999px;padding:10px 14px;background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer}
 .games-kind-tabs button.active{background:rgba(133,235,255,.16);color:var(--cyan);box-shadow:0 0 0 1px rgba(133,235,255,.20) inset}
+.game-variant-badge{display:inline-flex;align-items:center;white-space:nowrap;padding:4px 8px;border:1px solid rgba(133,235,255,.22);border-radius:999px;background:rgba(133,235,255,.08);color:var(--cyan);font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:900;letter-spacing:.55px;text-transform:uppercase}
 .modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(2,2,8,.78);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(14px);padding:14px}
 .modal{
   background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.02)),rgba(13,13,28,.94);
@@ -616,7 +617,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   .mobile-card{align-items:flex-start;flex-wrap:wrap}
   .mobile-card-elo{width:100%;text-align:left}
   #admin-games-section .table-wrap{border-radius:20px}
-  #admin-games-section table{min-width:760px}
+  #admin-games-section table{min-width:900px}
   .admin-section-title{font-size:24px}
   .admin-section-copy{font-size:12px}
 }
@@ -878,7 +879,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>#</th><th>J1</th><th>J2</th><th>Résultat</th><th>ELO</th>
+          <th>#</th><th>J1</th><th>J2</th><th>Résultat</th><th>Variante</th><th>ELO</th>
           <th>Coups</th><th>Date</th><th>Actions</th>
         </tr></thead>
         <tbody id="games-body"></tbody>
@@ -1809,6 +1810,14 @@ function closeAndReload() {
 }
 let currentAdminTab = 'players';
 let currentGamesKind = 'human';
+const ADMIN_VARIANT_LABELS = Object.freeze({
+  classic: 'Classique',
+  rotate: 'Plateau rotatif',
+  anti: 'Anti-Puissance 4',
+  bomb: 'Puissance Bombe',
+  mission: 'Mission personnelle',
+  simultaneous: 'Placement simultané',
+});
 function switchAdminTab(tab) {
   currentAdminTab = tab;
   const isPlayers = tab === 'players';
@@ -1853,7 +1862,7 @@ async function fetchAdminGames(offset) {
 function renderAdminGames(games, offset) {
   const tbody = document.getElementById('games-body');
   if (!games.length && offset === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvée</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Aucune partie trouvée</td></tr>';
     document.getElementById('games-pagination-admin').innerHTML = '';
     return;
   }
@@ -1865,6 +1874,8 @@ function renderAdminGames(games, offset) {
     const res      = isDraw ? 'Nul' : (isP1Win ? `Victoire ${g.p1_pseudo}` : `Victoire ${g.p2_pseudo}`);
     const d1       = g.elo_p1 != null ? (g.elo_p1 >= 0 ? '+' : '') + g.elo_p1 : '-';
     const d2       = g.elo_p2 != null ? (g.elo_p2 >= 0 ? '+' : '') + g.elo_p2 : '-';
+    const variant  = String(g.variant || 'classic');
+    const variantLabel = ADMIN_VARIANT_LABELS[variant] || variant;
     const date     = g.finished_at ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-';
     const canRevert= !g.reverted && g.elo_before_p1 != null;
     const revertedBadge = g.reverted ? '<span style="font-size:10px;padding:1px 5px;border-radius:4px;background:rgba(255,159,10,0.15);color:#ff9f0a;border:1px solid rgba(255,159,10,0.3)">REVERT</span> ' : '';
@@ -1874,6 +1885,7 @@ function renderAdminGames(games, offset) {
       <td><strong>${g.p1_pseudo}</strong></td>
       <td><strong>${g.p2_pseudo}</strong></td>
       <td style="font-size:12px">${res}</td>
+      <td><span class="game-variant-badge">${variantLabel}</span></td>
       <td style="font-size:11px;color:var(--muted)">${d1} / ${d2}</td>
       <td>${g.move_count || 0}</td>
       <td style="font-size:11px;color:var(--muted)">${date}</td>

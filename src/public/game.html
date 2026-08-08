@@ -1319,6 +1319,7 @@ html.p4-performance-lite .board::after {
 // ═══════════════════════════════════════════════════════════════════
 const SFX = (() => {
   let ctx = null;
+  let explosionNoise = null;
   function ac() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     return ctx;
@@ -1335,6 +1336,55 @@ const SFX = (() => {
       osc.start(c.currentTime); osc.stop(c.currentTime + dur);
     } catch(e) {}
   }
+  function explosion() {
+    try {
+      const c = ac();
+      if (c.state === 'suspended') c.resume().catch(() => {});
+      const now = c.currentTime + 0.008;
+      if (!explosionNoise || explosionNoise.sampleRate !== c.sampleRate) {
+        explosionNoise = c.createBuffer(1, Math.ceil(c.sampleRate * 0.72), c.sampleRate);
+        const samples = explosionNoise.getChannelData(0);
+        let last = 0;
+        for (let i = 0; i < samples.length; i++) {
+          const white = Math.random() * 2 - 1;
+          last = last * 0.72 + white * 0.28;
+          samples[i] = last;
+        }
+      }
+      const master = c.createGain();
+      const compressor = c.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-18, now);
+      compressor.knee.setValueAtTime(18, now);
+      compressor.ratio.setValueAtTime(5, now);
+      compressor.attack.setValueAtTime(0.003, now);
+      compressor.release.setValueAtTime(0.24, now);
+      master.gain.setValueAtTime(0.0001, now);
+      master.gain.exponentialRampToValueAtTime(0.42, now + 0.012);
+      master.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+      master.connect(compressor); compressor.connect(c.destination);
+
+      const noise = c.createBufferSource();
+      const filter = c.createBiquadFilter();
+      noise.buffer = explosionNoise;
+      filter.type = 'lowpass';
+      filter.Q.setValueAtTime(1.1, now);
+      filter.frequency.setValueAtTime(1450, now);
+      filter.frequency.exponentialRampToValueAtTime(90, now + 0.64);
+      noise.connect(filter); filter.connect(master);
+      noise.start(now); noise.stop(now + 0.7);
+
+      const sub = c.createOscillator();
+      const subGain = c.createGain();
+      sub.type = 'sine';
+      sub.frequency.setValueAtTime(105, now);
+      sub.frequency.exponentialRampToValueAtTime(38, now + 0.55);
+      subGain.gain.setValueAtTime(0.0001, now);
+      subGain.gain.exponentialRampToValueAtTime(0.55, now + 0.016);
+      subGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
+      sub.connect(subGain); subGain.connect(master);
+      sub.start(now); sub.stop(now + 0.65);
+    } catch (e) {}
+  }
   return {
     drop()        { beep(300, 0.07, 0.14, 'triangle'); setTimeout(() => beep(200, 0.09, 0.07, 'triangle'), 55); },
     opponentDrop(){ beep(230, 0.07, 0.09, 'triangle'); setTimeout(() => beep(160, 0.09, 0.05, 'triangle'), 55); },
@@ -1342,7 +1392,7 @@ const SFX = (() => {
     go()          { [523,659,784].forEach((f,i) => setTimeout(() => beep(f, 0.25, 0.13), i*70)); },
     matchFound()  { [440,554,659].forEach((f,i) => setTimeout(() => beep(f, 0.35, 0.13), i*90)); },
     bombTick()    { beep(760, 0.055, 0.08, 'square'); },
-    explosion()   { beep(92, .42, .22, 'sawtooth', .002); setTimeout(() => beep(58, .5, .16, 'square', .002), 35); },
+    explosion,
     win()         { [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.14), i*110)); },
     lose()        { [392,349,311,261].forEach((f,i) => setTimeout(() => beep(f, 0.45, 0.12, 'sawtooth'), i*120)); },
     draw()        { beep(350, 0.18, 0.1, 'triangle'); setTimeout(() => beep(350, 0.18, 0.08, 'triangle'), 240); },
@@ -1355,6 +1405,8 @@ let bombTargeting = false;
 let simultaneousWaiting = false;
 let forcedColumns = [];
 let socket, myPlayer, mySide, gameId, currentTurn;
+let boardCells = [];
+let columnButtons = [];
 let gameOver    = false;
 let lobbyData   = null;
 let inCountdown = false; // true pendant le 3-2-1
@@ -1707,15 +1759,7 @@ function setCardElo(side, value) {
   if (Number.isFinite(numeric)) {
     el.dataset.elo = String(Math.round(numeric));
     el.textContent = `${Math.round(numeric)} ELO`;
-  } else if (activeMoveTimeSeconds > 0) {
-    badge.textContent = `Classique · ${activeMoveTimeSeconds}s / coup`;
-    badge.classList.add('show');
-  } else if (activeMoveTimeSeconds > 0) {
-    badge.textContent = `Classique · ${activeMoveTimeSeconds}s / coup`;
-    badge.classList.add('show');
-  }
-  else 
-  {
+  } else {
     el.dataset.elo = '';
     el.textContent = String(value || '-- ELO');
   }
@@ -1890,17 +1934,21 @@ function startTurnTimer() {
   const boardTimer = document.getElementById('board-move-timer');
   if (!boardTimer) return;
   turnDeadline = Date.now() + activeMoveTimeSeconds * 1000;
+  let lastPaintedSecond = -1;
   const paint = () => {
     const remaining = Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
+    if (remaining === lastPaintedSecond) return remaining;
+    lastPaintedSecond = remaining;
     const text = `${String(remaining).padStart(2, '0')}s`;
     boardTimer.textContent = text;
     boardTimer.classList.add('show');
     boardTimer.classList.toggle('danger', remaining <= 5);
+    return remaining;
   };
   paint();
   turnTimerInterval = setInterval(() => {
-    paint();
-    if (Date.now() >= turnDeadline) {
+    const remaining = paint();
+    if (remaining === 0 || Date.now() >= turnDeadline) {
       clearInterval(turnTimerInterval);
       turnTimerInterval = null;
     }
@@ -2395,13 +2443,18 @@ function renderBoard() {
   const boardEl = document.getElementById('board');
   const colsEl  = document.getElementById('col-btns');
   boardEl.innerHTML = colsEl.innerHTML = '';
+  boardCells = Array.from({ length: ROWS }, () => Array(COLS));
+  columnButtons = Array(COLS);
+  const buttonFragment = document.createDocumentFragment();
+  const boardFragment = document.createDocumentFragment();
 
   for (let c = 0; c < COLS; c++) {
     const btn = document.createElement('button');
     btn.className = 'col-btn';
     btn.id        = 'cb' + c;
     btn.onclick   = () => playMove(c);
-    colsEl.appendChild(btn);
+    columnButtons[c] = btn;
+    buttonFragment.appendChild(btn);
   }
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -2418,21 +2471,45 @@ function renderBoard() {
         playMove(c);
       };
       cell.appendChild(Object.assign(document.createElement('div'), { className: 'token' }));
-      boardEl.appendChild(cell);
+      boardCells[r][c] = cell;
+      boardFragment.appendChild(cell);
     }
   }
+  colsEl.appendChild(buttonFragment);
+  boardEl.appendChild(boardFragment);
+}
+
+function getBoardCell(row, col) {
+  return boardCells[Number(row)]?.[Number(col)] || null;
 }
 
 function restoreBoard(grid) {
-  currentGrid = Array.from({ length: ROWS }, (_, row) =>
+  const nextGrid = Array.from({ length: ROWS }, (_, row) =>
     Array.from({ length: COLS }, (_, col) => Number(grid?.[row]?.[col] || 0))
   );
-  renderBoard();
+  const canPatch = boardCells.length === ROWS
+    && boardCells.every(row => row?.length === COLS && row.every(cell => cell?.isConnected));
+  if (!canPatch) renderBoard();
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (currentGrid[r][c]) applyToken(r, c, currentGrid[r][c], false);
+      const previous = Number(currentGrid?.[r]?.[c] || 0);
+      const next = nextGrid[r][c];
+      const cell = boardCells[r]?.[c];
+      if (!cell) continue;
+      if (next && (previous !== next || !cell.classList.contains('p' + next))) {
+        applyToken(r, c, next, false);
+      } else if (!next && (previous || cell.classList.contains('p1') || cell.classList.contains('p2'))) {
+        cell.classList.remove('p1', 'p2', 'drop', 'winning');
+        const token = cell.querySelector('.token');
+        if (token) {
+          token.removeAttribute('style');
+          token.replaceChildren();
+          token.className = 'token';
+        }
+      }
     }
   }
+  currentGrid = nextGrid;
 }
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
@@ -2440,7 +2517,6 @@ function playMove(col) {
   if (gameOver || (currentVariant !== 'simultaneous' && currentTurn !== mySide) || simultaneousWaiting) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
   if (iaMode) { iaPlayHuman(col); return; }
-  SFX.drop();
   socket.emit('play_move', { col });
 }
 
@@ -2483,7 +2559,7 @@ async function animateRotation(rotation, finalGrid) {
   const sampleCell = document.querySelector('.cell');
   const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
   (Array.isArray(rotation.falls) ? rotation.falls : []).forEach((fall, index) => {
-    const cell = document.querySelector(`.cell[data-row="${Number(fall.row)}"][data-col="${Number(fall.col)}"]`);
+    const cell = getBoardCell(fall.row, fall.col);
     if (!cell) return;
     cell.classList.add('rotation-falling');
     cell.style.setProperty('--rotation-fall-delay', `${Math.min(index * 28, 180)}ms`);
@@ -2502,7 +2578,7 @@ async function animateRotation(rotation, finalGrid) {
 async function animateBombUse(data = {}) {
   const board = document.getElementById('board');
   if (!board) return restoreBoard(data.board);
-  const target = document.querySelector(`.cell[data-row="${Number(data.row)}"][data-col="${Number(data.col)}"]`);
+  const target = getBoardCell(data.row, data.col);
   if (!target) return restoreBoard(data.board);
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   board.classList.add('locked');
@@ -2523,7 +2599,7 @@ async function animateBombUse(data = {}) {
   board.classList.add('bomb-shock');
   SFX.explosion();
   (Array.isArray(data.removed) ? data.removed : []).forEach(({ row, col }) => {
-    document.querySelector(`.cell[data-row="${Number(row)}"][data-col="${Number(col)}"]`)?.classList.add('bomb-hit');
+    getBoardCell(row, col)?.classList.add('bomb-hit');
   });
   setStatus('BOUM ! La gravité s’applique…');
   await pause(480);
@@ -2532,7 +2608,7 @@ async function animateBombUse(data = {}) {
   const sampleCell = document.querySelector('.cell');
   const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
   (Array.isArray(data.falls) ? data.falls : []).forEach((fall, index) => {
-    const cell = document.querySelector(`.cell[data-row="${Number(fall.row)}"][data-col="${Number(fall.col)}"]`);
+    const cell = getBoardCell(fall.row, fall.col);
     if (!cell) return;
     cell.classList.add('bomb-falling');
     cell.style.setProperty('--bomb-fall-delay', `${Math.min(index * 32, 190)}ms`);
@@ -2672,7 +2748,8 @@ const SHAPE_CLIPS = {
 };
 
 function applyToken(row, col, player, animate = true) {
-  const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+  const cell = getBoardCell(row, col)
+    || document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
   if (!cell) return;
   cell.classList.remove('p1', 'p2', 'drop');
   cell.classList.add('p' + player);
@@ -2705,8 +2782,12 @@ function applyToken(row, col, player, animate = true) {
     }
     token.style.setProperty('--token-rgb-delay', `${-((row * 0.32) + (col * 0.18)).toFixed(2)}s`);
   }
-  if (animate) void cell.offsetWidth;
-  cell.classList.add('drop');
+  if (animate) {
+    void cell.offsetWidth;
+    cell.classList.add('drop');
+  } else {
+    cell.classList.remove('drop');
+  }
 }
 
 function updateTurnUI() {
@@ -2715,7 +2796,7 @@ function updateTurnUI() {
   document.getElementById('card-p2').classList.toggle('active', currentTurn === 2);
 
   for (let c = 0; c < COLS; c++) {
-    const b = document.getElementById('cb' + c);
+    const b = columnButtons[c] || document.getElementById('cb' + c);
     if (b) {
       const forcedElsewhere = currentVariant === 'anti' && forcedColumns.length && !forcedColumns.includes(c);
       b.disabled = !isMe || gameOver || forcedElsewhere;
@@ -2779,6 +2860,11 @@ async function onGameOver(data) {
     await animateBombUse({ ...data.bomb, board: data.board });
   } else if (data?.rotation && Array.isArray(data?.board)) {
     await animateRotation(data.rotation, data.board);
+  } else if ((data?.variant === 'simultaneous' || currentVariant === 'simultaneous') && Array.isArray(data?.board)) {
+    // Le round décisif arrive directement sous forme de game_over : ses deux
+    // placements n'ont donc pas été rendus par onMovePlayed(). Restaurer la
+    // grille complète garantit que le pion ayant créé la ligne reste visible.
+    restoreBoard(data.board);
   }
 
   const dcBanner = document.getElementById('disconnect-banner');

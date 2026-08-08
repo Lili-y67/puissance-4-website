@@ -72,10 +72,10 @@ ul{padding-left:18px}
 <div class="page">
   <section class="hero">
     <div class="card">
-      <div class="eyebrow">Documentation Complete - Version 3.5.0</div>
+      <div class="eyebrow">Documentation Complete - Version 3.6.0</div>
       <img class="hero-logo" src="/assets/site-logo-small.png" alt="Puissance 4">
       <h1>Puissance <span>4</span> API</h1>
-      <p>Référence HTTP + Socket.IO du projet en version 3.5.0. Cette page décrit les routes disponibles, les erreurs probables, les headers attendus et des exemples directement réutilisables. Elle inclut les styles de pseudo, la recherche des bots, les historiques ELO humain/bot, les outils développeur et les commandes Discord francisées.</p>
+      <p>Référence HTTP + Socket.IO du projet en version 3.6.0. Cette page décrit les routes disponibles, les erreurs probables, les headers attendus et des exemples directement réutilisables. Elle inclut désormais les variantes, leur classement, la progression, les groupes, les outils développeur et les routes Discord complémentaires.</p>
       <div class="hero-actions">
         <a class="hero-back" href="/"><span>&larr;</span><span>Retour accueil</span></a>
         <a class="hero-profile" href="/profil"><span>&#128100;</span><span>Voir profil</span></a>
@@ -84,7 +84,7 @@ ul{padding-left:18px}
         <div class="mini"><div class="k">Base API</div><div class="v"><code>/api/...</code></div></div>
         <div class="mini"><div class="k">Session joueur</div><div class="v"><code>token</code> ou <code>x-session-token</code></div></div>
         <div class="mini"><div class="k">Session admin</div><div class="v"><code>x-admin-token</code></div></div>
-        <div class="mini"><div class="k">Version active</div><div class="v"><code>3.5.0</code></div></div>
+        <div class="mini"><div class="k">Version active</div><div class="v"><code>3.6.0</code></div></div>
       </div>
     </div>
     <div class="card">
@@ -95,12 +95,16 @@ ul{padding-left:18px}
         <a href="#games">Parties / Replay <span>&rarr;</span></a>
         <a href="#shop">Boutique / Boosters <span>&rarr;</span></a>
         <a href="#duels">Duels <span>&rarr;</span></a>
+        <a href="#variants">Variantes <span>&rarr;</span></a>
+        <a href="#progression">Progression <span>&rarr;</span></a>
         <a href="#clans">Clans <span>&rarr;</span></a>
+        <a href="#groups">Groupes <span>&rarr;</span></a>
         <a href="#discord">Discord <span>&rarr;</span></a>
         <a href="#bot-api">Bot API <span>&rarr;</span></a>
         <a href="#discord-commands">Commandes bot <span>&rarr;</span></a>
         <a href="#admin">Admin <span>&rarr;</span></a>
         <a href="#i18n">Langues / i18n <span>&rarr;</span></a>
+        <a href="#tooling">Outils / Laboratoire <span>&rarr;</span></a>
         <a href="#socketio">Socket.IO <span>&rarr;</span></a>
       </div>
     </div>
@@ -114,12 +118,17 @@ ul{padding-left:18px}
         <a href="#games">Parties, live et replay</a>
         <a href="#shop">Boutique, coins et boosters</a>
         <a href="#duels">Duels</a>
+        <a href="#variants">Variantes et classements</a>
+        <a href="#progression">Progression et saisons</a>
         <a href="#clans">Clans</a>
+        <a href="#groups">Groupes privés</a>
         <a href="#discord">Discord</a>
         <a href="#bot-api">Bot API</a>
         <a href="#discord-commands">Commandes bot</a>
         <a href="#admin">Administration</a>
         <a href="#i18n">Langues / i18n</a>
+        <a href="#tournaments">Tournois (compatibilité)</a>
+        <a href="#tooling">Outils, musique et laboratoire</a>
         <a href="#system">Syst&egrave;me</a>
         <a href="#socketio">WebSockets</a>
       </div>
@@ -277,7 +286,7 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id</span></div><p>Donn&eacute;es de base d&rsquo;une partie.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/moves</span></div><p>Liste ordonn&eacute;e des coups pour reconstruire la grille.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/replay-view</span></div><p>Payload enrichi pour <code>replay.html</code>.</p></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/analysis</span></div><p>Enregistre l&rsquo;analyse d&rsquo;une partie. Erreurs typiques : partie introuvable, payload vide.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/analysis</span></div><p>Enregistre l&rsquo;analyse d&rsquo;une partie <strong>classique</strong>. Une partie jouée avec une variante renvoie <code>409</code> : son analyse spécifique reste actuellement dans le laboratoire bêta et n&rsquo;est pas persistée par cette route.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/games/:id/analysis</span></div><p>Relit l&rsquo;analyse enregistr&eacute;e.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/games/:id/accuracy</span></div><p>Stocke la pr&eacute;cision finale c&ocirc;t&eacute; base.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/bot-replay</span></div><p>Calcul bot / ELO bot / r&eacute;sultat IA pour le mode contre l&rsquo;ordinateur. Les parties bot peuvent &ecirc;tre enregistr&eacute;es comme replay sans polluer les stats des invit&eacute;s amicaux.</p></article>
@@ -313,21 +322,22 @@ localStorage.setItem('player', JSON.stringify(guest.player));</code></pre><pre><
         <article class="endpoint"><div class="note">Quand <code>limitedOffer</code> contient un coupon, la boutique peut l&rsquo;appliquer automatiquement en preview avant confirmation d&rsquo;achat. Les stocks, timers et coupons restent recalcul&eacute;s c&ocirc;t&eacute; serveur au moment de valider.</div></article>
       </div></section>
       <section class="section" id="duels"><div class="section-head"><div><h2>Duels</h2><p>D&eacute;fi direct ou par lien, en <strong>Ranked</strong> ou <strong>Amical</strong>. Les liens amicaux expirent en 15 minutes et acceptent les invit&eacute;s.</p></div><div class="legend"><span class="chip post">POST</span><span class="chip socket">SOCKET</span></div></div><div class="group">
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/duels/challenge</span></div><p>Envoie un duel &agrave; un joueur connect&eacute;. <code>gameType</code> peut valoir <code>ranked</code> ou <code>friendly</code>.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>targetId</code>, <code>gameType</code></div></div><div class="box"><div class="label">Retour</div><div class="value">challenge + <code>shareUrl</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">joueur hors ligne, duel d&eacute;j&agrave; en attente, joueur d&eacute;j&agrave; en partie, self-duel</div></div></div><div class="subgrid"><pre><code>await fetch('/api/duels/challenge', {
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/duels/challenge</span></div><p>Envoie un duel &agrave; un joueur connect&eacute;. <code>gameType</code> peut valoir <code>ranked</code> ou <code>friendly</code> et <code>variant</code> sélectionne les règles de la partie.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>targetId</code>, <code>gameType</code>, <code>variant</code></div></div><div class="box"><div class="label">Retour</div><div class="value">challenge + <code>shareUrl</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">joueur hors ligne, variante invalide, duel d&eacute;j&agrave; en attente, joueur d&eacute;j&agrave; en partie, self-duel</div></div></div><div class="subgrid"><pre><code>await fetch('/api/duels/challenge', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     token,
     targetId: 12,
-    gameType: 'friendly'
+    gameType: 'friendly',
+    variant: 'bomb'
   })
 });</code></pre><pre><code>curl -X POST http://localhost:8080/api/duels/challenge ^
   -H "Content-Type: application/json" ^
-  -d "{\"token\":\"SESSION_TOKEN\",\"targetId\":12,\"gameType\":\"friendly\"}"</code></pre></div></article>
-        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/duels/link</span></div><p>Cr&eacute;e un lien de duel partageable de type <code>/duel/:id</code>. En <code>friendly</code>, le lien expire au bout de 15 minutes et peut &ecirc;tre cr&eacute;&eacute; avec une session invit&eacute;.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>gameType</code></div></div><div class="box"><div class="label">Retour</div><div class="value"><code>challenge.id</code>, <code>shareUrl</code>, mode, statut, <code>expiresAt</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">session invalide, joueur d&eacute;j&agrave; en partie, g&eacute;n&eacute;ration impossible</div></div></div><div class="subgrid"><pre><code>await fetch('/api/duels/link', {
+  -d "{\"token\":\"SESSION_TOKEN\",\"targetId\":12,\"gameType\":\"friendly\",\"variant\":\"bomb\"}"</code></pre></div></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/duels/link</span></div><p>Cr&eacute;e un lien de duel partageable de type <code>/duel/:id</code>. En <code>friendly</code>, le lien expire au bout de 15 minutes et peut être créé avec une session invité. Le champ <code>variant</code> est conservé jusqu&rsquo;à l&rsquo;acceptation.</p><div class="meta"><div class="box"><div class="label">Body</div><div class="value"><code>token</code>, <code>gameType</code>, <code>variant</code></div></div><div class="box"><div class="label">Retour</div><div class="value"><code>challenge.id</code>, <code>shareUrl</code>, mode, variante, statut, <code>expiresAt</code></div></div><div class="box"><div class="label">Erreurs</div><div class="value">session invalide, variante invalide, joueur d&eacute;j&agrave; en partie, g&eacute;n&eacute;ration impossible</div></div></div><div class="subgrid"><pre><code>await fetch('/api/duels/link', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ token, gameType: 'ranked' })
+  body: JSON.stringify({ token, gameType: 'ranked', variant: 'rotate' })
 });</code></pre><pre><code>curl -X POST http://localhost:8080/api/duels/link ^
   -H "Content-Type: application/json" ^
   -d "{\"token\":\"SESSION_TOKEN\",\"gameType\":\"ranked\"}"</code></pre></div></article>
@@ -512,6 +522,73 @@ LIBRETRANSLATE_KEY=</code></pre><pre><code>libretranslate --host 0.0.0.0 --port 
   --load-only fr,en,es,de,it,pt,nl,pl,ro,sv,tr,ru,uk,ar,zh,ja,ko,el,cs,hu,id,hi \
   --disable-web-ui</code></pre></div><div class="note warn">Dans deux containers Pterodactyl diff&eacute;rents, <code>127.0.0.1</code> pointe souvent vers le mauvais container. Utiliser l&rsquo;IP ou le hostname joignable du serveur LibreTranslate.</div></article>
       </div></section>
+      <section class="section" id="variants"><div class="section-head"><div><h2>Variantes et classements</h2><p>Catalogue des modes, statistiques ELO s&eacute;par&eacute;es et classement propre &agrave; chaque variante.</p></div><div class="legend"><span class="chip get">GET</span></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/variants</span></div><p>Retourne les variantes activ&eacute;es avec leur identifiant, leur nom, leur description, la taille de grille et les capacit&eacute;s disponibles. Les identifiants actuellement utilis&eacute;s sont <code>classic</code>, <code>rotate</code>, <code>anti</code>, <code>bomb</code>, <code>mission</code> et <code>simultaneous</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/variant-stats</span></div><p>Statistiques d&rsquo;un joueur ventil&eacute;es par variante : ELO, victoires, d&eacute;faites, nuls et historique utilis&eacute; par la courbe du profil.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/leaderboard/variant/:variant</span></div><p>Classement humain de la variante demand&eacute;e. La r&eacute;ponse contient <code>variant</code>, <code>variantLabel</code> et <code>players</code>; chaque joueur poss&egrave;de son ELO, ses r&eacute;sultats et son rang calcul&eacute;s pour ce mode.</p><pre><code>const data = await fetch('/api/leaderboard/variant/bomb').then(r =&gt; r.json());
+console.log(data.variantLabel, data.players);</code></pre></article>
+        <article class="endpoint"><div class="note ok">Le champ <code>variant</code> est aussi accept&eacute; par la file d&rsquo;attente et les deux routes Duel. Le mode classique est utilis&eacute; si ce champ est absent ou invalide.</div></article>
+      </div></section>
+
+      <section class="section" id="progression"><div class="section-head"><div><h2>Progression, saisons et pr&eacute;dictions</h2><p>Progression personnelle, r&eacute;compenses de saison, missions de clan et interactions avec les parties live.</p></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/progression/me</span></div><p>Retourne la progression du joueur connect&eacute; : niveau, XP, d&eacute;fis, th&egrave;me actif et r&eacute;compenses r&eacute;clamables. Authentification par session.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/progression/challenges/:key/claim</span></div><p>R&eacute;clame la r&eacute;compense d&rsquo;un d&eacute;fi termin&eacute;. Renvoie une erreur si le d&eacute;fi est incomplet, inconnu ou d&eacute;j&agrave; r&eacute;clam&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/progression/theme</span></div><p>Active un th&egrave;me d&eacute;bloqu&eacute; pour le joueur connect&eacute;. Body : <code>theme</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/seasons/current</span></div><p>Expose la saison en cours, ses dates et les donn&eacute;es publiques n&eacute;cessaires &agrave; l&rsquo;interface de progression.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/clans/:id/missions</span></div><p>Retourne les missions et l&rsquo;avancement collectif du clan.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/live/:id/predict</span></div><p>Enregistre ou modifie la pr&eacute;diction du joueur connect&eacute; sur le vainqueur d&rsquo;une partie live. Body : <code>predictedPlayerId</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/tournaments</span></div><p>Historique de participation d&rsquo;un joueur aux anciens tournois.</p></article>
+      </div></section>
+
+      <section class="section" id="groups"><div class="section-head"><div><h2>Groupes priv&eacute;s</h2><p>Cr&eacute;ation de groupes, invitations, notifications, messages et &eacute;v&eacute;nements internes.</p></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/groups</span></div><p>Liste les groupes auxquels appartient le joueur connect&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/groups</span></div><p>Cr&eacute;e un groupe. Body principal : <code>name</code>; le cr&eacute;ateur devient propri&eacute;taire.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/groups/:id/invites</span></div><p>Invite un joueur dans le groupe. R&eacute;serv&eacute; aux membres autoris&eacute;s.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/group-notifications</span></div><p>Liste les invitations et notifications de groupe du joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/group-notifications/:id/respond</span></div><p>Accepte ou refuse une invitation. Body : <code>action</code> avec <code>accept</code> ou <code>decline</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/groups/:id/messages</span></div><p>Charge les messages visibles par un membre du groupe.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/groups/:id/messages</span></div><p>Publie un message dans le groupe. Body : <code>content</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/groups/:id/events</span></div><p>Ajoute un &eacute;v&eacute;nement au fil du groupe; l&rsquo;acc&egrave;s et le type sont valid&eacute;s c&ocirc;t&eacute; serveur.</p></article>
+      </div></section>
+
+      <section class="section" id="tournaments"><div class="section-head"><div><h2>Tournois &mdash; routes de compatibilit&eacute;</h2><p>Ancienne API conserv&eacute;e pour identifier proprement les clients obsol&egrave;tes.</p></div></div><div class="group">
+        <article class="endpoint"><div class="note warn"><strong>Fonction retir&eacute;e :</strong> toutes les routes <code>/api/tournaments</code> et <code>/api/admin/tournaments</code> ci-dessous renvoient actuellement <code>410 Gone</code>. Elles ne doivent plus &ecirc;tre utilis&eacute;es pour une nouvelle int&eacute;gration.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments</span></div><p>Ancienne liste publique des tournois.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/tournaments/:id</span></div><p>Ancien d&eacute;tail d&rsquo;un tournoi.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments</span></div><p>Ancienne cr&eacute;ation de tournoi.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/tournaments/:id/join</span></div><p>Ancienne inscription &agrave; un tournoi.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/admin/tournaments</span></div><p>Ancienne liste d&rsquo;administration.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/finish</span></div><p>Ancienne cl&ocirc;ture forc&eacute;e.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/pause</span></div><p>Ancienne mise en pause.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/tournaments/:id/resume</span></div><p>Ancienne reprise.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip delete">DELETE</span><span class="route">/api/admin/tournaments/:id</span></div><p>Ancienne suppression.</p></article>
+      </div></section>
+
+      <section class="section" id="tooling"><div class="section-head"><div><h2>Outils, cosm&eacute;tiques, musique et laboratoire</h2><p>Routes auxiliaires ajout&eacute;es depuis la pr&eacute;c&eacute;dente version de cette documentation.</p></div></div><div class="group">
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/auth/session</span></div><p>V&eacute;rifie la session courante et renvoie le joueur associ&eacute; sans effectuer de connexion.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/beta-game/login</span></div><p>Ouvre une session temporaire du laboratoire avec son mot de passe d&rsquo;acc&egrave;s. Cette session est distincte d&rsquo;un compte joueur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/beta-game/session</span></div><p>Indique si le navigateur poss&egrave;de encore une session laboratoire valide.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/nameplates</span></div><p>Catalogue public des plaques nominatives disponibles.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/shop/catalog</span></div><p>Catalogue boutique normalis&eacute; utilis&eacute; par le front : articles, prix, monnaies et disponibilit&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip patch">PATCH</span><span class="route">/api/players/:id/search-nameplate</span></div><p>Change la plaque affich&eacute;e pour un r&eacute;sultat de recherche, avec contr&ocirc;le d&rsquo;identit&eacute; et de possession.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/easter-eggs/claim</span></div><p>Valide une r&eacute;clamation d&rsquo;Easter egg et attribue la r&eacute;compense si les conditions serveur sont remplies.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/queue-music/search</span></div><p>Recherche une piste pour la musique de file d&rsquo;attente. Param&egrave;tre principal : <code>q</code>.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/queue-music/lavalink-stream/:videoId</span></div><p>Relaye le flux audio d&rsquo;une piste valid&eacute;e via Lavalink. Cette route est destin&eacute;e au lecteur interne, pas &agrave; l&rsquo;archivage.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/players/:id/discord-info</span></div><p>Informations Discord publiques autoris&eacute;es pour un profil.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/me/discord-avatar/refresh</span></div><p>Resynchronise l&rsquo;avatar du compte Discord li&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/me/discord-banner/refresh</span></div><p>Resynchronise la banni&egrave;re Discord du joueur connect&eacute;.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/me/discord-pseudo/refresh</span></div><p>Resynchronise le pseudo Discord selon les r&egrave;gles de liaison du site.</p></article>
+        <article class="endpoint"><div class="note"><strong>Espace d&eacute;veloppeur :</strong> ces routes exigent la session et les droits appropri&eacute;s. Les secrets et mots de passe ne sont jamais renvoy&eacute;s en clair.</div></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/password</span></div><p>Retourne l&rsquo;&eacute;tat de configuration de l&rsquo;acc&egrave;s d&eacute;veloppeur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/dev/login</span></div><p>Cr&eacute;e une session d&eacute;veloppeur apr&egrave;s validation des identifiants.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/dev/logout</span></div><p>Ferme la session d&eacute;veloppeur courante.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/me</span></div><p>Retourne l&rsquo;identit&eacute; et les droits de la session d&eacute;veloppeur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/sources</span></div><p>Liste les sources de donn&eacute;es consultables dans le tableau de bord.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/source</span></div><p>Lit une source autoris&eacute;e; le chemin demand&eacute; reste valid&eacute; c&ocirc;t&eacute; serveur.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/metrics</span></div><p>M&eacute;triques techniques agr&eacute;g&eacute;es du projet.</p></article>
+        <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/dev/bot-usage</span></div><p>Statistiques d&rsquo;usage des comptes Bot API pour le tableau de bord d&eacute;veloppeur.</p></article>
+      </div></section>
+
       <section class="section" id="system"><div class="section-head"><div><h2>Syst&egrave;me</h2><p>Endpoints transverses utilis&eacute;s par l&rsquo;UI, le live et les alertes.</p></div></div><div class="group">
         <article class="endpoint"><div class="topline"><span class="chip get">GET</span><span class="route">/api/system-status</span></div><p>&Eacute;tat manuel du serveur : maintenance / red&eacute;marrage / message flottant.</p></article>
         <article class="endpoint"><div class="topline"><span class="chip post">POST</span><span class="route">/api/admin/system-status</span></div><p>Met &agrave; jour l&rsquo;alerte serveur affich&eacute;e en front.</p></article>
