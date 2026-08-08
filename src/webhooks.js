@@ -68,6 +68,7 @@ const EMOJI = Object.freeze({
   red: '\uD83D\uDD34',
   yellow: '\uD83D\uDFE1',
   black: '\u26AB',
+  empty: '\u25AB\uFE0F',
   win: '\uD83D\uDFE2',
 });
 
@@ -330,14 +331,13 @@ function boardGrid(board, p1Emoji, p2Emoji, winCells = []) {
   const cols = Math.max(0, ...rows.map(row => row.length));
   if (!rows.length || !cols || rows.length > 9 || cols > 9) return null;
   const winners = new Set((Array.isArray(winCells) ? winCells : []).map(normalizeWinCell).filter(Boolean));
-  const thinSpace = '\u2009';
   const grid = rows
     .map((row, r) => Array.from({ length: cols }, (_, c) => row[c] || 0)
       .map((cell, c) => {
         if (winners.has(`${r}:${c}`)) return EMOJI.win;
-        return Number(cell) === 1 ? p1Emoji : Number(cell) === 2 ? p2Emoji : EMOJI.black;
+        return Number(cell) === 1 ? p1Emoji : Number(cell) === 2 ? p2Emoji : EMOJI.empty;
       })
-      .join(thinSpace))
+      .join(''))
     .join('\n');
   return { grid, rows: rows.length, cols };
 }

@@ -103,8 +103,8 @@ const BOT_ARENA_INTERVAL_MS = Math.max(60_000, Number(process.env.BOT_ARENA_INTE
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(1, Number(process.env.BOT_ARENA_MAX_ACTIVE || 1)));
 const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(5 * 60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 8 * 60_000));
 const BOT_ARENA_REST_MS = Math.max(60_000, Number(process.env.BOT_ARENA_REST_MS || 90_000));
-const BOT_SEARCH_TIME_MS = Math.max(80, Math.min(300, Number(process.env.BOT_SEARCH_TIME_MS || 140)));
-const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(9, Number(process.env.BOT_MAX_SEARCH_DEPTH || 7)));
+const BOT_SEARCH_TIME_MS = Math.max(2000, Math.min(15000, Number(process.env.BOT_SEARCH_TIME_MS || 2000)));
+const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 const BOT_HOST_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_HOST_MAX_ACTIVE || 2)));
 const BOT_HOST_MAX_RSS_MB = Math.max(64, Math.min(256, Number(process.env.BOT_HOST_MAX_RSS_MB || 128)));
 const BOT_HOST_MAX_CPU_MS_PER_MIN = Math.max(1_000, Math.min(45_000, Number(process.env.BOT_HOST_MAX_CPU_MS_PER_MIN || 30_000)));
@@ -1657,9 +1657,11 @@ function getBuiltinBotSearchDepth(state, side) {
 
 function getBuiltinBotTimeBudget(state, side) {
   const depth = getBuiltinBotSearchDepth(state, side);
-  if (depth >= 12) return Math.max(BOT_SEARCH_TIME_MS, 850);
-  if (depth >= 10) return Math.max(BOT_SEARCH_TIME_MS, 620);
-  return Math.min(Math.max(BOT_SEARCH_TIME_MS, 140), 520);
+  if (depth >= 13) return Math.max(BOT_SEARCH_TIME_MS, 15000);
+  if (depth >= 11) return Math.max(BOT_SEARCH_TIME_MS, 12000);
+  if (depth >= 9) return Math.max(BOT_SEARCH_TIME_MS, 7000);
+  if (depth >= 8) return Math.max(BOT_SEARCH_TIME_MS, 4000);
+  return Math.max(BOT_SEARCH_TIME_MS, 2000);
 }
 
 function cloneGrid(grid) {
