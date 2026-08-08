@@ -424,7 +424,9 @@ db.exec(`
     stopped_at   INTEGER NOT NULL DEFAULT 0,
     expires_at   INTEGER NOT NULL DEFAULT 0,
     last_action  TEXT    NOT NULL DEFAULT '',
-    metrics      TEXT    NOT NULL DEFAULT '[]'
+    metrics      TEXT    NOT NULL DEFAULT '[]',
+    think_ms     INTEGER NOT NULL DEFAULT 5000,
+    auto_restart INTEGER NOT NULL DEFAULT 1
   )
 `);
 try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN pid INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
@@ -433,6 +435,8 @@ try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN exit_signal TEXT NOT NULL DEFAUL
 try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN started_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN stopped_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN metrics TEXT NOT NULL DEFAULT '[]'`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN think_ms INTEGER NOT NULL DEFAULT 5000`); } catch(e) {}
+try { db.exec(`ALTER TABLE bot_hosts ADD COLUMN auto_restart INTEGER NOT NULL DEFAULT 1`); } catch(e) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS discord_activity (

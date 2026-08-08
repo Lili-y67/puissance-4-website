@@ -1969,7 +1969,8 @@ function getAvatarDecorationRemainingMs(player = currentPlayer) {
   if (isAdminTier(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
   if (!lastChanged) return 0;
-  const remaining = lastChanged + (24 * 60 * 60 * 1000) - Date.now();
+  const cooldownHours = isVipPlus(player) ? 24 : 48;
+  const remaining = lastChanged + (cooldownHours * 60 * 60 * 1000) - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -1981,7 +1982,8 @@ function getSearchNameplateRemainingMs(player = currentPlayer) {
   if (isAdminTier(player)) return 0;
   const lastChanged = Number(player?.search_nameplate_changed_at || 0);
   if (!lastChanged) return 0;
-  const remaining = lastChanged + (24 * 60 * 60 * 1000) - Date.now();
+  const cooldownHours = isVipPlus(player) ? 24 : 48;
+  const remaining = lastChanged + (cooldownHours * 60 * 60 * 1000) - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -2002,7 +2004,7 @@ function canUsePersoBadgeRgb(player = currentPlayer) {
 }
 
 function canUseGradient(player = currentPlayer) {
-  return isVipPlus(player) || isPerso(player);
+  return isVip(player) || isPerso(player);
 }
 
 function isAdminTier(player = currentPlayer) {
@@ -3041,7 +3043,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
           <div>
             <div class="card-label" style="margin:0 0 4px">Style courbe ELO</div>
-            <div style="font-size:11px;color:var(--muted)">VIP/VIP+ toutes les 24h, Perso sans limite.</div>
+            <div style="font-size:11px;color:var(--muted)">VIP toutes les 48h, VIP+ toutes les 24h, Perso sans limite.</div>
           </div>
           <span class="save-confirm" id="elo-curve-confirm">✓ Enregistré !</span>
         </div>
@@ -3160,7 +3162,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         </div>
         <button class="btn-save-color" id="btn-save-pseudo-style" onclick="savePseudoStyle()">🎨 Style</button>
       </div>
-      <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP tous les mois.</div>` : ''}
+      <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP toutes les 48h.</div>` : ''}
     </div>
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -3197,7 +3199,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
         </div>
         <button class="btn-save-color" id="btn-save-color" onclick="saveColor()">&#127912; Enregistrer</button>
       </div>
-      ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : 'VIP+'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
+      ${canUseGradient(player) ? `<div style="font-size:11px;color:var(--muted)">${isPerso(player) ? 'Perso' : isVipPlus(player) ? 'VIP+' : 'VIP'} : ajoute une seconde couleur pour un pion en dégradé.</div>` : ''}
     </div>
     <div class="avatar-decoration-card" id="profile-wallpaper-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -3296,9 +3298,9 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
       <div class="token-emoji-wrap" id="token-emoji-wrap">
         <div class="token-emoji-row">
           <div class="token-emoji-preview" id="token-emoji-preview">VIP</div>
-          <div class="token-emoji-meta" id="token-emoji-meta">Emoji image VIP+ 128x128 conseille. Max 1 Mo, changement toutes les 12h.</div>
+          <div class="token-emoji-meta" id="token-emoji-meta">Emoji image VIP. Changement VIP 24h / VIP+ 12h.</div>
         </div>
-        <button class="token-emoji-btn" id="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP+</button>
+        <button class="token-emoji-btn" id="token-emoji-btn" type="button" onclick="openTokenEmojiPicker()">Importer un emoji VIP</button>
       </div>
       <button class="btn-save-color" onclick="saveShape()">&#128309; Enregistrer</button>
     </div>
@@ -3320,7 +3322,7 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
     </div>
     <div class="avatar-decoration-card" id="search-nameplate-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Plaque nominative VIP+</span>
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Plaque nominative VIP</span>
         <span class="save-confirm" id="search-nameplate-confirm"></span>
       </div>
       <div class="nameplate-setting-preview" id="search-nameplate-preview">
@@ -5428,9 +5430,9 @@ function handleTokenEmojiUpload(input) {
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const hasStaffBenefits = isAdminTier(me);
-  if (!isVipPlus(me) && !hasStaffBenefits) {
+  if (!isVip(me) && !hasStaffBenefits) {
     input.value = '';
-    return alert('Reserve au VIP+.');
+    return alert('Réservé aux VIP.');
   }
   if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type || '')) {
     input.value = '';
@@ -5455,9 +5457,9 @@ function handleAvatarDecorationUpload(input) {
   if (!file) return;
   const me = JSON.parse(localStorage.getItem('player') || '{}');
   const hasStaffBenefits = isAdminTier(me);
-  if (!isVipPlus(me) && !hasStaffBenefits) {
+  if (!isVip(me) && !hasStaffBenefits) {
     input.value = '';
-    return alert('Reserve au VIP+.');
+    return alert('Réservé aux VIP.');
   }
   if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type || '')) {
     input.value = '';
@@ -5845,7 +5847,7 @@ function selectSearchNameplate(src) {
 async function saveSelectedSearchNameplate() {
   const me = JSON.parse(localStorage.getItem('player') || sessionStorage.getItem('player') || '{}');
   if (!me.id) return;
-  if (!isVipPlus(me) && !isAdminTier(me)) return alert('La plaque nominative est reservee au VIP+.');
+  if (!isVip(me) && !isAdminTier(me)) return alert('La plaque nominative est réservée aux VIP.');
   const equippedValue = String(currentPlayer?.search_nameplate || me.search_nameplate || '');
   const nextValue = pendingSearchNameplate === null ? equippedValue : pendingSearchNameplate;
   if (nextValue === equippedValue) return;
@@ -5904,7 +5906,7 @@ function refreshSearchNameplateSetting(player = currentPlayer) {
   const changeBtn = document.getElementById('search-nameplate-change-btn');
   const removeBtn = document.getElementById('search-nameplate-remove-btn');
   if (!btn || !meta) return;
-  const allowed = isVipPlus(player) || isAdminTier(player);
+  const allowed = isVip(player) || isAdminTier(player);
   const active = !!player?.search_nameplate;
   const selected = pendingSearchNameplate === null ? String(player?.search_nameplate || '') : pendingSearchNameplate;
   const remaining = getSearchNameplateRemainingMs(player);
@@ -5922,12 +5924,12 @@ function refreshSearchNameplateSetting(player = currentPlayer) {
   if (changeBtn) changeBtn.disabled = !allowed || remaining > 0;
   if (removeBtn) removeBtn.disabled = !allowed || remaining > 0 || !active;
   meta.textContent = !allowed
-    ? 'Fonction reservee au VIP+.'
+    ? 'Fonction réservée aux VIP.'
     : remaining > 0
       ? `Plaque ${active ? 'active' : 'inactive'}. Nouveau changement dans ${formatRemainingTime(remaining)}.`
       : changed
         ? 'Sélection prête. Clique sur Appliquer pour l’enregistrer.'
-        : `Plaque ${active ? 'active' : 'inactive'}. Tu peux la modifier toutes les 24h.`;
+        : `Plaque ${active ? 'active' : 'inactive'}. Délai : VIP 48h, VIP+ 24h.`;
   if (modalMeta) modalMeta.textContent = changed
     ? 'Plaque sélectionnée. Clique sur Appliquer.'
     : active ? 'Cette plaque est actuellement équipée.' : 'Sélectionne une plaque pour la prévisualiser.';
@@ -6178,11 +6180,11 @@ function initShapePicker(currentShape, currentEmoji, currentTokenEmojiImage = ''
     emoji_image: { borderRadius: '12px', clipPath: '' },
   };
   SHAPES.forEach(s => {
-    const lockedVip = s.id === 'emoji_image' && !isVipPlus(currentPlayer);
+    const lockedVip = s.id === 'emoji_image' && !isVip(currentPlayer);
     const btn = document.createElement('div');
     btn.className = 'shape-btn' + (s.id === selectedShape ? ' active' : '') + (lockedVip ? ' disabled' : '');
     btn.dataset.shape = s.id;
-    btn.title = lockedVip ? 'Reserve au role VIP+' : (s.id === 'emoji' && !isVip(currentPlayer) ? 'Emoji libre, cooldown 1h sans VIP' : '');
+    btn.title = lockedVip ? 'Réservé aux VIP' : (s.id === 'emoji' && !isVip(currentPlayer) ? 'Emoji libre, cooldown 1h sans VIP' : '');
     btn.onclick = () => {
       if (lockedVip) return;
       selectShape(s.id);
@@ -6264,7 +6266,7 @@ function refreshTokenEmojiPreview() {
   const btn = document.getElementById('token-emoji-btn');
   const shapePreview = document.querySelector('.shape-btn[data-shape="emoji_image"] .shape-preview');
   if (!preview) return;
-  const isVipPlusTier = isVipPlus(currentPlayer);
+  const isVipPlusTier = isVip(currentPlayer);
   const accent = getVipAccent(currentPlayer);
   const remaining = isVipPlusTier ? getVipMediaRemainingMs() : 0;
   const previewImage = pendingTokenEmojiImage || selectedTokenEmojiImage;
@@ -6288,14 +6290,14 @@ function refreshTokenEmojiPreview() {
   }
   if (meta) {
     meta.textContent = !isVipPlusTier
-      ? 'Reserve au role VIP+.'
+      ? 'Réservé aux VIP.'
       : pendingTokenEmojiImage
         ? 'Clique sur Enregistrer pour appliquer.'
       : remaining > 0
         ? `Se termine dans ${formatRemainingTime(remaining)}`
         : selectedTokenEmojiImage
-          ? 'Emoji image VIP+ prêt. Recadrage 128x128, max 1 Mo, cooldown 12h.'
-          : 'Emoji image VIP+ 128x128 conseillé. Max 1 Mo, changement toutes les 12h.';
+          ? 'Emoji image prêt. Recadrage 128x128, max 1 Mo.'
+          : 'Emoji image VIP. Changement VIP 24h / VIP+ 12h.';
     meta.style.color = pendingTokenEmojiImage || remaining > 0 ? accent.color : 'var(--muted)';
     meta.style.textAlign = remaining > 0 ? 'center' : 'left';
   }
@@ -6318,7 +6320,7 @@ function refreshTokenEmojiPreview() {
       : accent.border;
     btn.style.color = accent.color;
     btn.title = !isVipPlusTier
-      ? 'Reserve au role VIP+'
+      ? 'Réservé aux VIP'
       : pendingTokenEmojiImage
         ? 'Clique sur Enregistrer pour appliquer'
       : remaining > 0
@@ -6329,7 +6331,7 @@ function refreshTokenEmojiPreview() {
 
 function openTokenEmojiPicker() {
   const me = JSON.parse(localStorage.getItem('player') || '{}');
-  if (!isVipPlus(me)) return;
+  if (!isVip(me)) return;
   if (getVipMediaRemainingMs() > 0) return;
   PROFIL_SFX.click();
   document.getElementById('token-emoji-input')?.click();
@@ -7195,9 +7197,15 @@ async function copyBotCurl() {
   alert('Requete curl d activation copiee.');
 }
 
+let botHostMetricsTimer = null;
+
 function renderBotHostPanel(data = {}) {
   const panel = document.getElementById('bot-host-panel');
   if (!panel) return;
+  if (botHostMetricsTimer) {
+    clearInterval(botHostMetricsTimer);
+    botHostMetricsTimer = null;
+  }
   const bots = Array.isArray(data.bots) ? data.bots : [];
   const crystals = Number(data.botCrystals || data.player?.bot_crystals || 0);
   const price = Number(data.price || 3000);
@@ -7222,6 +7230,7 @@ function renderBotHostPanel(data = {}) {
         const host = bot.host || {};
         const active = !!host.active;
         const status = active ? (host.status || 'stopped') : 'non actif';
+        const running = status === 'running';
         return `
           <div style="padding:14px;border-radius:16px;background:rgba(255,255,255,0.035);border:1px solid rgba(48,209,88,0.18)">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
@@ -7230,11 +7239,16 @@ function renderBotHostPanel(data = {}) {
                 <div style="font-size:12px;color:var(--muted)">Host: ${escapeHtml(status)}${host.expiresAt ? ` · expire le ${new Date(host.expiresAt).toLocaleDateString('fr-FR')}` : ''} · code ${Number(host.codeSize || 0)} octets</div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'start')" ${!active ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Demarrer</button>
-                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'restart')" ${!active ? 'disabled' : ''} style="background:rgba(133,235,255,.08);border-color:rgba(133,235,255,.28);color:#85EBFF">Redemarrer</button>
-                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'stop')" ${!active ? 'disabled' : ''} style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b81">Arreter</button>
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'start', this)" ${!active || running ? 'disabled' : ''} style="background:rgba(48,209,88,.10);border-color:rgba(48,209,88,.30);color:#30d158">Demarrer</button>
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'restart', this)" ${!active || !running ? 'disabled' : ''} style="background:rgba(133,235,255,.08);border-color:rgba(133,235,255,.28);color:#85EBFF">Redemarrer proprement</button>
+                <button class="btn-save-color" onclick="botHostAction(${Number(bot.id)}, 'stop', this)" ${!active || !running ? 'disabled' : ''} style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.28);color:#ff6b81">Arreter</button>
                 <a class="btn-save-color" href="/api/bot-host/${Number(bot.id)}/download?token=${encodeURIComponent(getStoredSessionToken())}" style="text-decoration:none;background:rgba(255,214,10,.08);border-color:rgba(255,214,10,.25);color:#ffd60a">Download code</a>
               </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:center;gap:12px;margin-top:10px;padding:12px;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.07)">
+              <label style="font-size:12px;color:var(--muted)">Cadence de réflexion <b id="bot-host-think-label-${Number(bot.id)}" style="color:#85EBFF">${Number(host.thinkMs || 5000)} ms</b><input id="bot-host-think-${Number(bot.id)}" type="range" min="750" max="15000" step="250" value="${Number(host.thinkMs || 5000)}" oninput="document.getElementById('bot-host-think-label-${Number(bot.id)}').textContent=this.value+' ms'" style="display:block;width:100%;margin-top:7px"></label>
+              <label style="font-size:12px;color:var(--muted);white-space:nowrap"><input id="bot-host-restart-${Number(bot.id)}" type="checkbox" ${host.autoRestart !== false ? 'checked' : ''}> Relance auto limitée</label>
+              <button class="btn-save-color" onclick="saveBotHostConfig(${Number(bot.id)}, this)" ${!active ? 'disabled' : ''}>Enregistrer</button>
             </div>
             <textarea id="bot-host-code-${Number(bot.id)}" class="search-input" style="width:100%;max-width:none;min-height:120px;margin:12px 0 8px;font-family:Consolas,monospace;font-size:12px;text-transform:none;letter-spacing:0" placeholder="// Code execute sur le serveur avec P4_BASE_URL et P4_BOT_TOKEN&#10;setInterval(async () => {&#10;  await fetch(P4_BASE_URL + '/api/bot/ping?status=hosted', { method:'POST', headers:{ Authorization:'Bearer ' + P4_BOT_TOKEN } });&#10;}, 15000);"></textarea>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -7256,7 +7270,11 @@ function renderBotHostPanel(data = {}) {
       }).join('')}
     </div>
   `;
-  setTimeout(() => bots.forEach(bot => loadBotHostMetrics(Number(bot.id))), 0);
+  const refreshMetrics = () => {
+    if (document.visibilityState === 'visible') bots.forEach(bot => loadBotHostMetrics(Number(bot.id)));
+  };
+  setTimeout(refreshMetrics, 0);
+  botHostMetricsTimer = setInterval(refreshMetrics, 15000);
 }
 
 function formatHostMetricValue(value, unit, digits = 0) {
@@ -7270,8 +7288,16 @@ function drawHostMetricChart(botId, metrics = [], limits = {}) {
   const line = document.getElementById(`bot-host-metric-line-${botId}`);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
+  const cssW = Math.max(300, Math.round(canvas.clientWidth || 620));
+  const cssH = 130;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const w = cssW;
+  const h = cssH;
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = 'rgba(255,255,255,.025)';
   ctx.fillRect(0, 0, w, h);
@@ -7300,7 +7326,7 @@ function drawHostMetricChart(botId, metrics = [], limits = {}) {
     ctx.stroke();
   }
   const series = [
-    { key: 'cpuPct', color: '#ff6b81', max: Math.max(100, ...rows.map(r => Number(r.cpuPct || 0))) },
+    { key: 'cpuPct', color: '#ff6b81', max: Math.max(1, Number(limits.maxCpuMsPerMin || 30000) / 600) },
     { key: 'rssMb', color: '#85ebff', max: Math.max(Number(limits.maxRssMb || 128), ...rows.map(r => Number(r.rssMb || 0))) },
     { key: 'netKb', color: '#ffd60a', max: Math.max(16, ...rows.map(r => Number(r.netKb || 0))) },
   ];
@@ -7424,16 +7450,42 @@ async function importBotHostCodeFile(botId, input) {
   }
 }
 
-async function botHostAction(botId, action) {
+async function saveBotHostConfig(botId, btn) {
   const token = getStoredSessionToken();
-  const res = await fetch(`/api/bot-host/${botId}/action`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-session-token': token },
-    body: JSON.stringify({ token, action }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return alert(data.error || 'Action impossible.');
-  await loadBotHostPanel();
+  const thinkMs = Number(document.getElementById(`bot-host-think-${botId}`)?.value || 5000);
+  const autoRestart = !!document.getElementById(`bot-host-restart-${botId}`)?.checked;
+  const previous = btn?.textContent || 'Enregistrer';
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement...'; }
+  try {
+    const res = await fetch(`/api/bot-host/${botId}/config`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, thinkMs, autoRestart }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Reglage impossible.');
+    alert(data.restartRequired ? 'Reglage enregistre. Redemarre le host pour appliquer la cadence.' : 'Reglage enregistre.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = previous; }
+  }
+}
+
+async function botHostAction(botId, action, btn) {
+  const token = getStoredSessionToken();
+  const previous = btn?.textContent || '';
+  if (btn) { btn.disabled = true; btn.textContent = action === 'stop' ? 'Arret...' : 'Demarrage...'; }
+  try {
+    const res = await fetch(`/api/bot-host/${botId}/action`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': token },
+      body: JSON.stringify({ token, action }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || 'Action impossible.');
+    await loadBotHostPanel();
+  } catch (_) {
+    alert('Le serveur host ne repond pas.');
+  } finally {
+    if (btn?.isConnected) { btn.disabled = false; btn.textContent = previous; }
+  }
 }
 
 async function loadBotHostLogs(botId) {

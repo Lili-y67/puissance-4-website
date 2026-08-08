@@ -42,14 +42,12 @@ body.clan-page.p4-wallpaper-mode .nav-btn,
 body.clan-page.p4-wallpaper-mode .btn,
 body.clan-page.p4-wallpaper-mode .tag,
 body.clan-page.p4-wallpaper-mode .blason{
-  background:transparent!important;
-  background-image:none!important;
-  border-color:rgba(133,235,255,.18)!important;
-  box-shadow:none!important;
-  backdrop-filter:none!important;
+  background:linear-gradient(180deg,rgba(8,10,22,.76),rgba(7,8,18,.58))!important;
+  border-color:rgba(133,235,255,.20)!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.28)!important;
+  backdrop-filter:blur(12px)!important;
 }
-body.clan-page.p4-wallpaper-mode .hero{background:transparent!important;background-image:none!important}
-body.clan-page.p4-wallpaper-mode::before{display:none!important}
+body.clan-page.p4-wallpaper-mode .hero{background:linear-gradient(135deg,var(--clan-bg,rgba(133,235,255,.12)),transparent 46%),linear-gradient(180deg,rgba(8,10,22,.76),rgba(7,8,18,.58))!important}
 body.clan-empty .layout,
 body.clan-empty #manage{display:none!important}
 body.clan-empty .page{max-width:980px;padding-top:clamp(24px,6vh,72px)}
@@ -57,6 +55,7 @@ body.clan-empty .hero{min-height:360px;display:flex;flex-direction:column;justif
 body.clan-empty .hero .stats{display:none}
 body.clan-empty .desc{font-size:17px;max-width:620px}
 body.clan-empty .tag::after{content:" - cree ou rejoins un clan depuis ton profil"}
+.layout{align-items:start}
 @media(max-width:900px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.nav{align-items:stretch;flex-direction:column}.nav-actions{display:grid;grid-template-columns:1fr 1fr}.chat-box{height:min(420px,58vh)}.manage-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:560px){.page{padding:16px 10px 44px}.hero{padding:18px;border-radius:18px}.clan-title-row{grid-template-columns:1fr}.blason{width:68px;height:68px;font-size:32px}.stats{grid-template-columns:1fr 1fr}.member{grid-template-columns:40px minmax(0,1fr)}.member>div:last-child{grid-column:1/-1}.role{text-align:left}.mini-actions{justify-content:flex-start}.chat-form,.manage-grid,.nav-actions{grid-template-columns:1fr}.card{padding:15px}.card-title{font-size:24px}}
 </style>

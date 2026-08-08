@@ -85,6 +85,9 @@ const anonymousPlayers = new Map();
 const botApiQueue = [];
 const botRuntime = new Map();
 const botHostProcesses = new Map();
+const botHostActionTimes = new Map();
+const botHostApiWindows = new Map();
+const botHostCrashWindows = new Map();
 const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
@@ -109,6 +112,11 @@ const HOSTED_BOT_THINK_MS = Math.max(400, Math.min(15_000, Number(process.env.P4
 const HOSTED_BOT_MAX_TABLE = Math.max(1_000, Math.min(120_000, Number(process.env.P4_HOST_MAX_TABLE || 60_000)));
 const LIVE_UPDATE_DEBOUNCE_MS = Math.max(250, Number(process.env.LIVE_UPDATE_DEBOUNCE_MS || 900));
 const BOT_HOST_METRIC_LIMIT = Math.max(30, Math.min(480, Number(process.env.BOT_HOST_METRIC_LIMIT || 240)));
+const BOT_HOST_ACTION_COOLDOWN_MS = Math.max(1000, Number(process.env.BOT_HOST_ACTION_COOLDOWN_MS || 2500));
+const BOT_HOST_API_MAX_PER_MIN = Math.max(30, Math.min(600, Number(process.env.BOT_HOST_API_MAX_PER_MIN || 180)));
+const BOT_HOST_MIN_THINK_MS = Math.max(400, Number(process.env.BOT_HOST_MIN_THINK_MS || 750));
+const BOT_HOST_MAX_THINK_MS = Math.max(BOT_HOST_MIN_THINK_MS, Number(process.env.BOT_HOST_MAX_THINK_MS || 15000));
+const BOT_HOST_MAX_CRASH_RESTARTS = Math.max(0, Math.min(5, Number(process.env.BOT_HOST_MAX_CRASH_RESTARTS || 3)));
 const SESSION_IDLE_MS = Math.max(60_000, Number(process.env.SESSION_IDLE_MS || 10 * 60_000));
 const TOURNAMENTS_ENABLED = String(process.env.TOURNAMENTS_ENABLED || '0') === '1';
 const LAVALINK_URL = String(process.env.LAVALINK_URL || '').trim().replace(/\/+$/, '');
@@ -857,6 +865,7 @@ gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw, reason, 
       moveCount: Number(game?.move_count || 0),
       duration: Number(payload?.duration || game?.duration || 0),
       gameType: String(payload?.gameType || game?.game_type || 'ranked'),
+      variant: normalizeVariant(payload?.variant || game?.variant),
       isSuspect: !!payload?.isSuspect,
       eloChanges: payload?.eloChanges || {},
       reason,
@@ -951,7 +960,7 @@ function isPlayerBanned(player) {
 }
 
 function canUseGradientPlayer(player) {
-  return hasStaffRoleBenefits(player) || isVipPlusPlayer(player) || isPersoPlayer(player);
+  return isVipPlayer(player) || isPersoPlayer(player) || hasStaffRoleBenefits(player);
 }
 
 function getPremiumTier(player) {
@@ -1136,9 +1145,21 @@ function getBotFromRequest(req) {
 }
 
 function meterBotHostNetwork(req, res, bot) {
-  if (!req?.p4BotUsesHostToken || !bot) return;
+  if (!req?.p4BotUsesHostToken || !bot) return true;
   const botId = Number(bot.id || 0);
-  if (!botId) return;
+  if (!botId) return true;
+  const now = Date.now();
+  let window = botHostApiWindows.get(botId);
+  if (!window || now - window.startedAt >= 60_000) {
+    window = { startedAt: now, count: 0 };
+    botHostApiWindows.set(botId, window);
+  }
+  window.count++;
+  if (window.count > BOT_HOST_API_MAX_PER_MIN) {
+    res.setHeader('Retry-After', String(Math.max(1, Math.ceil((60_000 - (now - window.startedAt)) / 1000))));
+    res.status(429).json({ error: `Host trop rapide : ${BOT_HOST_API_MAX_PER_MIN} appels API maximum par minute.` });
+    return false;
+  }
   let bytes = estimateRequestBytes(req);
   const child = getBotHostRuntime(botId);
   const addBytes = chunk => {
@@ -1168,6 +1189,7 @@ function meterBotHostNetwork(req, res, bot) {
     }
     return originalEnd(chunk, ...args);
   };
+  return true;
 }
 
 function ensureBotEnabled(bot, res) {
@@ -1205,7 +1227,7 @@ const TOKEN_EMOJI_COOLDOWN_MS = 60 * 60 * 1000;
 const AVATAR_DECORATION_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const PROFILE_BANNER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const PSEUDO_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-const VIP_MONTHLY_STYLE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+const VIP_STYLE_COOLDOWN_MS = 48 * 60 * 60 * 1000;
 const PSEUDO_FONT_OPTIONS = new Set([
   'barlow', 'condensed', 'bebas',
   'orbitron', 'audiowide', 'russo', 'chakra', 'rajdhani', 'oxanium', 'pressstart', 'bungee',
@@ -1376,7 +1398,8 @@ function getVipMediaRemainingMs(player) {
 function getAvatarDecorationRemainingMs(player) {
   if (hasStaffRoleBenefits(player)) return 0;
   const lastChanged = Number(player?.avatar_decoration_changed_at || 0);
-  const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
+  const cooldown = isVipPlusPlayer(player) ? AVATAR_DECORATION_COOLDOWN_MS : AVATAR_DECORATION_COOLDOWN_MS * 2;
+  const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -1395,7 +1418,7 @@ function normalizeHexColor(value) {
 function getPseudoStyleRemainingMs(player) {
   if (hasStaffRoleBenefits(player) || isPersoPlayer(player)) return 0;
   const lastChanged = Number(player?.pseudo_style_changed_at || 0);
-  const cooldown = isVipPlusPlayer(player) ? VIP_MEDIA_COOLDOWN_MS : VIP_MONTHLY_STYLE_COOLDOWN_MS;
+  const cooldown = isVipPlusPlayer(player) ? VIP_MEDIA_COOLDOWN_MS : VIP_STYLE_COOLDOWN_MS;
   const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
@@ -1403,7 +1426,8 @@ function getPseudoStyleRemainingMs(player) {
 function getEloCurveRemainingMs(player) {
   if (hasStaffRoleBenefits(player) || isPersoPlayer(player)) return 0;
   const lastChanged = Number(player?.elo_curve_changed_at || 0);
-  const remaining = lastChanged + VIP_MEDIA_COOLDOWN_MS - Date.now();
+  const cooldown = isVipPlusPlayer(player) ? VIP_MEDIA_COOLDOWN_MS : VIP_STYLE_COOLDOWN_MS;
+  const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -2477,7 +2501,8 @@ function getOwnedBots(ownerId, viewer = null) {
            b.bot_enabled, b.bot_token_preview, b.bot_description, b.bot_skill, b.bot_owner_id,
            owner.pseudo AS bot_owner_pseudo,
            h.status AS host_status, h.expires_at AS host_expires_at, h.updated_at AS host_updated_at,
-           h.metrics AS host_metrics,
+           h.metrics AS host_metrics, h.started_at AS host_started_at, h.stopped_at AS host_stopped_at,
+           h.think_ms AS host_think_ms, h.auto_restart AS host_auto_restart,
            LENGTH(COALESCE(h.code, '')) AS host_code_size
     FROM players b
     LEFT JOIN bot_hosts h ON h.bot_id = b.id
@@ -2500,6 +2525,10 @@ function getOwnedBots(ownerId, viewer = null) {
         status: row.host_status || 'none',
         expiresAt: Number(row.host_expires_at || 0) || null,
         updatedAt: Number(row.host_updated_at || 0) || null,
+        startedAt: Number(row.host_started_at || 0) || null,
+        stoppedAt: Number(row.host_stopped_at || 0) || null,
+        thinkMs: Math.max(BOT_HOST_MIN_THINK_MS, Math.min(BOT_HOST_MAX_THINK_MS, Number(row.host_think_ms || HOSTED_BOT_THINK_MS))),
+        autoRestart: Number(row.host_auto_restart ?? 1) === 1,
         codeSize: Number(row.host_code_size || 0),
         lastMetric: metrics[metrics.length - 1] || null,
       },
@@ -2688,6 +2717,22 @@ function stopBotHostProcess(botId, reason = 'stop') {
   return true;
 }
 
+function waitForBotHostExit(child, timeoutMs = 5000) {
+  if (!child || child.exitCode !== null || child.signalCode) return Promise.resolve();
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(finish, timeoutMs);
+    timer.unref?.();
+    child.once('exit', finish);
+  });
+}
+
 function ensureBotHostToken(bot) {
   const fresh = pQ.getById.get(Number(bot?.id || 0));
   if (!fresh || Number(fresh.is_bot || 0) !== 1) return null;
@@ -2709,10 +2754,7 @@ function startBotHostProcess(bot, host, action = 'start') {
   if (!host || Number(host.expires_at || 0) <= Date.now()) throw new Error('Host inactif ou expire.');
   const code = normalizeBotHostCode(host.code);
   if (!code.trim()) throw new Error('Aucun code host envoye.');
-  if (getBotHostRuntime(id)) {
-    if (action !== 'restart') throw new Error('Host deja demarre.');
-    stopBotHostProcess(id, 'restart');
-  }
+  if (getBotHostRuntime(id)) throw new Error(action === 'restart' ? 'Ancien processus encore en cours d arret.' : 'Host deja demarre.');
   if (BOT_HOST_MAX_ACTIVE > 0 && countRunningBotHosts(id) >= BOT_HOST_MAX_ACTIVE) {
     throw new Error(`Limite budget: ${BOT_HOST_MAX_ACTIVE} host bot actif maximum.`);
   }
@@ -2736,6 +2778,7 @@ ${code}
 `;
   fs.writeFileSync(runPath, wrappedCode, 'utf8');
   const baseUrl = String(discordConfig().baseUrl || process.env.PUBLIC_BASE_URL || `http://127.0.0.1:${PORT}`).replace(/\/+$/, '');
+  const thinkMs = Math.max(BOT_HOST_MIN_THINK_MS, Math.min(BOT_HOST_MAX_THINK_MS, Number(host.think_ms || HOSTED_BOT_THINK_MS)));
   const child = fork(runPath, [], {
     cwd: path.dirname(runPath),
     silent: true,
@@ -2748,13 +2791,14 @@ ${code}
       P4_THREADS: String(Math.max(1, Math.min(2, Number(process.env.P4_HOST_THREADS || process.env.P4_THREADS || 1)))),
       P4_MAX_THREADS: '2',
       P4_DEPTH: String(HOSTED_BOT_DEPTH),
-      P4_THINK_MS: String(HOSTED_BOT_THINK_MS),
+      P4_THINK_MS: String(thinkMs),
       P4_MAX_TABLE: String(HOSTED_BOT_MAX_TABLE),
       P4_BOT_ID: String(id),
       BOT_ID: String(id),
       P4_BOT_NAME: String(bot.pseudo || 'Bot'),
       NODE_ENV: process.env.NODE_ENV || 'production',
     },
+    execArgv: [`--max-old-space-size=${Math.max(48, Math.floor(BOT_HOST_MAX_RSS_MB * 0.75))}`],
   });
   botHostProcesses.set(id, child);
   child.__p4NetBytes = 0;
@@ -2763,11 +2807,24 @@ ${code}
   db.prepare(`UPDATE bot_hosts SET status = 'running', pid = ?, exit_code = NULL, exit_signal = '', started_at = ?, stopped_at = 0, updated_at = ?, last_action = ? WHERE bot_id = ?`)
     .run(Number(child.pid || 0), startedAt, startedAt, action, id);
   botRuntime.set(id, { status: 'hosted', lastSeen: Date.now(), hosted: true, pid: Number(child.pid || 0) });
-  appendBotHostLog(id, `${action === 'restart' ? 'Redemarrage' : 'Demarrage'} reel du process host PID ${child.pid || '?'}.`);
+  appendBotHostLog(id, `${action === 'restart' ? 'Redemarrage' : 'Demarrage'} reel du process host PID ${child.pid || '?'} (cadence ${thinkMs} ms).`);
   appendBotHostLog(id, `Token host injecte au process (preview ${token.slice(-8)}).`);
+  child.__p4LogWindow = { at: Date.now(), count: 0, warned: false };
   const logPipe = (type, chunk) => {
-    String(chunk || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(0, 8)
-      .forEach(line => appendBotHostLog(id, `${type}: ${line}`));
+    const now = Date.now();
+    if (now - child.__p4LogWindow.at >= 60_000) child.__p4LogWindow = { at: now, count: 0, warned: false };
+    const lines = String(chunk || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean).slice(0, 8);
+    for (const line of lines) {
+      if (child.__p4LogWindow.count >= 60) {
+        if (!child.__p4LogWindow.warned) {
+          child.__p4LogWindow.warned = true;
+          appendBotHostLog(id, 'Sortie console limitee a 60 lignes/minute.');
+        }
+        break;
+      }
+      child.__p4LogWindow.count++;
+      appendBotHostLog(id, `${type}: ${line}`);
+    }
   };
   child.stdout?.on('data', chunk => logPipe('stdout', chunk));
   child.stderr?.on('data', chunk => logPipe('stderr', chunk));
@@ -2780,6 +2837,26 @@ ${code}
     botRuntime.set(id, { status: child.__p4Stopping ? 'host-stopped' : 'host-crashed', lastSeen: Date.now(), hosted: true });
     appendBotHostLog(id, `Process host termine: code=${code ?? 'null'} signal=${signal || 'none'}.`);
     broadcastPresenceCounts();
+    if (!child.__p4Stopping && Number(host.auto_restart ?? 1) === 1 && Number(host.expires_at || 0) > Date.now()) {
+      const recent = (botHostCrashWindows.get(id) || []).filter(at => Date.now() - at < 10 * 60_000);
+      recent.push(Date.now());
+      botHostCrashWindows.set(id, recent);
+      if (recent.length <= BOT_HOST_MAX_CRASH_RESTARTS) {
+        const delay = Math.min(30_000, 2000 * (2 ** (recent.length - 1)));
+        appendBotHostLog(id, `Relance automatique dans ${Math.round(delay / 1000)} s (${recent.length}/${BOT_HOST_MAX_CRASH_RESTARTS}).`);
+        setTimeout(() => {
+          try {
+            const freshBot = pQ.getById.get(id);
+            const freshHost = db.prepare(`SELECT * FROM bot_hosts WHERE bot_id = ?`).get(id);
+            if (!getBotHostRuntime(id) && freshBot && freshHost?.status === 'crashed') startBotHostProcess(freshBot, freshHost, 'restart');
+          } catch (error) {
+            appendBotHostLog(id, `Relance automatique impossible: ${error.message}`);
+          }
+        }, delay).unref?.();
+      } else {
+        appendBotHostLog(id, 'Relance automatique bloquee: trop de crashs en 10 minutes.');
+      }
+    }
   });
   child.on('error', error => appendBotHostLog(id, `Erreur process host: ${error.message}`));
   broadcastPresenceCounts();
@@ -4840,7 +4917,8 @@ async function syncPlayerDiscordRankRole(playerOrId, currentRoleIds = null) {
 function getSearchNameplateRemainingMs(player) {
   if (hasStaffRoleBenefits(player)) return 0;
   const lastChanged = Number(player?.search_nameplate_changed_at || 0);
-  const remaining = lastChanged + AVATAR_DECORATION_COOLDOWN_MS - Date.now();
+  const cooldown = isVipPlusPlayer(player) ? AVATAR_DECORATION_COOLDOWN_MS : AVATAR_DECORATION_COOLDOWN_MS * 2;
+  const remaining = lastChanged + cooldown - Date.now();
   return remaining > 0 ? remaining : 0;
 }
 
@@ -5670,6 +5748,7 @@ app.post('/api/easter-eggs/claim', (req, res) => {
       respawnMs,
     };
   })();
+  if (!claim.alreadyClaimed && claim.collectible) progression.recordAction(playerId, 'collectibles');
   const freshPlayer = pQ.getById.get(playerId);
   res.json({
     ok: true,
@@ -6519,7 +6598,11 @@ function serializeBotHost(row, bot = null) {
     active: expiresAt > Date.now(),
     expiresAt: expiresAt || null,
     updatedAt: Number(row.updated_at || 0) || null,
+    startedAt: Number(row.started_at || 0) || null,
+    stoppedAt: Number(row.stopped_at || 0) || null,
     lastAction: row.last_action || '',
+    thinkMs: Math.max(BOT_HOST_MIN_THINK_MS, Math.min(BOT_HOST_MAX_THINK_MS, Number(row.think_ms || HOSTED_BOT_THINK_MS))),
+    autoRestart: Number(row.auto_restart ?? 1) === 1,
     codeSize: Buffer.byteLength(String(row.code || ''), 'utf8'),
     lastMetric: metrics[metrics.length - 1] || null,
     bot: bot ? sanitize(bot) : null,
@@ -6594,11 +6677,30 @@ app.get('/api/bot-host/:botId/metrics', (req, res) => {
       maxThreads: 2,
       hostedDepth: HOSTED_BOT_DEPTH,
       hostedThinkMs: HOSTED_BOT_THINK_MS,
+      minThinkMs: BOT_HOST_MIN_THINK_MS,
+      maxThinkMs: BOT_HOST_MAX_THINK_MS,
+      maxApiPerMin: BOT_HOST_API_MAX_PER_MIN,
+      sampleIntervalMs: BOT_HOST_WATCHDOG_MS,
     },
   });
 });
 
-app.post('/api/bot-host/:botId/action', (req, res) => {
+app.post('/api/bot-host/:botId/config', (req, res) => {
+  const player = getHostOwnerFromRequest(req);
+  if (!player) return res.status(401).json({ error: 'Session invalide.' });
+  const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
+  if (!bot) return res.status(404).json({ error: 'Bot introuvable ou non associe a ton compte.' });
+  const host = getBotHostForOwner(player.id, bot.id, player);
+  if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Host inactif ou expire.' });
+  const thinkMs = Math.max(BOT_HOST_MIN_THINK_MS, Math.min(BOT_HOST_MAX_THINK_MS, Math.round(Number(req.body?.thinkMs || HOSTED_BOT_THINK_MS))));
+  const autoRestart = req.body?.autoRestart === false ? 0 : 1;
+  db.prepare(`UPDATE bot_hosts SET think_ms = ?, auto_restart = ?, updated_at = ?, last_action = 'config' WHERE bot_id = ?`)
+    .run(thinkMs, autoRestart, Date.now(), bot.id);
+  appendBotHostLog(bot.id, `Reglage enregistre: cadence ${thinkMs} ms, relance auto ${autoRestart ? 'activee' : 'desactivee'}.`);
+  res.json({ ok: true, restartRequired: !!getBotHostRuntime(bot.id), host: serializeBotHost(getBotHostForOwner(player.id, bot.id, player), bot) });
+});
+
+app.post('/api/bot-host/:botId/action', async (req, res) => {
   const player = getHostOwnerFromRequest(req);
   if (!player) return res.status(401).json({ error: 'Session invalide.' });
   const bot = getOwnedBotOrFail(player.id, req.params.botId, player);
@@ -6607,6 +6709,12 @@ app.post('/api/bot-host/:botId/action', (req, res) => {
   if (!host || Number(host.expires_at || 0) <= Date.now()) return res.status(403).json({ error: 'Host inactif ou expire.' });
   const action = String(req.body?.action || '').toLowerCase();
   if (!['start', 'restart', 'stop'].includes(action)) return res.status(400).json({ error: 'Action invalide.' });
+  const now = Date.now();
+  const lastActionAt = Number(botHostActionTimes.get(Number(bot.id)) || 0);
+  if (now - lastActionAt < BOT_HOST_ACTION_COOLDOWN_MS) {
+    return res.status(429).json({ error: `Patiente ${Math.ceil((BOT_HOST_ACTION_COOLDOWN_MS - (now - lastActionAt)) / 1000)} s avant une nouvelle action.` });
+  }
+  botHostActionTimes.set(Number(bot.id), now);
   try {
     if (action === 'stop') {
       stopBotHostProcess(bot.id, 'profil');
@@ -6616,6 +6724,14 @@ app.post('/api/bot-host/:botId/action', (req, res) => {
       appendBotHostLog(bot.id, 'Arret demande depuis le profil.');
     } else {
       const freshHost = getBotHostForOwner(player.id, bot.id, player);
+      if (action === 'restart') {
+        const previous = getBotHostRuntime(bot.id);
+        if (previous) {
+          stopBotHostProcess(bot.id, 'restart');
+          await waitForBotHostExit(previous, 5000);
+        }
+      }
+      botHostCrashWindows.delete(Number(bot.id));
       startBotHostProcess(bot, freshHost, action);
     }
     broadcastPresenceCounts();
@@ -7198,14 +7314,14 @@ app.post('/api/bot/token/rotate', (req, res) => {
 
 app.get('/api/bot/me', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!bot) return res.status(401).json({ error: 'Token bot invalide.' });
   res.json({ bot: { ...sanitize(bot), runtime: publicBotRuntime(bot.id), activeGame: serializeBotGameState(findActiveBotGame(bot.id), bot.id) } });
 });
 
 app.post('/api/bot/ping', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!ensureBotEnabled(bot, res)) return;
   const status = String(req.body?.status || req.query?.status || 'idle').slice(0, 40);
   botRuntime.set(Number(bot.id), { status, lastSeen: Date.now(), userAgent: String(req.headers['user-agent'] || '').slice(0, 120) });
@@ -7216,7 +7332,7 @@ app.post('/api/bot/ping', (req, res) => {
 
 app.post('/api/bot/queue/join', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!ensureBotEnabled(bot, res)) return;
   botRuntime.set(Number(bot.id), { status: 'queue', lastSeen: Date.now() });
   broadcastPresenceCounts();
@@ -7244,7 +7360,7 @@ app.post('/api/bot/queue/join', (req, res) => {
 
 app.post('/api/bot/queue/leave', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!ensureBotEnabled(bot, res)) return;
   const idx = botApiQueue.indexOf(Number(bot.id));
   if (idx >= 0) botApiQueue.splice(idx, 1);
@@ -7255,14 +7371,14 @@ app.post('/api/bot/queue/leave', (req, res) => {
 
 app.get('/api/bot/game', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!ensureBotEnabled(bot, res)) return;
   res.json({ game: serializeBotGameState(findActiveBotGame(bot.id), bot.id) });
 });
 
 app.post('/api/bot/move', (req, res) => {
   const bot = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, bot);
+  if (!meterBotHostNetwork(req, res, bot)) return;
   if (!ensureBotEnabled(bot, res)) return;
   const state = findActiveBotGame(bot.id);
   if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
@@ -7276,7 +7392,7 @@ app.post('/api/bot/move', (req, res) => {
 
 app.post('/api/bot/challenge/:id', (req, res) => {
   const challenger = getBotFromRequest(req);
-  meterBotHostNetwork(req, res, challenger);
+  if (!meterBotHostNetwork(req, res, challenger)) return;
   if (!ensureBotEnabled(challenger, res)) return;
   const targetId = Number(req.params.id);
   const target = pQ.getById.get(targetId);
@@ -7379,8 +7495,8 @@ app.patch('/api/players/:id/shape', (req, res) => {
       return res.status(429).json({ error: `Emoji modifiable dans ${Math.ceil(remaining / 60000)} min.`, remainingMs: remaining });
     }
   }
-  if (base === 'emoji_image' && !isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) {
-    return res.status(403).json({ error: 'L emoji image est reserve au VIP+.' });
+  if (base === 'emoji_image' && !isVipPlayer(player) && !hasStaffRoleBenefits(player)) {
+    return res.status(403).json({ error: 'L emoji image est reserve aux VIP.' });
   }
   if (base === 'emoji_image' && !player?.token_emoji_image) {
     return res.status(400).json({ error: 'Ajoute d\'abord un emoji perso VIP.' });
@@ -7401,7 +7517,7 @@ app.patch('/api/players/:id/color', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   const normalizedSecondary = String(colorSecondary || '').trim();
   if (normalizedSecondary && !/^#[0-9a-fA-F]{6}$/.test(normalizedSecondary)) return res.status(400).json({ error: 'Couleur secondaire invalide.' });
-  if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve au VIP+, Perso ou Admin.' });
+  if (normalizedSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade est reserve aux VIP, Perso ou Admin.' });
   pQ.updateColor.run({ color, id: Number(req.params.id) });
   pQ.updateColorSecondary.run({ color_secondary: normalizedSecondary ? normalizedSecondary.toUpperCase() : '', id: Number(req.params.id) });
   progression.recordAction(Number(req.params.id), 'profile_updates');
@@ -7481,7 +7597,7 @@ app.patch('/api/players/:id/pseudo-style', (req, res) => {
     const pack = getCosmeticPackForAsset('font', nextFont);
     return res.status(403).json({ error: `Achete ${pack?.label || 'le pack de polices'} dans la boutique.` });
   }
-  if (nextColorSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade du pseudo est reserve au VIP+ ou Perso.' });
+  if (nextColorSecondary && !canUseGradientPlayer(player)) return res.status(403).json({ error: 'Le degrade du pseudo est reserve aux VIP ou Perso.' });
   const remaining = getPseudoStyleRemainingMs(player);
   if (remaining > 0) return res.status(429).json({ error: `Style pseudo disponible dans ${formatCooldownHours(remaining)}.`, remainingMs: remaining });
   const changedAt = Date.now();
@@ -7593,7 +7709,7 @@ app.patch('/api/players/:id/token-emoji', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve au VIP+.' });
+  if (!isVipPlayer(player) && !hasStaffRoleBenefits(player)) return res.status(403).json({ error: 'Reserve aux VIP.' });
   if (!image || !/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(image)) {
     return res.status(400).json({ error: 'Image invalide.' });
   }
@@ -7620,7 +7736,7 @@ app.patch('/api/players/:id/avatar-decoration', (req, res) => {
   const isPreset = getAvatarDecorationPaths().includes(nextDecoration);
   const isInlineImage = /^data:image\/(png|jpeg|jpg|webp);base64,/i.test(nextDecoration);
   const ownsPreset = isPreset && playerOwnsCosmeticAsset(player, 'decoration', nextDecoration);
-  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player) && nextDecoration && !ownsPreset) {
+  if (!isVipPlayer(player) && !hasStaffRoleBenefits(player) && nextDecoration && !ownsPreset) {
     return res.status(403).json({ error: 'Achete le pack de cette decoration dans la boutique.' });
   }
   if (nextDecoration && !isPreset && !isInlineImage) {
@@ -7649,8 +7765,8 @@ app.patch('/api/players/:id/search-nameplate', (req, res) => {
   const id = Number(req.params.id);
   if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorise.' });
   const player = pQ.getById.get(id);
-  if (!isVipPlusPlayer(player) && !hasStaffRoleBenefits(player)) {
-    return res.status(403).json({ error: 'Plaque nominative reservee au VIP+.' });
+  if (!isVipPlayer(player) && !hasStaffRoleBenefits(player)) {
+    return res.status(403).json({ error: 'Plaque nominative reservee aux VIP.' });
   }
   const nextNameplate = String(image || '').trim();
   if (nextNameplate && !getSearchNameplatePaths().includes(nextNameplate)) {

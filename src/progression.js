@@ -9,6 +9,8 @@ const CHALLENGES = [
   { key: 'daily_bot_win', period: 'daily', icon: '🤖', rarity: 'rare', label: 'Test de Turing inversé', description: 'Remporte une partie contre un bot.', metric: 'bot_wins', target: 1, coins: 50, xp: 55 },
   { key: 'daily_shop', period: 'daily', icon: '🛍️', rarity: 'common', label: 'Petite trouvaille', description: 'Effectue un achat dans la boutique.', metric: 'shop_purchases', target: 1, coins: 30, xp: 35 },
   { key: 'daily_profile', period: 'daily', icon: '✨', rarity: 'common', label: 'Nouveau look', description: 'Modifie un élément de ton profil.', metric: 'profile_updates', target: 1, coins: 25, xp: 30 },
+  { key: 'daily_variant', period: 'daily', icon: '🎲', rarity: 'rare', label: 'Changer les règles', description: 'Termine une partie classée dans une variante.', metric: 'variant_games', target: 1, coins: 50, xp: 55 },
+  { key: 'daily_collection', period: 'daily', icon: '🧿', rarity: 'rare', label: 'Pion voyageur', description: 'Ajoute un pion voyageur à ta collection.', metric: 'collectibles', target: 1, coins: 45, xp: 50 },
   { key: 'weekly_play', period: 'weekly', icon: '⚔️', rarity: 'common', label: 'Habitué de l’arène', description: 'Termine 12 parties classées.', metric: 'games', target: 12, coins: 140, xp: 140 },
   { key: 'weekly_win', period: 'weekly', icon: '👑', rarity: 'rare', label: 'Semaine dominante', description: 'Remporte 5 parties classées.', metric: 'wins', target: 5, coins: 190, xp: 180 },
   { key: 'weekly_fast', period: 'weekly', icon: '⚡', rarity: 'epic', label: 'Frappe éclair', description: 'Gagne 2 parties en moins de 3 minutes.', metric: 'fast_wins', target: 2, coins: 220, xp: 210 },
@@ -16,6 +18,8 @@ const CHALLENGES = [
   { key: 'weekly_bot_hunter', period: 'weekly', icon: '🧩', rarity: 'epic', label: 'Chasseur de circuits', description: 'Termine 5 parties contre des bots.', metric: 'bot_games', target: 5, coins: 180, xp: 190 },
   { key: 'weekly_shopping', period: 'weekly', icon: '💰', rarity: 'rare', label: 'Collectionneur avisé', description: 'Effectue 3 achats dans la boutique.', metric: 'shop_purchases', target: 3, coins: 150, xp: 160 },
   { key: 'weekly_clan', period: 'weekly', icon: '🛡️', rarity: 'legendary', label: 'Pour la bannière', description: 'Rapporte 12 points à ton clan.', metric: 'clan_points', target: 12, coins: 260, xp: 250 },
+  { key: 'weekly_variant_wins', period: 'weekly', icon: '🌀', rarity: 'epic', label: 'Maître des variantes', description: 'Remporte 3 parties classées hors mode classique.', metric: 'variant_wins', target: 3, coins: 230, xp: 225 },
+  { key: 'weekly_collection', period: 'weekly', icon: '💠', rarity: 'epic', label: 'Collection en mouvement', description: 'Récupère 5 pions voyageurs.', metric: 'collectibles', target: 5, coins: 210, xp: 205 },
 ];
 
 const BOARD_THEMES = [
@@ -203,7 +207,7 @@ function createProgression({ db, pQ, cQ }) {
     return true;
   }
 
-  const processGame = db.transaction(({ gameId, player1Id, player2Id, winnerId, isDraw, moveCount = 0, duration = 0, gameType = 'ranked', isSuspect = false, eloChanges = {} }) => {
+  const processGame = db.transaction(({ gameId, player1Id, player2Id, winnerId, isDraw, moveCount = 0, duration = 0, gameType = 'ranked', variant = 'classic', isSuspect = false, eloChanges = {} }) => {
     if (!gameId || isSuspect || String(gameType) === 'friendly') return false;
     if (!q.event.run(gameId, Date.now()).changes) return false;
     const season = currentSeason();
@@ -230,6 +234,10 @@ function createProgression({ db, pQ, cQ }) {
       if (Number(moveCount || 0) >= 35) addChallengeMetric(playerId, 'marathon_games', 1);
       addChallengeMetric(playerId, 'elo_gain', Math.max(0, Number(eloChanges?.[playerId] || 0)));
       if (won) addChallengeMetric(playerId, 'wins', 1);
+      if (String(variant || 'classic') !== 'classic') {
+        addChallengeMetric(playerId, 'variant_games', 1);
+        if (won) addChallengeMetric(playerId, 'variant_wins', 1);
+      }
       if (won && Number(duration || 0) > 0 && Number(duration || 0) <= 180) addChallengeMetric(playerId, 'fast_wins', 1);
       if (hasBot && Number(player?.is_bot || 0) !== 1) {
         addChallengeMetric(playerId, 'bot_games', 1);

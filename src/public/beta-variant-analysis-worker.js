@@ -37,10 +37,10 @@ function segments(grid, player, length = 4) {
   return result;
 }
 
-function evaluateWindows(grid, player) {
+function evaluateWindows(grid, player, fourWeight = 50000) {
   const opponent = other(player), rows = grid.length, cols = grid[0]?.length || 0;
   let score = 0;
-  const weights = [0, 2, 13, 72, 50000];
+  const weights = [0, 2, 13, 72, fourWeight];
   for (let row = 0; row < rows; row++) for (let col = 0; col < cols; col++) for (const [dr, dc] of DIRS) {
     let mine = 0, theirs = 0, valid = true;
     for (let i = 0; i < 4; i++) {
@@ -127,7 +127,9 @@ function missionValue(grid, player, missionId) {
 }
 
 function genericScore(grid, player, state) {
-  let score = evaluateWindows(grid, player);
+  // En Mission personnelle, une ligne classique n'est pas une victoire sauf
+  // si elle accomplit explicitement la mission Haute altitude.
+  let score = evaluateWindows(grid, player, state.mode === 'mission' ? 180 : 50000);
   if (state.mode === 'mission') {
     const mine = state.missions?.[player]?.id || state.missions?.[player] || '';
     const theirs = state.missions?.[other(player)]?.id || state.missions?.[other(player)] || '';
@@ -142,6 +144,29 @@ function forcedAntiCols(grid, player) {
     const copy = clone(grid); drop(copy, col, player);
     return segments(copy, player).length > segments(grid, player).length;
   });
+}
+
+function antiScore(grid, player) {
+  const opponent = other(player);
+  const mine = segments(grid, player).length;
+  const theirs = segments(grid, opponent).length;
+  const myForced = forcedAntiCols(grid, player).length;
+  const theirForced = forcedAntiCols(grid, opponent).length;
+  return (theirs - mine) * 900 + (theirForced - myForced) * 120;
+}
+
+// Score absolu de la position, toujours vu depuis le joueur rouge (J1),
+// comme dans le moteur classique. Il ne dépend pas du meilleur coup proposé.
+function positionScore(state) {
+  if (state.mode === 'anti') return antiScore(state.grid, 1);
+  return genericScore(state.grid, 1, state);
+}
+
+function scoreToWinPct(score, mode) {
+  if (score >= 50000) return 100;
+  if (score <= -50000) return 0;
+  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : 620;
+  return clamp(Math.round(50 + 48 * Math.tanh(score / scale)), 2, 98);
 }
 
 function bestOpponentReply(grid, player, state, depth) {
@@ -170,7 +195,7 @@ function analyseDropModes(state, depth) {
       const before = segments(base, player).length;
       const added = Math.max(0, segments(next, player).length - before);
       const opponentForced = forcedAntiCols(next, other(player)).length;
-      score = -added * 1400 + opponentForced * 85 - evaluateWindows(next, player) * .025;
+      score = -added * 1400 + opponentForced * 240 + antiScore(next, player) * .35;
       detail = added ? `${added} nouvel alignement subi` : opponentForced ? `force ${opponentForced} réponse${opponentForced > 1 ? 's' : ''}` : 'aucune ligne offerte immédiatement';
     } else if (state.mode === 'rotate' && (state.moves + 1) % 4 === 0) {
       const clockwise = rotate(clone(next), 1), counter = rotate(clone(next), -1);
@@ -249,9 +274,9 @@ function analyseSimultaneous(state, depth) {
 function normalize(actions, player, mode, depth) {
   actions.sort((a, b) => b.score - a.score);
   const top = actions.slice(0, depth === 1 ? 3 : 5);
-  const scale = mode === 'anti' ? 520 : 260;
+  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : 620;
   const result = top.map((action, index) => {
-    const rating = action.score >= 50000 ? 100 : clamp(Math.round(50 + 46 * Math.tanh(action.score / scale)), 0, 100);
+    const rating = action.score >= 50000 ? 100 : action.score <= -50000 ? 0 : clamp(Math.round(50 + 48 * Math.tanh(action.score / scale)), 2, 98);
     return { ...action, score: Math.round(action.score), rating, rank: index + 1 };
   });
   const best = result[0];
@@ -274,7 +299,11 @@ self.onmessage = event => {
     if (state.mode === 'bomb') actions = analyseBomb(state, Number(depth));
     else if (state.mode === 'simultaneous') actions = analyseSimultaneous(state, Number(depth));
     else actions = analyseDropModes(state, Number(depth));
-    self.postMessage({ requestId, ok: true, analysis: normalize(actions, state.turn || state.simChooser || 1, state.mode, Number(depth)) });
+    const analysis = normalize(actions, state.turn || state.simChooser || 1, state.mode, Number(depth));
+    analysis.positionScore = Math.round(positionScore(state));
+    analysis.p1WinPct = scoreToWinPct(analysis.positionScore, state.mode);
+    analysis.balance = analysis.p1WinPct;
+    self.postMessage({ requestId, ok: true, analysis });
   } catch (error) {
     self.postMessage({ requestId, ok: false, error: error.message || 'Analyse impossible.' });
   }
