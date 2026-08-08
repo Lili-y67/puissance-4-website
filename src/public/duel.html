@@ -166,14 +166,22 @@ function renderDuel(challenge) {
   const isSender = Number(me?.id || 0) === Number(sender?.id || 0);
   const pending = challenge?.status === 'pending';
   const isFriendly = String(challenge?.gameType || 'ranked') === 'friendly';
+  const variantLabel = challenge?.variantLabel || ({
+    classic: 'Classique',
+    rotate: 'Plateau rotatif',
+    anti: 'Anti-Puissance 4',
+    bomb: 'Puissance Bombe',
+    mission: 'Mission personnelle',
+    simultaneous: 'Placement simultane',
+  }[challenge?.variant] || 'Classique');
   const canAccept = pending && (isFriendly || isLogged) && !isSender;
 
   document.getElementById('duel-title').textContent = sender ? `${sender.pseudo} t invite a jouer` : 'Lien de duel';
   document.getElementById('duel-copy').textContent = challenge?.mode === 'link'
     ? (isFriendly
-      ? 'Le premier joueur qui accepte ce lien rejoint une partie amicale sans ELO.'
-      : 'Le premier joueur connecte qui accepte ce lien rejoint une partie ranked.')
-    : 'Ce duel est reserve a un joueur precis et demarre des validation.';
+      ? `Le premier joueur qui accepte ce lien rejoint une partie amicale en ${variantLabel}, sans ELO.`
+      : `Le premier joueur connecte qui accepte ce lien rejoint une partie ranked en ${variantLabel}.`)
+    : `Ce duel en ${variantLabel} est reserve a un joueur precis et demarre apres validation.`;
   document.getElementById('duel-mode').textContent = isFriendly ? 'Amical' : 'Ranked';
   document.getElementById('duel-status').textContent = (challenge?.status || 'inconnu').toUpperCase();
   document.getElementById('duel-created').textContent = formatCountdown(challenge?.expiresAt);
@@ -188,6 +196,7 @@ function renderDuel(challenge) {
     ['Createur', sender?.pseudo || 'Inconnu'],
     ['ELO', Number(sender?.elo || 0)],
     ['Type', isFriendly ? 'Amical' : 'Ranked'],
+    ['Variante', variantLabel],
     ['Lien', challenge?.id || '-'],
   ];
   entries.forEach(([label, value]) => {

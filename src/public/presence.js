@@ -330,7 +330,7 @@
       window.alert(message);
     });
 
-    socket.on('duel_invite', ({ id, sender } = {}) => {
+    socket.on('duel_invite', ({ id, sender, variantLabel, gameType } = {}) => {
       if (!id || !sender) return;
       const avatar = sender.avatar
         ? `<img src="${sender.avatar}" alt="" style="width:52px;height:52px;border-radius:16px;object-fit:cover;border:2px solid ${sender.color || '#ff2d55'};background:rgba(255,255,255,.04)">`
@@ -340,7 +340,7 @@
           ${avatar}
           <div style="min-width:0;flex:1;">
             <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:19px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#ff7b95;">Duel reçu</div>
-            <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:4px;"><strong>${sender.pseudo}</strong> te défie maintenant. ELO actuel: <strong>${Number(sender.elo || 0)}</strong>.</div>
+            <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:4px;"><strong>${sender.pseudo}</strong> te défie en <strong>${variantLabel || 'Classique'}</strong> · ${gameType === 'friendly' ? 'Amical' : 'Ranked'}. ELO actuel : <strong>${Number(sender.elo || 0)}</strong>.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
               <button type="button" onclick="window.acceptDuelInvite('${id}')" style="padding:10px 14px;border:none;border-radius:12px;background:#ff2d55;color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Accepter</button>
               <button type="button" onclick="window.declineDuelInvite('${id}')" style="padding:10px 14px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.04);color:#eeeef5;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;">Refuser</button>
@@ -350,11 +350,11 @@
       `);
     });
 
-    socket.on('duel_invite_sent', ({ target } = {}) => {
+    socket.on('duel_invite_sent', ({ target, variantLabel } = {}) => {
       if (!target) return;
       renderDuelToast(`
         <div style="font-family:Barlow Condensed,Segoe UI,Arial,sans-serif;font-size:18px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#85EBFF;">Duel envoyé</div>
-        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">La notification a bien été envoyée à <strong>${target.pseudo}</strong>. On attend sa réponse.</div>
+        <div style="font-size:13px;line-height:1.5;color:rgba(247,243,255,.82);margin-top:6px;">Invitation <strong>${variantLabel || 'Classique'}</strong> envoyée à <strong>${target.pseudo}</strong>. On attend sa réponse.</div>
       `);
       setTimeout(() => renderDuelToast(null), 4500);
     });

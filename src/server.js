@@ -722,7 +722,7 @@ function scheduleDuelExpiration(challengeId, ttlMs = 90_000) {
   }, ttlMs);
 }
 
-function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs = 90_000, gameType = 'ranked' }) {
+function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs = 90_000, gameType = 'ranked', variant = 'classic' }) {
   const challengeId = crypto.randomUUID();
   const safeGameType = String(gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
   const createdAt = Date.now();
@@ -733,6 +733,7 @@ function createDuelChallenge({ senderId, targetId = null, mode = 'direct', ttlMs
     targetId: targetId ? Number(targetId) : null,
     mode,
     gameType: safeGameType,
+    variant: normalizeVariant(variant),
     requireLogin: safeGameType !== 'friendly',
     createdAt,
     expiresAt: createdAt + Number(ttlMs || 0),
@@ -747,6 +748,8 @@ function serializeDuelChallenge(req, challenge, sender, target = null) {
     id: challenge.id,
     mode: challenge.mode || 'direct',
     gameType: String(challenge.gameType || 'ranked'),
+    variant: normalizeVariant(challenge.variant),
+    variantLabel: getVariant(challenge.variant).label,
     requireLogin: Number(challenge.requireLogin ? 1 : 0) === 1,
     status: challenge.status,
     createdAt: Number(challenge.createdAt || Date.now()),
@@ -809,10 +812,14 @@ function acceptDuelChallenge(challenge, accepterId) {
 
   getOnlineSocketsForPlayer(sender.id).forEach(s => s.emit('duel_invite_accepted', {
     id: challenge.id,
+    variant: normalizeVariant(challenge.variant),
+    variantLabel: getVariant(challenge.variant).label,
     target: { id: target.id, pseudo: target.pseudo, elo: Number(target.elo || 0), color: target.color || '#85EBFF', avatar: target.avatar || '' },
   }));
   getOnlineSocketsForPlayer(target.id).forEach(s => s.emit('duel_invite_accepted', {
     id: challenge.id,
+    variant: normalizeVariant(challenge.variant),
+    variantLabel: getVariant(challenge.variant).label,
     target: { id: sender.id, pseudo: sender.pseudo, elo: Number(sender.elo || 0), color: sender.color || '#ff2d55', avatar: sender.avatar || '' },
   }));
 
@@ -821,6 +828,7 @@ function acceptDuelChallenge(challenge, accepterId) {
   const state = _startMatch(p1, p2, {
     duel: true,
     gameType: challenge.gameType || 'ranked',
+    variant: normalizeVariant(challenge.variant),
     persist: !anonymousFriendlyMatch,
   });
   return { ok: true, sender, target, gameId: state?.id || null };
@@ -8557,6 +8565,7 @@ app.post('/api/duels/challenge', security.routeGuard('duel'), (req, res) => {
   try {
     const token = String(req.body?.token || '');
     const gameType = String(req.body?.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
+    const variant = normalizeVariant(req.body?.variant);
     const senderId = validateSession(token);
     if (!senderId) return res.status(401).json({ error: gameType === 'friendly' ? 'Session invite invalide.' : 'Session invalide.' });
 
@@ -8580,18 +8589,22 @@ app.post('/api/duels/challenge', security.routeGuard('duel'), (req, res) => {
       challenge.senderId === senderId &&
       challenge.targetId === targetId &&
       String(challenge.gameType || 'ranked') === gameType &&
+      normalizeVariant(challenge.variant) === variant &&
       Date.now() - Number(challenge.createdAt || 0) < 60_000
     );
     if (duplicate) {
       return res.status(400).json({ error: 'Un duel est déjà en attente pour ce joueur.' });
     }
 
-    const payload = createDuelChallenge({ senderId, targetId, mode: 'direct', ttlMs: 90_000, gameType });
+    const payload = createDuelChallenge({ senderId, targetId, mode: 'direct', ttlMs: 90_000, gameType, variant });
 
     const freshSender = sanitize(sender);
     targetSockets.forEach(socket => {
       socket.emit('duel_invite', {
         id: payload.id,
+        gameType,
+        variant,
+        variantLabel: getVariant(variant).label,
         sender: {
           id: freshSender.id,
           pseudo: freshSender.pseudo,
@@ -8605,6 +8618,9 @@ app.post('/api/duels/challenge', security.routeGuard('duel'), (req, res) => {
     getOnlineSocketsForPlayer(senderId).forEach(socket => {
       socket.emit('duel_invite_sent', {
         id: payload.id,
+        gameType,
+        variant,
+        variantLabel: getVariant(variant).label,
         target: {
           id: target.id,
           pseudo: target.pseudo,
@@ -8628,6 +8644,7 @@ app.post('/api/duels/challenge', security.routeGuard('duel'), (req, res) => {
 app.post('/api/duels/link', security.routeGuard('duel'), (req, res) => {
   try {
     const gameType = String(req.body?.gameType || 'ranked') === 'friendly' ? 'friendly' : 'ranked';
+    const variant = normalizeVariant(req.body?.variant);
     const token = String(req.body?.token || '');
     const senderId = validateSession(token);
     if (!senderId) return res.status(401).json({ error: gameType === 'friendly' ? 'Session invite invalide.' : 'Session invalide.' });
@@ -8640,10 +8657,11 @@ app.post('/api/duels/link', security.routeGuard('duel'), (req, res) => {
       challenge.status === 'pending' &&
       challenge.mode === 'link' &&
       String(challenge.gameType || 'ranked') === gameType &&
+      normalizeVariant(challenge.variant) === variant &&
       challenge.senderId === senderId &&
       Date.now() - Number(challenge.createdAt || 0) < 15 * 60_000
     );
-    const challenge = duplicate || createDuelChallenge({ senderId, mode: 'link', ttlMs: 15 * 60_000, gameType });
+    const challenge = duplicate || createDuelChallenge({ senderId, mode: 'link', ttlMs: 15 * 60_000, gameType, variant });
     res.json({ ok: true, challenge: serializeDuelChallenge(req, challenge, sender) });
   } catch (error) {
     console.error('[DUEL] link:', error.message);
