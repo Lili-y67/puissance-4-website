@@ -6,6 +6,8 @@ const fs         = require('fs');
 const path       = require('path');
 const crypto     = require('crypto');
 const os         = require('os');
+const zlib       = require('zlib');
+const Database   = require('better-sqlite3');
 const { fork, spawn } = require('child_process');
 const { Readable } = require('stream');
 
@@ -466,14 +468,17 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}, requestedVaria
   const realNow = Date.now();
   let now = realNow;
   let start = now - days * 24 * 60 * 60 * 1000;
-  const requestedStart = parseHistoryDateBound(range.start, false);
-  const requestedEnd = parseHistoryDateBound(range.end, true);
+  const accountCreatedAt = parseSqliteDateMs(player.created_at) || 0;
+  const requestedStartRaw = parseHistoryDateBound(range.start, false);
+  const requestedEndRaw = parseHistoryDateBound(range.end, true);
+  const requestedStart = requestedStartRaw ? Math.max(requestedStartRaw, accountCreatedAt) : 0;
+  const requestedEnd = requestedEndRaw ? Math.min(requestedEndRaw, realNow) : 0;
   if (requestedStart && requestedEnd && requestedEnd >= requestedStart) {
     start = requestedStart;
     now = Math.min(requestedEnd, realNow);
     days = Math.max(1, Math.ceil((now - start) / (24 * 60 * 60 * 1000)));
   }
-  const rows = db.prepare(`
+  const liveRows = db.prepare(`
     SELECT g.id, g.player1_id, g.player2_id, g.winner_id,
            g.elo_p1, g.elo_p2, g.elo_before_p1, g.elo_before_p2,
            g.finished_at, g.move_count, g.duration, g.game_type,
@@ -489,6 +494,20 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}, requestedVaria
     ORDER BY g.finished_at ASC, g.id ASC
   `).all(id, id, variant);
 
+  const purgedRows = db.prepare(`
+    SELECT a.original_game_id AS id, a.player1_id, a.player2_id, a.winner_id,
+           a.elo_p1, a.elo_p2, a.elo_before_p1, a.elo_before_p2,
+           a.finished_at, a.move_count, a.duration, a.game_type,
+           a.p1_pseudo, p1.elo AS p1_current_elo, p1.is_bot AS p1_is_bot,
+           a.p2_pseudo, p2.elo AS p2_current_elo, p2.is_bot AS p2_is_bot,
+           1 AS purged
+    FROM archived_game_summaries a
+    JOIN players p1 ON p1.id = a.player1_id
+    JOIN players p2 ON p2.id = a.player2_id
+    WHERE (a.player1_id = ? OR a.player2_id = ?) AND a.variant = ?
+  `).all(id, id, variant);
+  const rows = [...liveRows, ...purgedRows]
+    .sort((a, b) => parseSqliteDateMs(a.finished_at) - parseSqliteDateMs(b.finished_at) || Number(a.id) - Number(b.id));
   const games = rows
     .map(game => ({ ...game, finishedMs: parseSqliteDateMs(game.finished_at) }))
     .filter(game => game.finishedMs >= start && game.finishedMs <= now);
@@ -519,6 +538,7 @@ function buildPlayerEloHistory(playerId, daysRaw = 7, range = {}, requestedVaria
       beforeElo: beforeElo || running - delta,
       afterElo: running,
       gameId: game.id,
+      replayDeleted: Number(game.purged || 0) === 1,
       moveCount: game.move_count || 0,
       duration: game.duration || 0,
       type: game.game_type || 'ranked',
@@ -1909,19 +1929,127 @@ if (BOT_ARENA_ENABLED) {
 }
 
 function archiveOldGames() {
+  const now = Date.now();
+  db.prepare(`UPDATE games SET archived_at = ? WHERE archived = 1 AND COALESCE(archived_at, 0) = 0`).run(now);
   const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
   const result = db.prepare(`
-    UPDATE games SET archived = 1
+    UPDATE games SET archived = 1, archived_at = ?
     WHERE archived = 0
       AND status = 'finished'
       AND finished_at < ?
       AND finished_at IS NOT NULL
-  `).run(cutoff);
+  `).run(now, cutoff);
   if (result.changes > 0) console.log(`[Archive] ${result.changes} partie(s) archivAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAe(s)`);
 }
-// Lancer au dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAmarrage puis toutes les heures
-archiveOldGames();
-setInterval(archiveOldGames, 60 * 60 * 1000);
+
+async function sendGameArchiveToDiscord(fileBuffer, filename, rows) {
+  const { botToken } = discordConfig();
+  const recipientId = String(process.env.ARCHIVE_DISCORD_ADMIN_ID || DISCORD_GUILD_OWNER_ID || '').trim();
+  if (!botToken || !recipientId) throw new Error('Bot Discord ou administrateur d archive non configure.');
+  const dmRes = await discordRestFetch(`archive-dm-${recipientId}`, 'https://discord.com/api/v10/users/@me/channels', {
+    method: 'POST',
+    headers: { Authorization: `Bot ${botToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipient_id: recipientId }),
+  });
+  const dm = await dmRes.json().catch(() => ({}));
+  if (!dmRes.ok || !dm.id) throw new Error('Impossible d ouvrir le MP Discord administrateur.');
+  const form = new FormData();
+  form.append('payload_json', JSON.stringify({
+    content: `Archive automatique Puissance 4 : ${rows.length} partie(s), #${rows[0].id} a #${rows[rows.length - 1].id}. Les resumes restent visibles sur les profils.`,
+  }));
+  form.append('files[0]', new Blob([fileBuffer], { type: 'application/gzip' }), filename);
+  const messageRes = await discordRestFetch(`archive-send-${recipientId}`, `https://discord.com/api/v10/channels/${dm.id}/messages`, {
+    method: 'POST', headers: { Authorization: `Bot ${botToken}` }, body: form,
+  });
+  if (!messageRes.ok) throw new Error(`Envoi Discord refuse (${messageRes.status}).`);
+}
+
+function createCompressedGameArchive(rows) {
+  const firstId = Number(rows[0].id);
+  const lastId = Number(rows[rows.length - 1].id);
+  const filename = `p4-games-${firstId}-${lastId}-${new Date().toISOString().slice(0, 10)}.sqlite.gz`;
+  const sqlitePath = path.join(os.tmpdir(), `${process.pid}-${Date.now()}-${firstId}-${lastId}.sqlite`);
+  const archiveDb = new Database(sqlitePath);
+  try {
+    archiveDb.exec(`
+      PRAGMA journal_mode=DELETE;
+      CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE games (id INTEGER PRIMARY KEY, payload TEXT NOT NULL);
+      CREATE TABLE moves (game_id INTEGER NOT NULL, move_number INTEGER NOT NULL, payload TEXT NOT NULL);
+      CREATE TABLE actions (game_id INTEGER NOT NULL, action_number INTEGER NOT NULL, payload TEXT NOT NULL);
+    `);
+    const putMeta = archiveDb.prepare(`INSERT INTO metadata(key,value) VALUES (?,?)`);
+    const putGame = archiveDb.prepare(`INSERT INTO games(id,payload) VALUES (?,?)`);
+    const putMove = archiveDb.prepare(`INSERT INTO moves(game_id,move_number,payload) VALUES (?,?,?)`);
+    const putAction = archiveDb.prepare(`INSERT INTO actions(game_id,action_number,payload) VALUES (?,?,?)`);
+    archiveDb.transaction(() => {
+      putMeta.run('format', 'puissance4-game-archive-v1');
+      putMeta.run('created_at', new Date().toISOString());
+      putMeta.run('first_game_id', String(firstId));
+      putMeta.run('last_game_id', String(lastId));
+      for (const game of rows) {
+        putGame.run(game.id, JSON.stringify(game));
+        for (const move of mQ.getByGame.all(game.id)) putMove.run(game.id, Number(move.move_number || 0), JSON.stringify(move));
+        for (const action of aQ.getByGame.all(game.id)) putAction.run(game.id, Number(action.action_number || 0), JSON.stringify(action));
+      }
+    })();
+  } finally {
+    archiveDb.close();
+  }
+  try {
+    return { filename, buffer: zlib.gzipSync(fs.readFileSync(sqlitePath), { level: 9 }) };
+  } finally {
+    try { fs.unlinkSync(sqlitePath); } catch (_) {}
+  }
+}
+
+async function purgeArchivedGames() {
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const rows = db.prepare(`
+    SELECT g.*, p1.pseudo AS p1_pseudo, p2.pseudo AS p2_pseudo, COALESCE(w.pseudo, '') AS winner_pseudo
+    FROM games g
+    JOIN players p1 ON p1.id = g.player1_id
+    JOIN players p2 ON p2.id = g.player2_id
+    LEFT JOIN players w ON w.id = g.winner_id
+    WHERE g.archived = 1 AND g.archived_at > 0 AND g.archived_at <= ? AND g.status = 'finished'
+    ORDER BY g.id ASC LIMIT 250
+  `).all(cutoff);
+  if (!rows.length) return;
+  const archive = createCompressedGameArchive(rows);
+  if (archive.buffer.length > 24 * 1024 * 1024) throw new Error('Archive Discord trop lourde; reduis la taille du lot.');
+  await sendGameArchiveToDiscord(archive.buffer, archive.filename, rows);
+  const purge = db.transaction(games => {
+    const insertSummary = db.prepare(`
+      INSERT OR IGNORE INTO archived_game_summaries
+      (original_game_id,player1_id,player2_id,winner_id,p1_pseudo,p2_pseudo,winner_pseudo,move_count,duration,elo_p1,elo_p2,elo_before_p1,elo_before_p2,game_type,variant,result_reason,suspicious,finished_at,archived_at,purged_at)
+      VALUES (@id,@player1_id,@player2_id,@winner_id,@p1_pseudo,@p2_pseudo,@winner_pseudo,@move_count,@duration,@elo_p1,@elo_p2,@elo_before_p1,@elo_before_p2,@game_type,@variant,@result_reason,@suspicious,@finished_at,@archived_at,@purged_at)
+    `);
+    const delMoves = db.prepare(`DELETE FROM moves WHERE game_id = ?`);
+    const delGame = db.prepare(`DELETE FROM games WHERE id = ?`);
+    const purgedAt = Date.now();
+    for (const game of games) {
+      insertSummary.run({ ...game, game_type: game.game_type || 'ranked', variant: game.variant || 'classic', result_reason: game.result_reason || '', suspicious: Number(game.suspicious || 0), purged_at: purgedAt });
+      delMoves.run(game.id);
+      delGame.run(game.id);
+    }
+    db.prepare(`INSERT INTO game_archive_batches(first_game_id,last_game_id,game_count,period_start,period_end,filename,sent_at) VALUES (?,?,?,?,?,?,?)`)
+      .run(games[0].id, games[games.length - 1].id, games.length, games[0].finished_at, games[games.length - 1].finished_at, archive.filename, purgedAt);
+  });
+  purge(rows);
+  console.log(`[Archive] ${rows.length} partie(s) envoyee(s) puis purgee(s): ${archive.filename}`);
+}
+
+let gameArchiveMaintenanceRunning = false;
+async function runGameArchiveMaintenance() {
+  if (gameArchiveMaintenanceRunning) return;
+  gameArchiveMaintenanceRunning = true;
+  archiveOldGames();
+  try { await purgeArchivedGames(); }
+  catch (error) { console.error('[Archive]', error.message); }
+  finally { gameArchiveMaintenanceRunning = false; }
+}
+setTimeout(runGameArchiveMaintenance, 30_000).unref?.();
+setInterval(runGameArchiveMaintenance, 60 * 60 * 1000).unref?.();
 
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
 
@@ -8887,7 +9015,7 @@ app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return res.status(404).json({ error: 'Compte supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
   // Pour le bot, montrer toutes ses parties ; pour les humains, exclure les parties bot
-  const games = player.id === BOT_PLAYER_ID
+  let games = player.id === BOT_PLAYER_ID
     ? db.prepare(`
         SELECT g.*,
           p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
@@ -8903,6 +9031,19 @@ app.get('/api/players/:id', (req, res) => {
         ORDER BY g.finished_at DESC LIMIT 25
       `).all(player.id, player.id)
     : gQ.getForPlayer.all(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID);
+  const purgedGames = db.prepare(`
+    SELECT original_game_id AS id, player1_id, player2_id, winner_id, move_count, duration,
+           elo_p1, elo_p2, elo_before_p1, elo_before_p2, game_type, variant, result_reason,
+           suspicious, finished_at, p1_pseudo, p2_pseudo, winner_pseudo,
+           1 AS archived, 1 AS purged
+    FROM archived_game_summaries
+    WHERE (player1_id = ? OR player2_id = ?)
+      AND (? = 1 OR (player1_id != ? AND player2_id != ?))
+    ORDER BY finished_at DESC LIMIT 25
+  `).all(player.id, player.id, player.id === BOT_PLAYER_ID ? 1 : 0, BOT_PLAYER_ID, BOT_PLAYER_ID);
+  games = [...games, ...purgedGames]
+    .sort((a, b) => parseSqliteDateMs(b.finished_at) - parseSqliteDateMs(a.finished_at) || Number(b.id) - Number(a.id))
+    .slice(0, 25);
   const gamesTotal = player.id === BOT_PLAYER_ID
     ? Number(db.prepare(`
         SELECT COUNT(*) AS c
@@ -8916,6 +9057,11 @@ app.get('/api/players/:id', (req, res) => {
           AND player1_id != ? AND player2_id != ?
           AND status = 'finished'
       `).get(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
+  const purgedGamesTotal = Number(db.prepare(`
+    SELECT COUNT(*) AS c FROM archived_game_summaries
+    WHERE (player1_id = ? OR player2_id = ?)
+      AND (? = 1 OR (player1_id != ? AND player2_id != ?))
+  `).get(player.id, player.id, player.id === BOT_PLAYER_ID ? 1 : 0, BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
 
@@ -8941,7 +9087,8 @@ app.get('/api/players/:id', (req, res) => {
   const clan = serializeClan(cQ.getForPlayer.get(player.id));
   const runtime = Number(player.is_bot || 0) === 1 ? publicBotRuntime(player.id) : null;
   const online = Number(player.is_bot || 0) === 1 ? !!runtime.online : onlineSockets.has(Number(player.id));
-  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: gamesTotal, clan, online }, games, games_total: gamesTotal, following, followers });
+  const allGamesTotal = gamesTotal + purgedGamesTotal;
+  res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: allGamesTotal, clan, online }, games, games_total: allGamesTotal, following, followers });
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {
@@ -9364,14 +9511,21 @@ app.post('/api/discord/unlink/confirm', (req, res) => {
 
 app.get('/api/games/:id', (req, res) => {
   const game = gQ.getById.get(Number(req.params.id));
-  if (!game) return res.status(404).json({ error: 'Introuvable' });
+  if (!game) {
+    const deleted = db.prepare(`SELECT original_game_id FROM archived_game_summaries WHERE original_game_id = ?`).get(Number(req.params.id));
+    if (deleted) return res.status(410).json({ error: 'Replay supprimé après archivage.', deleted: true, gameId: Number(req.params.id) });
+    return res.status(404).json({ error: 'Introuvable' });
+  }
   res.json(game);
 });
 
 app.get('/api/games/:id/replay-view', (req, res) => {
   // Endpoint appelAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA par replay.html au chargement
   const game = gQ.getById?.get(Number(req.params.id));
-  if (!game) return res.json({ ok: false });
+  if (!game) {
+    const deleted = db.prepare(`SELECT original_game_id FROM archived_game_summaries WHERE original_game_id = ?`).get(Number(req.params.id));
+    return res.status(deleted ? 410 : 404).json({ ok: false, deleted: !!deleted });
+  }
   const _watcherId = validateSession(req.headers['x-token'] || req.query.token);
   const _watcher   = _watcherId ? pQ.getById.get(_watcherId) : null;
   WH.wlogReplay(_watcher?.pseudo || 'Anonyme', req.params.id);
@@ -9380,7 +9534,11 @@ app.get('/api/games/:id/replay-view', (req, res) => {
 
 app.get('/api/games/:id/moves', (req, res) => {
   const game = gQ.getById.get(Number(req.params.id));
-  if (!game) return res.status(404).json({ error: 'Introuvable' });
+  if (!game) {
+    const deleted = db.prepare(`SELECT original_game_id FROM archived_game_summaries WHERE original_game_id = ?`).get(Number(req.params.id));
+    if (deleted) return res.status(410).json({ error: 'Replay supprimé après archivage.', deleted: true, gameId: Number(req.params.id) });
+    return res.status(404).json({ error: 'Introuvable' });
+  }
   const actions = aQ.getByGame.all(Number(req.params.id)).map(action => {
     try { return { ...action, payload: JSON.parse(action.payload || '{}') }; }
     catch { return { ...action, payload: {} }; }

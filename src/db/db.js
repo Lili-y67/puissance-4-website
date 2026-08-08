@@ -205,8 +205,45 @@ try { db.exec(`ALTER TABLE players ADD COLUMN bot_host_token_preview TEXT NOT NU
 try { db.exec(`ALTER TABLE players ADD COLUMN bot_host_token TEXT NOT NULL DEFAULT ''`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN suspicious INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN archived  INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+try { db.exec(`ALTER TABLE games ADD COLUMN archived_at INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN game_type TEXT NOT NULL DEFAULT 'ranked'`); } catch(e) {}
 try { db.exec(`ALTER TABLE games ADD COLUMN result_reason TEXT NOT NULL DEFAULT ''`); } catch(e) {}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS archived_game_summaries (
+    original_game_id INTEGER PRIMARY KEY,
+    player1_id INTEGER NOT NULL,
+    player2_id INTEGER NOT NULL,
+    winner_id INTEGER,
+    p1_pseudo TEXT NOT NULL DEFAULT '',
+    p2_pseudo TEXT NOT NULL DEFAULT '',
+    winner_pseudo TEXT NOT NULL DEFAULT '',
+    move_count INTEGER NOT NULL DEFAULT 0,
+    duration INTEGER NOT NULL DEFAULT 0,
+    elo_p1 INTEGER NOT NULL DEFAULT 0,
+    elo_p2 INTEGER NOT NULL DEFAULT 0,
+    elo_before_p1 INTEGER,
+    elo_before_p2 INTEGER,
+    game_type TEXT NOT NULL DEFAULT 'ranked',
+    variant TEXT NOT NULL DEFAULT 'classic',
+    result_reason TEXT NOT NULL DEFAULT '',
+    suspicious INTEGER NOT NULL DEFAULT 0,
+    finished_at TEXT NOT NULL,
+    archived_at INTEGER NOT NULL,
+    purged_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_archived_games_p1 ON archived_game_summaries(player1_id, finished_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_archived_games_p2 ON archived_game_summaries(player2_id, finished_at DESC);
+  CREATE TABLE IF NOT EXISTS game_archive_batches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_game_id INTEGER NOT NULL,
+    last_game_id INTEGER NOT NULL,
+    game_count INTEGER NOT NULL,
+    period_start TEXT NOT NULL,
+    period_end TEXT NOT NULL,
+    filename TEXT NOT NULL,
+    sent_at INTEGER NOT NULL
+  );
+`);
 // Table boost VIP individuel
 db.exec(`CREATE TABLE IF NOT EXISTS vip_boosts (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,

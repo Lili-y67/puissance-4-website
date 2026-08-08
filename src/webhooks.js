@@ -9,12 +9,13 @@ const path = require('path');
 const BASE = (process.env.BASE_URL || process.env.PUBLIC_BASE_URL || `http://127.0.0.1:${process.env.PORT || 3000}`).replace(/\/+$/, '');
 const MEMBER_FORUM_CHANNEL_ID = process.env.DISCORD_MEMBER_FORUM_CHANNEL_ID || '1508534889153036461';
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
+const GAMES_LOG_CHANNEL_ID = process.env.DISCORD_GAMES_LOG_CHANNEL_ID || '1535756864019636304';
 const MEMBER_THREAD_STORE = path.join(__dirname, '..', 'data', 'discord-member-forum-threads.json');
 const DISCORD_REQUEST_DELAY_MS = Number(process.env.DISCORD_REQUEST_DELAY_MS || 450);
 const WEBHOOKS = Object.freeze({
   //get: process.env.DISCORD_WEBHOOK_GET || 'https://discord.com/api/webhooks/1503398804404179114/PuuvWQUV4Stby6Y_eekKKkxKnxdBHWgpHYpr9QfzAXEsD7Lemp1InNdah_MGF9k8eRFz',
   post: process.env.DISCORD_WEBHOOK_POST || 'https://discord.com/api/webhooks/1508532434008801351/EdesEHSTzRz5xlDEYpa9fRIHTBNrFuE1ch-lm9vNubPKqa8Nerch36lvqumJHmmKuWp5',
-  games: process.env.DISCORD_WEBHOOK_GAMES || 'https://discord.com/api/webhooks/1508532437549060268/SKY1sUhOfMrXJHWSygRovS821KoRyBjpJu_yLzOJl1XaRSWcoIBNIfR82NJHlqiIwugy',
+  games: process.env.DISCORD_WEBHOOK_GAMES || '',
   global: process.env.DISCORD_WEBHOOK_GLOBAL || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
   default: process.env.DISCORD_WEBHOOK || 'https://discord.com/api/webhooks/1508532441911136377/WQP56D0Y-EmQ-S5pK4HPpygXW6KQakDMIsjTN9PDDuummxJwAMlp00livy-akPvJB4KS',
 });
@@ -71,6 +72,7 @@ const EMOJI = Object.freeze({
 });
 
 function webhookUrl(target = 'global') {
+  if (target === 'games') return WEBHOOKS.games || '';
   return WEBHOOKS[target] || WEBHOOKS.default || WEBHOOKS.global || WEBHOOKS.get;
 }
 
@@ -157,6 +159,22 @@ async function postForumThreadMessage(threadId, payload) {
 }
 
 async function postWebhook(payload, target = 'global') {
+  if (target === 'games' && DISCORD_BOT_TOKEN && GAMES_LOG_CHANNEL_ID) {
+    try {
+      const res = await queuedDiscordFetch(`channel:${GAMES_LOG_CHANNEL_ID}`, `https://discord.com/api/v10/channels/${GAMES_LOG_CHANNEL_ID}/messages`, {
+        method: 'POST',
+        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('[GAME LOG CHANNEL]', `HTTP ${res.status}`, text.slice(0, 240));
+      }
+    } catch (error) {
+      console.error('[GAME LOG CHANNEL]', error.message);
+    }
+    return;
+  }
   const url = webhookUrl(target);
   if (!url) return;
   try {
@@ -307,17 +325,21 @@ function normalizeWinCell(cell) {
 }
 
 function boardGrid(board, p1Emoji, p2Emoji, winCells = []) {
-  if (!Array.isArray(board) || board.length !== 6) return '';
+  if (!Array.isArray(board) || !board.length) return null;
+  const rows = board.filter(Array.isArray);
+  const cols = Math.max(0, ...rows.map(row => row.length));
+  if (!rows.length || !cols || rows.length > 9 || cols > 9) return null;
   const winners = new Set((Array.isArray(winCells) ? winCells : []).map(normalizeWinCell).filter(Boolean));
-  return board
-    .map((row, r) => (Array.isArray(row) ? row : [])
-      .slice(0, 7)
+  const thinSpace = '\u2009';
+  const grid = rows
+    .map((row, r) => Array.from({ length: cols }, (_, c) => row[c] || 0)
       .map((cell, c) => {
         if (winners.has(`${r}:${c}`)) return EMOJI.win;
         return Number(cell) === 1 ? p1Emoji : Number(cell) === 2 ? p2Emoji : EMOJI.black;
       })
-      .join(''))
+      .join(thinSpace))
     .join('\n');
+  return { grid, rows: rows.length, cols };
 }
 
 function profileButtons(id) {
@@ -334,7 +356,7 @@ module.exports = {
   mkContainer,
   linkButton,
 
-  wlogGame({ gameId, isDraw, isSuspect, reason, p1, p2, winner, moves, duration, replayUrl, board, winCells }) {
+  wlogGame({ gameId, isDraw, isSuspect, reason, variant, p1, p2, winner, moves, duration, replayUrl, board, winCells }) {
     const titleIcon = isDraw ? EMOJI.draw : isSuspect ? EMOJI.warning : EMOJI.trophy;
     const title = isDraw ? `${titleIcon} Partie nulle` : isSuspect ? `${titleIcon} Partie suspecte` : `${titleIcon} Victoire de ${winner}`;
     const color = isDraw ? 0xffd60a : isSuspect ? 0xff9f0a : 0x30d158;
@@ -342,15 +364,18 @@ module.exports = {
     const d2 = Number(p2?.delta || 0) >= 0 ? `+${p2?.delta || 0}` : String(p2?.delta || 0);
     const p1Emoji = tokenEmojiFromColor(p1?.color, EMOJI.red);
     const p2Emoji = tokenEmojiFromColor(p2?.color, EMOJI.yellow);
-    const grid = boardGrid(board, p1Emoji, p2Emoji, winCells);
+    const boardView = boardGrid(board, p1Emoji, p2Emoji, winCells);
+    const variantLabels = { classic: 'Classique', rotate: 'Plateau rotatif', anti: 'Anti-P4', bomb: 'Puissance Bombe', mission: 'Mission personnelle', simultaneous: 'Placement simultane' };
+    const variantLabel = variantLabels[String(variant || 'classic')] || clean(variant, 'Classique');
     const fields = [
       ['Duel', `${p1Emoji} **${clean(p1?.pseudo)}** \`${p1?.elo || 0} ELO\` (${d1})\n${p2Emoji} **${clean(p2?.pseudo)}** \`${p2?.elo || 0} ELO\` (${d2})`, false],
       ['Resultat', isDraw ? `${EMOJI.draw} Nul` : `${EMOJI.trophy} **${clean(winner)}** gagne`, true],
       ['Rythme', `${moves || 0} coups - ${duration || 0}s`, true],
       ['Controle', `ID #${gameId} - Suspect: ${isSuspect ? 'Oui' : 'Non'}\nRaison: ${clean(reason)}`, false],
     ];
-    if (grid) {
-      fields.splice(1, 0, ['Plateau final', `${grid}\n1\uFE0F\u20E3 2\uFE0F\u20E3 3\uFE0F\u20E3 4\uFE0F\u20E3 5\uFE0F\u20E3 6\uFE0F\u20E3 7\uFE0F\u20E3\n${EMOJI.win} = ligne gagnante`, false]);
+    if (boardView) {
+      const columns = Array.from({ length: boardView.cols }, (_, index) => index + 1).join(' · ');
+      fields.splice(1, 0, ['Plateau final', `**${variantLabel} · ${boardView.rows}×${boardView.cols}**\n${boardView.grid}\nColonnes : \`${columns}\`\n${EMOJI.win} = alignement gagnant`, false]);
     }
     send([mkContainer(color, title, fields, {
       subtitle: isSuspect ? 'Surveillance anti-abus' : 'Fin de partie',

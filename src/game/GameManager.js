@@ -388,6 +388,7 @@ class GameManager {
         isDraw,
         isSuspect,
         reason,
+        variant: state.variant,
         p1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, delta: p1Delta, color: p1.color },
         p2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, delta: p2Delta, color: p2.color },
         winner: winner?.pseudo,

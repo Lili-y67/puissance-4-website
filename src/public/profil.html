@@ -563,7 +563,10 @@ input[type="file"]{display:none;}
 .elo-history-actions{display:flex;gap:8px;align-items:flex-start;justify-content:flex-end;flex-wrap:wrap;flex-shrink:0;}
 .elo-history-ranges,.elo-history-export{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;}
 .elo-history-date-range{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;width:100%;}
-.elo-history-date-range input{min-width:126px;padding:7px 9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);color:var(--text);font:800 12px Barlow;}
+.elo-history-date-range .elo-date-field{display:flex;align-items:center;min-width:132px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.045);overflow:hidden;}
+.elo-history-date-range input{min-width:0;width:112px;padding:7px 5px 7px 9px;border:0;background:transparent;color:var(--text);color-scheme:dark;font:800 12px Barlow;outline:none;}
+.elo-history-date-range input::-webkit-calendar-picker-indicator{opacity:.75;filter:invert(1);cursor:pointer;}
+.elo-date-picker-button{width:30px;align-self:stretch;border:0;border-left:1px solid rgba(255,255,255,.08);background:rgba(133,235,255,.06);color:#85EBFF;cursor:pointer;font-size:14px;}
 .elo-history-range{
   min-width:42px;
   padding:9px 11px;
@@ -657,6 +660,8 @@ input[type="file"]{display:none;}
 /* ── History rows ── */
 .game-row{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;min-height:74px;display:flex;align-items:center;gap:16px;cursor:pointer;text-decoration:none;color:var(--text);transition:all 0.2s;}
 .game-row:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px);}
+.game-row.replay-deleted{cursor:default;opacity:.78;}
+.game-row.replay-deleted:hover{transform:none;border-color:var(--border);}
 .game-result{width:44px;height:44px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
 .game-result img{width:42px;height:42px;object-fit:contain;filter:drop-shadow(0 0 10px rgba(255,255,255,.18));}
 .game-result.win{background:var(--green-dim);}
@@ -3024,8 +3029,8 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
             <button class="elo-history-range" data-elo-days="15" onclick="setEloHistoryRange(15)">15j</button>
           </div>
           <div class="elo-history-date-range">
-            <input type="date" id="elo-history-start-date" aria-label="Date de debut ELO">
-            <input type="date" id="elo-history-end-date" aria-label="Date de fin ELO">
+            <div class="elo-date-field"><input type="date" id="elo-history-start-date" aria-label="Date de debut ELO"><button class="elo-date-picker-button" type="button" aria-label="Ouvrir le calendrier de debut" onclick="openEloDatePicker('elo-history-start-date')">📅</button></div>
+            <div class="elo-date-field"><input type="date" id="elo-history-end-date" aria-label="Date de fin ELO"><button class="elo-date-picker-button" type="button" aria-label="Ouvrir le calendrier de fin" onclick="openEloDatePicker('elo-history-end-date')">📅</button></div>
             <button class="elo-history-range" type="button" onclick="applyEloHistoryDateRange()">Plage</button>
           </div>
           <div class="elo-history-export">
@@ -3886,7 +3891,38 @@ function setEloHistoryRange(days) {
   if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
 }
 
+function isoDateInputValue(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function configureEloHistoryDateInputs() {
+  const startInput = document.getElementById('elo-history-start-date');
+  const endInput = document.getElementById('elo-history-end-date');
+  const today = isoDateInputValue(Date.now());
+  const createdRaw = isoDateInputValue(currentPlayer?.created_at) || today;
+  const created = createdRaw > today ? today : createdRaw;
+  [startInput, endInput].forEach(input => {
+    if (!input) return;
+    input.min = created;
+    input.max = today;
+  });
+  if (startInput && !startInput.value) startInput.value = isoDateInputValue(Math.max(new Date(`${created}T00:00:00`).getTime(), Date.now() - 7 * 86400000));
+  if (endInput && !endInput.value) endInput.value = today;
+}
+
+function openEloDatePicker(id) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  configureEloHistoryDateInputs();
+  if (typeof input.showPicker === 'function') input.showPicker();
+  else input.focus();
+}
+
 function applyEloHistoryDateRange() {
+  configureEloHistoryDateInputs();
   const startInput = document.getElementById('elo-history-start-date');
   const endInput = document.getElementById('elo-history-end-date');
   const start = String(startInput?.value || '');
@@ -3897,6 +3933,10 @@ function applyEloHistoryDateRange() {
   }
   if (new Date(end) < new Date(start)) {
     alert('La date de fin doit etre apres la date de debut.');
+    return;
+  }
+  if (start < String(startInput.min || '') || end > String(endInput.max || '')) {
+    alert(`Choisis une plage comprise entre ${startInput.min} et ${endInput.max}.`);
     return;
   }
   eloHistoryStartDate = start;
@@ -3913,6 +3953,7 @@ function setEloHistoryButtonState(days) {
 
 async function loadEloHistory(playerId, days = 7, silent = false) {
   if (!playerId) return;
+  configureEloHistoryDateInputs();
   if (!eloHistoryStartDate || !eloHistoryEndDate) setEloHistoryButtonState(days);
   try {
     const params = new URLSearchParams({ days: String(days) });
@@ -4068,6 +4109,7 @@ function drawEloHistory(data, animationFrameOnly = false) {
     elo: Number(p.point.elo || 0),
     delta: Number(p.point.delta || 0),
     gameId: p.point.gameId || null,
+    replayDeleted: !!p.point.replayDeleted,
     label: p.point.label || (p.point.gameId ? `Partie #${p.point.gameId}` : ''),
     result: p.point.result || '',
     moveCount: Number(p.point.moveCount || 0),
@@ -4145,12 +4187,13 @@ function drawEloHistory(data, animationFrameOnly = false) {
     const deltaClass = delta > 0 ? 'color:#30d158' : delta < 0 ? 'color:#ff4d6d' : 'color:var(--muted)';
     const renderReplayStat = (point, value, label) => {
       const gameId = point?.gameId;
-      const tag = gameId ? 'a' : 'div';
-      const attrs = gameId
+      const replayAvailable = gameId && !point?.replayDeleted;
+      const tag = replayAvailable ? 'a' : 'div';
+      const attrs = replayAvailable
         ? `href="/replay/${encodeURIComponent(gameId)}" title="Ouvrir le replay #${escapeHtml(gameId)}"`
         : '';
-      const cls = `elo-history-stat${gameId ? ' elo-history-stat-link' : ''}`;
-      const suffix = gameId ? ` · Replay #${escapeHtml(gameId)}` : '';
+      const cls = `elo-history-stat${replayAvailable ? ' elo-history-stat-link' : ''}`;
+      const suffix = gameId ? (replayAvailable ? ` · Replay #${escapeHtml(gameId)}` : ` · Partie #${escapeHtml(gameId)} supprimée`) : '';
       return `<${tag} class="${cls}" ${attrs}><strong>${Math.round(value)}</strong><span>${label}${suffix}</span></${tag}>`;
     };
     statsEl.innerHTML = `
@@ -4397,7 +4440,7 @@ function handleEloHistoryMove(event) {
     }
   }
   if (nearest && nearestDistance <= 16) {
-    canvas.style.cursor = 'pointer';
+    canvas.style.cursor = nearest.gameId && !nearest.replayDeleted ? 'pointer' : 'default';
     showEloHistoryTooltip(nearest);
   } else {
     canvas.style.cursor = 'default';
@@ -4417,7 +4460,7 @@ function initEloHistoryHover() {
     hideEloHistoryTooltip();
   });
   canvas.addEventListener('click', () => {
-    if (eloHistoryActivePoint?.gameId) location.href = `/replay/${eloHistoryActivePoint.gameId}`;
+    if (eloHistoryActivePoint?.gameId && !eloHistoryActivePoint.replayDeleted) location.href = `/replay/${eloHistoryActivePoint.gameId}`;
   });
 }
 
@@ -4579,8 +4622,13 @@ function renderGameRow(g, me) {
       ? new Date(g.finished_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
       : '-';
     const suspBadge = g.suspicious ? `<div title="Double compte détecté — ELO non comptabilisé" style="font-size:10px;letter-spacing:1px;background:rgba(255,159,10,0.12);border:1px solid rgba(255,159,10,0.3);color:#ff9f0a;padding:2px 7px;border-radius:5px;white-space:nowrap;">Double compte</div>` : '';
-  const archiveBadge = g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">Archivée</div>` : '';
-  return `<a class="game-row" href="/replay/${g.id}">
+  const replayDeleted = Number(g.purged || 0) === 1;
+  const archiveBadge = replayDeleted
+    ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:rgba(238,238,245,.62);padding:2px 7px;border-radius:5px;white-space:nowrap;">Supprimé</div>`
+    : (g.archived ? `<div style="font-size:10px;letter-spacing:1px;background:rgba(255,45,85,0.1);border:1px solid rgba(255,45,85,0.25);color:#ff2d55;padding:2px 7px;border-radius:5px;white-space:nowrap;">Archivée</div>` : '');
+  const rowTag = replayDeleted ? 'div' : 'a';
+  const rowLink = replayDeleted ? '' : `href="/replay/${g.id}"`;
+  return `<${rowTag} class="game-row${replayDeleted ? ' replay-deleted' : ''}" ${rowLink}>
       <div class="game-result ${rc}">${ri}</div>
       <div class="game-vs">vs <span>${opponent}</span></div>
       <div class="game-meta">
@@ -4593,8 +4641,8 @@ function renderGameRow(g, me) {
         ${suspBadge}
         ${archiveBadge}
       </div>
-      <div class="replay-badge">Replay</div>
-    </a>`;
+      <div class="replay-badge">${replayDeleted ? 'Replay supprimé' : 'Replay'}</div>
+    </${rowTag}>`;
 }
 
 
