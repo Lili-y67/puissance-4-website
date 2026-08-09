@@ -43,6 +43,12 @@ const configuredConnectedCountInterval = Number(process.env.DISCORD_CONNECTED_CO
 const CONNECTED_COUNT_INTERVAL_MS = Number.isFinite(configuredConnectedCountInterval)
   ? Math.max(30_000, configuredConnectedCountInterval)
   : 30_000;
+const DISCORD_EMOJI_SYNC_ENABLED = String(process.env.DISCORD_SYNC_EMOJIS || '1') !== '0';
+const configuredEmojiSyncDelay = Number(process.env.DISCORD_EMOJI_SYNC_DELAY_MS || 15_000);
+const DISCORD_EMOJI_SYNC_DELAY_MS = Number.isFinite(configuredEmojiSyncDelay)
+  ? Math.max(5_000, configuredEmojiSyncDelay)
+  : 15_000;
+const DISCORD_EMOJI_MAX_BYTES = 256 * 1024;
 const ADMIN_COMMAND_ACTIONS = {
   'admin-stats': 'stats',
   'admin-player': 'player',
@@ -183,6 +189,7 @@ function startDiscordBot(ctx) {
   let connectedCountTimer = null;
   let previousOnlinePlayers = null;
   let connectedCountUpdateRunning = false;
+  let emojiSyncRunning = false;
 
   async function updateConnectedCountChannel() {
     if (connectedCountUpdateRunning || !CONNECTED_COUNT_CHANNEL_ID) return;
@@ -1988,6 +1995,64 @@ function startDiscordBot(ctx) {
     }
   }
 
+  function discordEmojiAssets() {
+    const emojiDir = path.join(__dirname, 'public', 'emojis');
+    const assets = [
+      { name: 'p4_coin', filePath: path.join(__dirname, 'public', 'assets', 'coin.png') },
+      { name: 'p4_gem', filePath: path.join(__dirname, 'public', 'assets', 'gem.png') },
+    ];
+    if (fs.existsSync(emojiDir)) {
+      for (const entry of fs.readdirSync(emojiDir, { withFileTypes: true })) {
+        if (!entry.isFile() || !/\.(png|gif|webp|jpe?g)$/i.test(entry.name) || entry.name === 'preview-pack.png') continue;
+        assets.push({
+          name: normalizeEmojiName(path.parse(entry.name).name).slice(0, 32),
+          filePath: path.join(emojiDir, entry.name),
+        });
+      }
+    }
+    return assets
+      .filter(asset => asset.name && fs.existsSync(asset.filePath))
+      .filter(asset => fs.statSync(asset.filePath).size <= DISCORD_EMOJI_MAX_BYTES)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async function syncGuildEmojiAssets() {
+    if (!DISCORD_EMOJI_SYNC_ENABLED || emojiSyncRunning || !ctx.DISCORD_GUILD) return;
+    emojiSyncRunning = true;
+    try {
+      const guild = await bot.guilds.fetch(ctx.DISCORD_GUILD);
+      const existing = await guild.emojis.fetch();
+      const existingNames = new Set(existing.map(emoji => normalizeEmojiName(emoji.name)));
+      const missing = discordEmojiAssets().filter(asset => !existingNames.has(asset.name));
+      if (!missing.length) {
+        console.log('[BOT EMOJIS] Synchronisation deja a jour, aucun upload.');
+        return;
+      }
+      console.log(`[BOT EMOJIS] ${missing.length} emoji(s) manquant(s), envoi espace de ${Math.round(DISCORD_EMOJI_SYNC_DELAY_MS / 1000)}s.`);
+      for (let index = 0; index < missing.length; index += 1) {
+        const asset = missing[index];
+        try {
+          const emoji = await guild.emojis.create({
+            attachment: asset.filePath,
+            name: asset.name,
+            reason: 'Synchronisation automatique des emojis Puissance 4',
+          });
+          const rendered = emoji.animated ? `<a:${emoji.name}:${emoji.id}>` : `<:${emoji.name}:${emoji.id}>`;
+          discordEmojiCache.set(normalizeEmojiName(emoji.name), rendered);
+          console.log(`[BOT EMOJIS] ${index + 1}/${missing.length} cree : ${emoji.name}`);
+        } catch (error) {
+          console.warn(`[BOT EMOJIS] Synchronisation stoppee sur ${asset.name}:`, error.message);
+          break;
+        }
+        if (index < missing.length - 1) await new Promise(resolve => setTimeout(resolve, DISCORD_EMOJI_SYNC_DELAY_MS));
+      }
+    } catch (error) {
+      console.warn('[BOT EMOJIS] Synchronisation indisponible:', error.message);
+    } finally {
+      emojiSyncRunning = false;
+    }
+  }
+
   function publicRewardRow(customId, label, emoji) {
     return rowButtons([
       new ButtonBuilder()
@@ -2466,6 +2531,7 @@ function startDiscordBot(ctx) {
     await updateConnectedCountChannel();
     connectedCountTimer = setInterval(updateConnectedCountChannel, CONNECTED_COUNT_INTERVAL_MS);
     connectedCountTimer.unref?.();
+    syncGuildEmojiAssets().catch(error => console.warn('[BOT EMOJIS]', error.message));
   });
 
   bot.on('interactionCreate', async interaction => {
