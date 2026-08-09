@@ -1,5 +1,20 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+const FORTUNE_REWARDS = [
+  { key: 'coins_25', label: '25 coins', shortLabel: '25', icon: '/assets/coin.png', coins: 25, gems: 0, weight: 20 },
+  { key: 'gems_2', label: '2 gemmes', shortLabel: '2', icon: '/assets/gem.png', coins: 0, gems: 2, weight: 10 },
+  { key: 'coins_40', label: '40 coins', shortLabel: '40', icon: '/assets/coin.png', coins: 40, gems: 0, weight: 17 },
+  { key: 'gems_3', label: '3 gemmes', shortLabel: '3', icon: '/assets/gem.png', coins: 0, gems: 3, weight: 6 },
+  { key: 'coins_60', label: '60 coins', shortLabel: '60', icon: '/assets/coin.png', coins: 60, gems: 0, weight: 14 },
+  { key: 'gems_5', label: '5 gemmes', shortLabel: '5', icon: '/assets/gem.png', coins: 0, gems: 5, weight: 4 },
+  { key: 'coins_80', label: '80 coins', shortLabel: '80', icon: '/assets/coin.png', coins: 80, gems: 0, weight: 11 },
+  { key: 'gems_8', label: '8 gemmes', shortLabel: '8', icon: '/assets/gem.png', coins: 0, gems: 8, weight: 3 },
+  { key: 'coins_120', label: '120 coins', shortLabel: '120', icon: '/assets/coin.png', coins: 120, gems: 0, weight: 8 },
+  { key: 'gems_12', label: '12 gemmes', shortLabel: '12', icon: '/assets/gem.png', coins: 0, gems: 12, weight: 1 },
+  { key: 'coins_200', label: '200 coins', shortLabel: '200', icon: '/assets/coin.png', coins: 200, gems: 0, weight: 5 },
+  { key: 'grade_lucky', label: 'Grade Chanceux', shortLabel: 'GRADE', icon: '👑', coins: 0, gems: 0, grade: 'Chanceux', weight: 1 },
+];
+
 const CHALLENGES = [
   { key: 'daily_play', period: 'daily', icon: '🎮', rarity: 'common', label: 'Mise en jambes', description: 'Termine 2 parties classées.', metric: 'games', target: 2, coins: 30, xp: 35 },
   { key: 'daily_win', period: 'daily', icon: '🏆', rarity: 'rare', label: 'Première couronne', description: 'Remporte une partie classée.', metric: 'wins', target: 1, coins: 45, xp: 50 },
@@ -75,6 +90,9 @@ function createProgression({ db, pQ, cQ }) {
     CREATE TABLE IF NOT EXISTS player_progression (
       player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
       xp INTEGER NOT NULL DEFAULT 0,
+      fortune_tickets INTEGER NOT NULL DEFAULT 0,
+      daily_ticket_key TEXT NOT NULL DEFAULT '',
+      fortune_grade TEXT NOT NULL DEFAULT '',
       equipped_board_theme TEXT NOT NULL DEFAULT 'classic',
       updated_at INTEGER NOT NULL DEFAULT 0
     );
@@ -110,6 +128,9 @@ function createProgression({ db, pQ, cQ }) {
       PRIMARY KEY (game_id, player_id)
     );
   `);
+  try { db.exec(`ALTER TABLE player_progression ADD COLUMN fortune_tickets INTEGER NOT NULL DEFAULT 0`); } catch {}
+  try { db.exec(`ALTER TABLE player_progression ADD COLUMN daily_ticket_key TEXT NOT NULL DEFAULT ''`); } catch {}
+  try { db.exec(`ALTER TABLE player_progression ADD COLUMN fortune_grade TEXT NOT NULL DEFAULT ''`); } catch {}
 
   const q = {
     event: db.prepare(`INSERT OR IGNORE INTO progression_game_events (game_id, processed_at) VALUES (?, ?)`),
@@ -129,6 +150,10 @@ function createProgression({ db, pQ, cQ }) {
     progression: db.prepare(`SELECT * FROM player_progression WHERE player_id = ?`),
     ensureProgression: db.prepare(`INSERT OR IGNORE INTO player_progression (player_id, updated_at) VALUES (?, ?)`),
     addXp: db.prepare(`UPDATE player_progression SET xp = xp + ?, updated_at = ? WHERE player_id = ?`),
+    addTickets: db.prepare(`UPDATE player_progression SET fortune_tickets = fortune_tickets + ?, updated_at = ? WHERE player_id = ?`),
+    spendTicket: db.prepare(`UPDATE player_progression SET fortune_tickets = fortune_tickets - 1, updated_at = ? WHERE player_id = ? AND fortune_tickets > 0`),
+    claimDailyTicket: db.prepare(`UPDATE player_progression SET fortune_tickets = fortune_tickets + 1, daily_ticket_key = ?, updated_at = ? WHERE player_id = ? AND daily_ticket_key <> ?`),
+    setFortuneGrade: db.prepare(`UPDATE player_progression SET fortune_grade = ?, updated_at = ? WHERE player_id = ?`),
     setTheme: db.prepare(`UPDATE player_progression SET equipped_board_theme = ?, updated_at = ? WHERE player_id = ?`),
     challenge: db.prepare(`SELECT * FROM challenge_progress WHERE player_id = ? AND challenge_key = ? AND period_key = ?`),
     challengeUpsert: db.prepare(`
@@ -267,6 +292,8 @@ function createProgression({ db, pQ, cQ }) {
       const progress = q.challenge.get(playerId, item.key, key);
       return {
         ...item,
+        gems: item.period === 'weekly' ? (item.rarity === 'legendary' ? 8 : item.rarity === 'epic' ? 5 : 3) : (item.rarity === 'epic' ? 2 : item.rarity === 'rare' ? 1 : 0),
+        tickets: item.period === 'weekly' ? 1 : (item.rarity === 'epic' ? 1 : 0),
         progress: Math.min(item.target, Number(progress?.progress || 0)),
         completed: Number(progress?.progress || 0) >= item.target,
         claimed: !!Number(progress?.claimed || 0),
@@ -278,6 +305,11 @@ function createProgression({ db, pQ, cQ }) {
     return {
       xp,
       level,
+      fortuneTickets: Number(row.fortune_tickets || 0),
+      fortuneGrade: String(row.fortune_grade || ''),
+      dailyTicket: { available: String(row.daily_ticket_key || '') !== periodKey('daily', now), nextAt: periodEndsAt('daily', now) },
+      wallet: { coins: Number(pQ.getById.get(playerId)?.coins || 0), gems: Number(pQ.getById.get(playerId)?.gems || 0) },
+      fortuneRewards: FORTUNE_REWARDS.map(({ weight, ...reward }) => ({ ...reward, probability: weight })),
       xpCurrent: xp - Math.pow(level - 1, 2) * 90,
       xpNext: Math.max(1, (Math.pow(level, 2) - Math.pow(level - 1, 2)) * 90),
       equippedBoardTheme: row.equipped_board_theme || 'classic',
@@ -302,9 +334,37 @@ function createProgression({ db, pQ, cQ }) {
     if (Number(progress?.claimed || 0)) throw new Error('Recompense deja recuperee.');
     if (!q.claim.run(Date.now(), playerId, definition.key, key).changes) throw new Error('Recompense indisponible.');
     ensurePlayer(playerId);
-    q.addXp.run(definition.xp, Date.now(), playerId);
+    const gems = definition.period === 'weekly' ? (definition.rarity === 'legendary' ? 8 : definition.rarity === 'epic' ? 5 : 3) : (definition.rarity === 'epic' ? 2 : definition.rarity === 'rare' ? 1 : 0);
+    const tickets = definition.period === 'weekly' ? 1 : (definition.rarity === 'epic' ? 1 : 0);
     pQ.addCoins.run({ delta: definition.coins, id: playerId });
-    return { coins: definition.coins, xp: definition.xp };
+    if (gems) pQ.addGems.run({ delta: gems, id: playerId });
+    if (tickets) q.addTickets.run(tickets, Date.now(), playerId);
+    return { coins: definition.coins, gems, tickets };
+  }
+
+  const spinFortune = db.transaction(playerId => {
+    const playerProgression = ensurePlayer(playerId);
+    if (!q.spendTicket.run(Date.now(), playerId).changes) throw new Error('Tu n\'as pas de ticket Roue Fortune.');
+    const total = FORTUNE_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
+    let draw = Math.floor(Math.random() * total);
+    const reward = FORTUNE_REWARDS.find(item => ((draw -= item.weight) < 0)) || FORTUNE_REWARDS[0];
+    if (reward.coins) pQ.addCoins.run({ delta: reward.coins, id: playerId });
+    if (reward.gems) pQ.addGems.run({ delta: reward.gems, id: playerId });
+    if (reward.grade) {
+      if (String(playerProgression.fortune_grade || '') === reward.grade) {
+        pQ.addGems.run({ delta: 25, id: playerId });
+        return { ...reward, label: '25 gemmes (grade déjà possédé)', gems: 25, converted: true, weight: undefined };
+      }
+      q.setFortuneGrade.run(reward.grade, Date.now(), playerId);
+    }
+    return { ...reward, weight: undefined };
+  });
+
+  function claimDailyTicket(playerId) {
+    ensurePlayer(playerId);
+    const today = periodKey('daily');
+    if (!q.claimDailyTicket.run(today, Date.now(), playerId, today).changes) throw new Error('Ton ticket du jour a déjà été récupéré.');
+    return { tickets: 1 };
   }
 
   function equipTheme(playerId, themeKey) {
@@ -372,6 +432,8 @@ function createProgression({ db, pQ, cQ }) {
     recordAction,
     getPlayerData,
     claimChallenge,
+    spinFortune,
+    claimDailyTicket,
     equipTheme,
     getClanMissions,
     getClanWar,

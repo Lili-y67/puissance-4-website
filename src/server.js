@@ -6945,6 +6945,30 @@ app.post('/api/progression/challenges/:key/claim', (req, res) => {
   }
 });
 
+app.post('/api/progression/fortune/spin', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  try {
+    const reward = progression.spinFortune(playerId);
+    res.json({ ok: true, reward, progression: progression.getPlayerData(playerId), player: sanitize(pQ.getById.get(playerId)) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'La roue ne peut pas tourner.' });
+  }
+});
+
+app.post('/api/progression/fortune/daily-ticket', (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  try {
+    const reward = progression.claimDailyTicket(playerId);
+    res.json({ ok: true, reward, progression: progression.getPlayerData(playerId) });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Ticket quotidien indisponible.' });
+  }
+});
+
 app.post('/api/progression/theme', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.body?.token || '');
   const playerId = validateSession(token);

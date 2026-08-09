@@ -375,7 +375,7 @@ module.exports = {
     ];
     if (boardView) {
       const columns = Array.from({ length: boardView.cols }, (_, index) => index + 1).join(' · ');
-      fields.splice(1, 0, ['Plateau final', `**${variantLabel} · ${boardView.rows}×${boardView.cols}**\n${boardView.grid}\nColonnes : \`${columns}\`\n${EMOJI.win} = alignement gagnant`, false]);
+      fields.splice(1, 0, ['Plateau final', `**${variantLabel} · ${boardView.rows}×${boardView.cols}**\n${boardView.grid}\n${EMOJI.win} = alignement gagnant`, false]);
     }
     send([mkContainer(color, title, fields, {
       subtitle: isSuspect ? 'Surveillance anti-abus' : 'Fin de partie',

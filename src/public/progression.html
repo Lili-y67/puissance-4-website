@@ -27,6 +27,9 @@ button,a{font:inherit}.page{width:min(1240px,100%);margin:auto;padding:22px 18px
 h1{max-width:760px;margin:10px 0 12px;font:900 clamp(52px,8vw,100px)/.82 "Barlow Condensed";letter-spacing:-2px;text-transform:uppercase}.gradient-text{color:transparent;background:linear-gradient(90deg,#fff,var(--gold) 45%,var(--cyan));background-clip:text;-webkit-background-clip:text}
 .hero-copy{max-width:700px;color:var(--muted);font-size:15px;line-height:1.65}.season-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.pill{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.045);font-size:12px;color:rgba(255,255,255,.75)}.pill strong{color:#fff}
 .level-card{align-self:stretch;display:flex;flex-direction:column;justify-content:center;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:26px;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.018));box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.wallet-title{color:var(--muted);font:800 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase}.wallet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px}.wallet-item{padding:12px 8px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.04);text-align:center}.wallet-item b{display:block;margin-top:5px;font:900 25px "Barlow Condensed"}.wallet-item span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.7px}.ticket-note{margin-top:12px;color:var(--cyan);font-size:11px;line-height:1.45}
+.fortune-layout{display:grid;grid-template-columns:minmax(280px,390px) 1fr;gap:30px;align-items:center}.fortune-stage{position:relative;display:grid;place-items:center;min-height:420px;border-radius:40px;background:radial-gradient(circle,rgba(106,43,255,.25),transparent 58%)}.fortune-pointer{position:absolute;z-index:8;top:3px;width:42px;height:49px;clip-path:polygon(50% 0,100% 30%,75% 100%,25% 100%,0 30%);background:linear-gradient(135deg,#fff,#76f7ff 35%,#19a7ff 68%,#fff);filter:drop-shadow(0 0 9px #63efff) drop-shadow(0 5px 6px #000);transform:translateY(3px)}.fortune-wheel{position:relative;width:min(360px,82vw);aspect-ratio:1;border-radius:50%;border:9px solid #7deaff;background:conic-gradient(#f2302f 0 30deg,#ef7421 30deg 60deg,#ee2323 60deg 90deg,#de36a9 90deg 120deg,#7623ae 120deg 150deg,#17399e 150deg 180deg,#087ac0 180deg 210deg,#009b7c 210deg 240deg,#18a83b 240deg 270deg,#f4a318 270deg 300deg,#f17123 300deg 330deg,#d92955 330deg);box-shadow:0 0 0 4px #fff,0 0 0 9px #249eff,0 0 0 13px rgba(172,246,255,.7),0 24px 55px #0009,0 0 48px #36c8ff99;transition:transform 4.8s cubic-bezier(.1,.72,.06,1)}.fortune-wheel::before{content:"";position:absolute;inset:7px;border-radius:50%;border:2px dashed rgba(255,255,255,.58);box-shadow:inset 0 0 25px rgba(255,255,255,.26)}.wheel-label{position:absolute;z-index:2;left:50%;top:50%;width:58px;margin-left:-29px;text-align:center;font:900 10px/1 "Barlow Condensed";text-shadow:0 2px 4px #000;transform:rotate(calc(var(--i)*30deg + 15deg)) translateY(-151px) rotate(calc(var(--i)*-30deg - 15deg))}.wheel-label b{display:block;font-size:13px}.wheel-spin{position:absolute;z-index:7;width:92px;height:92px;border-radius:50%;border:6px solid #ffba19;background:radial-gradient(circle at 40% 28%,#2cbfff,#0860bf 67%);color:#fff;font:900 23px "Barlow Condensed";letter-spacing:1px;text-shadow:0 2px 4px #00316f;box-shadow:0 0 0 4px #fff,0 8px 24px #0008;cursor:pointer}.wheel-spin:disabled{filter:grayscale(.75);cursor:not-allowed}.fortune-copy h3{margin:0;font:900 38px "Barlow Condensed";text-transform:uppercase}.fortune-copy p{color:var(--muted);line-height:1.6}.fortune-prizes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:16px 0}.fortune-prize{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04);font-size:11px}.fortune-prize em{color:var(--cyan);font-style:normal;font-weight:800}.daily-ticket{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0;padding:12px;border:1px solid rgba(133,235,255,.22);border-radius:15px;background:rgba(133,235,255,.06)}.daily-ticket span{font-size:12px;color:var(--muted)}.daily-btn{border:0;border-radius:11px;padding:9px 12px;background:var(--cyan);color:#07151a;font:900 11px "Barlow Condensed";text-transform:uppercase;cursor:pointer}.daily-btn:disabled{opacity:.48;cursor:not-allowed}.fortune-grade{margin-top:11px;padding:10px 12px;border-radius:13px;background:linear-gradient(90deg,rgba(255,214,10,.13),rgba(191,90,242,.12));color:#ffe97c;font:800 12px "Barlow Condensed";letter-spacing:.5px}
+.currency-img{width:24px;height:24px;object-fit:contain;vertical-align:middle;filter:drop-shadow(0 0 7px rgba(133,235,255,.32))}.wallet-item>.currency-img{width:34px;height:34px}.fortune-stage{min-height:455px;background:radial-gradient(circle,rgba(105,36,255,.32),transparent 61%)}.fortune-stage::before{content:"";position:absolute;width:min(410px,88vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,transparent 55%,rgba(85,238,255,.18) 65%,transparent 74%);filter:blur(7px);animation:fortuneAura 2.7s ease-in-out infinite}.fortune-pointer{top:5px;width:58px;height:58px;clip-path:none;background:url('/assets/gem.png') center/contain no-repeat;filter:drop-shadow(0 0 9px #55eeff) drop-shadow(0 0 17px #1689ff);transform:translateY(-5px)}.fortune-wheel{width:min(375px,82vw);border:7px solid #a9f7ff;box-shadow:0 0 0 4px #17357b,0 0 0 9px #37cfff,0 0 0 13px rgba(196,250,255,.72),0 26px 60px #000a,0 0 38px #39d7ff,0 0 86px rgba(151,54,255,.62),inset 0 0 30px rgba(255,255,255,.32)}.fortune-wheel::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:repeating-conic-gradient(from 0deg,#fff 0 2deg,transparent 2deg 30deg);mask:radial-gradient(circle,transparent 84%,#000 85%);filter:drop-shadow(0 0 5px #55eeff);pointer-events:none}.wheel-label{width:62px;margin-left:-31px;transform:rotate(calc(var(--i)*30deg + 15deg)) translateY(-159px) rotate(calc(var(--i)*-30deg - 15deg))}.wheel-label .currency-img{display:block;width:25px;height:25px;margin:0 auto -1px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.65))}.wheel-spin{position:relative;width:100%;height:auto;margin-top:14px;padding:14px 18px;border:1px solid rgba(255,255,255,.38);border-radius:15px;background:linear-gradient(135deg,#55eaff,#3578ff 52%,#9b43ff);color:#fff;font-size:16px;box-shadow:0 0 24px rgba(85,234,255,.24),0 10px 28px rgba(0,0,0,.28)}.wheel-spin.preview{background:linear-gradient(135deg,rgba(85,234,255,.2),rgba(155,67,255,.28));border-color:rgba(133,235,255,.45)}.spin-login-note{display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center}.fortune-prize>span{display:flex;align-items:center;gap:7px}.fortune-prize .currency-img{width:22px;height:22px}@keyframes fortuneAura{50%{transform:scale(1.06);opacity:.7}}
 .level-top{display:flex;justify-content:space-between;align-items:end;gap:12px}.level-label{color:var(--muted);font:800 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase}.level-number{font:900 70px/.82 "Barlow Condensed";color:var(--gold);text-shadow:0 0 28px rgba(255,214,10,.25)}.level-xp{font:900 17px "Barlow Condensed";color:var(--cyan)}
 .xp-track,.quest-track{position:relative;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.07)}.xp-track{height:14px;margin-top:18px}.xp-fill,.quest-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--red),var(--gold),var(--cyan));box-shadow:0 0 18px rgba(133,235,255,.28);transition:width .8s cubic-bezier(.2,.9,.2,1)}.xp-fill::after,.quest-fill::after{content:"";display:block;width:45%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:barShine 2.2s linear infinite}@keyframes barShine{from{transform:translateX(-120%)}to{transform:translateX(320%)}}
 .level-foot{display:flex;justify-content:space-between;gap:10px;margin-top:9px;color:var(--muted);font-size:12px}
@@ -50,6 +53,7 @@ h1{max-width:760px;margin:10px 0 12px;font:900 clamp(52px,8vw,100px)/.82 "Barlow
 .mobile-nav{display:none}
 .reveal{opacity:0;transform:translateY(14px);transition:.55s}.reveal.visible{opacity:1;transform:none}
 @media(max-width:980px){.hero{grid-template-columns:1fr}.summary-grid{grid-template-columns:repeat(2,1fr)}.content-grid{grid-template-columns:1fr}.side-column{display:grid;grid-template-columns:1fr 1fr;gap:18px}.side-column .panel{margin:0}.themes{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.fortune-layout{grid-template-columns:1fr}.fortune-stage{min-height:430px}.fortune-copy{text-align:center}.fortune-prizes{justify-content:center}.spin-btn{max-width:none}}
 @media(max-width:700px){.page{padding:12px 10px 98px}.nav{top:7px;border-radius:18px}.brand{font-size:23px}.brand img{width:35px;height:35px}.nav-links{display:none}.hero{margin:14px 0;padding:24px 18px;border-radius:27px}h1{font-size:clamp(52px,18vw,78px)}.hero-copy{font-size:14px}.summary-grid{gap:8px}.summary-card{padding:14px}.summary-value{font-size:29px}.content-grid{gap:14px}.panel{padding:15px;border-radius:22px}.panel-head{align-items:flex-start;flex-direction:column}.panel-note{text-align:left}.quest{grid-template-columns:48px minmax(0,1fr);padding:12px}.quest-icon{width:48px;height:48px}.quest-action{grid-column:1/-1;min-width:0}.claim-btn{padding:11px}.themes{grid-template-columns:1fr 1fr}.side-column{display:grid;grid-template-columns:1fr}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);z-index:90;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));padding:7px;border:1px solid rgba(255,255,255,.1);border-radius:20px;background:rgba(9,7,22,.88);backdrop-filter:blur(20px);box-shadow:0 20px 60px rgba(0,0,0,.45)}.mobile-nav a{display:grid;place-items:center;gap:2px;padding:7px 3px;border-radius:13px;color:var(--muted);text-decoration:none;font:800 10px "Barlow Condensed";letter-spacing:.6px;text-transform:uppercase}.mobile-nav a.active{background:rgba(133,235,255,.09);color:var(--cyan)}.mobile-nav b{font-size:19px}.toast{left:12px;right:12px;bottom:88px}}
 @media(max-width:420px){.summary-grid{grid-template-columns:1fr 1fr}.summary-label{font-size:10px}.level-number{font-size:58px}.themes{grid-template-columns:1fr}.rank-row{grid-template-columns:31px 34px minmax(0,1fr) auto;gap:7px}.season-pills .pill{width:100%;justify-content:center}.quest-desc{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}.reveal{opacity:1;transform:none}}
@@ -70,23 +74,24 @@ h1{max-width:760px;margin:10px 0 12px;font:900 clamp(52px,8vw,100px)/.82 "Barlow
   <section class="hero reveal">
     <div>
       <div class="eyebrow" id="season-name">Saison en cours</div>
-      <h1>Ta route vers <span class="gradient-text">le sommet</span></h1>
-      <p class="hero-copy">Chaque partie fait avancer quelque chose : ton niveau, tes défis, ton clan ou ton rang saisonnier. Pas de progression vide, seulement des objectifs liés à ta façon de jouer.</p>
+      <h1>Joue. Gagne. <span class="gradient-text">Tente ta chance.</span></h1>
+      <p class="hero-copy">Les quêtes rapportent maintenant de vraies ressources : coins, gemmes et tickets Roue Fortune. Termine tes contrats, récupère tes gains et fais tourner la roue.</p>
       <div class="season-pills" id="season-meta">
         <span class="pill">Chargement de la saison...</span>
       </div>
     </div>
     <div class="level-card">
-      <div class="level-top">
-        <div><div class="level-label">Niveau global</div><div class="level-number" id="level">1</div></div>
-        <div class="level-xp" id="xp-percent">0%</div>
+      <div class="wallet-title">Ton butin</div>
+      <div class="wallet-grid">
+        <div class="wallet-item"><img class="currency-img" src="/assets/coin.png" alt=""><b id="wallet-coins">0</b><span>Coins</span></div>
+        <div class="wallet-item"><img class="currency-img" src="/assets/gem.png" alt=""><b id="wallet-gems">0</b><span>Gemmes</span></div>
+        <div class="wallet-item">🎫<b id="wallet-tickets">0</b><span>Tickets</span></div>
       </div>
-      <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0"></div></div>
-      <div class="level-foot"><span id="xp-copy">0 / 90 XP</span><span id="next-theme">Prochain thème</span></div>
+      <div class="ticket-note">Les contrats rares offrent des gemmes. Les contrats épiques et hebdomadaires peuvent offrir un ticket.</div>
     </div>
   </section>
 
-  <div id="login-notice" class="notice" style="display:none;margin-bottom:18px">Connecte-toi pour progresser, récupérer les récompenses et équiper tes thèmes.</div>
+  <div id="login-notice" class="notice" style="display:none;margin-bottom:18px">Tu peux essayer la roue en aperçu. Connecte-toi pour recevoir ton ticket quotidien et conserver tes gains.</div>
 
   <section class="summary-grid reveal" id="summary">
     <div class="summary-card" style="--accent:#ffd60a"><div class="summary-icon">🎯</div><div class="summary-value" id="summary-completed">0/0</div><div class="summary-label">Quêtes terminées</div></div>
@@ -111,12 +116,15 @@ h1{max-width:760px;margin:10px 0 12px;font:900 clamp(52px,8vw,100px)/.82 "Barlow
         </div>
       </section>
 
-      <section class="panel reveal" id="themes-panel">
+      <section class="panel reveal" id="fortune-panel">
         <div class="panel-head">
-          <div><div class="panel-kicker">Personnalisation</div><h2 class="panel-title">Arsenal visuel</h2></div>
-          <div class="panel-note">Les thèmes débloqués s’appliquent à tes prochaines parties.</div>
+          <div><div class="panel-kicker">Ticket requis</div><h2 class="panel-title">Roue Fortune</h2></div>
+          <div class="panel-note">Une roue premium, fluide et sans GIF.</div>
         </div>
-        <div class="themes" id="themes"></div>
+        <div class="fortune-layout">
+          <div class="fortune-stage"><div class="fortune-pointer"></div><div class="fortune-wheel" id="fortune-wheel"></div></div>
+          <div class="fortune-copy"><h3>Ton prochain gain ?</h3><p>Chaque tour consomme un ticket. Les probabilités sont calculées côté serveur et totalisent 100 %.</p><div class="daily-ticket"><span id="daily-ticket-copy">Un ticket offert chaque jour.</span><button class="daily-btn" id="daily-ticket-btn" onclick="claimDailyTicket()">Récupérer</button></div><div class="fortune-prizes" id="fortune-prizes"></div><div class="fortune-grade" id="fortune-grade">👑 Jackpot cosmétique : Grade Chanceux permanent</div><button class="wheel-spin" id="spin-btn" onclick="spinFortune()">Faire tourner · 1 ticket</button><span class="spin-login-note" id="spin-login-note"></span></div>
+        </div>
       </section>
     </div>
 
@@ -150,6 +158,14 @@ const rarityMeta = {
   epic: { label: 'Épique', color: '#bf5af2' },
   legendary: { label: 'Légendaire', color: '#ffd60a' },
 };
+const previewFortuneRewards = [
+  ['/assets/coin.png','25 coins','25',20], ['/assets/gem.png','2 gemmes','2',10],
+  ['/assets/coin.png','40 coins','40',17], ['/assets/gem.png','3 gemmes','3',6],
+  ['/assets/coin.png','60 coins','60',14], ['/assets/gem.png','5 gemmes','5',4],
+  ['/assets/coin.png','80 coins','80',11], ['/assets/gem.png','8 gemmes','8',3],
+  ['/assets/coin.png','120 coins','120',8], ['/assets/gem.png','12 gemmes','12',1],
+  ['/assets/coin.png','200 coins','200',5], ['👑','Grade Chanceux','GRADE',1],
+].map(([icon,label,shortLabel,probability], index) => ({ key:`preview_${index}`, icon, label, shortLabel, probability }));
 let progression = null;
 let seasonData = null;
 let activePeriod = 'daily';
@@ -157,6 +173,12 @@ let toastTimer = null;
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
+}
+function rewardIconHtml(icon, alt = '') {
+  const source = String(icon || '');
+  return source === '/assets/coin.png' || source === '/assets/gem.png'
+    ? `<img class="currency-img" src="${source}" alt="${esc(alt)}">`
+    : esc(source || '🎁');
 }
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -178,7 +200,7 @@ function showToast(title, copy, icon = '🎁') {
   const toast = document.getElementById('toast');
   document.getElementById('toast-title').textContent = title;
   document.getElementById('toast-copy').textContent = copy;
-  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-icon').innerHTML = rewardIconHtml(icon);
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 3400);
@@ -217,27 +239,36 @@ function renderQuests() {
         <div class="quest-title-row"><strong class="quest-title">${esc(item.label)}</strong><span class="rarity">${rarity.label}</span></div>
         <div class="quest-desc">${esc(item.description || '')}</div>
         <div class="quest-track"><div class="quest-fill" style="width:${pct}%"></div></div>
-        <div class="quest-meta"><span>${Number(item.progress || 0)} / ${Number(item.target || 0)}</span><span class="quest-reward">+${item.coins} coins · +${item.xp} XP</span></div>
+        <div class="quest-meta"><span>${Number(item.progress || 0)} / ${Number(item.target || 0)}</span><span class="quest-reward">+${item.coins} coins${item.gems ? ` · +${item.gems} gemmes` : ''}${item.tickets ? ` · +${item.tickets} ticket` : ''}</span></div>
       </div>
       <div class="quest-action"><button class="claim-btn ${item.completed && !item.claimed ? 'ready' : ''}" onclick="claimQuest('${item.key}')" ${!item.completed || item.claimed ? 'disabled' : ''}>${button}</button></div>
     </article>`;
   }).join('') || '<div class="empty">Aucune quête active.</div>';
   updateCountdown();
 }
-function renderThemes() {
-  const root = document.getElementById('themes');
-  root.innerHTML = progression.themes.map(theme => {
-    const active = theme.key === progression.equippedBoardTheme;
-    const holes = Array.from({ length: 24 }, (_, index) => {
-      const token = [13,14,18,19,20,22].includes(index) ? (index % 2 ? 'red' : 'yellow') : '';
-      return `<i class="theme-hole ${token}"></i>`;
-    }).join('');
-    return `<article class="theme-card skin-${theme.key} ${theme.unlocked ? '' : 'locked'} ${active ? 'active' : ''}" style="--c1:${theme.colors[0]};--c2:${theme.colors[1]};--c3:${theme.colors[2]}" onclick="equipTheme('${theme.key}',${theme.unlocked})">
-      ${active ? '<span class="active-mark">✓</span>' : ''}
-      <div class="theme-preview"><div class="theme-board">${holes}</div></div>
-      <div class="theme-info"><div><div class="theme-name">${esc(theme.icon || '🎨')} ${esc(theme.label)}</div><div class="theme-tagline">${esc(theme.tagline || '')}</div><div class="theme-state">${theme.unlocked ? active ? 'Équipé' : 'Appuyer pour équiper' : `Niveau ${theme.level} requis`}</div></div><span>${theme.unlocked ? '🎨' : '🔒'}</span></div>
-    </article>`;
-  }).join('');
+function renderFortune() {
+  const rewards = progression.fortuneRewards || [];
+  document.getElementById('fortune-wheel').innerHTML = rewards.map((reward, index) => `<span class="wheel-label" style="--i:${index}">${rewardIconHtml(reward.icon)}<b>${esc(reward.shortLabel || reward.label)}</b></span>`).join('');
+  document.getElementById('fortune-prizes').innerHTML = rewards.map(reward => `<span class="fortune-prize"><span>${rewardIconHtml(reward.icon)} ${esc(reward.label)}</span><em>${Number(reward.probability || 0)} %</em></span>`).join('');
+  const button = document.getElementById('spin-btn');
+  const isPreview = !token;
+  button.classList.toggle('preview', isPreview);
+  button.disabled = !isPreview && Number(progression.fortuneTickets || 0) < 1;
+  button.textContent = isPreview ? 'Faire tourner un aperçu' : Number(progression.fortuneTickets || 0) > 0 ? 'Faire tourner · 1 ticket' : 'Aucun ticket disponible';
+  document.getElementById('spin-login-note').textContent = isPreview ? 'Aucun gain ne sera conservé · connecte-toi pour jouer réellement.' : 'Le gain sera ajouté immédiatement à ton compte.';
+  const dailyButton = document.getElementById('daily-ticket-btn');
+  if (isPreview) {
+    dailyButton.disabled = true;
+    dailyButton.textContent = 'Connexion requise';
+    document.getElementById('daily-ticket-copy').textContent = 'Connecte-toi pour récupérer ton ticket quotidien.';
+    document.getElementById('fortune-grade').textContent = '👑 Jackpot cosmétique : Grade Chanceux permanent · 1 %';
+    return;
+  }
+  const dailyAvailable = !!progression.dailyTicket?.available;
+  dailyButton.disabled = !dailyAvailable;
+  dailyButton.textContent = dailyAvailable ? 'Récupérer' : 'Déjà récupéré';
+  document.getElementById('daily-ticket-copy').textContent = dailyAvailable ? 'Ton ticket gratuit du jour est disponible.' : `Prochain ticket dans ${timeLeft(progression.dailyTicket?.nextAt)}`;
+  document.getElementById('fortune-grade').textContent = progression.fortuneGrade ? `👑 Grade obtenu : ${progression.fortuneGrade}` : '👑 Jackpot cosmétique : Grade Chanceux permanent · 1 %';
 }
 function renderAchievements() {
   const stats = progression.season?.stats || {};
@@ -245,8 +276,8 @@ function renderAchievements() {
     ['🎮','Premiers pas','Terminer une partie',Number(stats.games || 0) >= 1],
     ['⚔️','Combattant','Terminer 10 parties cette saison',Number(stats.games || 0) >= 10],
     ['👑','Challenger','Gagner 5 parties cette saison',Number(stats.wins || 0) >= 5],
-    ['🎨','Collectionneur','Atteindre le niveau 5',progression.level >= 5],
-    ['💎','Vétéran','Atteindre le niveau 10',progression.level >= 10],
+    ['🪙','Premier butin','Posséder 100 coins',Number(progression.wallet?.coins || 0) >= 100],
+    ['💎','Collectionneur','Posséder 10 gemmes',Number(progression.wallet?.gems || 0) >= 10],
   ];
   document.getElementById('achievements').innerHTML = achievements.map(([icon,name,copy,done]) => `<div class="achievement ${done ? 'done' : ''}"><div class="achievement-icon">${done ? '✓' : icon}</div><div><strong>${esc(name)}</strong><span>${esc(copy)}</span></div></div>`).join('');
 }
@@ -260,17 +291,12 @@ function renderSummary() {
 }
 function renderPlayer() {
   if (!progression) return;
-  const pct = Math.min(100, Math.round(Number(progression.xpCurrent || 0) / Math.max(1, Number(progression.xpNext || 1)) * 100));
-  document.getElementById('level').textContent = progression.level;
-  document.getElementById('xp-percent').textContent = `${pct}%`;
-  document.getElementById('xp-copy').textContent = `${progression.xpCurrent} / ${progression.xpNext} XP`;
-  requestAnimationFrame(() => document.getElementById('xp-fill').style.width = `${pct}%`);
-  const nextTheme = progression.themes.find(theme => !theme.unlocked);
-  document.getElementById('next-theme').textContent = nextTheme ? `${nextTheme.label} · niv. ${nextTheme.level}` : 'Tous les thèmes débloqués';
-  localStorage.setItem('p4_board_theme', progression.equippedBoardTheme || 'classic');
+  document.getElementById('wallet-coins').textContent = Number(progression.wallet?.coins || 0).toLocaleString('fr-FR');
+  document.getElementById('wallet-gems').textContent = Number(progression.wallet?.gems || 0).toLocaleString('fr-FR');
+  document.getElementById('wallet-tickets').textContent = Number(progression.fortuneTickets || 0);
   renderSummary();
   renderQuests();
-  renderThemes();
+  renderFortune();
   renderAchievements();
 }
 function renderSeason() {
@@ -293,27 +319,64 @@ async function claimQuest(key) {
     renderPlayer();
     if (data.player) localStorage.setItem('player', JSON.stringify(data.player));
     launchConfetti();
-    showToast('Quête validée', `+${data.reward.coins} coins et +${data.reward.xp} XP`, '🏆');
+    const extras = [data.reward.gems ? `+${data.reward.gems} gemmes` : '', data.reward.tickets ? `+${data.reward.tickets} ticket` : ''].filter(Boolean).join(' et ');
+    showToast('Quête validée', `+${data.reward.coins} coins${extras ? `, ${extras}` : ''}`, '🏆');
   } catch (error) {
     showToast('Impossible', error.message, '⚠️');
   }
 }
-async function equipTheme(key, unlocked) {
-  if (!unlocked) return showToast('Thème verrouillé', 'Continue de gagner de l’XP pour le débloquer.', '🔒');
+let wheelTurns = 0;
+async function spinFortune() {
+  const button = document.getElementById('spin-btn');
+  if (button.disabled) return;
+  button.disabled = true;
+  if (!token) {
+    const rewards = progression.fortuneRewards || previewFortuneRewards;
+    let draw = Math.random() * 100;
+    let rewardIndex = rewards.findIndex(reward => ((draw -= Number(reward.probability || 0)) < 0));
+    if (rewardIndex < 0) rewardIndex = 0;
+    wheelTurns += 6;
+    document.getElementById('fortune-wheel').style.transform = `rotate(${wheelTurns * 360 - (rewardIndex * 30 + 15)}deg)`;
+    setTimeout(() => {
+      button.disabled = false;
+      showToast('Tour d’aperçu', `${rewards[rewardIndex].label} · connecte-toi pour conserver tes prochains gains.`, rewards[rewardIndex].icon);
+    }, 4900);
+    return;
+  }
   try {
-    const data = await api('/api/progression/theme', { method:'POST', body:JSON.stringify({ theme:key }) });
+    const data = await api('/api/progression/fortune/spin', { method:'POST', body:'{}' });
+    const rewardIndex = Math.max(0, (progression.fortuneRewards || []).findIndex(item => item.key === data.reward.key));
+    wheelTurns += 6;
+    const target = wheelTurns * 360 - (rewardIndex * 30 + 15);
+    document.getElementById('fortune-wheel').style.transform = `rotate(${target}deg)`;
     progression = data.progression;
-    localStorage.setItem('p4_board_theme', key);
-    renderThemes();
-    showToast('Thème équipé', `${data.theme.label} sera utilisé lors de tes prochaines parties.`, '🎨');
+    if (data.player) localStorage.setItem('player', JSON.stringify(data.player));
+    setTimeout(() => { renderPlayer(); launchConfetti(); showToast('La roue a parlé !', data.reward.label, data.reward.icon); }, 4300);
   } catch (error) {
     showToast('Impossible', error.message, '⚠️');
+    button.disabled = false;
+  }
+}
+async function claimDailyTicket() {
+  const button = document.getElementById('daily-ticket-btn');
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    const data = await api('/api/progression/fortune/daily-ticket', { method:'POST', body:'{}' });
+    progression = data.progression;
+    renderPlayer();
+    showToast('Ticket quotidien', '+1 ticket Roue Fortune', '🎫');
+  } catch (error) {
+    showToast('Impossible', error.message, '⚠️');
+    button.disabled = false;
   }
 }
 function updateCountdown() {
   const quest = progression?.challenges?.find(item => item.period === activePeriod);
   const el = document.getElementById('quest-countdown');
   if (el && quest) el.textContent = `Actualisation dans ${timeLeft(quest.expiresAt)}`;
+  const dailyCopy = document.getElementById('daily-ticket-copy');
+  if (dailyCopy && progression?.dailyTicket && !progression.dailyTicket.available) dailyCopy.textContent = `Prochain ticket dans ${timeLeft(progression.dailyTicket.nextAt)}`;
 }
 function initReveal() {
   const observer = new IntersectionObserver(entries => entries.forEach(entry => {
@@ -327,6 +390,8 @@ async function load() {
   if (!token) {
     document.getElementById('login-notice').style.display = 'block';
     document.getElementById('quest-list').innerHTML = '<div class="empty">Connecte-toi pour découvrir tes contrats personnalisés.</div>';
+    progression = { fortuneRewards: previewFortuneRewards, fortuneTickets: 0, dailyTicket: { available:false }, fortuneGrade:'' };
+    renderFortune();
     return;
   }
   const data = await api('/api/progression/me');
