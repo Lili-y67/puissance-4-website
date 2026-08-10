@@ -779,6 +779,16 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
           <button class="btn-sm" style="background:rgba(255,255,255,0.06);color:var(--muted);" onclick="setCoinBoost(1,0)">Désactiver</button>
         </div>
       </div>
+
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="flex:1;min-width:220px;">
+          <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Booster Roue Fortune</div>
+          <input id="fortune-booster-slider" type="range" min="1" max="5" step="1" value="1" style="width:100%;accent-color:#bf5af2;" oninput="document.getElementById('fortune-booster-val').textContent='x'+this.value">
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;">Multiplie les coins, gemmes et tickets gagnés. Le grade reste unique.</div>
+        </div>
+        <div style="min-width:72px;text-align:center;"><div id="fortune-booster-val" style="font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:900;color:#d98bff;">x1</div></div>
+        <div id="fortune-booster-actions"><button class="btn-sm" style="background:rgba(191,90,242,.16);color:#d98bff;border:1px solid rgba(191,90,242,.3);" onclick="setFortuneBooster(Number(document.getElementById('fortune-booster-slider').value))">Appliquer</button></div>
+      </div>
     </div>
 
     <div id="boost-panel-vip" style="display:none;">
@@ -1064,6 +1074,8 @@ async function showPanel() {
   if (globalActions) globalActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const coinActions = document.getElementById('coin-boost-actions');
   if (coinActions) coinActions.style.display = myRole === 'admin' ? 'flex' : 'none';
+  const fortuneActions = document.getElementById('fortune-booster-actions');
+  if (fortuneActions) fortuneActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   const systemActions = document.getElementById('system-status-actions');
   if (systemActions) systemActions.style.display = myRole === 'admin' ? 'flex' : 'none';
   document.querySelectorAll('.admin-only-panel').forEach(el => {
@@ -1074,6 +1086,7 @@ async function showPanel() {
     await loadAdminTokenCatalog();
     await loadBoostStatus();
     await loadCoinBoostStatus();
+    await loadFortuneBooster();
     await loadActiveCoupons();
     clearInterval(activeCouponsTimer);
     clearInterval(activeCouponsTickTimer);
@@ -2021,6 +2034,28 @@ async function loadCoinBoostStatus() {
       el.innerHTML += coinLine;
     }
   } catch(e) {}
+}
+
+async function loadFortuneBooster() {
+  try {
+    const data = await api('GET', '/api/admin/fortune-booster');
+    const multiplier = Math.max(1, Math.min(5, Number(data.multiplier || 1)));
+    const slider = document.getElementById('fortune-booster-slider');
+    const value = document.getElementById('fortune-booster-val');
+    if (slider) slider.value = multiplier;
+    if (value) value.textContent = `x${multiplier}`;
+  } catch(e) {}
+}
+
+async function setFortuneBooster(multiplier) {
+  try {
+    const data = await api('POST', '/api/admin/fortune-booster', { multiplier });
+    await loadFortuneBooster();
+    const t = document.createElement('div');
+    t.textContent = `Booster Roue Fortune x${data.multiplier} appliqué`;
+    Object.assign(t.style,{position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1a1a2e',border:'1px solid rgba(191,90,242,.45)',color:'#eeeef5',padding:'10px 20px',borderRadius:'10px',fontSize:'13px',zIndex:'9999'});
+    document.body.appendChild(t); setTimeout(()=>t.remove(),3000);
+  } catch(e) { alert(e.message || 'Erreur booster Roue Fortune.'); }
 }
 
 async function loadSystemStatus() {

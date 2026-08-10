@@ -15,6 +15,11 @@ const FORTUNE_REWARDS = [
   { key: 'grade_lucky', label: 'Grade Chanceux', shortLabel: 'GRADE', icon: '👑', coins: 0, gems: 0, grade: 'Chanceux', weight: 1 },
 ];
 
+function fortuneBooster(db) {
+  const value = Number(db.prepare(`SELECT value FROM config WHERE key = 'fortune_booster_multiplier'`).get()?.value || 1);
+  return Number.isInteger(value) && value >= 1 && value <= 5 ? value : 1;
+}
+
 const CHALLENGES = [
   { key: 'daily_play', period: 'daily', icon: '🎮', rarity: 'common', label: 'Mise en jambes', description: 'Termine 2 parties classées.', metric: 'games', target: 2, coins: 30, xp: 35 },
   { key: 'daily_win', period: 'daily', icon: '🏆', rarity: 'rare', label: 'Première couronne', description: 'Remporte une partie classée.', metric: 'wins', target: 1, coins: 45, xp: 50 },
@@ -307,6 +312,7 @@ function createProgression({ db, pQ, cQ }) {
       level,
       fortuneTickets: Number(row.fortune_tickets || 0),
       fortuneGrade: String(row.fortune_grade || ''),
+      fortuneBooster: fortuneBooster(db),
       dailyTicket: { available: String(row.daily_ticket_key || '') !== periodKey('daily', now), nextAt: periodEndsAt('daily', now) },
       wallet: { coins: Number(pQ.getById.get(playerId)?.coins || 0), gems: Number(pQ.getById.get(playerId)?.gems || 0) },
       fortuneRewards: FORTUNE_REWARDS.map(({ weight, ...reward }) => reward.grade && String(row.fortune_grade || '') === reward.grade
@@ -350,16 +356,27 @@ function createProgression({ db, pQ, cQ }) {
     const total = FORTUNE_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     let draw = Math.floor(Math.random() * total);
     const reward = FORTUNE_REWARDS.find(item => ((draw -= item.weight) < 0)) || FORTUNE_REWARDS[0];
-    if (reward.coins) pQ.addCoins.run({ delta: reward.coins, id: playerId });
-    if (reward.gems) pQ.addGems.run({ delta: reward.gems, id: playerId });
+    const booster = fortuneBooster(db);
+    const boostedCoins = Number(reward.coins || 0) * booster;
+    const boostedGems = Number(reward.gems || 0) * booster;
+    if (boostedCoins) pQ.addCoins.run({ delta: boostedCoins, id: playerId });
+    if (boostedGems) pQ.addGems.run({ delta: boostedGems, id: playerId });
     if (reward.grade) {
       if (String(playerProgression.fortune_grade || '') === reward.grade) {
-        q.addTickets.run(1, Date.now(), playerId);
-        return { ...reward, label: '1 ticket (grade déjà possédé)', shortLabel: '+1 TICKET', icon: '/assets/fortune-ticket.png', grade: '', tickets: 1, converted: true, weight: undefined };
+        q.addTickets.run(booster, Date.now(), playerId);
+        return { ...reward, label: `${booster} ticket${booster > 1 ? 's' : ''} (grade déjà possédé)`, shortLabel: `+${booster} TICKET${booster > 1 ? 'S' : ''}`, icon: '/assets/fortune-ticket.png', grade: '', tickets: booster, boosterMultiplier: booster, converted: true, weight: undefined };
       }
       q.setFortuneGrade.run(reward.grade, Date.now(), playerId);
     }
-    return { ...reward, weight: undefined };
+    return {
+      ...reward,
+      label: boostedCoins ? `${boostedCoins} coins` : boostedGems ? `${boostedGems} gemmes` : reward.label,
+      shortLabel: boostedCoins || boostedGems ? String(boostedCoins || boostedGems) : reward.shortLabel,
+      coins: boostedCoins,
+      gems: boostedGems,
+      boosterMultiplier: booster,
+      weight: undefined,
+    };
   });
 
   function claimDailyTicket(playerId) {

@@ -10102,6 +10102,23 @@ app.post('/api/admin/coin-boost', (req, res) => {
   res.json({ ok: true, multiplier, expiresAt });
 });
 
+app.get('/api/admin/fortune-booster', (req, res) => {
+  if (!isModo(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const multiplier = Number(db.prepare(`SELECT value FROM config WHERE key = 'fortune_booster_multiplier'`).get()?.value || 1);
+  res.json({ multiplier: Number.isInteger(multiplier) && multiplier >= 1 && multiplier <= 5 ? multiplier : 1 });
+});
+
+app.post('/api/admin/fortune-booster', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins peuvent modifier le booster de la roue.' });
+  const multiplier = Number(req.body?.multiplier || 1);
+  if (!Number.isInteger(multiplier) || multiplier < 1 || multiplier > 5) {
+    return res.status(400).json({ error: 'Le booster doit etre compris entre x1 et x5.' });
+  }
+  db.prepare(`INSERT INTO config (key, value) VALUES ('fortune_booster_multiplier', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run(String(multiplier));
+  try { WH.wlogBoost('roue fortune', multiplier, req.headers['x-admin-identity'] || 'Admin panel', 'permanent'); } catch(e) {}
+  res.json({ ok: true, multiplier });
+});
+
 app.post('/api/admin/system-status', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Seuls les admins.' });
   const restarting = Boolean(req.body?.restarting);
