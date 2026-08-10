@@ -4,7 +4,7 @@
 <script src="/performance-bootstrap.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>News 3.5.0 | Puissance 4 Ranked</title>
+<title>News 4.0.0 | Puissance 4 Ranked</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -77,67 +77,63 @@ h1 span{color:var(--pink);text-shadow:0 0 26px rgba(255,45,85,.38)}
   <section class="hero">
     <div class="hero-copy">
       <div class="kicker"><span>&#128240;</span><span>Patch notes officiel</span></div>
-      <h1>Mise a jour <span>3.5.0</span></h1>
-      <p>La 3.5.0 stabilise les sessions, nettoie les anciennes surfaces tournois et affine le confort de jeu : chrono optionnel en local, musique de file plus lisible, presence plus fiable et interface dev revue.</p>
-      <div class="hero-actions"><a class="btn-main" href="/local">Tester le local</a><a class="btn-ghost" href="/dev">Console dev</a></div>
+      <h1>Mise a jour <span>4.0.0</span></h1>
+      <p>La 4.0.0 ouvre une nouvelle ere de jeu avec cinq variantes classees, leurs propres ELO et statistiques, une analyse strategique dediee et des bots capables de les jouer.</p>
+      <div class="hero-actions"><a class="btn-main" href="/game">Jouer aux variantes</a><a class="btn-ghost" href="/regles">Lire les regles</a></div>
     </div>
     <aside class="version-card">
-      <div><div class="version-orb">3.5.0</div><h2>Stabilite</h2><p>Les sessions inactives expirent vraiment apres 10 minutes, et la presence en ligne ne reste plus accrochee a un profil fantome.</p></div>
-      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>13 juillet</strong></div><div class="meta-box"><span>Focus</span><strong>Sessions</strong></div><div class="meta-box"><span>Type</span><strong>Qualite</strong></div></div>
+      <div><div class="version-orb">4.0.0</div><h2>Variantes</h2><p>Plateau rotatif, Anti-Puissance 4, Puissance Bombe, Mission personnelle et Placement simultane rejoignent le mode Classique.</p></div>
+      <div class="version-meta"><div class="meta-box"><span>Statut</span><strong>Deployee</strong></div><div class="meta-box"><span>Date</span><strong>10 aout</strong></div><div class="meta-box"><span>Focus</span><strong>Variantes</strong></div><div class="meta-box"><span>Version</span><strong>4.0.0</strong></div></div>
     </aside>
   </section>
 
   <section>
-    <div class="section-head"><div><h2>Nouveautes recentes</h2><p>Seulement les derniers changements utiles, presentes en bulles courtes pour scanner rapidement.</p></div></div>
+    <div class="section-head"><div><h2>Depuis la 3.6.0</h2><p>Les variantes sont au centre de cette version, accompagnees des evolutions de profil, de progression, de Live et de Discord.</p></div></div>
     <div class="bubble-board">
       <article class="bubble-column" style="--accent:#71ddff;--soft:rgba(113,221,255,.16)">
-        <div class="bubble-title"><div class="icon">&#128640;</div><h2>Mises a jour</h2></div>
+        <div class="bubble-title"><div class="icon">&#127918;</div><h2>Variantes</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10022;</span>Le mode local propose maintenant un temps de reflexion optionnel avant de lancer la partie.</div>
-          <div class="news-bubble"><span>&#10022;</span>Si le chrono local tombe a zero, un coup automatique facile est joue dans une colonne legale.</div>
-          <div class="news-bubble"><span>&#10022;</span>La barre de musique de file affiche le temps ecoule et la duree en temps reel, sans requete serveur repetee.</div>
-          <div class="news-bubble"><span>&#10022;</span>La page de connexion dev adopte une interface Security Gate plus claire et plus immersive.</div>
-          <div class="news-bubble"><span>&#10022;</span>Les pages publiques et le bot Discord affichent maintenant la version 3.5.0.</div>
-          <div class="news-bubble"><span>&#10022;</span>Les anciennes entrees tournois ont ete retirees des menus, stats, docs, profils et commandes Discord.</div>
+          <div class="news-bubble"><span>&#10022;</span>Cinq variantes disponibles en production, chacune avec ses propres regles.</div>
+          <div class="news-bubble"><span>&#10022;</span>ELO, classement, victoires, defaites et nuls sont separes par variante.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le matchmaking et les duels transmettent maintenant la variante choisie.</div>
+          <div class="news-bubble"><span>&#10022;</span>Le moteur d'analyse beta comprend rotations, anti-jeu, bombes, missions et coups simultanes.</div>
+          <div class="news-bubble"><span>&#10022;</span>Les bots officiels utilisent cette analyse et adaptent sa profondeur a leur niveau.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#ffd60a;--soft:rgba(255,214,10,.16)">
-        <div class="bubble-title"><div class="icon">&#9881;</div><h2>Modifications</h2></div>
+        <div class="bubble-title"><div class="icon">&#128308;</div><h2>Live et jeu</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9679;</span>Les sessions joueur sont maintenant limitees par l'inactivite serveur, avec extension seulement quand l'utilisateur est actif.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les sockets expirent proprement et retirent la presence en ligne quand la session n'est plus valide.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les routes tournoi redirigent ou repondent en mode retire pour eviter de remettre l'ancienne feature en avant.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les anciennes parties avec metadata tournoi retombent sur un affichage ranked/friendly normal.</div>
-          <div class="news-bubble"><span>&#9679;</span>Le cache PWA a ete incremente pour forcer les nouvelles surfaces 3.5.0.</div>
-          <div class="news-bubble"><span>&#9679;</span>Les textes API, i18n, menu et ticker ont ete harmonises avec la version active.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le Live propose un menu pour regarder une variante precise ou toutes les parties.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les cartes Live indiquent la variante et separent clairement joueurs et bots.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le mode spectateur gagne une grille plus lisible, des reactions, pronostics et spectateurs visibles.</div>
+          <div class="news-bubble"><span>&#9679;</span>Les replays conservent la variante et les actions speciales de la partie.</div>
+          <div class="news-bubble"><span>&#9679;</span>Le laboratoire beta permet de comparer plusieurs lignes conseillees.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#30d158;--soft:rgba(48,209,88,.16)">
-        <div class="bubble-title"><div class="icon">&#128295;</div><h2>Resolutions de bugs</h2></div>
+        <div class="bubble-title"><div class="icon">&#128100;</div><h2>Profils et progression</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#10003;</span>Le logout automatique de 10 minutes ne depend plus uniquement du navigateur.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le profil ne reste plus marque en ligne apres expiration de session.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le service worker recharge aussi les assets de presence au lieu de garder une ancienne logique.</div>
-          <div class="news-bubble"><span>&#10003;</span>Le controle de musique de file arrete son timer quand la musique s'arrete.</div>
-          <div class="news-bubble"><span>&#10003;</span>Les scripts inline des pages modifiees restent valides apres la mise a jour.</div>
+          <div class="news-bubble"><span>&#10003;</span>Nouveaux fonds PC et mobile, plaques nominatives, decorations d'avatar et bannieres.</div>
+          <div class="news-bubble"><span>&#10003;</span>Les statistiques de profil peuvent etre consultees variante par variante.</div>
+          <div class="news-bubble"><span>&#10003;</span>Groupes, clans, missions et progression enrichissent les objectifs hors partie.</div>
+          <div class="news-bubble"><span>&#10003;</span>La boutique, les collections de jetons et la roue de la fortune accueillent de nouvelles recompenses.</div>
+          <div class="news-bubble"><span>&#10003;</span>La presence et la derniere connexion restent synchronisees avec les sessions serveur.</div>
         </div>
       </article>
       <article class="bubble-column" style="--accent:#8b9cf4;--soft:rgba(88,101,242,.18)">
-        <div class="bubble-title"><div class="icon">&#127918;</div><h2>Discord RPC</h2></div>
+        <div class="bubble-title"><div class="icon">&#128172;</div><h2>Discord et qualite</h2></div>
         <div class="bubble-list">
-          <div class="news-bubble"><span>&#9670;</span>Un compagnon local relie le site a Discord Desktop pour afficher un Rich Presence Puissance 4.</div>
-          <div class="news-bubble"><span>&#9670;</span>La presence suit l'activite : exploration de l'arene, file d'attente, adversaire trouve, partie ou consultation du profil.</div>
-          <div class="news-bubble"><span>&#9670;</span>Discord peut afficher l'avatar du joueur et jusqu'a deux boutons vers son profil et le site.</div>
-          <div class="news-bubble"><span>&#9670;</span>Si le site ne transmet plus d'activite, le compagnon revient automatiquement sur une presence de secours.</div>
-          <div class="news-bubble"><span>&#9670;</span>Le compagnon communique uniquement avec le site Puissance 4 et le client Discord local, sans lire les mots de passe.</div>
-          <div class="news-bubble"><span>&#9670;</span>Le RPC fonctionne sur ordinateur avec Discord Desktop et Node.js ; les navigateurs mobiles et la PWA ne peuvent pas piloter Discord directement.</div>
-          <a class="news-bubble" href="/downloads/puissance4-discord-rpc.zip" style="--accent:#8b9cf4;text-decoration:none"><span>&#11015;</span>Telecharger le pack Discord Rich Presence.</a>
+          <div class="news-bubble"><span>&#9670;</span>Le profil Discord devient une carte Canvas compacte avec les cosmetiques et statistiques utiles.</div>
+          <div class="news-bubble"><span>&#9670;</span>Deux menus separes permettent de changer de variante et d'ouvrir les parties recentes.</div>
+          <div class="news-bubble"><span>&#9670;</span>La commande /variantes explique toutes les regles directement dans Discord.</div>
+          <div class="news-bubble"><span>&#9670;</span>Les resultats Discord et les replays affichent la variante jouee.</div>
+          <div class="news-bubble"><span>&#9670;</span>Corrections de stabilite sur les sessions, la presence, le cache PWA et les interfaces mobiles.</div>
         </div>
       </article>
     </div>
   </section>
 
-  <div class="footer-note">Version 3.5.0 : sessions 10 minutes fiabilisees, presence nettoyee, tournois retires des surfaces publiques, chrono local optionnel, musique de file avec temps reel, login dev modernise et textes de version synchronises.</div>
+  <div class="footer-note">Version 4.0.0 : cinq variantes classees, statistiques et classements dedies, analyse beta partagee avec les bots, Live filtrable, profils enrichis et nouvelles commandes Discord.</div>
 </main>
 <script src="/theme.js?v=eggs-33"></script>
 </body>

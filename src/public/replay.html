@@ -569,7 +569,7 @@ function renderShell() {
       <div class="progress-top">
         <span class="progress-label">Replay en cours</span>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Telecharger la partie</button>
+          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Télécharger JSON</button>
           <span style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Vitesse</span>
           ${[1,2,4].map(s => `<button id="speed-btn-${s}" onclick="setSpeed(${s})" style="padding:2px 8px;border-radius:6px;border:1px solid ${s===1?'rgba(76,110,245,0.5)':'rgba(255,255,255,0.1)'};background:${s===1?'rgba(76,110,245,0.2)':'transparent'};color:${s===1?'#8b9cf4':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">x${s}</button>`).join('')}
           <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
@@ -602,7 +602,7 @@ function renderShell() {
       <div class="end-sub" id="end-sub"></div>
       <div class="end-btns">
         <button class="btn-action primary" onclick="restartReplay()">↺ Revoir</button>
-        <button class="btn-action ghost" onclick="downloadReplayHtml()">Telecharger la partie</button>
+        <button class="btn-action ghost" onclick="downloadReplayHtml()">Télécharger JSON</button>
         <a class="btn-action ghost" href="/">Jouer</a>
       </div>
     </div>
@@ -708,6 +708,20 @@ function restartReplay() {
 
 function downloadReplayHtml() {
   if (!gameData || !Array.isArray(moves) || !moves.length) return;
+  const exportPayload = {
+    format: 'puissance4-replay-v2', exported_at: new Date().toISOString(), game: gameData,
+    moves: moves.map(move => ({ player_id: move.player_id, col: Number(move.col), row: Number(move.row), move_number: Number(move.move_number), think_ms: Number(move.think_ms || 0) })),
+    actions: (actions || []).map(action => ({
+      player_id: action.player_id ?? null, action_number: Number(action.action_number || 0), action_type: String(action.action_type || ''),
+      payload: typeof action.payload === 'string' ? (() => { try { return JSON.parse(action.payload); } catch (_) { return {}; } })() : (action.payload || {}),
+    })),
+  };
+  const jsonBlob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json;charset=utf-8' });
+  const jsonUrl = URL.createObjectURL(jsonBlob), jsonLink = document.createElement('a');
+  jsonLink.href = jsonUrl; jsonLink.download = `puissance4-replay-${gameData.id || getGameId()}.json`;
+  document.body.appendChild(jsonLink); jsonLink.click(); jsonLink.remove();
+  setTimeout(() => URL.revokeObjectURL(jsonUrl), 1000);
+  return;
   const winnerLabel = gameData.winner_id === null
     ? 'Match nul'
     : (gameData.winner_id === gameData.player1_id ? `${gameData.p1_pseudo} a gagne` : `${gameData.p2_pseudo} a gagne`);

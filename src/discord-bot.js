@@ -92,6 +92,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
     { name: 'stats', description: 'Afficher les statistiques du site' },
     { name: 'systeme', description: 'Afficher l etat public du serveur' },
     { name: 'live', description: 'Afficher les parties en direct' },
+    { name: 'variantes', description: 'Lire les regles des variantes Puissance 4' },
     { name: 'boutique', description: 'Afficher la boutique Puissance 4' },
     { name: 'api', description: 'Afficher la documentation API officielle du site' },
     { name: 'boosts', description: 'Afficher les boosts ELO et Coins actifs' },
@@ -1190,6 +1191,37 @@ function startDiscordBot(ctx) {
       ],
       rows: profileRows(player, games),
     });
+  }
+
+  function profileVariantRow(player, selected) {
+    return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder()
+      .setCustomId(`p4_profile_variant:${player.id}`).setPlaceholder(`Variante : ${variantLabel(selected)}`)
+      .addOptions(publicVariants().map(v => new StringSelectMenuOptionBuilder().setLabel(v.label).setValue(v.id).setDefault(v.id === selected))));
+  }
+
+  async function profileCanvasPayload(player, requestedVariant = 'classic') {
+    const stats = playerVariantStats(player, requestedVariant), games = latestGames(player.id, stats.variant);
+    let createCanvas, loadImage;
+    try { ({ createCanvas, loadImage } = require('canvas')); }
+    catch (error) { console.warn('[BOT PROFIL CANVAS]', error.message); return profilePayload(player, requestedVariant); }
+    const canvas = createCanvas(1000, 420), c = canvas.getContext('2d'), accent = String(player.color || '#ff2d55');
+    const gradient = c.createLinearGradient(0, 0, 1000, 420); gradient.addColorStop(0, '#080916'); gradient.addColorStop(.65, accent); gradient.addColorStop(1, '#111426');
+    c.fillStyle=gradient;c.fillRect(0,0,1000,420);c.fillStyle='rgba(4,5,14,.60)';c.fillRect(0,0,1000,420);
+    const image = async (value, fallback='') => { try { const src=String(value||fallback); return await loadImage(src.startsWith('/')?path.join(__dirname,'public',src.slice(1)):src); } catch(_){ return null; } };
+    const wallpaper=await image(player.profile_wallpaper_desktop||player.banner);if(wallpaper){const s=Math.max(1000/wallpaper.width,420/wallpaper.height);c.globalAlpha=.38;c.drawImage(wallpaper,(1000-wallpaper.width*s)/2,(420-wallpaper.height*s)/2,wallpaper.width*s,wallpaper.height*s);c.globalAlpha=1}
+    c.fillStyle='rgba(10,11,28,.84)';c.roundRect(28,28,944,364,28);c.fill();c.fillStyle=accent;c.fillRect(28,28,8,364);
+    const avatar=await image(player.avatar,'/assets/site-logo-small.png');c.save();c.beginPath();c.arc(150,145,82,0,Math.PI*2);c.clip();if(avatar)c.drawImage(avatar,68,63,164,164);c.restore();c.strokeStyle=accent;c.lineWidth=7;c.beginPath();c.arc(150,145,86,0,Math.PI*2);c.stroke();
+    const deco=await image(player.avatar_decoration);if(deco)c.drawImage(deco,48,43,204,204);
+    c.fillStyle='#fff';c.font='700 45px "Barlow Condensed"';c.fillText(String(player.pseudo).slice(0,24),280,96);c.fillStyle='#aeb5ca';c.font='400 21px Barlow';c.fillText(`${variantLabel(stats.variant)} · dernière connexion ${player.last_seen?new Date(Number(player.last_seen)).toLocaleDateString('fr-FR'):'inconnue'}`,280,132);
+    const total=stats.wins+stats.losses+stats.draws,values=[['ELO',fmt(stats.elo)],['VICTOIRES',fmt(stats.wins)],['DÉFAITES',fmt(stats.losses)],['NULS',fmt(stats.draws)],['WINRATE',total?`${Math.round(stats.wins/total*100)}%`:'0%']];
+    values.forEach(([label,value],i)=>{const x=280+(i%3)*215,y=170+Math.floor(i/3)*92;c.fillStyle='rgba(255,255,255,.08)';c.roundRect(x,y,195,70,15);c.fill();c.fillStyle='#aeb5ca';c.font='600 14px Barlow';c.fillText(label,x+15,y+22);c.fillStyle='#fff';c.font='700 29px "Barlow Condensed"';c.fillText(value,x+15,y+55)});
+    const plate=await image(player.search_nameplate||player.profile_banner);if(plate)c.drawImage(plate,58,276,184,56);c.fillStyle='#d5d9e7';c.font='600 17px Barlow';c.fillText(roleBadges(player).replace(/\*/g,''),62,370);
+    const file=new AttachmentBuilder(canvas.toBuffer('image/png'),{name:`profil-${player.id}.png`});
+    return containerMessage({color:parseInt(accent.replace('#',''),16)||0xff2d55,title:player.pseudo,subtitle:`${variantLabel(stats.variant)} · ${fmt(stats.elo)} ELO`,sections:[`![Carte du profil](attachment://profil-${player.id}.png)`,`Dernière connexion : ${player.last_seen?formatDiscordTimestamp(Number(player.last_seen),'R'):'**inconnue**'}`,profileBotSummary(player)],buttons:[linkButton('Voir profil',playerUrl(player),'👤'),linkButton('Personnaliser',`${api}/profil`,'🎨')],rows:[profileVariantRow(player,stats.variant),...profileRows(player,games)],files:[file]});
+  }
+
+  function variantsPayload() {
+    return containerMessage({color:0x85ebff,title:'Règles des variantes',subtitle:'Chaque variante possède son propre classement.',sections:['### Classique\nAligne quatre jetons.','### Plateau rotatif\nLa grille tourne tous les quatre coups, puis la gravité agit.','### Anti-Puissance 4\nÉvite les lignes ; un alignement disponible devient obligatoire et le plus petit score gagne.','### Puissance Bombe\nUne bombe par joueur retire les voisins d’un jeton.','### Mission personnelle\nAccomplis ton objectif secret avant l’adversaire.','### Placement simultané\nLes deux choix sont révélés ensemble et l’initiative alterne.'],buttons:[linkButton('Règles complètes',`${api}/regles`,'📖')]});
   }
 
   function statsPayload() {
@@ -2545,6 +2577,12 @@ function startDiscordBot(ctx) {
         if (!payload) return replyError(interaction, 'Partie introuvable');
         return interaction.editReply(payload);
       }
+      if (interaction.isStringSelectMenu() && interaction.customId.startsWith('p4_profile_variant:')) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const player = ctx.db.prepare('SELECT * FROM players WHERE id=? AND deleted=0').get(Number(interaction.customId.split(':')[1]));
+        if (!player) return replyError(interaction, 'Joueur introuvable');
+        return interaction.editReply(await profileCanvasPayload(player, interaction.values?.[0] || 'classic'));
+      }
       if (interaction.isButton?.() && interaction.customId.startsWith('p4_giveaway_join:')) {
         return handleGiveawayButton(interaction, interaction.customId.split(':')[1]);
       }
@@ -2564,12 +2602,12 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'profil') {
         const player = playerByPseudo(interaction.options.getString('pseudo', true));
         if (!player) return replyError(interaction, 'Joueur introuvable');
-        return interaction.editReply(profilePayload(player, interaction.options.getString('variante') || 'classic'));
+        return interaction.editReply(await profileCanvasPayload(player, interaction.options.getString('variante') || 'classic'));
       }
       if (interaction.commandName === 'moi') {
         const player = playerByDiscord(interaction.user.id);
         if (!player) return replyError(interaction, 'Compte non lie', `Lie ton compte depuis ${api}/profil`);
-        return interaction.editReply(profilePayload(player, interaction.options.getString('variante') || 'classic'));
+        return interaction.editReply(await profileCanvasPayload(player, interaction.options.getString('variante') || 'classic'));
       }
       if (interaction.commandName === 'ui') return interaction.editReply(await userInfoPayload(interaction));
       if (interaction.commandName === 'classement') return interaction.editReply(leaderboardPayload(interaction.options.getString('type') || 'humans', interaction.options.getString('variante') || 'classic'));
@@ -2577,6 +2615,7 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'stats') return interaction.editReply(statsPayload());
       if (interaction.commandName === 'systeme') return interaction.editReply(systemPayload());
       if (interaction.commandName === 'live') return interaction.editReply(livePayload());
+      if (interaction.commandName === 'variantes') return interaction.editReply(variantsPayload());
       if (interaction.commandName === 'boutique') return interaction.editReply(shopPayload());
       if (interaction.commandName === 'api') return interaction.editReply(apiPayload());
       if (interaction.commandName === 'boosts') return interaction.editReply(boostsPayload());

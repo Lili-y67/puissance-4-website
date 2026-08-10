@@ -1844,21 +1844,56 @@ function chooseBuiltinBotMoveAsync(state, side) {
   });
 }
 
+function chooseVariantBotActionAsync(state, side) {
+  const gameId = Number(state?.id || 0);
+  if (!gameId || botSearchWorkers.has(gameId)) return Promise.resolve(null);
+  const rawDepth = getBuiltinBotSearchDepth(state, side);
+  const depth = rawDepth >= 10 ? 3 : rawDepth >= 7 ? 2 : 1;
+  const worker = new Worker(path.join(__dirname, 'public', 'beta-variant-analysis-worker.js'));
+  botSearchWorkers.set(gameId, worker);
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (botSearchWorkers.get(gameId) === worker) botSearchWorkers.delete(gameId);
+      worker.terminate().catch(() => {});
+      resolve(result);
+    };
+    const timeout = setTimeout(() => finish(null), 4500);
+    worker.once('message', message => {
+      const action = message?.ok ? message.analysis?.actions?.[0] : null;
+      if (action) state.lastBotSearch = { player: state.players[side]?.pseudo || 'Bot', depthTarget: depth, depthCompleted: depth, score: Number(action.score || 0) };
+      finish(action || null);
+    });
+    worker.once('error', () => finish(null));
+    worker.postMessage({ requestId: gameId, depth, state: {
+      mode: state.variant, grid: state.board.grid, turn: side, simChooser: side,
+      moves: state.moveCount, bombs: state.bombs, missions: state.missions, initiative: state.initiative,
+    } });
+  });
+}
+
 function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
   setTimeout(async () => {
     try {
       const state = gm.games.get(gameId);
       if (!state || state.status !== 'active') return;
-      const side = state.current;
+      let side = state.current;
+      if (state.variant === 'simultaneous' && state.simultaneousChoices?.[side] !== null) side = side === 1 ? 2 : 1;
       const player = state.players[side];
       if (!builtinBotIds.has(Number(player?.id))) return;
-      let col = await chooseBuiltinBotMoveAsync(state, side);
+      const action = state.variant === 'classic' ? null : await chooseVariantBotActionAsync(state, side);
+      let col = action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
       const freshState = gm.games.get(gameId);
-      if (!freshState || freshState !== state || state.status !== 'active' || state.current !== side) return;
+      if (!freshState || freshState !== state || state.status !== 'active' || (state.variant !== 'simultaneous' && state.current !== side)) return;
       const validCols = state.board.getValidCols();
       if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
       if (col === null) return;
-      const result = gm.playMove(player.socketId, col);
+      let result;
+      if (state.variant === 'bomb' && action?.kind === 'bomb') result = gm.useBomb(player.socketId, action.row, action.col);
+      else result = gm.playMove(player.socketId, col);
       if (result?.gameId) {
         if (result.type === 'game_over') emitGameOver(result);
         else io.to('game:' + result.gameId).emit('move_played', result);
@@ -1870,7 +1905,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
         }
       }
       if (result?.type !== 'game_over') emitLiveUpdate();
-      scheduleBuiltinBotTurn(gameId, 650 + Math.floor(Math.random() * 600));
+      scheduleBuiltinBotTurn(gameId, state.variant === 'simultaneous' ? 120 : 650 + Math.floor(Math.random() * 600));
     } catch (error) {
       console.error('[BOT TURN]', error.message);
       const state = gm.games.get(gameId);
@@ -1879,18 +1914,19 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
   }, delayMs);
 }
 
-function createBotVsBotGame(botA, botB, gameType = 'ranked') {
+function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic') {
   const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
   assignDistinctMatchColors(p1, p2);
-  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
+  const state = gm.create(p1, p2, { gameType, variant, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
+  prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
   scheduleBuiltinBotTurn(state.id, 500);
   return state;
 }
 
-function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
+function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked', variant = 'classic') {
   const challengerIsBot = Number(challenger?.is_bot || 0) === 1;
   const p1 = challengerIsBot
     ? buildBotGamePayload(challenger, botSocketId(challenger.id))
@@ -1901,11 +1937,22 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked') {
   assignDistinctMatchColors(p1, p2);
 
   const current = challengerIsBot && Math.random() < 0.5 ? 1 : 2;
-  const state = gm.create(p1, p2, { gameType, moveTimeSeconds: 60, current });
+  const state = gm.create(p1, p2, { gameType, variant, moveTimeSeconds: 60, current });
+  prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
   if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
+}
+
+function prepareBuiltinBotVariant(state) {
+  if (state.variant !== 'mission') return;
+  const missions = [...MISSION_DEFINITIONS].sort(() => Math.random() - 0.5);
+  for (const side of [1, 2]) {
+    if (builtinBotIds.has(Number(state.players[side]?.id)) && !state.missions[side]) {
+      gm.selectMission(state.players[side].socketId, missions[side - 1]?.id || missions[0].id);
+    }
+  }
 }
 
 // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA Archivage automatique des parties > 14 jours AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
@@ -1971,7 +2018,9 @@ function runBackgroundBotMatchmaking(reason = 'loop') {
       botArenaRestUntil.set(Number(botB.id), Date.now() + BOT_ARENA_REST_MS);
       botRuntime.set(Number(botA.id), { status: 'arena', lastSeen: Date.now() });
       botRuntime.set(Number(botB.id), { status: 'arena', lastSeen: Date.now() });
-      const state = createBotVsBotGame(botA, botB, 'ranked');
+      const variants = publicVariants().map(item => item.id);
+      const variant = variants[Math.floor(Math.random() * variants.length)] || 'classic';
+      const state = createBotVsBotGame(botA, botB, 'ranked', variant);
       console.log(`[BOT-ARENA] ${reason}: ${botA.pseudo} vs ${botB.pseudo} game=${state.id}`);
     }
   } catch (error) {
@@ -2023,40 +2072,17 @@ async function sendGameArchiveToDiscord(fileBuffer, filename, rows) {
 function createCompressedGameArchive(rows) {
   const firstId = Number(rows[0].id);
   const lastId = Number(rows[rows.length - 1].id);
-  const filename = `p4-games-${firstId}-${lastId}-${new Date().toISOString().slice(0, 10)}.sqlite.gz`;
-  const sqlitePath = path.join(os.tmpdir(), `${process.pid}-${Date.now()}-${firstId}-${lastId}.sqlite`);
-  const archiveDb = new Database(sqlitePath);
-  try {
-    archiveDb.exec(`
-      PRAGMA journal_mode=DELETE;
-      CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-      CREATE TABLE games (id INTEGER PRIMARY KEY, payload TEXT NOT NULL);
-      CREATE TABLE moves (game_id INTEGER NOT NULL, move_number INTEGER NOT NULL, payload TEXT NOT NULL);
-      CREATE TABLE actions (game_id INTEGER NOT NULL, action_number INTEGER NOT NULL, payload TEXT NOT NULL);
-    `);
-    const putMeta = archiveDb.prepare(`INSERT INTO metadata(key,value) VALUES (?,?)`);
-    const putGame = archiveDb.prepare(`INSERT INTO games(id,payload) VALUES (?,?)`);
-    const putMove = archiveDb.prepare(`INSERT INTO moves(game_id,move_number,payload) VALUES (?,?,?)`);
-    const putAction = archiveDb.prepare(`INSERT INTO actions(game_id,action_number,payload) VALUES (?,?,?)`);
-    archiveDb.transaction(() => {
-      putMeta.run('format', 'puissance4-game-archive-v1');
-      putMeta.run('created_at', new Date().toISOString());
-      putMeta.run('first_game_id', String(firstId));
-      putMeta.run('last_game_id', String(lastId));
-      for (const game of rows) {
-        putGame.run(game.id, JSON.stringify(game));
-        for (const move of mQ.getByGame.all(game.id)) putMove.run(game.id, Number(move.move_number || 0), JSON.stringify(move));
-        for (const action of aQ.getByGame.all(game.id)) putAction.run(game.id, Number(action.action_number || 0), JSON.stringify(action));
-      }
-    })();
-  } finally {
-    archiveDb.close();
-  }
-  try {
-    return { filename, buffer: zlib.gzipSync(fs.readFileSync(sqlitePath), { level: 9 }) };
-  } finally {
-    try { fs.unlinkSync(sqlitePath); } catch (_) {}
-  }
+  const filename = `p4-games-${firstId}-${lastId}-${new Date().toISOString().slice(0, 10)}.json.gz`;
+  const payload = {
+    format: 'puissance4-game-archive-v2',
+    created_at: new Date().toISOString(), first_game_id: firstId, last_game_id: lastId,
+    games: rows.map(game => ({
+      format: 'puissance4-replay-v2', game,
+      moves: mQ.getByGame.all(game.id),
+      actions: aQ.getByGame.all(game.id).map(action => ({ ...action, payload: (() => { try { return JSON.parse(action.payload || '{}'); } catch (_) { return {}; } })() })),
+    })),
+  };
+  return { filename, buffer: zlib.gzipSync(Buffer.from(JSON.stringify(payload)), { level: 9 }) };
 }
 
 async function purgeArchivedGames() {
@@ -2091,8 +2117,18 @@ async function purgeArchivedGames() {
     db.prepare(`INSERT INTO game_archive_batches(first_game_id,last_game_id,game_count,period_start,period_end,filename,sent_at) VALUES (?,?,?,?,?,?,?)`)
       .run(games[0].id, games[games.length - 1].id, games.length, games[0].finished_at, games[games.length - 1].finished_at, archive.filename, purgedAt);
   });
-  purge(rows);
-  console.log(`[Archive] ${rows.length} partie(s) envoyee(s) puis purgee(s): ${archive.filename}`);
+  db.transaction(games => {
+    const markPending = db.prepare('UPDATE games SET archived=2 WHERE id=? AND archived=1');
+    for (const game of games) markPending.run(game.id);
+  })(rows);
+  const delayedPurge = setTimeout(() => {
+    try {
+      purge(rows);
+      console.log(`[Archive] ${rows.length} partie(s) purgee(s) une heure apres envoi: ${archive.filename}`);
+    } catch (error) { console.error('[Archive purge differee]', error.message); }
+  }, 60 * 60 * 1000);
+  delayedPurge.unref?.();
+  console.log(`[Archive] ${rows.length} partie(s) envoyee(s): purge programmee dans 1 heure (${archive.filename})`);
 }
 
 let gameArchiveMaintenanceRunning = false;
@@ -2106,6 +2142,12 @@ async function runGameArchiveMaintenance() {
 }
 setTimeout(runGameArchiveMaintenance, 30_000).unref?.();
 setInterval(runGameArchiveMaintenance, 60 * 60 * 1000).unref?.();
+// Un redémarrage pendant l'heure de grâce ne doit jamais laisser des parties
+// bloquées : elles redeviennent archivables et seront renvoyées avant purge.
+setTimeout(() => {
+  try { db.prepare('UPDATE games SET archived=1 WHERE archived=2').run(); }
+  catch (error) { console.error('[Archive reprise]', error.message); }
+}, 60 * 60 * 1000).unref?.();
 
 app.use(express.json({ limit: '14mb' })); // avatars/bannieres/fonds base64
 
@@ -2159,8 +2201,10 @@ app.get('/boutique.html', renderStaticPage('boutique.html', { title: 'Boutique -
 app.get('/regles.html', renderStaticPage('regles.html', { title: 'Regles - Puissance 4', description: 'Apprends les regles du Puissance 4 et les bases pour gagner.' }));
 app.get('/stats.html', renderStaticPage('stats.html', { title: 'Statistiques - Puissance 4', description: 'Explore les statistiques globales de Puissance 4.' }));
 app.get('/news.html', renderStaticPage('news.html', { title: 'Nouveautes - Puissance 4', description: 'Decouvre les dernieres nouveautes de Puissance 4.' }));
+app.get('/outils.html', renderStaticPage('outils.html', { title: 'Outils - Puissance 4', description: 'Telecharge le mode hors connexion ou visualise une partie exportee.' }));
 app.get('/analyse.html', renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
 app.get('/progression.html', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
+app.get('/roue-fortune.html', renderStaticPage('roue-fortune.html', { title: 'Roue Fortune - Puissance 4', description: 'Utilise tes tickets et tente de gagner des coins, des gemmes ou le Grade Chanceux.' }));
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
   lastModified: true,
@@ -2352,6 +2396,21 @@ app.get('/beta-game',  (req, res, next) => {
   next();
 }, renderStaticPage('beta-game.html', { title: 'Laboratoire beta - Puissance 4', description: 'Teste les variantes experimentales du Puissance 4.' }));
 app.get('/local',      renderStaticPage('local.html', { title: 'Mode local - Puissance 4', description: 'Joue au Puissance 4 sur le meme appareil.' }));
+app.get('/outils',     renderStaticPage('outils.html', { title: 'Outils - Puissance 4', description: 'Telecharge le mode hors connexion ou visualise une partie exportee.' }));
+app.get('/api/tools/local-offline', (_req, res) => {
+  const source = fs.readFileSync(path.join(__dirname, 'public', 'local.html'), 'utf8');
+  const standalone = source
+    .replace(/<script[^>]+src="\/(?:performance-bootstrap|presence|theme)[^"]*"[^>]*><\/script>/gi, '')
+    .replace(/<link[^>]+href="\/(?:theme|board-skins)[^"]*"[^>]*>/gi, '')
+    .replace(/<link[^>]+href="\/[^"]*"[^>]*>/gi, '')
+    .replace(/<link[^>]+href="https:\/\/fonts\.googleapis\.com[^"]*"[^>]*>/gi, '')
+    .replace(/<a href="\/downloads\/puissance4-local-offline\.html"[^>]*>[^<]*<\/a>/i, '')
+    .replace('</head>', '<meta name="p4-offline-version" content="4.0.0"><\/head>');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="Puissance-4-Hors-Connexion-4.0.0.html"');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(standalone);
+});
 app.get('/spec/:id', (req, res) => {
   const gameId = Number(req.params.id);
   const state = gm.games.get(gameId);
@@ -5830,6 +5889,8 @@ app.get('/analyse',    renderStaticPage('analyse.html', { title: 'Analyse - Puis
 app.get('/analyse.html', renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
 app.get('/progression', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
 app.get('/progression.html', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
+app.get('/roue-fortune', renderStaticPage('roue-fortune.html', { title: 'Roue Fortune - Puissance 4', description: 'Utilise tes tickets et tente de gagner des coins, des gemmes ou le Grade Chanceux.' }));
+app.get('/roue-fortune.html', renderStaticPage('roue-fortune.html', { title: 'Roue Fortune - Puissance 4', description: 'Utilise tes tickets et tente de gagner des coins, des gemmes ou le Grade Chanceux.' }));
 app.get('/tournoi',     (_, res) => res.redirect('/'));
 app.get('/tournoi/:id', (_, res) => res.redirect('/'));
 app.get('/duel/:id',    renderStaticPage('duel.html', { title: 'Duel - Puissance 4', description: 'Rejoins une invitation de duel Puissance 4.' }));
@@ -5852,7 +5913,7 @@ db.exec(`
 `);
 
 const EASTER_EGG_REWARD_PATHS = new Set([
-  '/profil', '/boutique', '/progression', '/leaderboard', '/players',
+  '/profil', '/boutique', '/progression', '/roue-fortune', '/leaderboard', '/players',
   '/analyse', '/stats', '/news', '/regles', '/api-doc',
   '/local', '/replay', '/cgu', '/duel', '/forgot-password',
   '/reset-password', '/404',
@@ -7613,7 +7674,7 @@ app.post('/api/bot/challenge/:id', (req, res) => {
   const runtime = publicBotRuntime(target.id);
   if (!runtime.online) return res.status(409).json({ error: 'Le bot cible est hors ligne.' });
   botRuntime.set(Number(challenger.id), { status: 'playing', lastSeen: Date.now() });
-  const state = createChallengeVsBotGame(challenger, target, 'ranked');
+  const state = createChallengeVsBotGame(challenger, target, 'ranked', normalizeVariant(req.body?.variant));
   res.json({ ok: true, game: serializeBotGameState(state, challenger.id), target: sanitize(target) });
 });
 
@@ -7629,7 +7690,7 @@ app.post('/api/bots/preconfigured/match', (req, res) => {
   const free = bots.filter(bot => !findActiveBotGame(bot.id));
   const pool = free.length >= 2 ? free : bots;
   const shuffled = pool.sort(() => Math.random() - 0.5);
-  const state = createBotVsBotGame(shuffled[0], shuffled[1], 'ranked');
+  const state = createBotVsBotGame(shuffled[0], shuffled[1], 'ranked', normalizeVariant(req.body?.variant));
   res.json({ ok: true, game: serializeBotGameState(state, shuffled[0].id) });
 });
 
@@ -7649,7 +7710,7 @@ app.post('/api/bots/:id/challenge', (req, res) => {
   const runtime = publicBotRuntime(target.id);
   if (!runtime.online) return res.status(409).json({ error: 'Ce bot est hors ligne.' });
   clearPlayerQueues(challenger.id);
-  const state = createChallengeVsBotGame(challenger, target, 'ranked');
+  const state = createChallengeVsBotGame(challenger, target, 'ranked', normalizeVariant(req.body?.variant));
   res.json({ ok: true, gameId: state.id, gameUrl: `/game/${state.id}`, game: serializeBotGameState(state, challenger.id), target: sanitize(target) });
 });
 

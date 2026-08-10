@@ -504,6 +504,7 @@ input[type="file"]{display:none;}
 .profile-variant-select option:disabled{color:rgba(238,238,245,.36)!important}
 .profile-action-btn{width:100%;padding:8px 10px;border-radius:9px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.045);color:var(--muted);font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:.18s}
 .profile-action-btn:hover{color:var(--text);border-color:rgba(255,255,255,.24);transform:translateY(-1px)}
+.fortune-nav-btn{display:inline-flex!important;align-items:center;gap:7px;color:#ffe381!important;border-color:rgba(255,198,55,.35)!important;background:linear-gradient(110deg,rgba(255,55,37,.12),rgba(150,40,205,.12))!important}.fortune-nav-btn img{width:31px;height:24px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.35))}
 .booster-choice-list{display:grid;gap:9px;padding:16px}
 .booster-choice{display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;padding:12px 13px;border-radius:14px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:var(--text);cursor:pointer}
 .booster-choice:hover{border-color:rgba(133,235,255,.34);background:rgba(133,235,255,.07)}
@@ -1450,6 +1451,7 @@ body.search-open .profile-side{
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
     <div class="nav-btns">
       <a class="btn-nav" href="/">← Jouer</a>
+      <a class="btn-nav fortune-nav-btn" href="/roue-fortune"><img src="/assets/fortune-ticket.png" alt=""> Roue Fortune</a>
       <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">Déconnexion</button>
       <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">Fermer le compte</button>
     </div>

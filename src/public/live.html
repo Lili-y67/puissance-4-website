@@ -36,6 +36,8 @@ img,canvas,svg{max-width:100%}
 .headline-sub strong{color:var(--text)}
 .status-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;background:rgba(76,110,245,0.12);border:1px solid rgba(76,110,245,0.22);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .headline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.live-filter{min-height:38px;padding:0 38px 0 14px;border-radius:999px;border:1px solid rgba(133,235,255,.28);background:rgba(133,235,255,.08);color:#dffaff;font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.live-filter option{background:#111126;color:#fff;text-transform:none}
 .sound-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.24);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .sound-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.48);background:rgba(255,214,10,.14)}
 .sound-btn.muted{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
@@ -260,6 +262,7 @@ body.p4-wallpaper-mode .live-cell{background:radial-gradient(circle at 50% 66%,r
       <div class="headline-sub"><strong id="count">-</strong> partie(s) en cours · <span id="live-status" style="color:var(--green)">Temps reel</span></div>
     </div>
     <div class="headline-actions">
+      <select class="live-filter" id="live-variant-filter" aria-label="Filtrer les lives par variante"></select>
       <button class="sound-btn" id="live-sound-btn" type="button" onclick="toggleLiveSound()">🔊 Sons live</button>
       <div class="status-pill" id="headline-pill">Cliquer pour spectate</div>
     </div>
@@ -412,6 +415,22 @@ let liveVariantCount = Math.max(1, Math.min(3, Number(localStorage.getItem('p4_l
 let lastVariantGame = null;
 let refreshInFlight = false;
 let refreshQueued = false;
+let liveVariantFilter = localStorage.getItem('p4_live_variant_filter') || 'all';
+let lastLiveGames = [];
+const LIVE_VARIANTS = [
+  ['all','Toutes les variantes'],['classic','Classique'],['rotate','Plateau rotatif'],
+  ['anti','Anti-Puissance 4'],['bomb','Puissance Bombe'],['mission','Mission personnelle'],
+  ['simultaneous','Placement simultané'],
+];
+const liveFilter = document.getElementById('live-variant-filter');
+liveFilter.innerHTML = LIVE_VARIANTS.map(([id,label]) => `<option value="${id}">${label}</option>`).join('');
+if (!LIVE_VARIANTS.some(([id]) => id === liveVariantFilter)) liveVariantFilter = 'all';
+liveFilter.value = liveVariantFilter;
+liveFilter.addEventListener('change', () => {
+  liveVariantFilter = liveFilter.value;
+  localStorage.setItem('p4_live_variant_filter', liveVariantFilter);
+  renderList(lastLiveGames);
+});
 
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
@@ -1085,15 +1104,20 @@ function applyBoardPalette(el, seed = '') {
 
 function renderBoardInto(board, game, large = true) {
   const p1 = game.players[1], p2 = game.players[2];
+  const rows = Math.max(1, Number(game.grid?.length || 6));
+  const cols = Math.max(1, Number(game.grid?.[0]?.length || 7));
   const cellClass = large ? 'live-cell' : 'mini-cell';
   const tokenClass = large ? 'live-token' : 'mini-token';
   const wasReady = board.dataset.liveReady === '1';
   applyBoardPalette(board, `game-${game.id || ''}-${game.players?.[1]?.id || game.players?.[1]?.pseudo || ''}-${game.players?.[2]?.id || game.players?.[2]?.pseudo || ''}`);
-  if (board.children.length !== 42) {
+  board.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
+  board.style.gridTemplateRows = `repeat(${rows},minmax(0,1fr))`;
+  board.style.aspectRatio = `${cols}/${rows}`;
+  if (board.children.length !== rows * cols) {
     board.innerHTML = '';
     board.dataset.liveReady = '0';
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 7; c++) {
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         const cell = document.createElement('div');
         cell.className = cellClass;
         cell.dataset.row = String(r);
@@ -1135,6 +1159,8 @@ function renderBoardInto(board, game, large = true) {
 }
 
 function renderList(games) {
+  lastLiveGames = games;
+  games = liveVariantFilter === 'all' ? games : games.filter(game => String(game.variant || 'classic') === liveVariantFilter);
   const container = document.getElementById('games-grid');
   const botContainer = document.getElementById('bot-games-grid');
   const activeCount = games.filter(g => g.status === 'active').length;
@@ -1191,7 +1217,8 @@ function renderList(games) {
 
     const footer = document.createElement('div');
     footer.className = 'card-footer';
-    footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''}</div>${game.botMatch ? '<div class="game-kind">Bot vs Bot</div>' : ''}`;
+    const variantLabel = LIVE_VARIANTS.find(([id]) => id === String(game.variant || 'classic'))?.[1] || 'Classique';
+    footer.innerHTML = `<div class="moves-label">${game.moves} coup${game.moves > 1 ? 's' : ''} · ${variantLabel}</div>${game.botMatch ? '<div class="game-kind">Bot vs Bot</div>' : ''}`;
     if (game.status === 'finished') {
       const winner = game.result?.winner ? game.players[game.result.winner] : null;
       const label = document.createElement('div');

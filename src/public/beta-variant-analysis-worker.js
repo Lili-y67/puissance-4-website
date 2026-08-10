@@ -1,5 +1,13 @@
 'use strict';
 
+// Le même moteur tourne dans un Web Worker (laboratoire) et un Worker Node
+// (bots officiels), afin que les décisions restent identiques.
+if (typeof self === 'undefined') {
+  const { parentPort } = require('worker_threads');
+  global.self = { postMessage: message => parentPort.postMessage(message) };
+  parentPort.on('message', data => self.onmessage({ data }));
+}
+
 const PROD_MODES = new Set(['rotate', 'anti', 'bomb', 'mission', 'simultaneous']);
 const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
 
