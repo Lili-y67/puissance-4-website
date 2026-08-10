@@ -13,6 +13,8 @@
   StringSelectMenuOptionBuilder,
   ContainerBuilder,
   TextDisplayBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   SeparatorBuilder,
   ModalBuilder,
   TextInputBuilder,
@@ -270,10 +272,34 @@ function startDiscordBot(ctx) {
     return btn;
   }
 
-  function containerMessage({ color = 0xff2d55, title, subtitle = '', sections = [], buttons = [], rows = [], files = [] }) {
+  function containerMessage({
+    color = 0xff2d55,
+    title,
+    subtitle = '',
+    sections = [],
+    media = [],
+    buttons = [],
+    rows = [],
+    files = [],
+  }) {
     const container = new ContainerBuilder().setAccentColor(color);
     const header = [`## ${title}`, subtitle].filter(Boolean).join('\n');
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent(header));
+
+    if (media.length) {
+      container.addSeparatorComponents(new SeparatorBuilder());
+      const gallery = new MediaGalleryBuilder();
+      gallery.addItems(
+        media.slice(0, 10).map((item) => {
+          const source = typeof item === 'string' ? { url: item } : item;
+          const galleryItem = new MediaGalleryItemBuilder().setURL(source.url);
+          if (source.description) galleryItem.setDescription(source.description);
+          return galleryItem;
+        })
+      );
+      container.addMediaGalleryComponents(gallery);
+    }
+
     if (sections.length) container.addSeparatorComponents(new SeparatorBuilder());
     for (const section of sections) {
       const contentSource = section && typeof section === 'object' && !Array.isArray(section)
@@ -1217,7 +1243,25 @@ function startDiscordBot(ctx) {
     values.forEach(([label,value],i)=>{const x=280+(i%3)*215,y=170+Math.floor(i/3)*92;c.fillStyle='rgba(255,255,255,.08)';c.roundRect(x,y,195,70,15);c.fill();c.fillStyle='#aeb5ca';c.font='600 14px Barlow';c.fillText(label,x+15,y+22);c.fillStyle='#fff';c.font='700 29px "Barlow Condensed"';c.fillText(value,x+15,y+55)});
     const plate=await image(player.search_nameplate||player.profile_banner);if(plate)c.drawImage(plate,58,276,184,56);c.fillStyle='#d5d9e7';c.font='600 17px Barlow';c.fillText(roleBadges(player).replace(/\*/g,''),62,370);
     const file=new AttachmentBuilder(canvas.toBuffer('image/png'),{name:`profil-${player.id}.png`});
-    return containerMessage({color:parseInt(accent.replace('#',''),16)||0xff2d55,title:player.pseudo,subtitle:`${variantLabel(stats.variant)} · ${fmt(stats.elo)} ELO`,sections:[`![Carte du profil](attachment://profil-${player.id}.png)`,`Dernière connexion : ${player.last_seen?formatDiscordTimestamp(Number(player.last_seen),'R'):'**inconnue**'}`,profileBotSummary(player)],buttons:[linkButton('Voir profil',playerUrl(player),'👤'),linkButton('Personnaliser',`${api}/profil`,'🎨')],rows:[profileVariantRow(player,stats.variant),...profileRows(player,games)],files:[file]});
+    return containerMessage({
+      color: parseInt(accent.replace('#', ''), 16) || 0xff2d55,
+      title: player.pseudo,
+      subtitle: `${variantLabel(stats.variant)} · ${fmt(stats.elo)} ELO`,
+      media: [{
+        url: `attachment://profil-${player.id}.png`,
+        description: `Carte du profil de ${player.pseudo}`,
+      }],
+      sections: [
+        `Dernière connexion : ${player.last_seen ? formatDiscordTimestamp(Number(player.last_seen), 'R') : '**inconnue**'}`,
+        profileBotSummary(player),
+      ],
+      buttons: [
+        linkButton('Voir profil', playerUrl(player), '👤'),
+        linkButton('Personnaliser', `${api}/profil`, '🎨'),
+      ],
+      rows: [profileVariantRow(player, stats.variant), ...profileRows(player, games)],
+      files: [file],
+    });
   }
 
   function variantsPayload() {
