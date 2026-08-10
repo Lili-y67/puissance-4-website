@@ -186,7 +186,7 @@ body::before {
   background: conic-gradient(from -15deg, #f42b2b 0 30deg, #ff8c1a 30deg 60deg, #752bd8 60deg 90deg, #d82c9c 90deg 120deg, #185fd1 120deg 150deg, #139ba7 150deg 180deg, #18a34a 180deg 210deg, #e4a51e 210deg 240deg, #f25925 240deg 270deg, #b626c7 270deg 300deg, #1478c9 300deg 330deg, #e02851 330deg);
   border: 9px solid #ffc83d;
   box-shadow: 0 0 0 4px #ff5331, 0 0 0 10px #78121b, 0 0 0 15px #ffd65b, 0 30px 65px rgba(0, 0, 0, .65), 0 0 65px rgba(255, 73, 25, .35);
-  transition: transform 4.9s cubic-bezier(.08, .7, .05, 1);
+  transition: none;
   will-change: transform
 }
 
@@ -237,6 +237,48 @@ body::before {
   border: 5px solid #ffe781;
   background: radial-gradient(circle at 35% 25%, #ff7250, #9c111f 58%, #390814);
   box-shadow: 0 0 0 7px #ffb41f, 0 0 35px #ff522d, 0 15px 30px #0008
+}
+
+.hub {
+  padding: 0;
+  color: #fff;
+  cursor: default;
+  font: 900 26px "Barlow Condensed";
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: transform .2s ease, filter .2s ease
+}
+
+.hub.is-stop {
+  cursor: pointer;
+  background: radial-gradient(circle at 35% 25%, #ff845e, #d3132b 58%, #510817);
+  animation: stopPulse .9s ease-in-out infinite alternate
+}
+
+.hub.is-stop:hover {
+  filter: brightness(1.15);
+  transform: scale(1.04)
+}
+
+.hub.is-stopping {
+  cursor: wait;
+  animation: none;
+  font-size: 18px
+}
+
+.hub-label {
+  display: none;
+  text-shadow: 0 2px 8px #000
+}
+
+.hub.is-stop img,
+.hub.is-stopping img {
+  display: none
+}
+
+.hub.is-stop .hub-label,
+.hub.is-stopping .hub-label {
+  display: block
 }
 
 .hub img {
@@ -401,8 +443,8 @@ body::before {
 
 .result {
   --reward: #ffd60a;
-  position: fixed;
-  z-index: 500;
+  position: fixed !important;
+  z-index: 10000;
   inset: 0;
   display: grid;
   place-items: center;
@@ -544,6 +586,14 @@ body::before {
   }
 }
 
+@keyframes stopPulse {
+  to {
+    box-shadow: 0 0 0 7px #ffb41f, 0 0 48px #ff354f, 0 15px 30px #0008;
+    transform: scale(1.035)
+  }
+}
+
+html.result-open,
 body.result-open {
   overflow: hidden
 }
@@ -852,9 +902,10 @@ body {
 </div>
 <div class="wheel" id="wheel">
 </div>
-<div class="hub">
+<button class="hub" id="wheel-hub" type="button" onclick="stopWheel()" aria-label="Centre de la roue">
 <img src="/assets/fortune-ticket.png" alt="Ticket Roue Fortune">
-</div>
+<span class="hub-label" id="hub-label">STOP</span>
+</button>
 </div>
 <aside class="side">
 <div class="wallet">
@@ -942,6 +993,10 @@ let data = {
   },
   rotation = 0,
   spinning = false,
+  wheelFrame = 0,
+  wheelStopRequested = false,
+  wheelCanStop = false,
+  wheelAudio = null,
   particleFrame = 0;
 
 function esc(v) {
@@ -1107,10 +1162,12 @@ function showResult(reward, before, after, isPreview = false) {
 function closeResult() {
   $('result').classList.remove('show');
   document.body.classList.remove('result-open');
+  document.documentElement.classList.remove('result-open');
   cancelAnimationFrame(particleFrame)
 }
 async function spin() {
   if (spinning || $('spin').disabled) return;
+  getWheelAudio();
   $('spin').disabled = true;
   if (!token) {
     let draw = Math.random() * 100,
@@ -1184,16 +1241,122 @@ load().catch(e => {
   render()
 });
 
+function getWheelAudio() {
+  if (!wheelAudio) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) wheelAudio = new AudioContext()
+  }
+  if (wheelAudio?.state === 'suspended') wheelAudio.resume().catch(() => {});
+  return wheelAudio
+}
+
+function wheelTick(strength = .7) {
+  const audio = getWheelAudio();
+  if (!audio) return;
+  const now = audio.currentTime,
+    oscillator = audio.createOscillator(),
+    gain = audio.createGain();
+  oscillator.type = 'triangle';
+  oscillator.frequency.setValueAtTime(520 + strength * 180, now);
+  oscillator.frequency.exponentialRampToValueAtTime(190, now + .035);
+  gain.gain.setValueAtTime(.0001, now);
+  gain.gain.exponentialRampToValueAtTime(.035 * strength, now + .004);
+  gain.gain.exponentialRampToValueAtTime(.0001, now + .045);
+  oscillator.connect(gain).connect(audio.destination);
+  oscillator.start(now);
+  oscillator.stop(now + .05)
+}
+
+function wheelFinishSound() {
+  const audio = getWheelAudio();
+  if (!audio) return;
+  [0, .1, .2].forEach((delay, index) => {
+    const oscillator = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime + delay;
+    oscillator.type = 'sine';
+    oscillator.frequency.value = [523.25, 659.25, 783.99][index];
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(.06, now + .02);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .28);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + .3)
+  })
+}
+
+function setHubState(state) {
+  const hub = $('wheel-hub');
+  hub.classList.toggle('is-stop', state === 'stop');
+  hub.classList.toggle('is-stopping', state === 'stopping');
+  hub.disabled = state !== 'stop';
+  $('hub-label').textContent = state === 'stopping' ? 'RALENTIT…' : 'STOP';
+  hub.setAttribute('aria-label', state === 'stop' ? 'Arrêter la roue' : 'Centre de la roue')
+}
+
+function stopWheel() {
+  if (!spinning || !wheelCanStop || wheelStopRequested) return;
+  wheelStopRequested = true;
+  setHubState('stopping')
+}
+
 function animateWheel(index, done) {
+  cancelAnimationFrame(wheelFrame);
   spinning = true;
-  const start = rotation,
-    target = (Math.ceil(start / 360) + 6) * 360 - index * 30;
-  rotation = target <= start ? target + 2160 : target;
-  $('wheel').style.transform = `rotate(${rotation}deg)`;
-  setTimeout(() => {
-    spinning = false;
-    done()
-  }, 5000)
+  wheelStopRequested = false;
+  wheelCanStop = false;
+  setHubState('stop');
+  getWheelAudio();
+  const wheel = $('wheel'),
+    startedAt = performance.now(),
+    maxCruiseMs = 6500,
+    minCruiseMs = 1200,
+    speed = .72;
+  let lastTime = startedAt,
+    lastSegment = Math.floor(rotation / 30),
+    slowingAt = 0,
+    slowingFrom = 0,
+    target = 0,
+    slowDuration = 0;
+
+  const frame = now => {
+    if (!slowingAt) {
+      rotation += Math.min(34, now - lastTime) * speed;
+      wheelCanStop = now - startedAt >= minCruiseMs;
+      if ((wheelStopRequested && wheelCanStop) || now - startedAt >= maxCruiseMs) {
+        slowingAt = now;
+        slowingFrom = rotation;
+        slowDuration = wheelStopRequested ? 3000 : 3500;
+        const landing = -(index * 30);
+        target = Math.ceil((slowingFrom - landing) / 360) * 360 + landing + 720;
+        setHubState('stopping')
+      }
+    } else {
+      const progress = Math.min(1, (now - slowingAt) / slowDuration),
+        eased = 1 - Math.pow(1 - progress, 4);
+      rotation = slowingFrom + (target - slowingFrom) * eased;
+      if (progress >= 1) {
+        rotation = target;
+        wheel.style.transform = `rotate(${rotation}deg)`;
+        spinning = false;
+        wheelCanStop = false;
+        setHubState('idle');
+        wheelTick(1);
+        wheelFinishSound();
+        done();
+        return
+      }
+    }
+    const segment = Math.floor(rotation / 30);
+    if (segment !== lastSegment) {
+      const velocity = Math.abs(rotation - Number(wheel.dataset.lastRotation || rotation));
+      wheelTick(Math.max(.25, Math.min(1, velocity / 10)));
+      lastSegment = segment
+    }
+    wheel.dataset.lastRotation = rotation;
+    wheel.style.transform = `rotate(${rotation}deg)`;
+    lastTime = now;
+    wheelFrame = requestAnimationFrame(frame)
+  };
+  wheelFrame = requestAnimationFrame(frame)
 }
 
 function showResult(reward, before, after, isPreview = false) {
@@ -1216,6 +1379,7 @@ function showResult(reward, before, after, isPreview = false) {
   $('result-label').textContent = type === 'grade' ? (reward.grade || reward.label) : type === 'gems' ? 'Gemmes' : type === 'tickets' ? 'Ticket' : 'Coins';
   $('equation').innerHTML = type === 'grade' || isPreview ? `<div class="eq"><small>${isPreview?'Gain aperçu':'Débloqué'}</small><b>${esc(reward.label)}</b></div>` : `<div class="eq"><small>Avant</small><b>${old.toLocaleString('fr-FR')}</b></div><span class="sign">+</span><div class="eq"><small>Gain</small><b id="gain">+0</b></div><span class="sign">=</span><div class="eq"><small>Résultat</small><b id="total">${old.toLocaleString('fr-FR')}</b></div>`;
   document.body.classList.add('result-open');
+  document.documentElement.classList.add('result-open');
   root.classList.add('show');
   if (type !== 'grade') {
     animateNumber($('result-title'), 0, gain, '+');
