@@ -163,6 +163,48 @@ function antiScore(grid, player) {
   return (theirs - mine) * 900 + (theirForced - myForced) * 120;
 }
 
+function antiTerminalScore(grid, player) {
+  const opponent = other(player);
+
+  for (const length of [4, 3, 2]) {
+    const mine = segments(grid, player, length).length;
+    const theirs = segments(grid, opponent, length).length;
+    if (mine === theirs) continue;
+    return mine < theirs ? 100000 - length : -100000 + length;
+  }
+
+  return 0;
+}
+
+function antiSearch(grid, turn, player, depth, alpha, beta) {
+  const legal = legalCols(grid);
+  if (!legal.length) return antiTerminalScore(grid, player);
+  if (depth <= 0) return antiScore(grid, player);
+
+  const forced = forcedAntiCols(grid, turn);
+  const choices = forced.length ? forced : legal;
+  const maximizing = turn === player;
+  let best = maximizing ? -Infinity : Infinity;
+
+  for (const col of choices) {
+    const next = clone(grid);
+    drop(next, col, turn);
+    const value = antiSearch(next, other(turn), player, depth - 1, alpha, beta);
+
+    if (maximizing) {
+      best = Math.max(best, value);
+      alpha = Math.max(alpha, best);
+    } else {
+      best = Math.min(best, value);
+      beta = Math.min(beta, best);
+    }
+
+    if (beta <= alpha) break;
+  }
+
+  return best;
+}
+
 // Score absolu de la position, toujours vu depuis le joueur rouge (J1),
 // comme dans le moteur classique. Il ne dépend pas du meilleur coup proposé.
 function positionScore(state) {
@@ -203,7 +245,15 @@ function analyseDropModes(state, depth) {
       const before = segments(base, player).length;
       const added = Math.max(0, segments(next, player).length - before);
       const opponentForced = forcedAntiCols(next, other(player)).length;
-      score = -added * 1400 + opponentForced * 240 + antiScore(next, player) * .35;
+      const future = antiSearch(
+        next,
+        other(player),
+        player,
+        Math.max(0, Number(depth || 1) - 1),
+        -Infinity,
+        Infinity
+      );
+      score = future - added * 1400 + opponentForced * 240 + antiScore(next, player) * .2;
       detail = added ? `${added} nouvel alignement subi` : opponentForced ? `force ${opponentForced} réponse${opponentForced > 1 ? 's' : ''}` : 'aucune ligne offerte immédiatement';
     } else if (state.mode === 'rotate' && (state.moves + 1) % 4 === 0) {
       const clockwise = rotate(clone(next), 1), counter = rotate(clone(next), -1);

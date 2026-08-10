@@ -1566,14 +1566,20 @@ function findActiveGameByPlayer(playerId) {
 function serializeBotGameState(state, playerId) {
   if (!state) return null;
   const side = Number(state.players[1].id) === Number(playerId) ? 1 : 2;
+  const forcedCols = state.variant === 'anti'
+    ? gm._antiForcedCols(state, side)
+    : [];
   return {
     gameId: state.id,
     gameType: state.gameType || 'ranked',
+    variant: state.variant || 'classic',
     side,
     current: state.current,
     isMyTurn: side === state.current,
     board: state.board.grid,
-    legalMoves: state.board.getValidCols(),
+    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols(),
+    forcedCols,
+    antiScores: state.variant === 'anti' ? state.antiScores : null,
     moveCount: state.moveCount,
     moveTimeSeconds: state.moveTimeSeconds || 60,
     players: {

@@ -1463,7 +1463,7 @@ function startDiscordBot(ctx) {
   }
 
   function variantsPayload() {
-    return containerMessage({color:0x85ebff,title:'Règles des variantes',subtitle:'Chaque variante possède son propre classement.',sections:['### Classique\nAligne quatre jetons.','### Plateau rotatif\nLa grille tourne tous les quatre coups, puis la gravité agit.','### Anti-Puissance 4\nÉvite les lignes ; un alignement disponible devient obligatoire et le plus petit score gagne.','### Puissance Bombe\nUne bombe par joueur retire les voisins d’un jeton.','### Mission personnelle\nAccomplis ton objectif secret avant l’adversaire.','### Placement simultané\nLes deux choix sont révélés ensemble et l’initiative alterne.'],buttons:[linkButton('Règles complètes',`${api}/regles`,'📖')]});
+    return containerMessage({color:0x85ebff,title:'Règles des variantes',subtitle:'Chaque variante possède son propre classement.',sections:['### Classique\nAligne quatre jetons.','### Plateau rotatif\nLa grille tourne tous les quatre coups, puis la gravité agit.','### Anti-Puissance 4\nÉvite les lignes ; un alignement disponible devient obligatoire et le plus petit score gagne. Une égalité est départagée par les lignes de 3, puis de 2.','### Puissance Bombe\nUne bombe par joueur retire les voisins d’un jeton.','### Mission personnelle\nAccomplis ton objectif secret avant l’adversaire.','### Placement simultané\nLes deux choix sont révélés ensemble et l’initiative alterne.'],buttons:[linkButton('Règles complètes',`${api}/regles`,'📖')]});
   }
 
   function statsPayload() {

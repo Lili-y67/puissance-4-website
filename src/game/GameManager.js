@@ -79,6 +79,7 @@ class GameManager {
       bombs: { 1: true, 2: true },
       antiSegments: { 1: new Set(), 2: new Set() },
       antiScores: { 1: 0, 2: 0 },
+      antiLastScorer: null,
       missions: { 1: null, 2: null },
       simultaneousChoices: { 1: null, 2: null },
       initiative: initialCurrent,
@@ -131,10 +132,18 @@ class GameManager {
     if (state.variant === 'anti') {
       const fresh = state.board.getSegments(playerNum).filter(segment => !state.antiSegments[playerNum].has(segment.key));
       fresh.forEach(segment => state.antiSegments[playerNum].add(segment.key));
+      if (fresh.length) state.antiLastScorer = playerNum;
       state.antiScores[playerNum] = state.antiSegments[playerNum].size;
       if (state.board.isDraw()) {
-        const winner = state.antiScores[1] === state.antiScores[2] ? null : (state.antiScores[1] < state.antiScores[2] ? 1 : 2);
-        return this._end(state, winner, [], winner ? 'anti_score' : 'draw', lastMove);
+        const antiResult = this._resolveAntiWinner(state, playerNum);
+        return this._end(
+          state,
+          antiResult.winner,
+          [],
+          antiResult.reason,
+          lastMove,
+          { antiTiebreak: antiResult.tiebreak }
+        );
       }
     } else if (winCells && state.variant !== 'mission') return this._end(state, playerNum, winCells, 'win', lastMove);
     else if (state.board.isDraw()) return this._end(state, null, [], 'draw', lastMove);
@@ -257,6 +266,59 @@ class GameManager {
       const row = copy.drop(col, player);
       return !!copy.checkWin(row, col, player);
     });
+  }
+
+  _resolveAntiWinner(state, lastPlayer) {
+    const comparisons = [
+      {
+        key: 'segments4',
+        label: 'alignements de 4',
+        values: {
+          1: Number(state.antiScores[1] || 0),
+          2: Number(state.antiScores[2] || 0),
+        },
+      },
+      {
+        key: 'segments3',
+        label: 'alignements de 3',
+        values: {
+          1: state.board.getSegments(1, 3).length,
+          2: state.board.getSegments(2, 3).length,
+        },
+      },
+      {
+        key: 'segments2',
+        label: 'alignements de 2',
+        values: {
+          1: state.board.getSegments(1, 2).length,
+          2: state.board.getSegments(2, 2).length,
+        },
+      },
+    ];
+
+    for (const comparison of comparisons) {
+      if (comparison.values[1] === comparison.values[2]) continue;
+      return {
+        winner: comparison.values[1] < comparison.values[2] ? 1 : 2,
+        reason: comparison.key === 'segments4' ? 'anti_score' : 'anti_tiebreak',
+        tiebreak: {
+          criterion: comparison.key,
+          label: comparison.label,
+          scores: comparison.values,
+        },
+      };
+    }
+
+    const loser = Number(state.antiLastScorer || lastPlayer) === 1 ? 1 : 2;
+    return {
+      winner: loser === 1 ? 2 : 1,
+      reason: 'anti_last_alignment',
+      tiebreak: {
+        criterion: 'last_alignment',
+        label: 'dernier alignement créé',
+        loser,
+      },
+    };
   }
 
   _missionComplete(board, player, missionId) {
