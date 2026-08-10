@@ -4404,6 +4404,7 @@ const SHOP_ITEMS = Object.freeze({
   vip_plus: { key: 'vip_plus', category: 'ranks', label: 'VIP+', price: 5000 },
   perso: { key: 'perso', category: 'ranks', label: 'Perso', price: 15000 },
   elo_reset: { key: 'elo_reset', category: 'services', label: 'Reset ELO', price: 2500 },
+  fortune_ticket: { key: 'fortune_ticket', category: 'services', label: 'Ticket Roue Fortune', price: 500 },
   elo_mini: { key: 'elo_mini', category: 'elo_boosters', label: 'Mini Boost', price: 250, boostType: 'elo', multiplier: 1.05, defaultStock: 10 },
   elo_classic: { key: 'elo_classic', category: 'elo_boosters', label: 'Classic Boost', price: 750, boostType: 'elo', multiplier: 1.10, defaultStock: 5 },
   elo_max: { key: 'elo_max', category: 'elo_boosters', label: 'Max Boost', price: 2500, boostType: 'elo', multiplier: 1.25, defaultStock: 3 },
@@ -6558,6 +6559,9 @@ app.post('/api/shop/buy', async (req, res) => {
   const isGift = recipientId !== Number(playerId);
   const requestedCurrency = String(req.body?.currency || 'coins').toLowerCase();
   const currency = requestedCurrency === 'gems' ? 'gems' : requestedCurrency === 'crystals' ? 'crystals' : 'coins';
+  if (pack === 'fortune_ticket' && currency !== 'coins') {
+    return res.status(400).json({ error: 'Le ticket Roue Fortune s achete uniquement avec 500 coins.' });
+  }
   if (currency === 'gems' && !String(player.discord_id || '').trim()) {
     return res.status(403).json({ error: 'Lie ton compte Discord pour utiliser les gemmes.' });
   }
@@ -6667,6 +6671,8 @@ app.post('/api/shop/buy', async (req, res) => {
       variantQ.ensure.run(recipientId, resetVariant);
       db.prepare('UPDATE player_variant_stats SET elo = 1000 WHERE player_id = ? AND variant = ?').run(recipientId, resetVariant);
     }
+  } else if (pack === 'fortune_ticket') {
+    progression.addFortuneTickets(recipientId, 1);
   } else if (pack === 'limited_offer' && Array.isArray(item.grants)) {
     for (const grant of item.grants) applyLimitedPackEntry(recipientId, grant, { now, player: recipient });
   } else if (Array.isArray(item.grants)) {

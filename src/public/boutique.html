@@ -801,6 +801,16 @@ const SHOP_ITEMS = {
     meta: 'Active un boost coins pour tout le site pendant 2 heures.',
     features: [['🌍','Global','Tous les gains de coins sont multipliés.'],['⏱️','Durée','Activation de 2 heures après utilisation.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
+  fortune_ticket: {
+    key: 'fortune_ticket', type: 'service', theme: 'booster-coin', badge: '<img src="/assets/fortune-ticket.png" alt="" style="width:30px;height:22px;vertical-align:-7px;object-fit:contain"> ROUE', duration: 'Immédiat', title: 'Ticket Roue Fortune',
+    stat: '1', statSub: 'ticket pour 500 coins',
+    meta: 'Ajoute immédiatement un ticket à ton compte pour faire tourner la Roue Fortune.',
+    features: [
+      ['🎟️', 'Un tour', 'Chaque ticket permet de lancer une fois la Roue Fortune.'],
+      ['⚡', 'Ajout immédiat', 'Le ticket apparaît directement sur la page de la roue.'],
+      ['♾️', 'Achat répétable', 'Tu peux acheter autant de tickets que ton solde le permet.']
+    ]
+  },
   bot_host_1m: {
     key: 'bot_host_1m', type: 'host', theme: 'bot-host', badge: '<img src="/assets/bot-crystals.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> HOST', duration: '1 mois', title: 'Host Bot 1 Mois',
     stat: '3000', statSub: 'Cristaux pour 1 mois',
@@ -820,6 +830,7 @@ const SHOP_PRICES = {
   crystal: 5000,
   vip_1m: 500, vip_1y: 5000, vip_plus: 10000, perso: 25000,
   elo_reset: 2500,
+  fortune_ticket: 500,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
   global_elo_boost: 5000, global_coin_boost: 5000,
@@ -1339,7 +1350,7 @@ function getButtonState(pack) {
   const purchaseNotice = getPurchaseNotice(pack);
   if (purchaseNotice) return { disabled: false, note: purchaseNotice, purchased: true };
   const price = getDisplayPrice(pack);
-  const currency = getShopCurrency();
+  const currency = pack === 'fortune_ticket' ? 'coins' : getShopCurrency();
   const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : currency === 'crystals' ? Number(shopPlayer?.bot_crystals || 0) : Number(shopPlayer?.coins || 0);
   const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
   if (!item) return { disabled: true, note: 'Pack indisponible' };
@@ -1948,7 +1959,7 @@ function renderShop() {
         <div class="feature"><div class="feature-emoji">✨</div><div class="feature-copy"><strong>Perso</strong><span>10 minutes</span></div></div>
       </div>
     </article>`;
-  document.getElementById('shop-ranks-section').innerHTML = respawnComparison + ['crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-ranks-section').innerHTML = respawnComparison + ['fortune_ticket','crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
   document.getElementById('shop-cosmetics-section').innerHTML = Object.values(SHOP_ITEMS)
     .filter(item => item?.category === 'cosmetics')
     .map(renderCosmeticCard)
@@ -2122,6 +2133,10 @@ async function purchasePack(pack, giftTo = '', giftToId = 0) {
   if (pack === 'bot_host_1m') {
     const input = document.getElementById('currency-select');
     if (input) input.value = 'crystals';
+  }
+  if (pack === 'fortune_ticket') {
+    const input = document.getElementById('currency-select');
+    if (input) input.value = 'coins';
   }
   const state = giftTo ? getGiftButtonState(pack) : getButtonState(pack);
   if (state.disabled) return false;

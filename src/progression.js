@@ -386,6 +386,13 @@ function createProgression({ db, pQ, cQ }) {
     return { tickets: 1 };
   }
 
+  function addFortuneTickets(playerId, amount = 1) {
+    const quantity = Math.max(1, Math.min(100, Math.floor(Number(amount || 1))));
+    ensurePlayer(playerId);
+    q.addTickets.run(quantity, Date.now(), playerId);
+    return Number(ensurePlayer(playerId).fortune_tickets || 0);
+  }
+
   function equipTheme(playerId, themeKey) {
     const data = getPlayerData(playerId);
     const theme = data.themes.find(item => item.key === themeKey);
@@ -453,6 +460,7 @@ function createProgression({ db, pQ, cQ }) {
     claimChallenge,
     spinFortune,
     claimDailyTicket,
+    addFortuneTickets,
     equipTheme,
     getClanMissions,
     getClanWar,
