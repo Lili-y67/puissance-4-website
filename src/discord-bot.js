@@ -1308,6 +1308,7 @@ function startDiscordBot(ctx) {
     c.fillRect(0, 0, width, height);
 
     c.fillStyle = 'rgba(7,9,24,.70)';
+    c.beginPath();
     c.roundRect(34, 34, width - 68, height - 68, 34);
     c.fill();
     c.strokeStyle = 'rgba(255,255,255,.16)';
@@ -1315,6 +1316,7 @@ function startDiscordBot(ctx) {
     c.stroke();
 
     c.fillStyle = accent;
+    c.beginPath();
     c.roundRect(34, 34, 9, height - 68, 5);
     c.fill();
 
@@ -1352,6 +1354,7 @@ function startDiscordBot(ctx) {
       c.restore();
     } else {
       c.fillStyle = 'rgba(255,255,255,.10)';
+      c.beginPath();
       c.roundRect(75, 319, 210, 66, 18);
       c.fill();
     }
@@ -1401,6 +1404,7 @@ function startDiscordBot(ctx) {
       const y = 260;
 
       c.fillStyle = 'rgba(255,255,255,.075)';
+      c.beginPath();
       c.roundRect(x, y, cardWidth, 112, 20);
       c.fill();
       c.strokeStyle = 'rgba(255,255,255,.11)';
@@ -1408,6 +1412,7 @@ function startDiscordBot(ctx) {
       c.stroke();
 
       c.fillStyle = color;
+      c.beginPath();
       c.roundRect(x + 14, y + 14, 28, 5, 3);
       c.fill();
       c.font = '700 15px "Barlow Condensed", sans-serif';
@@ -1418,6 +1423,7 @@ function startDiscordBot(ctx) {
     });
 
     c.fillStyle = 'rgba(255,255,255,.075)';
+    c.beginPath();
     c.roundRect(330, 398, 841, 102, 20);
     c.fill();
 
@@ -1435,7 +1441,7 @@ function startDiscordBot(ctx) {
     c.textAlign = 'right';
     c.fillStyle = 'rgba(255,255,255,.55)';
     c.font = '600 15px Barlow, sans-serif';
-    c.fillText('PUISSANCE 4 • PROFIL OFFICIEL', 1145, 474);
+    c.fillText('PUISSANCE 4 • PROFIL OFFICIEL', 1145, 522);
     c.textAlign = 'left';
 
     const file = new AttachmentBuilder(canvas.toBuffer('image/png'), {
