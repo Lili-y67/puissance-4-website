@@ -1255,32 +1255,62 @@ function wheelTick(strength = .7) {
   if (!audio) return;
   const now = audio.currentTime,
     oscillator = audio.createOscillator(),
-    gain = audio.createGain();
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(520 + strength * 180, now);
-  oscillator.frequency.exponentialRampToValueAtTime(190, now + .035);
+    gain = audio.createGain(),
+    filter = audio.createBiquadFilter();
+  oscillator.type = 'square';
+  oscillator.frequency.setValueAtTime(1450 + strength * 550, now);
+  oscillator.frequency.exponentialRampToValueAtTime(380, now + .055);
+  filter.type = 'bandpass';
+  filter.frequency.value = 1250;
+  filter.Q.value = 1.4;
   gain.gain.setValueAtTime(.0001, now);
-  gain.gain.exponentialRampToValueAtTime(.035 * strength, now + .004);
-  gain.gain.exponentialRampToValueAtTime(.0001, now + .045);
+  gain.gain.exponentialRampToValueAtTime(.12 * strength, now + .003);
+  gain.gain.exponentialRampToValueAtTime(.0001, now + .065);
+  oscillator.connect(filter).connect(gain).connect(audio.destination);
+  oscillator.start(now);
+  oscillator.stop(now + .07)
+}
+
+function casinoTone(frequency, start, duration, volume = .11, type = 'triangle') {
+  const audio = getWheelAudio();
+  if (!audio) return;
+  const oscillator = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime + start;
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, now);
+  gain.gain.setValueAtTime(.0001, now);
+  gain.gain.exponentialRampToValueAtTime(volume, now + .015);
+  gain.gain.setValueAtTime(volume, now + Math.max(.02, duration - .08));
+  gain.gain.exponentialRampToValueAtTime(.0001, now + duration);
   oscillator.connect(gain).connect(audio.destination);
   oscillator.start(now);
-  oscillator.stop(now + .05)
+  oscillator.stop(now + duration + .02)
+}
+
+function wheelStartSound() {
+  [392, 523.25, 659.25, 783.99].forEach((note, index) => {
+    casinoTone(note, index * .065, .22, .075, index % 2 ? 'square' : 'triangle')
+  })
 }
 
 function wheelFinishSound() {
+  const melody = [523.25, 659.25, 783.99, 1046.5];
+  melody.forEach((note, index) => casinoTone(note, index * .11, .32, .12, 'triangle'));
+  [523.25, 659.25, 783.99].forEach(note => casinoTone(note, .46, .72, .085, 'sine'));
   const audio = getWheelAudio();
-  if (!audio) return;
-  [0, .1, .2].forEach((delay, index) => {
-    const oscillator = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime + delay;
-    oscillator.type = 'sine';
-    oscillator.frequency.value = [523.25, 659.25, 783.99][index];
+  if (audio) {
+    const now = audio.currentTime + .46,
+      oscillator = audio.createOscillator(),
+      gain = audio.createGain();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(130, now);
+    oscillator.frequency.exponentialRampToValueAtTime(70, now + .18);
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(.06, now + .02);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + .28);
+    gain.gain.exponentialRampToValueAtTime(.1, now + .01);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + .22);
     oscillator.connect(gain).connect(audio.destination);
     oscillator.start(now);
-    oscillator.stop(now + .3)
-  })
+    oscillator.stop(now + .24)
+  }
 }
 
 function setHubState(state) {
@@ -1305,6 +1335,7 @@ function animateWheel(index, done) {
   wheelCanStop = false;
   setHubState('stop');
   getWheelAudio();
+  wheelStartSound();
   const wheel = $('wheel'),
     startedAt = performance.now(),
     maxCruiseMs = 6500,
