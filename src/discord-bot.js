@@ -1226,23 +1226,221 @@ function startDiscordBot(ctx) {
   }
 
   async function profileCanvasPayload(player, requestedVariant = 'classic') {
-    const stats = playerVariantStats(player, requestedVariant), games = latestGames(player.id, stats.variant);
-    let createCanvas, loadImage;
-    try { ({ createCanvas, loadImage } = require('canvas')); }
-    catch (error) { console.warn('[BOT PROFIL CANVAS]', error.message); return profilePayload(player, requestedVariant); }
-    const canvas = createCanvas(1000, 420), c = canvas.getContext('2d'), accent = String(player.color || '#ff2d55');
-    const gradient = c.createLinearGradient(0, 0, 1000, 420); gradient.addColorStop(0, '#080916'); gradient.addColorStop(.65, accent); gradient.addColorStop(1, '#111426');
-    c.fillStyle=gradient;c.fillRect(0,0,1000,420);c.fillStyle='rgba(4,5,14,.60)';c.fillRect(0,0,1000,420);
-    const image = async (value, fallback='') => { try { const src=String(value||fallback); return await loadImage(src.startsWith('/')?path.join(__dirname,'public',src.slice(1)):src); } catch(_){ return null; } };
-    const wallpaper=await image(player.profile_wallpaper_desktop||player.banner);if(wallpaper){const s=Math.max(1000/wallpaper.width,420/wallpaper.height);c.globalAlpha=.38;c.drawImage(wallpaper,(1000-wallpaper.width*s)/2,(420-wallpaper.height*s)/2,wallpaper.width*s,wallpaper.height*s);c.globalAlpha=1}
-    c.fillStyle='rgba(10,11,28,.84)';c.roundRect(28,28,944,364,28);c.fill();c.fillStyle=accent;c.fillRect(28,28,8,364);
-    const avatar=await image(player.avatar,'/assets/site-logo-small.png');c.save();c.beginPath();c.arc(150,145,82,0,Math.PI*2);c.clip();if(avatar)c.drawImage(avatar,68,63,164,164);c.restore();c.strokeStyle=accent;c.lineWidth=7;c.beginPath();c.arc(150,145,86,0,Math.PI*2);c.stroke();
-    const deco=await image(player.avatar_decoration);if(deco)c.drawImage(deco,48,43,204,204);
-    c.fillStyle='#fff';c.font='700 45px "Barlow Condensed"';c.fillText(String(player.pseudo).slice(0,24),280,96);c.fillStyle='#aeb5ca';c.font='400 21px Barlow';c.fillText(`${variantLabel(stats.variant)} · dernière connexion ${player.last_seen?new Date(Number(player.last_seen)).toLocaleDateString('fr-FR'):'inconnue'}`,280,132);
-    const total=stats.wins+stats.losses+stats.draws,values=[['ELO',fmt(stats.elo)],['VICTOIRES',fmt(stats.wins)],['DÉFAITES',fmt(stats.losses)],['NULS',fmt(stats.draws)],['WINRATE',total?`${Math.round(stats.wins/total*100)}%`:'0%']];
-    values.forEach(([label,value],i)=>{const x=280+(i%3)*215,y=170+Math.floor(i/3)*92;c.fillStyle='rgba(255,255,255,.08)';c.roundRect(x,y,195,70,15);c.fill();c.fillStyle='#aeb5ca';c.font='600 14px Barlow';c.fillText(label,x+15,y+22);c.fillStyle='#fff';c.font='700 29px "Barlow Condensed"';c.fillText(value,x+15,y+55)});
-    const plate=await image(player.search_nameplate||player.profile_banner);if(plate)c.drawImage(plate,58,276,184,56);c.fillStyle='#d5d9e7';c.font='600 17px Barlow';c.fillText(roleBadges(player).replace(/\*/g,''),62,370);
-    const file=new AttachmentBuilder(canvas.toBuffer('image/png'),{name:`profil-${player.id}.png`});
+    const stats = playerVariantStats(player, requestedVariant);
+    const games = latestGames(player.id, stats.variant);
+    let createCanvas;
+    let loadImage;
+
+    try {
+      ({ createCanvas, loadImage } = require('canvas'));
+    } catch (error) {
+      console.warn('[BOT PROFIL CANVAS]', error.message);
+      return profilePayload(player, requestedVariant);
+    }
+
+    const width = 1200;
+    const height = 560;
+    const canvas = createCanvas(width, height);
+    const c = canvas.getContext('2d');
+    const accent = /^#[0-9a-f]{6}$/i.test(String(player.color || ''))
+      ? String(player.color)
+      : '#ff2d55';
+
+    const loadProfileImage = async (value, fallback = '') => {
+      try {
+        const source = String(value || fallback);
+        if (!source) return null;
+        const resolved = source.startsWith('/')
+          ? path.join(__dirname, 'public', source.slice(1))
+          : source;
+        return await loadImage(resolved);
+      } catch (_) {
+        return null;
+      }
+    };
+
+    const drawCover = (image, x, y, targetWidth, targetHeight) => {
+      const scale = Math.max(targetWidth / image.width, targetHeight / image.height);
+      const sourceWidth = targetWidth / scale;
+      const sourceHeight = targetHeight / scale;
+      const sourceX = (image.width - sourceWidth) / 2;
+      const sourceY = (image.height - sourceHeight) / 2;
+      c.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        x,
+        y,
+        targetWidth,
+        targetHeight
+      );
+    };
+
+    const wallpaper = await loadProfileImage(
+      player.profile_wallpaper_desktop || player.banner,
+      '/assets/profile-wallpaper.jpg'
+    );
+
+    if (wallpaper) {
+      drawCover(wallpaper, 0, 0, width, height);
+    } else {
+      const fallback = c.createLinearGradient(0, 0, width, height);
+      fallback.addColorStop(0, '#090b1e');
+      fallback.addColorStop(0.55, accent);
+      fallback.addColorStop(1, '#170822');
+      c.fillStyle = fallback;
+      c.fillRect(0, 0, width, height);
+    }
+
+    const shade = c.createLinearGradient(0, 0, width, 0);
+    shade.addColorStop(0, 'rgba(3,5,16,.92)');
+    shade.addColorStop(0.48, 'rgba(3,5,16,.66)');
+    shade.addColorStop(1, 'rgba(3,5,16,.32)');
+    c.fillStyle = shade;
+    c.fillRect(0, 0, width, height);
+
+    const glow = c.createRadialGradient(930, 100, 20, 930, 100, 500);
+    glow.addColorStop(0, `${accent}88`);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = glow;
+    c.fillRect(0, 0, width, height);
+
+    c.fillStyle = 'rgba(7,9,24,.70)';
+    c.roundRect(34, 34, width - 68, height - 68, 34);
+    c.fill();
+    c.strokeStyle = 'rgba(255,255,255,.16)';
+    c.lineWidth = 2;
+    c.stroke();
+
+    c.fillStyle = accent;
+    c.roundRect(34, 34, 9, height - 68, 5);
+    c.fill();
+
+    const avatar = await loadProfileImage(player.avatar, '/assets/site-logo-small.png');
+    c.save();
+    c.shadowColor = accent;
+    c.shadowBlur = 32;
+    c.fillStyle = accent;
+    c.beginPath();
+    c.arc(180, 180, 103, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    c.save();
+    c.beginPath();
+    c.arc(180, 180, 94, 0, Math.PI * 2);
+    c.clip();
+    if (avatar) drawCover(avatar, 86, 86, 188, 188);
+    c.restore();
+
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 5;
+    c.beginPath();
+    c.arc(180, 180, 98, 0, Math.PI * 2);
+    c.stroke();
+
+    const decoration = await loadProfileImage(player.avatar_decoration);
+    if (decoration) c.drawImage(decoration, 61, 61, 238, 238);
+
+    const nameplate = await loadProfileImage(player.search_nameplate || player.profile_banner);
+    if (nameplate) {
+      c.save();
+      c.globalAlpha = 0.95;
+      drawCover(nameplate, 75, 319, 210, 66);
+      c.restore();
+    } else {
+      c.fillStyle = 'rgba(255,255,255,.10)';
+      c.roundRect(75, 319, 210, 66, 18);
+      c.fill();
+    }
+
+    c.fillStyle = '#ffffff';
+    c.font = '700 56px "Barlow Condensed", sans-serif';
+    c.fillText(String(player.pseudo || 'Joueur').slice(0, 24), 330, 118);
+
+    c.fillStyle = accent;
+    c.font = '700 21px "Barlow Condensed", sans-serif';
+    c.fillText(String(roleBadges(player).replace(/\*/g, '') || 'JOUEUR').slice(0, 50), 333, 153);
+
+    c.fillStyle = '#d1d6e5';
+    c.font = '500 19px Barlow, sans-serif';
+    c.fillText(
+      `${variantLabel(stats.variant)}  •  ${fmt(stats.elo)} ELO  •  ID #${player.id}`,
+      333,
+      188
+    );
+
+    const lastSeen = player.last_seen
+      ? new Date(Number(player.last_seen)).toLocaleString('fr-FR', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'inconnue';
+    c.fillStyle = 'rgba(255,255,255,.62)';
+    c.font = '500 16px Barlow, sans-serif';
+    c.fillText(`Dernière connexion : ${lastSeen}`, 333, 218);
+
+    const total = Number(stats.wins || 0) + Number(stats.losses || 0) + Number(stats.draws || 0);
+    const winrate = total ? Math.round((Number(stats.wins || 0) / total) * 100) : 0;
+    const values = [
+      ['ELO', fmt(stats.elo), accent],
+      ['VICTOIRES', fmt(stats.wins), '#54e38e'],
+      ['DÉFAITES', fmt(stats.losses), '#ff6174'],
+      ['NULS', fmt(stats.draws), '#aeb5ca'],
+      ['WINRATE', `${winrate}%`, '#ffd65a'],
+    ];
+
+    values.forEach(([label, value, color], index) => {
+      const cardWidth = 157;
+      const gap = 14;
+      const x = 330 + index * (cardWidth + gap);
+      const y = 260;
+
+      c.fillStyle = 'rgba(255,255,255,.075)';
+      c.roundRect(x, y, cardWidth, 112, 20);
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.11)';
+      c.lineWidth = 1;
+      c.stroke();
+
+      c.fillStyle = color;
+      c.roundRect(x + 14, y + 14, 28, 5, 3);
+      c.fill();
+      c.font = '700 15px "Barlow Condensed", sans-serif';
+      c.fillText(label, x + 14, y + 45);
+      c.fillStyle = '#ffffff';
+      c.font = '700 34px "Barlow Condensed", sans-serif';
+      c.fillText(String(value), x + 14, y + 86);
+    });
+
+    c.fillStyle = 'rgba(255,255,255,.075)';
+    c.roundRect(330, 398, 841, 102, 20);
+    c.fill();
+
+    c.fillStyle = '#ffffff';
+    c.font = '700 17px "Barlow Condensed", sans-serif';
+    c.fillText('ÉCONOMIE', 352, 427);
+    c.fillStyle = '#ffd65a';
+    c.font = '700 28px "Barlow Condensed", sans-serif';
+    c.fillText(`${fmt(player.coins || 0)} COINS`, 352, 469);
+    c.fillStyle = '#85ebff';
+    c.fillText(`${fmt(player.gems || 0)} GEMMES`, 560, 469);
+    c.fillStyle = '#65ef9b';
+    c.fillText(`${fmt(player.bot_crystals || 0)} CRISTAUX`, 780, 469);
+
+    c.textAlign = 'right';
+    c.fillStyle = 'rgba(255,255,255,.55)';
+    c.font = '600 15px Barlow, sans-serif';
+    c.fillText('PUISSANCE 4 • PROFIL OFFICIEL', 1145, 474);
+    c.textAlign = 'left';
+
+    const file = new AttachmentBuilder(canvas.toBuffer('image/png'), {
+      name: `profil-${player.id}.png`,
+    });
     return containerMessage({
       color: parseInt(accent.replace('#', ''), 16) || 0xff2d55,
       title: player.pseudo,
@@ -2622,10 +2820,12 @@ function startDiscordBot(ctx) {
         return interaction.editReply(payload);
       }
       if (interaction.isStringSelectMenu() && interaction.customId.startsWith('p4_profile_variant:')) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         const player = ctx.db.prepare('SELECT * FROM players WHERE id=? AND deleted=0').get(Number(interaction.customId.split(':')[1]));
         if (!player) return replyError(interaction, 'Joueur introuvable');
-        return interaction.editReply(await profileCanvasPayload(player, interaction.values?.[0] || 'classic'));
+        const payload = await profileCanvasPayload(player, interaction.values?.[0] || 'classic');
+        delete payload.flags;
+        payload.attachments = [];
+        return interaction.update(payload);
       }
       if (interaction.isButton?.() && interaction.customId.startsWith('p4_giveaway_join:')) {
         return handleGiveawayButton(interaction, interaction.customId.split(':')[1]);
