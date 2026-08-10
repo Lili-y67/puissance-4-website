@@ -3545,34 +3545,6 @@ app.get('/api/dev/bot-usage', (req, res) => {
       lastMetric: metrics[metrics.length - 1] || null,
     };
   });
-  const sharedMetrics = devMachineMetrics.map(sample => ({
-    at: Number(sample?.at || 0),
-    cpuPct: Number(sample?.processCpuPct || 0),
-    rssMb: Number(sample?.processRssMb || 0),
-    netKb: Number(sample?.networkRxKbps || 0) + Number(sample?.networkTxKbps || 0),
-  })).filter(sample => sample.at > 0);
-  const builtinBots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(bot => (
-    bot && !bot.deleted && Number(bot.is_bot || 0) === 1
-  )).map(bot => {
-    const playing = !!findActiveBotGame(bot.id);
-    return {
-      id: Number(bot.id),
-      pseudo: String(bot.pseudo || `Bot #${bot.id}`),
-      avatar: String(bot.avatar || ''),
-      color: String(bot.color || '#85EBFF'),
-      enabled: Number(bot.bot_enabled || 0) === 1,
-      status: playing ? 'arena' : 'shared',
-      source: 'builtin',
-      sharedProcess: true,
-      pid: Number(process.pid || 0),
-      startedAt: null,
-      stoppedAt: null,
-      updatedAt: Date.now(),
-      expiresAt: null,
-      metrics: sharedMetrics,
-      lastMetric: sharedMetrics[sharedMetrics.length - 1] || null,
-    };
-  }).sort((a, b) => a.pseudo.localeCompare(b.pseudo, 'fr', { sensitivity: 'base' }));
   res.json({
     generatedAt: Date.now(),
     sampleIntervalMs: BOT_HOST_WATCHDOG_MS,
@@ -3580,7 +3552,7 @@ app.get('/api/dev/bot-usage', (req, res) => {
       rssMb: BOT_HOST_MAX_RSS_MB,
       cpuPct: Math.round((BOT_HOST_MAX_CPU_MS_PER_MIN / 60_000) * 100),
     },
-    bots: [...builtinBots, ...hostedBots],
+    bots: hostedBots,
   });
 });
 

@@ -160,7 +160,7 @@ button,input{font:inherit}.hidden{display:none!important}.btn{border:1px solid v
     </section>
 
     <section id="bots-view" class="hidden">
-      <div class="source-toolbar" style="margin:2px 2px 12px"><div><div class="kicker">Bots officiels et hébergés</div><h2 style="margin:5px 0 0">Bots utilisation</h2></div><div id="bot-usage-refresh" class="live-state"><i class="pulse"></i>Actualisation 5s</div></div>
+      <div class="source-toolbar" style="margin:2px 2px 12px"><div><div class="kicker">Processus de bots hébergés</div><h2 style="margin:5px 0 0">Bots utilisation</h2></div><div id="bot-usage-refresh" class="live-state"><i class="pulse"></i>Actualisation 5s</div></div>
       <div class="bot-usage-layout">
         <aside class="panel">
           <div class="source-toolbar"><div><div class="kicker">Instances</div><h2 style="margin:5px 0">Bots</h2></div><span id="bot-usage-count" class="source-count">0 bot</span></div>
@@ -515,10 +515,10 @@ function renderSelectedBotUsage() {
   if (!metrics.length) return;
   drawChart('bot-cpu-chart', metrics, [
     { key:'cpuPct', label:'CPU', suffix:'%', hueOffset:35 },
-  ], values => Math.max(100, ...values.map(row => Number(row.cpuPct || 0))) * 1.05, { unit:'%' });
+  ], values => Math.max(100, ...values.map(row => Number(row.cpuPct || 0))) * 1.05, { unit:'%', windowMs:600000 });
   drawChart('bot-ram-chart', metrics, [
     { key:'rssMb', label:'RAM', suffix:' MB', hueOffset:185 },
-  ], shared ? Math.max(32, ...metrics.map(row => Number(row.rssMb || 0))) * 1.12 : Math.max(Number(botUsageLimits.rssMb || 128), 32), { unit:' MB' });
+  ], Math.max(Number(botUsageLimits.rssMb || 128), 32), { unit:' MB', windowMs:600000 });
   startChartAnimation();
 }
 
@@ -615,7 +615,11 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
     canvas.dataset.hoverReady = '1';
     const updateHover = event => {
       const state = canvas._chartState;
-      const values = Array.isArray(state?.rows) ? state.rows.slice(-120) : [];
+      const hoverWindowMs = Math.max(30_000, Number(state?.options?.windowMs || 120_000));
+      const hoverCutoff = Date.now() - hoverWindowMs;
+      const values = Array.isArray(state?.rows)
+        ? state.rows.filter(row => Number(row?.at || 0) >= hoverCutoff).slice(-120)
+        : [];
       if (!values.length) return;
       const rect = canvas.getBoundingClientRect();
       const mouseX = event.clientX - rect.left;
@@ -665,7 +669,11 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
   background.addColorStop(1, '#050605');
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, w, h);
-  const values = Array.isArray(rows) ? rows.slice(-120) : [];
+  const windowMs = Math.max(30_000, Number(options.windowMs || 120_000));
+  const cutoff = Date.now() - windowMs;
+  const values = Array.isArray(rows)
+    ? rows.filter(row => Number(row?.at || 0) >= cutoff).slice(-120)
+    : [];
   const requestedMax = typeof maxValue === 'function' ? maxValue(values) : Number(maxValue || 100);
   const resolvedMax = Number.isFinite(requestedMax) ? Math.max(1, requestedMax) : 100;
   const axisFontSize = w < 420 ? 11 : 13;
@@ -701,13 +709,21 @@ function drawChart(canvasId, rows, series, maxValue, options = {}) {
       label: sampleTime.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' }),
     });
   });
-  minuteTicks.forEach((tick, index) => {
+  const maxTimeLabels = Math.max(2, Math.floor(plotW / (w < 420 ? 62 : 78)));
+  const visibleTicks = minuteTicks.length <= maxTimeLabels
+    ? minuteTicks
+    : minuteTicks.filter((tick, index) => (
+      index === 0
+      || index === minuteTicks.length - 1
+      || index % Math.ceil((minuteTicks.length - 1) / (maxTimeLabels - 1)) === 0
+    )).slice(0, maxTimeLabels - 1).concat(minuteTicks[minuteTicks.length - 1]);
+  visibleTicks.forEach((tick, index) => {
     const ratio = values.length <= 1 ? 0 : tick.sampleIndex / (values.length - 1);
     const x = pad.left + plotW * ratio;
     ctx.strokeStyle = 'rgba(255,255,255,.035)';
     ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
     ctx.fillStyle = '#a0a0a0';
-    ctx.textAlign = index === 0 ? 'left' : index === minuteTicks.length - 1 && ratio > .96 ? 'right' : 'center';
+    ctx.textAlign = index === 0 ? 'left' : index === visibleTicks.length - 1 && ratio > .96 ? 'right' : 'center';
     ctx.fillText(tick.label, x, h - 14);
   });
   if (!values.length) return;
@@ -871,14 +887,6 @@ function connectLiveMetrics() {
     liveMetrics.push(sample);
     if (liveMetrics.length > 240) liveMetrics.splice(0, liveMetrics.length - 240);
     renderMetrics(liveMetrics);
-    const sharedSample = {
-      at: Number(sample.at || Date.now()),
-      cpuPct: Number(sample.processCpuPct || 0),
-      rssMb: Number(sample.processRssMb || 0),
-      netKb: Number(sample.networkRxKbps || 0) + Number(sample.networkTxKbps || 0),
-    };
-    botUsageRows.filter(bot => bot.sharedProcess).forEach(bot => appendLiveBotMetric(bot.id, sharedSample));
-    refreshBotUsageLiveView();
     const now = Date.now();
     if (now - lastMetricAlertAt > 30000 && Number(sample.processCpuPct || 0) >= 80) {
       lastMetricAlertAt = now;
