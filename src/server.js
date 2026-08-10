@@ -360,9 +360,20 @@ function getRegistrationCounts() {
 }
 
 function getPresenceCounts() {
-  const onlinePlayers = Number(onlineSockets.size || 0);
+  let onlinePlayers = 0;
+  let identifiedVisitors = 0;
+  for (const playerId of onlineSockets.keys()) {
+    if (isAnonymousPlayerId(playerId)) {
+      identifiedVisitors++;
+      continue;
+    }
+    const player = getPlayerRecord(playerId);
+    if (player && Number(player.is_bot || 0) !== 1) onlinePlayers++;
+  }
   const onlineBots = getOnlineBotCount();
-  const visitors = Number(getVisitorCount() || 0);
+  // Une session invitee possede un identifiant technique negatif pour jouer,
+  // mais reste un visiteur dans les statistiques de presence.
+  const visitors = Number(getVisitorCount() || 0) + identifiedVisitors;
   const registrations = getRegistrationCounts();
   const queueCounts = getQueueCounts();
   return {
@@ -836,6 +847,19 @@ function acceptDuelChallenge(challenge, accepterId) {
 
   clearPlayerQueues(sender.id);
   clearPlayerQueues(target.id);
+
+  const anonymousFriendlyMatch = String(challenge.gameType || 'ranked') === 'friendly'
+    && (isAnonymousPlayerId(sender.id) || isAnonymousPlayerId(target.id));
+  const state = _startMatch(p1, p2, {
+    duel: true,
+    gameType: challenge.gameType || 'ranked',
+    variant: normalizeVariant(challenge.variant),
+    persist: !anonymousFriendlyMatch,
+  });
+  if (!state?.id) {
+    return { error: 'La partie du duel n a pas pu etre creee. Reessaie dans une seconde.' };
+  }
+
   challenge.status = 'accepted';
   challenge.targetId = target.id;
   duelChallenges.set(challenge.id, challenge);
@@ -852,15 +876,6 @@ function acceptDuelChallenge(challenge, accepterId) {
     variantLabel: getVariant(challenge.variant).label,
     target: { id: sender.id, pseudo: sender.pseudo, elo: Number(sender.elo || 0), color: sender.color || '#ff2d55', avatar: sender.avatar || '' },
   }));
-
-  const anonymousFriendlyMatch = String(challenge.gameType || 'ranked') === 'friendly'
-    && (isAnonymousPlayerId(sender.id) || isAnonymousPlayerId(target.id));
-  const state = _startMatch(p1, p2, {
-    duel: true,
-    gameType: challenge.gameType || 'ranked',
-    variant: normalizeVariant(challenge.variant),
-    persist: !anonymousFriendlyMatch,
-  });
   return { ok: true, sender, target, gameId: state?.id || null };
 }
 
@@ -11091,10 +11106,17 @@ io.on('connection', socket => {
 function _startMatch(p1, p2, options = {}) {
   options.variant = normalizeVariant(options.variant || p1.variant || p2.variant);
   if (options.variant !== 'classic') {
-    variantQ.ensure.run(p1.id, options.variant);
-    variantQ.ensure.run(p2.id, options.variant);
-    p1.elo = variantQ.get.get(p1.id, options.variant).elo;
-    p2.elo = variantQ.get.get(p2.id, options.variant).elo;
+    [p1, p2].forEach(player => {
+      const playerId = Number(player?.id || 0);
+      if (playerId > 0 && pQ.getById.get(playerId)) {
+        variantQ.ensure.run(playerId, options.variant);
+        player.elo = Number(variantQ.get.get(playerId, options.variant)?.elo || 1000);
+      } else {
+        // Les invites anonymes des duels amicaux n'existent pas dans la table
+        // players et ne doivent donc jamais recevoir de ligne ELO persistante.
+        player.elo = Number(player.elo || 1000);
+      }
+    });
   }
   // AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA MAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAme IP AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA AAaAasAAAAAAAAasAA...AAasAAAAAAAAasAA...AAasAA ELO annulAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA direct AAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAa AaaAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAA
   const ip1 = playerToIp.get(p1.id);
@@ -11115,7 +11137,7 @@ function _startMatch(p1, p2, options = {}) {
     const p1facedP2 = p1recent.slice(0, 2).includes(p2.id); // 2 derniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres parties de p1
     const p2facedP1 = p2recent.slice(0, 2).includes(p1.id); // 2 derniAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAres parties de p2
     // Anti-rematch seulement si d'autres joueurs sont disponibles
-    if (p1facedP2 && p2facedP1 && mm.size() > 2) {
+    if (!options.duel && p1facedP2 && p2facedP1 && mm.size() > 2) {
       console.log(`[ANTI-REMATCH] ${p1.pseudo} vs ${p2.pseudo} remis en queue`);
       // tryMatch les a dAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  retirAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAs de la queue AAaAa AaaAAaAAasAAAAaAasAAAAAAAAaAAAAaAAAAaAAasAAAAaAasAAAAAAAAasAA...AAasAAAAaAAasAA on les rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAinsAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAre proprement
       mm.leave(p1.socketId); // au cas oAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA (sAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcuritAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA)
