@@ -10457,7 +10457,9 @@ io.on('connection', socket => {
       && socket.playerId
       && !['presence_ping', 'visitor_presence', 'identify', 'dev_metrics_subscribe', 'dev_metrics_unsubscribe'].includes(eventName)
     ) {
-      const validId = touchSession(socket.sessionToken);
+      const validId = isAnonymousPlayerId(socket.playerId)
+        ? validateSession(socket.sessionToken, { touch: false })
+        : touchSession(socket.sessionToken);
       if (validId !== Number(socket.playerId)) {
         expireSocketSession(socket);
         return;
