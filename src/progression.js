@@ -309,7 +309,9 @@ function createProgression({ db, pQ, cQ }) {
       fortuneGrade: String(row.fortune_grade || ''),
       dailyTicket: { available: String(row.daily_ticket_key || '') !== periodKey('daily', now), nextAt: periodEndsAt('daily', now) },
       wallet: { coins: Number(pQ.getById.get(playerId)?.coins || 0), gems: Number(pQ.getById.get(playerId)?.gems || 0) },
-      fortuneRewards: FORTUNE_REWARDS.map(({ weight, ...reward }) => ({ ...reward, probability: weight })),
+      fortuneRewards: FORTUNE_REWARDS.map(({ weight, ...reward }) => reward.grade && String(row.fortune_grade || '') === reward.grade
+        ? { ...reward, label: '1 ticket (grade déjà possédé)', shortLabel: '+1 TICKET', icon: '/assets/fortune-ticket.png', probability: weight }
+        : { ...reward, probability: weight }),
       xpCurrent: xp - Math.pow(level - 1, 2) * 90,
       xpNext: Math.max(1, (Math.pow(level, 2) - Math.pow(level - 1, 2)) * 90),
       equippedBoardTheme: row.equipped_board_theme || 'classic',
@@ -352,8 +354,8 @@ function createProgression({ db, pQ, cQ }) {
     if (reward.gems) pQ.addGems.run({ delta: reward.gems, id: playerId });
     if (reward.grade) {
       if (String(playerProgression.fortune_grade || '') === reward.grade) {
-        pQ.addGems.run({ delta: 25, id: playerId });
-        return { ...reward, label: '25 gemmes (grade déjà possédé)', gems: 25, converted: true, weight: undefined };
+        q.addTickets.run(1, Date.now(), playerId);
+        return { ...reward, label: '1 ticket (grade déjà possédé)', shortLabel: '+1 TICKET', icon: '/assets/fortune-ticket.png', grade: '', tickets: 1, converted: true, weight: undefined };
       }
       q.setFortuneGrade.run(reward.grade, Date.now(), playerId);
     }
