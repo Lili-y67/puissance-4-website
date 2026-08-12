@@ -8,7 +8,7 @@ if (typeof self === 'undefined') {
   parentPort.on('message', data => self.onmessage({ data }));
 }
 
-const PROD_MODES = new Set(['rotate', 'anti', 'bomb', 'mission', 'simultaneous']);
+const PROD_MODES = new Set(['rotate', 'anti', 'bomb', 'mission', 'simultaneous', 'fog', 'conquest']);
 const DIRS = [[0, 1], [1, 0], [1, 1], [1, -1]];
 
 const clone = grid => grid.map(row => row.slice());
@@ -205,17 +205,116 @@ function antiSearch(grid, turn, player, depth, alpha, beta) {
   return best;
 }
 
+function conquestScores(value) {
+  return { 1: Number(value?.[1] || 0), 2: Number(value?.[2] || 0) };
+}
+
+function conquestResult(grid, scores, turn, col) {
+  const next = clone(grid);
+  const placed = drop(next, col, turn);
+  if (!placed) return null;
+  const nextScores = conquestScores(scores);
+  const lines = segments(next, turn);
+  let captured = 0;
+  if (lines.length) {
+    const cells = new Set(lines.flatMap(line => line.map(([row, cellCol]) => `${row}:${cellCol}`)));
+    captured = cells.size;
+    nextScores[turn]++;
+    for (const key of cells) {
+      const [row, cellCol] = key.split(':').map(Number);
+      next[row][cellCol] = 0;
+    }
+    gravity(next);
+  }
+
+  const total = nextScores[1] + nextScores[2];
+  const winner = nextScores[turn] >= 3 ? turn : null;
+  const draw = !winner && total >= 4;
+  let reset = false;
+  if (!winner && !draw && !legalCols(next).length) {
+    for (const row of next) row.fill(0);
+    reset = true;
+  }
+  return { grid: next, scores: nextScores, captured, lines: lines.length, winner, draw, reset };
+}
+
+function conquestHeuristic(grid, scores, player) {
+  const opponent = other(player);
+  const scoreLead = (scores[player] - scores[opponent]) * 6200;
+  const urgency = scores[player] === 2 ? 1100 : 0;
+  const danger = scores[opponent] === 2 ? 1350 : 0;
+  // Les lignes complètes ont déjà été capturées : on valorise surtout
+  // les constructions de 2/3 et davantage le blocage d'une capture décisive.
+  return scoreLead + urgency - danger + evaluateWindows(grid, player, 850);
+}
+
+function conquestSearch(grid, scores, turn, player, depth, alpha, beta) {
+  const choices = legalCols(grid);
+  if (depth <= 0 || !choices.length) return conquestHeuristic(grid, scores, player);
+  const maximizing = turn === player;
+  let best = maximizing ? -Infinity : Infinity;
+
+  // Centre d'abord : l'alpha-beta coupe plus vite tout en restant déterministe.
+  const center = (grid[0].length - 1) / 2;
+  choices.sort((a, b) => Math.abs(a - center) - Math.abs(b - center));
+  for (const col of choices) {
+    const result = conquestResult(grid, scores, turn, col);
+    let value;
+    if (result.winner) value = result.winner === player ? 100000 + depth * 100 : -100000 - depth * 100;
+    else if (result.draw) value = 0;
+    else value = conquestSearch(result.grid, result.scores, other(turn), player, depth - 1, alpha, beta);
+
+    if (maximizing) {
+      best = Math.max(best, value);
+      alpha = Math.max(alpha, best);
+    } else {
+      best = Math.min(best, value);
+      beta = Math.min(beta, best);
+    }
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+
+function analyseConquest(state, depth) {
+  const player = state.turn;
+  const scores = conquestScores(state.conquestScores);
+  const actions = [];
+  for (const col of legalCols(state.grid)) {
+    const result = conquestResult(state.grid, scores, player, col);
+    let score;
+    if (result.winner) score = 100000 + Number(depth || 1) * 100;
+    else if (result.draw) score = 0;
+    else score = conquestSearch(
+      result.grid, result.scores, other(player), player,
+      Math.max(0, Number(depth || 1) - 1), -Infinity, Infinity
+    );
+    const detail = result.winner
+      ? `capture décisive · score ${result.scores[1]}–${result.scores[2]}`
+      : result.draw
+        ? 'quatrième capture · match nul 2–2'
+        : result.lines
+          ? `${result.lines} alignement${result.lines > 1 ? 's' : ''} capturé${result.lines > 1 ? 's' : ''} · score ${result.scores[1]}–${result.scores[2]}`
+          : result.reset
+            ? 'grille pleine · nouveau plateau, scores conservés'
+            : `prépare une conquête · score ${scores[1]}–${scores[2]}`;
+    actions.push({ kind: 'drop', col, label: `Colonne ${col + 1}`, detail, score });
+  }
+  return actions;
+}
+
 // Score absolu de la position, toujours vu depuis le joueur rouge (J1),
 // comme dans le moteur classique. Il ne dépend pas du meilleur coup proposé.
 function positionScore(state) {
   if (state.mode === 'anti') return antiScore(state.grid, 1);
+  if (state.mode === 'conquest') return conquestHeuristic(state.grid, conquestScores(state.conquestScores), 1);
   return genericScore(state.grid, 1, state);
 }
 
 function scoreToWinPct(score, mode) {
   if (score >= 50000) return 100;
   if (score <= -50000) return 0;
-  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : 620;
+  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : mode === 'conquest' ? 4200 : 620;
   return clamp(Math.round(50 + 48 * Math.tanh(score / scale)), 2, 98);
 }
 
@@ -265,7 +364,7 @@ function analyseDropModes(state, depth) {
       if (state.mode === 'mission') {
         const missionId = state.missions?.[player]?.id || state.missions?.[player] || '';
         detail = `progression de mission : ${Math.round(missionValue(next, player, missionId) * 100)}%`;
-      } else detail = 'prépare la position avant la prochaine rotation';
+      } else detail = state.mode === 'fog' ? 'construit la position mémorisée' : 'prépare la position avant la prochaine rotation';
     }
     if (segments(next, player).length && state.mode !== 'anti' && state.mode !== 'mission') score += 100000;
     actions.push({ kind: 'drop', col, label: `Colonne ${col + 1}`, detail, score });
@@ -332,7 +431,7 @@ function analyseSimultaneous(state, depth) {
 function normalize(actions, player, mode, depth) {
   actions.sort((a, b) => b.score - a.score);
   const top = actions.slice(0, depth === 1 ? 3 : 5);
-  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : 620;
+  const scale = mode === 'anti' ? 900 : mode === 'mission' ? 1050 : mode === 'conquest' ? 4200 : 620;
   const result = top.map((action, index) => {
     const rating = action.score >= 50000 ? 100 : action.score <= -50000 ? 0 : clamp(Math.round(50 + 48 * Math.tanh(action.score / scale)), 2, 98);
     return { ...action, score: Math.round(action.score), rating, rank: index + 1 };
@@ -356,6 +455,7 @@ self.onmessage = event => {
     let actions;
     if (state.mode === 'bomb') actions = analyseBomb(state, Number(depth));
     else if (state.mode === 'simultaneous') actions = analyseSimultaneous(state, Number(depth));
+    else if (state.mode === 'conquest') actions = analyseConquest(state, Number(depth));
     else actions = analyseDropModes(state, Number(depth));
     const analysis = normalize(actions, state.turn || state.simChooser || 1, state.mode, Number(depth));
     analysis.positionScore = Math.round(positionScore(state));

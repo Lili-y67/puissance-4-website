@@ -1870,7 +1870,11 @@ function chooseVariantBotActionAsync(state, side) {
   const gameId = Number(state?.id || 0);
   if (!gameId || botSearchWorkers.has(gameId)) return Promise.resolve(null);
   const rawDepth = getBuiltinBotSearchDepth(state, side);
-  const depth = rawDepth >= 10 ? 3 : rawDepth >= 7 ? 2 : 1;
+  // Conquête a besoin de voir au-delà d'une capture, puisque celle-ci retire
+  // les quatre pions et recrée immédiatement une position par gravité.
+  const depth = state.variant === 'conquest'
+    ? (rawDepth >= 10 ? 5 : rawDepth >= 7 ? 4 : 3)
+    : (rawDepth >= 10 ? 3 : rawDepth >= 7 ? 2 : 1);
   const worker = new Worker(path.join(__dirname, 'public', 'beta-variant-analysis-worker.js'));
   botSearchWorkers.set(gameId, worker);
   return new Promise(resolve => {
@@ -1893,6 +1897,7 @@ function chooseVariantBotActionAsync(state, side) {
     worker.postMessage({ requestId: gameId, depth, state: {
       mode: state.variant, grid: state.board.grid, turn: side, simChooser: side,
       moves: state.moveCount, bombs: state.bombs, missions: state.missions, initiative: state.initiative,
+      conquestScores: state.conquestScores,
     } });
   });
 }
