@@ -320,7 +320,7 @@ function updateReplayDiscordPresence() {
   window.P4DiscordPresence?.setContext(context);
 }
 let replaySpeed = 1; // multiplicateur de vitesse
-const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' };
 function replayVariant(){return String(gameData?.variant || 'classic')}
 function isClassicReplay(){return replayVariant()==='classic'}
 
@@ -341,7 +341,7 @@ async function init() {
     gameData = data.game;
     moves    = data.moves;
     actions  = data.actions || [];
-    const sizes = { classic:[6,7], rotate:[7,7], anti:[9,9], bomb:[6,7], mission:[7,7], simultaneous:[6,7] };
+    const sizes = { classic:[6,7], rotate:[7,7], anti:[9,9], bomb:[6,7], mission:[7,7], simultaneous:[6,7], fog:[6,7], conquest:[6,7] };
     [ROWS, COLS] = sizes[gameData.variant || 'classic'] || sizes.classic;
     board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
 
@@ -526,7 +526,7 @@ function renderShell() {
   const gameType = String(g.game_type || 'ranked') === 'friendly' ? 'Amical' : 'Ranked';
   const variantLabel = VARIANT_LABELS[g.variant || 'classic'] || 'Classique';
   const reason = String(g.result_reason || '');
-  const variantWinLabel = { mission:'MISSION ACCOMPLIE', anti:'VICTOIRE AU SCORE', rotate:'VICTOIRE APRÈS ROTATION', bomb:'VICTOIRE EXPLOSIVE', simultaneous:'VICTOIRE SIMULTANÉE' }[g.variant] || 'VICTOIRE PAR ALIGNEMENT';
+  const variantWinLabel = { mission:'MISSION ACCOMPLIE', anti:'VICTOIRE AU SCORE', rotate:'VICTOIRE APRÈS ROTATION', bomb:'VICTOIRE EXPLOSIVE', simultaneous:'VICTOIRE SIMULTANÉE', fog:'VICTOIRE DANS LE BROUILLARD', conquest:'VICTOIRE DE CONQUÊTE' }[g.variant] || 'VICTOIRE PAR ALIGNEMENT';
   const resultLabel = (won) => isDraw
     ? (reason === 'agreement_draw' ? 'NUL PAR ACCORD' : 'POSITION NULLE')
     : won
@@ -957,7 +957,7 @@ function playMoveInReplay(move, player) {
 function applyReplayActions(upTo) {
   while (actionIndex < actions.length && Number(actions[actionIndex].action_number || 0) <= upTo) {
     const action = actions[actionIndex++];
-    const actionLabels = { rotation:'Rotation du plateau', bomb:'Explosion et gravité', simultaneous_round:'Résolution simultanée', mission:'Mission sélectionnée' };
+    const actionLabels = { rotation:'Rotation du plateau', bomb:'Explosion et gravité', simultaneous_round:'Résolution simultanée', mission:'Mission sélectionnée', conquest_capture:'Alignement capturé', conquest_reset:'Grille de conquête remise à zéro' };
     const actionLabel = actionLabels[action.action_type];
     if (actionLabel) {
       const text = document.getElementById('think-text');

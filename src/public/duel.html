@@ -173,6 +173,8 @@ function renderDuel(challenge) {
     bomb: 'Puissance Bombe',
     mission: 'Mission personnelle',
     simultaneous: 'Placement simultane',
+    fog: 'Brouillard de Guerre',
+    conquest: 'Conquête',
   }[challenge?.variant] || 'Classique');
   const canAccept = pending && (isFriendly || isLogged) && !isSender;
 

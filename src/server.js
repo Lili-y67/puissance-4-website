@@ -1595,6 +1595,7 @@ function serializeBotGameState(state, playerId) {
     legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols(),
     forcedCols,
     antiScores: state.variant === 'anti' ? state.antiScores : null,
+    conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
     moveCount: state.moveCount,
     moveTimeSeconds: state.moveTimeSeconds || 60,
     players: {
@@ -7094,6 +7095,7 @@ app.get('/api/live', (_, res) => {
       variant: state.variant || 'classic',
       variantConfig: state.variantConfig || getVariant(state.variant),
       antiScores: state.antiScores || null,
+      conquestScores: state.conquestScores || null,
       bombs: state.bombs || null,
       current: state.current,
       moves:   state.moveCount,
@@ -10738,7 +10740,7 @@ io.on('connection', socket => {
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
-    if (['move', 'simultaneous_round'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
+    if (['move', 'simultaneous_round', 'conquest_capture', 'conquest_reset'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
     if (result.type === 'game_over') emitGameOver(result);
     const activeState = result.gameId ? gm.games.get(result.gameId) : null;
@@ -10953,6 +10955,7 @@ io.on('connection', socket => {
         persisted: true,
         bombs: { 1: true, 2: true }, antiSegments: { 1: new Set(), 2: new Set() }, antiScores: { 1: 0, 2: 0 },
         missions: { 1: null, 2: null }, simultaneousChoices: { 1: null, 2: null }, initiative: nextSide,
+        conquestScores: { 1: 0, 2: 0 }, conquestRound: 1,
       };
       gm.games.set(gameId, state);
     }
@@ -10993,6 +10996,7 @@ io.on('connection', socket => {
         startsIn: 0,
         latencies: getGameLatencyPayload(state),
         antiScores: state.antiScores,
+        conquestScores: state.conquestScores,
         bombs: state.bombs,
       });
 
@@ -11173,10 +11177,18 @@ function _startMatch(p1, p2, options = {}) {
   // RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAsoudre les couleurs AVANT de crAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAer la partie
   const _c1 = p1.color || '#ff2d55';
   let   _c2 = p2.color || '#ffd60a';
-  if (_c1.toLowerCase() === _c2.toLowerCase()) {
-    // Couleurs identiques : choisir une couleur alternative pour p2
+  const colorDistance = (a, b) => {
+    const left = String(a).match(/^#([0-9a-f]{6})$/i)?.[1];
+    const right = String(b).match(/^#([0-9a-f]{6})$/i)?.[1];
+    if (!left || !right) return Infinity;
+    const rgb = hex => [0, 2, 4].map(index => parseInt(hex.slice(index, index + 2), 16));
+    const [r1, g1, b1] = rgb(left), [r2, g2, b2] = rgb(right);
+    return Math.hypot(r1 - r2, g1 - g2, b1 - b2);
+  };
+  if (colorDistance(_c1, _c2) < 90) {
+    // Couleurs identiques ou trop proches : choisir une alternative vraiment lisible pour p2.
     const ALTS = ['#ffd60a','#30d158','#0a84ff','#bf5af2','#ff9f0a','#ff6b81'];
-    _c2 = ALTS.find(c => c.toLowerCase() !== _c1.toLowerCase()) || '#ffd60a';
+    _c2 = ALTS.sort((a, b) => colorDistance(_c1, b) - colorDistance(_c1, a))[0] || '#ffd60a';
   }
   p1.color = _c1;
   p2.color = _c2;
@@ -11192,6 +11204,7 @@ function _startMatch(p1, p2, options = {}) {
     variant: state.variant,
     variantConfig: state.variantConfig,
     missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
+    conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
     gameType: String(state.gameType || options.gameType || 'ranked'),
     moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
     tournament: options.tournamentId ? {

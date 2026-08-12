@@ -3608,7 +3608,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
       </div>
       <label style="display:grid;gap:7px;color:var(--muted);font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.7px;text-transform:uppercase">Variante du duel
         <select class="queue-variant-select" id="duel-variant" onchange="selectDuelVariant(this.value)">
-          <option value="classic">Classique · 6×7</option><option value="rotate">Plateau rotatif · 7×7</option><option value="anti">Anti-Puissance 4 · 9×9</option><option value="bomb">Puissance Bombe · 6×7</option><option value="mission">Mission personnelle · 7×7</option><option value="simultaneous">Placement simultané · 6×7</option>
+          <option value="classic">Classique · 6×7</option><option value="rotate">Plateau rotatif · 7×7</option><option value="anti">Anti-Puissance 4 · 9×9</option><option value="bomb">Puissance Bombe · 6×7</option><option value="mission">Mission personnelle · 7×7</option><option value="simultaneous">Placement simultané · 6×7</option><option value="fog">Brouillard de Guerre · 6×7</option><option value="conquest">Conquête · 6×7</option>
         </select>
       </label>
       <div class="input-wrap">
@@ -3866,7 +3866,7 @@ let latestQueueCounts = { total: 0, byVariant: {} };
 let currentQueuePosition = 0;
 let activeQueueVariant = localStorage.getItem('p4_queue_variant') || 'classic';
 let queueVariantProfileStats = null;
-const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' };
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
 let duelSearchTimer = null;
@@ -5293,6 +5293,8 @@ function showLoggedInView(p) {
           <option value="bomb">Puissance Bombe · 6×7</option>
           <option value="mission">Mission personnelle · 7×7</option>
           <option value="simultaneous">Placement simultané · 6×7</option>
+          <option value="fog">Brouillard de Guerre · 6×7</option>
+          <option value="conquest">Conquête · 6×7</option>
         </select>
       </label>
       <div class="queue-waiting-count" id="queue-waiting-count" aria-live="polite"><strong>0</strong> joueur en attente sur cette variante</div>

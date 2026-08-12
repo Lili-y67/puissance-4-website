@@ -634,6 +634,13 @@ body {
   box-shadow:0 0 0 2px rgba(6,7,20,.62),0 0 18px rgba(133,235,255,.68),inset 0 0 14px rgba(133,235,255,.15);
   animation:anti-forced-pulse .9s ease-in-out infinite alternate;
 }
+.board.fog-active{position:relative;isolation:isolate;box-shadow:inset 0 0 70px rgba(185,197,214,.12)}
+.board.fog-active::before{content:"";position:absolute;pointer-events:none;z-index:6;inset:-12%;opacity:.62;filter:blur(18px);background:radial-gradient(ellipse at 15% 35%,rgba(220,228,238,.42),transparent 32%),radial-gradient(ellipse at 72% 58%,rgba(120,136,158,.5),transparent 38%),radial-gradient(ellipse at 88% 24%,rgba(235,239,244,.28),transparent 30%);animation:fog-drift 8s ease-in-out infinite alternate}
+.cell.fog-hidden .token{opacity:0;filter:blur(8px);transform:scale(.72)!important}
+.cell.fog-revealed .token{animation:fog-vanish 1.25s ease-in-out forwards!important}
+@keyframes fog-drift{from{transform:translate(-8%,-3%) scale(1)}to{transform:translate(9%,5%) scale(1.12)}}
+@keyframes fog-vanish{0%,58%{opacity:1;filter:blur(0);transform:scale(1)}100%{opacity:0;filter:blur(8px);transform:scale(.72)}}
+@media(prefers-reduced-motion:reduce){.board.fog-active::before{animation:none}}
 @keyframes anti-forced-pulse{from{transform:scale(.88);filter:brightness(.92)}to{transform:scale(1);filter:brightness(1.28)}}
 
 /* ── Result overlay ── */
@@ -1428,8 +1435,9 @@ let pendingActionOffer = null;
 let currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 let latencyProbeTimer = null;
 let latencyProbePending = false;
+let fogRevealTimer = null;
 
-const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané' };
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' };
 
 function configureVariant(data = {}) {
   currentVariant = data.variant || 'classic';
@@ -1444,6 +1452,7 @@ function configureVariant(data = {}) {
   document.getElementById('turn-badge')?.setAttribute('data-variant', currentVariant);
   const badge = document.getElementById('turn-badge');
   if (badge) badge.textContent = VARIANT_LABELS[currentVariant] || 'Classique';
+  board?.classList.toggle('fog-active', currentVariant === 'fog');
   ensureVariantControls(data);
 }
 
@@ -1456,6 +1465,8 @@ function ensureVariantControls(data = {}) {
   if (currentVariant === 'anti') controls.innerHTML = '<span id="anti-score">Alignements : 0 — 0</span>';
   if (currentVariant === 'rotate') controls.innerHTML = '<span>Rotation imprévisible tous les 4 coups</span>';
   if (currentVariant === 'simultaneous') controls.innerHTML = '<span id="simultaneous-state">Choisis une colonne en secret</span>';
+  if (currentVariant === 'fog') controls.innerHTML = '<span>Le dernier pion disparaît dans la brume après 1,25 s</span>';
+  if (currentVariant === 'conquest') controls.innerHTML = `<span id="conquest-score">Conquêtes : ${data.conquestScores?.[1] || 0} — ${data.conquestScores?.[2] || 0}</span>`;
   document.querySelector('.board-wrap')?.prepend(controls);
   document.getElementById('bomb-button')?.addEventListener('click', () => { bombTargeting = !bombTargeting; setStatus(bombTargeting ? 'Clique le jeton central de la bombe' : ''); });
   if (currentVariant === 'mission' && Array.isArray(data.missions) && data.missions.length) {
@@ -2510,6 +2521,22 @@ function restoreBoard(grid) {
     }
   }
   currentGrid = nextGrid;
+  if (currentVariant === 'fog') applyFogVisibility();
+}
+
+function applyFogVisibility(revealedRow = null, revealedCol = null) {
+  if (currentVariant !== 'fog') return;
+  if (fogRevealTimer) clearTimeout(fogRevealTimer);
+  document.querySelectorAll('.cell.p1,.cell.p2').forEach(cell => {
+    const revealed = Number(cell.dataset.row) === Number(revealedRow) && Number(cell.dataset.col) === Number(revealedCol);
+    cell.classList.toggle('fog-revealed', revealed);
+    cell.classList.toggle('fog-hidden', !revealed);
+  });
+  if (revealedRow !== null) fogRevealTimer = setTimeout(() => {
+    const cell = getBoardCell(revealedRow, revealedCol);
+    cell?.classList.remove('fog-revealed');
+    cell?.classList.add('fog-hidden');
+  }, 1250);
 }
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
@@ -2529,6 +2556,16 @@ function onMovePlayed(data) {
     updateTurnUI();
     return;
   }
+  if (data.type === 'conquest_capture' || data.type === 'conquest_reset') {
+    restoreBoard(data.board);
+    currentTurn = data.next;
+    const score = document.getElementById('conquest-score');
+    if (score) score.textContent = `Conquêtes : ${data.conquestScores?.[1] || 0} — ${data.conquestScores?.[2] || 0}`;
+    setStatus(data.type === 'conquest_reset' ? 'Grille pleine : nouveau plateau, scores conservés' : `Point de conquête pour le joueur ${data.player}`);
+    updateTurnUI();
+    updateGameDiscordPresence();
+    return;
+  }
   if (data.player === mySide) SFX.drop();
   else SFX.opponentDrop();
   applyToken(data.row, data.col, data.player);
@@ -2536,6 +2573,7 @@ function onMovePlayed(data) {
   currentTurn = data.next;
   if (data.board && data.rotation) animateRotation(data.rotation, data.board);
   else if (data.board && currentVariant !== 'classic') restoreBoard(data.board);
+  if (currentVariant === 'fog') applyFogVisibility(data.row, data.col);
   if (data.antiScores) {
     const score = document.getElementById('anti-score');
     if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0}`;
@@ -2897,7 +2935,7 @@ async function onGameOver(data) {
   setStatus('');
 
   const isWinner = data.winner === mySide;
-  const isDraw = data.reason === 'draw';
+  const isDraw = ['draw','agreement_draw','position_draw','conquest_draw'].includes(data.reason);
   updateGameDiscordPresence({
     players: data.players,
     result: isDraw ? 'Match nul' : isWinner ? 'Victoire' : 'Défaite',

@@ -294,7 +294,7 @@ function hexToRgb(hex) {
   ];
 }
 
-function tokenEmojiFromColor(color, fallback) {
+function tokenEmojiFromColor(color, fallback, excludedEmoji = '') {
   const rgb = hexToRgb(color);
   if (!rgb) return fallback;
   const palette = [
@@ -307,9 +307,10 @@ function tokenEmojiFromColor(color, fallback) {
     { emoji: '\u26AA', rgb: [235, 245, 255] },
     { emoji: '\u26AB', rgb: [35, 35, 45] },
   ];
-  let best = palette[0];
+  const available = palette.filter(item => item.emoji !== excludedEmoji);
+  let best = available[0] || palette[0];
   let bestDistance = Infinity;
-  for (const item of palette) {
+  for (const item of available) {
     const distance = Math.hypot(rgb[0] - item.rgb[0], rgb[1] - item.rgb[1], rgb[2] - item.rgb[2]);
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -363,9 +364,11 @@ module.exports = {
     const d1 = Number(p1?.delta || 0) >= 0 ? `+${p1?.delta || 0}` : String(p1?.delta || 0);
     const d2 = Number(p2?.delta || 0) >= 0 ? `+${p2?.delta || 0}` : String(p2?.delta || 0);
     const p1Emoji = tokenEmojiFromColor(p1?.color, EMOJI.red);
-    const p2Emoji = tokenEmojiFromColor(p2?.color, EMOJI.yellow);
+    // Deux couleurs proches peuvent tomber sur le même emoji Discord. Le second
+    // joueur prend alors la teinte disponible la plus proche pour garder la grille lisible.
+    const p2Emoji = tokenEmojiFromColor(p2?.color, EMOJI.yellow, p1Emoji);
     const boardView = boardGrid(board, p1Emoji, p2Emoji, winCells);
-    const variantLabels = { classic: 'Classique', rotate: 'Plateau rotatif', anti: 'Anti-P4', bomb: 'Puissance Bombe', mission: 'Mission personnelle', simultaneous: 'Placement simultane' };
+    const variantLabels = { classic: 'Classique', rotate: 'Plateau rotatif', anti: 'Anti-P4', bomb: 'Puissance Bombe', mission: 'Mission personnelle', simultaneous: 'Placement simultané', fog: 'Brouillard de Guerre', conquest: 'Conquête' };
     const variantLabel = variantLabels[String(variant || 'classic')] || clean(variant, 'Classique');
     const fields = [
       ['Duel', `${p1Emoji} **${clean(p1?.pseudo)}** \`${p1?.elo || 0} ELO\` (${d1})\n${p2Emoji} **${clean(p2?.pseudo)}** \`${p2?.elo || 0} ELO\` (${d2})`, false],
@@ -375,7 +378,12 @@ module.exports = {
     ];
     if (boardView) {
       const columns = Array.from({ length: boardView.cols }, (_, index) => index + 1).join(' · ');
-      fields.splice(1, 0, ['Plateau final', `**${variantLabel} · ${boardView.rows}×${boardView.cols}**\n${boardView.grid}\n${EMOJI.win} = alignement gagnant`, false]);
+      const legend = String(variant || 'classic') === 'anti'
+        ? 'Score : alignements de chacun'
+        : String(variant || 'classic') === 'conquest'
+          ? `${EMOJI.win} = dernier alignement capturé`
+          : `${EMOJI.win} = alignement gagnant`;
+      fields.splice(1, 0, ['Plateau final', `**${variantLabel} · ${boardView.rows}×${boardView.cols}**\n${boardView.grid}\n${legend}`, false]);
     }
     send([mkContainer(color, title, fields, {
       subtitle: isSuspect ? 'Surveillance anti-abus' : 'Fin de partie',

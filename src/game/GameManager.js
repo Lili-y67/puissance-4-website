@@ -83,6 +83,8 @@ class GameManager {
       missions: { 1: null, 2: null },
       simultaneousChoices: { 1: null, 2: null },
       initiative: initialCurrent,
+      conquestScores: { 1: 0, 2: 0 },
+      conquestRound: 1,
     };
 
     this.games.set(gameId, state);
@@ -145,7 +147,12 @@ class GameManager {
           { antiTiebreak: antiResult.tiebreak }
         );
       }
+    } else if (state.variant === 'conquest' && winCells) {
+      return this._captureConquest(state, playerNum, lastMove);
     } else if (winCells && state.variant !== 'mission') return this._end(state, playerNum, winCells, 'win', lastMove);
+    else if (state.variant === 'conquest' && state.board.isDraw()) {
+      return this._resetConquestBoard(state, playerNum, lastMove);
+    }
     else if (state.board.isDraw()) return this._end(state, null, [], 'draw', lastMove);
 
     let rotation = null;
@@ -177,7 +184,48 @@ class GameManager {
       board: state.board.grid,
       rotation,
       antiScores: state.antiScores,
+      conquestScores: state.conquestScores,
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
+    };
+  }
+
+  _captureConquest(state, playerNum, lastMove) {
+    const segments = state.board.getSegments(playerNum);
+    const captured = [...new Set(segments.flatMap(segment => segment.cells.map(([row, col]) => `${row}:${col}`)))]
+      .map(key => key.split(':').map(Number));
+    state.conquestScores[playerNum]++;
+    for (const [row, col] of captured) state.board.grid[row][col] = 0;
+    const falls = state.board.applyGravity();
+    this._recordAction(state, playerNum, 'conquest_capture', {
+      captured, falls, scores: state.conquestScores, round: state.conquestRound,
+    });
+
+    const total = state.conquestScores[1] + state.conquestScores[2];
+    const winner = state.conquestScores[playerNum] >= 3 ? playerNum : null;
+    if (winner || total >= Number(state.variantConfig.pointsToResolve || 4)) {
+      return this._end(state, winner, captured, winner ? 'conquest_win' : 'conquest_draw', lastMove, {
+        conquestScores: state.conquestScores, conquest: { captured, falls },
+      });
+    }
+
+    state.current = playerNum === 1 ? 2 : 1;
+    return {
+      type: 'conquest_capture', gameId: state.id, variant: state.variant, player: playerNum,
+      captured, falls, board: state.board.grid, conquestScores: state.conquestScores,
+      round: state.conquestRound, next: state.current,
+    };
+  }
+
+  _resetConquestBoard(state, playerNum, lastMove) {
+    state.board = new Board(state.variantConfig);
+    state.conquestRound++;
+    state.current = playerNum === 1 ? 2 : 1;
+    this._recordAction(state, null, 'conquest_reset', {
+      scores: state.conquestScores, round: state.conquestRound,
+    });
+    return {
+      type: 'conquest_reset', gameId: state.id, variant: state.variant, board: state.board.grid,
+      conquestScores: state.conquestScores, round: state.conquestRound, next: state.current, lastMove,
     };
   }
 
@@ -389,7 +437,7 @@ class GameManager {
   _end(state, winnerSide, winCells, reason, lastMove = null, extra = {}) {
     state.status = 'finished';
     const duration = Math.round((Date.now() - state.startedAt) / 1000);
-    const isDraw = reason === 'draw' || reason === 'agreement_draw' || reason === 'position_draw';
+    const isDraw = reason === 'draw' || reason === 'agreement_draw' || reason === 'position_draw' || reason === 'conquest_draw';
 
     const winnerId = winnerSide ? state.players[winnerSide].id : state.players[1].id;
     const loserId = winnerSide ? state.players[winnerSide === 1 ? 2 : 1].id : state.players[2].id;
@@ -412,6 +460,7 @@ class GameManager {
           antiScores: state.antiScores,
           bombs: state.bombs,
           missions: state.missions,
+          conquestScores: state.conquestScores,
           ...extra,
         })
       : {
@@ -526,6 +575,7 @@ class GameManager {
       antiScores: state.antiScores,
       bombs: state.bombs,
       missions: state.missions,
+      conquestScores: state.conquestScores,
       ...extra,
     };
 

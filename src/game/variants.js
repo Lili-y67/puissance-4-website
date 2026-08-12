@@ -5,6 +5,8 @@ const VARIANTS = Object.freeze({
   bomb: Object.freeze({ id: 'bomb', label: 'Puissance Bombe', rows: 6, cols: 7, ranked: true }),
   mission: Object.freeze({ id: 'mission', label: 'Mission personnelle', rows: 7, cols: 7, ranked: true }),
   simultaneous: Object.freeze({ id: 'simultaneous', label: 'Placement simultané', rows: 6, cols: 7, ranked: true }),
+  fog: Object.freeze({ id: 'fog', label: 'Brouillard de Guerre', rows: 6, cols: 7, ranked: true, revealMs: 1250 }),
+  conquest: Object.freeze({ id: 'conquest', label: 'Conquête', rows: 6, cols: 7, ranked: true, pointsToResolve: 4 }),
 });
 
 const MISSION_DEFINITIONS = Object.freeze([
