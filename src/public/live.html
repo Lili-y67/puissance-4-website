@@ -44,10 +44,14 @@ img,canvas,svg{max-width:100%}
 .tv-view{display:none}.tv-view.show{display:block;animation:card-in .3s ease both}
 .tv-card{padding:22px;border:1px solid var(--border);border-radius:26px;background:radial-gradient(circle at 50% 5%,rgba(133,235,255,.08),transparent 38%),linear-gradient(180deg,rgba(18,18,38,.97),rgba(8,8,20,.98));box-shadow:0 30px 80px rgba(0,0,0,.42)}
 .tv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:16px}.tv-title{font:900 34px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase}.tv-copy{max-width:560px;color:var(--muted);font-size:12px;line-height:1.5}.tv-channel{padding:7px 11px;border-radius:999px;background:rgba(255,45,85,.1);border:1px solid rgba(255,45,85,.26);color:#ff708e;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;text-transform:uppercase}
-.tv-set{position:relative;width:min(100%,760px);aspect-ratio:526/458;margin:auto;filter:drop-shadow(0 28px 30px rgba(0,0,0,.55))}.tv-frame{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}.tv-screen{position:absolute;z-index:2;left:13.1%;top:11.2%;width:63.8%;height:51.3%;overflow:hidden;border-radius:16% 14% 14% 16%/12% 12% 14% 14%;background:#050609;cursor:pointer;transform:translateZ(0)}
-.tv-screen .live-board{width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;padding:3.5%;gap:1.4%;box-shadow:none}.tv-screen .live-cell{min-width:0;min-height:0}.tv-screen .live-token{inset:2px}
-.tv-no-signal{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;background:repeating-radial-gradient(ellipse at 30% 20%,#181818 0 1px,#777 1px 2px,#252525 2px 4px);animation:tv-static .15s steps(2) infinite}.tv-no-signal::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.12) 3px 4px);mix-blend-mode:screen}.tv-no-signal strong{position:relative;padding:8px 16px;background:rgba(0,0,0,.78);font:900 clamp(17px,4vw,34px) 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;text-shadow:2px 0 #f00,-2px 0 #0ff}.tv-no-signal span{display:block;margin-top:4px;font-size:10px;letter-spacing:2px}.tv-overlay{position:absolute;z-index:3;left:15%;right:25%;bottom:40%;display:flex;justify-content:space-between;gap:8px;pointer-events:none}.tv-overlay span{padding:4px 8px;border-radius:5px;background:rgba(0,0,0,.74);color:#fff;font:900 10px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.tv-now{margin-top:4px;text-align:center;color:var(--muted);font-size:12px}.tv-now strong{color:#fff}
-@keyframes tv-static{0%{background-position:0 0}50%{background-position:9px -6px}100%{background-position:-5px 8px}}
+.tv-set{position:relative;width:min(100%,760px);aspect-ratio:526/458;margin:auto;filter:drop-shadow(0 28px 30px rgba(0,0,0,.55))}.tv-frame{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}.tv-screen{position:absolute;z-index:2;left:13.1%;top:11.2%;width:63.8%;height:51.3%;overflow:hidden;border-radius:16% 14% 14% 16%/12% 12% 14% 14%;background:radial-gradient(ellipse at center,#0a1021,#020306 78%);cursor:pointer;transform:translateZ(0)}
+.tv-screen .live-board{position:absolute;left:50%;top:50%;height:92%;width:auto;max-width:94%;margin:0;transform:translate(-50%,-50%);border:0;border-radius:12px;padding:1.8%;gap:1.2%;box-shadow:none;box-sizing:border-box}.tv-screen .live-cell{min-width:0;min-height:0;aspect-ratio:1}.tv-screen .live-token{inset:2px}
+.tv-no-signal{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:rgba(255,255,255,.82);background:radial-gradient(ellipse at center,rgba(40,44,48,.38),rgba(3,4,6,.94)),repeating-linear-gradient(12deg,#111 0 2px,#181818 2px 4px);animation:tv-breathe 5s ease-in-out infinite}.tv-no-signal::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(255,255,255,.018) 5px 6px);opacity:.5}.tv-no-signal strong{position:relative;padding:9px 17px;border:1px solid rgba(255,255,255,.14);border-radius:5px;background:rgba(0,0,0,.48);font:900 clamp(17px,4vw,30px) 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;text-shadow:0 0 14px rgba(255,255,255,.2)}.tv-no-signal span{display:block;margin-top:5px;color:rgba(255,255,255,.48);font-size:9px;letter-spacing:2px}.tv-overlay{display:none}.tv-now{margin-top:4px;text-align:center;color:var(--muted);font-size:12px}.tv-now strong{color:#fff}
+@keyframes tv-breathe{0%,100%{filter:brightness(.82)}50%{filter:brightness(.96)}}
+@keyframes tv-board-rotate{0%{transform:translate(-50%,-50%) rotate(0) scale(1)}45%{transform:translate(-50%,-50%) rotate(7deg) scale(.92)}70%{transform:translate(-50%,-50%) rotate(-2deg) scale(.97)}100%{transform:translate(-50%,-50%) rotate(0) scale(1)}}
+@keyframes tv-conquest{0%,100%{filter:none}35%{filter:brightness(1.5) saturate(1.3);box-shadow:0 0 35px rgba(255,214,10,.28)}}
+.tv-screen .live-board.tv-rotate{animation:tv-board-rotate .72s cubic-bezier(.2,.8,.25,1)}
+.tv-screen .live-board.tv-conquest{animation:tv-conquest .72s ease}
 .sound-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.24);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .sound-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.48);background:rgba(255,214,10,.14)}
 .sound-btn.muted{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
@@ -230,7 +234,6 @@ img,canvas,svg{max-width:100%}
   .mini-cell.win-cell,
   .live-cell.win-cell,
   .game-card,
-  .token-drop,
   html[data-board-skin] .mini-board,
   html[data-board-skin] .mini-board::before,
   html[data-board-skin] .mini-board::after,
@@ -240,6 +243,7 @@ img,canvas,svg{max-width:100%}
   .game-card:hover{transform:none;box-shadow:0 18px 42px rgba(0,0,0,.30)}
   .scanlines{display:none}
 }
+@media (prefers-reduced-motion:reduce){.token-drop,.tv-no-signal,.tv-screen .live-board.tv-rotate,.tv-screen .live-board.tv-conquest{animation:none!important}}
 /* Transparent live board over custom wallpapers. */
 .board-wrap{background:rgba(8,8,18,.18);border-color:rgba(255,255,255,.06);backdrop-filter:blur(2px)}
 .live-board{background:radial-gradient(circle at 7% 80%,color-mix(in srgb,var(--board-a-soft) 60%,transparent),transparent 32%),radial-gradient(circle at 94% 18%,color-mix(in srgb,var(--board-b-soft) 56%,transparent),transparent 34%),rgba(6,7,18,.26);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 18px 48px rgba(0,0,0,.26)}
@@ -249,6 +253,39 @@ img,canvas,svg{max-width:100%}
 body.p4-wallpaper-mode .board-wrap{background:rgba(0,0,0,.08);border-color:rgba(255,255,255,.08);box-shadow:none}
 body.p4-wallpaper-mode .live-board{background:rgba(4,5,14,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 18px 42px rgba(0,0,0,.18)}
 body.p4-wallpaper-mode .live-cell{background:radial-gradient(circle at 50% 66%,rgba(0,0,0,.18),transparent 38%),rgba(7,8,22,.34)}
+
+/* Spectateur — régie de diffusion */
+body.spectating .page{max-width:1480px;padding-top:18px}
+body.spectating .headline,body.spectating .refresh-bar{display:none}
+body.spectating .nav{margin-bottom:10px}
+body.spectating #spec-view{animation:spec-enter .42s cubic-bezier(.22,1,.36,1) both}
+@keyframes spec-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+body.spectating .spec-shell{grid-template-columns:minmax(620px,1fr) minmax(330px,390px);gap:16px;align-items:start}
+body.spectating .spec-card,body.spectating .analysis-card{border:1px solid rgba(255,255,255,.105);background:linear-gradient(155deg,rgba(13,15,28,.88),rgba(5,7,17,.76));backdrop-filter:blur(18px) saturate(1.08);box-shadow:0 24px 70px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.045)}
+body.spectating .spec-card{padding:0;overflow:hidden;border-radius:26px}
+body.spectating .spec-top{margin:0;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:linear-gradient(90deg,rgba(133,235,255,.055),transparent 48%);flex-wrap:nowrap}
+.spec-heading{min-width:0;flex:1}.spec-kicker{margin-bottom:4px;color:#85EBFF;font:900 10px 'Barlow Condensed',sans-serif;letter-spacing:2.4px;text-transform:uppercase}.spec-heading-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+body.spectating .spec-title{font-size:30px;line-height:1}
+.spec-variant-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;border:1px solid rgba(133,235,255,.24);background:rgba(133,235,255,.075);color:#bff6ff;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.spec-variant-badge::before{content:'◆';font-size:8px;color:#85EBFF}
+body.spectating:has(#live-board[data-variant="rotate"]) .spec-variant-badge{color:#e6d6ff;border-color:rgba(178,126,255,.3);background:rgba(178,126,255,.09)}body.spectating:has(#live-board[data-variant="conquest"]) .spec-variant-badge{color:#ffe986;border-color:rgba(255,214,10,.3);background:rgba(255,214,10,.08)}body.spectating:has(#live-board[data-variant="bomb"]) .spec-variant-badge{color:#ffad83;border-color:rgba(255,112,64,.3);background:rgba(255,112,64,.08)}
+body.spectating .back-btn{order:2;padding:9px 12px;border-radius:999px;background:rgba(255,255,255,.035);font-size:11px}
+body.spectating .spec-sub{font-size:11px}
+body.spectating .spec-players{position:relative;margin:14px 18px 0;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(3,5,13,.38)}
+body.spectating .spec-player{padding:10px 12px;border:0;background:transparent;border-radius:13px}
+body.spectating .spec-player:first-child{background:linear-gradient(90deg,rgba(255,255,255,.035),transparent)}body.spectating .spec-player.right{background:linear-gradient(-90deg,rgba(255,255,255,.035),transparent)}
+body.spectating .spec-avatar{width:46px;height:46px;font-size:19px}body.spectating .spec-pseudo{font-size:20px}body.spectating .turn-chip{padding:7px 10px;font-size:10px;white-space:nowrap}
+body.spectating .board-wrap{margin:14px 18px 18px;padding:14px;border-radius:22px;background:linear-gradient(160deg,rgba(5,7,16,.64),rgba(3,5,12,.38));border-color:rgba(255,255,255,.075);backdrop-filter:blur(7px)}
+body.spectating .live-board{width:min(100%,610px);border-radius:20px;padding:13px;gap:9px;background:radial-gradient(circle at 15% 85%,color-mix(in srgb,var(--board-a-soft) 55%,transparent),transparent 34%),radial-gradient(circle at 88% 12%,color-mix(in srgb,var(--board-b-soft) 50%,transparent),transparent 36%),rgba(4,6,16,.56);box-shadow:0 18px 44px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.07)}
+@keyframes spec-rotate-board{0%{transform:rotate(0) scale(1)}45%{transform:rotate(5deg) scale(.95)}72%{transform:rotate(-1.5deg) scale(.985)}100%{transform:none}}@keyframes spec-conquest-board{0%,100%{filter:none}38%{filter:brightness(1.35) saturate(1.25)}}body.spectating .live-board.spec-rotate{animation:spec-rotate-board .72s cubic-bezier(.2,.8,.25,1)}body.spectating .live-board.spec-conquest{animation:spec-conquest-board .7s ease}
+body.spectating .spec-meta{margin-top:12px;gap:7px}body.spectating .meta-pill{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.035);font-size:10px}
+body.spectating .spectator-box{padding:10px 12px;border-radius:14px;background:rgba(3,5,13,.32)}body.spectating .spectator-head{margin-bottom:7px;font-size:12px}
+body.spectating .live-social{margin-top:8px}.social-row{gap:6px}body.spectating .social-btn{padding:7px 8px;border-radius:10px;font-size:11px;background:rgba(255,255,255,.025)}
+body.spectating .analysis-card{position:sticky;top:14px;padding:18px;border-radius:24px;gap:14px;max-height:calc(100vh - 28px);overflow:auto;scrollbar-width:thin}
+body.spectating .analysis-title{font-size:24px}body.spectating .analysis-copy{font-size:11px;line-height:1.45}body.spectating .eval-label{font-size:14px}body.spectating .eval-bar{height:10px}
+body.spectating .analysis-grid{gap:8px}body.spectating .analysis-stat{padding:10px 11px;border-radius:13px;background:rgba(255,255,255,.018)}body.spectating .analysis-stat-value{font-size:24px}
+body.spectating .variant-toolbar{padding:10px 11px;border-radius:13px}body.spectating .variant-title{font-size:15px}body.spectating .variant-item{padding:9px 10px;border-radius:13px}body.spectating .variant-move{font-size:14px}body.spectating .analysis-note{padding:10px 12px;border-radius:12px;font-size:10px}
+@media(max-width:1050px){body.spectating .spec-shell{grid-template-columns:1fr}body.spectating .analysis-card{position:relative;top:auto;max-height:none}}
+@media(max-width:700px){body.spectating .page{padding:12px 9px 30px}body.spectating .spec-top{align-items:flex-start;flex-wrap:wrap}body.spectating .back-btn{order:0}body.spectating .spec-heading{order:1;flex-basis:100%}body.spectating .spec-players{grid-template-columns:1fr auto 1fr;margin:10px 9px 0}body.spectating .spec-player{padding:7px;gap:7px}body.spectating .spec-avatar{width:38px;height:38px}body.spectating .spec-pseudo{font-size:15px}body.spectating .spec-elo{font-size:9px}body.spectating .turn-chip{font-size:0;padding:7px}body.spectating .turn-chip .dot{margin:0}body.spectating .board-wrap{margin:10px 9px 9px;padding:8px}body.spectating .live-board{padding:8px;gap:5px}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=eggs-33">
@@ -322,8 +359,12 @@ body.p4-wallpaper-mode .live-cell{background:radial-gradient(circle at 50% 66%,r
       <div class="spec-card">
         <div class="spec-top">
           <button class="back-btn" type="button" onclick="backToLive()">← Retour au live</button>
-          <div>
-            <div class="spec-title" id="spec-title">Spectateur</div>
+          <div class="spec-heading">
+            <div class="spec-kicker">Diffusion en direct</div>
+            <div class="spec-heading-row">
+              <div class="spec-title" id="spec-title">Spectateur</div>
+              <div class="spec-variant-badge" id="spec-variant">Classique</div>
+            </div>
             <div class="spec-sub" id="spec-sub">Chargement de la partie...</div>
           </div>
         </div>
@@ -469,7 +510,6 @@ function setLiveMode(mode) {
   document.getElementById('tv-tab')?.classList.toggle('active', liveMode === 'tv');
   document.getElementById('games-tab')?.classList.toggle('active', liveMode === 'games');
 }
-
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
     details: `Regarde ${game.players?.[1]?.pseudo || 'Joueur 1'} contre ${game.players?.[2]?.pseudo || 'Joueur 2'}`,
@@ -874,6 +914,7 @@ function goToSpec(gameId) {
   selectedGameId = Number(gameId);
   getLiveAudioContext();
   startLiveAmbient();
+  document.body.classList.add('spectating');
   history.replaceState({}, '', '/spec/' + selectedGameId);
   document.getElementById('list-view').classList.remove('show');
   document.getElementById('tv-view').classList.remove('show');
@@ -889,6 +930,7 @@ function backToLive() {
   lastVariantGame = null;
   if (socket?.connected) socket.emit('leave_live_game');
   stopLiveAmbient();
+  document.body.classList.remove('spectating');
   history.replaceState({}, '', '/live');
   document.getElementById('spec-view').classList.remove('show');
   document.querySelector('.live-mode-tabs').style.display = 'flex';
@@ -1168,7 +1210,6 @@ function renderBoardInto(board, game, large = true) {
     }
   }
 
-  let animatedToken = false;
   for (const cell of board.children) {
     const r = Number(cell.dataset.row);
     const c = Number(cell.dataset.col);
@@ -1179,7 +1220,7 @@ function renderBoardInto(board, game, large = true) {
     cell.classList.toggle('win-cell', isWinCell(game, r, c));
 
     if (previousValue !== val || cell.dataset.styleKey !== styleKey) {
-      const shouldAnimate = large && wasReady && !animatedToken && previousValue === 0 && val !== 0;
+      const shouldAnimate = large && wasReady && previousValue === 0 && val !== 0;
       cell.dataset.value = String(val);
       cell.dataset.styleKey = styleKey;
       cell.replaceChildren();
@@ -1189,7 +1230,6 @@ function renderBoardInto(board, game, large = true) {
         cell.appendChild(token);
         applyTokenStyle(token, player, large);
         if (shouldAnimate) {
-          animatedToken = true;
           requestAnimationFrame(() => token.classList.add('token-drop'));
           token.addEventListener('animationend', () => token.classList.remove('token-drop'), { once: true });
         }
@@ -1201,7 +1241,6 @@ function renderBoardInto(board, game, large = true) {
 
 function renderP4TV(allGames) {
   const screen = document.getElementById('tv-screen');
-  const overlay = document.getElementById('tv-overlay');
   const now = document.getElementById('tv-now');
   const channel = document.getElementById('tv-channel');
   if (!screen) return;
@@ -1215,18 +1254,38 @@ function renderP4TV(allGames) {
   if (channel) channel.textContent = `CH ${String(channelIndex + 1).padStart(2, '0')} · ${channelLabel}`;
   screen.onclick = game ? () => goToSpec(game.id) : null;
   if (!game) {
-    screen.innerHTML = '<div class="tv-no-signal"><strong>Aucun Signal<span>En attente d\'une partie</span></strong></div>';
-    overlay.innerHTML = '';
+    if (!screen.querySelector('.tv-no-signal')) screen.innerHTML = '<div class="tv-no-signal"><strong>Aucun Signal<span>En attente d\'une partie</span></strong></div>';
+    screen.dataset.gameId = '';
+    screen.dataset.grid = '';
     now.textContent = `Aucun direct disponible · ${channelLabel}`;
     return;
   }
-  screen.innerHTML = '';
-  const board = document.createElement('div');
-  board.className = 'live-board';
-  screen.appendChild(board);
+  let board = screen.querySelector('.live-board');
+  const sameGame = Number(screen.dataset.gameId) === Number(game.id);
+  if (!board || !sameGame) {
+    screen.innerHTML = '';
+    board = document.createElement('div');
+    board.className = 'live-board';
+    screen.appendChild(board);
+  }
+  let previousGrid = null;
+  try { previousGrid = sameGame && screen.dataset.grid ? JSON.parse(screen.dataset.grid) : null; } catch (_) {}
+  const previousCount = Array.isArray(previousGrid) ? previousGrid.flat().filter(Boolean).length : 0;
+  const nextCount = Array.isArray(game.grid) ? game.grid.flat().filter(Boolean).length : 0;
+  const changedCells = Array.isArray(previousGrid) ? game.grid.reduce((sum, row, r) => sum + row.reduce((n, value, c) => n + (Number(previousGrid?.[r]?.[c] || 0) !== Number(value || 0) ? 1 : 0), 0), 0) : 0;
   renderBoardInto(board, game, true);
+  if (sameGame && changedCells > 2) {
+    const effect = String(game.variant) === 'rotate' && previousCount === nextCount ? 'tv-rotate' : String(game.variant) === 'conquest' ? 'tv-conquest' : '';
+    if (effect) {
+      board.classList.remove('tv-rotate','tv-conquest');
+      void board.offsetWidth;
+      board.classList.add(effect);
+      board.addEventListener('animationend', () => board.classList.remove(effect), { once:true });
+    }
+  }
+  screen.dataset.gameId = String(game.id);
+  screen.dataset.grid = JSON.stringify(game.grid || []);
   const p1 = game.players[1], p2 = game.players[2];
-  overlay.innerHTML = `<span>● LIVE · #${game.id}</span><span>${escapeHtml(String(game.moves || 0))} coups</span>`;
   now.innerHTML = `<strong>${escapeHtml(p1.pseudo)}</strong> (${Math.round(Number(p1.elo || 0))}) contre <strong>${escapeHtml(p2.pseudo)}</strong> (${Math.round(Number(p2.elo || 0))}) · cliquer sur l’écran pour regarder`;
 }
 
@@ -1337,8 +1396,10 @@ function renderSpec(game) {
   lastSpecStatusByGame.set(Number(game.id), game.status);
   if (finished) stopLiveAmbient();
   else startLiveAmbient();
+  const variantLabel = LIVE_VARIANTS.find(([id]) => id === String(game.variant || 'classic'))?.[1] || 'Classique';
   document.getElementById('spec-title').textContent = `Partie #${game.id}`;
-  document.getElementById('spec-sub').textContent = `${game.moves} coups joues · tour de ${game.players[game.current].pseudo}`;
+  document.getElementById('spec-variant').textContent = variantLabel;
+  document.getElementById('live-board').dataset.variant = String(game.variant || 'classic');
 
   document.getElementById('spec-sub').textContent = finished
     ? `${game.moves} coups joues - ${winner ? `victoire de ${winner.pseudo}` : 'partie terminee'}`
@@ -1371,12 +1432,29 @@ function renderSpec(game) {
 
   players.append(left, center, right);
 
-  renderBoardInto(document.getElementById('live-board'), game, true);
+  const liveBoard = document.getElementById('live-board');
+  let previousSpecGrid = null;
+  try { previousSpecGrid = liveBoard.dataset.grid ? JSON.parse(liveBoard.dataset.grid) : null; } catch (_) {}
+  const previousSpecCount = Array.isArray(previousSpecGrid) ? previousSpecGrid.flat().filter(Boolean).length : 0;
+  const nextSpecCount = Array.isArray(game.grid) ? game.grid.flat().filter(Boolean).length : 0;
+  const specChangedCells = Array.isArray(previousSpecGrid) ? game.grid.reduce((sum, row, r) => sum + row.reduce((n, value, c) => n + (Number(previousSpecGrid?.[r]?.[c] || 0) !== Number(value || 0) ? 1 : 0), 0), 0) : 0;
+  renderBoardInto(liveBoard, game, true);
+  if (specChangedCells > 2) {
+    const effect = String(game.variant) === 'rotate' && previousSpecCount === nextSpecCount ? 'spec-rotate' : String(game.variant) === 'conquest' ? 'spec-conquest' : '';
+    if (effect) {
+      liveBoard.classList.remove('spec-rotate','spec-conquest');
+      void liveBoard.offsetWidth;
+      liveBoard.classList.add(effect);
+      liveBoard.addEventListener('animationend', () => liveBoard.classList.remove(effect), { once:true });
+    }
+  }
+  liveBoard.dataset.grid = JSON.stringify(game.grid || []);
 
   const meta = document.getElementById('spec-meta');
   meta.innerHTML = `
-    <div class="meta-pill">Partie <strong>#${game.id}</strong></div>
+    <div class="meta-pill">Variante <strong>${escapeHtml(variantLabel)}</strong></div>
     <div class="meta-pill">Coups <strong>${game.moves}</strong></div>
+    <div class="meta-pill">Mode <strong>${String(game.gameType || 'ranked') === 'friendly' ? 'AMICAL' : 'RANKED'}</strong></div>
     <div class="meta-pill">Statut <strong>${finished ? 'TERMINEE' : 'ACTIVE'}</strong></div>
   `;
 
