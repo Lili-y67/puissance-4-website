@@ -211,7 +211,7 @@ function initGrid() {
 
 function onVariantChange() {
   const selected = document.getElementById('local-variant')?.value || 'classic';
-  const hints = { classic:'Le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Grille 9×9 : le joueur avec le moins de lignes gagne.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.', fog:'Chaque pion disparaît dans la brume après 1,25 seconde.', conquest:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.' };
+  const hints = { classic:'Le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Le moins de lignes gagne ; une colonne ne peut jamais être remplie jusqu’en haut.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.', fog:'Chaque pion disparaît dans la brume après 1,25 seconde.', conquest:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.' };
   document.getElementById('variant-hint').textContent = hints[selected];
   document.getElementById('variant-missions').classList.toggle('hidden', selected !== 'mission');
   newRound();
@@ -441,8 +441,11 @@ function allSegments(player, size = 4) {
 
 function forcedColumns() {
   if (variant !== 'anti' || ended) return [];
-  return legalColumns().filter(col => { const row=lowestRow(col);grid[row][col]=current;const forced=allSegments(current).some(s=>!antiSegments[current].has(s.key));grid[row][col]=0;return forced; });
+  return antiPlayableColumns().filter(col => { const row=lowestRow(col);grid[row][col]=current;const forced=allSegments(current).some(s=>!antiSegments[current].has(s.key));grid[row][col]=0;return forced; });
 }
+
+function antiPlayableColumns(){return legalColumns().filter(col=>lowestRow(col)>0);}
+function resolveLocalAntiWinner(){for(const size of [4,3,2]){const a=size===4?antiScores[1]:allSegments(1,size).length,b=size===4?antiScores[2]:allSegments(2,size).length;if(a!==b)return a<b?1:2;}return current===1?2:1;}
 
 function missionComplete(player) {
   const id = document.getElementById(`mission-p${player}`)?.value || 'square';
@@ -470,6 +473,7 @@ function playColumn(col, options = {}) {
   const forced = forcedColumns();
   if (forced.length && !forced.includes(col)) { startTurnTimer(); return; }
   const row = lowestRow(col);
+  if (variant === 'anti' && row === 0) { updateStatus('Cette colonne ne peut pas être remplie jusqu’en haut','Coup interdit');startTurnTimer();return; }
   if (row < 0) {
     startTurnTimer();
     return;
@@ -486,7 +490,7 @@ function playColumn(col, options = {}) {
   }
   if (variant === 'anti') {
     const fresh=allSegments(current).filter(s=>!antiSegments[current].has(s.key));fresh.forEach(s=>antiSegments[current].add(s.key));antiScores[current]+=fresh.length;
-    if(!legalColumns().length){const winner=antiScores[1]===antiScores[2]?0:(antiScores[1]<antiScores[2]?1:2);if(winner)finishLocal(winner,[],`Anti-P4 · ${antiScores[1]} à ${antiScores[2]}`);else{ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Anti-P4');}return;}
+    if(!antiPlayableColumns().length){const winner=resolveLocalAntiWinner();finishLocal(winner,[],`Anti-P4 · ${antiScores[1]} à ${antiScores[2]}`);return;}
     advanceTurn(options);return;
   }
   if (variant === 'mission') { const mission=missionComplete(current);if(mission.length){finishLocal(current,mission,'Mission accomplie');return;}advanceTurn(options);return; }

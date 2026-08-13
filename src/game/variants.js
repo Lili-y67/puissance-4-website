@@ -1,7 +1,7 @@
 const VARIANTS = Object.freeze({
   classic: Object.freeze({ id: 'classic', label: 'Classique', rows: 6, cols: 7, ranked: true }),
   rotate: Object.freeze({ id: 'rotate', label: 'Plateau rotatif', rows: 7, cols: 7, ranked: true, rotateEvery: 4 }),
-  anti: Object.freeze({ id: 'anti', label: 'Anti-Puissance 4', rows: 9, cols: 9, ranked: true }),
+  anti: Object.freeze({ id: 'anti', label: 'Anti-Puissance 4', rows: 9, cols: 9, ranked: true, rule: 'Le moins d’alignements gagne ; il est interdit de remplir une colonne jusqu’en haut.' }),
   bomb: Object.freeze({ id: 'bomb', label: 'Puissance Bombe', rows: 6, cols: 7, ranked: true }),
   mission: Object.freeze({ id: 'mission', label: 'Mission personnelle', rows: 7, cols: 7, ranked: true }),
   simultaneous: Object.freeze({ id: 'simultaneous', label: 'Placement simultané', rows: 6, cols: 7, ranked: true }),

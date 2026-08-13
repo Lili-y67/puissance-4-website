@@ -79,6 +79,8 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_moves_game     ON moves(game_id);
   CREATE INDEX IF NOT EXISTS idx_games_p1       ON games(player1_id);
   CREATE INDEX IF NOT EXISTS idx_games_p2       ON games(player2_id);
+  CREATE INDEX IF NOT EXISTS idx_games_p1_created ON games(player1_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_games_p2_created ON games(player2_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_players_pseudo ON players(pseudo);
   CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
   CREATE INDEX IF NOT EXISTS idx_games_finished_p1_id ON games(status, player1_id, id DESC);

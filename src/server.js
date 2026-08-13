@@ -105,6 +105,7 @@ const BOT_ARENA_INTERVAL_MS = Math.max(30_000, Number(process.env.BOT_ARENA_INTE
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2)));
 const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 2 * 60_000));
 const BOT_ARENA_REST_MS = Math.max(30_000, Number(process.env.BOT_ARENA_REST_MS || 30_000));
+const BOT_GAME_WINDOW_LIMIT = 60;
 const BOT_SEARCH_TIME_MS = Math.max(2000, Math.min(15000, Number(process.env.BOT_SEARCH_TIME_MS || 2000)));
 const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 const BOT_HOST_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_HOST_MAX_ACTIVE || 2)));
@@ -1584,6 +1585,7 @@ function serializeBotGameState(state, playerId) {
   const forcedCols = state.variant === 'anti'
     ? gm._antiForcedCols(state, side)
     : [];
+  const forbiddenCols = state.variant === 'anti' ? gm._antiForbiddenCols(state) : [];
   return {
     gameId: state.id,
     gameType: state.gameType || 'ranked',
@@ -1592,8 +1594,9 @@ function serializeBotGameState(state, playerId) {
     current: state.current,
     isMyTurn: side === state.current,
     board: state.board.grid,
-    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols(),
+    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols().filter(col => !forbiddenCols.includes(col)),
     forcedCols,
+    forbiddenCols,
     antiScores: state.variant === 'anti' ? state.antiScores : null,
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
     moveCount: state.moveCount,
@@ -1915,7 +1918,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
       let col = action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
       const freshState = gm.games.get(gameId);
       if (!freshState || freshState !== state || state.status !== 'active' || (state.variant !== 'simultaneous' && state.current !== side)) return;
-      const validCols = state.board.getValidCols();
+      const validCols = state.variant === 'anti' ? gm._antiPlayableCols(state) : state.board.getValidCols();
       if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
       if (col === null) return;
       let result;
@@ -1987,6 +1990,83 @@ function botArenaPairKey(a, b) {
   return [Number(a), Number(b)].sort((x, y) => x - y).join(':');
 }
 
+function recentBotGameCount(botId) {
+  return Number(db.prepare(`SELECT COUNT(*) AS count FROM games WHERE (player1_id = ? OR player2_id = ?) AND created_at >= datetime('now', '-2 hours')`).get(Number(botId), Number(botId))?.count || 0);
+}
+
+function botQuotaStatus(botId) {
+  const row = db.prepare(`
+    SELECT COUNT(*) AS count, MIN(created_at) AS oldest
+    FROM games
+    WHERE (player1_id = ? OR player2_id = ?)
+      AND created_at >= datetime('now', '-2 hours')
+  `).get(Number(botId), Number(botId));
+  const count = Number(row?.count || 0);
+  const oldestMs = row?.oldest ? Date.parse(`${row.oldest}Z`) : 0;
+  return {
+    count,
+    remaining: Math.max(0, BOT_GAME_WINDOW_LIMIT - count),
+    retryAfterSeconds: count >= BOT_GAME_WINDOW_LIMIT && oldestMs
+      ? Math.max(1, Math.ceil((oldestMs + 2 * 60 * 60 * 1000 - Date.now()) / 1000))
+      : 0,
+  };
+}
+
+function enforceBotQuota(botIds, res) {
+  for (const id of [...new Set(botIds.map(Number).filter(Boolean))]) {
+    const bot = pQ.getById.get(id);
+    if (!bot || Number(bot.is_bot || 0) !== 1) continue;
+    const quota = botQuotaStatus(id);
+    if (quota.remaining > 0) continue;
+    res.set('Retry-After', String(quota.retryAfterSeconds));
+    res.status(429).json({
+      error: `${bot.pseudo} a atteint la limite de ${BOT_GAME_WINDOW_LIMIT} parties sur 2 heures.`,
+      code: 'BOT_GAME_QUOTA',
+      botId: id,
+      limit: BOT_GAME_WINDOW_LIMIT,
+      windowSeconds: 7200,
+      retryAfterSeconds: quota.retryAfterSeconds,
+    });
+    return false;
+  }
+  return true;
+}
+
+function recentPairCount(a, b) {
+  return Number(recentBotOpponentCounts(a).get(Number(b))?.count || 0);
+}
+
+function requestedOrBalancedBotVariant(value, botA, botB) {
+  return typeof value === 'string' && value.trim()
+    ? normalizeVariant(value)
+    : pickArenaVariant(botA, botB);
+}
+
+function recentBotOpponentCounts(botId) {
+  const rows = db.prepare(`
+    SELECT CASE WHEN player1_id = ? THEN player2_id ELSE player1_id END AS opponent_id,
+           COUNT(*) AS count, MAX(created_at) AS last_played
+    FROM games
+    WHERE (player1_id = ? OR player2_id = ?) AND created_at >= datetime('now', '-2 hours')
+    GROUP BY opponent_id
+  `).all(Number(botId), Number(botId), Number(botId));
+  return new Map(rows.map(row => [Number(row.opponent_id), { count: Number(row.count || 0), lastPlayed: Date.parse(`${row.last_played}Z`) || 0 }]));
+}
+
+function pickArenaVariant(botA, botB) {
+  const variants = publicVariants().map(item => item.id);
+  const rows = db.prepare(`
+    SELECT COALESCE(variant, 'classic') AS variant, COUNT(*) AS count FROM games
+    WHERE (player1_id IN (?, ?) OR player2_id IN (?, ?)) AND created_at >= datetime('now', '-2 hours')
+    GROUP BY COALESCE(variant, 'classic')
+  `).all(botA.id, botB.id, botA.id, botB.id);
+  const counts = new Map(rows.map(row => [String(row.variant), Number(row.count || 0)]));
+  const weights = Object.fromEntries(variants.map(id => [id, id === 'classic' ? 4 : 1]));
+  const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
+  const totalGames = [...counts.values()].reduce((sum, value) => sum + value, 0);
+  return variants.map(id => ({ id, score: ((totalGames + 1) * weights[id] / totalWeight) - Number(counts.get(id) || 0) + Math.random() * .2 })).sort((a, b) => b.score - a.score)[0]?.id || 'classic';
+}
+
 function countActiveBuiltinBotGames() {
   let count = 0;
   for (const state of gm.games.values()) {
@@ -2005,6 +2085,7 @@ function pickBackgroundBotPair() {
     .filter(bot => bot
       && !bot.deleted
       && Number(bot.bot_enabled || 0) === 1
+      && recentBotGameCount(bot.id) < BOT_GAME_WINDOW_LIMIT
       && !findActiveGameByPlayer(bot.id)
       && Number(botArenaRestUntil.get(Number(bot.id)) || 0) <= now)
     .sort(() => Math.random() - 0.5);
@@ -2013,15 +2094,18 @@ function pickBackgroundBotPair() {
   let best = null;
   let bestScore = Infinity;
   for (let i = 0; i < freeBots.length; i++) {
+    const opponentsA = recentBotOpponentCounts(freeBots[i].id);
     for (let j = i + 1; j < freeBots.length; j++) {
       const a = freeBots[i];
       const b = freeBots[j];
       const key = botArenaPairKey(a.id, b.id);
       const lastPlayed = Number(botArenaPairs.get(key) || 0);
       if (now - lastPlayed < BOT_ARENA_PAIR_COOLDOWN_MS && freeBots.length > 2) continue;
+      const repeated = opponentsA.get(Number(b.id)) || { count: 0, lastPlayed: 0 };
+      if (repeated.count >= 3 && freeBots.length > 2) continue;
       const eloDistance = Math.abs(Number(a.elo || 1000) - Number(b.elo || 1000));
       const freshnessPenalty = lastPlayed ? Math.max(0, BOT_ARENA_PAIR_COOLDOWN_MS - (now - lastPlayed)) / 1000 : 0;
-      const score = eloDistance + freshnessPenalty + Math.random() * 40;
+      const score = eloDistance + freshnessPenalty + repeated.count * 1500 + (repeated.lastPlayed ? 600 : 0) + Math.random() * 40;
       if (score < bestScore) {
         bestScore = score;
         best = [a, b, key];
@@ -2045,8 +2129,7 @@ function runBackgroundBotMatchmaking(reason = 'loop') {
       botArenaRestUntil.set(Number(botB.id), Date.now() + BOT_ARENA_REST_MS);
       botRuntime.set(Number(botA.id), { status: 'arena', lastSeen: Date.now() });
       botRuntime.set(Number(botB.id), { status: 'arena', lastSeen: Date.now() });
-      const variants = publicVariants().map(item => item.id);
-      const variant = variants[Math.floor(Math.random() * variants.length)] || 'classic';
+      const variant = pickArenaVariant(botA, botB);
       const state = createBotVsBotGame(botA, botB, 'ranked', variant);
       console.log(`[BOT-ARENA] ${reason}: ${botA.pseudo} vs ${botB.pseudo} game=${state.id}`);
     }
@@ -7615,18 +7698,23 @@ app.post('/api/bot/queue/join', (req, res) => {
   const active = findActiveBotGame(bot.id);
   if (active) return res.json({ ok: true, status: 'playing', game: serializeBotGameState(active, bot.id) });
   const ownId = Number(bot.id);
-  const opponentId = botApiQueue.find(id => id !== ownId && !findActiveBotGame(id));
+  if (!enforceBotQuota([ownId], res)) return;
+  const opponentId = botApiQueue
+    .filter(id => id !== ownId && !findActiveBotGame(id) && recentBotGameCount(id) < BOT_GAME_WINDOW_LIMIT)
+    .sort((a, b) => recentPairCount(ownId, a) - recentPairCount(ownId, b))[0];
   if (opponentId) {
     const idx = botApiQueue.indexOf(opponentId);
     if (idx >= 0) botApiQueue.splice(idx, 1);
-    const state = createBotVsBotGame(bot, pQ.getById.get(opponentId), 'ranked');
+    const opponent = pQ.getById.get(opponentId);
+    const state = createBotVsBotGame(bot, opponent, 'ranked', requestedOrBalancedBotVariant(req.body?.variant, bot, opponent));
     return res.json({ ok: true, status: 'matched', game: serializeBotGameState(state, bot.id) });
   }
   if (req.body?.allowBuiltin !== false) {
-    const candidates = [...builtinBotIds].filter(id => id !== ownId && !findActiveBotGame(id)).map(id => pQ.getById.get(id)).filter(Boolean)
-      .sort((a, b) => Math.abs(Number(a.elo || 1000) - Number(bot.elo || 1000)) - Math.abs(Number(b.elo || 1000) - Number(bot.elo || 1000)));
+    const candidates = [...builtinBotIds].filter(id => id !== ownId && !findActiveBotGame(id) && recentBotGameCount(id) < BOT_GAME_WINDOW_LIMIT).map(id => pQ.getById.get(id)).filter(Boolean)
+      .sort((a, b) => (recentPairCount(ownId, a.id) - recentPairCount(ownId, b.id)) * 10000
+        + Math.abs(Number(a.elo || 1000) - Number(bot.elo || 1000)) - Math.abs(Number(b.elo || 1000) - Number(bot.elo || 1000)));
     if (candidates[0]) {
-      const state = createBotVsBotGame(bot, candidates[0], 'ranked');
+      const state = createBotVsBotGame(bot, candidates[0], 'ranked', requestedOrBalancedBotVariant(req.body?.variant, bot, candidates[0]));
       return res.json({ ok: true, status: 'matched_builtin', game: serializeBotGameState(state, bot.id) });
     }
   }
@@ -7676,12 +7764,14 @@ app.post('/api/bot/challenge/:id', (req, res) => {
     return res.status(404).json({ error: 'Bot introuvable.' });
   }
   if (Number(target.id) === Number(challenger.id)) return res.status(409).json({ error: 'Un bot ne peut pas se defier lui-meme.' });
+  if (!enforceBotQuota([challenger.id, target.id], res)) return;
+  if (recentPairCount(challenger.id, target.id) >= 3) return res.status(429).json({ error: 'Ces deux bots se sont deja affrontes 3 fois sur les 2 dernieres heures. Choisis un autre adversaire.', code: 'BOT_PAIR_COOLDOWN' });
   if (findActiveGameByPlayer(challenger.id)) return res.status(409).json({ error: 'Ton bot est deja en partie.' });
   if (findActiveGameByPlayer(target.id)) return res.status(409).json({ error: 'Le bot cible est deja en partie.' });
   const runtime = publicBotRuntime(target.id);
   if (!runtime.online) return res.status(409).json({ error: 'Le bot cible est hors ligne.' });
   botRuntime.set(Number(challenger.id), { status: 'playing', lastSeen: Date.now() });
-  const state = createChallengeVsBotGame(challenger, target, 'ranked', normalizeVariant(req.body?.variant));
+  const state = createChallengeVsBotGame(challenger, target, 'ranked', requestedOrBalancedBotVariant(req.body?.variant, challenger, target));
   res.json({ ok: true, game: serializeBotGameState(state, challenger.id), target: sanitize(target) });
 });
 
@@ -7694,11 +7784,19 @@ app.get('/api/bots/preconfigured', (req, res) => {
 app.post('/api/bots/preconfigured/match', (req, res) => {
   const bots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(Boolean);
   if (bots.length < 2) return res.status(409).json({ error: 'Pas assez de bots disponibles.' });
-  const free = bots.filter(bot => !findActiveBotGame(bot.id));
-  const pool = free.length >= 2 ? free : bots;
-  const shuffled = pool.sort(() => Math.random() - 0.5);
-  const state = createBotVsBotGame(shuffled[0], shuffled[1], 'ranked', normalizeVariant(req.body?.variant));
-  res.json({ ok: true, game: serializeBotGameState(state, shuffled[0].id) });
+  const free = bots.filter(bot => !findActiveBotGame(bot.id) && recentBotGameCount(bot.id) < BOT_GAME_WINDOW_LIMIT);
+  const pool = free;
+  if (pool.length < 2) return res.status(409).json({ error: 'Pas assez de bots libres sous leur quota.' });
+  const pairs = [];
+  for (let i = 0; i < pool.length; i += 1) for (let j = i + 1; j < pool.length; j += 1) {
+    if (recentBotGameCount(pool[i].id) >= BOT_GAME_WINDOW_LIMIT || recentBotGameCount(pool[j].id) >= BOT_GAME_WINDOW_LIMIT) continue;
+    pairs.push({ a: pool[i], b: pool[j], repeats: recentPairCount(pool[i].id, pool[j].id), random: Math.random() });
+  }
+  pairs.sort((a, b) => a.repeats - b.repeats || a.random - b.random);
+  const selected = pairs[0];
+  if (!selected) return res.status(429).json({ error: 'Tous les bots disponibles ont atteint leur limite de parties.', code: 'BOT_GAME_QUOTA' });
+  const state = createBotVsBotGame(selected.a, selected.b, 'ranked', requestedOrBalancedBotVariant(req.body?.variant, selected.a, selected.b));
+  res.json({ ok: true, game: serializeBotGameState(state, selected.a.id) });
 });
 
 app.post('/api/bots/:id/challenge', (req, res) => {
@@ -7712,6 +7810,7 @@ app.post('/api/bots/:id/challenge', (req, res) => {
     return res.status(404).json({ error: 'Bot introuvable.' });
   }
   if (Number(target.id) === Number(challenger.id)) return res.status(409).json({ error: 'Tu ne peux pas defier ton propre bot.' });
+  if (!enforceBotQuota([target.id], res)) return;
   if (findActiveGameByPlayer(challenger.id)) return res.status(409).json({ error: 'Tu es deja en partie.' });
   if (findActiveGameByPlayer(target.id)) return res.status(409).json({ error: 'Ce bot est deja en partie.' });
   const runtime = publicBotRuntime(target.id);
@@ -10749,7 +10848,7 @@ io.on('connection', socket => {
 
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
-    if (result.error) return socket.emit('error', { message: result.error });
+    if (result.error) return socket.emit('error', { message: result.error, forcedCols: result.forcedCols || [], forbiddenCols: result.forbiddenCols || [] });
     if (['move', 'simultaneous_round', 'conquest_capture', 'conquest_reset'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
     if (result.type === 'game_over') emitGameOver(result);
@@ -11006,6 +11105,8 @@ io.on('connection', socket => {
         startsIn: 0,
         latencies: getGameLatencyPayload(state),
         antiScores: state.antiScores,
+        forcedCols: state.variant === 'anti' ? gm._antiForcedCols(state, state.current) : [],
+        forbiddenCols: state.variant === 'anti' ? gm._antiForbiddenCols(state) : [],
         conquestScores: state.conquestScores,
         bombs: state.bombs,
       });

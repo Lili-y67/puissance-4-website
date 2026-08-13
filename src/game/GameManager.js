@@ -106,8 +106,10 @@ class GameManager {
     if (playerNum !== state.current) return { error: 'Pas ton tour.' };
     if (!state.board.isValidCol(col)) return { error: 'Colonne invalide.' };
     if (state.variant === 'anti') {
+      const playable = this._antiPlayableCols(state);
+      if (!playable.includes(Number(col))) return { error: 'Interdit de remplir une colonne jusqu’en haut.', forbiddenCols: this._antiForbiddenCols(state) };
       const forced = this._antiForcedCols(state, playerNum);
-      if (forced.length && !forced.includes(Number(col))) return { error: 'Tu dois compléter un alignement de 4.', forcedCols: forced };
+      if (forced.length && !forced.includes(Number(col))) return { error: 'Tu dois compléter un alignement de 4.', forcedCols: forced, forbiddenCols: this._antiForbiddenCols(state) };
     }
 
     const now = Date.now();
@@ -136,7 +138,7 @@ class GameManager {
       fresh.forEach(segment => state.antiSegments[playerNum].add(segment.key));
       if (fresh.length) state.antiLastScorer = playerNum;
       state.antiScores[playerNum] = state.antiSegments[playerNum].size;
-      if (state.board.isDraw()) {
+      if (!this._antiPlayableCols(state).length) {
         const antiResult = this._resolveAntiWinner(state, playerNum);
         return this._end(
           state,
@@ -186,6 +188,7 @@ class GameManager {
       antiScores: state.antiScores,
       conquestScores: state.conquestScores,
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
+      forbiddenCols: state.variant === 'anti' ? this._antiForbiddenCols(state) : [],
     };
   }
 
@@ -309,11 +312,19 @@ class GameManager {
   }
 
   _antiForcedCols(state, player) {
-    return state.board.getValidCols().filter(col => {
+    return this._antiPlayableCols(state).filter(col => {
       const copy = state.board.clone();
       const row = copy.drop(col, player);
       return !!copy.checkWin(row, col, player);
     });
+  }
+
+  _antiPlayableCols(state) {
+    return state.board.getValidCols().filter(col => state.board.getLowestEmpty(col) > 0);
+  }
+
+  _antiForbiddenCols(state) {
+    return state.board.getValidCols().filter(col => state.board.getLowestEmpty(col) === 0);
   }
 
   _resolveAntiWinner(state, lastPlayer) {

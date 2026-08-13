@@ -1411,6 +1411,7 @@ let currentVariant = 'classic';
 let bombTargeting = false;
 let simultaneousWaiting = false;
 let forcedColumns = [];
+let forbiddenColumns = [];
 let socket, myPlayer, mySide, gameId, currentTurn;
 let boardCells = [];
 let columnButtons = [];
@@ -1441,6 +1442,8 @@ const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'An
 
 function configureVariant(data = {}) {
   currentVariant = data.variant || 'classic';
+  forcedColumns = Array.isArray(data.forcedCols) ? data.forcedCols.map(Number) : [];
+  forbiddenColumns = Array.isArray(data.forbiddenCols) ? data.forbiddenCols.map(Number) : [];
   ROWS = Number(data.variantConfig?.rows || data.grid?.length || 6);
   COLS = Number(data.variantConfig?.cols || data.grid?.[0]?.length || 7);
   const board = document.getElementById('board');
@@ -1462,7 +1465,7 @@ function ensureVariantControls(data = {}) {
   controls.id = 'variant-controls';
   controls.style.cssText = 'display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:8px 0;color:var(--muted);font:800 13px "Barlow Condensed",sans-serif';
   if (currentVariant === 'bomb') controls.innerHTML = '<button type="button" class="btn-action ghost" id="bomb-button">💣 Utiliser ma bombe</button><span id="bomb-state">1 disponible</span>';
-  if (currentVariant === 'anti') controls.innerHTML = '<span id="anti-score">Alignements : 0 — 0</span>';
+  if (currentVariant === 'anti') controls.innerHTML = '<span id="anti-score">Alignements : 0 — 0 · sommet interdit</span>';
   if (currentVariant === 'rotate') controls.innerHTML = '<span>Rotation imprévisible tous les 4 coups</span>';
   if (currentVariant === 'simultaneous') controls.innerHTML = '<span id="simultaneous-state">Choisis une colonne en secret</span>';
   if (currentVariant === 'fog') controls.innerHTML = '<span>Le dernier pion disparaît dans la brume après 1,25 s</span>';
@@ -2576,9 +2579,10 @@ function onMovePlayed(data) {
   if (currentVariant === 'fog') applyFogVisibility(data.row, data.col);
   if (data.antiScores) {
     const score = document.getElementById('anti-score');
-    if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0}`;
+    if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0} · sommet interdit`;
   }
   forcedColumns = Array.isArray(data.forcedCols) ? data.forcedCols.map(Number) : [];
+  forbiddenColumns = Array.isArray(data.forbiddenCols) ? data.forbiddenCols.map(Number) : [];
   updateTurnUI();
   updateGameDiscordPresence();
 }
@@ -2837,9 +2841,10 @@ function updateTurnUI() {
     const b = columnButtons[c] || document.getElementById('cb' + c);
     if (b) {
       const forcedElsewhere = currentVariant === 'anti' && forcedColumns.length && !forcedColumns.includes(c);
-      b.disabled = !isMe || gameOver || forcedElsewhere;
+      const forbidden = currentVariant === 'anti' && forbiddenColumns.includes(c);
+      b.disabled = !isMe || gameOver || forcedElsewhere || forbidden;
       b.style.boxShadow = '';
-      b.title = isMe && forcedColumns.includes(c) ? 'Coup obligatoire' : '';
+      b.title = forbidden ? 'Interdit : cette colonne atteindrait le sommet' : isMe && forcedColumns.includes(c) ? 'Coup obligatoire' : '';
     }
   }
   updateAntiForcedMarkers(isMe);
