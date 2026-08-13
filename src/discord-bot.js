@@ -483,14 +483,14 @@ function startDiscordBot(ctx) {
     return { ok: true, player, label: rewardLabel(item.key, qty) };
   }
 
-  async function requireDiscordAdmin(interaction) {
+  async function requireDiscordStaff(interaction) {
     const staff = await getLinkedStaffContext(interaction.user.id);
     if (staff.error) {
       await replyError(interaction, 'Acces refuse', staff.error);
       return null;
     }
-    if ((STAFF_ORDER[staff.effectiveRole] || 0) < STAFF_ORDER.admin) {
-      await replyError(interaction, 'Acces admin requis');
+    if ((STAFF_ORDER[staff.effectiveRole] || 0) < STAFF_ORDER.moderator) {
+      await replyError(interaction, 'Acces staff requis');
       return null;
     }
     return staff;
@@ -1459,7 +1459,7 @@ function startDiscordBot(ctx) {
   }
 
   function variantsPayload() {
-    return containerMessage({color:0x85ebff,title:'Règles des variantes',subtitle:'Chaque variante possède son propre classement.',sections:['### Classique\nAligne quatre jetons.','### Plateau rotatif\nLa grille tourne tous les quatre coups, puis la gravité agit.','### Anti-Puissance 4\nÉvite les lignes ; une complétion disponible est obligatoire et le plus petit score gagne. Les lignes de 3 puis de 2 départagent. Il est interdit de remplir une colonne jusqu’au sommet.','### Puissance Bombe\nUne bombe par joueur retire les voisins d’un jeton.','### Mission personnelle\nAccomplis ton objectif secret avant l’adversaire.','### Placement simultané\nLes deux choix sont révélés ensemble et l’initiative alterne.','### Brouillard de Guerre\nChaque pion n’est visible que 1,25 seconde avant de disparaître dans la brume. Mémorise la grille.','### Conquête\nUn alignement capturé rapporte un point puis disparaît. Après quatre captures : 3–0 ou 3–1 gagne, 2–2 donne un nul. Une grille pleine repart à zéro avec les scores conservés.'],buttons:[linkButton('Règles complètes',`${api}/regles`,'📖')]});
+    return containerMessage({color:0x85ebff,title:'Règles des variantes',subtitle:'Chaque variante possède son propre classement.',sections:['### Classique\nAligne quatre jetons.','### Plateau rotatif\nLa grille tourne tous les quatre coups, puis la gravité agit.','### Anti-Puissance 4\nÉvite les lignes ; un alignement disponible devient obligatoire et le plus petit score gagne. Une égalité est départagée par les lignes de 3, puis de 2.','### Puissance Bombe\nUne bombe par joueur retire les voisins d’un jeton.','### Mission personnelle\nAccomplis ton objectif secret avant l’adversaire.','### Placement simultané\nLes deux choix sont révélés ensemble et l’initiative alterne.','### Brouillard de Guerre\nChaque pion n’est visible que 1,25 seconde avant de disparaître dans la brume. Mémorise la grille.','### Conquête\nUn alignement capturé rapporte un point puis disparaît. Après quatre captures : 3–0 ou 3–1 gagne, 2–2 donne un nul. Une grille pleine repart à zéro avec les scores conservés.'],buttons:[linkButton('Règles complètes',`${api}/regles`,'📖')]});
   }
 
   function statsPayload() {
@@ -2044,7 +2044,9 @@ function startDiscordBot(ctx) {
     const reason = optionString(interaction, 'raison', '') || '';
     const resourceId = optionString(interaction, 'id');
     const itemKey = optionString(interaction, 'item');
-    const adminOnly = ['ban', 'unban', 'coins', 'elo', 'boost-elo', 'boost-coins', 'give-item', 'crystal', 'backups', 'maintenance-on', 'maintenance-off', 'role-generator', 'reload'];
+    // Les modos disposent des memes commandes operationnelles que les admins.
+    // Les sauvegardes restent liees au panel admin, qui leur est interdit.
+    const adminOnly = ['backups'];
     const role = await requireStaffForAdmin(interaction, adminOnly.includes(action) ? 'admin' : 'moderator');
     if (!role) return;
 
@@ -2149,7 +2151,7 @@ function startDiscordBot(ctx) {
   }
 
   async function handleCoupon(interaction) {
-    const role = await requireStaff(interaction, 'admin');
+    const role = await requireStaff(interaction, 'moderator');
     if (!role) return;
 
     const type = optionString(interaction, 'type') === 'flat' ? 'flat' : 'discount';
@@ -2193,7 +2195,7 @@ function startDiscordBot(ctx) {
   }
 
   async function handleProductKey(interaction) {
-    const role = await requireStaff(interaction, 'admin');
+    const role = await requireStaff(interaction, 'moderator');
     if (!role) return;
     const content = String(optionString(interaction, 'contenu') || '').trim().toLowerCase();
     const quantity = Math.max(1, Math.min(999, optionInteger(interaction, 'quantite', 1)));
@@ -2334,7 +2336,7 @@ function startDiscordBot(ctx) {
   }
 
   async function handleGiveaway(interaction) {
-    const staff = await requireDiscordAdmin(interaction);
+    const staff = await requireDiscordStaff(interaction);
     if (!staff) return;
     const title = truncate(optionString(interaction, 'titre', 'Giveaway Puissance 4'), 90);
     const minutes = Math.max(1, Math.min(GIVEAWAY_MINUTES_MAX, optionInteger(interaction, 'duree', 10)));
@@ -2398,7 +2400,7 @@ function startDiscordBot(ctx) {
   }
 
   async function handleDrop(interaction) {
-    const staff = await requireDiscordAdmin(interaction);
+    const staff = await requireDiscordStaff(interaction);
     if (!staff) return;
     const title = truncate(optionString(interaction, 'titre', 'Drop Puissance 4'), 90);
     const reward = normalizeRewardKey(optionString(interaction, 'recompense', 'coins'));
@@ -2612,7 +2614,7 @@ function startDiscordBot(ctx) {
   }
 
   async function handleTicketSetup(interaction) {
-    const staff = await requireDiscordAdmin(interaction);
+    const staff = await requireDiscordStaff(interaction);
     if (!staff) return;
     await interaction.channel.send(ticketPanelPayload(interaction.guild?.name || 'Puissance 4'));
     return interaction.editReply(containerMessage({

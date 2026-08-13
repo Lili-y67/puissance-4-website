@@ -557,6 +557,7 @@ body {
   font-size: clamp(18px, 5.2vw, 34px);
   line-height: 1;
 }
+.cell.settled .token { transform: scale(1); }
 .cell.drop .token { transform: scale(1); animation: token-land .38s cubic-bezier(.22,1,.36,1); }
 @keyframes token-land{0%{transform:translateY(-38%) scale(.72);filter:brightness(1.25)}70%{transform:translateY(4%) scale(1.08)}100%{transform:translateY(0) scale(1)}}
 .cell.bomb-armed{overflow:visible;z-index:8}
@@ -1411,7 +1412,7 @@ let currentVariant = 'classic';
 let bombTargeting = false;
 let simultaneousWaiting = false;
 let forcedColumns = [];
-let forbiddenColumns = [];
+let bombAvailability = { 1: true, 2: true };
 let socket, myPlayer, mySide, gameId, currentTurn;
 let boardCells = [];
 let columnButtons = [];
@@ -1443,7 +1444,9 @@ const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'An
 function configureVariant(data = {}) {
   currentVariant = data.variant || 'classic';
   forcedColumns = Array.isArray(data.forcedCols) ? data.forcedCols.map(Number) : [];
-  forbiddenColumns = Array.isArray(data.forbiddenCols) ? data.forbiddenCols.map(Number) : [];
+  bombAvailability = currentVariant === 'bomb'
+    ? { 1: data.bombs?.[1] !== false, 2: data.bombs?.[2] !== false }
+    : { 1: true, 2: true };
   ROWS = Number(data.variantConfig?.rows || data.grid?.length || 6);
   COLS = Number(data.variantConfig?.cols || data.grid?.[0]?.length || 7);
   const board = document.getElementById('board');
@@ -1465,7 +1468,7 @@ function ensureVariantControls(data = {}) {
   controls.id = 'variant-controls';
   controls.style.cssText = 'display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:8px 0;color:var(--muted);font:800 13px "Barlow Condensed",sans-serif';
   if (currentVariant === 'bomb') controls.innerHTML = '<button type="button" class="btn-action ghost" id="bomb-button">💣 Utiliser ma bombe</button><span id="bomb-state">1 disponible</span>';
-  if (currentVariant === 'anti') controls.innerHTML = '<span id="anti-score">Alignements : 0 — 0 · sommet interdit</span>';
+  if (currentVariant === 'anti') controls.innerHTML = `<span id="anti-score">Alignements : ${data.antiScores?.[1] || 0} — ${data.antiScores?.[2] || 0}</span>`;
   if (currentVariant === 'rotate') controls.innerHTML = '<span>Rotation imprévisible tous les 4 coups</span>';
   if (currentVariant === 'simultaneous') controls.innerHTML = '<span id="simultaneous-state">Choisis une colonne en secret</span>';
   if (currentVariant === 'fog') controls.innerHTML = '<span>Le dernier pion disparaît dans la brume après 1,25 s</span>';
@@ -2096,6 +2099,7 @@ function connectSocket(pendingMatch) {
     mySide = data.side;
     gameOver = false;
     configureVariant(data);
+    simultaneousWaiting = currentVariant === 'simultaneous' && data.simultaneousWaiting === true;
     applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
 
     // Appliquer couleurs et shapes
@@ -2191,6 +2195,7 @@ function connectSocket(pendingMatch) {
   socket.on('bomb_used', async data => {
     await animateBombUse(data);
     currentTurn = data.next;
+    bombAvailability = { 1: data.bombs?.[1] !== false, 2: data.bombs?.[2] !== false };
     const mineAvailable = data.bombs?.[mySide] !== false;
     const button = document.getElementById('bomb-button');
     if (button) button.disabled = !mineAvailable;
@@ -2513,7 +2518,7 @@ function restoreBoard(grid) {
       if (next && (previous !== next || !cell.classList.contains('p' + next))) {
         applyToken(r, c, next, false);
       } else if (!next && (previous || cell.classList.contains('p1') || cell.classList.contains('p2'))) {
-        cell.classList.remove('p1', 'p2', 'drop', 'winning');
+        cell.classList.remove('p1', 'p2', 'drop', 'settled', 'winning');
         const token = cell.querySelector('.token');
         if (token) {
           token.removeAttribute('style');
@@ -2550,17 +2555,18 @@ function playMove(col) {
   socket.emit('play_move', { col });
 }
 
-function onMovePlayed(data) {
+async function onMovePlayed(data) {
   if (data.type === 'simultaneous_round') {
     simultaneousWaiting = false;
-    restoreBoard(data.board);
+    await animateSimultaneousRound(data);
     const state = document.getElementById('simultaneous-state');
     if (state) state.textContent = 'Nouveau tour : choisis une colonne';
     updateTurnUI();
     return;
   }
   if (data.type === 'conquest_capture' || data.type === 'conquest_reset') {
-    restoreBoard(data.board);
+    if (data.type === 'conquest_capture') await animateConquestCapture(data);
+    else restoreBoard(data.board);
     currentTurn = data.next;
     const score = document.getElementById('conquest-score');
     if (score) score.textContent = `Conquêtes : ${data.conquestScores?.[1] || 0} — ${data.conquestScores?.[2] || 0}`;
@@ -2579,10 +2585,9 @@ function onMovePlayed(data) {
   if (currentVariant === 'fog') applyFogVisibility(data.row, data.col);
   if (data.antiScores) {
     const score = document.getElementById('anti-score');
-    if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0} · sommet interdit`;
+    if (score) score.textContent = `Alignements : ${data.antiScores[1] || 0} — ${data.antiScores[2] || 0}`;
   }
   forcedColumns = Array.isArray(data.forcedCols) ? data.forcedCols.map(Number) : [];
-  forbiddenColumns = Array.isArray(data.forbiddenCols) ? data.forbiddenCols.map(Number) : [];
   updateTurnUI();
   updateGameDiscordPresence();
 }
@@ -2617,6 +2622,28 @@ async function animateRotation(rotation, finalGrid) {
   board.classList.remove('locked');
 }
 
+async function animateSimultaneousRound(data = {}) {
+  const board = document.getElementById('board');
+  if (!board) return restoreBoard(data.board);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const placements = Array.isArray(data.placements) ? data.placements : [];
+  board.classList.add('locked');
+  setStatus('Révélation des deux choix…');
+  for (const placement of placements) {
+    const row = Number(placement.row);
+    const col = Number(placement.col);
+    const player = Number(placement.player);
+    if (!Number.isInteger(row) || !Number.isInteger(col) || ![1, 2].includes(player)) continue;
+    applyToken(row, col, player, true);
+    if (currentGrid[row]) currentGrid[row][col] = player;
+    player === mySide ? SFX.drop() : SFX.opponentDrop();
+    await pause(240);
+  }
+  restoreBoard(data.board);
+  await pause(220);
+  board.classList.remove('locked');
+}
+
 async function animateBombUse(data = {}) {
   const board = document.getElementById('board');
   if (!board) return restoreBoard(data.board);
@@ -2646,6 +2673,11 @@ async function animateBombUse(data = {}) {
   setStatus('BOUM ! La gravité s’applique…');
   await pause(480);
 
+  // La charge est un élément temporaire posé au-dessus du pion ciblé. Sans ce
+  // nettoyage elle reste dans la case après le choc et masque l'explosion.
+  charge.remove();
+  target.classList.remove('bomb-armed');
+
   restoreBoard(data.board);
   const sampleCell = document.querySelector('.cell');
   const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
@@ -2662,8 +2694,41 @@ async function animateBombUse(data = {}) {
     cell.style.removeProperty('--bomb-fall-delay');
     cell.style.removeProperty('--bomb-fall-from');
   });
+  document.querySelectorAll('.bomb-charge').forEach(element => element.remove());
+  document.querySelectorAll('.cell.bomb-armed,.cell.bomb-hit').forEach(cell => {
+    cell.classList.remove('bomb-armed', 'bomb-hit');
+  });
   board.classList.remove('bomb-shock', 'locked');
   setStatus('');
+}
+
+async function animateConquestCapture(data = {}) {
+  const board = document.getElementById('board');
+  if (!board) return restoreBoard(data.board);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  board.classList.add('locked');
+  const captured = Array.isArray(data.captured) ? data.captured : [];
+  captured.forEach(([row, col]) => getBoardCell(row, col)?.classList.add('winning'));
+  setStatus(`Conquête pour le joueur ${data.player || ''} !`);
+  await pause(520);
+  captured.forEach(([row, col]) => getBoardCell(row, col)?.classList.remove('winning'));
+  restoreBoard(data.board);
+  const sampleCell = document.querySelector('.cell');
+  const step = (sampleCell?.getBoundingClientRect().height || 60) + 8;
+  (Array.isArray(data.falls) ? data.falls : []).forEach((fall, index) => {
+    const cell = getBoardCell(fall.row, fall.col);
+    if (!cell) return;
+    cell.classList.add('rotation-falling');
+    cell.style.setProperty('--rotation-fall-delay', `${Math.min(index * 28, 180)}ms`);
+    cell.style.setProperty('--rotation-fall-from', `${(Number(fall.fromRow) - Number(fall.row)) * step}px`);
+  });
+  await pause(760);
+  document.querySelectorAll('.cell.rotation-falling').forEach(cell => {
+    cell.classList.remove('rotation-falling');
+    cell.style.removeProperty('--rotation-fall-delay');
+    cell.style.removeProperty('--rotation-fall-from');
+  });
+  board.classList.remove('locked');
 }
 
 // ── Emoji → pion teinté ──────────────────────────────────────────────────────
@@ -2793,7 +2858,7 @@ function applyToken(row, col, player, animate = true) {
   const cell = getBoardCell(row, col)
     || document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
   if (!cell) return;
-  cell.classList.remove('p1', 'p2', 'drop');
+  cell.classList.remove('p1', 'p2', 'drop', 'settled');
   cell.classList.add('p' + player);
   const token = cell.querySelector('.token');
   if (token) {
@@ -2828,7 +2893,7 @@ function applyToken(row, col, player, animate = true) {
     void cell.offsetWidth;
     cell.classList.add('drop');
   } else {
-    cell.classList.remove('drop');
+    cell.classList.add('settled');
   }
 }
 
@@ -2841,13 +2906,21 @@ function updateTurnUI() {
     const b = columnButtons[c] || document.getElementById('cb' + c);
     if (b) {
       const forcedElsewhere = currentVariant === 'anti' && forcedColumns.length && !forcedColumns.includes(c);
-      const forbidden = currentVariant === 'anti' && forbiddenColumns.includes(c);
-      b.disabled = !isMe || gameOver || forcedElsewhere || forbidden;
+      b.disabled = !isMe || gameOver || forcedElsewhere;
       b.style.boxShadow = '';
-      b.title = forbidden ? 'Interdit : cette colonne atteindrait le sommet' : isMe && forcedColumns.includes(c) ? 'Coup obligatoire' : '';
+      b.title = isMe && forcedColumns.includes(c) ? 'Coup obligatoire' : '';
     }
   }
   updateAntiForcedMarkers(isMe);
+
+  if (currentVariant === 'bomb') {
+    const bombButton = document.getElementById('bomb-button');
+    const available = bombAvailability[mySide] !== false;
+    if (bombButton) bombButton.disabled = !isMe || gameOver || !available;
+    const bombState = document.getElementById('bomb-state');
+    if (bombState) bombState.textContent = available ? '1 disponible' : 'Bombe utilisée';
+    if (!isMe || !available) bombTargeting = false;
+  }
 
   if (currentVariant === 'simultaneous') {
     document.getElementById('turn-lbl').textContent = simultaneousWaiting ? 'CHOIX ENVOYÉ' : 'CHOISIS EN SECRET';
@@ -2899,15 +2972,20 @@ async function onGameOver(data) {
   setGameActionState('ended');
   closeActionOffer();
 
+  const terminalBoardRestored = !!data?.bomb
+    || !!data?.rotation
+    || !!data?.conquest
+    || data?.variant === 'simultaneous'
+    || currentVariant === 'simultaneous';
   if (data?.bomb && Array.isArray(data?.board)) {
     await animateBombUse({ ...data.bomb, board: data.board });
   } else if (data?.rotation && Array.isArray(data?.board)) {
     await animateRotation(data.rotation, data.board);
+  } else if (data?.conquest && Array.isArray(data?.board)) {
+    await animateConquestCapture({ ...data.conquest, board: data.board, player: data.winner });
   } else if ((data?.variant === 'simultaneous' || currentVariant === 'simultaneous') && Array.isArray(data?.board)) {
-    // Le round décisif arrive directement sous forme de game_over : ses deux
-    // placements n'ont donc pas été rendus par onMovePlayed(). Restaurer la
-    // grille complète garantit que le pion ayant créé la ligne reste visible.
-    restoreBoard(data.board);
+    // Le round décisif arrive directement sous forme de game_over.
+    await animateSimultaneousRound(data);
   }
 
   const dcBanner = document.getElementById('disconnect-banner');
@@ -2919,7 +2997,7 @@ async function onGameOver(data) {
     dcBanner.classList.remove('show');
   }
 
-  if (data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
+  if (!terminalBoardRestored && data?.lastMove && Number.isInteger(data.lastMove.row) && Number.isInteger(data.lastMove.col) && Number.isInteger(data.lastMove.player)) {
     const finalCell = document.querySelector(`.cell[data-row="${data.lastMove.row}"][data-col="${data.lastMove.col}"]`);
     if (finalCell && !finalCell.classList.contains('p1') && !finalCell.classList.contains('p2')) {
       applyToken(data.lastMove.row, data.lastMove.col, data.lastMove.player);

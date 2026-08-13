@@ -176,6 +176,7 @@ function rememberFinishedGameSockets(result) {
     socket.lastFinishedGame = {
       gameId: result.gameId,
       gameType: String(result.gameType || 'ranked'),
+      variant: normalizeVariant(result.variant),
       players: result.players,
       finishedAt: Date.now(),
     };
@@ -1585,7 +1586,6 @@ function serializeBotGameState(state, playerId) {
   const forcedCols = state.variant === 'anti'
     ? gm._antiForcedCols(state, side)
     : [];
-  const forbiddenCols = state.variant === 'anti' ? gm._antiForbiddenCols(state) : [];
   return {
     gameId: state.id,
     gameType: state.gameType || 'ranked',
@@ -1594,9 +1594,8 @@ function serializeBotGameState(state, playerId) {
     current: state.current,
     isMyTurn: side === state.current,
     board: state.board.grid,
-    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols().filter(col => !forbiddenCols.includes(col)),
+    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols(),
     forcedCols,
-    forbiddenCols,
     antiScores: state.variant === 'anti' ? state.antiScores : null,
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
     moveCount: state.moveCount,
@@ -1918,7 +1917,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
       let col = action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
       const freshState = gm.games.get(gameId);
       if (!freshState || freshState !== state || state.status !== 'active' || (state.variant !== 'simultaneous' && state.current !== side)) return;
-      const validCols = state.variant === 'anti' ? gm._antiPlayableCols(state) : state.board.getValidCols();
+      const validCols = state.board.getValidCols();
       if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
       if (col === null) return;
       let result;
@@ -3676,8 +3675,8 @@ app.get('/api/admin/password', async (req, res) => {
       role = discordRole;
     }
   } catch(e) {}
-  if (!['admin', 'moderator'].includes(role)) {
-    return res.status(403).json({ error: 'Reserve au staff.' });
+  if (role !== 'admin') {
+    return res.status(403).json({ error: 'Reserve aux administrateurs.' });
   }
   res.json({ password: ADMIN_PASSWORD });
 });
@@ -3702,9 +3701,9 @@ function getAdminSession(req) {
     return null;
   }
   const player = pQ.getById.get(session.playerId);
-  const liveRole = player?.discord_id && (player.role === 'admin' || player.role === 'moderator')
-    ? player.role
-    : null;
+  // Une session de panel est strictement reservee aux admins. Cela invalide
+  // aussi immediatement une ancienne session si le joueur devient modo.
+  const liveRole = player?.discord_id && player.role === 'admin' ? 'admin' : null;
   if (!liveRole) {
     adminSessions.delete(t);
     return null;
@@ -3781,8 +3780,8 @@ async function resolveAdminLoginContext(password, playerToken, adminIdentity) {
     }
   } catch(e) {}
 
-  if (!['admin', 'moderator'].includes(role)) {
-    return { status: 403, error: "Ton role Discord ne permet pas l'acces au panel." };
+  if (role !== 'admin') {
+    return { status: 403, error: "Le panel est reserve aux administrateurs." };
   }
 
   return { playerId: player.id, player, role };
@@ -10848,7 +10847,7 @@ io.on('connection', socket => {
 
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
-    if (result.error) return socket.emit('error', { message: result.error, forcedCols: result.forcedCols || [], forbiddenCols: result.forbiddenCols || [] });
+    if (result.error) return socket.emit('error', { message: result.error });
     if (['move', 'simultaneous_round', 'conquest_capture', 'conquest_reset'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
     if (result.type === 'game_over') emitGameOver(result);
@@ -11087,6 +11086,8 @@ io.on('connection', socket => {
         missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
         selectedMissionId: state.variant === 'mission' ? state.missions?.[side] || null : null,
         missionReady: state.variant === 'mission' ? !!(state.missions?.[1] && state.missions?.[2]) : false,
+        simultaneousWaiting: state.variant === 'simultaneous' ? state.simultaneousChoices?.[side] !== null : false,
+        initiative: state.variant === 'simultaneous' ? state.initiative : null,
         side,
         gameType: String(state.gameType || 'ranked'),
         moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
@@ -11106,7 +11107,6 @@ io.on('connection', socket => {
         latencies: getGameLatencyPayload(state),
         antiScores: state.antiScores,
         forcedCols: state.variant === 'anti' ? gm._antiForcedCols(state, state.current) : [],
-        forbiddenCols: state.variant === 'anti' ? gm._antiForbiddenCols(state) : [],
         conquestScores: state.conquestScores,
         bombs: state.bombs,
       });

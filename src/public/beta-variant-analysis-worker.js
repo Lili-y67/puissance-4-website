@@ -177,11 +177,11 @@ function antiTerminalScore(grid, player) {
 }
 
 function antiSearch(grid, turn, player, depth, alpha, beta) {
-  const legal = legalCols(grid).filter(col => legalRow(grid, col) > 0);
+  const legal = legalCols(grid);
   if (!legal.length) return antiTerminalScore(grid, player);
   if (depth <= 0) return antiScore(grid, player);
 
-  const forced = forcedAntiCols(grid, turn).filter(col => legal.includes(col));
+  const forced = forcedAntiCols(grid, turn);
   const choices = forced.length ? forced : legal;
   const maximizing = turn === player;
   let best = maximizing ? -Infinity : Infinity;
@@ -334,8 +334,7 @@ function analyseDropModes(state, depth) {
   const player = state.turn, base = state.grid, actions = [];
   let choices = legalCols(base);
   if (state.mode === 'anti') {
-    choices = choices.filter(col => legalRow(base, col) > 0);
-    const forced = forcedAntiCols(base, player).filter(col => choices.includes(col));
+    const forced = forcedAntiCols(base, player);
     if (forced.length) choices = forced;
   }
   for (const col of choices) {

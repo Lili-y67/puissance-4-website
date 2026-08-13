@@ -106,10 +106,8 @@ class GameManager {
     if (playerNum !== state.current) return { error: 'Pas ton tour.' };
     if (!state.board.isValidCol(col)) return { error: 'Colonne invalide.' };
     if (state.variant === 'anti') {
-      const playable = this._antiPlayableCols(state);
-      if (!playable.includes(Number(col))) return { error: 'Interdit de remplir une colonne jusqu’en haut.', forbiddenCols: this._antiForbiddenCols(state) };
       const forced = this._antiForcedCols(state, playerNum);
-      if (forced.length && !forced.includes(Number(col))) return { error: 'Tu dois compléter un alignement de 4.', forcedCols: forced, forbiddenCols: this._antiForbiddenCols(state) };
+      if (forced.length && !forced.includes(Number(col))) return { error: 'Tu dois compléter un alignement de 4.', forcedCols: forced };
     }
 
     const now = Date.now();
@@ -138,7 +136,7 @@ class GameManager {
       fresh.forEach(segment => state.antiSegments[playerNum].add(segment.key));
       if (fresh.length) state.antiLastScorer = playerNum;
       state.antiScores[playerNum] = state.antiSegments[playerNum].size;
-      if (!this._antiPlayableCols(state).length) {
+      if (state.board.isDraw()) {
         const antiResult = this._resolveAntiWinner(state, playerNum);
         return this._end(
           state,
@@ -155,7 +153,6 @@ class GameManager {
     else if (state.variant === 'conquest' && state.board.isDraw()) {
       return this._resetConquestBoard(state, playerNum, lastMove);
     }
-    else if (state.board.isDraw()) return this._end(state, null, [], 'draw', lastMove);
 
     let rotation = null;
     if (state.variant === 'rotate' && state.moveCount % state.variantConfig.rotateEvery === 0) {
@@ -174,6 +171,10 @@ class GameManager {
       if (completed) return this._end(state, playerNum, completed, 'mission', lastMove);
     }
 
+    // Vérifier la grille pleine seulement après les effets de variante : le
+    // dernier coup peut encore déclencher une rotation ou accomplir une mission.
+    if (state.board.isDraw()) return this._end(state, null, [], 'draw', lastMove);
+
     state.current = state.current === 1 ? 2 : 1;
     return {
       type: 'move',
@@ -188,7 +189,6 @@ class GameManager {
       antiScores: state.antiScores,
       conquestScores: state.conquestScores,
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
-      forbiddenCols: state.variant === 'anti' ? this._antiForbiddenCols(state) : [],
     };
   }
 
@@ -312,19 +312,11 @@ class GameManager {
   }
 
   _antiForcedCols(state, player) {
-    return this._antiPlayableCols(state).filter(col => {
+    return state.board.getValidCols().filter(col => {
       const copy = state.board.clone();
       const row = copy.drop(col, player);
       return !!copy.checkWin(row, col, player);
     });
-  }
-
-  _antiPlayableCols(state) {
-    return state.board.getValidCols().filter(col => state.board.getLowestEmpty(col) > 0);
-  }
-
-  _antiForbiddenCols(state) {
-    return state.board.getValidCols().filter(col => state.board.getLowestEmpty(col) === 0);
   }
 
   _resolveAntiWinner(state, lastPlayer) {
