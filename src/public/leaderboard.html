@@ -526,6 +526,7 @@ let currentTab = 'elo';
 let currentVariant = 'classic';
 let currentVariantLabel = 'Classique';
 const variantLeaderboardCache = new Map();
+const botVariantLeaderboardCache = new Map();
 let botPage = 1;
 const BOTS_PER_PAGE = 6;
 
@@ -534,7 +535,7 @@ async function load() {
     const [variantRes, res, botRes, clanRes] = await Promise.all([
       fetch('/api/variants'),
       fetch('/api/leaderboard/variant/classic'),
-      fetch('/api/leaderboard/bots'),
+      fetch('/api/leaderboard/bots?variant=classic'),
       fetch('/api/clans/leaderboard')
     ]);
     const variantsPayload = variantRes.ok ? await variantRes.json() : { variants: [] };
@@ -545,6 +546,7 @@ async function load() {
     allPlayers = data.players || [];
     variantLeaderboardCache.set('classic', allPlayers);
     allBots = bots;
+    botVariantLeaderboardCache.set('classic', bots);
     allClans = clans.clans || [];
     const select = document.getElementById('leaderboard-variant');
     if (select && Array.isArray(variantsPayload.variants) && variantsPayload.variants.length) {
@@ -572,9 +574,18 @@ async function selectVariant(variant) {
       currentVariantLabel = payload.variantLabel || currentVariantLabel;
     }
     allPlayers = variantLeaderboardCache.get(currentVariant) || [];
+    if (!botVariantLeaderboardCache.has(currentVariant)) {
+      const botResponse = await fetch(`/api/leaderboard/bots?variant=${encodeURIComponent(currentVariant)}`, { cache: 'no-store' });
+      const botPayload = await botResponse.json();
+      if (!botResponse.ok) throw new Error(botPayload.error || 'Classement bots indisponible.');
+      botVariantLeaderboardCache.set(currentVariant, Array.isArray(botPayload) ? botPayload : []);
+    }
+    allBots = botVariantLeaderboardCache.get(currentVariant) || [];
+    botPage = 1;
     document.getElementById('player-board-title').textContent = `Classement ${currentVariantLabel}`;
     document.getElementById('player-board-note').textContent = `ELO et résultats propres à la variante ${currentVariantLabel}.`;
     render();
+    renderBots();
   } catch (error) {
     allPlayers = [];
     document.getElementById('list-wrap').innerHTML = `<div class="empty"><div class="empty-title">${error.message}</div></div>`;
@@ -771,7 +782,7 @@ function renderBots() {
     pseudo.textContent = p.pseudo;
     const meta = document.createElement('div');
     meta.className = 'bot-meta';
-    meta.textContent = `${p.botOnline ? 'En ligne' : 'Hors ligne'} · ${p.wins || 0}V/${p.losses || 0}D/${p.draws || 0}N`;
+    meta.textContent = `${p.botOnline ? 'En ligne' : 'Hors ligne'} · ${currentVariantLabel} · ${p.wins || 0}V/${p.losses || 0}D/${p.draws || 0}N`;
     identity.append(pseudo, meta);
 
     const status = document.createElement('span');
@@ -788,7 +799,7 @@ function renderBots() {
     val.style.color = '#85ebff';
     const lbl = document.createElement('div');
     lbl.className = 'row-label';
-    lbl.textContent = 'ELO BOT';
+    lbl.textContent = `ELO ${currentVariantLabel}`;
     valWrap.append(val, lbl);
     right.append(status, valWrap);
     if (p.rank) {

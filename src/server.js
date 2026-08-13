@@ -7497,14 +7497,15 @@ app.get('/api/players', (req, res) => {
   const limit = Math.max(1, Math.min(100, Number(req.query.limit || 60)));
   let rows = db.prepare(`
     SELECT id, pseudo, elo, wins, losses, draws, color, color_secondary, shape, avatar,
-           avatar_decoration, profile_banner, role, is_vip, is_vip_plus, is_perso,
+           avatar_decoration, profile_banner, search_nameplate, token_emoji_image, pseudo_font, pseudo_format,
+           pseudo_color, pseudo_color_secondary, pseudo_rgb, role, is_vip, is_vip_plus, is_perso,
            elo_curve_color, elo_curve_color_secondary, elo_curve_rgb, elo_curve_rgb_speed, elo_curve_rgb_direction,
            is_crystal, crystal_expires_at, crystal_auto_renew, crystal_alert_message, crystal_alert_color, crystal_alert_emoji, crystal_alert_animation,
            custom_role_text, custom_role_color, custom_role_color_secondary, custom_role_emoji, custom_role_rgb,
            is_bot, bot_skill, bot_description, bot_enabled, bot_last_seen, last_seen
     FROM players
     WHERE deleted = 0 AND is_guest = 0
-    ORDER BY elo DESC, wins DESC
+    ORDER BY COALESCE(last_seen, 0) DESC, pseudo COLLATE NOCASE ASC
     LIMIT ?
   `).all(limit * 2);
   if (type === 'bots') rows = rows.filter(p => Number(p.is_bot) === 1);
@@ -10180,13 +10181,18 @@ app.get('/api/admin/backups/:key', (req, res) => {
 app.get('/api/leaderboard', (_, res) => {
   res.json(pQ.leaderboard.all().filter(p => p.id !== BOT_PLAYER_ID).map(p => { const s = sanitize(p); return { ...s, rank: getRank(s.elo) }; }));
 });
-app.get('/api/leaderboard/bots', (_, res) => {
-  const bots = db.prepare(`
-    SELECT * FROM players
-    WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1
-    ORDER BY elo DESC, wins DESC
-    LIMIT 25
-  `).all();
+app.get('/api/leaderboard/bots', (req, res) => {
+  const variant = normalizeVariant(req.query.variant);
+  const bots = variant === 'classic'
+    ? db.prepare(`SELECT * FROM players WHERE deleted = 0 AND is_guest = 0 AND is_bot = 1 ORDER BY elo DESC, wins DESC LIMIT 25`).all()
+    : db.prepare(`
+        SELECT p.*, s.elo, s.wins, s.losses, s.draws, s.best_elo
+        FROM player_variant_stats s
+        JOIN players p ON p.id = s.player_id
+        WHERE p.deleted = 0 AND p.is_guest = 0 AND p.is_bot = 1 AND s.variant = ?
+        ORDER BY s.elo DESC, s.wins DESC
+        LIMIT 25
+      `).all(variant);
   res.json(bots.map(p => {
     const s = sanitize(p);
     const runtime = publicBotRuntime(s.id);
@@ -10196,6 +10202,8 @@ app.get('/api/leaderboard/bots', (_, res) => {
       botOnline: !!runtime.online,
       botStatus: runtime.status || (runtime.online ? 'online' : 'offline'),
       botDepth: runtime.depth || s.bot_skill || 0,
+      variant,
+      variantLabel: getVariant(variant).label,
     };
   }));
 });
