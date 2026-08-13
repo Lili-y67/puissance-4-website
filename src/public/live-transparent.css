@@ -50,3 +50,32 @@ body.p4-wallpaper-mode .live-board .live-cell,
 body.p4-wallpaper-mode .live-board[class*="board-skin-"] .live-cell {
   background: radial-gradient(circle at 50% 66%, rgba(0,0,0,.20), transparent 38%), rgba(7,8,22,.46) !important;
 }
+
+/* P4 TV: la grille doit rester lisible dans le verre sombre de la télévision. */
+.tv-screen .live-board,
+.tv-screen .live-board[class*="board-skin-"] {
+  background:
+    radial-gradient(circle at 10% 88%, color-mix(in srgb, var(--tv-p1) 16%, transparent), transparent 42%),
+    radial-gradient(circle at 90% 12%, color-mix(in srgb, var(--tv-p2) 16%, transparent), transparent 42%),
+    rgba(8,12,27,.82) !important;
+  border: 1px solid rgba(168,204,255,.24) !important;
+  box-shadow: inset 0 0 24px rgba(53,88,150,.12), 0 0 22px rgba(0,0,0,.28) !important;
+}
+
+.tv-screen .live-board .live-cell,
+.tv-screen .live-board[class*="board-skin-"] .live-cell {
+  background:
+    radial-gradient(circle at 38% 30%, rgba(75,105,170,.16), transparent 34%),
+    radial-gradient(circle at 50% 66%, rgba(0,0,0,.24), transparent 38%),
+    rgba(7,11,27,.88) !important;
+  box-shadow:
+    inset 0 3px 8px rgba(0,0,0,.76),
+    inset 0 0 0 1px rgba(117,155,224,.18),
+    0 0 0 1px rgba(116,152,214,.15),
+    0 0 8px rgba(74,111,184,.06) !important;
+}
+
+.tv-screen .live-board::before,
+.tv-screen .live-board[class*="board-skin-"]::before {
+  opacity: .52 !important;
+}
