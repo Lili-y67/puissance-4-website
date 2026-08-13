@@ -681,6 +681,13 @@ input[type="file"]{display:none;}
 .pg-btn:hover{border-color:var(--accent);color:var(--accent);}
 .pg-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .pg-btn:disabled{opacity:0.3;cursor:not-allowed;}
+.games-filters{display:grid;grid-template-columns:minmax(170px,1.45fr) repeat(4,minmax(125px,1fr)) auto;gap:8px;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015)),var(--surface)}
+.games-filter{min-width:0;height:40px;padding:0 12px;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:var(--surface2);color:var(--text);font:700 12px Barlow,sans-serif;outline:none}
+.games-filter:focus{border-color:rgba(133,235,255,.45);box-shadow:0 0 0 3px rgba(133,235,255,.08)}
+.games-filter-reset{height:40px;padding:0 14px;border:1px solid rgba(133,235,255,.22);border-radius:10px;background:rgba(133,235,255,.07);color:#85EBFF;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.games-filter-summary{grid-column:1/-1;color:var(--muted);font-size:11px;letter-spacing:.4px}
+@media(max-width:900px){.games-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.games-filter-reset{grid-column:span 2}}
+@media(max-width:520px){.games-filters{grid-template-columns:1fr}.games-filter-reset{grid-column:auto}}
 
 /* ── Player rows (following/followers) ── */
 .player-row{
@@ -3768,6 +3775,16 @@ function render(player, games, following, followers, followStatus, gamesTotalOve
 
     <!-- Panel : Historique -->
     <div class="tab-panel show" id="panel-history">
+      <div class="games-filters" aria-label="Filtres des parties">
+        <input class="games-filter" id="games-filter-opponent" type="search" placeholder="Adversaire..." oninput="applyGamesFilters()">
+        <select class="games-filter" id="games-filter-kind" onchange="applyGamesFilters()"><option value="all">Bot et humain</option><option value="human">Humain</option><option value="bot">Bot</option></select>
+        <select class="games-filter" id="games-filter-ranked" onchange="applyGamesFilters()"><option value="all">Ranked et amical</option><option value="ranked">Ranked</option><option value="friendly">Amical</option></select>
+        <select class="games-filter" id="games-filter-variant" onchange="applyGamesFilters()"><option value="all">Toutes variantes</option><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-P4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option></select>
+        <select class="games-filter" id="games-filter-result" onchange="applyGamesFilters()"><option value="all">Tous résultats</option><option value="win">Victoires</option><option value="loss">Défaites</option><option value="draw">Nulles</option></select>
+        <select class="games-filter" id="games-filter-moves" onchange="applyGamesFilters()"><option value="all">Tous les coups</option><option value="short">≤ 15 coups</option><option value="medium">16–30 coups</option><option value="long">31+ coups</option></select>
+        <button class="games-filter-reset" type="button" onclick="resetGamesFilters()">Réinitialiser</button>
+        <div class="games-filter-summary" id="games-filter-summary"></div>
+      </div>
       <div id="games-list-container"></div>
       <div id="games-pagination" style="display:none;justify-content:center;align-items:center;gap:8px;margin-top:12px;"></div>
     </div>
@@ -4539,14 +4556,16 @@ async function toggleFollow(targetId) {
 // ── Pagination des parties ───────────────────────────────────────────────────
 const GAMES_PER_PAGE = 10;
 let _gamesData = [];
+let _filteredGamesData = [];
 let _gamesPlayer = null;
 let _gamesPage = 1;
 
 function initGames(games, me) {
   _gamesData   = games;
+  _filteredGamesData = games;
   _gamesPlayer = me;
   _gamesPage   = 1;
-  renderGamesPage();
+  applyGamesFilters();
 }
 
 function renderGamesPage() {
@@ -4554,13 +4573,13 @@ function renderGamesPage() {
   const pagination = document.getElementById('games-pagination');
   if (!container) return;
 
-  const total = _gamesData.length;
+  const total = _filteredGamesData.length;
   const totalPages = Math.ceil(total / GAMES_PER_PAGE);
   const start = (_gamesPage - 1) * GAMES_PER_PAGE;
-  const slice = _gamesData.slice(start, start + GAMES_PER_PAGE);
+  const slice = _filteredGamesData.slice(start, start + GAMES_PER_PAGE);
 
   container.innerHTML = total === 0
-    ? '<div class="empty-state">Aucune partie jouée pour l\'instant.</div>'
+    ? `<div class="empty-state">${_gamesData.length ? 'Aucune partie ne correspond à ces filtres.' : 'Aucune partie jouée pour l\'instant.'}</div>`
     : slice.map(g => renderGameRow(g, _gamesPlayer)).join('');
 
   // Pagination
@@ -4587,7 +4606,7 @@ function renderGamesPage() {
 }
 
 function gotoPage(p) {
-  const totalPages = Math.ceil(_gamesData.length / GAMES_PER_PAGE);
+  const totalPages = Math.ceil(_filteredGamesData.length / GAMES_PER_PAGE);
   if (p < 1 || p > totalPages) return;
   _gamesPage = p;
   renderGamesPage();
@@ -4647,6 +4666,40 @@ function renderGameRow(g, me) {
       </div>
       <div class="replay-badge">${replayDeleted ? 'Replay supprimé' : 'Replay'}</div>
     </${rowTag}>`;
+}
+
+function applyGamesFilters() {
+  const opponentNeedle = String(document.getElementById('games-filter-opponent')?.value || '').trim().toLocaleLowerCase('fr');
+  const kind = document.getElementById('games-filter-kind')?.value || 'all';
+  const ranked = document.getElementById('games-filter-ranked')?.value || 'all';
+  const variant = document.getElementById('games-filter-variant')?.value || 'all';
+  const result = document.getElementById('games-filter-result')?.value || 'all';
+  const moves = document.getElementById('games-filter-moves')?.value || 'all';
+  _filteredGamesData = _gamesData.filter(g => {
+    const isP1 = Number(g.player1_id) === Number(_gamesPlayer?.id);
+    const opponent = String(isP1 ? g.p2_pseudo : g.p1_pseudo);
+    const opponentIsBot = Number(isP1 ? g.p2_is_bot : g.p1_is_bot) === 1 || /\bbot\b/i.test(opponent);
+    const outcome = g.winner_id == null ? 'draw' : (Number(g.winner_id) === Number(_gamesPlayer?.id) ? 'win' : 'loss');
+    const count = Number(g.move_count || 0);
+    const movesMatch = moves === 'all' || (moves === 'short' && count <= 15) || (moves === 'medium' && count >= 16 && count <= 30) || (moves === 'long' && count >= 31);
+    return (!opponentNeedle || opponent.toLocaleLowerCase('fr').includes(opponentNeedle))
+      && (kind === 'all' || (kind === 'bot') === opponentIsBot)
+      && (ranked === 'all' || String(g.game_type || 'ranked') === ranked)
+      && (variant === 'all' || String(g.variant || 'classic') === variant)
+      && (result === 'all' || outcome === result)
+      && movesMatch;
+  });
+  _gamesPage = 1;
+  const summary = document.getElementById('games-filter-summary');
+  if (summary) summary.textContent = `${_filteredGamesData.length} partie${_filteredGamesData.length > 1 ? 's' : ''} affichée${_filteredGamesData.length > 1 ? 's' : ''} sur ${_gamesData.length}`;
+  renderGamesPage();
+}
+
+function resetGamesFilters() {
+  ['games-filter-kind','games-filter-ranked','games-filter-variant','games-filter-result','games-filter-moves'].forEach(id => { const el = document.getElementById(id); if (el) el.value = 'all'; });
+  const opponent = document.getElementById('games-filter-opponent');
+  if (opponent) opponent.value = '';
+  applyGamesFilters();
 }
 
 

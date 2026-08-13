@@ -1260,11 +1260,14 @@ function startDiscordBot(ctx) {
     };
 
     const drawCover = (image, x, y, targetWidth, targetHeight) => {
-      const scale = Math.max(targetWidth / image.width, targetHeight / image.height);
+      const imageWidth = Number(image?.width || image?.naturalWidth || 0);
+      const imageHeight = Number(image?.height || image?.naturalHeight || 0);
+      if (!imageWidth || !imageHeight) return;
+      const scale = Math.max(targetWidth / imageWidth, targetHeight / imageHeight);
       const sourceWidth = targetWidth / scale;
       const sourceHeight = targetHeight / scale;
-      const sourceX = (image.width - sourceWidth) / 2;
-      const sourceY = (image.height - sourceHeight) / 2;
+      const sourceX = Math.max(0, (imageWidth - sourceWidth) / 2);
+      const sourceY = Math.max(0, (imageHeight - sourceHeight) / 2);
       c.drawImage(
         image,
         sourceX,
@@ -1279,7 +1282,7 @@ function startDiscordBot(ctx) {
     };
 
     const wallpaper = await loadProfileImage(
-      player.profile_wallpaper_desktop || player.banner,
+      player.profile_wallpaper_desktop || player.profile_wallpaper_mobile,
       '/assets/profile-wallpaper.jpg'
     );
 
@@ -1345,19 +1348,6 @@ function startDiscordBot(ctx) {
 
     const decoration = await loadProfileImage(player.avatar_decoration);
     if (decoration) c.drawImage(decoration, 61, 61, 238, 238);
-
-    const nameplate = await loadProfileImage(player.search_nameplate || player.profile_banner);
-    if (nameplate) {
-      c.save();
-      c.globalAlpha = 0.95;
-      drawCover(nameplate, 75, 319, 210, 66);
-      c.restore();
-    } else {
-      c.fillStyle = 'rgba(255,255,255,.10)';
-      c.beginPath();
-      c.roundRect(75, 319, 210, 66, 18);
-      c.fill();
-    }
 
     c.fillStyle = '#ffffff';
     c.font = '700 56px "Barlow Condensed", sans-serif';

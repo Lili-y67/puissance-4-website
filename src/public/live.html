@@ -38,6 +38,16 @@ img,canvas,svg{max-width:100%}
 .headline-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .live-filter{min-height:38px;padding:0 38px 0 14px;border-radius:999px;border:1px solid rgba(133,235,255,.28);background:rgba(133,235,255,.08);color:#dffaff;font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
 .live-filter option{background:#111126;color:#fff;text-transform:none}
+.live-mode-tabs{display:flex;align-self:center;gap:6px;margin:0 auto 20px;padding:6px;border:1px solid var(--border);border-radius:999px;background:rgba(10,10,24,.76);box-shadow:0 18px 45px rgba(0,0,0,.24)}
+.live-mode-tab{padding:10px 20px;border:1px solid transparent;border-radius:999px;background:transparent;color:var(--muted);font:900 13px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:.2s}
+.live-mode-tab.active{color:#071018;background:#85EBFF;border-color:#bff5ff;box-shadow:0 0 24px rgba(133,235,255,.22)}
+.tv-view{display:none}.tv-view.show{display:block;animation:card-in .3s ease both}
+.tv-card{padding:22px;border:1px solid var(--border);border-radius:26px;background:radial-gradient(circle at 50% 5%,rgba(133,235,255,.08),transparent 38%),linear-gradient(180deg,rgba(18,18,38,.97),rgba(8,8,20,.98));box-shadow:0 30px 80px rgba(0,0,0,.42)}
+.tv-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:16px}.tv-title{font:900 34px 'Barlow Condensed',sans-serif;letter-spacing:2px;text-transform:uppercase}.tv-copy{max-width:560px;color:var(--muted);font-size:12px;line-height:1.5}.tv-channel{padding:7px 11px;border-radius:999px;background:rgba(255,45,85,.1);border:1px solid rgba(255,45,85,.26);color:#ff708e;font:900 11px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;text-transform:uppercase}
+.tv-set{position:relative;width:min(100%,760px);aspect-ratio:526/458;margin:auto;filter:drop-shadow(0 28px 30px rgba(0,0,0,.55))}.tv-frame{position:absolute;inset:0;width:100%;height:100%;z-index:4;pointer-events:none}.tv-screen{position:absolute;z-index:2;left:13.1%;top:11.2%;width:63.8%;height:51.3%;overflow:hidden;border-radius:16% 14% 14% 16%/12% 12% 14% 14%;background:#050609;cursor:pointer;transform:translateZ(0)}
+.tv-screen .live-board{width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:0;padding:3.5%;gap:1.4%;box-shadow:none}.tv-screen .live-cell{min-width:0;min-height:0}.tv-screen .live-token{inset:2px}
+.tv-no-signal{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#fff;background:repeating-radial-gradient(ellipse at 30% 20%,#181818 0 1px,#777 1px 2px,#252525 2px 4px);animation:tv-static .15s steps(2) infinite}.tv-no-signal::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(255,255,255,.12) 3px 4px);mix-blend-mode:screen}.tv-no-signal strong{position:relative;padding:8px 16px;background:rgba(0,0,0,.78);font:900 clamp(17px,4vw,34px) 'Barlow Condensed',sans-serif;letter-spacing:5px;text-transform:uppercase;text-shadow:2px 0 #f00,-2px 0 #0ff}.tv-no-signal span{display:block;margin-top:4px;font-size:10px;letter-spacing:2px}.tv-overlay{position:absolute;z-index:3;left:15%;right:25%;bottom:40%;display:flex;justify-content:space-between;gap:8px;pointer-events:none}.tv-overlay span{padding:4px 8px;border-radius:5px;background:rgba(0,0,0,.74);color:#fff;font:900 10px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.tv-now{margin-top:4px;text-align:center;color:var(--muted);font-size:12px}.tv-now strong{color:#fff}
+@keyframes tv-static{0%{background-position:0 0}50%{background-position:9px -6px}100%{background-position:-5px 8px}}
 .sound-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.24);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .sound-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.48);background:rgba(255,214,10,.14)}
 .sound-btn.muted{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
@@ -176,6 +186,7 @@ img,canvas,svg{max-width:100%}
   .headline-actions{width:100%}
   .headline-actions>*{flex:1;justify-content:center}
   .headline-title{font-size:30px;line-height:.95}
+  .tv-card{padding:14px 8px}.tv-head{padding:0 8px}.tv-title{font-size:27px}.tv-channel{display:none}
   .headline-sub{line-height:1.45}
   .games-grid{grid-template-columns:1fr}
   .spec-card,.analysis-card{padding:16px}
@@ -268,7 +279,24 @@ body.p4-wallpaper-mode .live-cell{background:radial-gradient(circle at 50% 66%,r
     </div>
   </div>
 
-  <div class="view show" id="list-view">
+  <div class="live-mode-tabs" role="tablist" aria-label="Vues du direct">
+    <button class="live-mode-tab active" id="tv-tab" type="button" onclick="setLiveMode('tv')">P4 TV</button>
+    <button class="live-mode-tab" id="games-tab" type="button" onclick="setLiveMode('games')">Parties en cours</button>
+  </div>
+
+  <div class="tv-view show" id="tv-view">
+    <section class="tv-card">
+      <div class="tv-head"><div><div class="tv-title">P4 TV</div><div class="tv-copy">La partie active au meilleur niveau ELO pour la variante sélectionnée. Change de chaîne avec le sélecteur de variantes.</div></div><div class="tv-channel" id="tv-channel">CH 01 · Classique</div></div>
+      <div class="tv-set">
+        <div class="tv-screen" id="tv-screen" aria-label="Regarder la partie P4 TV"><div class="tv-no-signal"><strong>Aucun Signal<span>En attente d'une partie</span></strong></div></div>
+        <div class="tv-overlay" id="tv-overlay"></div>
+        <img class="tv-frame" src="/assets/p4-tv.png" alt="Télévision rétro P4 TV">
+      </div>
+      <div class="tv-now" id="tv-now">Recherche du meilleur direct…</div>
+    </section>
+  </div>
+
+  <div class="view" id="list-view">
     <div class="live-groups">
       <section class="live-group">
         <div class="live-group-head">
@@ -431,6 +459,16 @@ liveFilter.addEventListener('change', () => {
   localStorage.setItem('p4_live_variant_filter', liveVariantFilter);
   renderList(lastLiveGames);
 });
+
+let liveMode = 'tv';
+function setLiveMode(mode) {
+  liveMode = mode === 'games' ? 'games' : 'tv';
+  if (selectedGameId) return;
+  document.getElementById('tv-view')?.classList.toggle('show', liveMode === 'tv');
+  document.getElementById('list-view')?.classList.toggle('show', liveMode === 'games');
+  document.getElementById('tv-tab')?.classList.toggle('active', liveMode === 'tv');
+  document.getElementById('games-tab')?.classList.toggle('active', liveMode === 'games');
+}
 
 function updateLiveDiscordPresence(game = null, activeCount = null) {
   const context = game ? {
@@ -838,6 +876,8 @@ function goToSpec(gameId) {
   startLiveAmbient();
   history.replaceState({}, '', '/spec/' + selectedGameId);
   document.getElementById('list-view').classList.remove('show');
+  document.getElementById('tv-view').classList.remove('show');
+  document.querySelector('.live-mode-tabs').style.display = 'none';
   document.getElementById('spec-view').classList.add('show');
   document.getElementById('headline-title').textContent = 'Mode spectateur';
   document.getElementById('headline-pill').textContent = 'Analyse auto active';
@@ -851,7 +891,8 @@ function backToLive() {
   stopLiveAmbient();
   history.replaceState({}, '', '/live');
   document.getElementById('spec-view').classList.remove('show');
-  document.getElementById('list-view').classList.add('show');
+  document.querySelector('.live-mode-tabs').style.display = 'flex';
+  setLiveMode(liveMode);
   document.getElementById('headline-title').textContent = 'Parties en direct';
   document.getElementById('headline-pill').textContent = 'Cliquer pour spectate';
   updateLiveDiscordPresence(null, Number(document.getElementById('count')?.textContent || 0));
@@ -1158,8 +1199,40 @@ function renderBoardInto(board, game, large = true) {
   board.dataset.liveReady = '1';
 }
 
+function renderP4TV(allGames) {
+  const screen = document.getElementById('tv-screen');
+  const overlay = document.getElementById('tv-overlay');
+  const now = document.getElementById('tv-now');
+  const channel = document.getElementById('tv-channel');
+  if (!screen) return;
+  const candidates = allGames
+    .filter(game => game.status === 'active')
+    .filter(game => liveVariantFilter === 'all' || String(game.variant || 'classic') === liveVariantFilter)
+    .sort((a, b) => (Number(b.players?.[1]?.elo || 0) + Number(b.players?.[2]?.elo || 0)) - (Number(a.players?.[1]?.elo || 0) + Number(a.players?.[2]?.elo || 0)));
+  const game = candidates[0];
+  const channelIndex = Math.max(0, LIVE_VARIANTS.findIndex(([id]) => id === liveVariantFilter));
+  const channelLabel = LIVE_VARIANTS[channelIndex]?.[1] || 'Toutes variantes';
+  if (channel) channel.textContent = `CH ${String(channelIndex + 1).padStart(2, '0')} · ${channelLabel}`;
+  screen.onclick = game ? () => goToSpec(game.id) : null;
+  if (!game) {
+    screen.innerHTML = '<div class="tv-no-signal"><strong>Aucun Signal<span>En attente d\'une partie</span></strong></div>';
+    overlay.innerHTML = '';
+    now.textContent = `Aucun direct disponible · ${channelLabel}`;
+    return;
+  }
+  screen.innerHTML = '';
+  const board = document.createElement('div');
+  board.className = 'live-board';
+  screen.appendChild(board);
+  renderBoardInto(board, game, true);
+  const p1 = game.players[1], p2 = game.players[2];
+  overlay.innerHTML = `<span>● LIVE · #${game.id}</span><span>${escapeHtml(String(game.moves || 0))} coups</span>`;
+  now.innerHTML = `<strong>${escapeHtml(p1.pseudo)}</strong> (${Math.round(Number(p1.elo || 0))}) contre <strong>${escapeHtml(p2.pseudo)}</strong> (${Math.round(Number(p2.elo || 0))}) · cliquer sur l’écran pour regarder`;
+}
+
 function renderList(games) {
   lastLiveGames = games;
+  renderP4TV(games);
   games = liveVariantFilter === 'all' ? games : games.filter(game => String(game.variant || 'classic') === liveVariantFilter);
   const container = document.getElementById('games-grid');
   const botContainer = document.getElementById('bot-games-grid');

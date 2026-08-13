@@ -592,8 +592,8 @@ const gQ = {
   `),
   getForPlayer: db.prepare(`
     SELECT g.*,
-      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
-      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
+      p1.pseudo AS p1_pseudo, p1.elo AS p1_elo, p1.is_bot AS p1_is_bot,
+      p2.pseudo AS p2_pseudo, p2.elo AS p2_elo, p2.is_bot AS p2_is_bot,
       w.pseudo  AS winner_pseudo,
       COALESCE(g.p1_color, p1.color) AS p1_color,
       COALESCE(g.p2_color, p2.color) AS p2_color
@@ -602,7 +602,6 @@ const gQ = {
     JOIN players p2 ON g.player2_id = p2.id
     LEFT JOIN players w ON g.winner_id = w.id
     WHERE (g.player1_id = ? OR g.player2_id = ?)
-      AND g.player1_id != ? AND g.player2_id != ?
       AND g.status = 'finished'
     ORDER BY g.finished_at DESC LIMIT 25
   `),

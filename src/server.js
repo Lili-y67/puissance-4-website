@@ -9161,12 +9161,12 @@ app.get('/api/players/:id/elo-history/export', (req, res) => {
 app.get('/api/players/:id', (req, res) => {
   const player = pQ.getById.get(Number(req.params.id));
   if (!player || (player.deleted && player.id !== BOT_PLAYER_ID)) return res.status(404).json({ error: 'Compte supprimAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA' });
-  // Pour le bot, montrer toutes ses parties ; pour les humains, exclure les parties bot
+  // L'historique inclut les adversaires humains et bots afin de permettre le filtrage côté profil.
   let games = player.id === BOT_PLAYER_ID
     ? db.prepare(`
         SELECT g.*,
-          p1.pseudo AS p1_pseudo, p1.elo AS p1_elo,
-          p2.pseudo AS p2_pseudo, p2.elo AS p2_elo,
+          p1.pseudo AS p1_pseudo, p1.elo AS p1_elo, p1.is_bot AS p1_is_bot,
+          p2.pseudo AS p2_pseudo, p2.elo AS p2_elo, p2.is_bot AS p2_is_bot,
           w.pseudo AS winner_pseudo,
           COALESCE(g.p1_color, p1.color) AS p1_color,
           COALESCE(g.p2_color, p2.color) AS p2_color
@@ -9177,7 +9177,7 @@ app.get('/api/players/:id', (req, res) => {
         WHERE (g.player1_id = ? OR g.player2_id = ?) AND g.status = 'finished'
         ORDER BY g.finished_at DESC LIMIT 25
       `).all(player.id, player.id)
-    : gQ.getForPlayer.all(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID);
+    : gQ.getForPlayer.all(player.id, player.id);
   const purgedGames = db.prepare(`
     SELECT original_game_id AS id, player1_id, player2_id, winner_id, move_count, duration,
            elo_p1, elo_p2, elo_before_p1, elo_before_p2, game_type, variant, result_reason,
@@ -9185,9 +9185,8 @@ app.get('/api/players/:id', (req, res) => {
            1 AS archived, 1 AS purged
     FROM archived_game_summaries
     WHERE (player1_id = ? OR player2_id = ?)
-      AND (? = 1 OR (player1_id != ? AND player2_id != ?))
     ORDER BY finished_at DESC LIMIT 25
-  `).all(player.id, player.id, player.id === BOT_PLAYER_ID ? 1 : 0, BOT_PLAYER_ID, BOT_PLAYER_ID);
+  `).all(player.id, player.id);
   games = [...games, ...purgedGames]
     .sort((a, b) => parseSqliteDateMs(b.finished_at) - parseSqliteDateMs(a.finished_at) || Number(b.id) - Number(a.id))
     .slice(0, 25);
@@ -9201,14 +9200,12 @@ app.get('/api/players/:id', (req, res) => {
         SELECT COUNT(*) AS c
         FROM games
         WHERE (player1_id = ? OR player2_id = ?)
-          AND player1_id != ? AND player2_id != ?
           AND status = 'finished'
-      `).get(player.id, player.id, BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
+      `).get(player.id, player.id)?.c || 0);
   const purgedGamesTotal = Number(db.prepare(`
     SELECT COUNT(*) AS c FROM archived_game_summaries
     WHERE (player1_id = ? OR player2_id = ?)
-      AND (? = 1 OR (player1_id != ? AND player2_id != ?))
-  `).get(player.id, player.id, player.id === BOT_PLAYER_ID ? 1 : 0, BOT_PLAYER_ID, BOT_PLAYER_ID)?.c || 0);
+  `).get(player.id, player.id)?.c || 0);
   const following  = fQ.getFollowing.all(player.id);
   const followers  = fQ.getFollowers.all(player.id);
 

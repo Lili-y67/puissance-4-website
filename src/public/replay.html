@@ -121,6 +121,12 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .cell.highlight{box-shadow:inset 0 3px 8px rgba(0,0,0,0.6),inset 0 0 0 1px rgba(255,255,255,0.12),0 0 0 2px rgba(255,255,255,0.15);}
 .cell.winning .token{animation:win-pulse 0.7s ease-in-out infinite alternate;}
 @keyframes win-pulse{from{transform:scale(1)}to{transform:scale(1.1);filter:brightness(1.4);}}
+@keyframes replay-rotate-cw{0%{transform:rotate(0) scale(1)}45%{transform:rotate(90deg) scale(.88)}100%{transform:rotate(90deg) scale(1)}}
+@keyframes replay-rotate-ccw{0%{transform:rotate(0) scale(1)}45%{transform:rotate(-90deg) scale(.88)}100%{transform:rotate(-90deg) scale(1)}}
+@keyframes conquest-flash{0%,100%{filter:none}35%{filter:brightness(1.7) saturate(1.4);box-shadow:0 0 55px rgba(255,214,10,.55)}}
+.board.rotate-cw{animation:replay-rotate-cw .72s cubic-bezier(.22,.8,.24,1)}
+.board.rotate-ccw{animation:replay-rotate-ccw .72s cubic-bezier(.22,.8,.24,1)}
+.board.conquest-flash{animation:conquest-flash .65s ease}
 @keyframes cell-element{from{transform:scale(.88) rotate(-4deg);opacity:.34}to{transform:scale(1.08) rotate(4deg);opacity:.66}}
 
 /* ── End screen ── */
@@ -569,7 +575,8 @@ function renderShell() {
       <div class="progress-top">
         <span class="progress-label">Replay en cours</span>
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">Télécharger JSON</button>
+          <button onclick="downloadReplayJson()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">JSON</button>
+          <button onclick="downloadReplayHtml()" style="padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">HTML autonome</button>
           <span style="font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">Vitesse</span>
           ${[1,2,4].map(s => `<button id="speed-btn-${s}" onclick="setSpeed(${s})" style="padding:2px 8px;border-radius:6px;border:1px solid ${s===1?'rgba(76,110,245,0.5)':'rgba(255,255,255,0.1)'};background:${s===1?'rgba(76,110,245,0.2)':'transparent'};color:${s===1?'#8b9cf4':'var(--muted)'};font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">x${s}</button>`).join('')}
           <span class="progress-count" id="prog-count">0 / ${moves.length}</span>
@@ -602,7 +609,8 @@ function renderShell() {
       <div class="end-sub" id="end-sub"></div>
       <div class="end-btns">
         <button class="btn-action primary" onclick="restartReplay()">↺ Revoir</button>
-        <button class="btn-action ghost" onclick="downloadReplayHtml()">Télécharger JSON</button>
+        <button class="btn-action ghost" onclick="downloadReplayJson()">Télécharger JSON</button>
+        <button class="btn-action ghost" onclick="downloadReplayHtml()">Télécharger HTML</button>
         <a class="btn-action ghost" href="/">Jouer</a>
       </div>
     </div>
@@ -706,7 +714,7 @@ function restartReplay() {
   startReplay();
 }
 
-function downloadReplayHtml() {
+function downloadReplayJson() {
   if (!gameData || !Array.isArray(moves) || !moves.length) return;
   const exportPayload = {
     format: 'puissance4-replay-v2', exported_at: new Date().toISOString(), game: gameData,
@@ -721,7 +729,10 @@ function downloadReplayHtml() {
   jsonLink.href = jsonUrl; jsonLink.download = `puissance4-replay-${gameData.id || getGameId()}.json`;
   document.body.appendChild(jsonLink); jsonLink.click(); jsonLink.remove();
   setTimeout(() => URL.revokeObjectURL(jsonUrl), 1000);
-  return;
+}
+
+function downloadReplayHtml() {
+  if (!gameData || !Array.isArray(moves) || !moves.length) return;
   const winnerLabel = gameData.winner_id === null
     ? 'Match nul'
     : (gameData.winner_id === gameData.player1_id ? `${gameData.p1_pseudo} a gagne` : `${gameData.p2_pseudo} a gagne`);
@@ -745,7 +756,7 @@ body{margin:0;background:#0a0a14;color:#f5f5fb;font-family:Segoe UI,Arial,sans-s
 :root{--board-a:hsl(12 82% 58%);--board-b:hsl(198 82% 58%);--board-c:hsl(286 82% 58%);--board-a-soft:hsl(12 88% 60% / .30);--board-b-soft:hsl(198 88% 60% / .28);--board-c-soft:hsl(286 88% 60% / .16);--board-spin:210deg}
 .wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
 .card{background:#121426;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:18px}
-.board{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:repeat(7,64px);gap:6px;background:radial-gradient(circle at 7% 80%,var(--board-a-soft),transparent 30%),radial-gradient(circle at 94% 18%,var(--board-b-soft),transparent 32%),conic-gradient(from var(--board-spin) at 50% 50%,var(--board-a-soft),rgba(22,21,48,.98),var(--board-c-soft),rgba(9,17,35,.98),var(--board-b-soft));padding:10px;border-radius:18px;width:max-content}
+.board{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:repeat(${COLS},64px);gap:6px;background:radial-gradient(circle at 7% 80%,var(--board-a-soft),transparent 30%),radial-gradient(circle at 94% 18%,var(--board-b-soft),transparent 32%),conic-gradient(from var(--board-spin) at 50% 50%,var(--board-a-soft),rgba(22,21,48,.98),var(--board-c-soft),rgba(9,17,35,.98),var(--board-b-soft));padding:10px;border-radius:18px;width:max-content;max-width:100%;box-sizing:border-box}
 .board::before{content:"";position:absolute;inset:8px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--board-a) 16%,transparent),transparent 30%,transparent 70%,color-mix(in srgb,var(--board-b) 16%,transparent));opacity:.75;pointer-events:none}
 .cell{position:relative;z-index:1;width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 50% 65%,rgba(0,0,0,.30),transparent 36%),radial-gradient(circle at 35% 35%, rgba(255,255,255,.06), rgba(6,8,20,.96) 70%);box-shadow:inset 0 3px 10px rgba(0,0,0,.72), inset 0 0 0 1px rgba(255,255,255,.08)}
 .cell::before{content:"";position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--board-a) 13%,transparent),transparent 35%),radial-gradient(circle at 72% 72%,color-mix(in srgb,var(--board-b) 15%,transparent),transparent 42%);opacity:.55}
@@ -779,9 +790,10 @@ button{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1
 </div>
 \u003Cscript>
 const DATA = ${JSON.stringify(payload).replace(/<\/script/gi, '<\\\\/script')};
-const ROWS = 6, COLS = 7;
+const ROWS = ${ROWS}, COLS = ${COLS};
 let board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
 let idx = 0;
+let actionIdx = 0;
 let autoTimer = null;
 let autoPlaying = true;
 const THEMES=[{n:'classic',h:[210,214,202],s:78,l:48},{n:'arcade',h:[153,148,161],s:92,l:43},{n:'neon',h:[309,186,276],s:94,l:56},{n:'sunset',h:[17,43,4],s:94,l:55},{n:'ice',h:[194,205,186],s:88,l:66},{n:'obsidian',h:[267,278,252],s:58,l:38}];
@@ -799,6 +811,11 @@ function render(){
       const v=board[r][c];
       if(v===1) token.style.background='linear-gradient(135deg, '+(DATA.game.p1_color_secondary||'#ff6b85')+', '+(DATA.game.p1_color||'#ff2d55')+')';
       if(v===2) token.style.background='linear-gradient(135deg, '+(DATA.game.p2_color_secondary||'#ffe566')+', '+(DATA.game.p2_color||'#ffd60a')+')';
+      const shape=v===1?DATA.game.p1_shape:v===2?DATA.game.p2_shape:'circle';
+      const emoji=v===1?DATA.game.p1_token_emoji_image:v===2?DATA.game.p2_token_emoji_image:'';
+      const clips={triangle:'polygon(50% 8%,95% 92%,5% 92%)',diamond:'polygon(50% 5%,95% 50%,50% 95%,5% 50%)',star:'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)',heart:'polygon(50% 85%,15% 45%,5% 30%,15% 10%,35% 8%,50% 25%,65% 8%,85% 10%,95% 30%,85% 45%)'};
+      if(clips[shape]){token.style.borderRadius='0';token.style.clipPath=clips[shape]}
+      if(emoji){token.style.background='transparent url("'+String(emoji).replace(/"/g,'')+'") center/contain no-repeat';token.style.clipPath='none';token.style.borderRadius='16%'}
       if(v===0) token.style.background='transparent';
       if(v!==0) token.classList.add('show');
       cell.appendChild(token);
@@ -848,6 +865,7 @@ function nextMove(){
   board[move.row][move.col]=move.player_id===DATA.game.player1_id?1:2;
   idx++;
   render();
+  while(actionIdx<(DATA.actions||[]).length&&Number(DATA.actions[actionIdx].action_number||0)<=idx){const a=DATA.actions[actionIdx++],p=a.payload||{},snap=p.board||p.grid;if(Array.isArray(snap)){board=Array.from({length:ROWS},(_,r)=>Array.from({length:COLS},(_,c)=>Number(snap?.[r]?.[c]||0)));render()}}
   highlightLastMove(move);
   finishIfNeeded();
   clearTimeout(autoTimer);
@@ -857,6 +875,7 @@ function restart(){
   clearTimeout(autoTimer);
   board = Array.from({length:ROWS},()=>Array(COLS).fill(0));
   idx=0;
+  actionIdx=0;
   render();
   if(autoPlaying) autoTimer=setTimeout(nextMove, 420);
 }
@@ -968,6 +987,19 @@ function applyReplayActions(upTo) {
       board = Array.from({length:ROWS}, (_, r) => Array.from({length:COLS}, (_, c) => Number(snapshot?.[r]?.[c] || 0)));
       renderBoard();
       for (let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(board[r][c]) placeToken(r,c,board[r][c]);
+      const boardEl = document.getElementById('board');
+      if (action.action_type === 'rotation') {
+        const direction = Number(action.payload?.direction || 1) < 0 ? 'rotate-ccw' : 'rotate-cw';
+        boardEl.classList.remove('rotate-cw','rotate-ccw');
+        void boardEl.offsetWidth;
+        boardEl.classList.add(direction);
+        setTimeout(() => boardEl.classList.remove(direction), Math.round(760 / replaySpeed));
+      } else if (action.action_type === 'conquest_capture' || action.action_type === 'conquest_reset') {
+        boardEl.classList.remove('conquest-flash');
+        void boardEl.offsetWidth;
+        boardEl.classList.add('conquest-flash');
+        setTimeout(() => boardEl.classList.remove('conquest-flash'), Math.round(700 / replaySpeed));
+      }
     }
   }
 }
