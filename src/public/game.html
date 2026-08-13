@@ -108,8 +108,23 @@ body {
   animation: lobby-card-in .55s cubic-bezier(.22,1,.36,1) both;
 }
 .lobby-player::before{content:"";position:absolute;inset:-1px;opacity:.55;pointer-events:none;background:linear-gradient(145deg,rgba(255,255,255,.12),transparent 36%,rgba(255,255,255,.04))}
-.game-nameplate{display:none;position:absolute;inset:3px;z-index:0;border-radius:inherit;background-image:var(--game-nameplate);background-size:cover;background-position:center;background-repeat:no-repeat;pointer-events:none}
-.has-nameplate>.game-nameplate{display:block}
+.game-nameplate{
+  display:none;
+  position:absolute;
+  z-index:0;
+  left:0;
+  top:50%;
+  width:100%;
+  aspect-ratio:16/3;
+  max-height:62px;
+  transform:translateY(-50%);
+  background-image:var(--game-nameplate);
+  background-size:contain;
+  background-position:center;
+  background-repeat:no-repeat;
+  pointer-events:none;
+}
+.has-nameplate .game-nameplate{display:block}
 .lobby-player.has-nameplate::before,.player-card.has-nameplate::before{opacity:.18}
 .lobby-player.p1 { border-color: rgba(255,45,85,.46); box-shadow: 0 0 32px var(--p1-dim), 0 26px 70px rgba(0,0,0,0.40); }
 .lobby-player.p2 { border-color: rgba(255,214,10,.42); box-shadow: 0 0 32px var(--p2-dim), 0 26px 70px rgba(0,0,0,0.40); animation-delay:.08s; }
@@ -129,7 +144,7 @@ body {
 .lobby-player.p1 .lobby-avatar { background: var(--p1-dim); color: var(--p1); border: 2px solid var(--p1); }
 .lobby-player.p2 .lobby-avatar { background: var(--p2-dim); color: var(--p2); border: 2px solid var(--p2); }
 
-.lobby-info{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px 8px 0}
+.lobby-info{position:relative;width:min(100%,240px);min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 22px;isolation:isolate}
 .lobby-pseudo { position:relative;z-index:1;font-family:'Barlow Condensed',sans-serif;font-weight: 900; font-size: 22px; letter-spacing:1px; text-align: center; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 10px; }
 .lobby-elo { position:relative;z-index:1;font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: 1px; color: var(--muted); }
 .lobby-you { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 4px; }
@@ -184,7 +199,7 @@ body {
 .player-card.p1 .pc-dot { background: var(--p1); box-shadow: 0 0 8px var(--p1-glow); }
 .player-card.p2 .pc-dot { background: var(--p2); box-shadow: 0 0 8px var(--p2-glow); }
 
-.pc-info { position:relative; flex: 1; min-width: 0; display:flex; flex-direction:column; justify-content:center; padding:0 8px 0 0; }
+.pc-info { position:relative; flex: 1; min-width: 0; display:flex; flex-direction:column; justify-content:center; padding:8px 20px; isolation:isolate; }
 .pc-name { position:relative; z-index:1; font-family:'Barlow Condensed',sans-serif; font-weight: 900; font-size: 22px; letter-spacing:1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding:0 10px; }
 .pc-elo  { position:relative; z-index:1; font-size: 12px; font-weight:600; color: var(--muted); padding:0 10px; }
 .pc-ping {
@@ -1178,12 +1193,12 @@ html.p4-performance-lite .board::after {
 <div class="lobby-overlay" id="lobby-overlay">
   <div class="lobby-players">
     <div class="lobby-player p1" id="lp1">
-      <div class="game-nameplate" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap" id="law1">
         <div class="lobby-avatar-decoration" id="ldeco1"></div>
         <div class="lobby-avatar" id="lav1">?</div>
       </div>
       <div class="lobby-info">
+        <div class="game-nameplate" aria-hidden="true"></div>
         <div class="lobby-pseudo" id="lpseudo1">—</div>
         <div class="lobby-elo"    id="lelo1">— ELO</div>
       </div>
@@ -1193,12 +1208,12 @@ html.p4-performance-lite .board::after {
       <div class="countdown" id="countdown">3</div>
     </div>
     <div class="lobby-player p2" id="lp2">
-      <div class="game-nameplate" aria-hidden="true"></div>
       <div class="lobby-avatar-wrap" id="law2">
         <div class="lobby-avatar-decoration" id="ldeco2"></div>
         <div class="lobby-avatar" id="lav2">?</div>
       </div>
       <div class="lobby-info">
+        <div class="game-nameplate" aria-hidden="true"></div>
         <div class="lobby-pseudo" id="lpseudo2">—</div>
         <div class="lobby-elo"    id="lelo2">— ELO</div>
       </div>
@@ -1222,13 +1237,13 @@ html.p4-performance-lite .board::after {
 
   <div class="players-row">
     <div class="player-card p1" id="card-p1">
-      <div class="game-nameplate" aria-hidden="true"></div>
       <div class="pc-avatar-wrap" id="pwrap1">
         <div class="pc-avatar-decoration" id="deco-p1"></div>
         <div class="pc-avatar" id="avatar-p1">?</div>
       </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
+        <div class="game-nameplate" aria-hidden="true"></div>
         <div class="pc-name" id="name-p1">Joueur 1</div>
         <div class="pc-elo"  id="elo-p1">— ELO</div>
         <div class="pc-ping unknown" id="ping-p1" title="Connexion">-- ms</div>
@@ -1241,13 +1256,13 @@ html.p4-performance-lite .board::after {
       <div class="turn-badge" id="turn-badge">Partie</div>
     </div>
     <div class="player-card p2" id="card-p2">
-      <div class="game-nameplate" aria-hidden="true"></div>
       <div class="pc-avatar-wrap" id="pwrap2">
         <div class="pc-avatar-decoration" id="deco-p2"></div>
         <div class="pc-avatar" id="avatar-p2">?</div>
       </div>
       <div class="pc-dot"></div>
       <div class="pc-info">
+        <div class="game-nameplate" aria-hidden="true"></div>
         <div class="pc-name" id="name-p2">Joueur 2</div>
         <div class="pc-elo"  id="elo-p2">— ELO</div>
         <div class="pc-ping unknown" id="ping-p2" title="Connexion">-- ms</div>
