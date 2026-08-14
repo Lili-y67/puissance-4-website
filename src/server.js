@@ -6353,7 +6353,7 @@ app.get('/api/shop/catalog', (_, res) => {
   });
 });
 
-const SHOP_EXCHANGE_INTERVAL_MS = 15 * 60 * 1000;
+const SHOP_EXCHANGE_INTERVAL_MS = 60 * 60 * 1000;
 
 function getShopExchangeQuote(at = Date.now()) {
   const bucket = Math.floor(Number(at || Date.now()) / SHOP_EXCHANGE_INTERVAL_MS);
@@ -6374,12 +6374,20 @@ function getShopExchangeQuote(at = Date.now()) {
 
 app.get('/api/shop/exchange/quote', (_, res) => {
   const quote = getShopExchangeQuote();
-  const history = Array.from({ length: 12 }, (_, index) => {
-    const point = getShopExchangeQuote(quote.updatedAt - (11 - index) * SHOP_EXCHANGE_INTERVAL_MS);
+  const history = Array.from({ length: 24 }, (_, index) => {
+    const point = getShopExchangeQuote(quote.updatedAt - (23 - index) * SHOP_EXCHANGE_INTERVAL_MS);
+    return { at: point.updatedAt, mid: point.mid };
+  });
+  const forecastHourly = Array.from({ length: 12 }, (_, index) => {
+    const point = getShopExchangeQuote(quote.nextUpdateAt + index * SHOP_EXCHANGE_INTERVAL_MS);
+    return { at: point.updatedAt, mid: point.mid };
+  });
+  const forecastLong = Array.from({ length: 7 }, (_, index) => {
+    const point = getShopExchangeQuote(quote.nextUpdateAt + index * 24 * SHOP_EXCHANGE_INTERVAL_MS);
     return { at: point.updatedAt, mid: point.mid };
   });
   res.set('Cache-Control', 'no-store');
-  res.json({ ...quote, history });
+  res.json({ ...quote, history, forecastHourly, forecastLong });
 });
 
 app.post('/api/shop/exchange', (req, res) => {

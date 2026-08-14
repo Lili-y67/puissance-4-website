@@ -487,18 +487,25 @@ body{
 
   <section class="exchange-market" aria-labelledby="exchange-title">
     <div class="exchange-copy">
-      <div class="hero-kicker">Marché P4 · actualisé toutes les 15 min</div>
+      <div class="hero-kicker">Marché P4 · nouveau cours chaque heure</div>
       <h2 id="exchange-title">Bourse des monnaies</h2>
       <p>Échange tes coins et tes gemmes au cours du moment. Le prix évolue automatiquement selon le marché interne.</p>
       <div class="exchange-rates">
         <div><span>Acheter 1 gemme</span><strong id="exchange-buy-rate">—</strong></div>
         <div><span>Vendre 1 gemme</span><strong id="exchange-sell-rate">—</strong></div>
+        <div><span>Prévision dans 1 h</span><strong id="exchange-next-rate">—</strong></div>
         <div><span>Prochain cours</span><strong id="exchange-countdown">—</strong></div>
       </div>
     </div>
     <div class="exchange-chart-wrap">
-      <div class="exchange-chart-head"><span>Cours moyen</span><strong id="exchange-trend">—</strong></div>
-      <div class="exchange-chart" id="exchange-chart" aria-label="Historique des douze derniers cours"></div>
+      <div class="exchange-chart-head"><span id="exchange-chart-label">Cours des dernières 24 h</span><strong id="exchange-trend">—</strong></div>
+      <div class="exchange-chart-tabs">
+        <button class="active" type="button" data-range="history" onclick="setExchangeChartRange('history')">24 h</button>
+        <button type="button" data-range="hourly" onclick="setExchangeChartRange('hourly')">Prévision 12 h</button>
+        <button type="button" data-range="long" onclick="setExchangeChartRange('long')">Prévision 7 j</button>
+      </div>
+      <div class="exchange-chart" id="exchange-chart"><canvas id="exchange-canvas" aria-label="Graphique interactif du cours des gemmes"></canvas><div class="exchange-tooltip" id="exchange-tooltip"></div></div>
+      <div class="exchange-forecast-note" id="exchange-forecast-note">Passe la souris sur la courbe pour afficher un cours précis.</div>
     </div>
     <div class="exchange-desk">
       <div class="exchange-switch">
@@ -847,7 +854,7 @@ const SHOP_ITEMS = {
     features: [['🌍','Global','Tous les gains de coins sont multipliés.'],['⏱️','Durée','Activation de 2 heures après utilisation.'],['🎒','Inventaire','Ajouté à ton inventaire après achat.']]
   },
   fortune_ticket: {
-    key: 'fortune_ticket', type: 'service', theme: 'booster-coin', badge: '<img src="/assets/fortune-ticket.png" alt="" style="width:30px;height:22px;vertical-align:-7px;object-fit:contain"> ROUE', duration: 'Immédiat', title: 'Ticket Roue Fortune',
+    key: 'fortune_ticket', type: 'service', theme: 'booster-coin', art: '/assets/fortune-ticket.png', badge: '<img src="/assets/fortune-ticket.png" alt="" style="width:30px;height:22px;vertical-align:-7px;object-fit:contain"> ROUE', duration: 'Immédiat', title: 'Ticket Roue Fortune',
     stat: '1', statSub: 'ticket pour 500 coins',
     meta: 'Ajoute immédiatement un ticket à ton compte pour faire tourner la Roue Fortune.',
     features: [
@@ -924,9 +931,9 @@ body{background:var(--bg);overflow-x:hidden}
 .category-tabs{position:sticky;top:93px;z-index:55;width:100%;display:grid;grid-template-columns:repeat(5,1fr);padding:7px;border-radius:18px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(18px)}
 .category-tab{min-height:48px;border-radius:12px}.category-tab.active{background:linear-gradient(135deg,rgba(255,214,10,.18),rgba(255,122,69,.10));border-color:rgba(255,214,10,.33);color:var(--yellow)}
 .grid,.cosmetic-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
-.card{min-height:0;border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.014));box-shadow:0 18px 46px rgba(0,0,0,.24)}
+.card{min-height:0;border-radius:22px;background:linear-gradient(160deg,rgba(19,21,39,.98),rgba(8,9,19,.98))!important;background-image:none!important;box-shadow:0 18px 46px rgba(0,0,0,.24);isolation:isolate}
 .card:hover{transform:translateY(-6px);box-shadow:0 28px 70px rgba(0,0,0,.36)}
-.card h2{font-size:32px}.duration{font-size:34px}.feature-list{display:none}
+.card h2{font-size:32px}.card>.meta{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:45px}.duration{font-size:34px}.feature-list{display:none}
 .card .stat-line{margin-top:auto}.card-actions{display:grid;grid-template-columns:auto auto minmax(0,1fr)}
 .card-actions .cta{min-height:54px}.booster-column .card-actions{grid-template-columns:auto auto minmax(0,1fr)}
 .panel{border-radius:22px}.faq-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.faq-grid.feature-list{display:grid}
@@ -946,14 +953,17 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-total{display:flex;justify-content:space-between;margin-bottom:15px}.cart-total strong{font:900 28px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}
 .store-toast{position:fixed;z-index:250;left:50%;bottom:28px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:#f7f7fb;color:#11121c;font-weight:800;opacity:0;pointer-events:none;transition:.22s}.store-toast.show{opacity:1;transform:translate(-50%,0)}
-.rank-art{position:relative;display:grid;place-items:center;height:190px;margin:2px -4px 4px;border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(255,255,255,.09),transparent 60%),rgba(4,5,12,.36)}
-.rank-art>img:first-child{width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 20px 22px rgba(0,0,0,.45));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.04) translateY(-3px)}
+.rank-art{position:relative;display:grid;place-items:center;height:220px;margin:2px -4px 4px;border-radius:18px;overflow:hidden;background:radial-gradient(circle at 50% 48%,rgba(133,235,255,.11),transparent 48%),linear-gradient(145deg,rgba(4,5,12,.9),rgba(14,15,29,.72))}
+.rank-art::after{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.055);border-radius:inherit;pointer-events:none}.rank-art>img:first-child{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 16px 22px rgba(0,0,0,.42));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.035) translateY(-2px)}
 .rank-duration-art{position:absolute!important;right:9px!important;bottom:9px!important;width:56px!important;height:56px!important;object-fit:contain!important;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))!important}
 .exchange-market{display:grid;grid-template-columns:1.05fr .9fr .85fr;gap:18px;padding:24px;border:1px solid rgba(133,235,255,.15);border-radius:24px;background:radial-gradient(circle at 20% 0,rgba(133,235,255,.11),transparent 34%),linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));box-shadow:0 22px 55px rgba(0,0,0,.25)}
 .exchange-copy h2{margin:12px 0 7px;font:900 38px 'Barlow Condensed',sans-serif;text-transform:uppercase}.exchange-copy p{color:var(--muted);line-height:1.55}
-.exchange-rates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}.exchange-rates div{padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.03)}.exchange-rates span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-rates strong{display:block;margin-top:5px;font:900 20px 'Barlow Condensed',sans-serif;color:var(--yellow)}
+.exchange-rates{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:18px}.exchange-rates div{padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.03)}.exchange-rates span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-rates strong{display:block;margin-top:5px;font:900 20px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .exchange-chart-wrap,.exchange-desk{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(5,6,14,.48)}.exchange-chart-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.exchange-chart-head strong.up{color:var(--green)}.exchange-chart-head strong.down{color:var(--red)}
-.exchange-chart{height:142px;display:flex;align-items:flex-end;gap:5px;padding-top:18px}.exchange-bar{position:relative;flex:1;min-height:12px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--blue),rgba(133,235,255,.18));box-shadow:0 0 12px rgba(133,235,255,.12)}.exchange-bar:last-child{background:linear-gradient(180deg,var(--yellow),rgba(255,214,10,.2))}.exchange-bar:hover::after{content:attr(data-value);position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);padding:3px 5px;border-radius:5px;background:#fff;color:#111;font-size:10px}
+.exchange-chart-tabs{display:flex;gap:5px;margin-top:10px}.exchange-chart-tabs button{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.025);color:var(--muted);font:800 10px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-chart-tabs button.active{border-color:rgba(133,235,255,.25);background:rgba(133,235,255,.1);color:var(--blue)}
+.exchange-chart{position:relative;height:165px;margin-top:5px}.exchange-chart canvas{display:block;width:100%;height:100%;cursor:crosshair}.exchange-tooltip{position:absolute;z-index:3;display:none;pointer-events:none;padding:7px 9px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#f7f7fb;color:#10111c;font:800 11px 'Barlow Condensed',sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.28)}.exchange-forecast-note{margin-top:4px;font-size:10px;color:var(--muted)}
+.preview-product-hero{position:relative;height:240px;display:grid;place-items:center;margin-bottom:14px;border:1px solid rgba(255,255,255,.08);border-radius:22px;overflow:hidden;background:radial-gradient(circle,rgba(133,235,255,.12),transparent 52%),rgba(5,6,14,.64)}.preview-product-hero img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.42))}.preview-product-chip{position:absolute;left:13px;top:13px;padding:7px 10px;border-radius:999px;background:rgba(8,9,20,.82);border:1px solid rgba(255,255,255,.1);font:900 11px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}.preview-actions button{min-height:48px}
+#preview-features{display:flex!important;flex-direction:column;gap:10px}#preview-features .feature{display:flex!important;padding:13px;border-radius:15px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1665,6 +1675,7 @@ function getDisplayItem(pack) {
   if (String(item.type) === 'booster') {
     return {
       ...item,
+      art: item.family === 'coins' ? '/badges/Boost_Coin.png' : '/badges/Boost_Elo.png',
       badge: String(pack).startsWith('global_')
         ? (item.family === 'coins' ? '🌍 COINS' : '🌍 ELO')
         : item.family === 'coins' ? '🪙 COINS' : '⚡ ELO'
@@ -1810,6 +1821,9 @@ function renderBoosterPreviewShowcase(item) {
 function renderPreviewShowcase(item) {
   if (item.type === 'booster') {
     return renderBoosterPreviewShowcase(item);
+  }
+  if (item.art && item.type !== 'rank') {
+    return `<div class="preview-demo-card"><div class="preview-demo-label">Utilisation immédiate</div><div class="preview-demo-row"><div class="preview-demo-col"><div class="preview-demo-value">${escapeHtml(item.stat || '1')}</div><div class="preview-demo-unit">${escapeHtml(item.statSub || item.duration || '')}</div></div><div class="preview-demo-col right"><div class="preview-demo-label">Livraison</div><div class="preview-demo-value" style="font-size:30px;color:var(--green)">Instantanée</div><div class="preview-demo-unit">sur ton compte</div></div></div></div>`;
   }
   const state = buildPreviewState(item);
   const avatarStyle = item.key === 'vip_plus' || item.key === 'perso'
@@ -2141,7 +2155,8 @@ function openPreview(pack) {
   title.textContent = item.title;
   copy.textContent = item.meta;
   showcase.className = `preview-showcase ${item.theme}`;
-  showcase.innerHTML = renderPreviewShowcase(item);
+  const productHero = item.art ? `<div class="preview-product-hero"><span class="preview-product-chip">${item.badge}</span><img src="${escapeHtml(item.art)}" alt="${escapeHtml(item.title)}"></div>` : '';
+  showcase.innerHTML = productHero + renderPreviewShowcase(item);
   note.textContent = item.type === 'booster'
     ? renderPriceNote(pack, ` · ${pack.includes('_custom') ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
     : renderPriceNote(pack, ` · Aperçu uniquement, rien n'est sauvegardé`);
@@ -2150,7 +2165,7 @@ function openPreview(pack) {
       <div class="feature-emoji">${emoji}</div>
       <div class="feature-copy"><strong>${t}</strong><span>${text}</span></div>
     </div>
-  `).join('');
+  `).join('') + `<div class="preview-actions"><button class="gift-btn" type="button" onclick="closePreview();openGiftModal('${pack}')">🎁 Offrir</button><button class="cta ${item.theme}" type="button" onclick="addToCart('${pack}');closePreview()">🛒 Ajouter au panier</button></div>`;
   bg.classList.add('show');
   if (item.type === 'booster') {
     startBoosterPreviewAnimation(item, showcase);
@@ -2241,6 +2256,8 @@ async function loadShop() {
 let exchangeQuote = null;
 let exchangeDirection = 'coins_to_gems';
 let exchangeCountdownTimer = null;
+let exchangeChartRange = 'history';
+let exchangeChartPoints = [];
 
 async function loadExchangeQuote() {
   try {
@@ -2271,25 +2288,111 @@ function renderExchangeMarket() {
   if (!exchangeQuote) return;
   const buy = document.getElementById('exchange-buy-rate');
   const sell = document.getElementById('exchange-sell-rate');
+  const next = document.getElementById('exchange-next-rate');
   if (buy) buy.textContent = `${exchangeQuote.buy} coins`;
   if (sell) sell.textContent = `${exchangeQuote.sell} coins`;
+  if (next) next.textContent = `${Number(exchangeQuote.forecastHourly?.[0]?.mid || exchangeQuote.mid)} coins`;
   const history = Array.isArray(exchangeQuote.history) ? exchangeQuote.history : [];
   const values = history.map(point => Number(point.mid || 0));
-  const min = Math.min(...values, 0);
-  const max = Math.max(...values, 1);
-  const chart = document.getElementById('exchange-chart');
-  if (chart) chart.innerHTML = history.map(point => {
-    const height = 25 + ((Number(point.mid) - min) / Math.max(1, max - min)) * 75;
-    return `<span class="exchange-bar" style="height:${height}%" data-value="${Number(point.mid)}"></span>`;
-  }).join('');
   const trend = document.getElementById('exchange-trend');
   if (trend && values.length > 1) {
     const delta = ((values.at(-1) - values[0]) / Math.max(1, values[0])) * 100;
     trend.textContent = `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}%`;
     trend.className = delta >= 0 ? 'up' : 'down';
   }
+  drawExchangeChart();
   renderExchangeCountdown();
   renderExchangeEstimate();
+}
+
+function getExchangeChartData() {
+  if (!exchangeQuote) return [];
+  if (exchangeChartRange === 'hourly') return [exchangeQuote.history?.at(-1), ...(exchangeQuote.forecastHourly || [])].filter(Boolean);
+  if (exchangeChartRange === 'long') return [exchangeQuote.history?.at(-1), ...(exchangeQuote.forecastLong || [])].filter(Boolean);
+  return exchangeQuote.history || [];
+}
+
+function setExchangeChartRange(range) {
+  exchangeChartRange = ['history', 'hourly', 'long'].includes(range) ? range : 'history';
+  document.querySelectorAll('.exchange-chart-tabs button').forEach(button => button.classList.toggle('active', button.dataset.range === exchangeChartRange));
+  const label = document.getElementById('exchange-chart-label');
+  if (label) label.textContent = exchangeChartRange === 'history' ? 'Cours des dernières 24 h' : exchangeChartRange === 'hourly' ? 'Projection des prochaines 12 h' : 'Projection à 7 jours';
+  const note = document.getElementById('exchange-forecast-note');
+  if (note) note.textContent = exchangeChartRange === 'history' ? 'Passe la souris sur la courbe pour afficher un cours précis.' : 'Projection indicative calculée sur la volatilité du marché P4 — ce taux n’est pas garanti.';
+  drawExchangeChart();
+}
+
+function drawExchangeChart() {
+  const canvas = document.getElementById('exchange-canvas');
+  if (!canvas) return;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(rect.width * dpr);
+  canvas.height = Math.round(rect.height * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const width = rect.width;
+  const height = rect.height;
+  const pad = { left: 34, right: 10, top: 12, bottom: 22 };
+  const data = getExchangeChartData();
+  if (data.length < 2) return;
+  const values = data.map(point => Number(point.mid || 0));
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const margin = Math.max(3, Math.ceil((rawMax - rawMin) * .18));
+  const min = rawMin - margin;
+  const max = rawMax + margin;
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+  exchangeChartPoints = data.map((point, index) => ({
+    ...point,
+    x: pad.left + (index / (data.length - 1)) * plotW,
+    y: pad.top + (1 - (Number(point.mid) - min) / Math.max(1, max - min)) * plotH,
+  }));
+  ctx.font = '10px Barlow, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 3; i += 1) {
+    const y = pad.top + (i / 3) * plotH;
+    const value = Math.round(max - (i / 3) * (max - min));
+    ctx.strokeStyle = 'rgba(255,255,255,.07)';
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(244,244,251,.42)'; ctx.fillText(String(value), pad.left - 6, y);
+  }
+  const gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  gradient.addColorStop(0, exchangeChartRange === 'history' ? '#85ebff' : '#ffd60a');
+  gradient.addColorStop(1, exchangeChartRange === 'history' ? '#4d7cff' : '#ff7a45');
+  ctx.strokeStyle = gradient; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.setLineDash(exchangeChartRange === 'history' ? [] : [7, 5]);
+  ctx.beginPath(); exchangeChartPoints.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.stroke(); ctx.setLineDash([]);
+  const fill = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
+  fill.addColorStop(0, exchangeChartRange === 'history' ? 'rgba(133,235,255,.22)' : 'rgba(255,214,10,.16)'); fill.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath(); exchangeChartPoints.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.lineTo(exchangeChartPoints.at(-1).x, height - pad.bottom); ctx.lineTo(exchangeChartPoints[0].x, height - pad.bottom); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(244,244,251,.42)';
+  [0, Math.floor((data.length - 1) / 2), data.length - 1].forEach(index => { const date = new Date(Number(data[index].at)); ctx.fillText(exchangeChartRange === 'long' ? date.toLocaleDateString('fr-FR',{weekday:'short'}) : date.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}), exchangeChartPoints[index].x, height - pad.bottom + 6); });
+  if (!canvas.dataset.bound) {
+    canvas.dataset.bound = '1';
+    canvas.addEventListener('mousemove', onExchangeChartMove);
+    canvas.addEventListener('mouseleave', () => { const tooltip = document.getElementById('exchange-tooltip'); if (tooltip) tooltip.style.display = 'none'; drawExchangeChart(); });
+    window.addEventListener('resize', drawExchangeChart);
+  }
+}
+
+function onExchangeChartMove(event) {
+  const canvas = event.currentTarget;
+  if (!exchangeChartPoints.length) return;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const point = exchangeChartPoints.reduce((best, current) => Math.abs(current.x - mouseX) < Math.abs(best.x - mouseX) ? current : best);
+  drawExchangeChart();
+  const ctx = canvas.getContext('2d');
+  ctx.save(); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(point.x, point.y, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  const tooltip = document.getElementById('exchange-tooltip');
+  if (!tooltip) return;
+  const date = new Date(Number(point.at));
+  tooltip.textContent = `${date.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})} · ${Number(point.mid)} coins / gemme`;
+  tooltip.style.display = 'block'; tooltip.style.left = `${Math.min(rect.width - 145, Math.max(5, point.x + 9))}px`; tooltip.style.top = `${Math.max(4, point.y - 35)}px`;
 }
 
 function setExchangeDirection(direction) {
