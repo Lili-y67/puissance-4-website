@@ -1,6 +1,6 @@
 ﻿{
   "name": "puissance4",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Puissance 4 multijoueur en ligne",
   "main": "index.js",
   "engines": {

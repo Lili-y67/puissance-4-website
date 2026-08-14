@@ -2276,7 +2276,7 @@ function startDiscordBot(ctx) {
         { text: `⏳・${queueCount} en file`, type: ActivityType.Competing },
         { text: `🖥️・${registered} comptes`, type: ActivityType.Watching },
         { text: `🤖・${bots} bots API`, type: ActivityType.Watching },
-        { text: '💾・Version 3.5.0', type: ActivityType.Watching }
+        { text: '💾・Version 4.1.0', type: ActivityType.Watching }
       ];
       const status = statuses[Math.floor(Date.now() / 10000) % statuses.length];
       bot.user.setStatus('online')
