@@ -407,7 +407,7 @@ body{
     </nav>
     <div class="nav-actions">
       <a class="btn" href="/profil">Mon profil</a>
-      <button class="btn cart-trigger" type="button" onclick="openCart()" aria-label="Ouvrir le panier">🛒 Panier <span class="cart-count" id="cart-count">0</span></button>
+      <button class="btn cart-trigger" id="cart-trigger" type="button" aria-label="Ouvrir le panier" aria-controls="cart-overlay" aria-expanded="false">🛒 Panier <span class="cart-count" id="cart-count">0</span></button>
     </div>
   </div>
 
@@ -1010,7 +1010,8 @@ body{background:var(--bg);overflow-x:hidden}
   .cart-head,.cart-footer{padding:17px}.cart-items{padding:12px}.cart-drawer{width:100%}
   .preview-modal-bg{padding:0;align-items:stretch}.preview-modal{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-inline:0}.preview-modal>.preview-head{padding:16px 15px 13px}.preview-modal .preview-title{font-size:35px}.preview-modal .preview-copy{font-size:12px;margin-top:6px}.preview-modal .preview-close{width:40px;height:40px}.preview-modal .preview-grid{padding:12px;gap:10px}.preview-modal .preview-side{padding:13px;border-radius:18px}.preview-modal .preview-showcase{gap:10px;padding:0}.preview-modal .preview-product-hero{height:150px}.preview-modal .preview-product-hero img{max-height:145px;max-width:68%}.preview-product-chip{left:5px;top:5px}.preview-modal .preview-profile-banner{height:54px}.preview-modal .preview-profile-body{padding:12px;gap:10px}.preview-modal .preview-avatar-wrap,.preview-modal .preview-avatar{width:58px;height:58px}.preview-modal .preview-profile-name{font-size:29px}.preview-modal .preview-demo-card{padding:14px}.preview-modal .preview-demo-value{font-size:42px}.preview-buy-summary>div{min-height:70px;padding:11px}.preview-buy-summary strong{font-size:21px}.preview-modal #preview-features .feature{padding:11px}.preview-actions{grid-template-columns:1fr}.preview-modal .preview-actions button{min-height:50px}.preview-modal .preview-mini-note{font-size:10px}
 }
-.cart-overlay{display:block;padding:0;background:rgba(2,3,9,.58);backdrop-filter:blur(7px);z-index:300}
+.cart-overlay{display:block;padding:0;background:rgba(2,3,9,.58);backdrop-filter:blur(7px);z-index:300;visibility:hidden}
+.cart-overlay.open{visibility:visible}
 .cart-drawer{position:absolute;inset:0 0 0 auto;width:min(490px,100vw);height:100dvh;max-height:none;border:0;border-left:1px solid rgba(255,255,255,.12);border-radius:0;transform:translateX(102%);opacity:1;background:radial-gradient(circle at 90% 0,rgba(255,214,10,.09),transparent 30%),linear-gradient(160deg,#17182b,#080914);box-shadow:-35px 0 100px rgba(0,0,0,.62)}
 .cart-overlay.open .cart-drawer{transform:translateX(0)}
 .cart-head{padding:20px 21px}.cart-head h2{font-size:38px}
@@ -2577,18 +2578,39 @@ function removeFromCart(key) {
 }
 
 function openCart() {
-  renderCart();
   const overlay = document.getElementById('cart-overlay');
-  overlay?.classList.add('open');
-  overlay?.setAttribute('aria-hidden', 'false');
+  if (!overlay) {
+    console.error('[boutique] Le conteneur du panier est introuvable.');
+    return;
+  }
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  overlay.style.visibility = 'visible';
+  overlay.style.opacity = '1';
+  overlay.style.pointerEvents = 'auto';
+  document.getElementById('cart-trigger')?.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
+  try {
+    renderCart();
+  } catch (error) {
+    console.error('[boutique] Impossible de rendre le panier :', error);
+    const box = document.getElementById('cart-items');
+    if (box) box.innerHTML = '<div class="cart-empty"><b>Le panier n a pas pu etre charge.</b><span>Recharge la page puis reessaie.</span></div>';
+  }
 }
 
 function closeCart() {
   const overlay = document.getElementById('cart-overlay');
-  overlay?.classList.remove('open');
-  overlay?.setAttribute('aria-hidden', 'true');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.style.opacity = '';
+  overlay.style.pointerEvents = '';
+  document.getElementById('cart-trigger')?.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
+  window.setTimeout(() => {
+    if (!overlay.classList.contains('open')) overlay.style.visibility = '';
+  }, 260);
 }
 
 function renderCart() {
@@ -2908,6 +2930,7 @@ function confirmGift() {
 }
 
 repairDomText();
+document.getElementById('cart-trigger')?.addEventListener('click', openCart);
 loadShop();
 </script>
 <script src="/theme.js?v=eggs-33"></script>
