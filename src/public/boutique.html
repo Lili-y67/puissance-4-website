@@ -665,6 +665,7 @@ body{
         <div class="cart-summary-kicker">Récapitulatif</div>
         <div class="cart-breakdown" id="cart-breakdown"></div>
         <div class="cart-promo-state" id="cart-promo-state">Aucun code promotionnel appliqué</div>
+        <div class="cart-payment-state" id="cart-payment-state" role="status"></div>
         <div class="cart-total"><span>Total du panier</span><strong id="cart-total">0 coins</strong></div>
         <button class="cart-checkout" id="cart-checkout" type="button" onclick="checkoutCart()">Confirmer la commande</button>
         <p class="promo-help" style="margin-top:10px;text-align:center">Stocks, soldes et réductions sont vérifiés une dernière fois.</p>
@@ -1009,6 +1010,13 @@ body{background:var(--bg);overflow-x:hidden}
   .cart-head,.cart-footer{padding:17px}.cart-items{padding:12px}.cart-drawer{width:100%}
   .preview-modal-bg{padding:0;align-items:stretch}.preview-modal{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-inline:0}.preview-modal>.preview-head{padding:16px 15px 13px}.preview-modal .preview-title{font-size:35px}.preview-modal .preview-copy{font-size:12px;margin-top:6px}.preview-modal .preview-close{width:40px;height:40px}.preview-modal .preview-grid{padding:12px;gap:10px}.preview-modal .preview-side{padding:13px;border-radius:18px}.preview-modal .preview-showcase{gap:10px;padding:0}.preview-modal .preview-product-hero{height:150px}.preview-modal .preview-product-hero img{max-height:145px;max-width:68%}.preview-product-chip{left:5px;top:5px}.preview-modal .preview-profile-banner{height:54px}.preview-modal .preview-profile-body{padding:12px;gap:10px}.preview-modal .preview-avatar-wrap,.preview-modal .preview-avatar{width:58px;height:58px}.preview-modal .preview-profile-name{font-size:29px}.preview-modal .preview-demo-card{padding:14px}.preview-modal .preview-demo-value{font-size:42px}.preview-buy-summary>div{min-height:70px;padding:11px}.preview-buy-summary strong{font-size:21px}.preview-modal #preview-features .feature{padding:11px}.preview-actions{grid-template-columns:1fr}.preview-modal .preview-actions button{min-height:50px}.preview-modal .preview-mini-note{font-size:10px}
 }
+.cart-overlay{display:block;padding:0;background:rgba(2,3,9,.58);backdrop-filter:blur(7px);z-index:300}
+.cart-drawer{position:absolute;inset:0 0 0 auto;width:min(490px,100vw);height:100dvh;max-height:none;border:0;border-left:1px solid rgba(255,255,255,.12);border-radius:0;transform:translateX(102%);opacity:1;background:radial-gradient(circle at 90% 0,rgba(255,214,10,.09),transparent 30%),linear-gradient(160deg,#17182b,#080914);box-shadow:-35px 0 100px rgba(0,0,0,.62)}
+.cart-overlay.open .cart-drawer{transform:translateX(0)}
+.cart-head{padding:20px 21px}.cart-head h2{font-size:38px}
+.cart-content{display:flex;flex-direction:column;height:calc(100dvh - 91px);min-height:0;max-height:none}.cart-products{flex:1;min-height:0;padding:15px 9px 12px 14px}.cart-items{overflow:auto}.cart-footer{flex:0 0 auto;padding:17px 20px 20px;border:0;border-top:1px solid rgba(255,255,255,.09);background:rgba(5,6,14,.86)}
+.cart-summary-kicker{display:none}.cart-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:7px}.cart-breakdown-row{padding:8px 9px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(255,255,255,.025)}.cart-breakdown-row:nth-last-child(-n+2){display:none}.cart-promo-state{margin-top:9px;padding:8px}.cart-payment-state{display:none;margin-top:9px;padding:10px 11px;border-radius:11px;font-size:11px;line-height:1.4}.cart-payment-state.error{display:block;border:1px solid rgba(255,45,85,.28);background:rgba(255,45,85,.09);color:#ff7891}.cart-payment-state.ok{display:block;border:1px solid rgba(48,209,88,.24);background:rgba(48,209,88,.08);color:var(--green)}.cart-total{margin-top:12px;padding-top:13px}.cart-footer .cart-checkout{margin-top:12px}
+@media(max-width:560px){.cart-drawer{width:100vw}.cart-head{padding:15px 16px}.cart-content{height:calc(100dvh - 78px)}.cart-products{padding:10px 5px}.cart-footer{padding:12px 15px max(14px,env(safe-area-inset-bottom))}.cart-promo-state{display:none}.cart-breakdown{display:none}.cart-total{margin-top:0;padding-top:0;border:0}}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1553,6 +1561,33 @@ function getButtonState(pack) {
   return { disabled: false, note: `${price} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
 }
 
+function getCartPrice(pack) {
+  if (pack === 'fortune_ticket') return getDiscountedPrice(Number(SHOP_PRICES.fortune_ticket || 500)).finalPrice;
+  if (pack === 'bot_host_1m') return isShopAdmin() ? 0 : Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
+  return getDisplayPrice(pack);
+}
+
+function getCartEligibility(pack, { gift = false } = {}) {
+  const item = SHOP_ITEMS[pack] || getDynamicBoosterItem(pack);
+  if (!item) return { disabled: true, note: 'Pack indisponible' };
+  const currency = pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency();
+  const price = getCartPrice(pack);
+  const priceLabel = `${price} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}`;
+  const stock = pack === 'limited_offer'
+    ? Number(shopLimitedOffer?.stock ?? 0)
+    : Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
+  if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
+  if (gift && (item.type === 'host' || currency === 'crystals')) return { disabled: true, note: 'Cet article ne peut pas être offert' };
+  if (!gift && pack === 'bot_host_1m' && !shopBotHostEligible) return { disabled: true, note: 'Associe d’abord un bot' };
+  if (!gift && item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin' };
+  if (!gift && item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack déjà possédé' };
+  if (!gift && item.type === 'rank') {
+    const owned = packOwned(pack);
+    if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez déjà ce rôle' };
+  }
+  return { disabled: false, note: gift ? `Offrir · ${priceLabel}` : priceLabel };
+}
+
 function getFontPreviewFamily(font) {
   const families = {
     bebas: "'Bebas Neue',sans-serif", anton: "'Anton',sans-serif", righteous: "'Righteous',sans-serif",
@@ -1571,8 +1606,8 @@ function getFontPreviewFamily(font) {
 
 function renderCosmeticCard(item) {
   const assets = Array.isArray(item.assets) ? item.assets : [];
-  const state = getButtonState(item.key);
-  const giftState = getGiftButtonState(item.key);
+  const state = getCartEligibility(item.key);
+  const giftState = getCartEligibility(item.key, { gift: true });
   const previews = assets.map(asset => item.cosmeticType === 'decoration'
     ? `<div class="cosmetic-swatch"><img src="${escapeHtml(asset)}" alt="Apercu decoration" loading="lazy"></div>`
     : `<div class="cosmetic-swatch font" style="font-family:${getFontPreviewFamily(asset)}">${escapeHtml(shopPlayer?.pseudo || 'Pseudo')}</div>`
@@ -1994,8 +2029,8 @@ function updateCustomBooster(type, value) {
 function renderCustomBoosterCard(pack) {
   const item = getDisplayItem(pack);
   const price = getCustomBoosterPrice(pack);
-  const btnState = getButtonState(pack);
-  const giftState = getGiftButtonState(pack);
+  const btnState = getCartEligibility(pack);
+  const giftState = getCartEligibility(pack, { gift: true });
   const isElo = pack === 'elo_custom' || pack === 'global_elo_custom';
   const isGlobal = pack === 'global_elo_custom' || pack === 'global_coin_custom';
   const currentValue = getCustomBoosterValue(pack);
@@ -2071,8 +2106,8 @@ function renderCard(pack) {
   const item = getDisplayItem(pack);
   if (!item) return '';
   const price = getCustomBoosterPrice(pack);
-  const btnState = getButtonState(pack);
-  const giftState = getGiftButtonState(pack);
+  const btnState = getCartEligibility(pack);
+  const giftState = getCartEligibility(pack, { gift: true });
   const stock = Number.isFinite(Number(item.defaultStock)) ? getStockQty(pack) : null;
   const inv = item.type === 'booster' ? getInventoryQty(pack) : null;
   const bundleStockHtml = item.type === 'bundle'
@@ -2509,7 +2544,7 @@ function getCartSnapshot(pack, recipient = null) {
     duration: item?.duration || '',
     kind: item?.type === 'rank' ? 'Grade' : item?.category === 'cosmetics' ? 'Cosmétique' : item?.type === 'booster' ? 'Booster' : item?.type === 'host' ? 'Host' : 'Article',
     art: item?.art || '',
-    price: getDiscountedPrice(getCustomBoosterPrice(pack)).finalPrice,
+    price: getCartPrice(pack),
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
     multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
     icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡',
@@ -2518,7 +2553,7 @@ function getCartSnapshot(pack, recipient = null) {
 }
 
 function addToCart(pack, recipient = null) {
-  const state = recipient ? getGiftButtonState(pack) : getButtonState(pack);
+  const state = getCartEligibility(pack, { gift: !!recipient });
   if (state.disabled) return;
   const snapshot = getCartSnapshot(pack, recipient);
   const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
@@ -2528,12 +2563,16 @@ function addToCart(pack, recipient = null) {
     return;
   }
   shopCart.push({ ...snapshot, key });
+  const paymentState = document.getElementById('cart-payment-state');
+  if (paymentState) delete paymentState.dataset.locked;
   renderCart();
   showStoreToast(recipient ? `Cadeau pour ${recipient.pseudo} ajouté` : `${snapshot.title} ajouté au panier`);
 }
 
 function removeFromCart(key) {
   shopCart = shopCart.filter(entry => entry.key !== key);
+  const paymentState = document.getElementById('cart-payment-state');
+  if (paymentState) delete paymentState.dataset.locked;
   renderCart();
 }
 
@@ -2558,9 +2597,11 @@ function renderCart() {
   const itemsLabel = document.getElementById('cart-items-label');
   const breakdown = document.getElementById('cart-breakdown');
   const promoState = document.getElementById('cart-promo-state');
+  const paymentState = document.getElementById('cart-payment-state');
   const total = document.getElementById('cart-total');
   const checkout = document.getElementById('cart-checkout');
   if (count) count.textContent = String(shopCart.length);
+  if (paymentState && !paymentState.dataset.locked) { paymentState.textContent = ''; paymentState.className = 'cart-payment-state'; }
   if (itemsLabel) itemsLabel.textContent = `${shopCart.length} produit${shopCart.length > 1 ? 's' : ''}`;
   if (!box || !total || !checkout) return;
   if (!shopCart.length) {
@@ -2585,9 +2626,31 @@ function renderCart() {
   checkout.disabled = false;
 }
 
+function validateCartPayment() {
+  const token = localStorage.getItem('token');
+  if (!token || !shopPlayer) return { ok: false, message: 'Connecte-toi pour pouvoir régler ce panier.' };
+  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + Number(entry.price || 0); return acc; }, {});
+  const problems = [];
+  if (totals.gems && !shopGemsUnlocked) problems.push('lie ton compte Discord pour payer en gemmes');
+  if (totals.crystals && !shopBotHostEligible) problems.push('associe un bot pour utiliser les Cristaux');
+  const balances = { coins: Number(shopPlayer.coins || 0), gems: Number(shopPlayer.gems || 0), crystals: Number(shopPlayer.bot_crystals || 0) };
+  Object.entries(totals).forEach(([currency, required]) => {
+    const missing = Number(required) - Number(balances[currency] || 0);
+    if (missing > 0) problems.push(`il manque ${missing} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}`);
+  });
+  return problems.length ? { ok: false, message: `Paiement impossible : ${problems.join(' · ')}.` } : { ok: true, message: 'Solde suffisant, la commande peut être validée.' };
+}
+
 async function checkoutCart() {
   if (!shopCart.length) return;
   const checkout = document.getElementById('cart-checkout');
+  const paymentState = document.getElementById('cart-payment-state');
+  const validation = validateCartPayment();
+  if (!validation.ok) {
+    if (paymentState) { paymentState.dataset.locked = '1'; paymentState.textContent = validation.message; paymentState.className = 'cart-payment-state error'; }
+    return;
+  }
+  if (paymentState) { paymentState.dataset.locked = '1'; paymentState.textContent = validation.message; paymentState.className = 'cart-payment-state ok'; }
   if (checkout) { checkout.disabled = true; checkout.textContent = 'Commande en cours...'; }
   const pending = [...shopCart];
   let completed = 0;
@@ -2603,6 +2666,7 @@ async function checkoutCart() {
     shopCart = shopCart.filter(item => item.key !== entry.key);
   }
   renderCart();
+  if (paymentState) delete paymentState.dataset.locked;
   if (checkout) checkout.textContent = 'Confirmer la commande';
   if (completed) showStoreToast(`${completed} achat(s) validé(s)`);
   if (!shopCart.length) closeCart();
@@ -2762,7 +2826,7 @@ function selectGiftPlayer(id) {
 }
 
 function openGiftModal(pack) {
-  const state = getGiftButtonState(pack);
+  const state = getCartEligibility(pack, { gift: true });
   if (state.disabled) return;
   giftPackKey = pack;
   giftSelectedPlayer = null;
