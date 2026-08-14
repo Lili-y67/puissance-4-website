@@ -3970,6 +3970,36 @@ app.patch('/api/admin/players/:id/bot-enabled', (req, res) => {
   res.json({ ok: true, bot_enabled: enabled });
 });
 
+app.post('/api/admin/product-keys', (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const content = String(req.body?.content || '').trim().toLowerCase();
+  const rawQuantity = Number(req.body?.quantity ?? 1);
+  const rawDurationHours = Number(req.body?.durationHours ?? 0);
+  if (!Number.isFinite(rawQuantity) || rawQuantity < 1 || !Number.isFinite(rawDurationHours) || rawDurationHours < 0) {
+    return res.status(400).json({ error: 'Quantite ou duree invalide.' });
+  }
+  const quantity = Math.max(1, Math.min(999, Math.trunc(rawQuantity)));
+  const durationHours = Math.max(0, Math.min(8760, Math.trunc(rawDurationHours)));
+  const item = ['coins', 'gems', 'gemmes'].includes(content) ? null : resolveInventoryShopItem(content);
+  if (!content || (!item && !['coins', 'gems', 'gemmes'].includes(content))) {
+    return res.status(400).json({ error: 'Contenu invalide. Utilise coins, gems, un rang ou un code item boutique.' });
+  }
+  if (item?.key === 'bot_host_1m') {
+    return res.status(400).json({ error: 'Le host bot exige une cible et ne peut pas etre place dans une cle.' });
+  }
+  const rewardKey = content === 'gemmes' ? 'gems' : item?.key || content;
+  const code = `P4K-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  const expiresAt = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
+  db.prepare(`
+    INSERT INTO product_keys (code, grants_json, created_by, created_at, expires_at)
+    VALUES (?, ?, NULL, ?, ?)
+  `).run(code, JSON.stringify([{ key: rewardKey, qty: quantity }]), Date.now(), expiresAt);
+  res.json({
+    ok: true,
+    productKey: { code, content: rewardKey, label: item?.label || rewardKey, quantity, expiresAt },
+  });
+});
+
 app.post('/api/admin/coupons', (req, res) => {
   if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
   const code = normalizeCouponCode(req.body?.code || crypto.randomBytes(4).toString('hex').toUpperCase());

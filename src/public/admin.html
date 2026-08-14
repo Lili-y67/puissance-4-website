@@ -818,6 +818,26 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
       <div>
+        <div class="admin-section-title">Clés produit</div>
+        <div class="admin-section-copy">Crée une clé à usage unique contenant des coins, des gemmes, un grade ou un article boutique.</div>
+      </div>
+      <div id="product-key-result" style="font-size:13px;color:var(--green);"></div>
+    </div>
+    <div class="coupon-grid">
+      <input id="product-key-content" class="search-input" style="margin:0" placeholder="coins, gems, vip_1m, vip_plus...">
+      <input id="product-key-quantity" type="number" class="search-input" style="margin:0" value="1" min="1" max="999" placeholder="Quantité">
+      <input id="product-key-hours" type="number" class="search-input" style="margin:0" value="0" min="0" max="8760" placeholder="Validité h">
+      <button id="product-key-generate-btn" class="btn-sm" style="background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);height:40px" onclick="createProductKey()">Générer la clé</button>
+    </div>
+    <div id="product-key-output" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:14px 16px;border:1px solid rgba(48,209,88,.24);border-radius:16px;background:rgba(48,209,88,.07)">
+      <div><div style="font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase">Clé générée</div><strong id="product-key-code" style="display:block;margin-top:5px;color:var(--green);font:900 22px 'Barlow Condensed',sans-serif;letter-spacing:1px"></strong><small id="product-key-meta" style="color:var(--muted)"></small></div>
+      <button class="btn-sm" style="background:rgba(255,255,255,.07);color:var(--ink)" onclick="copyProductKey()">Copier</button>
+    </div>
+  </div>
+
+  <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+      <div>
         <div class="admin-section-title">Pack limité</div>
         <div class="admin-section-copy">Active une offre temporaire visible directement dans la boutique, sans code coupon.</div>
       </div>
@@ -1670,6 +1690,46 @@ async function createCoupon() {
   const expires = data.coupon.expiresAt ? ` expire le ${new Date(data.coupon.expiresAt).toLocaleString('fr-FR')}` : ' sans expiration';
   if (out) out.textContent = `Code ${data.coupon.code} cree (${data.coupon.value}${data.coupon.type === 'flat' ? '' : '%'}) -${expires}.`;
   await loadActiveCoupons();
+}
+
+async function createProductKey() {
+  const out = document.getElementById('product-key-result');
+  const button = document.getElementById('product-key-generate-btn');
+  const content = String(document.getElementById('product-key-content')?.value || '').trim();
+  if (!content) {
+    if (out) out.textContent = 'Indique le contenu de la clé.';
+    return;
+  }
+  if (button) { button.disabled = true; button.textContent = 'Génération...'; }
+  if (out) out.textContent = '';
+  try {
+    const data = await api('POST', '/api/admin/product-keys', {
+      content,
+      quantity: Number(document.getElementById('product-key-quantity')?.value || 1),
+      durationHours: Number(document.getElementById('product-key-hours')?.value || 0),
+    });
+    if (!data.ok) {
+      if (out) out.textContent = data.error || 'Création impossible.';
+      return;
+    }
+    const key = data.productKey;
+    document.getElementById('product-key-code').textContent = key.code;
+    document.getElementById('product-key-meta').textContent = `${key.label} ×${key.quantity} · ${key.expiresAt ? `expire le ${new Date(key.expiresAt).toLocaleString('fr-FR')}` : 'sans expiration'}`;
+    document.getElementById('product-key-output').style.display = 'flex';
+    if (out) out.textContent = 'Clé prête à être distribuée.';
+  } catch (error) {
+    if (out) out.textContent = 'Connexion impossible avec le générateur.';
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Générer la clé'; }
+  }
+}
+
+async function copyProductKey() {
+  const code = document.getElementById('product-key-code')?.textContent || '';
+  if (!code) return;
+  await navigator.clipboard.writeText(code);
+  const out = document.getElementById('product-key-result');
+  if (out) out.textContent = 'Clé copiée dans le presse-papiers.';
 }
 
 async function createLimitedPack() {

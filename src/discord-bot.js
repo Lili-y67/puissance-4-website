@@ -129,11 +129,7 @@ function buildDiscordCommandDefinitions(shopItems = {}) {
       { type: 4, name: 'utilisations', description: 'Nombre maximum d utilisations', required: false },
       { type: 4, name: 'heures', description: 'Expiration en heures, vide = pas d expiration', required: false },
     ]),
-    { name: 'key-generate', description: 'Generer une cle produit a usage unique', default_member_permissions: '8', options: [
-      { type: 3, name: 'contenu', description: 'coins, gems, vip_1m, vip_plus, perso ou item boutique', required: true },
-      { type: 4, name: 'quantite', description: 'Montant ou quantite, defaut 1', required: false },
-      { type: 4, name: 'heures', description: 'Expiration en heures, vide = aucune', required: false },
-    ] },
+    { name: 'key-generate', description: 'Ouvrir le generateur de cle produit', default_member_permissions: '8' },
     { name: 'aide', description: 'Afficher le centre de commandes Puissance 4' },
     adminCommand('stats', 'Afficher les statistiques staff'),
     adminCommand('player', 'Afficher le profil staff d un joueur', [pseudoOption(true)]),
@@ -2197,9 +2193,15 @@ function startDiscordBot(ctx) {
   async function handleProductKey(interaction) {
     const role = await requireStaff(interaction, 'moderator');
     if (!role) return;
-    const content = String(optionString(interaction, 'contenu') || '').trim().toLowerCase();
-    const quantity = Math.max(1, Math.min(999, optionInteger(interaction, 'quantite', 1)));
-    const hours = Math.max(0, Math.min(8760, optionInteger(interaction, 'heures', 0)));
+    const fromModal = interaction.isModalSubmit?.();
+    const content = String(fromModal ? interaction.fields.getTextInputValue('content') : optionString(interaction, 'contenu') || '').trim().toLowerCase();
+    const rawQuantity = Number(fromModal ? interaction.fields.getTextInputValue('quantity') || 1 : optionInteger(interaction, 'quantite', 1));
+    const rawHours = Number(fromModal ? interaction.fields.getTextInputValue('hours') || 0 : optionInteger(interaction, 'heures', 0));
+    if (!Number.isFinite(rawQuantity) || rawQuantity < 1 || !Number.isFinite(rawHours) || rawHours < 0) {
+      return replyError(interaction, 'Valeurs invalides', 'La quantite doit etre positive et les heures doivent etre egales ou superieures a 0.');
+    }
+    const quantity = Math.max(1, Math.min(999, Math.trunc(rawQuantity)));
+    const hours = Math.max(0, Math.min(8760, Math.trunc(rawHours)));
     const item = content === 'coins' || content === 'gems' || content === 'gemmes'
       ? null
       : resolveGiveItem(content);
@@ -2228,6 +2230,37 @@ function startDiscordBot(ctx) {
       ]],
       buttons: [linkButton('Ouvrir la boutique', `${api}/boutique`, '🛒')],
     }));
+  }
+
+  function productKeyModal() {
+    return new ModalBuilder()
+      .setCustomId('p4_product_key_generate')
+      .setTitle('Generer une cle produit')
+      .addComponents(
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId('content')
+          .setLabel('Contenu de la cle')
+          .setPlaceholder('coins, gems, vip_1m, vip_plus, perso...')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(64)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId('quantity')
+          .setLabel('Quantite')
+          .setPlaceholder('1')
+          .setValue('1')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(3)),
+        new ActionRowBuilder().addComponents(new TextInputBuilder()
+          .setCustomId('hours')
+          .setLabel('Expiration en heures (0 = aucune)')
+          .setPlaceholder('24')
+          .setValue('0')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(4))
+      );
   }
 
   function updateStatus() {
@@ -2837,7 +2870,12 @@ function startDiscordBot(ctx) {
       if (interaction.isModalSubmit?.() && interaction.customId.startsWith('p4_ticket_modal:')) {
         return handleTicketModal(interaction, interaction.customId.split(':')[1] || 'other');
       }
+      if (interaction.isModalSubmit?.() && interaction.customId === 'p4_product_key_generate') {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        return handleProductKey(interaction);
+      }
       if (!interaction.isChatInputCommand()) return;
+      if (interaction.commandName === 'key-generate') return interaction.showModal(productKeyModal());
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       trackSlashApiLatency(interaction, process.hrtime.bigint());
 
@@ -2890,7 +2928,6 @@ function startDiscordBot(ctx) {
       if (interaction.commandName === 'db-reset') return handleDbReset(interaction);
       if (ADMIN_COMMAND_ACTIONS[interaction.commandName]) return handleAdmin(interaction);
       if (interaction.commandName === 'admin-coupon') return handleCoupon(interaction);
-      if (interaction.commandName === 'key-generate') return handleProductKey(interaction);
     } catch (error) {
       console.error('[BOT ERROR]', error);
       return replyError(interaction, 'Erreur bot Discord', truncate(error.message || 'Erreur inconnue', 300));
