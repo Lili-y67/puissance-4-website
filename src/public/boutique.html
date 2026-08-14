@@ -654,15 +654,23 @@ body{
 </div>
 
 <div class="cart-overlay" id="cart-overlay" onclick="if(event.target===this)closeCart()" aria-hidden="true">
-  <aside class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+  <section class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
     <div class="cart-head"><div><div class="hero-kicker">Ta sélection</div><h2 id="cart-title">Mon panier</h2></div><button class="cart-close" type="button" onclick="closeCart()" aria-label="Fermer">×</button></div>
-    <div class="cart-items" id="cart-items"></div>
-    <div class="cart-footer">
-      <div class="cart-total"><span>Total estimé</span><strong id="cart-total">0 coins</strong></div>
-      <button class="cart-checkout" id="cart-checkout" type="button" onclick="checkoutCart()">Valider mon panier</button>
-      <p class="promo-help" style="margin-top:10px;text-align:center">Les réductions et stocks sont revérifiés à la validation.</p>
+    <div class="cart-content">
+      <div class="cart-products">
+        <div class="cart-section-title"><span>Articles</span><strong id="cart-items-label">0 produit</strong></div>
+        <div class="cart-items" id="cart-items"></div>
+      </div>
+      <aside class="cart-footer">
+        <div class="cart-summary-kicker">Récapitulatif</div>
+        <div class="cart-breakdown" id="cart-breakdown"></div>
+        <div class="cart-promo-state" id="cart-promo-state">Aucun code promotionnel appliqué</div>
+        <div class="cart-total"><span>Total du panier</span><strong id="cart-total">0 coins</strong></div>
+        <button class="cart-checkout" id="cart-checkout" type="button" onclick="checkoutCart()">Confirmer la commande</button>
+        <p class="promo-help" style="margin-top:10px;text-align:center">Stocks, soldes et réductions sont vérifiés une dernière fois.</p>
+      </aside>
     </div>
-  </aside>
+  </section>
 </div>
 <div class="store-toast" id="store-toast" role="status" aria-live="polite"></div>
 
@@ -683,7 +691,7 @@ body{
     </div>
     <div class="gift-actions">
       <button class="preview-btn" type="button" onclick="closeGiftModal()">Annuler</button>
-      <button class="gift-btn" id="gift-confirm-btn" type="button" onclick="confirmGift()" disabled>🎁 Offrir</button>
+      <button class="gift-btn" id="gift-confirm-btn" type="button" onclick="confirmGift()" disabled>🛒 Ajouter le cadeau</button>
     </div>
   </div>
 </div>
@@ -952,6 +960,17 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-remove{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer}.cart-footer{border-top:1px solid rgba(255,255,255,.08);border-bottom:0}
 .cart-total{display:flex;justify-content:space-between;margin-bottom:15px}.cart-total strong{font:900 28px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}
+.cart-overlay{display:grid;place-items:center;padding:24px;background:rgba(2,3,9,.8);backdrop-filter:blur(14px)}
+.cart-drawer{position:relative;inset:auto;width:min(1080px,calc(100vw - 48px));max-height:calc(100dvh - 48px);border:1px solid rgba(255,255,255,.12);border-radius:30px;overflow:hidden;background:radial-gradient(circle at 8% 0,rgba(255,214,10,.08),transparent 30%),linear-gradient(150deg,#17182b,#090a15);box-shadow:0 45px 140px rgba(0,0,0,.7);transform:translateY(24px) scale(.97);opacity:0}
+.cart-overlay.open .cart-drawer{transform:none;opacity:1}
+.cart-head{padding:23px 27px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(10,11,22,.66)}.cart-head h2{font-size:43px;line-height:.9}.cart-head .hero-kicker{margin-bottom:9px}
+.cart-content{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.7fr);min-height:430px;max-height:calc(100dvh - 155px)}
+.cart-products{min-width:0;display:flex;flex-direction:column;padding:20px 12px 20px 22px}.cart-section-title{display:flex;align-items:center;justify-content:space-between;padding:0 8px 12px;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1.3px;text-transform:uppercase}.cart-section-title strong{color:var(--text)}
+.cart-items{padding:0 8px;gap:10px}.cart-empty{padding:55px 20px;border:1px dashed rgba(255,255,255,.1);border-radius:20px;background:rgba(255,255,255,.018)}
+.cart-item{grid-template-columns:72px minmax(0,1fr) auto;padding:13px 14px;border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.018));transition:.18s}.cart-item:hover{border-color:rgba(255,214,10,.2);transform:translateY(-1px)}
+.cart-item-icon{width:72px;height:64px;padding:5px;border-radius:14px;background:radial-gradient(circle,rgba(255,214,10,.1),transparent 65%)}.cart-item-icon img{width:100%;height:100%;object-fit:contain;display:block}.cart-item-main{min-width:0}.cart-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cart-item-top strong{font:900 21px 'Barlow Condensed',sans-serif;text-transform:uppercase}.cart-kind{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase}.cart-item-price{display:block;margin-top:5px;color:var(--yellow)!important;font:900 18px 'Barlow Condensed',sans-serif}.cart-recipient{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:5px 8px;border:1px solid rgba(255,122,69,.2);border-radius:9px;background:rgba(255,122,69,.08);color:var(--orange);font-size:11px}.cart-remove{align-self:start;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.04);font-size:18px}.cart-remove:hover{background:rgba(255,45,85,.12);color:var(--red)}
+.cart-footer{display:flex;flex-direction:column;padding:24px;border:0;border-left:1px solid rgba(255,255,255,.08);background:rgba(5,6,14,.44)}.cart-summary-kicker{margin-bottom:15px;font:900 22px 'Barlow Condensed',sans-serif;text-transform:uppercase}.cart-breakdown{display:flex;flex-direction:column;gap:9px}.cart-breakdown-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted)}.cart-breakdown-row strong{color:var(--text);font-size:13px}.cart-promo-state{margin-top:14px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.11);color:var(--muted);font-size:11px;text-align:center}.cart-promo-state.active{border-style:solid;border-color:rgba(48,209,88,.24);background:rgba(48,209,88,.07);color:var(--green)}.cart-total{margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,.09);align-items:flex-end}.cart-total span{font-size:12px;color:var(--muted)}.cart-total strong{max-width:70%;text-align:right;font-size:31px;line-height:1}.cart-footer .cart-checkout{margin-top:16px}
+@media(max-width:760px){.cart-overlay{padding:0;place-items:stretch}.cart-drawer{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-inline:0}.cart-head{padding:16px}.cart-head h2{font-size:35px}.cart-content{grid-template-columns:1fr;display:flex;flex-direction:column;max-height:calc(100dvh - 87px)}.cart-products{flex:1;min-height:0;padding:12px 7px}.cart-items{padding:0 5px}.cart-item{grid-template-columns:58px minmax(0,1fr) auto;padding:10px}.cart-item-icon{width:58px;height:54px}.cart-item-top strong{font-size:18px}.cart-footer{flex:0 0 auto;padding:14px 16px;border-left:0;border-top:1px solid rgba(255,255,255,.08)}.cart-summary-kicker,.cart-breakdown,.cart-promo-state{display:none}.cart-total{margin:0;padding:0;border:0}.cart-total strong{font-size:25px}.cart-footer .cart-checkout{margin-top:11px;min-height:50px}.cart-footer .promo-help{display:none}}
 .store-toast{position:fixed;z-index:250;left:50%;bottom:28px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:#f7f7fb;color:#11121c;font-weight:800;opacity:0;pointer-events:none;transition:.22s}.store-toast.show{opacity:1;transform:translate(-50%,0)}
 .rank-art{position:relative;display:grid;place-items:center;height:148px;margin:0 0 3px;overflow:visible;background:transparent!important;border:0!important}
 .rank-art::after{display:none!important}.rank-art>img:first-child{width:auto;height:auto;max-width:68%;max-height:142px;object-fit:contain;filter:drop-shadow(0 13px 16px rgba(0,0,0,.38));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.045) translateY(-2px)}
@@ -964,6 +983,32 @@ body{background:var(--bg);overflow-x:hidden}
 .exchange-chart{position:relative;height:165px;margin-top:5px}.exchange-chart canvas{display:block;width:100%;height:100%;cursor:crosshair}.exchange-tooltip{position:absolute;z-index:3;display:none;pointer-events:none;padding:7px 9px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#f7f7fb;color:#10111c;font:800 11px 'Barlow Condensed',sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.28)}.exchange-forecast-note{margin-top:4px;font-size:10px;color:var(--muted)}
 .preview-product-hero{position:relative;height:190px;display:grid;place-items:center;margin-bottom:14px;border:0;border-radius:0;overflow:visible;background:transparent}.preview-product-hero img{width:auto;height:auto;max-width:72%;max-height:184px;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.42))}.preview-product-chip{position:absolute;left:13px;top:13px;padding:7px 10px;border-radius:999px;background:rgba(8,9,20,.82);border:1px solid rgba(255,255,255,.1);font:900 11px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}.preview-actions button{min-height:48px}
 #preview-features{display:flex!important;flex-direction:column;gap:10px}#preview-features .feature{display:flex!important;padding:13px;border-radius:15px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
+.preview-modal-bg{padding:20px;background:rgba(2,3,9,.82);backdrop-filter:blur(14px)}
+.preview-modal{width:min(1180px,calc(100vw - 40px));max-height:calc(100dvh - 40px);padding:0;border-radius:30px;overflow:auto;background:radial-gradient(circle at 12% 0,rgba(133,235,255,.09),transparent 30%),linear-gradient(155deg,rgba(21,22,40,.99),rgba(7,8,17,.99));border:1px solid rgba(255,255,255,.12);box-shadow:0 45px 140px rgba(0,0,0,.72)}
+.preview-modal>.preview-head{position:sticky;top:0;z-index:10;margin:0;padding:25px 28px 19px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(11,12,24,.88);backdrop-filter:blur(18px)}
+.preview-modal .preview-title{font-size:clamp(38px,4vw,58px);line-height:.9}.preview-modal .preview-copy{max-width:760px;font-size:15px;line-height:1.55}.preview-modal .preview-close{width:46px;height:46px;border-radius:15px;font-size:25px;flex:0 0 auto}
+.preview-modal .preview-grid{grid-template-columns:minmax(0,1.28fr) minmax(330px,.72fr);gap:18px;padding:20px 22px 24px}
+.preview-modal .preview-side{padding:20px;border-radius:23px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075)}
+.preview-modal .preview-side:first-child{background:radial-gradient(circle at 50% 10%,rgba(133,235,255,.08),transparent 42%),rgba(3,4,11,.38)}
+.preview-modal .preview-showcase{min-height:480px;display:flex;flex-direction:column;justify-content:flex-start;gap:16px;padding:6px 10px 14px;overflow:visible;background:transparent!important}
+.preview-modal .preview-product-hero{width:100%;height:245px;margin:0}.preview-modal .preview-product-hero img{max-width:76%;max-height:238px}.preview-modal .preview-profile,.preview-modal .preview-booster-demo{width:100%;max-width:560px}.preview-modal .preview-profile-banner{height:88px}.preview-modal .preview-profile-body{padding:18px 20px 21px}.preview-modal .preview-avatar-wrap,.preview-modal .preview-avatar{width:78px;height:78px}.preview-modal .preview-profile-name{font-size:42px}.preview-modal .preview-demo-card{padding:22px}.preview-modal .preview-demo-value{font-size:66px}
+.preview-modal .preview-mini-note{margin:13px 5px 0;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.025);text-align:left}
+.preview-buy-summary{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:4px}.preview-buy-summary>div{min-height:84px;padding:14px;border-radius:16px;background:linear-gradient(145deg,rgba(255,214,10,.08),rgba(255,255,255,.025));border:1px solid rgba(255,214,10,.14)}.preview-buy-summary span{display:block;margin-bottom:7px;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}.preview-buy-summary strong{font:900 26px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-buy-summary .price{font-size:27px;justify-content:flex-start}
+.preview-modal #preview-features .feature{padding:15px}.preview-modal #preview-features .feature-emoji{width:40px;height:40px;font-size:20px}.preview-modal #preview-features .feature-copy strong{font-size:15px}.preview-modal #preview-features .feature-copy span{font-size:12px;line-height:1.45}.preview-modal .preview-actions{position:sticky;bottom:-1px;z-index:4;margin:4px -2px -2px;padding:12px 2px 2px;background:linear-gradient(180deg,transparent,rgba(13,14,27,.98) 34%)}
+@media(max-width:900px){
+  .preview-modal{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 24px)}
+  .preview-modal .preview-grid{grid-template-columns:1fr}.preview-modal .preview-showcase{min-height:0}.preview-modal .preview-side:first-child{padding-bottom:14px}.preview-modal .preview-product-hero{height:210px}.preview-modal .preview-product-hero img{max-height:204px}.preview-modal .preview-profile,.preview-modal .preview-booster-demo{max-width:100%}
+}
+@media(max-width:560px){
+  .page{padding:10px 8px 92px;gap:12px}.nav{padding:9px 10px;border-radius:16px}.logo{font-size:21px}.logo::before{width:34px;height:34px}.cart-trigger{padding:9px 11px;font-size:12px}
+  .hero{padding:23px 15px;border-radius:21px}.hero-title{font-size:clamp(40px,13vw,58px)}.hero-copy{font-size:13px}.hero-pills{display:grid;grid-template-columns:1fr}.hero-pills .pill{width:100%;text-align:center}.hero-side{padding:13px}.wallet-card{min-height:72px;padding:11px 13px}.coins-value{font-size:29px}.promo-box{padding:9px}
+  .section-head{padding-top:6px}.section-title{font-size:32px}.section-sub{font-size:12px}.category-tabs{top:64px;margin-inline:-1px;padding:5px;border-radius:14px}.category-tab{min-width:116px;min-height:42px;padding:9px 12px;font-size:12px}
+  .card{padding:15px 13px;border-radius:18px;gap:11px}.card h2{font-size:28px}.card>.meta{font-size:12px;min-height:37px}.tier .duration{font-size:28px}.rank-art{height:115px}.rank-art>img:first-child{max-height:110px;max-width:58%}.stat-line{padding:11px 12px}.price,.stat-line-left strong{font-size:27px}.card-actions{gap:7px}.card-actions .preview-btn,.card-actions .gift-btn,.card-actions .cta{min-height:46px;padding:9px 8px;font-size:12px}.card-actions .cta small{font-size:9px}
+  .booster-column{padding:12px;border-radius:18px}.exchange-market{padding:14px;border-radius:19px}.exchange-copy h2{font-size:31px}.exchange-chart-wrap,.exchange-desk{padding:13px}.exchange-chart{height:150px}.exchange-chart-tabs{overflow:auto}.exchange-rates{grid-template-columns:1fr 1fr}.exchange-rates strong{font-size:17px}
+  .panel{padding:15px!important;border-radius:18px}.panel-title{font-size:25px}.shop-guide-grid{gap:8px}.guide-step{padding:12px}.faq-grid .feature{min-height:0}
+  .cart-head,.cart-footer{padding:17px}.cart-items{padding:12px}.cart-drawer{width:100%}
+  .preview-modal-bg{padding:0;align-items:stretch}.preview-modal{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-inline:0}.preview-modal>.preview-head{padding:16px 15px 13px}.preview-modal .preview-title{font-size:35px}.preview-modal .preview-copy{font-size:12px;margin-top:6px}.preview-modal .preview-close{width:40px;height:40px}.preview-modal .preview-grid{padding:12px;gap:10px}.preview-modal .preview-side{padding:13px;border-radius:18px}.preview-modal .preview-showcase{gap:10px;padding:0}.preview-modal .preview-product-hero{height:150px}.preview-modal .preview-product-hero img{max-height:145px;max-width:68%}.preview-product-chip{left:5px;top:5px}.preview-modal .preview-profile-banner{height:54px}.preview-modal .preview-profile-body{padding:12px;gap:10px}.preview-modal .preview-avatar-wrap,.preview-modal .preview-avatar{width:58px;height:58px}.preview-modal .preview-profile-name{font-size:29px}.preview-modal .preview-demo-card{padding:14px}.preview-modal .preview-demo-value{font-size:42px}.preview-buy-summary>div{min-height:70px;padding:11px}.preview-buy-summary strong{font-size:21px}.preview-modal #preview-features .feature{padding:11px}.preview-actions{grid-template-columns:1fr}.preview-modal .preview-actions button{min-height:50px}.preview-modal .preview-mini-note{font-size:10px}
+}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -2160,7 +2205,7 @@ function openPreview(pack) {
   note.textContent = item.type === 'booster'
     ? renderPriceNote(pack, ` · ${pack.includes('_custom') ? 'Configuration personnalisée actuelle' : 'Stock global limité'}`)
     : renderPriceNote(pack, ` · Aperçu uniquement, rien n'est sauvegardé`);
-  features.innerHTML = (Array.isArray(item.features) ? item.features : []).map(([emoji, t, text]) => `
+  features.innerHTML = `<div class="preview-buy-summary"><div><span>Formule</span><strong>${escapeHtml(item.duration || 'Immédiat')}</strong></div><div><span>Prix actuel</span>${renderPriceHtml(getCustomBoosterPrice(pack))}</div></div>` + (Array.isArray(item.features) ? item.features : []).map(([emoji, t, text]) => `
     <div class="feature">
       <div class="feature-emoji">${emoji}</div>
       <div class="feature-copy"><strong>${t}</strong><span>${text}</span></div>
@@ -2456,31 +2501,35 @@ function showStoreToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
-function getCartSnapshot(pack) {
+function getCartSnapshot(pack, recipient = null) {
   const item = getDisplayItem(pack);
   return {
     pack,
     title: item?.title || item?.label || pack,
+    duration: item?.duration || '',
+    kind: item?.type === 'rank' ? 'Grade' : item?.category === 'cosmetics' ? 'Cosmétique' : item?.type === 'booster' ? 'Booster' : item?.type === 'host' ? 'Host' : 'Article',
+    art: item?.art || '',
     price: getDiscountedPrice(getCustomBoosterPrice(pack)).finalPrice,
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
     multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
-    icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡'
+    icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡',
+    recipient: recipient ? { id: Number(recipient.id || 0), pseudo: String(recipient.pseudo || '') } : null,
   };
 }
 
-function addToCart(pack) {
-  const state = getButtonState(pack);
+function addToCart(pack, recipient = null) {
+  const state = recipient ? getGiftButtonState(pack) : getButtonState(pack);
   if (state.disabled) return;
-  const snapshot = getCartSnapshot(pack);
-  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.currency}`;
+  const snapshot = getCartSnapshot(pack, recipient);
+  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
   if (shopCart.some(entry => entry.key === key)) {
-    showStoreToast('Cet article est déjà dans ton panier');
+    showStoreToast(recipient ? 'Ce cadeau est déjà dans ton panier' : 'Cet article est déjà dans ton panier');
     openCart();
     return;
   }
   shopCart.push({ ...snapshot, key });
   renderCart();
-  showStoreToast(`${snapshot.title} ajouté au panier`);
+  showStoreToast(recipient ? `Cadeau pour ${recipient.pseudo} ajouté` : `${snapshot.title} ajouté au panier`);
 }
 
 function removeFromCart(key) {
@@ -2506,28 +2555,40 @@ function closeCart() {
 function renderCart() {
   const box = document.getElementById('cart-items');
   const count = document.getElementById('cart-count');
+  const itemsLabel = document.getElementById('cart-items-label');
+  const breakdown = document.getElementById('cart-breakdown');
+  const promoState = document.getElementById('cart-promo-state');
   const total = document.getElementById('cart-total');
   const checkout = document.getElementById('cart-checkout');
   if (count) count.textContent = String(shopCart.length);
+  if (itemsLabel) itemsLabel.textContent = `${shopCart.length} produit${shopCart.length > 1 ? 's' : ''}`;
   if (!box || !total || !checkout) return;
   if (!shopCart.length) {
     box.innerHTML = '<div class="cart-empty"><b>🛒</b>Ton panier est vide.<br><small>Ajoute un grade, un booster ou un cosmétique.</small></div>';
+    if (breakdown) breakdown.innerHTML = '<div class="cart-breakdown-row"><span>Sous-total</span><strong>—</strong></div>';
+    if (promoState) { promoState.textContent = 'Aucun code promotionnel appliqué'; promoState.classList.remove('active'); }
     total.textContent = '0 coins';
     checkout.disabled = true;
     return;
   }
-  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.icon}</span><div><strong>${escapeHtml(entry.title)}</strong><small>${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}${entry.multiplier ? ` · x${entry.multiplier}` : ''}</small></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
+  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}</small>${entry.recipient ? `<span class="cart-recipient">🎁 Pour <b>${escapeHtml(entry.recipient.pseudo)}</b></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
   const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
-  total.textContent = Object.entries(totals).map(([currency, amount]) => `${amount} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}`).join(' + ');
+  const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
+  const totalText = Object.entries(totals).map(([currency, amount]) => `${amount} ${currencyName(currency).toLowerCase()}`).join(' + ');
+  total.textContent = totalText;
+  const gifts = shopCart.filter(entry => entry.recipient).length;
+  if (breakdown) breakdown.innerHTML = Object.entries(totals).map(([currency, amount]) => `<div class="cart-breakdown-row"><span>Sous-total ${currencyName(currency)}</span><strong>${amount}</strong></div>`).join('') + `<div class="cart-breakdown-row"><span>Articles personnels</span><strong>${shopCart.length - gifts}</strong></div><div class="cart-breakdown-row"><span>Cadeaux</span><strong>${gifts}</strong></div>`;
+  if (promoState) {
+    promoState.textContent = appliedCouponCode ? `✓ Code ${appliedCouponCode} appliqué aux articles compatibles` : 'Aucun code promotionnel appliqué';
+    promoState.classList.toggle('active', !!appliedCouponCode);
+  }
   checkout.disabled = false;
 }
 
 async function checkoutCart() {
   if (!shopCart.length) return;
-  const summary = document.getElementById('cart-total')?.textContent || '';
-  if (!confirm(`Confirmer les ${shopCart.length} article(s) du panier pour ${summary} ?`)) return;
   const checkout = document.getElementById('cart-checkout');
-  if (checkout) { checkout.disabled = true; checkout.textContent = 'Validation...'; }
+  if (checkout) { checkout.disabled = true; checkout.textContent = 'Commande en cours...'; }
   const pending = [...shopCart];
   let completed = 0;
   for (const entry of pending) {
@@ -2536,13 +2597,13 @@ async function checkoutCart() {
     if (entry.pack === 'coin_custom') customBoosterState.coins = entry.multiplier;
     if (entry.pack === 'global_elo_custom') customBoosterState.globalElo = entry.multiplier;
     if (entry.pack === 'global_coin_custom') customBoosterState.globalCoins = entry.multiplier;
-    const ok = await purchasePack(entry.pack, '', 0, { skipConfirm: true });
+    const ok = await purchasePack(entry.pack, entry.recipient?.pseudo || '', entry.recipient?.id || 0, { skipConfirm: true });
     if (!ok) break;
     completed += 1;
     shopCart = shopCart.filter(item => item.key !== entry.key);
   }
   renderCart();
-  if (checkout) checkout.textContent = 'Valider mon panier';
+  if (checkout) checkout.textContent = 'Confirmer la commande';
   if (completed) showStoreToast(`${completed} achat(s) validé(s)`);
   if (!shopCart.length) closeCart();
 }
@@ -2722,7 +2783,7 @@ function openGiftModal(pack) {
   }
   if (btn) {
     btn.disabled = true;
-    btn.textContent = '🎁 Offrir';
+    btn.textContent = '🛒 Ajouter le cadeau';
   }
   if (err) err.textContent = '';
   renderGiftResults([]);
@@ -2763,7 +2824,7 @@ function onGiftSearchInput() {
   }, 220);
 }
 
-async function confirmGift() {
+function confirmGift() {
   const err = document.getElementById('gift-error');
   const btn = document.getElementById('gift-confirm-btn');
   if (!giftPackKey || !giftSelectedPlayer?.pseudo) return;
@@ -2773,18 +2834,13 @@ async function confirmGift() {
   }
   if (btn) {
     btn.disabled = true;
-    btn.textContent = 'Envoi...';
+    btn.textContent = 'Ajout...';
   }
-  const sent = await purchasePack(giftPackKey, giftSelectedPlayer.pseudo, giftSelectedPlayer.id);
-  if (sent) {
-    closeGiftModal();
-    return;
-  }
-  if (err) err.textContent = 'Le cadeau n a pas ete envoye. Verifie le message affiche puis reessaie.';
-  if (btn) {
-    btn.disabled = false;
-    btn.textContent = '🎁 Offrir';
-  }
+  const recipient = { id: giftSelectedPlayer.id, pseudo: giftSelectedPlayer.pseudo };
+  const pack = giftPackKey;
+  closeGiftModal();
+  addToCart(pack, recipient);
+  openCart();
 }
 
 repairDomText();

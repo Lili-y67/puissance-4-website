@@ -350,6 +350,11 @@ html,body{min-height:100%;background:var(--bg); background-attachment: fixed;col
 .status-dot.bot-online{background:#85EBFF;animation:pulse-online 1.5s ease-in-out infinite;}
 .status-dot.live{background:#ff4d6d;animation:pulse-online 1.15s ease-in-out infinite;}
 .status-dot.offline{background:#636366;}
+.status-phone-icon{display:none;width:10px;height:15px;flex:0 0 auto;filter:drop-shadow(0 0 5px rgba(48,209,88,.45))}
+@media(max-width:700px){
+  .status-badge.online .status-dot.online{display:none}
+  .status-badge.online .status-phone-icon{display:block}
+}
 .status-lastseen{font-size:10px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
 @keyframes pulse-online{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(48,209,88,0.4);}50%{opacity:0.8;box-shadow:0 0 0 4px rgba(48,209,88,0);}}
 /* Toggle auto-rejoin */
@@ -7005,6 +7010,7 @@ async function loadStatus(playerId) {
         ring.className = 'avatar-ring online';
         wrap.innerHTML = `<div class="status-badge online">
           <div class="status-dot online"></div>
+          <img class="status-phone-icon" src="/assets/phone-online.svg" alt="Sur téléphone">
           En ligne
         </div>`;
       }
