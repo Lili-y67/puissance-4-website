@@ -656,7 +656,7 @@ body{
   </section>
 </div>
 
-<div class="cart-overlay" id="cart-overlay" onclick="if(event.target===this)closeCart()" aria-hidden="true">
+<div class="cart-overlay p4-modal-layer" id="cart-overlay" onclick="if(event.target===this)closeCart()" aria-hidden="true">
   <section class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
     <div class="cart-head"><div><div class="hero-kicker">Ta sélection</div><h2 id="cart-title">Mon panier</h2></div><button class="cart-close" type="button" onclick="closeCart()" aria-label="Fermer">×</button></div>
     <div class="cart-content">
@@ -1015,6 +1015,8 @@ body{background:var(--bg);overflow-x:hidden}
 }
 .cart-overlay{display:block;padding:0;background:rgba(2,3,9,.58);backdrop-filter:blur(7px);z-index:300;visibility:hidden}
 .cart-overlay.open{visibility:visible}
+.cart-overlay.p4-modal-layer{position:fixed!important;inset:0!important;z-index:100200!important;padding:0!important}
+.cart-overlay.p4-modal-layer>.cart-drawer{max-width:none;max-height:none;overflow:hidden}
 .cart-drawer{position:absolute;inset:0 0 0 auto;width:min(490px,100vw);height:100dvh;max-height:none;border:0;border-left:1px solid rgba(255,255,255,.12);border-radius:0;transform:translateX(102%);opacity:1;background:radial-gradient(circle at 90% 0,rgba(255,214,10,.09),transparent 30%),linear-gradient(160deg,#17182b,#080914);box-shadow:-35px 0 100px rgba(0,0,0,.62)}
 .cart-overlay.open .cart-drawer{transform:translateX(0)}
 .cart-head{padding:20px 21px}.cart-head h2{font-size:38px}
@@ -2591,6 +2593,10 @@ function openCart() {
   overlay.style.visibility = 'visible';
   overlay.style.opacity = '1';
   overlay.style.pointerEvents = 'auto';
+  overlay.style.position = 'fixed';
+  overlay.style.inset = '0';
+  const drawer = overlay.querySelector('.cart-drawer');
+  if (drawer) drawer.style.transform = 'translateX(0)';
   document.getElementById('cart-trigger')?.setAttribute('aria-expanded', 'true');
   document.body.style.overflow = 'hidden';
   try {
@@ -2609,6 +2615,8 @@ function closeCart() {
   overlay.setAttribute('aria-hidden', 'true');
   overlay.style.opacity = '';
   overlay.style.pointerEvents = '';
+  const drawer = overlay.querySelector('.cart-drawer');
+  if (drawer) drawer.style.transform = '';
   document.getElementById('cart-trigger')?.setAttribute('aria-expanded', 'false');
   document.body.style.overflow = '';
   window.setTimeout(() => {
