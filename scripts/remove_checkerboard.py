@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 from PIL import Image, ImageFilter
 
 
@@ -37,8 +38,20 @@ def remove_checkerboard(source: Path, destination: Path):
     rgba.save(destination, "PNG", optimize=True)
 
 
-for name in FILES:
-    remove_checkerboard(BADGES / f"{name}-cutout.png", BADGES / f"{name}-transparent.png")
-    result = Image.open(BADGES / f"{name}-transparent.png")
-    extrema = result.getchannel("A").getextrema()
-    print(f"{name}: {result.size[0]}x{result.size[1]}, alpha={extrema}")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Retire un fond damier clair et cree un PNG transparent.")
+    parser.add_argument("source", nargs="?")
+    parser.add_argument("destination", nargs="?")
+    args = parser.parse_args()
+    if args.source and args.destination:
+        destination = Path(args.destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        remove_checkerboard(Path(args.source), destination)
+        result = Image.open(destination)
+        print(f"{destination.name}: {result.size[0]}x{result.size[1]}, alpha={result.getchannel('A').getextrema()}")
+    else:
+        for name in FILES:
+            remove_checkerboard(BADGES / f"{name}-cutout.png", BADGES / f"{name}-transparent.png")
+            result = Image.open(BADGES / f"{name}-transparent.png")
+            extrema = result.getchannel("A").getextrema()
+            print(f"{name}: {result.size[0]}x{result.size[1]}, alpha={extrema}")

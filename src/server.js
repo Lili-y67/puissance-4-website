@@ -4707,7 +4707,35 @@ function normalizeGlobalCoinMultiplier(value) {
   return stepped;
 }
 
+function normalizeFortuneBoostMultiplier(value) {
+  const multiplier = Math.round(Number(value));
+  return Number.isFinite(multiplier) && multiplier >= 1 && multiplier <= 5 ? multiplier : null;
+}
+
+function normalizeFortuneBoostDuration(value) {
+  const hours = Math.round(Number(value));
+  return Number.isFinite(hours) && hours >= 1 && hours <= 24 ? hours : null;
+}
+
 function buildCustomShopItem(pack, body = {}) {
+  if (pack === 'fortune_boost_custom') {
+    const multiplier = normalizeFortuneBoostMultiplier(body.customMultiplier);
+    const durationHours = normalizeFortuneBoostDuration(body.customDurationHours);
+    if (multiplier === null || durationHours === null) return null;
+    const price = 1500 + ((multiplier - 1) * 500) + ((durationHours - 1) * 250);
+    return {
+      key: `fortune_boost_${String(multiplier).padStart(2, '0')}_${String(durationHours).padStart(2, '0')}h`,
+      displayKey: 'fortune_boost_custom',
+      category: 'fortune_boosters',
+      label: `Boost Roue Fortune x${multiplier} · ${durationHours}h`,
+      price,
+      gemPrice: Math.max(1, Math.ceil(price * 0.45)),
+      boostType: 'fortune',
+      multiplier,
+      durationHours,
+      isCustom: true,
+    };
+  }
   if (pack === 'elo_custom') {
     const bonus = normalizeCustomEloBonus(body.customMultiplier);
     if (bonus === null) return null;
@@ -4773,6 +4801,13 @@ function resolveInventoryShopItem(itemKey) {
   const key = String(itemKey || '').trim();
   if (!key) return null;
   if (SHOP_ITEMS[key]) return SHOP_ITEMS[key];
+  const fortuneMatch = key.match(/^fortune_boost_(\d{2})(?:_(\d{2})h)?$/);
+  if (fortuneMatch) {
+    const multiplier = normalizeFortuneBoostMultiplier(Number(fortuneMatch[1]));
+    if (multiplier === null) return null;
+    const durationHours = normalizeFortuneBoostDuration(Number(fortuneMatch[2] || 1));
+    return { key, category: 'fortune_boosters', label: `Boost Roue Fortune x${multiplier} · ${durationHours}h`, boostType: 'fortune', multiplier, durationHours, isCustom: true };
+  }
   const eloMatch = key.match(/^elo_custom_(\d+)_(\d+)$/);
   if (eloMatch) {
     const bonus = normalizeCustomEloBonus(Number(`${eloMatch[1]}.${eloMatch[2]}`));

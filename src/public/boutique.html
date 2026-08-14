@@ -1041,7 +1041,7 @@ let shopBotHostEligible = false;
 let shopBotHosts = [];
 let shopReferral = null;
 let currentCategory = 'ranks';
-let customBoosterState = { elo: 0.1, coins: 1, globalElo: 0.2, globalCoins: 2 };
+let customBoosterState = { elo: 0.1, coins: 1, fortune: 1, fortuneDuration: 1, globalElo: 0.2, globalCoins: 2 };
 let previewDecorations = [];
 let previewProfileBanners = [];
 let previewAnimTimer = null;
@@ -1099,6 +1099,7 @@ function setStoredPlayer(player) {
 function getCustomBoosterValue(pack) {
   if (pack === 'elo_custom') return Number(customBoosterState.elo || 0.1);
   if (pack === 'coin_custom') return Number(customBoosterState.coins || 1);
+  if (pack === 'fortune_boost_custom') return Number(customBoosterState.fortune || 1);
   if (pack === 'global_elo_custom') return Number(customBoosterState.globalElo || 0.2);
   if (pack === 'global_coin_custom') return Number(customBoosterState.globalCoins || 2);
   return 1;
@@ -1258,6 +1259,10 @@ function getCustomBoosterPrice(pack) {
     const coins = Math.round(getCustomBoosterValue(pack) * 600);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
   }
+  if (pack === 'fortune_boost_custom') {
+    const coins = 1500 + ((getCustomBoosterValue(pack) - 1) * 500) + ((Number(customBoosterState.fortuneDuration || 1) - 1) * 250);
+    return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
+  }
   if (pack === 'global_elo_custom') {
     const coins = Math.round((getCustomBoosterValue(pack) / 0.1) * 2500);
     return currency === 'gems' ? Math.max(1, Math.ceil(coins * 0.45)) : coins;
@@ -1276,6 +1281,21 @@ function getCustomInventoryQty(prefix) {
 }
 
 function getDynamicBoosterItem(pack) {
+  if (pack === 'fortune_boost_custom') {
+    const multiplier = Number(customBoosterState.fortune || 1);
+    return {
+      key: 'fortune_boost_custom', type: 'booster', family: 'fortune', theme: 'booster-coin',
+      art: '/assets/fortune-boost-ticket.png', badge: '🎟️ ROUE', duration: `x${multiplier}`,
+      title: 'Boost Roue Fortune', stat: `x${multiplier}`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier} pendant ${customBoosterState.fortuneDuration}h`,
+      meta: 'Choisis la puissance et la durée appliquées à toutes tes récompenses de la Roue Fortune.',
+      features: [
+        ['🎡', 'Activation automatique', 'La durée démarre lors de ton prochain lancer.'],
+        ['📈', 'Puissance réglable', 'De x1 à x5, avec +500 coins par niveau.'],
+        ['⏱️', 'Durée libre', 'De 1 à 24 heures ; les lancers restent boostés pendant toute la période.']
+      ]
+    };
+  }
   if (pack === 'elo_custom') {
     const bonus = Number(customBoosterState.elo || 0.1);
     const total = 1 + bonus;
@@ -1570,6 +1590,7 @@ function getButtonState(pack) {
 
 function getCartPrice(pack) {
   if (pack === 'fortune_ticket') return getDiscountedPrice(Number(SHOP_PRICES.fortune_ticket || 500)).finalPrice;
+  if (pack === 'fortune_boost_custom') return getDisplayPrice(pack);
   if (pack === 'bot_host_1m') return isShopAdmin() ? 0 : Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
   return getDisplayPrice(pack);
 }
@@ -2024,6 +2045,10 @@ function updateCustomBooster(type, value) {
     customBoosterState.elo = Math.max(0.1, Math.min(1.0, Math.round(Number(value || 0.1) * 10) / 10));
   } else if (type === 'coins') {
     customBoosterState.coins = Math.max(1, Math.min(10, Math.round(Number(value || 1))));
+  } else if (type === 'fortune') {
+    customBoosterState.fortune = Math.max(1, Math.min(5, Math.round(Number(value || 1))));
+  } else if (type === 'fortuneDuration') {
+    customBoosterState.fortuneDuration = Math.max(1, Math.min(24, Math.round(Number(value || 1))));
   } else if (type === 'globalElo') {
     customBoosterState.globalElo = Math.max(0.1, Math.min(1.0, Math.round(Number(value || 0.2) * 10) / 10));
   } else if (type === 'globalCoins') {
@@ -2040,23 +2065,26 @@ function renderCustomBoosterCard(pack) {
   const giftState = getCartEligibility(pack, { gift: true });
   const isElo = pack === 'elo_custom' || pack === 'global_elo_custom';
   const isGlobal = pack === 'global_elo_custom' || pack === 'global_coin_custom';
+  const isFortune = pack === 'fortune_boost_custom';
   const currentValue = getCustomBoosterValue(pack);
   const totalText = isElo ? `x${(1 + currentValue).toFixed(2)}` : `x${currentValue}`;
   const inv = pack === 'elo_custom'
     ? getCustomInventoryQty('elo_custom_')
     : pack === 'coin_custom'
       ? getCustomInventoryQty('coin_custom_')
+      : pack === 'fortune_boost_custom'
+        ? getCustomInventoryQty('fortune_boost_')
       : pack === 'global_elo_custom'
         ? getCustomInventoryQty('global_elo_custom_')
         : getCustomInventoryQty('global_coin_custom_');
-  const updateType = pack === 'elo_custom' ? 'elo' : pack === 'coin_custom' ? 'coins' : pack === 'global_elo_custom' ? 'globalElo' : 'globalCoins';
+  const updateType = pack === 'elo_custom' ? 'elo' : pack === 'coin_custom' ? 'coins' : pack === 'fortune_boost_custom' ? 'fortune' : pack === 'global_elo_custom' ? 'globalElo' : 'globalCoins';
   const min = pack === 'global_coin_custom' ? '2' : isElo ? '0.1' : '1';
-  const max = isElo ? '1.0' : '10';
+  const max = isElo ? '1.0' : isFortune ? '5' : '10';
   const step = isElo ? '0.1' : '1';
   const sliderClass = isGlobal ? 'global' : (isElo ? '' : 'coins');
   const valueClass = isGlobal ? 'global' : (isElo ? 'elo' : 'coins');
   const leftScale = isElo ? '+0.1' : pack === 'global_coin_custom' ? 'x2' : 'x1';
-  const rightScale = isElo ? '+1.0' : 'x10';
+  const rightScale = isElo ? '+1.0' : isFortune ? 'x5' : 'x10';
   return `
     <article class="card ${item.theme}">
       <div class="tier">
@@ -2070,7 +2098,7 @@ function renderCustomBoosterCard(pack) {
         <div class="config-topline">
           <div>
             <div class="config-value ${valueClass}">${isElo ? '+' + currentValue.toFixed(1) : 'x' + currentValue}</div>
-            <div class="config-price-note">${isGlobal ? 'Puissance globale choisie pour le serveur' : isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
+            <div class="config-price-note">${isFortune ? 'Multiplicateur de la prochaine récompense' : isGlobal ? 'Puissance globale choisie pour le serveur' : isElo ? 'Bonus choisi sur le gain ELO' : 'Multiplicateur choisi sur les coins gagnés'}</div>
           </div>
           ${renderPriceHtml(price)}
         </div>
@@ -2089,8 +2117,13 @@ function renderCustomBoosterCard(pack) {
             <span>${rightScale}</span>
           </div>
         </div>
+        ${isFortune ? `<div class="config-slider-wrap">
+          <div class="config-price-note">Durée choisie : <strong>${customBoosterState.fortuneDuration} heure${customBoosterState.fortuneDuration > 1 ? 's' : ''}</strong></div>
+          <input class="config-slider coins" type="range" min="1" max="24" step="1" value="${customBoosterState.fortuneDuration}" oninput="updateCustomBooster('fortuneDuration', this.value)">
+          <div class="config-scale"><span>1h</span><span>+250 coins / heure</span><span>24h</span></div>
+        </div>` : ''}
         <div class="config-bullets">
-          <div class="config-bullet"><strong>Base tarifaire</strong><span>${isGlobal ? (isElo ? '+0.1 = 2500 coins' : 'x2 = 5000 coins') : isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
+          <div class="config-bullet"><strong>Base tarifaire</strong><span>${isFortune ? 'x1 = 1500 coins, puis +500 par niveau' : isGlobal ? (isElo ? '+0.1 = 2500 coins' : 'x2 = 5000 coins') : isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
           <div class="config-bullet"><strong>Inventaire actuel</strong><span>${inv} booster(s) ${isGlobal ? 'globaux' : 'personnalisés'} déjà possédés</span></div>
         </div>
       </div>
@@ -2185,6 +2218,7 @@ function renderShop() {
   document.getElementById('shop-elo-boosters-grid').innerHTML = [
     renderCustomBoosterCard('elo_custom'),
     renderCustomBoosterCard('coin_custom'),
+    renderCustomBoosterCard('fortune_boost_custom'),
   ].join('');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [
     renderCustomBoosterCard('global_elo_custom'),
@@ -2553,7 +2587,8 @@ function getCartSnapshot(pack, recipient = null) {
     art: item?.art || '',
     price: getCartPrice(pack),
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
-    multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
+    durationHours: pack === 'fortune_boost_custom' ? customBoosterState.fortuneDuration : null,
+    multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'fortune_boost_custom' ? customBoosterState.fortune : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
     icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡',
     recipient: recipient ? {
       id: Number(recipient.id || 0),
@@ -2568,7 +2603,7 @@ function addToCart(pack, recipient = null) {
   const state = getCartEligibility(pack, { gift: !!recipient });
   if (state.disabled) return;
   const snapshot = getCartSnapshot(pack, recipient);
-  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
+  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationHours ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
   if (shopCart.some(entry => entry.key === key)) {
     showStoreToast(recipient ? 'Ce cadeau est déjà dans ton panier' : 'Cet article est déjà dans ton panier');
     openCart();
@@ -2651,7 +2686,7 @@ function renderCart() {
     checkout.disabled = true;
     return;
   }
-  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
+  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}${entry.durationHours ? ` · ${entry.durationHours}h` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
   const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
   const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
   const totalText = Object.entries(totals).map(([currency, amount]) => `${amount} ${currencyName(currency).toLowerCase()}`).join(' + ');
@@ -2697,6 +2732,8 @@ async function checkoutCart() {
     setShopCurrency(entry.currency);
     if (entry.pack === 'elo_custom') customBoosterState.elo = entry.multiplier;
     if (entry.pack === 'coin_custom') customBoosterState.coins = entry.multiplier;
+    if (entry.pack === 'fortune_boost_custom') customBoosterState.fortune = entry.multiplier;
+    if (entry.pack === 'fortune_boost_custom') customBoosterState.fortuneDuration = entry.durationHours;
     if (entry.pack === 'global_elo_custom') customBoosterState.globalElo = entry.multiplier;
     if (entry.pack === 'global_coin_custom') customBoosterState.globalCoins = entry.multiplier;
     const ok = await purchasePack(entry.pack, entry.recipient?.pseudo || '', entry.recipient?.id || 0, { skipConfirm: true });
@@ -2768,11 +2805,14 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
           ? Number(customBoosterState.elo || 0.1)
           : pack === 'coin_custom'
             ? Number(customBoosterState.coins || 1)
+            : pack === 'fortune_boost_custom'
+              ? Number(customBoosterState.fortune || 1)
             : pack === 'global_elo_custom'
               ? Number(customBoosterState.globalElo || 0.2)
               : pack === 'global_coin_custom'
                 ? Number(customBoosterState.globalCoins || 2)
                 : undefined,
+        customDurationHours: pack === 'fortune_boost_custom' ? Number(customBoosterState.fortuneDuration || 1) : undefined,
         currency,
         coupon: coupon || undefined,
         giftTo: giftTo || undefined,

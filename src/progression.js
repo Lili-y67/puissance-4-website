@@ -20,6 +20,32 @@ function fortuneBooster(db) {
   return Number.isInteger(value) && value >= 1 && value <= 5 ? value : 1;
 }
 
+function consumePersonalFortuneBooster(db, playerId) {
+  const now = Date.now();
+  const active = db.prepare(`SELECT multiplier, expires_at FROM player_fortune_boosts WHERE player_id = ? AND expires_at > ?`).get(playerId, now);
+  if (active) return { multiplier: Number(active.multiplier || 1), expiresAt: Number(active.expires_at || 0), activated: false };
+  const rows = db.prepare(`
+    SELECT item_key, quantity FROM player_shop_items
+    WHERE player_id = ? AND item_key LIKE 'fortune_boost_%' AND quantity > 0
+  `).all(playerId);
+  const selected = rows
+    .map(row => {
+      const match = String(row.item_key).match(/^fortune_boost_(\d{2})(?:_(\d{2})h)?$/);
+      return { ...row, multiplier: Number(match?.[1] || 0), durationHours: Number(match?.[2] || 1) };
+    })
+    .filter(row => row.multiplier >= 1 && row.multiplier <= 5)
+    .sort((a, b) => b.multiplier - a.multiplier || b.durationHours - a.durationHours)[0];
+  if (!selected) return { multiplier: 1, expiresAt: 0, activated: false };
+  db.prepare(`UPDATE player_shop_items SET quantity = quantity - 1 WHERE player_id = ? AND item_key = ? AND quantity > 0`).run(playerId, selected.item_key);
+  const expiresAt = now + Math.max(1, Math.min(24, selected.durationHours)) * 60 * 60 * 1000;
+  db.prepare(`
+    INSERT INTO player_fortune_boosts (player_id, multiplier, expires_at, updated_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(player_id) DO UPDATE SET multiplier=excluded.multiplier, expires_at=excluded.expires_at, updated_at=excluded.updated_at
+  `).run(playerId, selected.multiplier, expiresAt, now);
+  return { multiplier: selected.multiplier, expiresAt, activated: true };
+}
+
 const CHALLENGES = [
   { key: 'daily_play', period: 'daily', icon: '🎮', rarity: 'common', label: 'Mise en jambes', description: 'Termine 2 parties classées.', metric: 'games', target: 2, coins: 30, xp: 35 },
   { key: 'daily_win', period: 'daily', icon: '🏆', rarity: 'rare', label: 'Première couronne', description: 'Remporte une partie classée.', metric: 'wins', target: 1, coins: 45, xp: 50 },
@@ -99,6 +125,12 @@ function createProgression({ db, pQ, cQ }) {
       daily_ticket_key TEXT NOT NULL DEFAULT '',
       fortune_grade TEXT NOT NULL DEFAULT '',
       equipped_board_theme TEXT NOT NULL DEFAULT 'classic',
+      updated_at INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS player_fortune_boosts (
+      player_id INTEGER PRIMARY KEY REFERENCES players(id) ON DELETE CASCADE,
+      multiplier INTEGER NOT NULL DEFAULT 1,
+      expires_at INTEGER NOT NULL DEFAULT 0,
       updated_at INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS challenge_progress (
@@ -356,7 +388,8 @@ function createProgression({ db, pQ, cQ }) {
     const total = FORTUNE_REWARDS.reduce((sum, reward) => sum + reward.weight, 0);
     let draw = Math.floor(Math.random() * total);
     const reward = FORTUNE_REWARDS.find(item => ((draw -= item.weight) < 0)) || FORTUNE_REWARDS[0];
-    const booster = fortuneBooster(db);
+    const personalBooster = consumePersonalFortuneBooster(db, playerId);
+    const booster = Math.min(5, Math.max(fortuneBooster(db), personalBooster.multiplier));
     const boostedCoins = Number(reward.coins || 0) * booster;
     const boostedGems = Number(reward.gems || 0) * booster;
     if (boostedCoins) pQ.addCoins.run({ delta: boostedCoins, id: playerId });
@@ -364,7 +397,7 @@ function createProgression({ db, pQ, cQ }) {
     if (reward.grade) {
       if (String(playerProgression.fortune_grade || '') === reward.grade) {
         q.addTickets.run(booster, Date.now(), playerId);
-        return { ...reward, label: `${booster} ticket${booster > 1 ? 's' : ''} (grade déjà possédé)`, shortLabel: `+${booster} TICKET${booster > 1 ? 'S' : ''}`, icon: '/assets/fortune-ticket.png', grade: '', tickets: booster, boosterMultiplier: booster, converted: true, weight: undefined };
+        return { ...reward, label: `${booster} ticket${booster > 1 ? 's' : ''} (grade déjà possédé)`, shortLabel: `+${booster} TICKET${booster > 1 ? 'S' : ''}`, icon: '/assets/fortune-ticket.png', grade: '', tickets: booster, boosterMultiplier: booster, personalBoosterUsed: personalBooster.multiplier > 1 ? personalBooster.multiplier : 0, personalBoosterExpiresAt: personalBooster.expiresAt || null, converted: true, weight: undefined };
       }
       q.setFortuneGrade.run(reward.grade, Date.now(), playerId);
     }
@@ -375,6 +408,8 @@ function createProgression({ db, pQ, cQ }) {
       coins: boostedCoins,
       gems: boostedGems,
       boosterMultiplier: booster,
+      personalBoosterUsed: personalBooster.multiplier > 1 ? personalBooster.multiplier : 0,
+      personalBoosterExpiresAt: personalBooster.expiresAt || null,
       weight: undefined,
     };
   });

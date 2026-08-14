@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.6.0-shop-cart-1';
+const CACHE_VERSION = 'p4-shell-v3.6.2-fortune-duration';
 const APP_SHELL = [
   '/',
   '/index.html',
