@@ -228,7 +228,7 @@ body{
 .gift-result-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:900;letter-spacing:.8px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gift-result-meta{font-size:12px;color:var(--muted);margin-top:2px}
 .gift-selected{display:none;padding:11px 12px;border-radius:16px;background:rgba(48,209,88,.08);border:1px solid rgba(48,209,88,.24);color:#30d158;font-size:13px;font-weight:700}
-.gift-selected.show{display:block}
+.gift-selected.show{display:flex;align-items:center;gap:10px}
 .gift-actions{display:flex;gap:10px;margin-top:16px}
 .gift-actions button{flex:1}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -1016,13 +1016,14 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-overlay{display:block;padding:0;background:rgba(2,3,9,.58);backdrop-filter:blur(7px);z-index:300;visibility:hidden}
 .cart-overlay.open{visibility:visible}
 .cart-overlay.p4-modal-layer{position:fixed!important;inset:0!important;z-index:100200!important;padding:0!important}
-.cart-overlay.p4-modal-layer>.cart-drawer{max-width:none;max-height:none;overflow:hidden}
+.cart-overlay.p4-modal-layer>.cart-drawer{position:absolute!important;top:12px!important;right:12px!important;bottom:12px!important;left:auto!important;width:min(430px,calc(100vw - 24px))!important;height:auto!important;max-width:none!important;max-height:none!important;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:26px}
 .cart-drawer{position:absolute;inset:0 0 0 auto;width:min(490px,100vw);height:100dvh;max-height:none;border:0;border-left:1px solid rgba(255,255,255,.12);border-radius:0;transform:translateX(102%);opacity:1;background:radial-gradient(circle at 90% 0,rgba(255,214,10,.09),transparent 30%),linear-gradient(160deg,#17182b,#080914);box-shadow:-35px 0 100px rgba(0,0,0,.62)}
 .cart-overlay.open .cart-drawer{transform:translateX(0)}
+.cart-recipient-avatar{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;overflow:hidden;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;font:900 12px 'Barlow Condensed',sans-serif}.cart-recipient-avatar img{width:100%;height:100%;display:block;object-fit:cover}.cart-recipient-copy{display:flex;min-width:0;flex-direction:column;line-height:1.05}.cart-recipient-copy small{font-size:8px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.8px}.cart-recipient-copy b{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--orange)}
 .cart-head{padding:20px 21px}.cart-head h2{font-size:38px}
 .cart-content{display:flex;flex-direction:column;height:calc(100dvh - 91px);min-height:0;max-height:none}.cart-products{flex:1;min-height:0;padding:15px 9px 12px 14px}.cart-items{overflow:auto}.cart-footer{flex:0 0 auto;padding:17px 20px 20px;border:0;border-top:1px solid rgba(255,255,255,.09);background:rgba(5,6,14,.86)}
 .cart-summary-kicker{display:none}.cart-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:7px}.cart-breakdown-row{padding:8px 9px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(255,255,255,.025)}.cart-breakdown-row:nth-last-child(-n+2){display:none}.cart-promo-state{margin-top:9px;padding:8px}.cart-payment-state{display:none;margin-top:9px;padding:10px 11px;border-radius:11px;font-size:11px;line-height:1.4}.cart-payment-state.error{display:block;border:1px solid rgba(255,45,85,.28);background:rgba(255,45,85,.09);color:#ff7891}.cart-payment-state.ok{display:block;border:1px solid rgba(48,209,88,.24);background:rgba(48,209,88,.08);color:var(--green)}.cart-total{margin-top:12px;padding-top:13px}.cart-footer .cart-checkout{margin-top:12px}
-@media(max-width:560px){.cart-drawer{width:100vw}.cart-head{padding:15px 16px}.cart-content{height:calc(100dvh - 78px)}.cart-products{padding:10px 5px}.cart-footer{padding:12px 15px max(14px,env(safe-area-inset-bottom))}.cart-promo-state{display:none}.cart-breakdown{display:none}.cart-total{margin-top:0;padding-top:0;border:0}}
+@media(max-width:560px){.cart-overlay.p4-modal-layer>.cart-drawer{top:6px!important;right:6px!important;bottom:6px!important;width:calc(100vw - 12px)!important;border-radius:20px}.cart-head{padding:15px 16px}.cart-content{height:calc(100dvh - 78px)}.cart-products{padding:10px 5px}.cart-footer{padding:12px 15px max(14px,env(safe-area-inset-bottom))}.cart-promo-state{display:none}.cart-breakdown{display:none}.cart-total{margin-top:0;padding-top:0;border:0}}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -2554,7 +2555,12 @@ function getCartSnapshot(pack, recipient = null) {
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
     multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
     icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡',
-    recipient: recipient ? { id: Number(recipient.id || 0), pseudo: String(recipient.pseudo || '') } : null,
+    recipient: recipient ? {
+      id: Number(recipient.id || 0),
+      pseudo: String(recipient.pseudo || ''),
+      avatar: String(recipient.avatar || ''),
+      color: String(recipient.color || '#ff7a45'),
+    } : null,
   };
 }
 
@@ -2645,7 +2651,7 @@ function renderCart() {
     checkout.disabled = true;
     return;
   }
-  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}</small>${entry.recipient ? `<span class="cart-recipient">🎁 Pour <b>${escapeHtml(entry.recipient.pseudo)}</b></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
+  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
   const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
   const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
   const totalText = Object.entries(totals).map(([currency, amount]) => `${amount} ${currencyName(currency).toLowerCase()}`).join(' + ');
@@ -2851,7 +2857,10 @@ function selectGiftPlayer(id) {
   const btn = document.getElementById('gift-confirm-btn');
   const err = document.getElementById('gift-error');
   if (selected) {
-    selected.textContent = `Cadeau pour ${player.pseudo} - ${Number(player.elo || 1000)} ELO`;
+    const avatar = String(player.avatar || '').trim()
+      ? `<img src="${escapeHtml(player.avatar)}" alt="Avatar de ${escapeHtml(player.pseudo)}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid ${escapeHtml(player.color || '#85EBFF')}">`
+      : `<span style="width:30px;height:30px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.1);font-weight:900">${escapeHtml(String(player.pseudo || '?').charAt(0).toUpperCase())}</span>`;
+    selected.innerHTML = `${avatar}<span><b>Cadeau pour ${escapeHtml(player.pseudo)}</b><small style="display:block;color:var(--muted);margin-top:2px">${Number(player.elo || 1000)} ELO</small></span>`;
     selected.classList.add('show');
   }
   if (btn) btn.disabled = false;
@@ -2933,7 +2942,12 @@ function confirmGift() {
     btn.disabled = true;
     btn.textContent = 'Ajout...';
   }
-  const recipient = { id: giftSelectedPlayer.id, pseudo: giftSelectedPlayer.pseudo };
+  const recipient = {
+    id: giftSelectedPlayer.id,
+    pseudo: giftSelectedPlayer.pseudo,
+    avatar: giftSelectedPlayer.avatar || '',
+    color: giftSelectedPlayer.color || '#ff7a45',
+  };
   const pack = giftPackKey;
   closeGiftModal();
   addToCart(pack, recipient);
