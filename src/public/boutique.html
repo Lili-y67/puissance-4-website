@@ -740,7 +740,7 @@ function repairDomText(root = document.body) {
 
 const SHOP_ITEMS = {
   crystal: {
-    key: 'crystal', type: 'rank', theme: 'vipplus', art: '/badges/Crystal.png', badge: '<img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal', duration: 'Mensuel', title: 'Crystal',
+    key: 'crystal', type: 'rank', theme: 'vipplus', art: '/badges/Crystal-cutout.png', badge: '<img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal', duration: 'Mensuel', title: 'Crystal',
     stat: '20', statSub: 'gemmes par semaine',
     meta: 'Rang premium mensuel avec renouvellement automatique et avantages VIP/VIP+ inclus.',
     features: [
@@ -751,7 +751,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_1m: {
-    key: 'vip_1m', type: 'rank', theme: 'vip', art: '/badges/VIP.png', durationArt: '/badges/vip-star-1m.png', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
+    key: 'vip_1m', type: 'rank', theme: 'vip', art: '/badges/VIP-cutout.png', durationArt: '/badges/vip-star-1m.png', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
     stat: '+20%', statSub: 'sur le boost ELO quotidien',
     meta: 'Le pack premium simple pour profiter du contenu VIP pendant 30 jours.',
     features: [
@@ -762,7 +762,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_1y: {
-    key: 'vip_1y', type: 'rank', theme: 'vip', art: '/badges/VIP.png', durationArt: '/badges/vip-star-1y.png', badge: '⭐ VIP', duration: '1 an', title: 'VIP Annuel',
+    key: 'vip_1y', type: 'rank', theme: 'vip', art: '/badges/VIP-cutout.png', durationArt: '/badges/vip-star-1y.png', badge: '⭐ VIP', duration: '1 an', title: 'VIP Annuel',
     stat: '+20%', statSub: 'sur le boost ELO quotidien',
     meta: 'La version longue durée du pack VIP pour garder les avantages pendant un an.',
     features: [
@@ -773,7 +773,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_plus: {
-    key: 'vip_plus', type: 'rank', theme: 'vipplus', art: '/badges/VIP_Plus.png', badge: '💎 VIP+', duration: 'À vie', title: 'VIP+ Lifetime',
+    key: 'vip_plus', type: 'rank', theme: 'vipplus', art: '/badges/VIP_Plus-cutout.png', badge: '💎 VIP+', duration: 'À vie', title: 'VIP+ Lifetime',
     stat: '+30%', statSub: 'sur le boost ELO quotidien',
     meta: 'Le rang premium permanent pour le meilleur style et le plus gros bonus VIP.',
     features: [
@@ -784,7 +784,7 @@ const SHOP_ITEMS = {
     ]
   },
   perso: {
-    key: 'perso', type: 'rank', theme: 'perso', art: '/badges/Perso.png', badge: '✨ Perso', duration: 'Créateur', title: 'Pack Perso',
+    key: 'perso', type: 'rank', theme: 'perso', art: '/badges/Perso-cutout.png', badge: '✨ Perso', duration: 'Créateur', title: 'Pack Perso',
     stat: '2h', statSub: 'de boost ELO à +30%',
     meta: 'Le pack identité pour les profils spéciaux : badge perso, export replay HTML et bonus dédié.',
     features: [
@@ -953,22 +953,22 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-total{display:flex;justify-content:space-between;margin-bottom:15px}.cart-total strong{font:900 28px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}
 .store-toast{position:fixed;z-index:250;left:50%;bottom:28px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:#f7f7fb;color:#11121c;font-weight:800;opacity:0;pointer-events:none;transition:.22s}.store-toast.show{opacity:1;transform:translate(-50%,0)}
-.rank-art{position:relative;display:grid;place-items:center;height:220px;margin:2px -4px 4px;border-radius:18px;overflow:hidden;background:radial-gradient(circle at 50% 48%,rgba(133,235,255,.11),transparent 48%),linear-gradient(145deg,rgba(4,5,12,.9),rgba(14,15,29,.72))}
-.rank-art::after{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,.055);border-radius:inherit;pointer-events:none}.rank-art>img:first-child{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 16px 22px rgba(0,0,0,.42));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.035) translateY(-2px)}
-.rank-duration-art{position:absolute!important;right:9px!important;bottom:9px!important;width:56px!important;height:56px!important;object-fit:contain!important;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))!important}
+.rank-art{position:relative;display:grid;place-items:center;height:148px;margin:0 0 3px;overflow:visible;background:transparent!important;border:0!important}
+.rank-art::after{display:none!important}.rank-art>img:first-child{width:auto;height:auto;max-width:68%;max-height:142px;object-fit:contain;filter:drop-shadow(0 13px 16px rgba(0,0,0,.38));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.045) translateY(-2px)}
+.rank-duration-art{position:absolute!important;right:12%!important;bottom:3px!important;width:40px!important;height:40px!important;object-fit:contain!important;filter:drop-shadow(0 5px 8px rgba(0,0,0,.45))!important}
 .exchange-market{display:grid;grid-template-columns:1.05fr .9fr .85fr;gap:18px;padding:24px;border:1px solid rgba(133,235,255,.15);border-radius:24px;background:radial-gradient(circle at 20% 0,rgba(133,235,255,.11),transparent 34%),linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));box-shadow:0 22px 55px rgba(0,0,0,.25)}
 .exchange-copy h2{margin:12px 0 7px;font:900 38px 'Barlow Condensed',sans-serif;text-transform:uppercase}.exchange-copy p{color:var(--muted);line-height:1.55}
 .exchange-rates{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:18px}.exchange-rates div{padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.03)}.exchange-rates span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-rates strong{display:block;margin-top:5px;font:900 20px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .exchange-chart-wrap,.exchange-desk{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(5,6,14,.48)}.exchange-chart-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.exchange-chart-head strong.up{color:var(--green)}.exchange-chart-head strong.down{color:var(--red)}
 .exchange-chart-tabs{display:flex;gap:5px;margin-top:10px}.exchange-chart-tabs button{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.025);color:var(--muted);font:800 10px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-chart-tabs button.active{border-color:rgba(133,235,255,.25);background:rgba(133,235,255,.1);color:var(--blue)}
 .exchange-chart{position:relative;height:165px;margin-top:5px}.exchange-chart canvas{display:block;width:100%;height:100%;cursor:crosshair}.exchange-tooltip{position:absolute;z-index:3;display:none;pointer-events:none;padding:7px 9px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#f7f7fb;color:#10111c;font:800 11px 'Barlow Condensed',sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.28)}.exchange-forecast-note{margin-top:4px;font-size:10px;color:var(--muted)}
-.preview-product-hero{position:relative;height:240px;display:grid;place-items:center;margin-bottom:14px;border:1px solid rgba(255,255,255,.08);border-radius:22px;overflow:hidden;background:radial-gradient(circle,rgba(133,235,255,.12),transparent 52%),rgba(5,6,14,.64)}.preview-product-hero img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.42))}.preview-product-chip{position:absolute;left:13px;top:13px;padding:7px 10px;border-radius:999px;background:rgba(8,9,20,.82);border:1px solid rgba(255,255,255,.1);font:900 11px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}.preview-actions button{min-height:48px}
+.preview-product-hero{position:relative;height:190px;display:grid;place-items:center;margin-bottom:14px;border:0;border-radius:0;overflow:visible;background:transparent}.preview-product-hero img{width:auto;height:auto;max-width:72%;max-height:184px;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.42))}.preview-product-chip{position:absolute;left:13px;top:13px;padding:7px 10px;border-radius:999px;background:rgba(8,9,20,.82);border:1px solid rgba(255,255,255,.1);font:900 11px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}.preview-actions button{min-height:48px}
 #preview-features{display:flex!important;flex-direction:column;gap:10px}#preview-features .feature{display:flex!important;padding:13px;border-radius:15px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:1100px){.exchange-market{grid-template-columns:1fr 1fr}.exchange-copy{grid-column:1/-1}}
-@media(max-width:760px){.nav{top:7px;flex-wrap:wrap}.nav-actions{width:auto;margin-left:auto}.nav-actions .btn:not(.cart-trigger){display:none}.logo{font-size:24px}.hero{min-height:0;padding:30px 20px}.hero-inner{gap:26px}.hero-title{font-size:clamp(46px,15vw,68px)}.wallet-row{grid-template-columns:1fr}.category-tabs{top:78px;display:flex;overflow-x:auto;flex-wrap:nowrap}.category-tab{flex:0 0 auto;min-width:130px}.grid,.cosmetic-grid{grid-template-columns:1fr}.section-title{font-size:38px}.card-actions,.booster-column .card-actions{grid-template-columns:1fr 1fr}.card-actions .cta{grid-column:1/-1;grid-row:1}.shop-guide-grid,.faq-grid{grid-template-columns:1fr}.panel:nth-of-type(n){padding:18px}.exchange-market{grid-template-columns:1fr;padding:17px}.exchange-copy{grid-column:auto}.exchange-rates{grid-template-columns:1fr}.rank-art{height:170px}}
+@media(max-width:760px){.nav{top:7px;flex-wrap:wrap}.nav-actions{width:auto;margin-left:auto}.nav-actions .btn:not(.cart-trigger){display:none}.logo{font-size:24px}.hero{min-height:0;padding:30px 20px}.hero-inner{gap:26px}.hero-title{font-size:clamp(46px,15vw,68px)}.wallet-row{grid-template-columns:1fr}.category-tabs{top:78px;display:flex;overflow-x:auto;flex-wrap:nowrap}.category-tab{flex:0 0 auto;min-width:130px}.grid,.cosmetic-grid{grid-template-columns:1fr}.section-title{font-size:38px}.card-actions,.booster-column .card-actions{grid-template-columns:1fr 1fr}.card-actions .cta{grid-column:1/-1;grid-row:1}.shop-guide-grid,.faq-grid{grid-template-columns:1fr}.panel:nth-of-type(n){padding:18px}.exchange-market{grid-template-columns:1fr;padding:17px}.exchange-copy{grid-column:auto}.exchange-rates{grid-template-columns:1fr}.rank-art{height:132px}.rank-art>img:first-child{max-height:126px;max-width:62%}}
 `;
 document.head.appendChild(boutiqueStorefrontStyle);
 
