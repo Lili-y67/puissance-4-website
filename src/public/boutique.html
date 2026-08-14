@@ -2566,7 +2566,7 @@ function addToCart(pack, recipient = null) {
   shopCart.push({ ...snapshot, key });
   const paymentState = document.getElementById('cart-payment-state');
   if (paymentState) delete paymentState.dataset.locked;
-  renderCart();
+  openCart();
   showStoreToast(recipient ? `Cadeau pour ${recipient.pseudo} ajouté` : `${snapshot.title} ajouté au panier`);
 }
 
@@ -2926,7 +2926,6 @@ function confirmGift() {
   const pack = giftPackKey;
   closeGiftModal();
   addToCart(pack, recipient);
-  openCart();
 }
 
 repairDomText();
