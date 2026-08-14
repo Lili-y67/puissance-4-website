@@ -399,26 +399,30 @@ body{
 <div class="page">
   <div class="nav">
     <a class="logo" href="/">Puissance <span>4</span></a>
+    <nav class="main-nav" aria-label="Navigation principale">
+      <a href="/">Jouer</a>
+      <a href="/progression">Progression</a>
+      <a class="active" href="/boutique" aria-current="page">Boutique</a>
+      <a href="/leaderboard">Classement</a>
+    </nav>
     <div class="nav-actions">
       <a class="btn" href="/profil">Mon profil</a>
-      <a class="btn" href="/">Retour</a>
+      <button class="btn cart-trigger" type="button" onclick="openCart()" aria-label="Ouvrir le panier">🛒 Panier <span class="cart-count" id="cart-count">0</span></button>
     </div>
   </div>
 
   <section class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-kicker">Boutique en coins</div>
-        <h1 class="hero-title">Depense tes <span>coins</span> pour evoluer</h1>
+        <div class="hero-kicker">● Nouvelle collection</div>
+        <h1 class="hero-title">Fais passer ton jeu au <span>niveau supérieur</span></h1>
         <p class="hero-copy">
-          Deux catégories sont disponibles : les rangs premium, puis les boosters à stock limité.
-          Les rangs s’activent directement, et les boosters achetés vont dans ton inventaire.
+          Grades exclusifs, boosters de progression et cosmétiques : compose ton expérience Puissance 4 avec les récompenses gagnées en jeu.
         </p>
         <div class="hero-pills">
-          <div class="pill">1 à 3 coins par partie</div>
-          <div class="pill">Rangs : VIP, VIP+, Perso</div>
-          <div class="pill">Boosters ELO à stock global</div>
-          <div class="pill">Boosters Coins à stock global</div>
+          <div class="pill">⚡ Activation instantanée</div>
+          <div class="pill">🎁 Articles à offrir</div>
+          <div class="pill">🔒 Paiement en monnaies du jeu</div>
         </div>
       </div>
       <div class="hero-side">
@@ -478,6 +482,34 @@ body{
           <div class="hero-side-item"><div><strong>Boosters Coins</strong><span>Coin Boost et Coin Boost +</span></div><strong style="color:var(--orange)">Stock</strong></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <section class="exchange-market" aria-labelledby="exchange-title">
+    <div class="exchange-copy">
+      <div class="hero-kicker">Marché P4 · actualisé toutes les 15 min</div>
+      <h2 id="exchange-title">Bourse des monnaies</h2>
+      <p>Échange tes coins et tes gemmes au cours du moment. Le prix évolue automatiquement selon le marché interne.</p>
+      <div class="exchange-rates">
+        <div><span>Acheter 1 gemme</span><strong id="exchange-buy-rate">—</strong></div>
+        <div><span>Vendre 1 gemme</span><strong id="exchange-sell-rate">—</strong></div>
+        <div><span>Prochain cours</span><strong id="exchange-countdown">—</strong></div>
+      </div>
+    </div>
+    <div class="exchange-chart-wrap">
+      <div class="exchange-chart-head"><span>Cours moyen</span><strong id="exchange-trend">—</strong></div>
+      <div class="exchange-chart" id="exchange-chart" aria-label="Historique des douze derniers cours"></div>
+    </div>
+    <div class="exchange-desk">
+      <div class="exchange-switch">
+        <button id="exchange-dir-buy" class="active" type="button" onclick="setExchangeDirection('coins_to_gems')">Coins → Gemmes</button>
+        <button id="exchange-dir-sell" type="button" onclick="setExchangeDirection('gems_to_coins')">Gemmes → Coins</button>
+      </div>
+      <label class="exchange-label" for="exchange-amount">Montant à convertir</label>
+      <div class="exchange-input-row"><input id="exchange-amount" type="number" min="1" step="1" value="100" oninput="renderExchangeEstimate()"><span id="exchange-source-label">coins</span></div>
+      <div class="exchange-estimate"><span>Tu recevras environ</span><strong id="exchange-estimate">—</strong></div>
+      <button class="cart-checkout" id="exchange-submit" type="button" onclick="submitExchange()">Confirmer l’échange</button>
+      <p class="promo-help" id="exchange-status">Compte Discord lié requis pour utiliser les gemmes.</p>
     </div>
   </section>
 
@@ -614,6 +646,19 @@ body{
   </section>
 </div>
 
+<div class="cart-overlay" id="cart-overlay" onclick="if(event.target===this)closeCart()" aria-hidden="true">
+  <aside class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <div class="cart-head"><div><div class="hero-kicker">Ta sélection</div><h2 id="cart-title">Mon panier</h2></div><button class="cart-close" type="button" onclick="closeCart()" aria-label="Fermer">×</button></div>
+    <div class="cart-items" id="cart-items"></div>
+    <div class="cart-footer">
+      <div class="cart-total"><span>Total estimé</span><strong id="cart-total">0 coins</strong></div>
+      <button class="cart-checkout" id="cart-checkout" type="button" onclick="checkoutCart()">Valider mon panier</button>
+      <p class="promo-help" style="margin-top:10px;text-align:center">Les réductions et stocks sont revérifiés à la validation.</p>
+    </div>
+  </aside>
+</div>
+<div class="store-toast" id="store-toast" role="status" aria-live="polite"></div>
+
 <div class="preview-modal-bg" id="gift-modal-bg" onclick="if(event.target===this)closeGiftModal()">
   <div class="gift-modal">
     <div class="preview-head">
@@ -688,7 +733,7 @@ function repairDomText(root = document.body) {
 
 const SHOP_ITEMS = {
   crystal: {
-    key: 'crystal', type: 'rank', theme: 'vipplus', badge: '<img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal', duration: 'Mensuel', title: 'Crystal',
+    key: 'crystal', type: 'rank', theme: 'vipplus', art: '/badges/Crystal.png', badge: '<img src="/assets/crystal-badge.png" alt="" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal', duration: 'Mensuel', title: 'Crystal',
     stat: '20', statSub: 'gemmes par semaine',
     meta: 'Rang premium mensuel avec renouvellement automatique et avantages VIP/VIP+ inclus.',
     features: [
@@ -699,7 +744,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_1m: {
-    key: 'vip_1m', type: 'rank', theme: 'vip', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
+    key: 'vip_1m', type: 'rank', theme: 'vip', art: '/badges/VIP.png', durationArt: '/badges/vip-star-1m.png', badge: '⭐ VIP', duration: '1 mois', title: 'VIP Mensuel',
     stat: '+20%', statSub: 'sur le boost ELO quotidien',
     meta: 'Le pack premium simple pour profiter du contenu VIP pendant 30 jours.',
     features: [
@@ -710,7 +755,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_1y: {
-    key: 'vip_1y', type: 'rank', theme: 'vip', badge: '⭐ VIP', duration: '1 an', title: 'VIP Annuel',
+    key: 'vip_1y', type: 'rank', theme: 'vip', art: '/badges/VIP.png', durationArt: '/badges/vip-star-1y.png', badge: '⭐ VIP', duration: '1 an', title: 'VIP Annuel',
     stat: '+20%', statSub: 'sur le boost ELO quotidien',
     meta: 'La version longue durée du pack VIP pour garder les avantages pendant un an.',
     features: [
@@ -721,7 +766,7 @@ const SHOP_ITEMS = {
     ]
   },
   vip_plus: {
-    key: 'vip_plus', type: 'rank', theme: 'vipplus', badge: '💎 VIP+', duration: 'À vie', title: 'VIP+ Lifetime',
+    key: 'vip_plus', type: 'rank', theme: 'vipplus', art: '/badges/VIP_Plus.png', badge: '💎 VIP+', duration: 'À vie', title: 'VIP+ Lifetime',
     stat: '+30%', statSub: 'sur le boost ELO quotidien',
     meta: 'Le rang premium permanent pour le meilleur style et le plus gros bonus VIP.',
     features: [
@@ -732,7 +777,7 @@ const SHOP_ITEMS = {
     ]
   },
   perso: {
-    key: 'perso', type: 'rank', theme: 'perso', badge: '✨ Perso', duration: 'Créateur', title: 'Pack Perso',
+    key: 'perso', type: 'rank', theme: 'perso', art: '/badges/Perso.png', badge: '✨ Perso', duration: 'Créateur', title: 'Pack Perso',
     stat: '2h', statSub: 'de boost ELO à +30%',
     meta: 'Le pack identité pour les profils spéciaux : badge perso, export replay HTML et bonus dédié.',
     features: [
@@ -849,6 +894,73 @@ function mergeShopItems(items) {
     };
   });
 }
+
+const boutiqueStorefrontStyle = document.createElement('style');
+boutiqueStorefrontStyle.textContent = `
+/* Boutique 2026 — storefront layer (keeps the existing theme tokens and shop engine) */
+body{background:var(--bg);overflow-x:hidden}
+.page{max-width:1540px;padding-top:18px;gap:18px}
+.nav{position:sticky;top:12px;z-index:70;flex-wrap:nowrap;border-radius:20px;background:color-mix(in srgb,var(--surface) 88%,transparent);border-color:rgba(255,255,255,.1);box-shadow:0 18px 50px rgba(0,0,0,.34)}
+.main-nav{display:flex;align-items:center;justify-content:center;gap:4px;margin-left:auto}
+.main-nav a{padding:10px 15px;border-radius:12px;color:var(--muted);text-decoration:none;font:800 13px 'Barlow Condensed',sans-serif;letter-spacing:1.2px;text-transform:uppercase;transition:.18s}
+.main-nav a:hover,.main-nav a.active{color:var(--text);background:rgba(255,255,255,.06)}
+.main-nav a.active{color:var(--yellow)}
+.cart-trigger{position:relative;color:var(--text);border-color:rgba(255,214,10,.26);background:linear-gradient(135deg,rgba(255,214,10,.15),rgba(255,122,69,.08));cursor:pointer}
+.cart-count{display:grid;place-items:center;min-width:21px;height:21px;padding:0 6px;border-radius:999px;background:var(--yellow);color:#13101d;font:900 12px 'Barlow Condensed',sans-serif}
+.hero{min-height:430px;padding:48px;border-radius:28px;background:radial-gradient(circle at 77% 36%,rgba(133,235,255,.14),transparent 25%),radial-gradient(circle at 18% 12%,rgba(255,45,85,.14),transparent 31%),linear-gradient(135deg,rgba(20,20,40,.96),rgba(8,9,20,.9));box-shadow:0 30px 80px rgba(0,0,0,.38)}
+.hero-inner{grid-template-columns:minmax(0,1.15fr) minmax(390px,.85fr);gap:44px}
+.hero-kicker{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(255,214,10,.24);border-radius:999px;background:rgba(255,214,10,.07);color:var(--yellow);letter-spacing:2.5px}
+.hero-title{max-width:800px;font-size:clamp(58px,6.4vw,94px);line-height:.86}
+.hero-title span{background:linear-gradient(90deg,var(--yellow),var(--orange));-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none}
+.hero-copy{max-width:650px;font-size:17px}
+.hero-pills .pill{animation:none;background:rgba(255,255,255,.045)}
+.hero-side{background:rgba(8,9,20,.72);border-color:rgba(255,255,255,.11);box-shadow:0 25px 70px rgba(0,0,0,.28)}
+.hero-side-title,.hero-side-list{display:none}
+.coins-panel{margin:0;padding:0;background:none;border:0;box-shadow:none}
+.wallet-row{grid-template-columns:1fr}.wallet-card{min-height:92px}
+.shop-controls{gap:12px}.product-key-box{display:none}
+.section-head{align-items:center;padding:12px 0 4px}
+.section-title{font-size:48px}.section-sub{font-size:15px}
+.category-tabs{position:sticky;top:93px;z-index:55;width:100%;display:grid;grid-template-columns:repeat(5,1fr);padding:7px;border-radius:18px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(18px)}
+.category-tab{min-height:48px;border-radius:12px}.category-tab.active{background:linear-gradient(135deg,rgba(255,214,10,.18),rgba(255,122,69,.10));border-color:rgba(255,214,10,.33);color:var(--yellow)}
+.grid,.cosmetic-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card{min-height:0;border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.014));box-shadow:0 18px 46px rgba(0,0,0,.24)}
+.card:hover{transform:translateY(-6px);box-shadow:0 28px 70px rgba(0,0,0,.36)}
+.card h2{font-size:32px}.duration{font-size:34px}.feature-list{display:none}
+.card .stat-line{margin-top:auto}.card-actions{display:grid;grid-template-columns:auto auto minmax(0,1fr)}
+.card-actions .cta{min-height:54px}.booster-column .card-actions{grid-template-columns:auto auto minmax(0,1fr)}
+.panel{border-radius:22px}.faq-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.faq-grid.feature-list{display:grid}
+.faq-grid .feature{display:flex}.shop-guide-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cart-overlay{position:fixed;inset:0;z-index:190;background:rgba(3,4,10,.72);backdrop-filter:blur(5px);opacity:0;pointer-events:none;transition:.24s}
+.cart-overlay.open{opacity:1;pointer-events:auto}
+.cart-drawer{position:absolute;inset:0 0 0 auto;width:min(460px,100%);display:flex;flex-direction:column;background:linear-gradient(180deg,#151628,#090a14);border-left:1px solid rgba(255,255,255,.1);box-shadow:-30px 0 90px rgba(0,0,0,.5);transform:translateX(102%);transition:.28s cubic-bezier(.2,.8,.2,1)}
+.cart-overlay.open .cart-drawer{transform:none}
+.cart-head,.cart-footer{padding:24px;border-bottom:1px solid rgba(255,255,255,.08)}
+.cart-head{display:flex;align-items:center;justify-content:space-between}.cart-head h2{font:900 34px 'Barlow Condensed',sans-serif;text-transform:uppercase}
+.cart-close{width:42px;height:42px;border-radius:13px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:24px;cursor:pointer}
+.cart-items{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:10px}
+.cart-empty{margin:auto;text-align:center;color:var(--muted);line-height:1.7}.cart-empty b{display:block;font-size:40px;margin-bottom:8px}
+.cart-item{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.035)}
+.cart-item-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,214,10,.1);font-size:23px}.cart-item strong{display:block}.cart-item small{color:var(--muted)}
+.cart-remove{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer}.cart-footer{border-top:1px solid rgba(255,255,255,.08);border-bottom:0}
+.cart-total{display:flex;justify-content:space-between;margin-bottom:15px}.cart-total strong{font:900 28px 'Barlow Condensed',sans-serif;color:var(--yellow)}
+.cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}
+.store-toast{position:fixed;z-index:250;left:50%;bottom:28px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:#f7f7fb;color:#11121c;font-weight:800;opacity:0;pointer-events:none;transition:.22s}.store-toast.show{opacity:1;transform:translate(-50%,0)}
+.rank-art{position:relative;display:grid;place-items:center;height:190px;margin:2px -4px 4px;border-radius:18px;overflow:hidden;background:radial-gradient(circle,rgba(255,255,255,.09),transparent 60%),rgba(4,5,12,.36)}
+.rank-art>img:first-child{width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 20px 22px rgba(0,0,0,.45));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.04) translateY(-3px)}
+.rank-duration-art{position:absolute!important;right:9px!important;bottom:9px!important;width:56px!important;height:56px!important;object-fit:contain!important;filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))!important}
+.exchange-market{display:grid;grid-template-columns:1.05fr .9fr .85fr;gap:18px;padding:24px;border:1px solid rgba(133,235,255,.15);border-radius:24px;background:radial-gradient(circle at 20% 0,rgba(133,235,255,.11),transparent 34%),linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.012));box-shadow:0 22px 55px rgba(0,0,0,.25)}
+.exchange-copy h2{margin:12px 0 7px;font:900 38px 'Barlow Condensed',sans-serif;text-transform:uppercase}.exchange-copy p{color:var(--muted);line-height:1.55}
+.exchange-rates{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}.exchange-rates div{padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.03)}.exchange-rates span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-rates strong{display:block;margin-top:5px;font:900 20px 'Barlow Condensed',sans-serif;color:var(--yellow)}
+.exchange-chart-wrap,.exchange-desk{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(5,6,14,.48)}.exchange-chart-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.exchange-chart-head strong.up{color:var(--green)}.exchange-chart-head strong.down{color:var(--red)}
+.exchange-chart{height:142px;display:flex;align-items:flex-end;gap:5px;padding-top:18px}.exchange-bar{position:relative;flex:1;min-height:12px;border-radius:5px 5px 2px 2px;background:linear-gradient(180deg,var(--blue),rgba(133,235,255,.18));box-shadow:0 0 12px rgba(133,235,255,.12)}.exchange-bar:last-child{background:linear-gradient(180deg,var(--yellow),rgba(255,214,10,.2))}.exchange-bar:hover::after{content:attr(data-value);position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);padding:3px 5px;border-radius:5px;background:#fff;color:#111;font-size:10px}
+.exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
+.exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
+@media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1100px){.exchange-market{grid-template-columns:1fr 1fr}.exchange-copy{grid-column:1/-1}}
+@media(max-width:760px){.nav{top:7px;flex-wrap:wrap}.nav-actions{width:auto;margin-left:auto}.nav-actions .btn:not(.cart-trigger){display:none}.logo{font-size:24px}.hero{min-height:0;padding:30px 20px}.hero-inner{gap:26px}.hero-title{font-size:clamp(46px,15vw,68px)}.wallet-row{grid-template-columns:1fr}.category-tabs{top:78px;display:flex;overflow-x:auto;flex-wrap:nowrap}.category-tab{flex:0 0 auto;min-width:130px}.grid,.cosmetic-grid{grid-template-columns:1fr}.section-title{font-size:38px}.card-actions,.booster-column .card-actions{grid-template-columns:1fr 1fr}.card-actions .cta{grid-column:1/-1;grid-row:1}.shop-guide-grid,.faq-grid{grid-template-columns:1fr}.panel:nth-of-type(n){padding:18px}.exchange-market{grid-template-columns:1fr;padding:17px}.exchange-copy{grid-column:auto}.exchange-rates{grid-template-columns:1fr}.rank-art{height:170px}}
+`;
+document.head.appendChild(boutiqueStorefrontStyle);
 
 let shopPlayer = null;
 let shopStock = {};
@@ -1419,7 +1531,7 @@ function renderCosmeticCard(item) {
     <div class="cosmetic-pack-note">Tarif de base : 5 000 Coins ou 100 gemmes. Les joueurs Perso profitent automatiquement de -30%.</div>
     <div class="card-actions">
       <button class="gift-btn" type="button" onclick="openGiftModal('${item.key}')" ${giftState.disabled ? 'disabled' : ''}>🎁 Offrir</button>
-      <button class="cta vipplus" id="buy-${item.key}" onclick="buyPack('${item.key}')" ${state.disabled ? 'disabled' : ''}>${state.disabled ? state.note : `Acheter le pack`}<small id="buy-${item.key}-note">${state.note}</small></button>
+      <button class="cta vipplus" id="buy-${item.key}" onclick="addToCart('${item.key}')" ${state.disabled ? 'disabled' : ''}>${state.disabled ? state.note : `Ajouter au panier`}<small id="buy-${item.key}-note">${state.note}</small></button>
     </div>
   </article>`;
 }
@@ -1851,6 +1963,7 @@ function renderCustomBoosterCard(pack) {
         <div class="duration">${totalText}</div>
       </div>
       <h2>${item.title}</h2>
+      ${item.art ? `<div class="rank-art"><img src="${escapeHtml(item.art)}" alt="Badge ${escapeHtml(item.title)}" loading="lazy">${item.durationArt ? `<img class="rank-duration-art" src="${escapeHtml(item.durationArt)}" alt="${escapeHtml(item.duration)}">` : ''}</div>` : ''}
       <div class="meta">${item.meta}</div>
       <div class="config-shell">
         <div class="config-topline">
@@ -1886,8 +1999,8 @@ function renderCustomBoosterCard(pack) {
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
-        <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
-          ${btnState.purchased ? 'Achat effectué' : `Acheter ${item.title}`}
+        <button class="cta ${item.theme}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+          ${btnState.purchased ? 'Achat effectué' : `Ajouter au panier`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
       </div>
@@ -1917,6 +2030,7 @@ function renderCard(pack) {
       <h2>${item.title}</h2>
       <div class="meta">${item.meta}</div>
       ${offerTimerHtml}${autoCouponHtml}
+      ${item.art ? `<div class="rank-art"><img src="${escapeHtml(item.art)}" alt="Badge ${escapeHtml(item.title)}" loading="lazy">${item.durationArt ? `<img class="rank-duration-art" src="${escapeHtml(item.durationArt)}" alt="${escapeHtml(item.duration)}">` : ''}</div>` : ''}
       <div class="stat-line ${item.theme}">
         <div class="stat-line-left">
           <strong>${item.type === 'booster' ? item.duration : item.stat}</strong>
@@ -1937,8 +2051,8 @@ function renderCard(pack) {
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
-        <button class="cta ${item.theme}" id="buy-${pack}" onclick="buyPack('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
-          ${btnState.purchased ? 'Achat effectué' : `Acheter ${item.title}`}
+        <button class="cta ${item.theme}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+          ${btnState.purchased ? 'Achat effectué' : `Ajouter au panier`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
       </div>
@@ -2073,7 +2187,7 @@ async function loadPreviewAssets() {
 }
 
 async function loadShop() {
-  await loadPreviewAssets();
+  await Promise.all([loadPreviewAssets(), loadExchangeQuote()]);
   const token = localStorage.getItem('token');
   if (!token) {
     shopGemsUnlocked = false;
@@ -2124,7 +2238,215 @@ async function loadShop() {
   switchShopCategory(currentCategory);
 }
 
-async function purchasePack(pack, giftTo = '', giftToId = 0) {
+let exchangeQuote = null;
+let exchangeDirection = 'coins_to_gems';
+let exchangeCountdownTimer = null;
+
+async function loadExchangeQuote() {
+  try {
+    const res = await fetch('/api/shop/exchange/quote', { cache: 'no-store' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Cours indisponible');
+    exchangeQuote = data;
+    renderExchangeMarket();
+    clearInterval(exchangeCountdownTimer);
+    exchangeCountdownTimer = setInterval(() => {
+      if (Date.now() >= Number(exchangeQuote?.nextUpdateAt || 0)) loadExchangeQuote();
+      else renderExchangeCountdown();
+    }, 1000);
+  } catch {
+    const status = document.getElementById('exchange-status');
+    if (status) status.textContent = 'Le marché est momentanément indisponible.';
+  }
+}
+
+function renderExchangeCountdown() {
+  const el = document.getElementById('exchange-countdown');
+  if (!el || !exchangeQuote) return;
+  const seconds = Math.max(0, Math.ceil((Number(exchangeQuote.nextUpdateAt) - Date.now()) / 1000));
+  el.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function renderExchangeMarket() {
+  if (!exchangeQuote) return;
+  const buy = document.getElementById('exchange-buy-rate');
+  const sell = document.getElementById('exchange-sell-rate');
+  if (buy) buy.textContent = `${exchangeQuote.buy} coins`;
+  if (sell) sell.textContent = `${exchangeQuote.sell} coins`;
+  const history = Array.isArray(exchangeQuote.history) ? exchangeQuote.history : [];
+  const values = history.map(point => Number(point.mid || 0));
+  const min = Math.min(...values, 0);
+  const max = Math.max(...values, 1);
+  const chart = document.getElementById('exchange-chart');
+  if (chart) chart.innerHTML = history.map(point => {
+    const height = 25 + ((Number(point.mid) - min) / Math.max(1, max - min)) * 75;
+    return `<span class="exchange-bar" style="height:${height}%" data-value="${Number(point.mid)}"></span>`;
+  }).join('');
+  const trend = document.getElementById('exchange-trend');
+  if (trend && values.length > 1) {
+    const delta = ((values.at(-1) - values[0]) / Math.max(1, values[0])) * 100;
+    trend.textContent = `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}%`;
+    trend.className = delta >= 0 ? 'up' : 'down';
+  }
+  renderExchangeCountdown();
+  renderExchangeEstimate();
+}
+
+function setExchangeDirection(direction) {
+  exchangeDirection = direction === 'gems_to_coins' ? 'gems_to_coins' : 'coins_to_gems';
+  document.getElementById('exchange-dir-buy')?.classList.toggle('active', exchangeDirection === 'coins_to_gems');
+  document.getElementById('exchange-dir-sell')?.classList.toggle('active', exchangeDirection === 'gems_to_coins');
+  const input = document.getElementById('exchange-amount');
+  if (input) input.value = exchangeDirection === 'coins_to_gems' ? String(exchangeQuote?.buy || 100) : '1';
+  renderExchangeEstimate();
+}
+
+function renderExchangeEstimate() {
+  const amount = Math.max(0, Math.floor(Number(document.getElementById('exchange-amount')?.value || 0)));
+  const source = document.getElementById('exchange-source-label');
+  const estimate = document.getElementById('exchange-estimate');
+  if (source) source.textContent = exchangeDirection === 'coins_to_gems' ? 'coins' : 'gemmes';
+  if (!estimate || !exchangeQuote) return;
+  const result = exchangeDirection === 'coins_to_gems' ? Math.floor(amount / Number(exchangeQuote.buy || 1)) : amount * Number(exchangeQuote.sell || 0);
+  estimate.textContent = `${result} ${exchangeDirection === 'coins_to_gems' ? 'gemme' + (result > 1 ? 's' : '') : 'coins'}`;
+}
+
+async function submitExchange() {
+  const token = localStorage.getItem('token');
+  const status = document.getElementById('exchange-status');
+  const button = document.getElementById('exchange-submit');
+  const amount = Math.floor(Number(document.getElementById('exchange-amount')?.value || 0));
+  if (!token) { if (status) status.textContent = 'Connecte-toi pour effectuer un échange.'; return; }
+  if (!shopGemsUnlocked) { if (status) status.textContent = 'Lie ton compte Discord pour utiliser les gemmes.'; return; }
+  if (!Number.isSafeInteger(amount) || amount <= 0) { if (status) status.textContent = 'Entre un montant valide.'; return; }
+  const estimate = document.getElementById('exchange-estimate')?.textContent || '';
+  if (!confirm(`Confirmer cet échange contre ${estimate} au cours actuel ?`)) return;
+  if (button) { button.disabled = true; button.textContent = 'Échange en cours...'; }
+  try {
+    const res = await fetch('/api/shop/exchange', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, direction: exchangeDirection, amount }) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Conversion impossible.');
+    shopPlayer = data.player || shopPlayer;
+    exchangeQuote = { ...exchangeQuote, ...(data.quote || {}) };
+    setStoredPlayer(shopPlayer);
+    setCoinsUi(shopPlayer?.coins || 0, 'Conversion effectuée avec succès.');
+    renderShop();
+    renderExchangeMarket();
+    if (status) { status.textContent = `Échange validé : ${data.spent} ${exchangeDirection === 'coins_to_gems' ? 'coins' : 'gemmes'} → ${data.received} ${exchangeDirection === 'coins_to_gems' ? 'gemmes' : 'coins'}.`; status.className = 'promo-help ok'; }
+    showStoreToast('Conversion effectuée ✓');
+  } catch (error) {
+    if (status) { status.textContent = error.message; status.className = 'promo-help error'; }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'Confirmer l’échange'; }
+  }
+}
+
+let shopCart = [];
+let toastTimer = null;
+
+function showStoreToast(message) {
+  const toast = document.getElementById('store-toast');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+function getCartSnapshot(pack) {
+  const item = getDisplayItem(pack);
+  return {
+    pack,
+    title: item?.title || item?.label || pack,
+    price: getDiscountedPrice(getCustomBoosterPrice(pack)).finalPrice,
+    currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
+    multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
+    icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡'
+  };
+}
+
+function addToCart(pack) {
+  const state = getButtonState(pack);
+  if (state.disabled) return;
+  const snapshot = getCartSnapshot(pack);
+  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.currency}`;
+  if (shopCart.some(entry => entry.key === key)) {
+    showStoreToast('Cet article est déjà dans ton panier');
+    openCart();
+    return;
+  }
+  shopCart.push({ ...snapshot, key });
+  renderCart();
+  showStoreToast(`${snapshot.title} ajouté au panier`);
+}
+
+function removeFromCart(key) {
+  shopCart = shopCart.filter(entry => entry.key !== key);
+  renderCart();
+}
+
+function openCart() {
+  renderCart();
+  const overlay = document.getElementById('cart-overlay');
+  overlay?.classList.add('open');
+  overlay?.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCart() {
+  const overlay = document.getElementById('cart-overlay');
+  overlay?.classList.remove('open');
+  overlay?.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+function renderCart() {
+  const box = document.getElementById('cart-items');
+  const count = document.getElementById('cart-count');
+  const total = document.getElementById('cart-total');
+  const checkout = document.getElementById('cart-checkout');
+  if (count) count.textContent = String(shopCart.length);
+  if (!box || !total || !checkout) return;
+  if (!shopCart.length) {
+    box.innerHTML = '<div class="cart-empty"><b>🛒</b>Ton panier est vide.<br><small>Ajoute un grade, un booster ou un cosmétique.</small></div>';
+    total.textContent = '0 coins';
+    checkout.disabled = true;
+    return;
+  }
+  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.icon}</span><div><strong>${escapeHtml(entry.title)}</strong><small>${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}${entry.multiplier ? ` · x${entry.multiplier}` : ''}</small></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
+  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
+  total.textContent = Object.entries(totals).map(([currency, amount]) => `${amount} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}`).join(' + ');
+  checkout.disabled = false;
+}
+
+async function checkoutCart() {
+  if (!shopCart.length) return;
+  const summary = document.getElementById('cart-total')?.textContent || '';
+  if (!confirm(`Confirmer les ${shopCart.length} article(s) du panier pour ${summary} ?`)) return;
+  const checkout = document.getElementById('cart-checkout');
+  if (checkout) { checkout.disabled = true; checkout.textContent = 'Validation...'; }
+  const pending = [...shopCart];
+  let completed = 0;
+  for (const entry of pending) {
+    setShopCurrency(entry.currency);
+    if (entry.pack === 'elo_custom') customBoosterState.elo = entry.multiplier;
+    if (entry.pack === 'coin_custom') customBoosterState.coins = entry.multiplier;
+    if (entry.pack === 'global_elo_custom') customBoosterState.globalElo = entry.multiplier;
+    if (entry.pack === 'global_coin_custom') customBoosterState.globalCoins = entry.multiplier;
+    const ok = await purchasePack(entry.pack, '', 0, { skipConfirm: true });
+    if (!ok) break;
+    completed += 1;
+    shopCart = shopCart.filter(item => item.key !== entry.key);
+  }
+  renderCart();
+  if (checkout) checkout.textContent = 'Valider mon panier';
+  if (completed) showStoreToast(`${completed} achat(s) validé(s)`);
+  if (!shopCart.length) closeCart();
+}
+
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeCart(); });
+
+async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
   const token = localStorage.getItem('token');
   if (!token) {
     alert('Connecte-toi d abord.');
@@ -2159,7 +2481,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0) {
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
   const priceText = price === 0 ? 'gratuitement' : `pour ${price} ${currencyLabel}${promoText}`;
-  if (!confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${resetVariant ? ` pour la variante ${resetVariantLabel}` : ''}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
+  if (!options.skipConfirm && !confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${resetVariant ? ` pour la variante ${resetVariantLabel}` : ''}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
 
   const btn = giftTo ? null : document.getElementById(`buy-${pack}`);
   const btnInitialHtml = btn?.innerHTML || '';

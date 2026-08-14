@@ -6353,6 +6353,71 @@ app.get('/api/shop/catalog', (_, res) => {
   });
 });
 
+const SHOP_EXCHANGE_INTERVAL_MS = 15 * 60 * 1000;
+
+function getShopExchangeQuote(at = Date.now()) {
+  const bucket = Math.floor(Number(at || Date.now()) / SHOP_EXCHANGE_INTERVAL_MS);
+  const seeded = (value) => {
+    const raw = Math.sin(value * 12.9898 + 78.233) * 43758.5453;
+    return raw - Math.floor(raw);
+  };
+  const mid = Math.round(100 * (0.88 + seeded(bucket) * 0.24));
+  return {
+    bucket,
+    mid,
+    buy: Math.ceil(mid * 1.04),
+    sell: Math.floor(mid * 0.96),
+    updatedAt: bucket * SHOP_EXCHANGE_INTERVAL_MS,
+    nextUpdateAt: (bucket + 1) * SHOP_EXCHANGE_INTERVAL_MS,
+  };
+}
+
+app.get('/api/shop/exchange/quote', (_, res) => {
+  const quote = getShopExchangeQuote();
+  const history = Array.from({ length: 12 }, (_, index) => {
+    const point = getShopExchangeQuote(quote.updatedAt - (11 - index) * SHOP_EXCHANGE_INTERVAL_MS);
+    return { at: point.updatedAt, mid: point.mid };
+  });
+  res.set('Cache-Control', 'no-store');
+  res.json({ ...quote, history });
+});
+
+app.post('/api/shop/exchange', (req, res) => {
+  const token = String(req.body?.token || '');
+  const playerId = validateSession(token);
+  if (!playerId) return res.status(401).json({ error: 'Session invalide.' });
+  const direction = String(req.body?.direction || 'coins_to_gems');
+  const amount = Number(req.body?.amount || 0);
+  if (!['coins_to_gems', 'gems_to_coins'].includes(direction)) return res.status(400).json({ error: 'Sens de conversion invalide.' });
+  if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 10000000) return res.status(400).json({ error: 'Montant invalide.' });
+  const quote = getShopExchangeQuote();
+
+  try {
+    const result = db.transaction(() => {
+      const player = pQ.getById.get(playerId);
+      if (!player) throw new Error('Joueur introuvable.');
+      if (!String(player.discord_id || '').trim()) throw new Error('Lie ton compte Discord pour utiliser les gemmes.');
+      if (direction === 'coins_to_gems') {
+        const received = Math.floor(amount / quote.buy);
+        if (received < 1) throw new Error(`Il faut au moins ${quote.buy} coins pour acheter 1 gemme.`);
+        const spent = received * quote.buy;
+        if (Number(player.coins || 0) < spent) throw new Error('Pas assez de coins.');
+        pQ.updateCoins.run({ coins: Number(player.coins || 0) - spent, id: playerId });
+        pQ.updateGems.run({ gems: Number(player.gems || 0) + received, id: playerId });
+        return { spent, received };
+      }
+      if (Number(player.gems || 0) < amount) throw new Error('Pas assez de gemmes.');
+      const received = amount * quote.sell;
+      pQ.updateGems.run({ gems: Number(player.gems || 0) - amount, id: playerId });
+      pQ.updateCoins.run({ coins: Number(player.coins || 0) + received, id: playerId });
+      return { spent: amount, received };
+    })();
+    res.json({ ok: true, direction, ...result, quote, player: sanitize(pQ.getById.get(playerId)) });
+  } catch (error) {
+    res.status(400).json({ error: error?.message || 'Conversion impossible.' });
+  }
+});
+
 app.get('/api/shop/me', (req, res) => {
   const token = String(req.headers['x-session-token'] || req.query.token || '');
   const playerId = validateSession(token);
