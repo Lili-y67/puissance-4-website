@@ -2703,6 +2703,9 @@ function renderHtmlWithMeta(fileName, req, res, meta = {}) {
   const filePath = path.join(__dirname, 'public', fileName);
   fs.readFile(filePath, 'utf8', (error, html) => {
     if (error) return res.status(500).send('Erreur serveur');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const title = meta.title || 'Puissance 4';
     const description = meta.description || 'Joue au Puissance 4 en ligne, defie tes amis et grimpe le classement.';
     const url = meta.url || absolutePublicUrl(req, req.originalUrl || req.path || '/');

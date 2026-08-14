@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.5.0-discord-auth-1';
+const CACHE_VERSION = 'p4-shell-v3.6.0-shop-cart-1';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -67,7 +67,7 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      fetch(request, { cache: 'no-store' })
         .then(response => {
           if (response.ok) {
             const copy = response.clone();
