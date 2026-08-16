@@ -410,6 +410,7 @@ body{
     </nav>
     <div class="nav-actions">
       <a class="btn" href="/profil">Mon profil</a>
+      <button class="btn product-key-trigger" type="button" onclick="openProductKeyModal()">🔑 Clé produit</button>
       <button class="btn cart-trigger" id="cart-trigger" type="button" aria-label="Ouvrir le panier" aria-controls="cart-overlay" aria-expanded="false">🛒 Panier <span class="cart-count" id="cart-count">0</span></button>
     </div>
   </div>
@@ -466,14 +467,6 @@ body{
                 <button id="coupon-validate-btn" type="button" class="promo-validate" onclick="validateCoupon()" disabled>Valider</button>
               </div>
               <div class="promo-help" id="coupon-status">Optionnel, appliqué au moment de confirmer l'achat.</div>
-            </div>
-            <div class="product-key-box">
-              <div class="promo-line">
-                <input id="product-key-input" class="promo-input" placeholder="P4K-XXXX-XXXX">
-                <button id="product-key-btn" type="button" class="promo-validate" onclick="redeemProductKey()">Utiliser</button>
-              </div>
-              <input id="product-key-target" class="promo-input product-key-target" placeholder="Profil destinataire (vide = moi)">
-              <div class="promo-help" id="product-key-status">La récompense sera ajoutée immédiatement au profil choisi.</div>
             </div>
             <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
           </div>
@@ -545,6 +538,10 @@ body{
   <section id="shop-host-section" class="grid" style="display:none"></section>
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
+    <div class="booster-column personal fortune-featured">
+      <div class="subsection-label">Roue Fortune</div>
+      <div class="grid" id="shop-fortune-boosters-grid"></div>
+    </div>
     <div class="boosters-row">
       <div class="booster-column personal">
         <div class="subsection-label">Boosters Perso</div>
@@ -652,6 +649,23 @@ body{
           <span>Il remet ton ELO à 1000 sans supprimer ton compte ni tes historiques visibles. À utiliser seulement si tu veux repartir proprement.</span>
         </div>
       </div>
+    </div>
+  </section>
+</div>
+
+<div class="key-redeem-overlay p4-modal-layer" id="product-key-modal" onclick="if(event.target===this)closeProductKeyModal()" aria-hidden="true">
+  <section class="key-redeem-modal" role="dialog" aria-modal="true" aria-labelledby="product-key-title">
+    <div class="key-redeem-head">
+      <div><div class="hero-kicker">Récompense secrète</div><h2 id="product-key-title">Utiliser une clé produit</h2></div>
+      <button class="cart-close" type="button" onclick="closeProductKeyModal()" aria-label="Fermer">×</button>
+    </div>
+    <div class="key-redeem-body">
+      <div class="key-redeem-icon">🔑</div>
+      <p>Entre la clé reçue pour ajouter immédiatement son contenu au compte choisi.</p>
+      <label>Clé produit<input id="product-key-input" class="promo-input" placeholder="P4K-XXXX-XXXX" autocomplete="off" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')redeemProductKey()"></label>
+      <label>Destinataire <span>(optionnel)</span><input id="product-key-target" class="promo-input" placeholder="Vide = mon compte" autocomplete="off"></label>
+      <div class="key-redeem-status" id="product-key-status">Une clé est à usage unique. Vérifie bien le destinataire.</div>
+      <button id="product-key-btn" class="cart-checkout" type="button" onclick="redeemProductKey()">Utiliser la clé</button>
     </div>
   </section>
 </div>
@@ -808,7 +822,7 @@ const SHOP_ITEMS = {
     ]
   },
   elo_reset: {
-    key: 'elo_reset', type: 'service', theme: 'booster-elo', badge: '♻ RESET', duration: 'Instantane', title: 'Reset ELO',
+    key: 'elo_reset', type: 'service', theme: 'booster-elo', art: '/assets/elo-reset-ticket.png', badge: '♻ RESET', duration: 'Instantane', title: 'Reset ELO',
     stat: '1000', statSub: 'ELO apres achat',
     meta: 'Remets ton classement a 1000 ELO immediatement. Pratique pour repartir proprement.',
     features: [
@@ -1020,10 +1034,12 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-drawer{position:absolute;inset:0 0 0 auto;width:min(490px,100vw);height:100dvh;max-height:none;border:0;border-left:1px solid rgba(255,255,255,.12);border-radius:0;transform:translateX(102%);opacity:1;background:radial-gradient(circle at 90% 0,rgba(255,214,10,.09),transparent 30%),linear-gradient(160deg,#17182b,#080914);box-shadow:-35px 0 100px rgba(0,0,0,.62)}
 .cart-overlay.open .cart-drawer{transform:translateX(0)}
 .cart-recipient-avatar{width:25px;height:25px;flex:0 0 25px;display:grid;place-items:center;overflow:hidden;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;font:900 12px 'Barlow Condensed',sans-serif}.cart-recipient-avatar img{width:100%;height:100%;display:block;object-fit:cover}.cart-recipient-copy{display:flex;min-width:0;flex-direction:column;line-height:1.05}.cart-recipient-copy small{font-size:8px;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.8px}.cart-recipient-copy b{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--orange)}
+.key-redeem-overlay{position:fixed;inset:0;z-index:340;display:grid;place-items:center;padding:18px;background:rgba(2,3,9,.72);backdrop-filter:blur(12px);opacity:0;visibility:hidden;pointer-events:none;transition:.22s}.key-redeem-overlay.open{opacity:1;visibility:visible;pointer-events:auto}.key-redeem-modal{width:min(520px,100%);overflow:hidden;border:1px solid rgba(133,235,255,.2);border-radius:25px;background:linear-gradient(160deg,rgba(19,21,39,.99),rgba(7,8,18,.99));box-shadow:0 32px 100px rgba(0,0,0,.58);transform:translateY(16px) scale(.98);transition:.22s}.key-redeem-overlay.open .key-redeem-modal{transform:none}.key-redeem-head{display:flex;align-items:center;justify-content:space-between;padding:21px 23px;border-bottom:1px solid rgba(255,255,255,.08)}.key-redeem-head h2{font:900 32px 'Barlow Condensed',sans-serif;text-transform:uppercase}.key-redeem-body{display:grid;gap:15px;padding:24px}.key-redeem-icon{display:grid;place-items:center;width:68px;height:68px;margin:auto;border:1px solid rgba(133,235,255,.22);border-radius:22px;background:radial-gradient(circle,rgba(133,235,255,.18),transparent 70%);font-size:34px}.key-redeem-body>p{text-align:center;color:var(--muted);font-size:13px;line-height:1.6}.key-redeem-body label{display:grid;gap:7px;color:var(--text);font:900 12px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.key-redeem-body label span{color:var(--muted);font-weight:600}.key-redeem-body .promo-input{height:48px;font-size:15px;letter-spacing:.6px;text-transform:none}.key-redeem-status{min-height:42px;padding:11px 13px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025);color:var(--muted);font-size:11px;line-height:1.5}.key-redeem-status.ok{border-color:rgba(48,209,88,.24);background:rgba(48,209,88,.07);color:var(--green)}.key-redeem-status.error{border-color:rgba(255,45,85,.25);background:rgba(255,45,85,.07);color:#ff7891}
 .cart-head{padding:20px 21px}.cart-head h2{font-size:38px}
 .cart-content{display:flex;flex-direction:column;height:calc(100dvh - 91px);min-height:0;max-height:none}.cart-products{flex:1;min-height:0;padding:15px 9px 12px 14px}.cart-items{overflow:auto}.cart-footer{flex:0 0 auto;padding:17px 20px 20px;border:0;border-top:1px solid rgba(255,255,255,.09);background:rgba(5,6,14,.86)}
 .cart-summary-kicker{display:none}.cart-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:7px}.cart-breakdown-row{padding:8px 9px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(255,255,255,.025)}.cart-breakdown-row:nth-last-child(-n+2){display:none}.cart-promo-state{margin-top:9px;padding:8px}.cart-payment-state{display:none;margin-top:9px;padding:10px 11px;border-radius:11px;font-size:11px;line-height:1.4}.cart-payment-state.error{display:block;border:1px solid rgba(255,45,85,.28);background:rgba(255,45,85,.09);color:#ff7891}.cart-payment-state.ok{display:block;border:1px solid rgba(48,209,88,.24);background:rgba(48,209,88,.08);color:var(--green)}.cart-total{margin-top:12px;padding-top:13px}.cart-footer .cart-checkout{margin-top:12px}
 @media(max-width:560px){.cart-overlay.p4-modal-layer>.cart-drawer{top:6px!important;right:6px!important;bottom:6px!important;width:calc(100vw - 12px)!important;border-radius:20px}.cart-head{padding:15px 16px}.cart-content{height:calc(100dvh - 78px)}.cart-products{padding:10px 5px}.cart-footer{padding:12px 15px max(14px,env(safe-area-inset-bottom))}.cart-promo-state{display:none}.cart-breakdown{display:none}.cart-total{margin-top:0;padding-top:0;border:0}}
+@media(max-width:560px){.product-key-trigger{padding:9px 10px;font-size:0}.product-key-trigger::first-letter{font-size:15px}.key-redeem-overlay{padding:7px}.key-redeem-modal{border-radius:21px}.key-redeem-head{padding:16px}.key-redeem-head h2{font-size:27px}.key-redeem-body{padding:18px 15px}}
 .exchange-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:13px;background:rgba(255,255,255,.04)}.exchange-switch button{padding:9px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:800 12px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-switch button.active{background:rgba(133,235,255,.12);color:var(--blue)}
 .exchange-label{display:block;margin:13px 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-input-row{display:flex;align-items:center;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(5,6,14,.62);overflow:hidden}.exchange-input-row input{min-width:0;width:100%;padding:12px;border:0;outline:0;background:transparent;color:var(--text);font:900 22px 'Barlow Condensed',sans-serif}.exchange-input-row span{padding-right:12px;color:var(--muted);font-size:12px}.exchange-estimate{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)}.exchange-estimate span{font-size:12px;color:var(--muted)}.exchange-estimate strong{font:900 24px 'Barlow Condensed',sans-serif;color:var(--green)}
 @media(max-width:1100px){.grid,.cosmetic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main-nav{display:none}.hero-inner{grid-template-columns:1fr}.hero-side{max-width:none}.wallet-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -1478,6 +1494,23 @@ async function validateCoupon() {
   }
 }
 
+function openProductKeyModal() {
+  const modal = document.getElementById('product-key-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('product-key-input')?.focus(), 120);
+}
+
+function closeProductKeyModal() {
+  const modal = document.getElementById('product-key-modal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
 function setProductKeyStatus(message, type = '') {
   const el = document.getElementById('product-key-status');
   if (!el) return;
@@ -1522,7 +1555,7 @@ async function redeemProductKey() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Utiliser';
+      btn.textContent = 'Utiliser la clé';
     }
   }
 }
@@ -2218,8 +2251,8 @@ function renderShop() {
   document.getElementById('shop-elo-boosters-grid').innerHTML = [
     renderCustomBoosterCard('elo_custom'),
     renderCustomBoosterCard('coin_custom'),
-    renderCustomBoosterCard('fortune_boost_custom'),
   ].join('');
+  document.getElementById('shop-fortune-boosters-grid').innerHTML = renderCustomBoosterCard('fortune_boost_custom');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [
     renderCustomBoosterCard('global_elo_custom'),
     renderCustomBoosterCard('global_coin_custom'),
@@ -2748,7 +2781,7 @@ async function checkoutCart() {
   if (!shopCart.length) closeCart();
 }
 
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeCart(); });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeCart(); closeProductKeyModal(); } });
 
 async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
   const token = localStorage.getItem('token');

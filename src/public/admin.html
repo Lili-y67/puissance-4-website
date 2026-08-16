@@ -560,6 +560,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
 .modal input,.modal select{min-width:0}
 .modal .btn-sm{min-height:38px}
 .modal-btns{display:flex;gap:8px;margin-top:16px}
+.key-builder-bg{position:fixed;inset:0;z-index:10020;background:rgba(2,2,8,.68);backdrop-filter:blur(10px);opacity:0;pointer-events:none;transition:.22s}.key-builder-bg.open{opacity:1;pointer-events:auto}.key-builder-drawer{position:absolute;inset:8px 8px 8px auto;width:min(510px,calc(100% - 16px));display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(48,209,88,.2);border-radius:25px;background:linear-gradient(180deg,#17192a,#090a14);box-shadow:-28px 0 90px rgba(0,0,0,.55);transform:translateX(calc(100% + 20px));transition:.28s cubic-bezier(.2,.8,.2,1)}.key-builder-bg.open .key-builder-drawer{transform:none}.key-builder-head{display:flex;align-items:center;justify-content:space-between;padding:22px;border-bottom:1px solid rgba(255,255,255,.08)}.key-builder-head h3{margin:0;font:900 34px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;text-transform:uppercase}.key-builder-close{width:42px;height:42px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(255,255,255,.04);color:var(--ink);font-size:22px;cursor:pointer}.key-builder-body{flex:1;overflow:auto;padding:21px;display:grid;align-content:start;gap:16px}.key-builder-fields{display:grid;grid-template-columns:1fr 120px;gap:12px}.key-builder-field{display:grid;gap:7px}.key-builder-field.full{grid-column:1/-1}.key-builder-field label{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.key-builder-preview{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.018))}.key-builder-preview-title{font:900 12px 'Barlow Condensed',sans-serif;color:var(--green);letter-spacing:1.5px;text-transform:uppercase}.key-builder-preview-row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06);color:var(--muted);font-size:12px}.key-builder-preview-row:last-child{border-bottom:0}.key-builder-preview-row strong{color:var(--ink);text-align:right}.key-builder-result{display:none;padding:17px;border:1px solid rgba(48,209,88,.24);border-radius:18px;background:rgba(48,209,88,.07)}.key-builder-result.show{display:block}.key-builder-code{display:block;margin:8px 0;color:var(--green);font:900 25px 'Barlow Condensed',sans-serif;letter-spacing:1px;word-break:break-all}.key-builder-footer{padding:17px 21px;border-top:1px solid rgba(255,255,255,.08);background:rgba(5,6,14,.72)}
 .mobile-list{display:none;flex-direction:column;gap:10px;padding:10px}
 .mobile-card{
   background:linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.018)),rgba(18,18,38,.90);
@@ -608,6 +609,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   #boost-status,#coupon-result,#limited-pack-result,#system-status-preview{text-align:left}
   .modal{max-height:calc(100vh - 24px);overflow-y:auto;padding:22px 16px;border-radius:22px}
   .modal-btns{flex-direction:column}
+  .key-builder-drawer{inset:5px;width:calc(100% - 10px);border-radius:21px}.key-builder-head{padding:17px}.key-builder-head h3{font-size:29px}.key-builder-body{padding:16px}.key-builder-fields{grid-template-columns:1fr}
 }
 @media(max-width:640px){
   #admin-players-section .table-wrap table{display:none}
@@ -821,18 +823,9 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
         <div class="admin-section-title">Clés produit</div>
         <div class="admin-section-copy">Crée une clé à usage unique contenant des coins, des gemmes, un grade ou un article boutique.</div>
       </div>
-      <div id="product-key-result" style="font-size:13px;color:var(--green);"></div>
+      <button class="btn-sm" style="background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);height:42px" onclick="openProductKeyBuilder()">Ouvrir le générateur</button>
     </div>
-    <div class="coupon-grid">
-      <input id="product-key-content" class="search-input" style="margin:0" placeholder="coins, gems, vip_1m, vip_plus...">
-      <input id="product-key-quantity" type="number" class="search-input" style="margin:0" value="1" min="1" max="999" placeholder="Quantité">
-      <input id="product-key-hours" type="number" class="search-input" style="margin:0" value="0" min="0" max="8760" placeholder="Validité h">
-      <button id="product-key-generate-btn" class="btn-sm" style="background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);height:40px" onclick="createProductKey()">Générer la clé</button>
-    </div>
-    <div id="product-key-output" style="display:none;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;padding:14px 16px;border:1px solid rgba(48,209,88,.24);border-radius:16px;background:rgba(48,209,88,.07)">
-      <div><div style="font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase">Clé générée</div><strong id="product-key-code" style="display:block;margin-top:5px;color:var(--green);font:900 22px 'Barlow Condensed',sans-serif;letter-spacing:1px"></strong><small id="product-key-meta" style="color:var(--muted)"></small></div>
-      <button class="btn-sm" style="background:rgba(255,255,255,.07);color:var(--ink)" onclick="copyProductKey()">Copier</button>
-    </div>
+    <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border:1px dashed rgba(48,209,88,.18);border-radius:15px;background:rgba(48,209,88,.035);color:var(--muted);font-size:12px"><span style="font-size:22px">🔑</span><span>Prépare le contenu, la quantité et l’expiration dans un panneau dédié, puis copie la clé en un clic.</span></div>
   </div>
 
   <div class="table-wrap admin-only-panel" style="padding:18px 20px;margin-bottom:0;">
@@ -1692,6 +1685,51 @@ async function createCoupon() {
   await loadActiveCoupons();
 }
 
+function openProductKeyBuilder() {
+  closeProductKeyBuilder();
+  const layer = document.createElement('div');
+  layer.className = 'key-builder-bg';
+  layer.id = 'product-key-builder';
+  layer.innerHTML = `
+    <section class="key-builder-drawer" role="dialog" aria-modal="true" aria-labelledby="key-builder-title">
+      <div class="key-builder-head"><div><div class="eyebrow">Boutique · Administration</div><h3 id="key-builder-title">Nouvelle clé produit</h3></div><button class="key-builder-close" onclick="closeProductKeyBuilder()" aria-label="Fermer">×</button></div>
+      <div class="key-builder-body">
+        <div class="admin-section-copy">Configure une récompense à usage unique. La clé ne sera créée qu’après confirmation.</div>
+        <div class="key-builder-fields">
+          <div class="key-builder-field full"><label for="product-key-content">Contenu de la clé</label><input id="product-key-content" class="search-input" style="margin:0" value="coins" placeholder="coins, gems, vip_1m, vip_plus..." oninput="renderProductKeySummary()"></div>
+          <div class="key-builder-field"><label for="product-key-quantity">Quantité</label><input id="product-key-quantity" type="number" class="search-input" style="margin:0" value="1" min="1" max="999" oninput="renderProductKeySummary()"></div>
+          <div class="key-builder-field"><label for="product-key-hours">Validité</label><input id="product-key-hours" type="number" class="search-input" style="margin:0" value="0" min="0" max="8760" oninput="renderProductKeySummary()"></div>
+        </div>
+        <div class="key-builder-preview"><div class="key-builder-preview-title">Récapitulatif</div><div id="product-key-summary"></div></div>
+        <div id="product-key-result" style="min-height:18px;font-size:12px;color:var(--green)"></div>
+        <div id="product-key-output" class="key-builder-result"><div class="key-builder-preview-title">Clé générée</div><strong id="product-key-code" class="key-builder-code"></strong><small id="product-key-meta" style="color:var(--muted)"></small><button class="btn-sm" style="width:100%;margin-top:14px;background:rgba(48,209,88,.14);color:var(--green);border:1px solid rgba(48,209,88,.25)" onclick="copyProductKey()">Copier la clé</button></div>
+      </div>
+      <div class="key-builder-footer"><button id="product-key-generate-btn" class="btn-sm" style="width:100%;min-height:50px;background:linear-gradient(135deg,rgba(48,209,88,.9),rgba(133,235,255,.72));color:#07120d;font-weight:900" onclick="createProductKey()">Confirmer et générer</button></div>
+    </section>`;
+  layer.addEventListener('click', event => { if (event.target === layer) closeProductKeyBuilder(); });
+  document.body.appendChild(layer);
+  renderProductKeySummary();
+  requestAnimationFrame(() => layer.classList.add('open'));
+}
+
+function closeProductKeyBuilder() {
+  const layer = document.getElementById('product-key-builder');
+  if (!layer) return;
+  layer.classList.remove('open');
+  setTimeout(() => layer.remove(), 240);
+}
+
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeProductKeyBuilder(); });
+
+function renderProductKeySummary() {
+  const box = document.getElementById('product-key-summary');
+  if (!box) return;
+  const content = String(document.getElementById('product-key-content')?.value || '').trim() || 'Non renseigné';
+  const quantity = Math.max(1, Number(document.getElementById('product-key-quantity')?.value || 1));
+  const hours = Math.max(0, Number(document.getElementById('product-key-hours')?.value || 0));
+  box.innerHTML = `<div class="key-builder-preview-row"><span>Récompense</span><strong>${escapeHtml(content)}</strong></div><div class="key-builder-preview-row"><span>Quantité</span><strong>×${quantity}</strong></div><div class="key-builder-preview-row"><span>Expiration</span><strong>${hours ? `${hours} heure${hours > 1 ? 's' : ''}` : 'Aucune'}</strong></div><div class="key-builder-preview-row"><span>Utilisation</span><strong>Une seule fois</strong></div>`;
+}
+
 async function createProductKey() {
   const out = document.getElementById('product-key-result');
   const button = document.getElementById('product-key-generate-btn');
@@ -1715,7 +1753,7 @@ async function createProductKey() {
     const key = data.productKey;
     document.getElementById('product-key-code').textContent = key.code;
     document.getElementById('product-key-meta').textContent = `${key.label} ×${key.quantity} · ${key.expiresAt ? `expire le ${new Date(key.expiresAt).toLocaleString('fr-FR')}` : 'sans expiration'}`;
-    document.getElementById('product-key-output').style.display = 'flex';
+    document.getElementById('product-key-output').classList.add('show');
     if (out) out.textContent = 'Clé prête à être distribuée.';
   } catch (error) {
     if (out) out.textContent = 'Connexion impossible avec le générateur.';

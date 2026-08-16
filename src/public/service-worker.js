@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.6.2-fortune-duration';
+const CACHE_VERSION = 'p4-shell-v3.6.4-product-keys';
 const APP_SHELL = [
   '/',
   '/index.html',
