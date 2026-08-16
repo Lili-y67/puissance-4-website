@@ -256,6 +256,9 @@ body{
 .preview-profile-main{flex:1;min-width:0}
 .preview-name-wrap{position:relative;min-height:34px;display:flex;align-items:center}
 .preview-profile-name{font-family:'Barlow Condensed',sans-serif;font-size:34px;line-height:.95;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.preview-name-wrap.has-nameplate{min-height:46px;padding:7px 16px;border-radius:12px;background:linear-gradient(110deg,rgba(255,214,10,.22),rgba(133,235,255,.18),rgba(191,90,242,.2));border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 0 20px rgba(255,255,255,.05),0 8px 20px rgba(0,0,0,.2)}
+.preview-profile-name.premium-rgb{color:transparent;background:linear-gradient(90deg,#ff5c7a,#ffd60a,#85ebff,#bf5af2,#ff5c7a);background-size:240% 100%;background-clip:text;-webkit-background-clip:text;animation:preview-rgb-name 3s linear infinite;text-shadow:none}
+@keyframes preview-rgb-name{to{background-position:240% 0}}
 .preview-profile-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .preview-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .preview-pill.vip{background:var(--yellow-soft);border:1px solid rgba(255,214,10,.3);color:var(--yellow)}
@@ -1726,11 +1729,14 @@ function getDisplayItem(pack) {
     return {
       ...item,
       badge: '<img src="/assets/crystal-badge.png" alt="" title="Crystal" style="width:18px;height:18px;vertical-align:-4px;object-fit:contain"> Crystal',
+      meta: 'Le rang mensuel avec les avantages VIP+, 20 gemmes hebdomadaires et les options Crystal.',
       features: [
         ['💠', 'Badge Crystal', 'Badge exclusif avec info au survol.'],
         ['💎', '20 gemmes par semaine', 'Gemmes donnees automatiquement chaque semaine.'],
         ['📣', 'Message connexion', 'Alerte custom globale quand tu arrives sur le site.'],
-        ['✨', 'Avantages VIP+', 'Acces VIP/VIP+ sans limite de temps pendant le mois Crystal.']
+        ['✨', 'Personnalisation VIP+', 'Nameplate, pseudo RGB, dégradés, emoji image, décoration et courbe ELO.'],
+        ['⏱️', 'Délais VIP+', '12 h pour les GIF et 24 h pour les styles, nameplates et décorations.'],
+        ['⚡', 'Boost quotidien', '+30 % ELO pendant 1 heure, une fois par jour.']
       ],
     };
   }
@@ -1738,10 +1744,15 @@ function getDisplayItem(pack) {
     return {
       ...item,
       badge: '⭐ VIP',
+      meta: 'Les outils de personnalisation de VIP+, avec des délais plus longs, pendant 30 jours.',
       features: [
-        ['🎭', 'Emoji custom', 'Choisis ton emoji de pion personnalisé.'],
-        ['🖼️', 'Avatar et bannière GIF', 'GIF autorisés sur ton profil avec cooldown de 24h.'],
-        ['⏱️', 'Boost quotidien', 'Une activation par jour, active pendant 1 heure à +20% ELO.']
+        ['🏷️', 'Nameplate', 'Plaque nominative modifiable toutes les 48 h.'],
+        ['🌈', 'Pseudo RGB et dégradés', 'Style du pseudo, seconde couleur et RGB, modifiables toutes les 48 h.'],
+        ['📈', 'Courbe ELO personnalisée', 'Couleur et dégradé de la courbe ELO, modifiables toutes les 48 h.'],
+        ['🧩', 'Pion et emoji image', 'Emoji image personnel et pion en dégradé.'],
+        ['✨', 'Décoration avatar', 'Décoration personnalisée ou issue des packs, changement toutes les 48 h.'],
+        ['🖼️', 'Avatar et bannière GIF', 'GIF jusqu’à 5 Mo, changement toutes les 24 h.'],
+        ['⚡', 'Boost quotidien', '+20 % ELO pendant 1 heure, une fois par jour.']
       ]
     };
   }
@@ -1749,10 +1760,15 @@ function getDisplayItem(pack) {
     return {
       ...item,
       badge: '⭐ VIP',
+      meta: 'Toutes les personnalisations VIP pendant 365 jours, avec les mêmes délais que le VIP mensuel.',
       features: [
         ['🗓️', '1 an complet', 'Le VIP dure 365 jours et peut être prolongé.'],
-        ['🎨', 'Emoji custom VIP', 'Même confort que le VIP mensuel pour ton pion.'],
-        ['💾', 'GIF médias', 'Avatar et bannière GIF avec cooldown de 24h.']
+        ['🏷️', 'Nameplate', 'Plaque nominative modifiable toutes les 48 h.'],
+        ['🌈', 'Pseudo RGB et dégradés', 'Style complet du pseudo et du pion, délai de 48 h.'],
+        ['📈', 'Courbe ELO personnalisée', 'Couleur et dégradé personnalisés toutes les 48 h.'],
+        ['🧩', 'Emoji image et décoration', 'Import d’emoji et décoration avatar avec délai de 48 h.'],
+        ['💾', 'GIF médias', 'Avatar et bannière GIF avec délai de 24 h.'],
+        ['⚡', 'Boost quotidien', '+20 % ELO pendant 1 heure, une fois par jour.']
       ]
     };
   }
@@ -1761,11 +1777,15 @@ function getDisplayItem(pack) {
       ...item,
       badge: '💎 VIP+',
       duration: 'À vie',
+      meta: 'Les mêmes outils premium que VIP, à vie, avec des délais divisés par deux et un boost supérieur.',
       features: [
-        ['🧩', 'Emoji image', 'Import d’un emoji image 128x128 pour tes pions.'],
-        ['🖼️', 'GIF rapides', 'Avatar et bannière GIF avec cooldown réduit à 12h.'],
-        ['🌈', 'Double couleur', 'Ajoute une seconde couleur pour un vrai dégradé.'],
-        ['✨', 'Décorations avatar', 'Import personnalisé VIP+ et sélecteur pour les packs achetés.']
+        ['🏷️', 'Nameplate rapide', 'Plaque nominative modifiable toutes les 24 h.'],
+        ['🌈', 'Pseudo RGB et dégradés', 'Style complet du pseudo et du pion, modifiable toutes les 24 h.'],
+        ['📈', 'Courbe ELO personnalisée', 'Couleur et dégradé de la courbe toutes les 24 h. RGB animé réservé à Perso.'],
+        ['🧩', 'Pion et emoji image', 'Emoji image personnel et pion en dégradé.'],
+        ['✨', 'Décoration avatar', 'Décoration personnalisée ou issue des packs, changement toutes les 24 h.'],
+        ['🖼️', 'GIF rapides', 'Avatar et bannière GIF jusqu’à 5 Mo, changement toutes les 12 h.'],
+        ['⚡', 'Boost quotidien', '+30 % ELO pendant 1 heure, une fois par jour.']
       ]
     };
   }
@@ -1822,8 +1842,9 @@ function buildPreviewState(item) {
   const primary = randomHexColor();
   let secondary = randomHexColor();
   while (secondary === primary) secondary = randomHexColor();
-  if (item.key === 'vip_1m' || item.key === 'vip_1y') secondary = primary;
-  const hasDecoration = item.key === 'vip_plus' || item.key === 'perso';
+  const premiumStyleKeys = new Set(['crystal', 'vip_1m', 'vip_1y', 'vip_plus', 'perso']);
+  const hasPremiumStyle = premiumStyleKeys.has(item.key);
+  const hasDecoration = hasPremiumStyle;
   const hasPseudoBanner = item.key === 'perso';
   return {
     name,
@@ -1832,6 +1853,7 @@ function buildPreviewState(item) {
     avatar: randomPreviewAvatar(name),
     decoration: hasDecoration ? pickRandom(previewDecorations, '') : '',
     banner: hasPseudoBanner ? pickRandom(previewProfileBanners, '') : pickRandom(previewProfileBanners, ''),
+    hasPremiumStyle,
     customRole: item.key === 'perso'
       ? { text: pickRandom(['LILI', 'MOON', 'STAR', 'LOVE'], 'LILI'), emoji: pickRandom(['💖', '🌙', '✨', '🦋'], '✨') }
       : null,
@@ -1936,10 +1958,10 @@ function renderPreviewShowcase(item) {
     return `<div class="preview-demo-card"><div class="preview-demo-label">Utilisation immédiate</div><div class="preview-demo-row"><div class="preview-demo-col"><div class="preview-demo-value">${escapeHtml(item.stat || '1')}</div><div class="preview-demo-unit">${escapeHtml(item.statSub || item.duration || '')}</div></div><div class="preview-demo-col right"><div class="preview-demo-label">Livraison</div><div class="preview-demo-value" style="font-size:30px;color:var(--green)">Instantanée</div><div class="preview-demo-unit">sur ton compte</div></div></div></div>`;
   }
   const state = buildPreviewState(item);
-  const avatarStyle = item.key === 'vip_plus' || item.key === 'perso'
+  const avatarStyle = state.hasPremiumStyle
     ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
     : `background:${state.primary};`;
-  const tokenStyle = item.key === 'vip_plus' || item.key === 'perso'
+  const tokenStyle = state.hasPremiumStyle
     ? `background:linear-gradient(135deg, ${state.primary}, ${state.secondary});`
     : `background:${state.primary};`;
   const decoration = state.decoration
@@ -1959,22 +1981,22 @@ function renderPreviewShowcase(item) {
         ${decoration}
       </div>
       <div class="preview-profile-main">
-        <div class="preview-name-wrap">
-          <div class="preview-profile-name" style="position:relative;z-index:1;padding:0 10px">${escapeHtml(state.name)}</div>
+        <div class="preview-name-wrap ${state.hasPremiumStyle ? 'has-nameplate' : ''}">
+          <div class="preview-profile-name ${state.hasPremiumStyle ? 'premium-rgb' : ''}" style="position:relative;z-index:1;padding:0 10px">${escapeHtml(state.name)}</div>
         </div>
         <div class="preview-profile-badges">
           <span class="preview-pill ${item.theme}">${item.badge}</span>
           ${customRole}
         </div>
         <div class="preview-meta-row">
-          <div class="${item.key === 'vip_plus' || item.key === 'perso' ? 'preview-token-duo' : 'preview-token'}">
+          <div class="${state.hasPremiumStyle ? 'preview-token-duo' : 'preview-token'}">
             <div class="preview-token-dot" style="${tokenStyle}"></div>
-            ${(item.key === 'vip_plus' || item.key === 'perso') ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
+            ${state.hasPremiumStyle ? `<div class="preview-token-dot" style="background:${state.secondary}"></div>` : ''}
           </div>
-          <div class="preview-chip">${item.key === 'perso' ? 'Deco active' : item.key === 'vip_plus' ? 'Deco active' : 'GIF actif'}</div>
+          <div class="preview-chip">${state.hasPremiumStyle ? 'Nameplate · RGB · Dégradé' : 'Profil standard'}</div>
         </div>
-        <div class="preview-subline">${item.key === 'perso' ? 'Deco aleatoire, badge custom et rendu gradient' : item.key === 'vip_plus' ? 'Déco aléatoire, GIF feel et double couleur' : 'Emoji custom, avatar GIF et boost quotidien'}</div>
-        <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' ? 'Activer Boost VIP+ (+30%)' : 'Activer Boost VIP (+20%)'}</div>
+        <div class="preview-subline">${item.key === 'perso' ? 'Badge custom, décoration et rendu RGB' : state.hasPremiumStyle ? 'Nameplate, pseudo RGB, courbe ELO custom, GIF et décoration' : 'Aperçu du profil'}</div>
+        <div class="preview-boost-btn" ${boostClass}>${item.key === 'perso' ? 'Activer Boost Perso (+30% · 2h)' : item.key === 'vip_plus' || item.key === 'crystal' ? `Activer Boost ${item.key === 'crystal' ? 'Crystal' : 'VIP+'} (+30% · 1h)` : 'Activer Boost VIP (+20% · 1h)'}</div>
       </div>
     </div>
   </div>`;

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.6.5-inline-key-fortune-rank';
+const CACHE_VERSION = 'p4-shell-v3.6.6-premium-previews';
 const APP_SHELL = [
   '/',
   '/index.html',
