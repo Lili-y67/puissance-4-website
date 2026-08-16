@@ -4717,26 +4717,26 @@ function normalizeFortuneBoostMultiplier(value) {
 }
 
 function normalizeFortuneBoostDuration(value) {
-  const hours = Math.round(Number(value));
-  return Number.isFinite(hours) && hours >= 1 && hours <= 24 ? hours : null;
+  const days = Math.round(Number(value));
+  return Number.isFinite(days) && days >= 1 && days <= 24 ? days : null;
 }
 
 function buildCustomShopItem(pack, body = {}) {
   if (pack === 'fortune_boost_custom') {
     const multiplier = normalizeFortuneBoostMultiplier(body.customMultiplier);
-    const durationHours = normalizeFortuneBoostDuration(body.customDurationHours);
-    if (multiplier === null || durationHours === null) return null;
-    const price = 1500 + ((multiplier - 1) * 500) + ((durationHours - 1) * 250);
+    const durationDays = normalizeFortuneBoostDuration(body.customDurationDays);
+    if (multiplier === null || durationDays === null) return null;
+    const price = 1500 + ((multiplier - 1) * 500) + ((durationDays - 1) * 250);
     return {
-      key: `fortune_boost_${String(multiplier).padStart(2, '0')}_${String(durationHours).padStart(2, '0')}h`,
+      key: `fortune_boost_${String(multiplier).padStart(2, '0')}_${String(durationDays).padStart(2, '0')}d`,
       displayKey: 'fortune_boost_custom',
       category: 'fortune_boosters',
-      label: `Boost Roue Fortune x${multiplier} · ${durationHours}h`,
+      label: `Boost Roue Fortune x${multiplier} · ${durationDays} jour${durationDays > 1 ? 's' : ''}`,
       price,
       gemPrice: Math.max(1, Math.ceil(price * 0.45)),
       boostType: 'fortune',
       multiplier,
-      durationHours,
+      durationDays,
       isCustom: true,
     };
   }
@@ -4805,12 +4805,13 @@ function resolveInventoryShopItem(itemKey) {
   const key = String(itemKey || '').trim();
   if (!key) return null;
   if (SHOP_ITEMS[key]) return SHOP_ITEMS[key];
-  const fortuneMatch = key.match(/^fortune_boost_(\d{2})(?:_(\d{2})h)?$/);
+  const fortuneMatch = key.match(/^fortune_boost_(\d{2})(?:_(\d{2})([dh]))?$/);
   if (fortuneMatch) {
     const multiplier = normalizeFortuneBoostMultiplier(Number(fortuneMatch[1]));
     if (multiplier === null) return null;
-    const durationHours = normalizeFortuneBoostDuration(Number(fortuneMatch[2] || 1));
-    return { key, category: 'fortune_boosters', label: `Boost Roue Fortune x${multiplier} · ${durationHours}h`, boostType: 'fortune', multiplier, durationHours, isCustom: true };
+    const durationValue = normalizeFortuneBoostDuration(Number(fortuneMatch[2] || 1));
+    const legacyHours = fortuneMatch[3] === 'h';
+    return { key, category: 'fortune_boosters', label: `Boost Roue Fortune x${multiplier} · ${durationValue}${legacyHours ? 'h' : ` jour${durationValue > 1 ? 's' : ''}`}`, boostType: 'fortune', multiplier, durationDays: legacyHours ? null : durationValue, durationHours: legacyHours ? durationValue : null, isCustom: true };
   }
   const eloMatch = key.match(/^elo_custom_(\d+)_(\d+)$/);
   if (eloMatch) {

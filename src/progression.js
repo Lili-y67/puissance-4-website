@@ -30,14 +30,15 @@ function consumePersonalFortuneBooster(db, playerId) {
   `).all(playerId);
   const selected = rows
     .map(row => {
-      const match = String(row.item_key).match(/^fortune_boost_(\d{2})(?:_(\d{2})h)?$/);
-      return { ...row, multiplier: Number(match?.[1] || 0), durationHours: Number(match?.[2] || 1) };
+      const match = String(row.item_key).match(/^fortune_boost_(\d{2})(?:_(\d{2})([dh]))?$/);
+      const duration = Number(match?.[2] || 1);
+      return { ...row, multiplier: Number(match?.[1] || 0), durationMs: duration * (match?.[3] === 'h' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000) };
     })
     .filter(row => row.multiplier >= 1 && row.multiplier <= 5)
-    .sort((a, b) => b.multiplier - a.multiplier || b.durationHours - a.durationHours)[0];
+    .sort((a, b) => b.multiplier - a.multiplier || b.durationMs - a.durationMs)[0];
   if (!selected) return { multiplier: 1, expiresAt: 0, activated: false };
   db.prepare(`UPDATE player_shop_items SET quantity = quantity - 1 WHERE player_id = ? AND item_key = ? AND quantity > 0`).run(playerId, selected.item_key);
-  const expiresAt = now + Math.max(1, Math.min(24, selected.durationHours)) * 60 * 60 * 1000;
+  const expiresAt = now + selected.durationMs;
   db.prepare(`
     INSERT INTO player_fortune_boosts (player_id, multiplier, expires_at, updated_at)
     VALUES (?, ?, ?, ?)

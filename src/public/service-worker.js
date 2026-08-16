@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.6.8-fantasy-fonts';
+const CACHE_VERSION = 'p4-shell-v3.7.0-market-trend';
 const APP_SHELL = [
   '/',
   '/index.html',

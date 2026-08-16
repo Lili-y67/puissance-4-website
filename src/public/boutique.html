@@ -509,6 +509,7 @@ body{
         <button class="active" type="button" data-range="history" onclick="setExchangeChartRange('history')">24 h</button>
         <button type="button" data-range="hourly" onclick="setExchangeChartRange('hourly')">Prévision 12 h</button>
         <button type="button" data-range="long" onclick="setExchangeChartRange('long')">Prévision 7 j</button>
+        <button class="exchange-rgb-toggle" id="exchange-rgb-toggle" type="button" onclick="toggleExchangeChartRgb()" aria-pressed="false">🌈 RGB</button>
       </div>
       <div class="exchange-chart" id="exchange-chart"><canvas id="exchange-canvas" aria-label="Graphique interactif du cours des gemmes"></canvas><div class="exchange-tooltip" id="exchange-tooltip"></div></div>
       <div class="exchange-forecast-note" id="exchange-forecast-note">Passe la souris sur la courbe pour afficher un cours précis.</div>
@@ -987,7 +988,7 @@ body{background:var(--bg);overflow-x:hidden}
 .exchange-copy h2{margin:12px 0 7px;font:900 38px 'Barlow Condensed',sans-serif;text-transform:uppercase}.exchange-copy p{color:var(--muted);line-height:1.55}
 .exchange-rates{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:18px}.exchange-rates div{padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.03)}.exchange-rates span{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}.exchange-rates strong{display:block;margin-top:5px;font:900 20px 'Barlow Condensed',sans-serif;color:var(--yellow)}
 .exchange-chart-wrap,.exchange-desk{padding:17px;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(5,6,14,.48)}.exchange-chart-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}.exchange-chart-head strong.up{color:var(--green)}.exchange-chart-head strong.down{color:var(--red)}
-.exchange-chart-tabs{display:flex;gap:5px;margin-top:10px}.exchange-chart-tabs button{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.025);color:var(--muted);font:800 10px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-chart-tabs button.active{border-color:rgba(133,235,255,.25);background:rgba(133,235,255,.1);color:var(--blue)}
+.exchange-chart-tabs{display:flex;gap:5px;margin-top:10px}.exchange-chart-tabs button{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:rgba(255,255,255,.025);color:var(--muted);font:800 10px 'Barlow Condensed',sans-serif;cursor:pointer}.exchange-chart-tabs button.active{border-color:rgba(133,235,255,.25);background:rgba(133,235,255,.1);color:var(--blue)}.exchange-chart-tabs .exchange-rgb-toggle{margin-left:auto}.exchange-chart-tabs .exchange-rgb-toggle.active{color:#fff;border-color:rgba(255,255,255,.3);background:linear-gradient(100deg,rgba(255,45,85,.25),rgba(255,214,10,.22),rgba(48,209,88,.22),rgba(133,235,255,.24),rgba(179,107,255,.25));box-shadow:0 0 18px rgba(179,107,255,.14)}
 .exchange-chart{position:relative;height:165px;margin-top:5px}.exchange-chart canvas{display:block;width:100%;height:100%;cursor:crosshair}.exchange-tooltip{position:absolute;z-index:3;display:none;pointer-events:none;padding:7px 9px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:#f7f7fb;color:#10111c;font:800 11px 'Barlow Condensed',sans-serif;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.28)}.exchange-forecast-note{margin-top:4px;font-size:10px;color:var(--muted)}
 .preview-product-hero{position:relative;height:190px;display:grid;place-items:center;margin-bottom:14px;border:0;border-radius:0;overflow:visible;background:transparent}.preview-product-hero img{width:auto;height:auto;max-width:72%;max-height:184px;object-fit:contain;filter:drop-shadow(0 18px 25px rgba(0,0,0,.42))}.preview-product-chip{position:absolute;left:13px;top:13px;padding:7px 10px;border-radius:999px;background:rgba(8,9,20,.82);border:1px solid rgba(255,255,255,.1);font:900 11px 'Barlow Condensed',sans-serif;text-transform:uppercase}.preview-actions{display:grid;grid-template-columns:1fr 1.4fr;gap:9px;margin-top:12px}.preview-actions button{min-height:48px}
 #preview-features{display:flex!important;flex-direction:column;gap:10px}#preview-features .feature{display:flex!important;padding:13px;border-radius:15px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06)}
@@ -1293,12 +1294,12 @@ function getDynamicBoosterItem(pack) {
       key: 'fortune_boost_custom', type: 'booster', family: 'fortune', theme: 'booster-coin',
       art: '/assets/fortune-boost-ticket.png?v=2', badge: '🎟️ ROUE', duration: `x${multiplier}`,
       title: 'Boost Roue Fortune', stat: `x${multiplier}`,
-      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier} pendant ${customBoosterState.fortuneDuration}h`,
+      statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier} pendant ${customBoosterState.fortuneDuration} jour${customBoosterState.fortuneDuration > 1 ? 's' : ''}`,
       meta: 'Choisis la puissance et la durée appliquées à toutes tes récompenses de la Roue Fortune.',
       features: [
         ['🎡', 'Activation automatique', 'La durée démarre lors de ton prochain lancer.'],
         ['📈', 'Puissance réglable', 'De x1 à x5, avec +500 coins par niveau.'],
-        ['⏱️', 'Durée libre', 'De 1 à 24 heures ; les lancers restent boostés pendant toute la période.']
+        ['⏱️', 'Durée libre', 'De 1 à 24 jours ; les lancers restent boostés pendant toute la période.']
       ]
     };
   }
@@ -2130,8 +2131,8 @@ function renderCustomBoosterCard(pack) {
         <div class="duration">${totalText}</div>
       </div>
       <h2>${item.title}</h2>
-      ${item.art ? `<div class="rank-art"><img src="${escapeHtml(item.art)}" alt="Badge ${escapeHtml(item.title)}" loading="lazy">${item.durationArt ? `<img class="rank-duration-art" src="${escapeHtml(item.durationArt)}" alt="${escapeHtml(item.duration)}">` : ''}</div>` : ''}
       <div class="meta">${item.meta}</div>
+      ${item.art ? `<div class="rank-art"><img src="${escapeHtml(item.art)}" alt="Badge ${escapeHtml(item.title)}" loading="lazy">${item.durationArt ? `<img class="rank-duration-art" src="${escapeHtml(item.durationArt)}" alt="${escapeHtml(item.duration)}">` : ''}</div>` : ''}
       <div class="config-shell">
         <div class="config-topline">
           <div>
@@ -2156,9 +2157,9 @@ function renderCustomBoosterCard(pack) {
           </div>
         </div>
         ${isFortune ? `<div class="config-slider-wrap">
-          <div class="config-price-note">Durée choisie : <strong>${customBoosterState.fortuneDuration} heure${customBoosterState.fortuneDuration > 1 ? 's' : ''}</strong></div>
+          <div class="config-price-note">Durée choisie : <strong>${customBoosterState.fortuneDuration} jour${customBoosterState.fortuneDuration > 1 ? 's' : ''}</strong></div>
           <input class="config-slider coins" type="range" min="1" max="24" step="1" value="${customBoosterState.fortuneDuration}" oninput="updateCustomBooster('fortuneDuration', this.value)">
-          <div class="config-scale"><span>1h</span><span>+250 coins / heure</span><span>24h</span></div>
+          <div class="config-scale"><span>1 jour</span><span>+250 coins / jour</span><span>24 jours</span></div>
         </div>` : ''}
         <div class="config-bullets">
           <div class="config-bullet"><strong>Base tarifaire</strong><span>${isFortune ? 'x1 = 1500 coins, puis +500 par niveau' : isGlobal ? (isElo ? '+0.1 = 2500 coins' : 'x2 = 5000 coins') : isElo ? '+0.1 = 750 coins' : 'x1 = 600 coins'}</span></div>
@@ -2419,6 +2420,7 @@ let exchangeDirection = 'coins_to_gems';
 let exchangeCountdownTimer = null;
 let exchangeChartRange = 'history';
 let exchangeChartPoints = [];
+let exchangeChartRgb = (() => { try { return localStorage.getItem('p4_exchange_chart_rgb') === '1'; } catch { return false; } })();
 
 async function loadExchangeQuote() {
   try {
@@ -2483,6 +2485,29 @@ function setExchangeChartRange(range) {
   drawExchangeChart();
 }
 
+function toggleExchangeChartRgb() {
+  exchangeChartRgb = !exchangeChartRgb;
+  try { localStorage.setItem('p4_exchange_chart_rgb', exchangeChartRgb ? '1' : '0'); } catch {}
+  syncExchangeChartRgbButton();
+  drawExchangeChart();
+}
+
+function syncExchangeChartRgbButton() {
+  const button = document.getElementById('exchange-rgb-toggle');
+  if (!button) return;
+  button.classList.toggle('active', exchangeChartRgb);
+  button.setAttribute('aria-pressed', exchangeChartRgb ? 'true' : 'false');
+  button.title = exchangeChartRgb ? 'Désactiver la courbe RGB' : 'Afficher une courbe arc-en-ciel';
+}
+
+function getExchangeSegmentColor(previous, current, index, total) {
+  if (exchangeChartRgb) return `hsl(${Math.round((index / Math.max(1, total - 1)) * 300)}, 92%, 64%)`;
+  const delta = Number(current?.mid || 0) - Number(previous?.mid || 0);
+  if (delta > 0) return '#30d158';
+  if (delta < 0) return '#ff4567';
+  return '#9da3b4';
+}
+
 function drawExchangeChart() {
   const canvas = document.getElementById('exchange-canvas');
   if (!canvas) return;
@@ -2521,12 +2546,14 @@ function drawExchangeChart() {
     ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
     ctx.fillStyle = 'rgba(244,244,251,.42)'; ctx.fillText(String(value), pad.left - 6, y);
   }
-  const gradient = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
-  gradient.addColorStop(0, exchangeChartRange === 'history' ? '#85ebff' : '#ffd60a');
-  gradient.addColorStop(1, exchangeChartRange === 'history' ? '#4d7cff' : '#ff7a45');
-  ctx.strokeStyle = gradient; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.lineWidth = 2.8; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   ctx.setLineDash(exchangeChartRange === 'history' ? [] : [7, 5]);
-  ctx.beginPath(); exchangeChartPoints.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.stroke(); ctx.setLineDash([]);
+  exchangeChartPoints.slice(1).forEach((point, offset) => {
+    const previous = exchangeChartPoints[offset];
+    ctx.strokeStyle = getExchangeSegmentColor(previous, point, offset + 1, exchangeChartPoints.length);
+    ctx.beginPath(); ctx.moveTo(previous.x, previous.y); ctx.lineTo(point.x, point.y); ctx.stroke();
+  });
+  ctx.setLineDash([]);
   const fill = ctx.createLinearGradient(0, pad.top, 0, height - pad.bottom);
   fill.addColorStop(0, exchangeChartRange === 'history' ? 'rgba(133,235,255,.22)' : 'rgba(255,214,10,.16)'); fill.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.beginPath(); exchangeChartPoints.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y)); ctx.lineTo(exchangeChartPoints.at(-1).x, height - pad.bottom); ctx.lineTo(exchangeChartPoints[0].x, height - pad.bottom); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
@@ -2538,6 +2565,7 @@ function drawExchangeChart() {
     canvas.addEventListener('mouseleave', () => { const tooltip = document.getElementById('exchange-tooltip'); if (tooltip) tooltip.style.display = 'none'; drawExchangeChart(); });
     window.addEventListener('resize', drawExchangeChart);
   }
+  syncExchangeChartRgbButton();
 }
 
 function onExchangeChartMove(event) {
@@ -2627,7 +2655,7 @@ function getCartSnapshot(pack, recipient = null) {
     art: item?.art || '',
     price: getCartPrice(pack),
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
-    durationHours: pack === 'fortune_boost_custom' ? customBoosterState.fortuneDuration : null,
+    durationDays: pack === 'fortune_boost_custom' ? customBoosterState.fortuneDuration : null,
     multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'fortune_boost_custom' ? customBoosterState.fortune : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
     icon: item?.type === 'rank' ? '♛' : item?.category === 'cosmetics' ? '✦' : item?.type === 'host' ? '◆' : '⚡',
     recipient: recipient ? {
@@ -2643,7 +2671,7 @@ function addToCart(pack, recipient = null) {
   const state = getCartEligibility(pack, { gift: !!recipient });
   if (state.disabled) return;
   const snapshot = getCartSnapshot(pack, recipient);
-  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationHours ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
+  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationDays ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
   if (shopCart.some(entry => entry.key === key)) {
     showStoreToast(recipient ? 'Ce cadeau est déjà dans ton panier' : 'Cet article est déjà dans ton panier');
     openCart();
@@ -2726,7 +2754,7 @@ function renderCart() {
     checkout.disabled = true;
     return;
   }
-  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}${entry.durationHours ? ` · ${entry.durationHours}h` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
+  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}${entry.durationDays ? ` · ${entry.durationDays} jour${entry.durationDays > 1 ? 's' : ''}` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
   const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
   const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
   const totalText = Object.entries(totals).map(([currency, amount]) => `${amount} ${currencyName(currency).toLowerCase()}`).join(' + ');
@@ -2773,7 +2801,7 @@ async function checkoutCart() {
     if (entry.pack === 'elo_custom') customBoosterState.elo = entry.multiplier;
     if (entry.pack === 'coin_custom') customBoosterState.coins = entry.multiplier;
     if (entry.pack === 'fortune_boost_custom') customBoosterState.fortune = entry.multiplier;
-    if (entry.pack === 'fortune_boost_custom') customBoosterState.fortuneDuration = entry.durationHours;
+    if (entry.pack === 'fortune_boost_custom') customBoosterState.fortuneDuration = entry.durationDays;
     if (entry.pack === 'global_elo_custom') customBoosterState.globalElo = entry.multiplier;
     if (entry.pack === 'global_coin_custom') customBoosterState.globalCoins = entry.multiplier;
     const ok = await purchasePack(entry.pack, entry.recipient?.pseudo || '', entry.recipient?.id || 0, { skipConfirm: true });
@@ -2852,7 +2880,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
               : pack === 'global_coin_custom'
                 ? Number(customBoosterState.globalCoins || 2)
                 : undefined,
-        customDurationHours: pack === 'fortune_boost_custom' ? Number(customBoosterState.fortuneDuration || 1) : undefined,
+        customDurationDays: pack === 'fortune_boost_custom' ? Number(customBoosterState.fortuneDuration || 1) : undefined,
         currency,
         coupon: coupon || undefined,
         giftTo: giftTo || undefined,
