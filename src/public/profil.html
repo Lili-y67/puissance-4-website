@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Profil</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=MedievalSharp&family=Metal+Mania&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Uncial+Antiqua&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Almendra:wght@400;700&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bruno+Ace+SC&family=Bungee&family=Caudex:wght@400;700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Cormorant+Unicase:wght@500;700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=Genos:wght@600;800&family=Grenze+Gotisch:wght@500;700&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=Macondo&family=MedievalSharp&family=Metal+Mania&family=Metamorphous&family=Michroma&family=Nova+Square&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Pirata+One&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Quintessential&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Syncopate:wght@400;700&family=Tomorrow:wght@500;700&family=Uncial+Antiqua&family=UnifrakturMaguntia&family=Zen+Dots&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -2084,6 +2084,21 @@ function getPseudoFontFamily(font) {
   if (key === 'creepster') return "'Creepster', cursive";
   if (key === 'fredericka') return "'Fredericka the Great', cursive";
   if (key === 'imfell') return "'IM Fell English SC', serif";
+  if (key === 'almendra') return "'Almendra', serif";
+  if (key === 'caudex') return "'Caudex', serif";
+  if (key === 'cormorantunicase') return "'Cormorant Unicase', serif";
+  if (key === 'grenzegotisch') return "'Grenze Gotisch', cursive";
+  if (key === 'macondo') return "'Macondo', cursive";
+  if (key === 'metamorphous') return "'Metamorphous', serif";
+  if (key === 'pirata') return "'Pirata One', cursive";
+  if (key === 'quintessential') return "'Quintessential', cursive";
+  if (key === 'brunoace') return "'Bruno Ace SC', sans-serif";
+  if (key === 'genos') return "'Genos', sans-serif";
+  if (key === 'michroma') return "'Michroma', sans-serif";
+  if (key === 'novasquare') return "'Nova Square', sans-serif";
+  if (key === 'syncopate') return "'Syncopate', sans-serif";
+  if (key === 'tomorrow') return "'Tomorrow', sans-serif";
+  if (key === 'zendots') return "'Zen Dots', sans-serif";
   if (key === 'mono') return "Consolas, 'Courier New', monospace";
   if (key === 'serif') return "Georgia, 'Times New Roman', serif";
   if (key === 'script') return "'Segoe Script', 'Brush Script MT', cursive";
@@ -2098,6 +2113,8 @@ const PSEUDO_FONT_GROUPS = [
   { label: 'Gaming / futuriste', fonts: [
     ['orbitron','Orbitron'], ['audiowide','Audiowide'], ['chakra','Chakra Petch'],
     ['pressstart','Press Start'], ['bungee','Bungee'], ['rubikglitch','Rubik Glitch'],
+    ['brunoace','Bruno Ace SC'], ['genos','Genos'], ['michroma','Michroma'],
+    ['novasquare','Nova Square'], ['syncopate','Syncopate'], ['tomorrow','Tomorrow'], ['zendots','Zen Dots'],
   ] },
   { label: 'Classe / premium', fonts: [
     ['playfair','Playfair Display'], ['cinzel','Cinzel'], ['abril','Abril Fatface'],
@@ -2108,6 +2125,9 @@ const PSEUDO_FONT_GROUPS = [
     ['luckiest','Luckiest Guy'], ['eaglelake','Eagle Lake'], ['uncial','Uncial Antiqua'],
     ['unifraktur','Unifraktur'], ['medieval','Medieval'], ['jacquard','Jacquard'],
     ['metalmania','Metal Mania'], ['creepster','Creepster'], ['imfell','IM Fell'],
+    ['almendra','Almendra'], ['caudex','Caudex'], ['cormorantunicase','Cormorant Unicase'],
+    ['grenzegotisch','Grenze Gotisch'], ['macondo','Macondo'], ['metamorphous','Metamorphous'],
+    ['pirata','Pirata One'], ['quintessential','Quintessential'],
   ] },
 ];
 const PSEUDO_FONT_RARITIES = {
@@ -2116,6 +2136,8 @@ const PSEUDO_FONT_RARITIES = {
   playfair: 'rare', cinzel: 'legendary', abril: 'legendary', prata: 'rare', bodoni: 'legendary', fredericka: 'epic',
   pacifico: 'epic', lobster: 'epic', permanent: 'legendary', luckiest: 'legendary',
   unifraktur: 'mythic', medieval: 'mythic', eaglelake: 'mythic', uncial: 'mythic', jacquard: 'mythic', metalmania: 'mythic', creepster: 'mythic', imfell: 'mythic',
+  almendra: 'epic', caudex: 'rare', cormorantunicase: 'legendary', grenzegotisch: 'mythic', macondo: 'epic', metamorphous: 'legendary', pirata: 'mythic', quintessential: 'legendary',
+  brunoace: 'legendary', genos: 'rare', michroma: 'mythic', novasquare: 'epic', syncopate: 'legendary', tomorrow: 'rare', zendots: 'mythic',
 };
 const PSEUDO_FONT_RARITY_LABELS = {
   all: 'Toutes',

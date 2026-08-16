@@ -1276,6 +1276,8 @@ const PSEUDO_FONT_OPTIONS = new Set([
   'pacifico', 'caveat', 'lobster', 'dancing', 'satisfy', 'permanent', 'shadows', 'luckiest',
   'eaglelake', 'uncial',
   'oswald', 'anton', 'teko', 'righteous',
+  'almendra', 'caudex', 'cormorantunicase', 'grenzegotisch', 'macondo', 'metamorphous', 'pirata', 'quintessential',
+  'brunoace', 'genos', 'michroma', 'novasquare', 'syncopate', 'tomorrow', 'zendots',
   'mono', 'serif', 'script',
 ]);
 const PSEUDO_FONT_CATALOG = [
@@ -1284,6 +1286,8 @@ const PSEUDO_FONT_CATALOG = [
   'playfair', 'cinzel', 'abril', 'prata', 'bodoni', 'fredericka',
   'pacifico', 'lobster', 'permanent', 'luckiest', 'eaglelake', 'uncial',
   'unifraktur', 'medieval', 'jacquard', 'metalmania', 'creepster', 'imfell',
+  'almendra', 'caudex', 'cormorantunicase', 'grenzegotisch', 'macondo', 'metamorphous', 'pirata', 'quintessential',
+  'brunoace', 'genos', 'michroma', 'novasquare', 'syncopate', 'tomorrow', 'zendots',
 ];
 const DECORATIONS_DIR = path.join(__dirname, 'public', 'decorations');
 const SEARCH_NAMEPLATES_DIR = path.join(__dirname, 'public', 'nameplates');

@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Puissance 4 - Boutique</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bungee&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=MedievalSharp&family=Metal+Mania&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Uncial+Antiqua&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Almendra:wght@400;700&family=Anton&family=Audiowide&family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@300;400;500;600;700&family=Bebas+Neue&family=Bodoni+Moda:wght@700;900&family=Bruno+Ace+SC&family=Bungee&family=Caudex:wght@400;700&family=Chakra+Petch:wght@700&family=Cinzel:wght@700&family=Cormorant+Unicase:wght@500;700&family=Creepster&family=Eagle+Lake&family=Fredericka+the+Great&family=Genos:wght@600;800&family=Grenze+Gotisch:wght@500;700&family=IM+Fell+English+SC&family=Jacquard+12&family=Lobster&family=Luckiest+Guy&family=Macondo&family=MedievalSharp&family=Metal+Mania&family=Metamorphous&family=Michroma&family=Nova+Square&family=Orbitron:wght@700;900&family=Pacifico&family=Permanent+Marker&family=Pirata+One&family=Playfair+Display:wght@700;900&family=Prata&family=Press+Start+2P&family=Quintessential&family=Righteous&family=Rubik+Glitch&family=Silkscreen:wght@700&family=Syncopate:wght@400;700&family=Tomorrow:wght@500;700&family=Uncial+Antiqua&family=UnifrakturMaguntia&family=Zen+Dots&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -947,6 +947,7 @@ body{background:var(--bg);overflow-x:hidden}
 .category-tab{min-height:48px;border-radius:12px}.category-tab.active{background:linear-gradient(135deg,rgba(255,214,10,.18),rgba(255,122,69,.10));border-color:rgba(255,214,10,.33);color:var(--yellow)}
 .grid,.cosmetic-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .card{min-height:0;border-radius:22px;background:linear-gradient(160deg,rgba(19,21,39,.98),rgba(8,9,19,.98))!important;background-image:none!important;box-shadow:0 18px 46px rgba(0,0,0,.24);isolation:isolate}
+.card.fortune-card{background:radial-gradient(circle at 50% 18%,rgba(255,159,10,.12),transparent 36%),linear-gradient(160deg,rgba(19,21,39,.99),rgba(8,9,19,.99))!important;background-image:radial-gradient(circle at 50% 18%,rgba(255,159,10,.12),transparent 36%),linear-gradient(160deg,rgba(19,21,39,.99),rgba(8,9,19,.99))!important}
 .card:hover{transform:translateY(-6px);box-shadow:0 28px 70px rgba(0,0,0,.36)}
 .card h2{font-size:32px}.card>.meta{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:45px}.duration{font-size:34px}.feature-list{display:none}
 .card .stat-line{margin-top:auto}.card-actions{display:grid;grid-template-columns:auto auto minmax(0,1fr)}
@@ -1290,7 +1291,7 @@ function getDynamicBoosterItem(pack) {
     const multiplier = Number(customBoosterState.fortune || 1);
     return {
       key: 'fortune_boost_custom', type: 'booster', family: 'fortune', theme: 'booster-coin',
-      art: '/assets/fortune-boost-ticket.png', badge: '🎟️ ROUE', duration: `x${multiplier}`,
+      art: '/assets/fortune-boost-ticket.png?v=2', badge: '🎟️ ROUE', duration: `x${multiplier}`,
       title: 'Boost Roue Fortune', stat: `x${multiplier}`,
       statSub: `${getCustomBoosterPrice(pack)} ${getCurrencyLabel()} pour x${multiplier} pendant ${customBoosterState.fortuneDuration}h`,
       meta: 'Choisis la puissance et la durée appliquées à toutes tes récompenses de la Roue Fortune.',
@@ -1632,7 +1633,12 @@ function getFontPreviewFamily(font) {
     permanent: "'Permanent Marker',cursive", luckiest: "'Luckiest Guy',cursive", eaglelake: "'Eagle Lake',cursive",
     uncial: "'Uncial Antiqua',cursive", unifraktur: "'UnifrakturMaguntia',cursive", medieval: "'MedievalSharp',cursive",
     jacquard: "'Jacquard 12',cursive", metalmania: "'Metal Mania',cursive", creepster: "'Creepster',cursive",
-    imfell: "'IM Fell English SC',serif",
+    imfell: "'IM Fell English SC',serif", almendra: "'Almendra',serif", caudex: "'Caudex',serif",
+    cormorantunicase: "'Cormorant Unicase',serif", grenzegotisch: "'Grenze Gotisch',cursive",
+    macondo: "'Macondo',cursive", metamorphous: "'Metamorphous',serif", pirata: "'Pirata One',cursive",
+    quintessential: "'Quintessential',cursive", brunoace: "'Bruno Ace SC',sans-serif", genos: "'Genos',sans-serif",
+    michroma: "'Michroma',sans-serif", novasquare: "'Nova Square',sans-serif", syncopate: "'Syncopate',sans-serif",
+    tomorrow: "'Tomorrow',sans-serif", zendots: "'Zen Dots',sans-serif",
   };
   return families[font] || "'Barlow Condensed',sans-serif";
 }
@@ -1800,6 +1806,14 @@ function getDisplayItem(pack) {
         ['📥', 'Replay HTML', 'Télécharge une partie en HTML autonome depuis le replay.'],
         ['🚀', 'Boost Perso', 'Activation spéciale de 2 heures à +30% ELO.']
       ]
+    };
+  }
+  if (pack === 'fortune_boost_custom') {
+    return {
+      ...item,
+      art: '/assets/fortune-boost-ticket.png?v=2',
+      badge: '🎟️ ROUE',
+      theme: 'booster-coin',
     };
   }
   if (String(item.type) === 'booster') {
@@ -2110,7 +2124,7 @@ function renderCustomBoosterCard(pack) {
   const leftScale = isElo ? '+0.1' : pack === 'global_coin_custom' ? 'x2' : 'x1';
   const rightScale = isElo ? '+1.0' : isFortune ? 'x5' : 'x10';
   return `
-    <article class="card ${item.theme}">
+    <article class="card ${item.theme} ${isFortune ? 'fortune-card' : ''}">
       <div class="tier">
         <span class="badge ${item.theme}">${item.badge}</span>
         <div class="duration">${totalText}</div>
