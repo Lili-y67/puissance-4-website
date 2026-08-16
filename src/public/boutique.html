@@ -410,7 +410,6 @@ body{
     </nav>
     <div class="nav-actions">
       <a class="btn" href="/profil">Mon profil</a>
-      <button class="btn product-key-trigger" type="button" onclick="openProductKeyModal()">🔑 Clé produit</button>
       <button class="btn cart-trigger" id="cart-trigger" type="button" aria-label="Ouvrir le panier" aria-controls="cart-overlay" aria-expanded="false">🛒 Panier <span class="cart-count" id="cart-count">0</span></button>
     </div>
   </div>
@@ -467,6 +466,14 @@ body{
                 <button id="coupon-validate-btn" type="button" class="promo-validate" onclick="validateCoupon()" disabled>Valider</button>
               </div>
               <div class="promo-help" id="coupon-status">Optionnel, appliqué au moment de confirmer l'achat.</div>
+            </div>
+            <div class="product-key-box">
+              <div class="promo-line">
+                <input id="product-key-input" class="promo-input" placeholder="EX : P4K-XXXX-XXXX" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')redeemProductKey()">
+                <button id="product-key-btn" type="button" class="promo-validate" onclick="redeemProductKey()">Utiliser</button>
+              </div>
+              <input id="product-key-target" class="promo-input product-key-target" placeholder="Destinataire facultatif · vide = mon compte">
+              <div class="promo-help" id="product-key-status">Ajoute immédiatement la récompense au compte choisi.</div>
             </div>
             <div id="coins-state" style="font-size:12px;color:var(--muted)">Connecte-toi pour acheter.</div>
           </div>
@@ -538,10 +545,6 @@ body{
   <section id="shop-host-section" class="grid" style="display:none"></section>
 
   <section id="shop-boosters-section" style="display:none;flex-direction:column;gap:18px;">
-    <div class="booster-column personal fortune-featured">
-      <div class="subsection-label">Roue Fortune</div>
-      <div class="grid" id="shop-fortune-boosters-grid"></div>
-    </div>
     <div class="boosters-row">
       <div class="booster-column personal">
         <div class="subsection-label">Boosters Perso</div>
@@ -649,23 +652,6 @@ body{
           <span>Il remet ton ELO à 1000 sans supprimer ton compte ni tes historiques visibles. À utiliser seulement si tu veux repartir proprement.</span>
         </div>
       </div>
-    </div>
-  </section>
-</div>
-
-<div class="key-redeem-overlay p4-modal-layer" id="product-key-modal" onclick="if(event.target===this)closeProductKeyModal()" aria-hidden="true">
-  <section class="key-redeem-modal" role="dialog" aria-modal="true" aria-labelledby="product-key-title">
-    <div class="key-redeem-head">
-      <div><div class="hero-kicker">Récompense secrète</div><h2 id="product-key-title">Utiliser une clé produit</h2></div>
-      <button class="cart-close" type="button" onclick="closeProductKeyModal()" aria-label="Fermer">×</button>
-    </div>
-    <div class="key-redeem-body">
-      <div class="key-redeem-icon">🔑</div>
-      <p>Entre la clé reçue pour ajouter immédiatement son contenu au compte choisi.</p>
-      <label>Clé produit<input id="product-key-input" class="promo-input" placeholder="P4K-XXXX-XXXX" autocomplete="off" oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')redeemProductKey()"></label>
-      <label>Destinataire <span>(optionnel)</span><input id="product-key-target" class="promo-input" placeholder="Vide = mon compte" autocomplete="off"></label>
-      <div class="key-redeem-status" id="product-key-status">Une clé est à usage unique. Vérifie bien le destinataire.</div>
-      <button id="product-key-btn" class="cart-checkout" type="button" onclick="redeemProductKey()">Utiliser la clé</button>
     </div>
   </section>
 </div>
@@ -951,7 +937,7 @@ body{background:var(--bg);overflow-x:hidden}
 .hero-side-title,.hero-side-list{display:none}
 .coins-panel{margin:0;padding:0;background:none;border:0;box-shadow:none}
 .wallet-row{grid-template-columns:1fr}.wallet-card{min-height:92px}
-.shop-controls{gap:12px}.product-key-box{display:none}
+.shop-controls{gap:12px}.product-key-box{display:block}
 .section-head{align-items:center;padding:12px 0 4px}
 .section-title{font-size:48px}.section-sub{font-size:15px}
 .category-tabs{position:sticky;top:93px;z-index:55;width:100%;display:grid;grid-template-columns:repeat(5,1fr);padding:7px;border-radius:18px;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(18px)}
@@ -1494,23 +1480,6 @@ async function validateCoupon() {
   }
 }
 
-function openProductKeyModal() {
-  const modal = document.getElementById('product-key-modal');
-  if (!modal) return;
-  modal.classList.add('open');
-  modal.setAttribute('aria-hidden', 'false');
-  document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('product-key-input')?.focus(), 120);
-}
-
-function closeProductKeyModal() {
-  const modal = document.getElementById('product-key-modal');
-  if (!modal) return;
-  modal.classList.remove('open');
-  modal.setAttribute('aria-hidden', 'true');
-  document.body.style.overflow = '';
-}
-
 function setProductKeyStatus(message, type = '') {
   const el = document.getElementById('product-key-status');
   if (!el) return;
@@ -1555,7 +1524,7 @@ async function redeemProductKey() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Utiliser la clé';
+      btn.textContent = 'Utiliser';
     }
   }
 }
@@ -2240,7 +2209,10 @@ function renderShop() {
         <div class="feature"><div class="feature-emoji">✨</div><div class="feature-copy"><strong>Perso</strong><span>10 minutes</span></div></div>
       </div>
     </article>`;
-  document.getElementById('shop-ranks-section').innerHTML = respawnComparison + ['fortune_ticket','crystal','vip_1m','vip_1y','vip_plus','perso','elo_reset'].map(renderCard).join('');
+  document.getElementById('shop-ranks-section').innerHTML = respawnComparison
+    + ['fortune_ticket','crystal','vip_1m','vip_1y','vip_plus','perso'].map(renderCard).join('')
+    + renderCard('elo_reset')
+    + renderCustomBoosterCard('fortune_boost_custom');
   document.getElementById('shop-cosmetics-section').innerHTML = Object.values(SHOP_ITEMS)
     .filter(item => item?.category === 'cosmetics')
     .map(renderCosmeticCard)
@@ -2252,7 +2224,6 @@ function renderShop() {
     renderCustomBoosterCard('elo_custom'),
     renderCustomBoosterCard('coin_custom'),
   ].join('');
-  document.getElementById('shop-fortune-boosters-grid').innerHTML = renderCustomBoosterCard('fortune_boost_custom');
   document.getElementById('shop-coin-boosters-grid').innerHTML = [
     renderCustomBoosterCard('global_elo_custom'),
     renderCustomBoosterCard('global_coin_custom'),
@@ -2781,7 +2752,7 @@ async function checkoutCart() {
   if (!shopCart.length) closeCart();
 }
 
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') { closeCart(); closeProductKeyModal(); } });
+document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeCart(); });
 
 async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
   const token = localStorage.getItem('token');
