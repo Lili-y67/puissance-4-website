@@ -3423,6 +3423,17 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
         <div class="bot-dialog" style="background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;width:90%;max-width:380px;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 64px rgba(0,0,0,0.6);">
           <div style="font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:900;letter-spacing:2px;color:var(--text);">&#129302; MODE IA</div>
 
+          <label for="bot-variant" style="display:flex;flex-direction:column;gap:7px;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;">
+            Variante
+            <select id="bot-variant" onchange="setBotVariant(this.value)" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);font:700 14px 'Barlow',sans-serif;outline:none;cursor:pointer;">
+              <option value="classic">Puissance 4 classique</option>
+              <option value="color_swap">Couleurs inversées · BetaGame</option>
+              <option value="recolor">Recolorisation · BetaGame</option>
+              <option value="tetris">Tetris · BetaGame</option>
+            </select>
+            <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques, sans effet expérimental.</span>
+          </label>
+
           <!-- Tabs -->
           <div style="display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:3px;">
             <button id="bot-tab-preset" onclick="setBotTab('preset')"
@@ -4537,6 +4548,7 @@ function openBotModal(options = {}) {
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
   syncModalPageLock();
+  setBotVariant(options.variant || localStorage.getItem('bot_variant') || 'classic');
   if (options.tab === 'elo') {
     const slider = document.getElementById('bot-elo-slider');
     if (slider) slider.value = String(initialElo);
@@ -4545,6 +4557,22 @@ function openBotModal(options = {}) {
     setBotTab('preset');
   }
   updateBotEloDisplay(initialElo);
+}
+
+const BOT_VARIANT_DESCRIPTIONS = {
+  classic: 'Les règles classiques, sans effet expérimental.',
+  color_swap: 'Chaque joueur peut inverser toutes les couleurs une fois. Cette action consomme son tour.',
+  recolor: 'Tous les 5 à 10 coups, plusieurs pions choisis au hasard changent de camp.',
+  tetris: 'Tous les 6 à 10 coups, la rangée du bas disparaît puis la gravité s’applique.'
+};
+
+function setBotVariant(value) {
+  const variant = Object.hasOwn(BOT_VARIANT_DESCRIPTIONS, value) ? value : 'classic';
+  const select = document.getElementById('bot-variant');
+  const desc = document.getElementById('bot-variant-desc');
+  if (select) select.value = variant;
+  if (desc) desc.textContent = BOT_VARIANT_DESCRIPTIONS[variant];
+  localStorage.setItem('bot_variant', variant);
 }
 
 function closeBotModal() {
@@ -4612,6 +4640,13 @@ function updateBotEloDisplay(elo) {
 
 function startVsIA(difficulty = 'hard', targetElo = null) {
   closeBotModal();
+  const selectedVariant = document.getElementById('bot-variant')?.value || 'classic';
+  if (selectedVariant !== 'classic' && Object.hasOwn(BOT_VARIANT_DESCRIPTIONS, selectedVariant)) {
+    const betaDifficulty = difficulty === 'medium' || difficulty === 'elo' ? 'normal' : difficulty;
+    sessionStorage.setItem('p4_beta_ai_level', betaDifficulty);
+    location.href = `/beta-game?mode=${encodeURIComponent(selectedVariant)}&ai=1`;
+    return;
+  }
   // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
   const guestPlayer = saved ? JSON.parse(saved) : {

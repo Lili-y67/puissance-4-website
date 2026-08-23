@@ -166,6 +166,7 @@ class GameManager {
       if (wins.length === 2) return this._end(state, null, [], 'position_draw', lastMove, { rotation });
     }
 
+
     if (state.variant === 'mission') {
       const completed = this._missionComplete(state.board, playerNum, state.missions[playerNum]);
       if (completed) return this._end(state, playerNum, completed, 'mission', lastMove);
@@ -191,6 +192,7 @@ class GameManager {
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
     };
   }
+
 
   _captureConquest(state, playerNum, lastMove) {
     const segments = state.board.getSegments(playerNum);
