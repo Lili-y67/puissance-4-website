@@ -3427,9 +3427,13 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
             Variante
             <select id="bot-variant" onchange="setBotVariant(this.value)" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);font:700 14px 'Barlow',sans-serif;outline:none;cursor:pointer;">
               <option value="classic">Puissance 4 classique</option>
-              <option value="color_swap">Couleurs inversées · BetaGame</option>
-              <option value="recolor">Recolorisation · BetaGame</option>
-              <option value="tetris">Tetris · BetaGame</option>
+              <option value="rotate">Plateau rotatif</option>
+              <option value="anti">Anti-Puissance 4</option>
+              <option value="bomb">Puissance Bombe</option>
+              <option value="mission">Mission personnelle</option>
+              <option value="simultaneous">Placement simultané</option>
+              <option value="fog">Brouillard de Guerre</option>
+              <option value="conquest">Conquête</option>
             </select>
             <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques, sans effet expérimental.</span>
           </label>
@@ -4560,10 +4564,14 @@ function openBotModal(options = {}) {
 }
 
 const BOT_VARIANT_DESCRIPTIONS = {
-  classic: 'Les règles classiques, sans effet expérimental.',
-  color_swap: 'Chaque joueur peut inverser toutes les couleurs une fois. Cette action consomme son tour.',
-  recolor: 'Tous les 5 à 10 coups, plusieurs pions choisis au hasard changent de camp.',
-  tetris: 'Tous les 6 à 10 coups, la rangée du bas disparaît puis la gravité s’applique.'
+  classic: 'Les règles classiques du Puissance 4.',
+  rotate: 'Le plateau tourne tous les 4 coups et les jetons retombent avec la gravité.',
+  anti: 'Chaque alignement compte contre toi : termine avec le moins de lignes possible.',
+  bomb: 'Chaque joueur possède une bombe capable de détruire les jetons voisins.',
+  mission: 'Accomplis ton objectif personnel avant l’ordinateur.',
+  simultaneous: 'Choisis ta colonne en secret avant la résolution simultanée des deux coups.',
+  fog: 'Les jetons disparaissent visuellement dans la brume : mémorise la grille.',
+  conquest: 'Capture des alignements pour marquer des points et vider les lignes formées.'
 };
 
 function setBotVariant(value) {
@@ -4642,9 +4650,9 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
   closeBotModal();
   const selectedVariant = document.getElementById('bot-variant')?.value || 'classic';
   if (selectedVariant !== 'classic' && Object.hasOwn(BOT_VARIANT_DESCRIPTIONS, selectedVariant)) {
-    const betaDifficulty = difficulty === 'medium' || difficulty === 'elo' ? 'normal' : difficulty;
-    sessionStorage.setItem('p4_beta_ai_level', betaDifficulty);
-    location.href = `/beta-game?mode=${encodeURIComponent(selectedVariant)}&ai=1`;
+    const practiceDifficulty = difficulty === 'medium' || difficulty === 'elo' ? 'normal' : difficulty;
+    sessionStorage.setItem('p4_practice_ai_level', practiceDifficulty);
+    location.href = `/game/bot-practice?mode=${encodeURIComponent(selectedVariant)}&ai=1`;
     return;
   }
   // Créer un joueur invité si pas connecté

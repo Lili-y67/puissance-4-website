@@ -2307,6 +2307,10 @@ app.get('/api/beta-game/session', (req, res) => {
   res.json({ valid: true, expiresAt });
 });
 
+app.get('/game/bot-practice', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'beta-game.html'));
+});
+
 app.get('/profil.html', renderProfilePage);
 app.get('/leaderboard.html', renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
 app.get('/players.html', renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
