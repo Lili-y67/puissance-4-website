@@ -4,11 +4,11 @@
 <script src="/performance-bootstrap.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puissance 4 - 1v1 local</title>
+  <title>Puissance 4 - Jeu local</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}.hidden{display:none!important}
 :root{--bg:#06060e;--surface:#0d0d1c;--surface2:#15152d;--border:rgba(255,255,255,.08);--text:#f1f1f7;--muted:rgba(241,241,247,.52);--red:#ff2d55;--yellow:#ffd60a;--blue:#85ebff;--green:#30d158}
 body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(255,45,85,.18),transparent 30%),radial-gradient(circle at 82% 18%,rgba(255,214,10,.14),transparent 28%),linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px),var(--bg);background-size:auto,auto,48px 48px,48px 48px;color:var(--text);font-family:Barlow,sans-serif;overflow-x:hidden}
 .page{width:min(1180px,calc(100% - 24px));margin:0 auto;padding:22px 0 42px}
@@ -21,7 +21,7 @@ body{min-height:100vh;background:radial-gradient(circle at 18% 12%,rgba(255,45,8
 h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transform:uppercase;letter-spacing:-1px;margin-bottom:12px}.accent{color:var(--yellow);text-shadow:0 0 24px rgba(255,214,10,.28)}
 .sub{color:var(--muted);line-height:1.55;max-width:520px}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--border);border-radius:999px;padding:7px 10px;background:rgba(255,255,255,.045);font:800 12px Barlow;color:var(--muted)}
 .setup{display:grid;gap:12px;margin-top:20px}.player-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:rgba(255,255,255,.035)}.player-box label{display:block;font:900 11px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.row{display:grid;grid-template-columns:1fr auto auto auto;gap:10px}.time-row{grid-template-columns:1fr}.input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--surface);color:var(--text);padding:12px 13px;font:800 15px Barlow}.emoji-input{width:62px;text-align:center;font-size:22px;padding:8px 6px}.color{width:52px;height:44px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:var(--surface);cursor:pointer;padding:3px}.color.secondary{filter:saturate(1.25);box-shadow:0 0 16px rgba(133,235,255,.08)}.setup-hint{margin-top:8px;font-size:12px;line-height:1.45;color:var(--muted)}
-.score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}.score.four-score{grid-template-columns:repeat(5,1fr)}.score-card{border:1px solid var(--border);border-radius:16px;background:rgba(255,255,255,.04);padding:12px;text-align:center}.score-card b{display:block;font:900 32px "Barlow Condensed"}.score-card span{font:900 10px "Barlow Condensed";letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
 .local-replays{margin-top:14px;border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.035);padding:13px;display:none;gap:8px;flex-direction:column}.local-replays.show{display:flex}.local-replays-title{font:900 12px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted)}.local-replay-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.055);border-radius:13px;padding:9px 10px;background:rgba(0,0,0,.12)}.local-replay-row strong{display:block;font:900 15px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase}.local-replay-row span{font-size:12px;color:var(--muted)}.local-replay-row button{border:1px solid rgba(133,235,255,.24);border-radius:10px;background:rgba(133,235,255,.08);color:var(--blue);padding:8px 10px;font:900 12px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;cursor:pointer}
 .game{padding:18px}.status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:14px}.turn{border:1px solid var(--border);border-radius:18px;background:rgba(255,255,255,.045);padding:13px 15px}.turn small{display:block;font:900 10px "Barlow Condensed";letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}.turn strong{font:900 24px "Barlow Condensed";letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:8px}.turn-clock{margin-top:7px;font:900 12px "Barlow Condensed";letter-spacing:1.5px;text-transform:uppercase;color:var(--blue)}.turn-clock.warning{color:var(--yellow)}.turn-clock.danger{color:var(--red);animation:pulse-online .75s ease-in-out infinite}.token-dot{display:inline-block;width:16px;height:16px;border-radius:50%;flex:0 0 auto;background:var(--piece-gradient,currentColor);box-shadow:0 0 18px currentColor}.token-dot.emoji{width:24px;height:24px;border-radius:0;background:transparent!important;font-size:20px;line-height:1;filter:drop-shadow(0 0 8px currentColor)}.token-dot.emoji canvas{width:100%;height:100%;display:block}
 .actions{display:flex;gap:8px}.btn{border:1px solid var(--border);border-radius:14px;padding:12px 14px;font:900 13px "Barlow Condensed";letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;color:var(--text);background:rgba(255,255,255,.045)}.btn.primary{border-color:rgba(255,45,85,.38);background:linear-gradient(135deg,var(--red),#ff4f70);box-shadow:0 14px 30px rgba(255,45,85,.22)}.btn:disabled{opacity:.45;cursor:not-allowed}
@@ -34,7 +34,7 @@ body.p4-wallpaper-mode .board-shell{background:linear-gradient(180deg,rgba(18,18
 body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.06),rgba(8,9,27,.82) 66%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.09),inset 0 9px 20px rgba(0,0,0,.48)}
 @keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
 .footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
-@media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}}
+@media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}.score.four-score{grid-template-columns:repeat(2,1fr)}.score.four-score .score-draw-card{grid-column:1/-1;grid-row:3}}
 @media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr 1fr}.row .input:first-child{grid-column:1/-1}.color,.emoji-input{width:100%}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
@@ -55,8 +55,8 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
   <section class="hero">
     <aside class="panel intro">
       <div class="eyebrow">Mode canapé</div>
-      <h1>1v1 <span class="accent">Local</span></h1>
-      <p class="sub">Aucun compte, aucun ELO, aucune base de données. Deux personnes sur le même écran, chacun son tour, parfait pour jouer en IRL vite fait.</p>
+       <h1>Jeu <span class="accent">Local</span></h1>
+       <p class="sub">Aucun compte, aucun ELO, aucune base de données. Deux à quatre personnes sur le même écran, chacun son tour, parfait pour jouer en IRL vite fait.</p>
       <div class="chips">
         <div class="chip">Hors ligne côté compte</div>
         <div class="chip">Même écran</div>
@@ -65,7 +65,7 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
       <div class="setup">
         <div class="player-box variant-setup">
           <label>Variante locale</label>
-          <select class="input" id="local-variant" onchange="onVariantChange()"><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option></select>
+          <select class="input" id="local-variant" onchange="onVariantChange()"><option value="classic">Classique</option><option value="four">4 joueurs</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option></select>
           <div class="variant-missions hidden" id="variant-missions"><select class="input" id="mission-p1"><option value="square">J1 · Carré 2×2</option><option value="center">J1 · 4 cases centrales</option><option value="high4">J1 · Ligne de 4 hors du bas</option></select><select class="input" id="mission-p2"><option value="square">J2 · Carré 2×2</option><option value="center">J2 · 4 cases centrales</option><option value="high4">J2 · Ligne de 4 hors du bas</option></select></div>
           <div class="setup-hint" id="variant-hint">Règles classiques : le premier alignement de 4 gagne.</div>
         </div>
@@ -76,6 +76,14 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
         <div class="player-box">
           <label>Joueur 2</label>
           <div class="row"><input class="input" id="p2-name" value="Joueur 2" maxlength="16"><input class="emoji-input input" id="p2-emoji" placeholder="💎" maxlength="4" title="Emoji de pion"><input class="color" id="p2-color" type="color" value="#ffd60a" title="Couleur 1"><input class="color secondary" id="p2-color2" type="color" value="#85ebff" title="Couleur 2"></div>
+        </div>
+        <div class="player-box four-only hidden">
+          <label>Joueur 3</label>
+          <div class="row"><input class="input" id="p3-name" value="Joueur 3" maxlength="16"><input class="emoji-input input" id="p3-emoji" placeholder="🌊" maxlength="4" title="Emoji de pion"><input class="color" id="p3-color" type="color" value="#32ade6" title="Couleur 1"><input class="color secondary" id="p3-color2" type="color" value="#64d2ff" title="Couleur 2"></div>
+        </div>
+        <div class="player-box four-only hidden">
+          <label>Joueur 4</label>
+          <div class="row"><input class="input" id="p4-name" value="Joueur 4" maxlength="16"><input class="emoji-input input" id="p4-emoji" placeholder="🔮" maxlength="4" title="Emoji de pion"><input class="color" id="p4-color" type="color" value="#bf5af2" title="Couleur 1"><input class="color secondary" id="p4-color2" type="color" value="#30d158" title="Couleur 2"></div>
         </div>
         <div class="player-box">
           <label>Temps de réflexion maximum</label>
@@ -93,10 +101,12 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
           <div class="setup-hint">Facultatif. Si le chrono tombe à zéro, un coup automatique facile est joué dans une colonne légale.</div>
         </div>
       </div>
-      <div class="score">
+      <div class="score" id="score-board">
         <div class="score-card"><b id="score-p1">0</b><span>Joueur 1</span></div>
-        <div class="score-card"><b id="score-draw">0</b><span>Nuls</span></div>
         <div class="score-card"><b id="score-p2">0</b><span>Joueur 2</span></div>
+        <div class="score-card four-only hidden"><b id="score-p3">0</b><span>Joueur 3</span></div>
+        <div class="score-card four-only hidden"><b id="score-p4">0</b><span>Joueur 4</span></div>
+        <div class="score-card score-draw-card"><b id="score-draw">0</b><span>Nuls</span></div>
       </div>
       <div class="local-replays" id="local-replays">
         <div class="local-replays-title">Replays temporaires</div>
@@ -131,7 +141,7 @@ let grid = [];
 let current = 1;
 let ended = false;
 let history = [];
-let scores = { 1: 0, 2: 0, draw: 0 };
+let scores = { 1: 0, 2: 0, 3: 0, 4: 0, draw: 0 };
 let nextStarter = 1;
 let localReplays = [];
 let localReplayTimer = null;
@@ -166,11 +176,11 @@ function playerName(player) {
 }
 
 function playerColor(player) {
-  return document.getElementById(`p${player}-color`).value || (player === 1 ? '#ff2d55' : '#ffd60a');
+  return document.getElementById(`p${player}-color`)?.value || ({1:'#ff2d55',2:'#ffd60a',3:'#32ade6',4:'#bf5af2'}[player]);
 }
 
 function playerColor2(player) {
-  return document.getElementById(`p${player}-color2`)?.value || (player === 1 ? '#ff8fab' : '#85ebff');
+  return document.getElementById(`p${player}-color2`)?.value || ({1:'#ff8fab',2:'#85ebff',3:'#64d2ff',4:'#30d158'}[player]);
 }
 
 function playerGradient(player) {
@@ -186,11 +196,11 @@ function playerEmoji(player) {
 
 function initGrid() {
   variant = document.getElementById('local-variant')?.value || 'classic';
-  ROWS = variant === 'anti' ? 9 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
-  COLS = variant === 'anti' ? 9 : 7;
+  ROWS = variant === 'anti' ? 9 : variant === 'four' ? 8 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
+  COLS = variant === 'anti' ? 9 : variant === 'four' ? 10 : 7;
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
-  current = nextStarter;
+   current = variant === 'four' ? Math.min(4, nextStarter) : Math.min(2, nextStarter);
   ended = false;
   autoMoveLocked = false;
   moveCount = 0;
@@ -211,9 +221,11 @@ function initGrid() {
 
 function onVariantChange() {
   const selected = document.getElementById('local-variant')?.value || 'classic';
-  const hints = { classic:'Le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Grille 9×9 : le joueur avec le moins de lignes gagne.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.', fog:'Chaque pion disparaît dans la brume après 1,25 seconde.', conquest:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.' };
+  const hints = { classic:'Le premier alignement de 4 gagne.', four:'Quatre joueurs sur une grande grille 10×8 : le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Grille 9×9 : le joueur avec le moins de lignes gagne.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.', fog:'Chaque pion disparaît dans la brume après 1,25 seconde.', conquest:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.' };
   document.getElementById('variant-hint').textContent = hints[selected];
   document.getElementById('variant-missions').classList.toggle('hidden', selected !== 'mission');
+  document.querySelectorAll('.four-only').forEach(el => el.classList.toggle('hidden', selected !== 'four'));
+  document.getElementById('score-board').classList.toggle('four-score', selected === 'four');
   newRound();
 }
 
@@ -272,7 +284,7 @@ function handleTurnTimeout() {
 }
 
 function shouldFlipBoard() {
-  return mobileTurnView.matches && current === 2 && !ended;
+  return variant !== 'four' && mobileTurnView.matches && current === 2 && !ended;
 }
 
 function renderBoard(winCells = []) {
@@ -460,7 +472,7 @@ function detonateLocal(row,col){if(variant!=='bomb'||!bombArmed||!bombs[current]
 
 function finishLocal(winner, cells = [], label = 'Victoire locale') { ended=true;scores[winner]++;nextStarter=winner;saveLocalReplay(winner,cells);renderBoard(cells);updateScores();updateStatus(`${playerName(winner)} gagne !`,label);clearTurnTimer(); }
 
-function advanceTurn(options={}){current=current===1?2:1;renderBoard();const label=variant==='anti'?`Anti-P4 · lignes ${antiScores[1]} — ${antiScores[2]}`:variant==='rotate'?`Rotation dans ${4-(moveCount%4)} coups`:variant==='simultaneous'?'Placement simultané':variant==='conquest'?`Conquêtes ${conquestPoints[1]} — ${conquestPoints[2]}`:'Tour actuel';updateStatus(options.automatic?`${playerName(current)} reprend la main`:null,label);startTurnTimer();}
+function advanceTurn(options={}){current=variant==='four'?(current%4)+1:(current===1?2:1);renderBoard();const label=variant==='four'?'4 joueurs · premier alignement de 4':variant==='anti'?`Anti-P4 · lignes ${antiScores[1]} — ${antiScores[2]}`:variant==='rotate'?`Rotation dans ${4-(moveCount%4)} coups`:variant==='simultaneous'?'Placement simultané':variant==='conquest'?`Conquêtes ${conquestPoints[1]} — ${conquestPoints[2]}`:'Tour actuel';updateStatus(options.automatic?`${playerName(current)} reprend la main`:null,label);startTurnTimer();}
 
 function playColumn(col, options = {}) {
   if (ended) return;
@@ -567,7 +579,7 @@ function newRound() {
 
 function resetAll() {
   stopLocalReplayPlayback();
-  scores = { 1: 0, 2: 0, draw: 0 };
+  scores = { 1: 0, 2: 0, 3: 0, 4: 0, draw: 0 };
   nextStarter = 1;
   localReplays = [];
   updateScores();
@@ -578,6 +590,8 @@ function resetAll() {
 function updateScores() {
   document.getElementById('score-p1').textContent = scores[1];
   document.getElementById('score-p2').textContent = scores[2];
+  document.getElementById('score-p3').textContent = scores[3];
+  document.getElementById('score-p4').textContent = scores[4];
   document.getElementById('score-draw').textContent = scores.draw;
 }
 
@@ -592,6 +606,8 @@ function saveLocalReplay(winner, winCells = []) {
     players: {
       1: { name: playerName(1), color: playerColor(1), color2: playerColor2(1), emoji: playerEmoji(1) },
       2: { name: playerName(2), color: playerColor(2), color2: playerColor2(2), emoji: playerEmoji(2) },
+      3: { name: playerName(3), color: playerColor(3), color2: playerColor2(3), emoji: playerEmoji(3) },
+      4: { name: playerName(4), color: playerColor(4), color2: playerColor2(4), emoji: playerEmoji(4) },
     },
     createdAt: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
   };
@@ -611,7 +627,7 @@ function renderLocalReplays() {
       <div class="local-replay-row">
         <div>
           <strong>${label}</strong>
-          <span>${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')} · ${replay.moves.length} coups - ${escapeHtml(replay.createdAt)}</span>
+          <span>${({classic:'Classique',four:'4 joueurs',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')} · ${replay.moves.length} coups - ${escapeHtml(replay.createdAt)}</span>
         </div>
         <button type="button" onclick="playLocalReplay(${index})">Replay</button>
       </div>
@@ -628,8 +644,9 @@ function stopLocalReplayPlayback() {
 }
 
 function applyReplayPlayerSettings(replay) {
-  [1, 2].forEach(player => {
+  [1, 2, 3, 4].forEach(player => {
     const data = replay.players[player];
+    if (!data) return;
     document.getElementById(`p${player}-name`).value = data.name;
     document.getElementById(`p${player}-color`).value = data.color;
     document.getElementById(`p${player}-color2`).value = data.color2;
@@ -645,8 +662,10 @@ function playLocalReplay(index) {
   applyReplayPlayerSettings(replay);
   variant = replay.variant || 'classic';
   document.getElementById('local-variant').value = variant;
-  ROWS = variant === 'anti' ? 9 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
-  COLS = variant === 'anti' ? 9 : 7;
+  ROWS = variant === 'anti' ? 9 : variant === 'four' ? 8 : variant === 'rotate' || variant === 'mission' ? 7 : 6;
+  COLS = variant === 'anti' ? 9 : variant === 'four' ? 10 : 7;
+  document.querySelectorAll('.four-only').forEach(el => el.classList.toggle('hidden', variant !== 'four'));
+  document.getElementById('score-board').classList.toggle('four-score', variant === 'four');
   boardEl.style.gridTemplateColumns = `repeat(${COLS},1fr)`;
   grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   history = [];
@@ -664,12 +683,12 @@ function playLocalReplay(index) {
         renderBoard(replay.winCells || []);
         current = replay.winner || 1;
         updateStatus(replay.winner ? `${replay.players[replay.winner].name} gagne !` : 'Match nul', 'Replay terminé');
-        if (turnClock) turnClock.textContent = `Replay · ${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')}`;
+        if (turnClock) turnClock.textContent = `Replay · ${({classic:'Classique',four:'4 joueurs',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')}`;
         return;
       }
       grid = frame.map(line => [...line]);
       renderBoard();
-      updateStatus(`Étape ${step + 1} / ${frames.length}`, `Replay · ${({classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')}`);
+      updateStatus(`Étape ${step + 1} / ${frames.length}`, `Replay · ${({classic:'Classique',four:'4 joueurs',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête'}[replay.variant]||'Classique')}`);
       step += 1;
       localReplayTimer = setTimeout(next, 520);
       return;
@@ -687,7 +706,7 @@ function playLocalReplay(index) {
     }
     grid[move.row][move.col] = move.player;
     history.push({ ...move });
-    current = move.player === 1 ? 2 : 1;
+    current = variant === 'four' ? (move.player % 4) + 1 : (move.player === 1 ? 2 : 1);
     renderBoard();
     updateStatus(`Coup ${step + 1} / ${replay.moves.length}`, 'Replay local');
     step += 1;
@@ -696,7 +715,7 @@ function playLocalReplay(index) {
   localReplayTimer = setTimeout(next, 250);
 }
 
-['p1-name','p2-name','p1-color','p2-color','p1-color2','p2-color2','p1-emoji','p2-emoji'].forEach(id => {
+['p1-name','p2-name','p3-name','p4-name','p1-color','p2-color','p3-color','p4-color','p1-color2','p2-color2','p3-color2','p4-color2','p1-emoji','p2-emoji','p3-emoji','p4-emoji'].forEach(id => {
   document.getElementById(id).addEventListener('input', () => {
     renderBoard();
     updateStatus(ended ? statusText.textContent : null, ended ? statusLabel.textContent : 'Tour actuel');

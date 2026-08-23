@@ -3435,7 +3435,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
               <option value="fog">Brouillard de Guerre</option>
               <option value="conquest">Conquête</option>
             </select>
-            <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques, sans effet expérimental.</span>
+            <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques du Puissance 4.</span>
           </label>
 
           <!-- Tabs -->
@@ -4646,21 +4646,26 @@ function updateBotEloDisplay(elo) {
   if (descEl) descEl.textContent = info.desc;
 }
 
-function startVsIA(difficulty = 'hard', targetElo = null) {
+async function startVsIA(difficulty = 'hard', targetElo = null) {
   closeBotModal();
   const selectedVariant = document.getElementById('bot-variant')?.value || 'classic';
-  if (selectedVariant !== 'classic' && Object.hasOwn(BOT_VARIANT_DESCRIPTIONS, selectedVariant)) {
-    const practiceDifficulty = difficulty === 'medium' || difficulty === 'elo' ? 'normal' : difficulty;
-    sessionStorage.setItem('p4_practice_ai_level', practiceDifficulty);
-    location.href = `/game/bot-practice?mode=${encodeURIComponent(selectedVariant)}&ai=1`;
-    return;
-  }
   // Créer un joueur invité si pas connecté
   const saved = localStorage.getItem('player');
-  const guestPlayer = saved ? JSON.parse(saved) : {
+  let guestPlayer = saved ? JSON.parse(saved) : {
     id: 0, pseudo: 'Toi', elo: 1200,
     color: '#ff2d55', avatar: ''
   };
+  if (selectedVariant !== 'classic') {
+    try {
+      const auth = await ensureFriendlyDuelAuth();
+      guestPlayer = auth.player;
+      sessionStorage.setItem('player', JSON.stringify(auth.player));
+    } catch (error) {
+      const errorBox = document.getElementById('error-msg');
+      if (errorBox) errorBox.textContent = error.message || 'Impossible de lancer la partie contre le bot.';
+      return;
+    }
+  }
   const botColor = randomColor(guestPlayer.color);
   const botName  = 'Puissance4-AI';
   // Si mode ELO, mapper vers la profondeur
@@ -4670,7 +4675,7 @@ function startVsIA(difficulty = 'hard', targetElo = null) {
   if (difficulty === 'medium') finalTargetElo = 1200;
   if (difficulty === 'hard')   finalTargetElo = 3500;
   sessionStorage.setItem('player', JSON.stringify(guestPlayer));
-  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty: finalDifficulty, targetElo: finalTargetElo }));
+  sessionStorage.setItem('vs_ia', JSON.stringify({ botName, botColor, difficulty: finalDifficulty, targetElo: finalTargetElo, variant: selectedVariant }));
   location.href = '/game/bot';
 }
 

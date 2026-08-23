@@ -2053,7 +2053,9 @@ window.addEventListener('DOMContentLoaded', () => {
   if (iaData) {
     sessionStorage.removeItem('vs_ia');
     if (history.replaceState) history.replaceState(null, '', '/game/bot');
-    startVsIA(JSON.parse(iaData));
+    const iaOptions = JSON.parse(iaData);
+    if (iaOptions.variant && iaOptions.variant !== 'classic') startVariantVsIA(iaOptions);
+    else startVsIA(iaOptions);
   } else {
     // Récupérer le gameId depuis l'URL /game/:id ou depuis sessionStorage
     const urlGameId = location.pathname.split('/').pop();
@@ -2080,7 +2082,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Socket ────────────────────────────────────────────────────────────────────
-function connectSocket(pendingMatch) {
+function connectSocket(pendingMatch, botPractice = null) {
   socket = io({ transports: ['websocket', 'polling'] });
 
   socket.on('connect', () => {
@@ -2091,6 +2093,11 @@ function connectSocket(pendingMatch) {
 
   socket.on('identified', (p) => {
     myPlayer = p;
+    if (botPractice) {
+      socket.emit('bot_practice_start', botPractice);
+      botPractice = null;
+      return;
+    }
     if (pendingMatch) {
       socket.emit('rejoin_game', { gameId: pendingMatch.gameId });
       // isRejoin = true si la partie était déjà en cours (pas de startsIn, ou URL /game/:id)
@@ -2250,6 +2257,11 @@ function connectSocket(pendingMatch) {
     }
     if (message) appendChatMessage({ system: true, message });
   });
+  socket.on('bot_practice_error', ({ message } = {}) => {
+    sessionStorage.setItem('no_auto_queue', '1');
+    alert(message || 'Impossible de lancer la partie contre le bot.');
+    location.href = '/';
+  });
   socket.on('color_updated', ({ playerId, color }) => {
     // Adversaire a changé sa couleur en cours de partie
     if (!lobbyData) return;
@@ -2345,7 +2357,8 @@ function setupLobby(data) {
   mySide    = data.yourSide;
   applyLatencyUpdate(data.latencies || {});
   applyBoardPalette(`game-${data.gameId || ''}-${data.players?.[1]?.id || ''}-${data.players?.[2]?.id || ''}`);
-  setGameMode(String(data.gameType || '').toLowerCase() === 'friendly' ? 'friendly' : 'ranked');
+  const incomingGameMode = String(data.gameType || '').toLowerCase();
+  setGameMode(incomingGameMode === 'bot' ? 'bot' : incomingGameMode === 'friendly' ? 'friendly' : 'ranked');
   applyMoveTimerMeta(data.moveTimeSeconds || 0);
   updateGameDiscordPresence({ players: data.players, moves: 0 });
 
@@ -2460,7 +2473,7 @@ function startGame(data) {
   applyPlayerCardVisual(2, data.players[2]);
   applyLatencyUpdate(data.latencies || {});
 
-  currentTurn = 1;
+  currentTurn = Number(data.current) === 2 ? 2 : 1;
   gameOver    = false;
   currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   renderBoard();
@@ -2566,7 +2579,7 @@ function applyFogVisibility(revealedRow = null, revealedCol = null) {
 function playMove(col) {
   if (gameOver || (currentVariant !== 'simultaneous' && currentTurn !== mySide) || simultaneousWaiting) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
-  if (iaMode) { iaPlayHuman(col); return; }
+  if (iaMode && !serverBotMode) { iaPlayHuman(col); return; }
   socket.emit('play_move', { col });
 }
 
@@ -3160,7 +3173,7 @@ async function onGameOver(data) {
 
   const replayBtn = document.getElementById('btn-replay');
   if (replayBtn) {
-    if (data.allowReplay === false || Number(data.gameId) <= 0) {
+    if (serverBotMode || data.allowReplay === false || Number(data.gameId) <= 0) {
       replayBtn.style.display = 'none';
       replayBtn.removeAttribute('href');
     } else {
@@ -3170,10 +3183,19 @@ async function onGameOver(data) {
   }
   document.getElementById('result-overlay').classList.add('show');
   sessionStorage.removeItem('match');
-  if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
+  if (serverBotMode) {
+    const reason = document.getElementById('result-reason');
+    if (reason) reason.textContent = isDraw ? 'Partie nulle contre le bot.' : isWinner ? 'Tu as battu le bot !' : 'Le bot a gagné cette fois.';
+    if (eloEl) eloEl.textContent = '';
+    if (summaryEl) summaryEl.innerHTML = '';
+    if (metaEl) metaEl.innerHTML = '';
+    const primary = document.querySelector('.btn-action.primary');
+    if (primary) primary.onclick = replayBotViaHome;
+  } else if (history.replaceState) history.replaceState(null, '', '/game/' + data.gameId);
 }
 
 let iaMode = false;
+let serverBotMode = false;
 let iaGrid = [];
 let iaDifficulty = 'hard';
 let iaTargetElo  = 3500;
@@ -3192,8 +3214,19 @@ function replayBotViaHome() {
   location.href = '/';
 }
 
+function startVariantVsIA({ difficulty = 'hard', targetElo = null, variant = 'rotate' }) {
+  iaMode = true;
+  serverBotMode = true;
+  iaDifficulty = difficulty;
+  iaTargetElo = targetElo || (difficulty === 'easy' ? 500 : difficulty === 'medium' ? 1200 : 3500);
+  setGameMode('bot');
+  setGameActionState('playing');
+  connectSocket(null, { difficulty, targetElo: iaTargetElo, variant });
+}
+
 async function startVsIA({ botName, botColor, difficulty = 'hard', targetElo = null }) {
   iaMode = true;
+  serverBotMode = false;
   setGameMode('bot');
   setGameActionState('playing');
   applyBoardPalette(`bot-${Date.now()}-${Math.random()}`);

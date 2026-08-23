@@ -1929,7 +1929,8 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
       else result = gm.playMove(player.socketId, col);
       if (result?.gameId) {
         if (result.type === 'game_over') emitGameOver(result);
-        else io.to('game:' + result.gameId).emit('move_played', result);
+        else if (result.type === 'bomb') io.to('game:' + result.gameId).emit('bomb_used', result);
+        else if (result.type !== 'simultaneous_wait') io.to('game:' + result.gameId).emit('move_played', result);
         if (result.type === 'game_over') {
           const now = Date.now();
           for (const sideId of [state.players?.[1]?.id, state.players?.[2]?.id]) {
@@ -1976,6 +1977,71 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked', va
   broadcastPresenceCounts(true);
   if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
   return state;
+}
+
+function pickPracticeBot(difficulty = 'hard', targetElo = null) {
+  const preferredPseudo = difficulty === 'easy'
+    ? 'P4-Bot-Nova'
+    : difficulty === 'medium'
+      ? 'P4-Bot-Orion'
+      : difficulty === 'hard'
+        ? 'P4-Bot-Zenith'
+        : '';
+  if (preferredPseudo) {
+    const preferred = pQ.getByPseudo.get(preferredPseudo);
+    if (preferred && builtinBotIds.has(Number(preferred.id))) return preferred;
+  }
+  const target = Number(targetElo || 1200);
+  return [...builtinBotIds]
+    .map(id => pQ.getById.get(id))
+    .filter(Boolean)
+    .sort((a, b) => Math.abs(Number(a.bot_skill || a.elo || 1200) - target) - Math.abs(Number(b.bot_skill || b.elo || 1200) - target))[0] || null;
+}
+
+function startPracticeVsBot(socket, options = {}) {
+  const player = socket.playerData && getPlayerRecord(socket.playerData.id);
+  if (!player) return { error: 'Session joueur invalide.' };
+  if (gm.socketToGame.has(socket.id)) return { error: 'Une partie est déjà en cours.' };
+  const bot = pickPracticeBot(String(options.difficulty || 'hard'), options.targetElo);
+  if (!bot) return { error: 'Aucun bot officiel disponible.' };
+
+  const p1 = buildPlayableSocketPayload(player);
+  p1.socketId = socket.id;
+  const p2 = buildBotGamePayload(bot, `practice-bot:${bot.id}:${crypto.randomUUID()}`);
+  assignDistinctMatchColors(p1, p2);
+  const state = gm.create(p1, p2, {
+    gameType: 'friendly',
+    variant: normalizeVariant(options.variant),
+    persist: false,
+    moveTimeSeconds: 180,
+    current: Math.random() < 0.5 ? 1 : 2,
+  });
+  state.gameType = 'bot';
+  prepareBuiltinBotVariant(state);
+  socket.join('game:' + state.id);
+  clearPlayerQueues(player.id);
+
+  socket.emit('match_found', {
+    gameId: state.id,
+    variant: state.variant,
+    variantConfig: state.variantConfig,
+    missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
+    selectedMissionId: null,
+    missionReady: state.variant !== 'mission',
+    conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
+    gameType: 'bot',
+    moveTimeSeconds: 180,
+    current: state.current,
+    players: {
+      1: { id: p1.id, pseudo: p1.pseudo, elo: p1.elo, color: p1.color, avatar: p1.avatar || '', shape: p1.shape || 'circle', token_emoji_image: p1.token_emoji_image || '', token_rgb: Number(p1.pseudo_rgb || 0) === 1, avatar_decoration: p1.avatar_decoration || '', search_nameplate: p1.search_nameplate || '', profile_banner: p1.profile_banner || '', color_secondary: p1.color_secondary || '' },
+      2: { id: p2.id, pseudo: p2.pseudo, elo: p2.elo, color: p2.color, avatar: p2.avatar || '', shape: p2.shape || 'circle', token_emoji_image: p2.token_emoji_image || '', token_rgb: Number(p2.pseudo_rgb || 0) === 1, avatar_decoration: p2.avatar_decoration || '', search_nameplate: p2.search_nameplate || '', profile_banner: p2.profile_banner || '', color_secondary: p2.color_secondary || '' },
+    },
+    latencies: {},
+    startsIn: 3,
+    yourSide: 1,
+  });
+  if (state.variant !== 'mission') scheduleBuiltinBotTurn(state.id, 3500);
+  return { state, bot };
 }
 
 function prepareBuiltinBotVariant(state) {
@@ -2305,10 +2371,6 @@ app.get('/api/beta-game/session', (req, res) => {
     return res.status(401).json({ valid: false });
   }
   res.json({ valid: true, expiresAt });
-});
-
-app.get('/game/bot-practice', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'beta-game.html'));
 });
 
 app.get('/profil.html', renderProfilePage);
@@ -10995,6 +11057,11 @@ io.on('connection', socket => {
     socket.emit('tournament_queue_left');
   });
 
+  socket.on('bot_practice_start', (options = {}) => {
+    const result = startPracticeVsBot(socket, options);
+    if (result.error) socket.emit('bot_practice_error', { message: result.error });
+  });
+
   socket.on('play_move', ({ col }) => {
     const result = gm.playMove(socket.id, col);
     if (result.error) return socket.emit('error', { message: result.error });
@@ -11002,7 +11069,7 @@ io.on('connection', socket => {
     if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
     if (result.type === 'game_over') emitGameOver(result);
     const activeState = result.gameId ? gm.games.get(result.gameId) : null;
-    if (result.type === 'move' && activeState && builtinBotIds.has(Number(activeState.players?.[activeState.current]?.id))) {
+    if (['move', 'simultaneous_wait', 'conquest_capture', 'conquest_reset'].includes(result.type) && activeState) {
       scheduleBuiltinBotTurn(result.gameId, 500);
     }
     // Notifier les spectateurs live. Les fins de partie le font via emitGameOver().
@@ -11014,6 +11081,7 @@ io.on('connection', socket => {
     if (result.error) return socket.emit('game_action_error', { message: result.error });
     if (result.type === 'game_over') return emitGameOver(result);
     io.to('game:' + result.gameId).emit('bomb_used', result);
+    scheduleBuiltinBotTurn(result.gameId, 500);
     emitLiveUpdate();
   });
 
@@ -11022,6 +11090,7 @@ io.on('connection', socket => {
     if (result.error) return socket.emit('game_action_error', { message: result.error });
     socket.emit('mission_confirmed', result);
     io.to('game:' + result.gameId).emit('mission_ready_state', { side: result.side, ready: result.ready });
+    if (result.ready) scheduleBuiltinBotTurn(result.gameId, 3500);
   });
 
   socket.on('game_chat_send', ({ message } = {}) => {
