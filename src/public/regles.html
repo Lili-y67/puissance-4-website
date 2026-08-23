@@ -145,6 +145,7 @@ html,body{min-height:100%;background:
       <div class="tip"><span class="tip-icon">🎯</span><span><strong>Mission personnelle (7×7).</strong> Chaque joueur choisit sa propre mission avant le premier coup. La mission reste personnelle, puis le premier à la réaliser gagne.</span></div>
       <div class="tip"><span class="tip-icon">⚡</span><span><strong>Placement simultané (6×7).</strong> Les deux joueurs choisissent leur colonne sans voir le choix adverse. Les deux jetons sont ensuite posés ; la priorité alterne à chaque manche.</span></div>
       <div class="tip"><span class="tip-icon">🌫️</span><span><strong>Brouillard de Guerre (6×7).</strong> Un jeton nouvellement posé reste visible pendant 1,25 seconde, puis sa couleur disparaît dans la brume. Mémorise les coups et aligne 4 jetons avant ton adversaire.</span></div>
+      <div class="tip"><span class="tip-icon">⚓</span><span><strong>Puissance 4 Navale (6×7).</strong> La grille est remplie mais entièrement masquée. Révèle une case ronde à chaque tour : le premier joueur qui complète la découverte de l’unique ligne secrète gagne.</span></div>
       <div class="tip"><span class="tip-icon">⚔️</span><span><strong>Conquête (6×7).</strong> Chaque alignement de 4 est capturé, rapporte un point puis disparaît avant que la gravité replace les jetons. Après quatre captures, 3–0 ou 3–1 donne la victoire ; 2–2 donne une nulle.</span></div>
     </div>
   </div>
@@ -468,6 +469,7 @@ const DEMO_MODES = {
   simultaneous:{label:'Simultané',icon:'⇊',rows:6,cols:7,description:'Les deux flèches représentent les choix secrets révélés ensemble.',objective:'Les deux joueurs choisissent leur colonne <strong>en secret</strong>. Les jetons tombent ensemble et la priorité alterne à chaque manche.',cells:[[5,1,'r'],[5,2,'y'],[5,4,'r'],[5,5,'y'],[4,2,'r'],[4,4,'y']],choices:[[3,2],[3,4]]},
   fog:{label:'Brouillard',icon:'🌫️',rows:6,cols:7,description:'Chaque nouveau pion reste visible 1,25 seconde, puis la brume masque sa couleur.',objective:'Aligne <strong>4 jetons</strong> comme en Classique, mais mémorise tous les coups : les pions joués disparaissent visuellement dans le Brouillard de Guerre.',cells:[[5,0,'r'],[5,1,'y'],[5,2,'r'],[4,1,'y'],[5,4,'r'],[4,4,'y']]},
   conquest:{label:'Conquête',icon:'⚔️',rows:6,cols:7,description:'Les alignements sont capturés, retirés de la grille, puis la gravité agit.',objective:'Chaque alignement rapporte <strong>1 point</strong>. Après quatre captures, un score de 3–0 ou 3–1 gagne ; 2–2 est nul. Une grille pleine est remise à zéro sans effacer les scores.',cells:[[5,0,'r'],[5,1,'r'],[5,2,'r'],[5,3,'r'],[4,2,'y'],[4,3,'y']],win:[[5,0],[5,1],[5,2],[5,3]]},
+  naval:{label:'Navale',icon:'⚓',rows:6,cols:7,description:'Chaque clic révèle un pion caché ; une seule ligne de 4 existe dans toute la grille.',objective:'Explore la grille noire à tour de rôle. Le premier joueur qui révèle la quatrième case de <strong>l’unique ligne secrète</strong> gagne.',cells:[[5,0,'r'],[4,2,'y'],[3,3,'r'],[2,4,'y'],[1,5,'r']],win:[]},
 };
 let activeDemoMode = localStorage.getItem('p4_rules_variant') || 'classic';
 let demoRenderId = 0;

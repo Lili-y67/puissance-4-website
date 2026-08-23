@@ -132,7 +132,7 @@
       const match = readMatch();
       const opponent = opponentName(player, match);
       const versusBot = Boolean(sessionStorage.getItem('vs_ia'));
-      const variantNames = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' };
+      const variantNames = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
       const variant = variantNames[String(match?.variant || 'classic')] || 'Classique';
       return [
         versusBot ? `${variant} · affronte une intelligence artificielle` : `${variant} · partie en ligne`,

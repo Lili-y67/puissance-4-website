@@ -1472,7 +1472,7 @@ function openModal(id) {
           <select id="new-elo-variant" style="margin-bottom:0;padding:9px 12px;font-size:13px">
             <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option>
             <option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option>
-            <option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option>
+            <option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option>
           </select>
           <input type="number" id="new-elo" value="1000" min="0" max="9999" style="flex:1;margin-bottom:0;padding:9px 12px;font-size:13px">
           <button class="btn-sm" style="background:rgba(255,214,10,0.15);color:var(--yellow)" onclick="resetElo(${id})">Reset</button>
@@ -1930,6 +1930,7 @@ const ADMIN_VARIANT_LABELS = Object.freeze({
   simultaneous: 'Placement simultané',
   fog: 'Brouillard de Guerre',
   conquest: 'Conquête',
+  naval: 'Puissance 4 Navale',
 });
 function switchAdminTab(tab) {
   currentAdminTab = tab;

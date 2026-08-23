@@ -33,6 +33,7 @@ const apiAuditRecent = new Map();
 let lastPresenceSignature = '';
 const { Matchmaking }         = require('./game/Matchmaking');
 const { GameManager }         = require('./game/GameManager');
+const { createNavalGrid: createNavalGridForGame } = require('./game/naval');
 const { normalizeVariant, getVariant, publicVariants, MISSION_DEFINITIONS } = require('./game/variants');
 const { createProgression }    = require('./progression');
 
@@ -1949,6 +1950,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
 }
 
 function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic') {
+  variant = getVariant(variant).botSupported === false ? 'classic' : normalizeVariant(variant);
   const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
   const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
   assignDistinctMatchColors(p1, p2);
@@ -1961,6 +1963,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic'
 }
 
 function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked', variant = 'classic') {
+  variant = getVariant(variant).botSupported === false ? 'classic' : normalizeVariant(variant);
   const challengerIsBot = Number(challenger?.is_bot || 0) === 1;
   const p1 = challengerIsBot
     ? buildBotGamePayload(challenger, botSocketId(challenger.id))
@@ -2004,6 +2007,8 @@ function startPracticeVsBot(socket, options = {}) {
   if (gm.socketToGame.has(socket.id)) return { error: 'Une partie est déjà en cours.' };
   const bot = pickPracticeBot(String(options.difficulty || 'hard'), options.targetElo);
   if (!bot) return { error: 'Aucun bot officiel disponible.' };
+  const practiceVariant = normalizeVariant(options.variant);
+  if (getVariant(practiceVariant).botSupported === false) return { error: 'Cette variante ne peut pas être jouée contre un bot.' };
 
   const p1 = buildPlayableSocketPayload(player);
   p1.socketId = socket.id;
@@ -2011,7 +2016,7 @@ function startPracticeVsBot(socket, options = {}) {
   assignDistinctMatchColors(p1, p2);
   const state = gm.create(p1, p2, {
     gameType: 'friendly',
-    variant: normalizeVariant(options.variant),
+    variant: practiceVariant,
     persist: false,
     moveTimeSeconds: 180,
     current: Math.random() < 0.5 ? 1 : 2,
@@ -2106,9 +2111,11 @@ function recentPairCount(a, b) {
 }
 
 function requestedOrBalancedBotVariant(value, botA, botB) {
-  return typeof value === 'string' && value.trim()
-    ? normalizeVariant(value)
-    : pickArenaVariant(botA, botB);
+  if (typeof value === 'string' && value.trim()) {
+    const requested = normalizeVariant(value);
+    return getVariant(requested).botSupported === false ? 'classic' : requested;
+  }
+  return pickArenaVariant(botA, botB);
 }
 
 function recentBotOpponentCounts(botId) {
@@ -2123,7 +2130,7 @@ function recentBotOpponentCounts(botId) {
 }
 
 function pickArenaVariant(botA, botB) {
-  const variants = publicVariants().map(item => item.id);
+  const variants = publicVariants().filter(item => item.botSupported !== false).map(item => item.id);
   const rows = db.prepare(`
     SELECT COALESCE(variant, 'classic') AS variant, COUNT(*) AS count FROM games
     WHERE (player1_id IN (?, ?) OR player2_id IN (?, ?)) AND created_at >= datetime('now', '-2 hours')
@@ -11004,6 +11011,9 @@ io.on('connection', socket => {
       socket.playerData.token_emoji_image = tokenEmojiImage;
     }
     const variant = normalizeVariant(requestedVariant);
+    if (Number(freshPlayer.is_bot || 0) === 1 && getVariant(variant).botSupported === false) {
+      return socket.emit('error', { message: 'Cette variante est réservée aux joueurs humains.' });
+    }
     const joined = mm.join(socket.id, { ...socket.playerData, socketId: socket.id, variant });
     if (!joined) return socket.emit('error', { message: 'DAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAjAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA  en queue.' });
     socket.emit('queue_joined', { position: mm.position(socket.id), variant });
@@ -11062,8 +11072,8 @@ io.on('connection', socket => {
     if (result.error) socket.emit('bot_practice_error', { message: result.error });
   });
 
-  socket.on('play_move', ({ col }) => {
-    const result = gm.playMove(socket.id, col);
+  socket.on('play_move', ({ col, row } = {}) => {
+    const result = gm.playMove(socket.id, col, row);
     if (result.error) return socket.emit('error', { message: result.error });
     if (['move', 'simultaneous_round', 'conquest_capture', 'conquest_reset'].includes(result.type)) io.to('game:' + result.gameId).emit('move_played', result);
     if (result.type === 'simultaneous_wait') socket.emit('simultaneous_waiting', result);
@@ -11248,7 +11258,20 @@ io.on('connection', socket => {
       const variant = normalizeVariant(gameRow.variant);
       const variantConfig = getVariant(variant);
       const board = new Board(variantConfig);
-      moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
+      let navalSecretGrid = null, navalWinningLine = [], navalRevealed = new Set();
+      if (variant === 'naval') {
+        const naval = createNavalGridForGame(gameId);
+        navalSecretGrid = naval.grid;
+        navalWinningLine = naval.winningLine;
+        moves.forEach(m => {
+          const row = Number(m.row), col = Number(m.col);
+          if (row >= 0 && row < 6 && col >= 0 && col < 7) {
+            board.grid[row][col] = navalSecretGrid[row][col];
+            board.moveCount++;
+            navalRevealed.add(`${row}:${col}`);
+          }
+        });
+      } else moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
       const firstMoveSide = moves[0]
         ? (Number(gameRow.player1_id) === Number(moves[0].player_id) ? 1 : 2)
         : 1;
@@ -11283,6 +11306,7 @@ io.on('connection', socket => {
         bombs: { 1: true, 2: true }, antiSegments: { 1: new Set(), 2: new Set() }, antiScores: { 1: 0, 2: 0 },
         missions: { 1: null, 2: null }, simultaneousChoices: { 1: null, 2: null }, initiative: nextSide,
         conquestScores: { 1: 0, 2: 0 }, conquestRound: 1,
+        navalSecretGrid, navalWinningLine, navalRevealed,
       };
       gm.games.set(gameId, state);
     }
@@ -11328,6 +11352,7 @@ io.on('connection', socket => {
         forcedCols: state.variant === 'anti' ? gm._antiForcedCols(state, state.current) : [],
         conquestScores: state.conquestScores,
         bombs: state.bombs,
+        revealedCount: state.variant === 'naval' ? state.navalRevealed?.size || 0 : null,
       });
 
       // Notifier l'adversaire

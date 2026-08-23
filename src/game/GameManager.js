@@ -5,6 +5,7 @@ const { Board } = require('./Board');
 const { gQ, mQ, aQ, finishGame, abQ } = require('../db/db');
 const { wlogGame } = require('../webhooks');
 const { getVariant, normalizeVariant, MISSION_DEFINITIONS } = require('./variants');
+const { createNavalGrid } = require('./naval');
 
 class GameManager {
   constructor() {
@@ -85,7 +86,15 @@ class GameManager {
       initiative: initialCurrent,
       conquestScores: { 1: 0, 2: 0 },
       conquestRound: 1,
+      navalSecretGrid: null,
+      navalWinningLine: [],
+      navalRevealed: new Set(),
     };
+    if (variant === 'naval') {
+      const naval = createNavalGrid(gameId);
+      state.navalSecretGrid = naval.grid;
+      state.navalWinningLine = naval.winningLine;
+    }
 
     this.games.set(gameId, state);
     this.socketToGame.set(p1.socketId, gameId);
@@ -93,7 +102,7 @@ class GameManager {
     return state;
   }
 
-  playMove(socketId, col) {
+  playMove(socketId, col, requestedRow = null) {
     const gameId = this.socketToGame.get(socketId);
     if (!gameId) return { error: 'Aucune partie en cours.' };
 
@@ -104,6 +113,7 @@ class GameManager {
     if (state.variant === 'simultaneous') return this.submitSimultaneous(socketId, col);
     if (state.variant === 'mission' && (!state.missions[1] || !state.missions[2])) return { error: 'Les deux missions doivent être choisies.' };
     if (playerNum !== state.current) return { error: 'Pas ton tour.' };
+    if (state.variant === 'naval') return this._playNaval(state, playerNum, requestedRow, col);
     if (!state.board.isValidCol(col)) return { error: 'Colonne invalide.' };
     if (state.variant === 'anti') {
       const forced = this._antiForcedCols(state, playerNum);
@@ -190,6 +200,36 @@ class GameManager {
       antiScores: state.antiScores,
       conquestScores: state.conquestScores,
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
+    };
+  }
+
+  _playNaval(state, playerNum, requestedRow, requestedCol) {
+    const row = Number(requestedRow), col = Number(requestedCol);
+    if (!Number.isInteger(row) || !Number.isInteger(col) || row < 0 || row >= 6 || col < 0 || col >= 7) {
+      return { error: 'Case navale invalide.' };
+    }
+    const key = `${row}:${col}`;
+    if (state.navalRevealed.has(key)) return { error: 'Cette case est déjà révélée.' };
+    const revealedPlayer = Number(state.navalSecretGrid?.[row]?.[col] || 0);
+    if (!revealedPlayer) return { error: 'Grille navale indisponible.' };
+    const now = Date.now();
+    const thinkMs = now - state.lastMoveAt;
+    state.navalRevealed.add(key);
+    state.board.grid[row][col] = revealedPlayer;
+    state.board.moveCount++;
+    state.moveCount++;
+    state.lastMoveAt = now;
+    if (state.persisted) {
+      mQ.insert.run({ game_id: state.id, player_id: state.players[playerNum].id, col, row, move_number: state.moveCount, think_ms: thinkMs });
+    }
+    this._recordAction(state, playerNum, 'naval_reveal', { row, col, revealedPlayer, board: state.board.grid });
+    const lastMove = { row, col, player: revealedPlayer, actor: playerNum };
+    const discovered = state.navalWinningLine.every(([r, c]) => state.navalRevealed.has(`${r}:${c}`));
+    if (discovered) return this._end(state, playerNum, state.navalWinningLine, 'naval_discovery', lastMove);
+    state.current = playerNum === 1 ? 2 : 1;
+    return {
+      type: 'move', gameId: state.id, variant: state.variant, row, col, player: revealedPlayer,
+      actor: playerNum, next: state.current, board: state.board.grid, revealedCount: state.navalRevealed.size,
     };
   }
 

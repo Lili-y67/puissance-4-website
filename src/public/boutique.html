@@ -2218,7 +2218,7 @@ function renderCard(pack) {
       </div>
       ${pack === 'elo_reset' ? `<label style="display:grid;gap:7px;margin:4px 0 14px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Variante à réinitialiser
         <select id="elo-reset-variant" style="width:100%;padding:11px 13px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:#11101d;color:#fff;font:700 14px 'Barlow Condensed',sans-serif">
-          <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option>
+          <option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option>
         </select>
       </label>` : ''}
       <div class="card-actions">
@@ -2848,7 +2848,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
   }
   const coupon = appliedCouponCode;
   const resetVariant = pack === 'elo_reset' ? (document.getElementById('elo-reset-variant')?.value || 'classic') : undefined;
-  const resetVariantLabel = resetVariant ? ({ classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' }[resetVariant] || 'Classique') : '';
+  const resetVariantLabel = resetVariant ? ({ classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' }[resetVariant] || 'Classique') : '';
   const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';

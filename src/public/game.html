@@ -654,6 +654,7 @@ body {
 .board.fog-active::before{content:"";position:absolute;pointer-events:none;z-index:6;inset:-12%;opacity:.62;filter:blur(18px);background:radial-gradient(ellipse at 15% 35%,rgba(220,228,238,.42),transparent 32%),radial-gradient(ellipse at 72% 58%,rgba(120,136,158,.5),transparent 38%),radial-gradient(ellipse at 88% 24%,rgba(235,239,244,.28),transparent 30%);animation:fog-drift 8s ease-in-out infinite alternate}
 .cell.fog-hidden .token{opacity:0;filter:blur(8px);transform:scale(.72)!important}
 .cell.fog-revealed .token{animation:fog-vanish 1.25s ease-in-out forwards!important}
+.col-buttons.naval-controls-hidden{display:none!important}.board.naval-active .cell{border-radius:50%}.board.naval-active .cell.naval-hidden{background:radial-gradient(circle at 34% 27%,#292932 0 8%,#09090d 52%,#010103 76%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),inset 0 8px 18px #000,0 4px 12px rgba(0,0,0,.5)}.board.naval-active .cell.naval-hidden::before{content:"?";inset:0;display:grid;place-items:center;border-radius:50%;background:none;color:rgba(255,255,255,.2);font:900 clamp(14px,2.5vw,26px) "Barlow Condensed",sans-serif;animation:none}.board.naval-active .cell:not(.naval-hidden){border-radius:50%}
 @keyframes fog-drift{from{transform:translate(-8%,-3%) scale(1)}to{transform:translate(9%,5%) scale(1.12)}}
 @keyframes fog-vanish{0%,58%{opacity:1;filter:blur(0);transform:scale(1)}100%{opacity:0;filter:blur(8px);transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){.board.fog-active::before{animation:none}}
@@ -1454,7 +1455,7 @@ let latencyProbeTimer = null;
 let latencyProbePending = false;
 let fogRevealTimer = null;
 
-const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête' };
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
 
 function configureVariant(data = {}) {
   currentVariant = data.variant || 'classic';
@@ -1474,6 +1475,8 @@ function configureVariant(data = {}) {
   const badge = document.getElementById('turn-badge');
   if (badge) badge.textContent = VARIANT_LABELS[currentVariant] || 'Classique';
   board?.classList.toggle('fog-active', currentVariant === 'fog');
+  board?.classList.toggle('naval-active', currentVariant === 'naval');
+  cols?.classList.toggle('naval-controls-hidden', currentVariant === 'naval');
   ensureVariantControls(data);
 }
 
@@ -1488,6 +1491,7 @@ function ensureVariantControls(data = {}) {
   if (currentVariant === 'simultaneous') controls.innerHTML = '<span id="simultaneous-state">Choisis une colonne en secret</span>';
   if (currentVariant === 'fog') controls.innerHTML = '<span>Le dernier pion disparaît dans la brume après 1,25 s</span>';
   if (currentVariant === 'conquest') controls.innerHTML = `<span id="conquest-score">Conquêtes : ${data.conquestScores?.[1] || 0} — ${data.conquestScores?.[2] || 0}</span>`;
+  if (currentVariant === 'naval') controls.innerHTML = `<span id="naval-state">${Number(data.revealedCount ?? (Array.isArray(data.grid) ? data.grid.flat().filter(Boolean).length : 0))} / 42 cases révélées · trouve l’unique ligne</span>`;
   document.querySelector('.board-wrap')?.prepend(controls);
   document.getElementById('bomb-button')?.addEventListener('click', () => { bombTargeting = !bombTargeting; setStatus(bombTargeting ? 'Clique le jeton central de la bombe' : ''); });
   if (currentVariant === 'mission' && Array.isArray(data.missions) && data.missions.length) {
@@ -2506,7 +2510,7 @@ function renderBoard() {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell  = document.createElement('div');
-      cell.className    = 'cell';
+      cell.className    = `cell${currentVariant === 'naval' ? ' naval-hidden' : ''}`;
       cell.dataset.row  = r;
       cell.dataset.col  = c;
       cell.onclick      = () => {
@@ -2515,7 +2519,7 @@ function renderBoard() {
           bombTargeting = false;
           return;
         }
-        playMove(c);
+        playMove(c, r);
       };
       cell.appendChild(Object.assign(document.createElement('div'), { className: 'token' }));
       boardCells[r][c] = cell;
@@ -2543,6 +2547,7 @@ function restoreBoard(grid) {
       const next = nextGrid[r][c];
       const cell = boardCells[r]?.[c];
       if (!cell) continue;
+      cell.classList.toggle('naval-hidden', currentVariant === 'naval' && !next);
       if (next && (previous !== next || !cell.classList.contains('p' + next))) {
         applyToken(r, c, next, false);
       } else if (!next && (previous || cell.classList.contains('p1') || cell.classList.contains('p2'))) {
@@ -2576,14 +2581,24 @@ function applyFogVisibility(revealedRow = null, revealedCol = null) {
 }
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
-function playMove(col) {
+function playMove(col, row = null) {
   if (gameOver || (currentVariant !== 'simultaneous' && currentTurn !== mySide) || simultaneousWaiting) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
   if (iaMode && !serverBotMode) { iaPlayHuman(col); return; }
-  socket.emit('play_move', { col });
+  socket.emit('play_move', { col, ...(currentVariant === 'naval' ? { row } : {}) });
 }
 
 async function onMovePlayed(data) {
+  if (currentVariant === 'naval') {
+    if (data.board) restoreBoard(data.board);
+    currentTurn = data.next;
+    const state = document.getElementById('naval-state');
+    if (state) state.textContent = `${Number(data.revealedCount || 0)} / 42 cases révélées · trouve l’unique ligne`;
+    if (data.actor === mySide) SFX.drop(); else SFX.opponentDrop();
+    updateTurnUI();
+    updateGameDiscordPresence();
+    return;
+  }
   if (data.type === 'simultaneous_round') {
     simultaneousWaiting = false;
     await animateSimultaneousRound(data);
@@ -3004,7 +3019,9 @@ async function onGameOver(data) {
     || !!data?.rotation
     || !!data?.conquest
     || data?.variant === 'simultaneous'
-    || currentVariant === 'simultaneous';
+    || currentVariant === 'simultaneous'
+    || data?.variant === 'naval'
+    || currentVariant === 'naval';
   if (data?.bomb && Array.isArray(data?.board)) {
     await animateBombUse({ ...data.bomb, board: data.board });
   } else if (data?.rotation && Array.isArray(data?.board)) {
@@ -3014,6 +3031,8 @@ async function onGameOver(data) {
   } else if ((data?.variant === 'simultaneous' || currentVariant === 'simultaneous') && Array.isArray(data?.board)) {
     // Le round décisif arrive directement sous forme de game_over.
     await animateSimultaneousRound(data);
+  } else if ((data?.variant === 'naval' || currentVariant === 'naval') && Array.isArray(data?.board)) {
+    restoreBoard(data.board);
   }
 
   const dcBanner = document.getElementById('disconnect-banner');
