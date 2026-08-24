@@ -1729,6 +1729,30 @@ function chooseQuickBotMove(state, side) {
   return pool[Math.floor(Math.random() * pool.length)] ?? cols[0];
 }
 
+function chooseTutorialBombAction(state, side) {
+  if (!state?.tutorial || state.variant !== 'bomb' || state.bombs?.[side] === false) return null;
+  const grid = state.board?.grid || [];
+  const opponent = Number(side) === 1 ? 2 : 1;
+  const targets = [];
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < (grid[row]?.length || 0); col++) {
+      if (!Number(grid[row][col] || 0)) continue;
+      let neighbours = 0;
+      let opponentHits = 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        if (!dr && !dc) continue;
+        const value = Number(grid[row + dr]?.[col + dc] || 0);
+        if (!value) continue;
+        neighbours++;
+        if (value === opponent) opponentHits++;
+      }
+      if (neighbours > 0) targets.push({ row, col, score: opponentHits * 8 + neighbours + Math.random() });
+    }
+  }
+  targets.sort((a, b) => b.score - a.score);
+  return targets[0] ? { kind: 'bomb', row: targets[0].row, col: targets[0].col } : null;
+}
+
 function chooseNavalBotCell(state) {
   const board = state?.board?.grid;
   if (!Array.isArray(board) || !board.length) return null;
@@ -1992,7 +2016,8 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
       const player = state.players[side];
       if (!state.tutorial && !builtinBotIds.has(Number(player?.id))) return;
       const navalCell = state.variant === 'naval' ? chooseNavalBotCell(state) : null;
-      const action = ['classic', 'naval'].includes(state.variant) ? null : await chooseVariantBotActionAsync(state, side);
+      const tutorialBomb = chooseTutorialBombAction(state, side);
+      const action = tutorialBomb || (['classic', 'naval'].includes(state.variant) ? null : await chooseVariantBotActionAsync(state, side));
       let col = navalCell?.col ?? action?.col ?? (state.variant === 'classic'
         ? (state.tutorial ? chooseQuickBotMove(state, side) : await chooseBuiltinBotMoveAsync(state, side))
         : null);

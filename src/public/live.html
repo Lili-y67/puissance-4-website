@@ -51,8 +51,11 @@ img,canvas,svg{max-width:100%}
 @keyframes tv-breathe{0%,100%{filter:brightness(.82)}50%{filter:brightness(.96)}}
 @keyframes tv-board-rotate{0%{transform:translate(-50%,-50%) rotate(0) scale(1)}45%{transform:translate(-50%,-50%) rotate(7deg) scale(.92)}70%{transform:translate(-50%,-50%) rotate(-2deg) scale(.97)}100%{transform:translate(-50%,-50%) rotate(0) scale(1)}}
 @keyframes tv-conquest{0%,100%{filter:none}35%{filter:brightness(1.5) saturate(1.3);box-shadow:0 0 35px rgba(255,214,10,.28)}}
+@keyframes board-bomb{0%,100%{transform:none;filter:none}24%{transform:scale(1.018);filter:brightness(1.8) saturate(1.6);box-shadow:0 0 55px rgba(255,76,40,.55)}48%{transform:translateX(-3px)}62%{transform:translateX(3px)}}
 .tv-screen .live-board.tv-rotate{animation:tv-board-rotate .72s cubic-bezier(.2,.8,.25,1)}
 .tv-screen .live-board.tv-conquest{animation:tv-conquest .72s ease}
+.tv-screen .live-board.tv-bomb,body.spectating .live-board.spec-bomb{animation:board-bomb .72s ease}
+.board-bomb-blast{position:absolute;z-index:20;inset:0;display:grid;place-items:center;pointer-events:none;font-size:clamp(52px,11vw,105px);filter:drop-shadow(0 0 24px rgba(255,76,40,.9));animation:bomb-blast-pop .72s ease-out forwards}@keyframes bomb-blast-pop{0%{opacity:0;transform:scale(.25) rotate(-12deg)}28%{opacity:1;transform:scale(1.2) rotate(5deg)}100%{opacity:0;transform:scale(1.65) rotate(0)}}
 .sound-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 13px;border-radius:999px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.24);color:var(--yellow);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:900;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:transform .18s,border-color .18s,background .18s}
 .sound-btn:hover{transform:translateY(-1px);border-color:rgba(255,214,10,.48);background:rgba(255,214,10,.14)}
 .sound-btn.muted{color:var(--muted);border-color:rgba(255,255,255,.1);background:rgba(255,255,255,.035)}
@@ -245,7 +248,7 @@ img,canvas,svg{max-width:100%}
   .game-card:hover{transform:none;box-shadow:0 18px 42px rgba(0,0,0,.30)}
   .scanlines{display:none}
 }
-@media (prefers-reduced-motion:reduce){.token-drop,.tv-no-signal,.tv-screen .live-board.tv-rotate,.tv-screen .live-board.tv-conquest{animation:none!important}}
+@media (prefers-reduced-motion:reduce){.token-drop,.tv-no-signal,.tv-screen .live-board.tv-rotate,.tv-screen .live-board.tv-conquest,.tv-screen .live-board.tv-bomb,body.spectating .live-board.spec-bomb,.board-bomb-blast{animation:none!important}}
 /* Transparent live board over custom wallpapers. */
 .board-wrap{background:rgba(8,8,18,.18);border-color:rgba(255,255,255,.06);backdrop-filter:blur(2px)}
 .live-board{background:radial-gradient(circle at 7% 80%,color-mix(in srgb,var(--board-a-soft) 60%,transparent),transparent 32%),radial-gradient(circle at 94% 18%,color-mix(in srgb,var(--board-b-soft) 56%,transparent),transparent 34%),rgba(6,7,18,.26);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 18px 48px rgba(0,0,0,.26)}
@@ -1202,7 +1205,8 @@ function renderBoardInto(board, game, large = true) {
   board.style.gridTemplateColumns = `repeat(${cols},minmax(0,1fr))`;
   board.style.gridTemplateRows = `repeat(${rows},minmax(0,1fr))`;
   board.style.aspectRatio = `${cols}/${rows}`;
-  if (board.children.length !== rows * cols) {
+  const directCells = () => board.querySelectorAll(':scope > .live-cell, :scope > .mini-cell');
+  if (directCells().length !== rows * cols) {
     board.innerHTML = '';
     board.dataset.liveReady = '0';
     for (let r = 0; r < rows; r++) {
@@ -1216,7 +1220,7 @@ function renderBoardInto(board, game, large = true) {
     }
   }
 
-  for (const cell of board.children) {
+  for (const cell of directCells()) {
     const r = Number(cell.dataset.row);
     const c = Number(cell.dataset.col);
     const previousValue = Number(cell.dataset.value || 0);
@@ -1244,6 +1248,17 @@ function renderBoardInto(board, game, large = true) {
     }
   }
   board.dataset.liveReady = '1';
+}
+
+function showBoardBombBlast(board) {
+  if (!board) return;
+  board.querySelector('.board-bomb-blast')?.remove();
+  const blast = document.createElement('div');
+  blast.className = 'board-bomb-blast';
+  blast.textContent = '💥';
+  board.appendChild(blast);
+  blast.addEventListener('animationend', () => blast.remove(), { once: true });
+  setTimeout(() => blast.remove(), 900);
 }
 
 function renderP4TV(allGames) {
@@ -1281,12 +1296,19 @@ function renderP4TV(allGames) {
   const nextCount = Array.isArray(game.grid) ? game.grid.flat().filter(Boolean).length : 0;
   const changedCells = Array.isArray(previousGrid) ? game.grid.reduce((sum, row, r) => sum + row.reduce((n, value, c) => n + (Number(previousGrid?.[r]?.[c] || 0) !== Number(value || 0) ? 1 : 0), 0), 0) : 0;
   renderBoardInto(board, game, true);
-  if (sameGame && changedCells > 2) {
-    const effect = String(game.variant) === 'rotate' && previousCount === nextCount ? 'tv-rotate' : String(game.variant) === 'conquest' ? 'tv-conquest' : '';
+  if (sameGame && changedCells > 1) {
+    const effect = String(game.variant) === 'rotate' && previousCount === nextCount
+      ? 'tv-rotate'
+      : String(game.variant) === 'conquest'
+        ? 'tv-conquest'
+        : String(game.variant) === 'bomb' && nextCount <= previousCount
+          ? 'tv-bomb'
+          : '';
     if (effect) {
-      board.classList.remove('tv-rotate','tv-conquest');
+      board.classList.remove('tv-rotate','tv-conquest','tv-bomb');
       void board.offsetWidth;
       board.classList.add(effect);
+      if (effect === 'tv-bomb') showBoardBombBlast(board);
       board.addEventListener('animationend', () => board.classList.remove(effect), { once:true });
     }
   }
@@ -1452,12 +1474,19 @@ function renderSpec(game) {
   const nextSpecCount = Array.isArray(game.grid) ? game.grid.flat().filter(Boolean).length : 0;
   const specChangedCells = Array.isArray(previousSpecGrid) ? game.grid.reduce((sum, row, r) => sum + row.reduce((n, value, c) => n + (Number(previousSpecGrid?.[r]?.[c] || 0) !== Number(value || 0) ? 1 : 0), 0), 0) : 0;
   renderBoardInto(liveBoard, game, true);
-  if (specChangedCells > 2) {
-    const effect = String(game.variant) === 'rotate' && previousSpecCount === nextSpecCount ? 'spec-rotate' : String(game.variant) === 'conquest' ? 'spec-conquest' : '';
+  if (specChangedCells > 1) {
+    const effect = String(game.variant) === 'rotate' && previousSpecCount === nextSpecCount
+      ? 'spec-rotate'
+      : String(game.variant) === 'conquest'
+        ? 'spec-conquest'
+        : String(game.variant) === 'bomb' && nextSpecCount <= previousSpecCount
+          ? 'spec-bomb'
+          : '';
     if (effect) {
-      liveBoard.classList.remove('spec-rotate','spec-conquest');
+      liveBoard.classList.remove('spec-rotate','spec-conquest','spec-bomb');
       void liveBoard.offsetWidth;
       liveBoard.classList.add(effect);
+      if (effect === 'spec-bomb') showBoardBombBlast(liveBoard);
       liveBoard.addEventListener('animationend', () => liveBoard.classList.remove(effect), { once:true });
     }
   }

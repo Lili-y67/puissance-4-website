@@ -1611,7 +1611,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 .queue-variant-select option{background:#11111d!important;color:#f7f3ff!important;font-weight:700}
 .arena-variant-picker{width:100%;padding:15px;border:1px solid rgba(133,235,255,.16);border-radius:18px;background:linear-gradient(155deg,rgba(18,21,37,.98),rgba(7,8,17,.98));box-shadow:0 18px 42px rgba(0,0,0,.28)}
 .arena-variant-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}.arena-variant-head strong{font:900 18px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.arena-variant-head span{color:var(--muted);font-size:10px;text-align:right}
-.arena-variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.arena-variant-card{min-width:0;padding:10px 8px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(255,255,255,.035);color:#e9eaf5;cursor:pointer;text-align:left;transition:.18s}.arena-variant-card:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.07)}.arena-variant-card.active{border-color:rgba(133,235,255,.55);background:linear-gradient(145deg,rgba(133,235,255,.16),rgba(155,124,255,.10));box-shadow:0 0 22px rgba(133,235,255,.08)}.arena-variant-card b{display:block;overflow:hidden;text-overflow:ellipsis;color:inherit;font:900 13px 'Barlow Condensed',sans-serif;letter-spacing:.4px;white-space:nowrap}.arena-variant-card small{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.arena-variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.arena-variant-card{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;min-width:0;min-height:62px;padding:9px 8px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(255,255,255,.035);color:#e9eaf5;cursor:pointer;text-align:left;transition:.18s}.arena-variant-card:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.07)}.arena-variant-card.active{border-color:rgba(133,235,255,.55);background:linear-gradient(145deg,rgba(133,235,255,.16),rgba(155,124,255,.10));box-shadow:0 0 22px rgba(133,235,255,.08)}.arena-variant-icon{display:grid;place-items:center;width:27px;height:27px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(0,0,0,.2);font-size:19px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}.arena-variant-card.active .arena-variant-icon{border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.1)}.arena-variant-card-copy{min-width:0}.arena-variant-card b{display:-webkit-box;overflow:hidden;color:inherit;font:900 13px/1.05 'Barlow Condensed',sans-serif;letter-spacing:.25px;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}.arena-variant-card small{display:block;margin-top:4px;color:var(--muted);font-size:9px}
 .arena-variant-choice{margin-top:11px;padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(0,0,0,.18)}.arena-variant-choice strong{display:block;color:#85ebff;font:900 17px 'Barlow Condensed',sans-serif;text-transform:uppercase}.arena-variant-choice span{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}.arena-variant-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.arena-variant-actions .btn{min-height:44px;padding:9px;font-size:12px}.arena-tutorial-error{min-height:16px;margin-top:7px;color:#ff6b84;font-size:10px;text-align:center}
 .variant-native-select{color-scheme:dark!important;background:#0b0d18!important;color:#f7f3ff!important;border-color:rgba(133,235,255,.22)!important}.variant-native-select option{background:#0b0d18!important;color:#f7f3ff!important}
 @media(max-width:520px){.arena-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arena-variant-actions{grid-template-columns:1fr}}
@@ -3890,14 +3890,14 @@ let activeQueueVariant = localStorage.getItem('p4_queue_variant') || 'classic';
 let queueVariantProfileStats = null;
 const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
 const ARENA_VARIANT_META = {
-  classic: { size:'6×7', icon:'●', description:'Aligne quatre jetons avant ton adversaire.' },
-  rotate: { size:'7×7', icon:'↻', description:'Le plateau pivote et la gravité redistribue les jetons.' },
-  anti: { size:'9×9', icon:'−', description:'Évite les alignements : le plus petit score gagne.' },
+  classic: { size:'6×7', icon:'🔴', description:'Aligne quatre jetons avant ton adversaire.' },
+  rotate: { size:'7×7', icon:'🔄', description:'Le plateau pivote et la gravité redistribue les jetons.' },
+  anti: { size:'9×9', icon:'🧩', description:'Évite les alignements : le plus petit score gagne.' },
   bomb: { size:'6×7', icon:'💣', description:'Une bombe par joueur peut renverser la position.' },
-  mission: { size:'7×7', icon:'◎', description:'Accomplis ton objectif secret avant l’adversaire.' },
-  simultaneous: { size:'6×7', icon:'⇄', description:'Les deux choix sont révélés et résolus ensemble.' },
-  fog: { size:'6×7', icon:'◌', description:'Mémorise les coups qui disparaissent dans la brume.' },
-  conquest: { size:'6×7', icon:'⚑', description:'Capture des lignes pour atteindre trois points.' },
+  mission: { size:'7×7', icon:'🎯', description:'Accomplis ton objectif secret avant l’adversaire.' },
+  simultaneous: { size:'6×7', icon:'⚡', description:'Les deux choix sont révélés et résolus ensemble.' },
+  fog: { size:'6×7', icon:'🌫️', description:'Mémorise les coups qui disparaissent dans la brume.' },
+  conquest: { size:'6×7', icon:'🚩', description:'Capture des lignes pour atteindre trois points.' },
   naval: { size:'6×7', icon:'⚓', description:'Explore la grille cachée et découvre son unique ligne.' },
 };
 let currentGlobalBoost = null;
@@ -5361,7 +5361,7 @@ function renderArenaVariantPicker() {
     card.type = 'button';
     card.className = 'arena-variant-card';
     card.dataset.variant = variant;
-    card.innerHTML = `<b>${meta.icon} ${escapeHtml(QUEUE_VARIANT_LABELS[variant])}</b><small>${meta.size}</small>`;
+    card.innerHTML = `<span class="arena-variant-icon" aria-hidden="true">${meta.icon}</span><span class="arena-variant-card-copy"><b>${escapeHtml(QUEUE_VARIANT_LABELS[variant])}</b><small>${meta.size}</small></span>`;
     card.addEventListener('click', () => selectArenaVariant(variant));
     grid.appendChild(card);
   }
