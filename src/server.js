@@ -102,11 +102,20 @@ let devMachineCpuAt = Date.now();
 const devNetworkTotals = { rxBytes: 0, txBytes: 0 };
 let devNetworkBase = { rxBytes: 0, txBytes: 0 };
 const BOT_ARENA_ENABLED = String(process.env.BOT_ARENA_ENABLED || '1') !== '0';
-const BOT_ARENA_INTERVAL_MS = Math.max(30_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 30_000));
+const BOT_ARENA_INTERVAL_MS = Math.max(5_000, Number(process.env.BOT_ARENA_INTERVAL_MS || 10_000));
 const BOT_ARENA_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_ARENA_MAX_ACTIVE || 2)));
-const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(60_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 2 * 60_000));
-const BOT_ARENA_REST_MS = Math.max(30_000, Number(process.env.BOT_ARENA_REST_MS || 30_000));
-const BOT_GAME_WINDOW_LIMIT = 60;
+const BOT_ARENA_PAIR_COOLDOWN_MS = Math.max(15_000, Number(process.env.BOT_ARENA_PAIR_COOLDOWN_MS || 45_000));
+const BOT_ARENA_REST_MS = Math.max(5_000, Number(process.env.BOT_ARENA_REST_MS || 10_000));
+const configuredBotGameWindowLimit = Number(process.env.BOT_GAME_WINDOW_LIMIT ?? 240);
+// 0 desactive la limite. La valeur par defaut, 240 parties sur deux heures,
+// conserve un garde-fou tout en laissant l'arene tourner a une cadence elevee.
+const BOT_GAME_WINDOW_LIMIT = Number.isFinite(configuredBotGameWindowLimit)
+  ? Math.max(0, Math.min(2000, Math.trunc(configuredBotGameWindowLimit)))
+  : 240;
+const configuredBotPairWindowLimit = Number(process.env.BOT_PAIR_WINDOW_LIMIT ?? 12);
+const BOT_PAIR_WINDOW_LIMIT = Number.isFinite(configuredBotPairWindowLimit)
+  ? Math.max(0, Math.min(200, Math.trunc(configuredBotPairWindowLimit)))
+  : 12;
 const BOT_SEARCH_TIME_MS = Math.max(2000, Math.min(15000, Number(process.env.BOT_SEARCH_TIME_MS || 2000)));
 const BOT_MAX_SEARCH_DEPTH = Math.max(3, Math.min(13, Number(process.env.BOT_MAX_SEARCH_DEPTH || 13)));
 const BOT_HOST_MAX_ACTIVE = Math.max(0, Math.min(2, Number(process.env.BOT_HOST_MAX_ACTIVE || 2)));
@@ -1956,7 +1965,7 @@ function chooseVariantBotActionAsync(state, side) {
   });
 }
 
-function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
+function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
   setTimeout(async () => {
     try {
       const state = gm.games.get(gameId);
@@ -1990,7 +1999,7 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
         }
       }
       if (result?.type !== 'game_over') emitLiveUpdate();
-      scheduleBuiltinBotTurn(gameId, state.variant === 'simultaneous' ? 120 : 650 + Math.floor(Math.random() * 600));
+      scheduleBuiltinBotTurn(gameId, state.variant === 'simultaneous' ? 80 : 300 + Math.floor(Math.random() * 350));
     } catch (error) {
       console.error('[BOT TURN]', error.message);
       const state = gm.games.get(gameId);
@@ -2008,7 +2017,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic'
   prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
-  scheduleBuiltinBotTurn(state.id, 500);
+  scheduleBuiltinBotTurn(state.id, 250);
   return state;
 }
 
@@ -2028,7 +2037,7 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked', va
   prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
-  if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 500);
+  if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 250);
   return state;
 }
 
@@ -2118,6 +2127,10 @@ function recentBotGameCount(botId) {
   return Number(db.prepare(`SELECT COUNT(*) AS count FROM games WHERE (player1_id = ? OR player2_id = ?) AND created_at >= datetime('now', '-2 hours')`).get(Number(botId), Number(botId))?.count || 0);
 }
 
+function isBotUnderGameLimit(botId) {
+  return BOT_GAME_WINDOW_LIMIT === 0 || recentBotGameCount(botId) < BOT_GAME_WINDOW_LIMIT;
+}
+
 function botQuotaStatus(botId) {
   const row = db.prepare(`
     SELECT COUNT(*) AS count, MIN(created_at) AS oldest
@@ -2129,14 +2142,17 @@ function botQuotaStatus(botId) {
   const oldestMs = row?.oldest ? Date.parse(`${row.oldest}Z`) : 0;
   return {
     count,
-    remaining: Math.max(0, BOT_GAME_WINDOW_LIMIT - count),
-    retryAfterSeconds: count >= BOT_GAME_WINDOW_LIMIT && oldestMs
+    limit: BOT_GAME_WINDOW_LIMIT || null,
+    unlimited: BOT_GAME_WINDOW_LIMIT === 0,
+    remaining: BOT_GAME_WINDOW_LIMIT === 0 ? null : Math.max(0, BOT_GAME_WINDOW_LIMIT - count),
+    retryAfterSeconds: BOT_GAME_WINDOW_LIMIT > 0 && count >= BOT_GAME_WINDOW_LIMIT && oldestMs
       ? Math.max(1, Math.ceil((oldestMs + 2 * 60 * 60 * 1000 - Date.now()) / 1000))
       : 0,
   };
 }
 
 function enforceBotQuota(botIds, res) {
+  if (BOT_GAME_WINDOW_LIMIT === 0) return true;
   for (const id of [...new Set(botIds.map(Number).filter(Boolean))]) {
     const bot = pQ.getById.get(id);
     if (!bot || Number(bot.is_bot || 0) !== 1) continue;
@@ -2158,6 +2174,10 @@ function enforceBotQuota(botIds, res) {
 
 function recentPairCount(a, b) {
   return Number(recentBotOpponentCounts(a).get(Number(b))?.count || 0);
+}
+
+function isBotPairUnderLimit(a, b) {
+  return BOT_PAIR_WINDOW_LIMIT === 0 || recentPairCount(a, b) < BOT_PAIR_WINDOW_LIMIT;
 }
 
 function requestedOrBalancedBotVariant(value, botA, botB) {
@@ -2187,7 +2207,9 @@ function pickArenaVariant(botA, botB) {
     GROUP BY COALESCE(variant, 'classic')
   `).all(botA.id, botB.id, botA.id, botB.id);
   const counts = new Map(rows.map(row => [String(row.variant), Number(row.count || 0)]));
-  const weights = Object.fromEntries(variants.map(id => [id, id === 'classic' ? 4 : 1]));
+  // Le classique reste majoritaire, tandis que la Navale apparait environ
+  // deux fois plus souvent que les autres variantes speciales.
+  const weights = Object.fromEntries(variants.map(id => [id, id === 'classic' ? 4 : id === 'naval' ? 2 : 1]));
   const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
   const totalGames = [...counts.values()].reduce((sum, value) => sum + value, 0);
   return variants.map(id => ({ id, score: ((totalGames + 1) * weights[id] / totalWeight) - Number(counts.get(id) || 0) + Math.random() * .2 })).sort((a, b) => b.score - a.score)[0]?.id || 'classic';
@@ -2211,7 +2233,7 @@ function pickBackgroundBotPair() {
     .filter(bot => bot
       && !bot.deleted
       && Number(bot.bot_enabled || 0) === 1
-      && recentBotGameCount(bot.id) < BOT_GAME_WINDOW_LIMIT
+      && isBotUnderGameLimit(bot.id)
       && !findActiveGameByPlayer(bot.id)
       && Number(botArenaRestUntil.get(Number(bot.id)) || 0) <= now)
     .sort(() => Math.random() - 0.5);
@@ -2228,7 +2250,7 @@ function pickBackgroundBotPair() {
       const lastPlayed = Number(botArenaPairs.get(key) || 0);
       if (now - lastPlayed < BOT_ARENA_PAIR_COOLDOWN_MS && freeBots.length > 2) continue;
       const repeated = opponentsA.get(Number(b.id)) || { count: 0, lastPlayed: 0 };
-      if (repeated.count >= 3 && freeBots.length > 2) continue;
+      if (BOT_PAIR_WINDOW_LIMIT > 0 && repeated.count >= BOT_PAIR_WINDOW_LIMIT && freeBots.length > 2) continue;
       const eloDistance = Math.abs(Number(a.elo || 1000) - Number(b.elo || 1000));
       const freshnessPenalty = lastPlayed ? Math.max(0, BOT_ARENA_PAIR_COOLDOWN_MS - (now - lastPlayed)) / 1000 : 0;
       const score = eloDistance + freshnessPenalty + repeated.count * 1500 + (repeated.lastPlayed ? 600 : 0) + Math.random() * 40;
@@ -7982,7 +8004,7 @@ app.post('/api/bot/queue/join', (req, res) => {
   const ownId = Number(bot.id);
   if (!enforceBotQuota([ownId], res)) return;
   const opponentId = botApiQueue
-    .filter(id => id !== ownId && !findActiveBotGame(id) && recentBotGameCount(id) < BOT_GAME_WINDOW_LIMIT)
+    .filter(id => id !== ownId && !findActiveBotGame(id) && isBotUnderGameLimit(id))
     .sort((a, b) => recentPairCount(ownId, a) - recentPairCount(ownId, b))[0];
   if (opponentId) {
     const idx = botApiQueue.indexOf(opponentId);
@@ -7992,7 +8014,7 @@ app.post('/api/bot/queue/join', (req, res) => {
     return res.json({ ok: true, status: 'matched', game: serializeBotGameState(state, bot.id) });
   }
   if (req.body?.allowBuiltin !== false) {
-    const candidates = [...builtinBotIds].filter(id => id !== ownId && !findActiveBotGame(id) && recentBotGameCount(id) < BOT_GAME_WINDOW_LIMIT).map(id => pQ.getById.get(id)).filter(Boolean)
+    const candidates = [...builtinBotIds].filter(id => id !== ownId && !findActiveBotGame(id) && isBotUnderGameLimit(id)).map(id => pQ.getById.get(id)).filter(Boolean)
       .sort((a, b) => (recentPairCount(ownId, a.id) - recentPairCount(ownId, b.id)) * 10000
         + Math.abs(Number(a.elo || 1000) - Number(bot.elo || 1000)) - Math.abs(Number(b.elo || 1000) - Number(bot.elo || 1000)));
     if (candidates[0]) {
@@ -8047,7 +8069,7 @@ app.post('/api/bot/challenge/:id', (req, res) => {
   }
   if (Number(target.id) === Number(challenger.id)) return res.status(409).json({ error: 'Un bot ne peut pas se defier lui-meme.' });
   if (!enforceBotQuota([challenger.id, target.id], res)) return;
-  if (recentPairCount(challenger.id, target.id) >= 3) return res.status(429).json({ error: 'Ces deux bots se sont deja affrontes 3 fois sur les 2 dernieres heures. Choisis un autre adversaire.', code: 'BOT_PAIR_COOLDOWN' });
+  if (!isBotPairUnderLimit(challenger.id, target.id)) return res.status(429).json({ error: `Ces deux bots se sont deja affrontes ${BOT_PAIR_WINDOW_LIMIT} fois sur les 2 dernieres heures. Choisis un autre adversaire.`, code: 'BOT_PAIR_COOLDOWN' });
   if (findActiveGameByPlayer(challenger.id)) return res.status(409).json({ error: 'Ton bot est deja en partie.' });
   if (findActiveGameByPlayer(target.id)) return res.status(409).json({ error: 'Le bot cible est deja en partie.' });
   const runtime = publicBotRuntime(target.id);
@@ -8066,12 +8088,12 @@ app.get('/api/bots/preconfigured', (req, res) => {
 app.post('/api/bots/preconfigured/match', (req, res) => {
   const bots = [...builtinBotIds].map(id => pQ.getById.get(id)).filter(Boolean);
   if (bots.length < 2) return res.status(409).json({ error: 'Pas assez de bots disponibles.' });
-  const free = bots.filter(bot => !findActiveBotGame(bot.id) && recentBotGameCount(bot.id) < BOT_GAME_WINDOW_LIMIT);
+  const free = bots.filter(bot => !findActiveBotGame(bot.id) && isBotUnderGameLimit(bot.id));
   const pool = free;
   if (pool.length < 2) return res.status(409).json({ error: 'Pas assez de bots libres sous leur quota.' });
   const pairs = [];
   for (let i = 0; i < pool.length; i += 1) for (let j = i + 1; j < pool.length; j += 1) {
-    if (recentBotGameCount(pool[i].id) >= BOT_GAME_WINDOW_LIMIT || recentBotGameCount(pool[j].id) >= BOT_GAME_WINDOW_LIMIT) continue;
+    if (!isBotUnderGameLimit(pool[i].id) || !isBotUnderGameLimit(pool[j].id)) continue;
     pairs.push({ a: pool[i], b: pool[j], repeats: recentPairCount(pool[i].id, pool[j].id), random: Math.random() });
   }
   pairs.sort((a, b) => a.repeats - b.repeats || a.random - b.random);
