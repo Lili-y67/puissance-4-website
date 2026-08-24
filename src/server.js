@@ -4098,7 +4098,8 @@ app.patch('/api/admin/players/:id/bot-enabled', (req, res) => {
 });
 
 app.post('/api/admin/product-keys', (req, res) => {
-  if (!isAdmin(req)) return res.status(403).json({ error: 'Non autorise.' });
+  const adminSession = getAdminSession(req);
+  if (!adminSession || adminSession.role !== 'admin') return res.status(403).json({ error: 'Non autorise.' });
   const content = String(req.body?.content || '').trim().toLowerCase();
   const rawQuantity = Number(req.body?.quantity ?? 1);
   const rawDurationHours = Number(req.body?.durationHours ?? 0);
@@ -4115,12 +4116,15 @@ app.post('/api/admin/product-keys', (req, res) => {
     return res.status(400).json({ error: 'Le host bot exige une cible et ne peut pas etre place dans une cle.' });
   }
   const rewardKey = content === 'gemmes' ? 'gems' : item?.key || content;
-  const code = `P4K-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  let code = '';
+  do {
+    code = `P4K-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+  } while (db.prepare('SELECT 1 FROM product_keys WHERE code = ?').get(code));
   const expiresAt = durationHours ? Date.now() + durationHours * 60 * 60 * 1000 : null;
   db.prepare(`
     INSERT INTO product_keys (code, grants_json, created_by, created_at, expires_at)
-    VALUES (?, ?, NULL, ?, ?)
-  `).run(code, JSON.stringify([{ key: rewardKey, qty: quantity }]), Date.now(), expiresAt);
+    VALUES (?, ?, ?, ?, ?)
+  `).run(code, JSON.stringify([{ key: rewardKey, qty: quantity }]), Number(adminSession.playerId), Date.now(), expiresAt);
   res.json({
     ok: true,
     productKey: { code, content: rewardKey, label: item?.label || rewardKey, quantity, expiresAt },
@@ -4645,7 +4649,7 @@ const SHOP_ITEMS = Object.freeze({
   vip_plus: { key: 'vip_plus', category: 'ranks', label: 'VIP+', price: 5000 },
   perso: { key: 'perso', category: 'ranks', label: 'Perso', price: 15000 },
   elo_reset: { key: 'elo_reset', category: 'services', label: 'Reset ELO', price: 2500 },
-  fortune_ticket: { key: 'fortune_ticket', category: 'services', label: 'Ticket Roue Fortune', price: 500 },
+  fortune_ticket: { key: 'fortune_ticket', category: 'services', label: 'Ticket Roue Fortune', price: 1000 },
   elo_mini: { key: 'elo_mini', category: 'elo_boosters', label: 'Mini Boost', price: 250, boostType: 'elo', multiplier: 1.05, defaultStock: 10 },
   elo_classic: { key: 'elo_classic', category: 'elo_boosters', label: 'Classic Boost', price: 750, boostType: 'elo', multiplier: 1.10, defaultStock: 5 },
   elo_max: { key: 'elo_max', category: 'elo_boosters', label: 'Max Boost', price: 2500, boostType: 'elo', multiplier: 1.25, defaultStock: 3 },
@@ -6890,6 +6894,17 @@ app.post('/api/shop/buy', async (req, res) => {
     };
   }
   if (!item) return res.status(400).json({ error: 'Pack invalide.' });
+  const rawQuantity = Number(req.body?.quantity ?? 1);
+  if (!Number.isSafeInteger(rawQuantity) || rawQuantity < 1 || rawQuantity > 99) {
+    return res.status(400).json({ error: 'Quantite invalide (1 a 99).' });
+  }
+  // Un reset ELO est applique immediatement et ne peut donc pas avoir une
+  // quantite utile. Plusieurs variantes restent achetables dans le meme panier.
+  const bulkPurchasable = pack === 'fortune_ticket' || !!item.boostType;
+  if (rawQuantity > 1 && !bulkPurchasable) {
+    return res.status(400).json({ error: 'Cet article ne peut etre achete qu une unite a la fois.' });
+  }
+  const quantity = bulkPurchasable ? rawQuantity : 1;
 
   const player = pQ.getById.get(playerId);
   if (!player) return res.status(404).json({ error: 'Joueur introuvable.' });
@@ -6910,7 +6925,7 @@ app.post('/api/shop/buy', async (req, res) => {
   const requestedCurrency = String(req.body?.currency || 'coins').toLowerCase();
   const currency = requestedCurrency === 'gems' ? 'gems' : requestedCurrency === 'crystals' ? 'crystals' : 'coins';
   if (pack === 'fortune_ticket' && currency !== 'coins') {
-    return res.status(400).json({ error: 'Le ticket Roue Fortune s achete uniquement avec 500 coins.' });
+    return res.status(400).json({ error: 'Le ticket Roue Fortune s achete uniquement avec des coins.' });
   }
   if (currency === 'gems' && !String(player.discord_id || '').trim()) {
     return res.status(403).json({ error: 'Lie ton compte Discord pour utiliser les gemmes.' });
@@ -6938,7 +6953,8 @@ app.post('/api/shop/buy', async (req, res) => {
     : currency === 'gems'
       ? Number(item.gemPrice || SHOP_GEM_PRICES[item.key || pack] || Math.max(1, Math.ceil(Number(item.price || 0) * 0.45)))
       : Number(item.price || 0);
-  const price = adminFreeBotHost ? 0 : currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
+  const unitPrice = adminFreeBotHost ? 0 : currency === 'crystals' ? basePrice : applyReferralDiscountPrice(basePrice, player, coupon);
+  const price = unitPrice * quantity;
   const balance = currency === 'gems'
     ? Number(player.gems || 0)
     : currency === 'crystals'
@@ -6966,8 +6982,8 @@ app.post('/api/shop/buy', async (req, res) => {
   if (pack === 'limited_offer' && Number(item.defaultStock || 0) <= 0) {
     return res.status(400).json({ error: 'Rupture de stock.' });
   }
-  if (pack !== 'limited_offer' && Number.isFinite(item.defaultStock) && getShopStock(pack) <= 0) {
-    return res.status(400).json({ error: 'Rupture de stock.' });
+  if (pack !== 'limited_offer' && Number.isFinite(item.defaultStock) && getShopStock(pack) < quantity) {
+    return res.status(400).json({ error: `Stock insuffisant (${getShopStock(pack)} disponible${getShopStock(pack) > 1 ? 's' : ''}).` });
   }
 
   const now = Date.now();
@@ -7022,21 +7038,17 @@ app.post('/api/shop/buy', async (req, res) => {
       db.prepare('UPDATE player_variant_stats SET elo = 1000 WHERE player_id = ? AND variant = ?').run(recipientId, resetVariant);
     }
   } else if (pack === 'fortune_ticket') {
-    progression.addFortuneTickets(recipientId, 1);
+    progression.addFortuneTickets(recipientId, quantity);
   } else if (pack === 'limited_offer' && Array.isArray(item.grants)) {
     for (const grant of item.grants) applyLimitedPackEntry(recipientId, grant, { now, player: recipient });
   } else if (Array.isArray(item.grants)) {
     for (const grant of item.grants) applyShopGrant(recipientId, grant, { now, player: recipient });
   } else {
-    if (item.isCustom) {
-      shopItemQ.addOne.run(recipientId, item.key);
-    } else {
-      shopItemQ.addOne.run(recipientId, pack);
-    }
+    shopItemQ.addQty.run({ player_id: recipientId, item_key: item.isCustom ? item.key : pack, quantity });
   }
   const stockKey = SHOP_STOCK_KEYS[pack];
   if (stockKey) {
-    db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - 1, 0) AS TEXT) WHERE key = ?`).run(stockKey);
+    db.prepare(`UPDATE config SET value = CAST(MAX(CAST(value AS INTEGER) - ?, 0) AS TEXT) WHERE key = ?`).run(quantity, stockKey);
   }
   if (pack === 'limited_offer') {
     db.prepare(`
@@ -7059,10 +7071,10 @@ app.post('/api/shop/buy', async (req, res) => {
   }
 
   try {
-    WH.wlogShopPurchase(player.pseudo, playerId, `${item.label || item.name || pack}${isGift ? ` -> ${recipient.pseudo}` : ''}`, {
+    WH.wlogShopPurchase(player.pseudo, playerId, `${item.label || item.name || pack}${quantity > 1 ? ` x${quantity}` : ''}${isGift ? ` -> ${recipient.pseudo}` : ''}`, {
       currency,
       paid: price,
-      basePrice,
+      basePrice: basePrice * quantity,
       referralDiscount: Number(getReferralInfo(player).discountPercent || 0),
       persoDiscount: Number(player.is_perso || 0) === 1 ? 30 : 0,
       coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value } : null,
@@ -7084,6 +7096,8 @@ app.post('/api/shop/buy', async (req, res) => {
     gemPrices: SHOP_GEM_PRICES,
     botCrystalPrices: { bot_host_1m: BOT_HOST_PRICE_CRYSTALS },
     currency,
+    quantity,
+    unitPrice,
     paid: price,
     coupon: coupon ? { code: coupon.code, type: coupon.type, value: coupon.value, expiresAt: Number(coupon.expires_at || 0) || null } : null,
     items: SHOP_ITEMS,

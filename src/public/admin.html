@@ -392,11 +392,10 @@ input:focus,select:focus{
 .stat-card:hover::after{transform:translateX(120%)}
 .stat-val{font-family:'Barlow Condensed',sans-serif;font-size:46px;font-weight:900;line-height:.86;position:relative;z-index:1}
 .stat-lbl{font-size:11px;color:var(--muted);letter-spacing:2.2px;text-transform:uppercase;margin-top:10px;font-weight:700;position:relative;z-index:1}
-.admin-stack{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+.admin-stack{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:18px}
+.admin-stack>.table-wrap{grid-column:span 12;min-width:0}
 .admin-stack>.table-wrap:nth-child(1){grid-column:span 7}
 .admin-stack>.table-wrap:nth-child(2){grid-column:span 5}
-.admin-stack>.table-wrap:nth-child(3){grid-column:span 12}
-.admin-stack>.table-wrap:nth-child(4){grid-column:span 12}
 .admin-stack>.pill-tabs{grid-column:span 12}
 #admin-games-section,#admin-players-section{grid-column:span 12}
 .table-wrap{
@@ -823,7 +822,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
         <div class="admin-section-title">Clés produit</div>
         <div class="admin-section-copy">Crée une clé à usage unique contenant des coins, des gemmes, un grade ou un article boutique.</div>
       </div>
-      <button class="btn-sm" style="background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);height:42px" onclick="openProductKeyBuilder()">Ouvrir le générateur</button>
+      <button type="button" class="btn-sm" style="background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);height:42px" onclick="openProductKeyBuilder()">Ouvrir le générateur</button>
     </div>
     <div style="display:flex;align-items:center;gap:10px;padding:13px 14px;border:1px dashed rgba(48,209,88,.18);border-radius:15px;background:rgba(48,209,88,.035);color:var(--muted);font-size:12px"><span style="font-size:22px">🔑</span><span>Prépare le contenu, la quantité et l’expiration dans un panneau dédié, puis copie la clé en un clic.</span></div>
   </div>
@@ -1704,10 +1703,11 @@ function openProductKeyBuilder() {
         <div id="product-key-result" style="min-height:18px;font-size:12px;color:var(--green)"></div>
         <div id="product-key-output" class="key-builder-result"><div class="key-builder-preview-title">Clé générée</div><strong id="product-key-code" class="key-builder-code"></strong><small id="product-key-meta" style="color:var(--muted)"></small><button class="btn-sm" style="width:100%;margin-top:14px;background:rgba(48,209,88,.14);color:var(--green);border:1px solid rgba(48,209,88,.25)" onclick="copyProductKey()">Copier la clé</button></div>
       </div>
-      <div class="key-builder-footer"><button id="product-key-generate-btn" class="btn-sm" style="width:100%;min-height:50px;background:linear-gradient(135deg,rgba(48,209,88,.9),rgba(133,235,255,.72));color:#07120d;font-weight:900" onclick="createProductKey()">Confirmer et générer</button></div>
+      <div class="key-builder-footer"><button type="button" id="product-key-generate-btn" class="btn-sm" style="width:100%;min-height:50px;background:linear-gradient(135deg,rgba(48,209,88,.9),rgba(133,235,255,.72));color:#07120d;font-weight:900">Confirmer et générer</button></div>
     </section>`;
   layer.addEventListener('click', event => { if (event.target === layer) closeProductKeyBuilder(); });
   document.body.appendChild(layer);
+  layer.querySelector('#product-key-generate-btn')?.addEventListener('click', createProductKey);
   renderProductKeySummary();
   requestAnimationFrame(() => layer.classList.add('open'));
 }

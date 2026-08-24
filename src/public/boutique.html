@@ -871,12 +871,12 @@ const SHOP_ITEMS = {
   },
   fortune_ticket: {
     key: 'fortune_ticket', type: 'service', theme: 'booster-coin', art: '/assets/fortune-ticket.png', badge: '<img src="/assets/fortune-ticket.png" alt="" style="width:30px;height:22px;vertical-align:-7px;object-fit:contain"> ROUE', duration: 'Immédiat', title: 'Ticket Roue Fortune',
-    stat: '1', statSub: 'ticket pour 500 coins',
+    stat: '1', statSub: 'ticket pour 1000 coins',
     meta: 'Ajoute immédiatement un ticket à ton compte pour faire tourner la Roue Fortune.',
     features: [
       ['🎟️', 'Un tour', 'Chaque ticket permet de lancer une fois la Roue Fortune.'],
       ['⚡', 'Ajout immédiat', 'Le ticket apparaît directement sur la page de la roue.'],
-      ['♾️', 'Achat répétable', 'Tu peux acheter autant de tickets que ton solde le permet.']
+      ['♾️', 'Achat multiple', 'Choisis directement la quantité voulue dans le panier.']
     ]
   },
   bot_host_1m: {
@@ -898,7 +898,7 @@ const SHOP_PRICES = {
   crystal: 5000,
   vip_1m: 500, vip_1y: 5000, vip_plus: 10000, perso: 25000,
   elo_reset: 2500,
-  fortune_ticket: 500,
+  fortune_ticket: 1000,
   elo_mini: 250, elo_classic: 750, elo_max: 2500, elo_princess: 5000,
   coin_boost: 3000, coin_boost_plus: 6000,
   global_elo_boost: 5000, global_coin_boost: 5000,
@@ -980,6 +980,7 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-item-icon{width:72px;height:64px;padding:5px;border-radius:14px;background:radial-gradient(circle,rgba(255,214,10,.1),transparent 65%)}.cart-item-icon img{width:100%;height:100%;object-fit:contain;display:block}.cart-item-main{min-width:0}.cart-item-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.cart-item-top strong{font:900 21px 'Barlow Condensed',sans-serif;text-transform:uppercase}.cart-kind{padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase}.cart-item-price{display:block;margin-top:5px;color:var(--yellow)!important;font:900 18px 'Barlow Condensed',sans-serif}.cart-recipient{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:5px 8px;border:1px solid rgba(255,122,69,.2);border-radius:9px;background:rgba(255,122,69,.08);color:var(--orange);font-size:11px}.cart-remove{align-self:start;width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.04);font-size:18px}.cart-remove:hover{background:rgba(255,45,85,.12);color:var(--red)}
 .cart-footer{display:flex;flex-direction:column;padding:24px;border:0;border-left:1px solid rgba(255,255,255,.08);background:rgba(5,6,14,.44)}.cart-summary-kicker{margin-bottom:15px;font:900 22px 'Barlow Condensed',sans-serif;text-transform:uppercase}.cart-breakdown{display:flex;flex-direction:column;gap:9px}.cart-breakdown-row{display:flex;align-items:center;justify-content:space-between;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--muted)}.cart-breakdown-row strong{color:var(--text);font-size:13px}.cart-promo-state{margin-top:14px;padding:11px;border-radius:12px;border:1px dashed rgba(255,255,255,.11);color:var(--muted);font-size:11px;text-align:center}.cart-promo-state.active{border-style:solid;border-color:rgba(48,209,88,.24);background:rgba(48,209,88,.07);color:var(--green)}.cart-total{margin-top:auto;padding-top:20px;border-top:1px solid rgba(255,255,255,.09);align-items:flex-end}.cart-total span{font-size:12px;color:var(--muted)}.cart-total strong{max-width:70%;text-align:right;font-size:31px;line-height:1}.cart-footer .cart-checkout{margin-top:16px}
 @media(max-width:760px){.cart-overlay{padding:0;place-items:stretch}.cart-drawer{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-inline:0}.cart-head{padding:16px}.cart-head h2{font-size:35px}.cart-content{grid-template-columns:1fr;display:flex;flex-direction:column;max-height:calc(100dvh - 87px)}.cart-products{flex:1;min-height:0;padding:12px 7px}.cart-items{padding:0 5px}.cart-item{grid-template-columns:58px minmax(0,1fr) auto;padding:10px}.cart-item-icon{width:58px;height:54px}.cart-item-top strong{font-size:18px}.cart-footer{flex:0 0 auto;padding:14px 16px;border-left:0;border-top:1px solid rgba(255,255,255,.08)}.cart-summary-kicker,.cart-breakdown,.cart-promo-state{display:none}.cart-total{margin:0;padding:0;border:0}.cart-total strong{font-size:25px}.cart-footer .cart-checkout{margin-top:11px;min-height:50px}.cart-footer .promo-help{display:none}}
+.cart-quantity{display:inline-grid;grid-template-columns:30px 42px 30px;align-items:center;margin-top:8px;border:1px solid rgba(255,255,255,.1);border-radius:11px;overflow:hidden;background:rgba(0,0,0,.16)}.cart-quantity button{height:30px;border:0;background:rgba(255,255,255,.05);color:var(--text);font:900 17px 'Barlow Condensed',sans-serif;cursor:pointer}.cart-quantity button:hover:not(:disabled){background:rgba(255,214,10,.15);color:var(--yellow)}.cart-quantity button:disabled{opacity:.35;cursor:not-allowed}.cart-quantity strong{display:grid;place-items:center;font:900 15px 'Barlow Condensed',sans-serif}
 .store-toast{position:fixed;z-index:250;left:50%;bottom:28px;transform:translate(-50%,20px);padding:12px 18px;border-radius:14px;background:#f7f7fb;color:#11121c;font-weight:800;opacity:0;pointer-events:none;transition:.22s}.store-toast.show{opacity:1;transform:translate(-50%,0)}
 .rank-art{position:relative;display:grid;place-items:center;height:148px;margin:0 0 3px;overflow:visible;background:transparent!important;border:0!important}
 .rank-art::after{display:none!important}.rank-art>img:first-child{width:auto;height:auto;max-width:68%;max-height:142px;object-fit:contain;filter:drop-shadow(0 13px 16px rgba(0,0,0,.38));transition:transform .25s ease}.card:hover .rank-art>img:first-child{transform:scale(1.045) translateY(-2px)}
@@ -1596,7 +1597,7 @@ function getButtonState(pack) {
 }
 
 function getCartPrice(pack) {
-  if (pack === 'fortune_ticket') return getDiscountedPrice(Number(SHOP_PRICES.fortune_ticket || 500)).finalPrice;
+  if (pack === 'fortune_ticket') return getDiscountedPrice(Number(SHOP_PRICES.fortune_ticket || 1000)).finalPrice;
   if (pack === 'fortune_boost_custom') return getDisplayPrice(pack);
   if (pack === 'bot_host_1m') return isShopAdmin() ? 0 : Number(SHOP_BOT_CRYSTAL_PRICES.bot_host_1m || 3000);
   return getDisplayPrice(pack);
@@ -2654,6 +2655,8 @@ function getCartSnapshot(pack, recipient = null) {
     kind: item?.type === 'rank' ? 'Grade' : item?.category === 'cosmetics' ? 'Cosmétique' : item?.type === 'booster' ? 'Booster' : item?.type === 'host' ? 'Host' : 'Article',
     art: item?.art || '',
     price: getCartPrice(pack),
+    quantity: 1,
+    resetVariant: pack === 'elo_reset' ? (document.getElementById('elo-reset-variant')?.value || 'classic') : null,
     currency: pack === 'fortune_ticket' ? 'coins' : pack === 'bot_host_1m' ? 'crystals' : getShopCurrency(),
     durationDays: pack === 'fortune_boost_custom' ? customBoosterState.fortuneDuration : null,
     multiplier: pack === 'elo_custom' ? customBoosterState.elo : pack === 'coin_custom' ? customBoosterState.coins : pack === 'fortune_boost_custom' ? customBoosterState.fortune : pack === 'global_elo_custom' ? customBoosterState.globalElo : pack === 'global_coin_custom' ? customBoosterState.globalCoins : null,
@@ -2667,13 +2670,33 @@ function getCartSnapshot(pack, recipient = null) {
   };
 }
 
+function isBulkCartItem(pack) {
+  const item = getDisplayItem(pack);
+  return pack === 'fortune_ticket' || item?.type === 'booster' || !!item?.boostType;
+}
+
+function getCartQuantityMax(entry) {
+  if (!isBulkCartItem(entry?.pack)) return 1;
+  const stock = entry.pack === 'limited_offer'
+    ? Number(shopLimitedOffer?.stock ?? 0)
+    : getStockQty(entry.pack);
+  return stock === null ? 99 : Math.max(1, Math.min(99, Math.trunc(stock)));
+}
+
 function addToCart(pack, recipient = null) {
   const state = getCartEligibility(pack, { gift: !!recipient });
   if (state.disabled) return;
   const snapshot = getCartSnapshot(pack, recipient);
-  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationDays ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
-  if (shopCart.some(entry => entry.key === key)) {
-    showStoreToast(recipient ? 'Ce cadeau est déjà dans ton panier' : 'Cet article est déjà dans ton panier');
+  const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationDays ?? ''}:${snapshot.resetVariant ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
+  const existing = shopCart.find(entry => entry.key === key);
+  if (existing) {
+    if (isBulkCartItem(pack) && existing.quantity < getCartQuantityMax(existing)) {
+      existing.quantity += 1;
+      renderCart();
+      showStoreToast(`${snapshot.title} · quantité ${existing.quantity}`);
+    } else {
+      showStoreToast(recipient ? 'Ce cadeau est déjà dans ton panier' : 'Quantité maximale atteinte');
+    }
     openCart();
     return;
   }
@@ -2682,6 +2705,15 @@ function addToCart(pack, recipient = null) {
   if (paymentState) delete paymentState.dataset.locked;
   openCart();
   showStoreToast(recipient ? `Cadeau pour ${recipient.pseudo} ajouté` : `${snapshot.title} ajouté au panier`);
+}
+
+function changeCartQuantity(key, delta) {
+  const entry = shopCart.find(item => item.key === key);
+  if (!entry || !isBulkCartItem(entry.pack)) return;
+  entry.quantity = Math.max(1, Math.min(getCartQuantityMax(entry), Number(entry.quantity || 1) + Number(delta || 0)));
+  const paymentState = document.getElementById('cart-payment-state');
+  if (paymentState) delete paymentState.dataset.locked;
+  renderCart();
 }
 
 function removeFromCart(key) {
@@ -2733,6 +2765,15 @@ function closeCart() {
   }, 260);
 }
 
+function renderCartItem(entry) {
+  const quantity = Math.max(1, Number(entry.quantity || 1));
+  const linePrice = Number(entry.price || 0) * quantity;
+  const quantityHtml = isBulkCartItem(entry.pack)
+    ? `<div class="cart-quantity" aria-label="Quantité"><button type="button" onclick="changeCartQuantity('${escapeHtml(entry.key)}',-1)" ${quantity <= 1 ? 'disabled' : ''} aria-label="Diminuer">−</button><strong>${quantity}</strong><button type="button" onclick="changeCartQuantity('${escapeHtml(entry.key)}',1)" ${quantity >= getCartQuantityMax(entry) ? 'disabled' : ''} aria-label="Augmenter">+</button></div>`
+    : '';
+  return `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}${quantity > 1 ? ` ×${quantity}` : ''}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}${entry.durationDays ? ` · ${entry.durationDays} jour${entry.durationDays > 1 ? 's' : ''}` : ''}${entry.resetVariant ? ` · ${escapeHtml(entry.resetVariant)}` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}${quantityHtml}<span class="cart-item-price">${linePrice} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}${quantity > 1 ? ` · ${entry.price}/unité` : ''}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`;
+}
+
 function renderCart() {
   const box = document.getElementById('cart-items');
   const count = document.getElementById('cart-count');
@@ -2742,9 +2783,10 @@ function renderCart() {
   const paymentState = document.getElementById('cart-payment-state');
   const total = document.getElementById('cart-total');
   const checkout = document.getElementById('cart-checkout');
-  if (count) count.textContent = String(shopCart.length);
+  const unitCount = shopCart.reduce((sum, entry) => sum + Math.max(1, Number(entry.quantity || 1)), 0);
+  if (count) count.textContent = String(unitCount);
   if (paymentState && !paymentState.dataset.locked) { paymentState.textContent = ''; paymentState.className = 'cart-payment-state'; }
-  if (itemsLabel) itemsLabel.textContent = `${shopCart.length} produit${shopCart.length > 1 ? 's' : ''}`;
+  if (itemsLabel) itemsLabel.textContent = `${unitCount} produit${unitCount > 1 ? 's' : ''}`;
   if (!box || !total || !checkout) return;
   if (!shopCart.length) {
     box.innerHTML = '<div class="cart-empty"><b>🛒</b>Ton panier est vide.<br><small>Ajoute un grade, un booster ou un cosmétique.</small></div>';
@@ -2754,13 +2796,13 @@ function renderCart() {
     checkout.disabled = true;
     return;
   }
-  box.innerHTML = shopCart.map(entry => `<div class="cart-item"><span class="cart-item-icon">${entry.art ? `<img src="${escapeHtml(entry.art)}" alt="">` : entry.icon}</span><div class="cart-item-main"><div class="cart-item-top"><strong>${escapeHtml(entry.title)}</strong><span class="cart-kind">${escapeHtml(entry.kind)}</span></div><small>${escapeHtml(entry.duration)}${entry.multiplier ? ` · configuration x${entry.multiplier}` : ''}${entry.durationDays ? ` · ${entry.durationDays} jour${entry.durationDays > 1 ? 's' : ''}` : ''}</small>${entry.recipient ? `<span class="cart-recipient"><span class="cart-recipient-avatar" style="border-color:${escapeHtml(entry.recipient.color)}">${entry.recipient.avatar ? `<img src="${escapeHtml(entry.recipient.avatar)}" alt="Avatar de ${escapeHtml(entry.recipient.pseudo)}">` : escapeHtml(entry.recipient.pseudo.charAt(0).toUpperCase())}</span><span class="cart-recipient-copy"><small>Cadeau pour</small><b>${escapeHtml(entry.recipient.pseudo)}</b></span></span>` : ''}<span class="cart-item-price">${entry.price} ${entry.currency === 'gems' ? 'gemmes' : entry.currency === 'crystals' ? 'Cristaux' : 'coins'}</span></div><button class="cart-remove" type="button" onclick="removeFromCart('${escapeHtml(entry.key)}')" aria-label="Retirer ${escapeHtml(entry.title)}">×</button></div>`).join('');
-  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + entry.price; return acc; }, {});
+  box.innerHTML = shopCart.map(renderCartItem).join('');
+  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + Number(entry.price || 0) * Math.max(1, Number(entry.quantity || 1)); return acc; }, {});
   const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
   const totalText = Object.entries(totals).map(([currency, amount]) => `${amount} ${currencyName(currency).toLowerCase()}`).join(' + ');
   total.textContent = totalText;
-  const gifts = shopCart.filter(entry => entry.recipient).length;
-  if (breakdown) breakdown.innerHTML = Object.entries(totals).map(([currency, amount]) => `<div class="cart-breakdown-row"><span>Sous-total ${currencyName(currency)}</span><strong>${amount}</strong></div>`).join('') + `<div class="cart-breakdown-row"><span>Articles personnels</span><strong>${shopCart.length - gifts}</strong></div><div class="cart-breakdown-row"><span>Cadeaux</span><strong>${gifts}</strong></div>`;
+  const gifts = shopCart.filter(entry => entry.recipient).reduce((sum, entry) => sum + Math.max(1, Number(entry.quantity || 1)), 0);
+  if (breakdown) breakdown.innerHTML = Object.entries(totals).map(([currency, amount]) => `<div class="cart-breakdown-row"><span>Sous-total ${currencyName(currency)}</span><strong>${amount}</strong></div>`).join('') + `<div class="cart-breakdown-row"><span>Articles personnels</span><strong>${unitCount - gifts}</strong></div><div class="cart-breakdown-row"><span>Cadeaux</span><strong>${gifts}</strong></div>`;
   if (promoState) {
     promoState.textContent = appliedCouponCode ? `✓ Code ${appliedCouponCode} appliqué aux articles compatibles` : 'Aucun code promotionnel appliqué';
     promoState.classList.toggle('active', !!appliedCouponCode);
@@ -2771,7 +2813,7 @@ function renderCart() {
 function validateCartPayment() {
   const token = localStorage.getItem('token');
   if (!token || !shopPlayer) return { ok: false, message: 'Connecte-toi pour pouvoir régler ce panier.' };
-  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + Number(entry.price || 0); return acc; }, {});
+  const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + Number(entry.price || 0) * Math.max(1, Number(entry.quantity || 1)); return acc; }, {});
   const problems = [];
   if (totals.gems && !shopGemsUnlocked) problems.push('lie ton compte Discord pour payer en gemmes');
   if (totals.crystals && !shopBotHostEligible) problems.push('associe un bot pour utiliser les Cristaux');
@@ -2804,9 +2846,13 @@ async function checkoutCart() {
     if (entry.pack === 'fortune_boost_custom') customBoosterState.fortuneDuration = entry.durationDays;
     if (entry.pack === 'global_elo_custom') customBoosterState.globalElo = entry.multiplier;
     if (entry.pack === 'global_coin_custom') customBoosterState.globalCoins = entry.multiplier;
-    const ok = await purchasePack(entry.pack, entry.recipient?.pseudo || '', entry.recipient?.id || 0, { skipConfirm: true });
+    const ok = await purchasePack(entry.pack, entry.recipient?.pseudo || '', entry.recipient?.id || 0, {
+      skipConfirm: true,
+      quantity: Math.max(1, Number(entry.quantity || 1)),
+      variant: entry.resetVariant || undefined,
+    });
     if (!ok) break;
-    completed += 1;
+    completed += Math.max(1, Number(entry.quantity || 1));
     shopCart = shopCart.filter(item => item.key !== entry.key);
   }
   renderCart();
@@ -2837,9 +2883,11 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
 
   const item = getDisplayItem(pack);
   const packLabel = item?.title || pack;
+  const quantity = isBulkCartItem(pack) ? Math.max(1, Math.min(99, Math.trunc(Number(options.quantity || 1)))) : 1;
   const basePrice = getCustomBoosterPrice(pack);
   const priceInfo = getDiscountedPrice(basePrice);
-  const price = priceInfo.finalPrice;
+  const unitPrice = priceInfo.finalPrice;
+  const price = unitPrice * quantity;
   const currency = getShopCurrency();
   const rawCoupon = String(document.getElementById('coupon-input')?.value || '').trim();
   if (rawCoupon && !appliedCouponCode) {
@@ -2847,13 +2895,13 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
     return false;
   }
   const coupon = appliedCouponCode;
-  const resetVariant = pack === 'elo_reset' ? (document.getElementById('elo-reset-variant')?.value || 'classic') : undefined;
+  const resetVariant = pack === 'elo_reset' ? (options.variant || document.getElementById('elo-reset-variant')?.value || 'classic') : undefined;
   const resetVariantLabel = resetVariant ? ({ classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' }[resetVariant] || 'Classique') : '';
-  const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice}` : '';
+  const promoText = priceInfo.hasDiscount ? ` au lieu de ${basePrice * quantity}` : '';
   const giftText = giftTo ? ` pour ${giftTo}` : '';
   const currencyLabel = currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins';
   const priceText = price === 0 ? 'gratuitement' : `pour ${price} ${currencyLabel}${promoText}`;
-  if (!options.skipConfirm && !confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${giftText} ${priceText}${resetVariant ? ` pour la variante ${resetVariantLabel}` : ''}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
+  if (!options.skipConfirm && !confirm(`Confirmer ${giftTo ? 'le cadeau' : 'l achat'} de ${packLabel}${quantity > 1 ? ` ×${quantity}` : ''}${giftText} ${priceText}${resetVariant ? ` pour la variante ${resetVariantLabel}` : ''}${coupon ? ` avec le code ${coupon}` : ''} ?`)) return false;
 
   const btn = giftTo ? null : document.getElementById(`buy-${pack}`);
   const btnInitialHtml = btn?.innerHTML || '';
@@ -2869,6 +2917,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
       body: JSON.stringify({
         token,
         pack,
+        quantity,
         customMultiplier: pack === 'elo_custom'
           ? Number(customBoosterState.elo || 0.1)
           : pack === 'coin_custom'
@@ -2895,7 +2944,7 @@ async function purchasePack(pack, giftTo = '', giftToId = 0, options = {}) {
       return false;
     }
     purchaseOk = true;
-    const successText = giftTo ? 'Cadeau envoyé' : 'Achat effectué';
+    const successText = giftTo ? 'Cadeau envoyé' : quantity > 1 ? `${quantity} achats effectués` : 'Achat effectué';
     setPurchaseNotice(pack, `${successText} ✓`);
     if (btn) btn.innerHTML = `${successText} ✓`;
     shopPlayer = data.player || shopPlayer;
