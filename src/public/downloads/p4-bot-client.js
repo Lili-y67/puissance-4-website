@@ -487,6 +487,26 @@ async function evaluateRootMoves(board, moveOrder, me, depth, deadline) {
 
 async function chooseMove(game) {
   const board = game.board;
+  if (game.variant === 'naval') {
+    const legalCells = Array.isArray(game.legalCells) ? game.legalCells : [];
+    if (!legalCells.length) return { row: null, col: null, stats: { tactical: 'naval-no-target', elapsedMs: 0 } };
+    const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+    const scored = legalCells.map(cell => ({ row: Number(cell.row), col: Number(cell.col), score: 0 }));
+    const byKey = new Map(scored.map(cell => [`${cell.row}:${cell.col}`, cell]));
+    for (let row = 0; row < board.length; row++) for (let col = 0; col < board[row].length; col++) {
+      for (const [dr, dc] of directions) {
+        const cells = Array.from({ length: 4 }, (_, step) => [row + dr * step, col + dc * step]);
+        if (cells.some(([r, c]) => r < 0 || r >= board.length || c < 0 || c >= board[r].length)) continue;
+        const known = cells.map(([r, c]) => Number(board[r][c] || 0)).filter(Boolean);
+        if (new Set(known).size > 1) continue;
+        const weight = Math.pow(known.length + 1, 3);
+        cells.forEach(([r, c]) => { const target = byKey.get(`${r}:${c}`); if (target) target.score += weight; });
+      }
+    }
+    scored.forEach(cell => { cell.score += Math.random() * 0.02; });
+    scored.sort((a, b) => b.score - a.score);
+    return { row: scored[0].row, col: scored[0].col, stats: { tactical: 'naval-public-grid', score: scored[0].score, elapsedMs: 0 } };
+  }
   const me = Number(game.side);
   const opp = me === 1 ? 2 : 1;
   const moves = game.legalMoves?.length ? game.legalMoves : legalMoves(board);
@@ -619,11 +639,11 @@ async function runBotWorker(token, workerIndex) {
 
       const result = await api('/api/bot/move', {
         method: 'POST',
-        body: JSON.stringify({ col }),
+        body: JSON.stringify({ col, ...(game.variant === 'naval' ? { row: choice.row } : {}) }),
       }, token);
       const s = choice.stats || {};
-      renderEngineReport(game, col, s, boardAfterMove(game.board, col, Number(game.side)));
-      workerLog(`[${gameLabel(game)}] Played c${col + 1}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
+      if (game.variant !== 'naval') renderEngineReport(game, col, s, boardAfterMove(game.board, col, Number(game.side)));
+      workerLog(`[${gameLabel(game)}] Played ${game.variant === 'naval' ? `r${choice.row + 1}c${col + 1}` : `c${col + 1}`}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
       if (result.result?.type === 'game_over') {
         const winner = result.result?.winner ? `side ${result.result.winner}` : 'draw';
         workerLog(`Game ${game.gameId} ended: ${winner}. Clearing local search memory and seeking next game.`);

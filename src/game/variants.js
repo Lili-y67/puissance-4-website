@@ -7,7 +7,7 @@ const VARIANTS = Object.freeze({
   simultaneous: Object.freeze({ id: 'simultaneous', label: 'Placement simultané', rows: 6, cols: 7, ranked: true }),
   fog: Object.freeze({ id: 'fog', label: 'Brouillard de Guerre', rows: 6, cols: 7, ranked: true, revealMs: 1250 }),
   conquest: Object.freeze({ id: 'conquest', label: 'Conquête', rows: 6, cols: 7, ranked: true, pointsToResolve: 4 }),
-  naval: Object.freeze({ id: 'naval', label: 'Puissance 4 Navale', rows: 6, cols: 7, ranked: true, botSupported: false }),
+  naval: Object.freeze({ id: 'naval', label: 'Puissance 4 Navale', rows: 6, cols: 7, ranked: true, botSupported: true }),
 });
 
 const MISSION_DEFINITIONS = Object.freeze([

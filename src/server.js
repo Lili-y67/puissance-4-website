@@ -1591,6 +1591,13 @@ function serializeBotGameState(state, playerId) {
   const forcedCols = state.variant === 'anti'
     ? gm._antiForcedCols(state, side)
     : [];
+  // En Navale, board ne contient que les cases deja revelees. La grille
+  // secrete reste exclusivement dans state.navalSecretGrid, cote moteur.
+  const navalLegalCells = state.variant === 'naval'
+    ? state.board.grid.flatMap((row, rowIndex) => row.flatMap((value, colIndex) => (
+        value === 0 ? [{ row: rowIndex, col: colIndex }] : []
+      )))
+    : null;
   return {
     gameId: state.id,
     gameType: state.gameType || 'ranked',
@@ -1599,7 +1606,8 @@ function serializeBotGameState(state, playerId) {
     current: state.current,
     isMyTurn: side === state.current,
     board: state.board.grid,
-    legalMoves: forcedCols.length ? forcedCols : state.board.getValidCols(),
+    legalMoves: state.variant === 'naval' ? [] : (forcedCols.length ? forcedCols : state.board.getValidCols()),
+    legalCells: navalLegalCells,
     forcedCols,
     antiScores: state.variant === 'anti' ? state.antiScores : null,
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
@@ -1693,6 +1701,45 @@ function getBuiltinBotTimeBudget(state, side) {
   if (depth >= 9) return Math.max(BOT_SEARCH_TIME_MS, 7000);
   if (depth >= 8) return Math.max(BOT_SEARCH_TIME_MS, 4000);
   return Math.max(BOT_SEARCH_TIME_MS, 2000);
+}
+
+function chooseNavalBotCell(state) {
+  const board = state?.board?.grid;
+  if (!Array.isArray(board) || !board.length) return null;
+
+  const candidates = [];
+  for (let row = 0; row < board.length; row++) {
+    for (let col = 0; col < (board[row]?.length || 0); col++) {
+      if (Number(board[row][col] || 0) === 0) candidates.push({ row, col, score: 0 });
+    }
+  }
+  if (!candidates.length) return null;
+
+  const byKey = new Map(candidates.map(cell => [`${cell.row}:${cell.col}`, cell]));
+  const directions = [[0, 1], [1, 0], [1, 1], [1, -1]];
+  for (let row = 0; row < board.length; row++) {
+    for (let col = 0; col < (board[row]?.length || 0); col++) {
+      for (const [dr, dc] of directions) {
+        const cells = Array.from({ length: 4 }, (_, step) => [row + dr * step, col + dc * step]);
+        if (cells.some(([r, c]) => r < 0 || r >= board.length || c < 0 || c >= (board[r]?.length || 0))) continue;
+        const revealed = cells.map(([r, c]) => Number(board[r][c] || 0)).filter(Boolean);
+        // Deux couleurs revelees rendent cette ligne impossible. Sinon, le bot
+        // favorise les lignes compatibles sans jamais consulter la grille cachee.
+        if (new Set(revealed).size > 1) continue;
+        const weight = Math.pow(revealed.length + 1, 3);
+        for (const [r, c] of cells) {
+          const candidate = byKey.get(`${r}:${c}`);
+          if (candidate) candidate.score += weight;
+        }
+      }
+    }
+  }
+
+  for (const cell of candidates) {
+    cell.score += (3 - Math.abs(3 - cell.col)) * 0.05 + Math.random() * 0.02;
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return { row: candidates[0].row, col: candidates[0].col };
 }
 
 function cloneGrid(grid) {
@@ -1918,16 +1965,19 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 700) {
       if (state.variant === 'simultaneous' && state.simultaneousChoices?.[side] !== null) side = side === 1 ? 2 : 1;
       const player = state.players[side];
       if (!builtinBotIds.has(Number(player?.id))) return;
-      const action = state.variant === 'classic' ? null : await chooseVariantBotActionAsync(state, side);
-      let col = action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
+      const navalCell = state.variant === 'naval' ? chooseNavalBotCell(state) : null;
+      const action = ['classic', 'naval'].includes(state.variant) ? null : await chooseVariantBotActionAsync(state, side);
+      let col = navalCell?.col ?? action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
       const freshState = gm.games.get(gameId);
       if (!freshState || freshState !== state || state.status !== 'active' || (state.variant !== 'simultaneous' && state.current !== side)) return;
       const validCols = state.board.getValidCols();
-      if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
+      if (state.variant === 'naval') {
+        if (!navalCell || Number(state.board.grid?.[navalCell.row]?.[navalCell.col] || 0) !== 0) return scheduleBuiltinBotTurn(gameId, 100);
+      } else if (col === null || !validCols.includes(Number(col))) col = validCols[0] ?? null;
       if (col === null) return;
       let result;
       if (state.variant === 'bomb' && action?.kind === 'bomb') result = gm.useBomb(player.socketId, action.row, action.col);
-      else result = gm.playMove(player.socketId, col);
+      else result = gm.playMove(player.socketId, col, navalCell?.row ?? null);
       if (result?.gameId) {
         if (result.type === 'game_over') emitGameOver(result);
         else if (result.type === 'bomb') io.to('game:' + result.gameId).emit('bomb_used', result);
@@ -7966,7 +8016,7 @@ app.post('/api/bot/move', (req, res) => {
   if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
   const side = Number(state.players[1].id) === Number(bot.id) ? 1 : 2;
   if (state.current !== side) return res.status(409).json({ error: 'Pas ton tour.', game: serializeBotGameState(state, bot.id) });
-  const result = gm.playMove(state.players[side].socketId, Number(req.body?.col));
+  const result = gm.playMove(state.players[side].socketId, Number(req.body?.col), req.body?.row);
   if (result?.error) return res.status(400).json({ error: result.error, game: serializeBotGameState(state, bot.id) });
   scheduleBuiltinBotTurn(state.id);
   res.json({ ok: true, result, game: serializeBotGameState(gm.games.get(state.id), bot.id) });
