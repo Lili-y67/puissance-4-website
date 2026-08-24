@@ -805,6 +805,15 @@ body {
 .btn-action.ghost { background: rgba(255,255,255,.035); border: 1.5px solid var(--border); color: var(--muted); }
 .btn-action.ghost:hover { border-color: var(--muted); color: var(--text); }
 
+body.tutorial-viewer .game-social { display: none; }
+body.tutorial-viewer .game-id-badge {
+  display: inline-flex;
+  color: var(--cyan);
+  border-color: rgba(133,235,255,.28);
+  background: rgba(133,235,255,.07);
+}
+body.tutorial-viewer .col-btn { pointer-events: none; opacity: .3; }
+
 /* ── Abyss Grove theme layer ── */
 body::before{
   content:"";
@@ -1454,6 +1463,9 @@ let currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 let latencyProbeTimer = null;
 let latencyProbePending = false;
 let fogRevealTimer = null;
+let tutorialViewerMode = false;
+let tutorialViewerGameId = 0;
+let tutorialIntroTimer = null;
 
 const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
 
@@ -1684,6 +1696,11 @@ function resignGame() {
 
 function quit() {
   sessionStorage.setItem('no_auto_queue', '1');
+  if (tutorialViewerMode) {
+    socket?.disconnect();
+    location.href = '/';
+    return;
+  }
   if (!gameOver && !iaMode && socket && mySide) {
     if (!confirm('Quitter la partie ? Cela comptera comme un abandon et l ELO sera applique.')) return;
     socket.emit('game_resign');
@@ -1731,11 +1748,24 @@ function applyBoardPalette(seed = '') {
 
 function updateGameDiscordPresence(extra = {}) {
   const players = extra.players || lobbyData?.players || {};
+  const variantLabel = VARIANT_LABELS[currentVariant] || 'Classique';
+  if (tutorialViewerMode) {
+    const p1 = players?.[1]?.pseudo || 'IA 1';
+    const p2 = players?.[2]?.pseudo || 'IA 2';
+    const context = {
+      details: `Regarde le tuto ${variantLabel}`,
+      state: `${p1} contre ${p2} · partie accélérée`,
+      hideIdentity: true,
+      url: location.href,
+    };
+    window.__p4RpcContext = context;
+    window.P4DiscordPresence?.setContext(context);
+    return;
+  }
   const opponentSide = mySide === 1 ? 2 : 1;
   const opponent = players?.[opponentSide];
   const activeMode = document.body.dataset.gameMode || 'ranked';
   const mode = iaMode ? 'contre une IA' : activeMode === 'friendly' ? 'en amical' : 'en ranked';
-  const variantLabel = VARIANT_LABELS[currentVariant] || 'Classique';
   const p1Elo = Number.isFinite(Number(players?.[1]?.elo)) ? Math.round(Number(players[1].elo)) : '—';
   const p2Elo = Number.isFinite(Number(players?.[2]?.elo)) ? Math.round(Number(players[2].elo)) : '—';
   const context = {
@@ -2044,8 +2074,142 @@ function applyColors(c1, c2, s1 = '', s2 = '') {
   root.style.setProperty('--p2-dim',   hexToRgba(c2, 0.15));
 }
 
+function applyTutorialTokenVisuals(players = {}) {
+  const raw1 = players?.[1]?.shape || 'circle';
+  const raw2 = players?.[2]?.shape || 'circle';
+  p1TokenRgb = players?.[1]?.token_rgb === true || Number(players?.[1]?.pseudo_rgb || 0) === 1;
+  p2TokenRgb = players?.[2]?.token_rgb === true || Number(players?.[2]?.pseudo_rgb || 0) === 1;
+  if (raw1.startsWith('emoji:')) { p1Shape = 'emoji'; p1Emoji = raw1.slice(6) || '⭐'; }
+  else p1Shape = raw1;
+  if (raw2.startsWith('emoji:')) { p2Shape = 'emoji'; p2Emoji = raw2.slice(6) || '💎'; }
+  else p2Shape = raw2;
+  p1EmojiImage = raw1 === 'emoji_image' ? (players?.[1]?.token_emoji_image || '') : '';
+  p2EmojiImage = raw2 === 'emoji_image' ? (players?.[2]?.token_emoji_image || '') : '';
+}
+
+function runTutorialIntro(game) {
+  const overlay = document.getElementById('lobby-overlay');
+  const countdown = document.getElementById('countdown');
+  overlay?.classList.remove('hidden');
+  SFX.matchFound();
+  clearInterval(tutorialIntroTimer);
+  let previous = null;
+  const tick = () => {
+    const remaining = Math.max(0, Number(game.tutorialStartsAt || 0) - Date.now());
+    const number = Math.ceil(remaining / 1000);
+    if (countdown) countdown.textContent = number > 0 ? number : 'GO';
+    if (number > 0 && number !== previous) SFX.tick();
+    previous = number;
+    if (remaining <= 0) {
+      clearInterval(tutorialIntroTimer);
+      tutorialIntroTimer = null;
+      SFX.go();
+      setTimeout(() => overlay?.classList.add('hidden'), 260);
+      updateTurnUI();
+    }
+  };
+  tick();
+  tutorialIntroTimer = setInterval(tick, 100);
+}
+
+function setupTutorialSocket(id) {
+  socket = io({ transports: ['websocket', 'polling'] });
+  socket.on('connect', () => socket.emit('join_tutorial_game', { gameId: id }));
+  socket.on('move_played', onMovePlayed);
+  socket.on('bomb_used', async data => {
+    await animateBombUse(data);
+    currentTurn = data.next;
+    bombAvailability = { 1: data.bombs?.[1] !== false, 2: data.bombs?.[2] !== false };
+    updateTurnUI();
+  });
+  socket.on('game_over', onGameOver);
+  socket.on('tutorial_game_error', ({ message } = {}) => {
+    setStatus(message || 'Ce tutoriel est terminé.');
+    setTimeout(() => location.href = '/', 1600);
+  });
+}
+
+async function startTutorialViewer(id) {
+  tutorialViewerMode = true;
+  tutorialViewerGameId = Number(id || 0);
+  document.body.classList.add('tutorial-viewer');
+  try {
+    const response = await fetch(`/api/live?tutorialId=${encodeURIComponent(tutorialViewerGameId)}`, { cache: 'no-store' });
+    const games = await response.json();
+    const game = Array.isArray(games) ? games.find(item => Number(item.id) === tutorialViewerGameId && item.tutorial) : null;
+    if (!game || game.status !== 'active') throw new Error('Ce tutoriel est terminé ou introuvable.');
+
+    const players = game.players || {};
+    gameId = tutorialViewerGameId;
+    mySide = 0;
+    myPlayer = { id: 0, pseudo: 'Tutoriel' };
+    iaMode = true;
+    serverBotMode = true;
+    gameOver = false;
+    lobbyData = game;
+    currentTurn = Number(game.current) === 2 ? 2 : 1;
+    configureVariant(game);
+    setGameMode('bot');
+    applyBoardPalette(`tutorial-${game.id}`);
+    applyColors(players?.[1]?.color || '#ff2d55', players?.[2]?.color || '#ffd60a', players?.[1]?.color_secondary || '', players?.[2]?.color_secondary || '');
+    applyTutorialTokenVisuals(players);
+
+    [1, 2].forEach(side => {
+      const player = players?.[side] || { pseudo: `IA ${side}`, elo: '—' };
+      document.getElementById('name-p' + side).textContent = player.pseudo;
+      setCardElo(side, player.elo);
+      applyPlayerCardVisual(side, player);
+      applyLobbyPlayerVisual(side, player);
+      document.getElementById('lpseudo' + side).textContent = player.pseudo;
+      document.getElementById('lelo' + side).textContent = `${player.elo ?? '—'} ELO`;
+      setPlayerLatency(side, null);
+    });
+    document.getElementById('game-id-badge').textContent = 'TUTO · NON COMPTÉ';
+    const badge = document.getElementById('turn-badge');
+    if (badge) {
+      badge.textContent = `TUTO · ${VARIANT_LABELS[currentVariant] || 'Classique'}`;
+      badge.classList.add('show');
+    }
+    const actionState = document.getElementById('action-state');
+    if (actionState) actionState.textContent = 'Spectateur';
+
+    currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+    renderBoard();
+    restoreBoard(game.grid || []);
+    updateTurnUI();
+    updateGameDiscordPresence({ players });
+    setupTutorialSocket(tutorialViewerGameId);
+    if (Number(game.tutorialStartsAt || 0) > Date.now()) runTutorialIntro(game);
+    else document.getElementById('lobby-overlay')?.classList.add('hidden');
+  } catch (error) {
+    document.getElementById('lobby-overlay')?.classList.add('hidden');
+    setStatus(error?.message || 'Impossible de charger le tutoriel.');
+    setTimeout(() => location.href = '/', 1800);
+  }
+}
+
+async function restartTutorialViewer() {
+  try {
+    const response = await fetch('/api/tutorial/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variant: currentVariant }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Relance impossible.');
+    location.href = data.url;
+  } catch (error) {
+    setStatus(error?.message || 'Relance impossible.');
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
+  const tutorialMatch = location.pathname.match(/^\/tutorial\/(-?\d+)\/?$/);
+  if (tutorialMatch) {
+    startTutorialViewer(Number(tutorialMatch[1]));
+    return;
+  }
   // Lire depuis sessionStorage OU localStorage
   const pData = sessionStorage.getItem('player') || sessionStorage.getItem('duel_guest_player') || localStorage.getItem('player');
   const mData = sessionStorage.getItem('match');
@@ -2593,6 +2757,10 @@ function playMove(col, row = null) {
 async function onMovePlayed(data) {
   if (currentVariant === 'naval') {
     if (data.board) restoreBoard(data.board);
+    const navalPlayer = Number(data.player || data.actor || 0);
+    if (Number.isInteger(data.row) && Number.isInteger(data.col) && [1, 2].includes(navalPlayer)) {
+      applyToken(data.row, data.col, navalPlayer, true);
+    }
     currentTurn = data.next;
     const state = document.getElementById('naval-state');
     if (state) state.textContent = `${Number(data.revealedCount || 0)} / 42 cases révélées · trouve l’unique ligne`;
@@ -2947,6 +3115,26 @@ function updateTurnUI() {
   document.getElementById('card-p1').classList.toggle('active', currentTurn === 1);
   document.getElementById('card-p2').classList.toggle('active', currentTurn === 2);
 
+  if (tutorialViewerMode) {
+    for (let c = 0; c < COLS; c++) {
+      const button = columnButtons[c] || document.getElementById('cb' + c);
+      if (button) button.disabled = true;
+    }
+    updateAntiForcedMarkers(false);
+    const activeBot = lobbyData?.players?.[currentTurn]?.pseudo || `IA ${currentTurn}`;
+    const turnLabel = document.getElementById('turn-lbl');
+    if (turnLabel) turnLabel.textContent = gameOver ? 'PARTIE TERMINÉE' : `${activeBot} JOUE`;
+    const bombButton = document.getElementById('bomb-button');
+    if (bombButton) bombButton.disabled = true;
+    const bombState = document.getElementById('bomb-state');
+    if (bombState && currentVariant === 'bomb') {
+      bombState.textContent = `IA 1 : ${bombAvailability[1] ? '💣' : '✓'} · IA 2 : ${bombAvailability[2] ? '💣' : '✓'}`;
+    }
+    setStatus(gameOver ? '' : `Démonstration accélérée · ${VARIANT_LABELS[currentVariant] || 'Classique'}`);
+    stopTurnTimer();
+    return;
+  }
+
   for (let c = 0; c < COLS; c++) {
     const b = columnButtons[c] || document.getElementById('cb' + c);
     if (b) {
@@ -3065,6 +3253,35 @@ async function onGameOver(data) {
     if (b) b.disabled = true;
   }
   setStatus('');
+
+  if (tutorialViewerMode) {
+    const isDraw = ['draw','agreement_draw','position_draw','conquest_draw'].includes(data.reason);
+    const winnerName = data.players?.[data.winner]?.pseudo || lobbyData?.players?.[data.winner]?.pseudo || 'Une IA';
+    const title = document.getElementById('result-title');
+    if (title) {
+      title.textContent = isDraw ? 'MATCH NUL' : `${winnerName} GAGNE`;
+      title.style.background = 'linear-gradient(135deg, var(--p1), var(--p2))';
+      title.style.webkitBackgroundClip = 'text';
+      title.style.webkitTextFillColor = 'transparent';
+    }
+    const elo = document.getElementById('result-elo');
+    if (elo) elo.textContent = 'Tutoriel non compté';
+    const reason = document.getElementById('result-reason');
+    if (reason) reason.textContent = isDraw
+      ? 'Les deux IA terminent à égalité dans cette démonstration.'
+      : `${winnerName} remporte cet affrontement accéléré.`;
+    const meta = document.getElementById('result-meta');
+    if (meta) meta.innerHTML = `<div class="result-meta-chip">Variante<strong>${escapeHtml(VARIANT_LABELS[currentVariant] || 'Classique')}</strong></div><div class="result-meta-chip">Mode<strong>IA contre IA</strong></div>`;
+    const summary = document.getElementById('result-summary');
+    if (summary) summary.innerHTML = '';
+    const buttons = document.querySelector('#result-overlay .result-btns');
+    if (buttons) buttons.innerHTML = '<button class="btn-action primary" type="button" onclick="restartTutorialViewer()">▶ Revoir le tuto</button><button class="btn-action ghost" type="button" onclick="quit()">🏟️ Retour à l’arène</button>';
+    document.getElementById('result-overlay')?.classList.add('show');
+    setTimeout(() => isDraw ? SFX.draw() : SFX.win(), 300);
+    updateGameDiscordPresence({ players: data.players || lobbyData?.players, result: isDraw ? 'Match nul' : `${winnerName} gagne` });
+    updateTurnUI();
+    return;
+  }
 
   const isWinner = data.winner === mySide;
   const isDraw = ['draw','agreement_draw','position_draw','conquest_draw'].includes(data.reason);
