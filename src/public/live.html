@@ -907,7 +907,7 @@ function mkAvatar(player, large = false) {
 }
 
 function getInitialGameId() {
-  const pathMatch = location.pathname.match(/^\/spec\/(\d+)/);
+  const pathMatch = location.pathname.match(/^\/spec\/(-?\d+)/);
   if (pathMatch) return Number(pathMatch[1]);
   const url = new URL(location.href);
   const q = Number(url.searchParams.get('game'));
@@ -1406,9 +1406,13 @@ function renderSpec(game) {
   if (finished) stopLiveAmbient();
   else startLiveAmbient();
   const variantLabel = LIVE_VARIANTS.find(([id]) => id === String(game.variant || 'classic'))?.[1] || 'Classique';
-  document.getElementById('spec-title').textContent = `Partie #${game.id}`;
+  document.getElementById('spec-title').textContent = game.tutorial ? `Tuto express · ${variantLabel}` : `Partie #${game.id}`;
   document.getElementById('spec-variant').textContent = variantLabel;
   document.getElementById('live-board').dataset.variant = String(game.variant || 'classic');
+  if (game.tutorial) {
+    document.getElementById('headline-title').textContent = 'Tutoriel IA contre IA';
+    document.getElementById('headline-pill').textContent = 'Non compté · cadence rapide';
+  }
 
   document.getElementById('spec-sub').textContent = finished
     ? `${game.moves} coups joues - ${winner ? `victoire de ${winner.pseudo}` : 'partie terminee'}`
@@ -1463,7 +1467,7 @@ function renderSpec(game) {
   meta.innerHTML = `
     <div class="meta-pill">Variante <strong>${escapeHtml(variantLabel)}</strong></div>
     <div class="meta-pill">Coups <strong>${game.moves}</strong></div>
-    <div class="meta-pill">Mode <strong>${String(game.gameType || 'ranked') === 'friendly' ? 'AMICAL' : 'RANKED'}</strong></div>
+    <div class="meta-pill">Mode <strong>${game.tutorial ? 'TUTORIEL' : String(game.gameType || 'ranked') === 'friendly' ? 'AMICAL' : 'RANKED'}</strong></div>
     <div class="meta-pill">Statut <strong>${finished ? 'TERMINEE' : 'ACTIVE'}</strong></div>
   `;
 

@@ -1609,6 +1609,12 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 .queue-variant-select{color-scheme:dark;width:100%;margin-top:7px;padding:12px 38px 12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background-color:#11111d;color:#f7f3ff;font:800 15px 'Barlow Condensed',sans-serif;outline:none;cursor:pointer}
 .queue-variant-select:focus{border-color:rgba(133,235,255,.55);box-shadow:0 0 0 3px rgba(133,235,255,.09)}
 .queue-variant-select option{background:#11111d!important;color:#f7f3ff!important;font-weight:700}
+.arena-variant-picker{width:100%;padding:15px;border:1px solid rgba(133,235,255,.16);border-radius:18px;background:linear-gradient(155deg,rgba(18,21,37,.98),rgba(7,8,17,.98));box-shadow:0 18px 42px rgba(0,0,0,.28)}
+.arena-variant-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}.arena-variant-head strong{font:900 18px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.arena-variant-head span{color:var(--muted);font-size:10px;text-align:right}
+.arena-variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.arena-variant-card{min-width:0;padding:10px 8px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(255,255,255,.035);color:#e9eaf5;cursor:pointer;text-align:left;transition:.18s}.arena-variant-card:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.07)}.arena-variant-card.active{border-color:rgba(133,235,255,.55);background:linear-gradient(145deg,rgba(133,235,255,.16),rgba(155,124,255,.10));box-shadow:0 0 22px rgba(133,235,255,.08)}.arena-variant-card b{display:block;overflow:hidden;text-overflow:ellipsis;color:inherit;font:900 13px 'Barlow Condensed',sans-serif;letter-spacing:.4px;white-space:nowrap}.arena-variant-card small{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.arena-variant-choice{margin-top:11px;padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(0,0,0,.18)}.arena-variant-choice strong{display:block;color:#85ebff;font:900 17px 'Barlow Condensed',sans-serif;text-transform:uppercase}.arena-variant-choice span{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}.arena-variant-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.arena-variant-actions .btn{min-height:44px;padding:9px;font-size:12px}.arena-tutorial-error{min-height:16px;margin-top:7px;color:#ff6b84;font-size:10px;text-align:center}
+.variant-native-select{color-scheme:dark!important;background:#0b0d18!important;color:#f7f3ff!important;border-color:rgba(133,235,255,.22)!important}.variant-native-select option{background:#0b0d18!important;color:#f7f3ff!important}
+@media(max-width:520px){.arena-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arena-variant-actions{grid-template-columns:1fr}}
 .queue-waiting-count{width:100%;margin-top:-6px;padding:8px 11px;border:1px solid rgba(133,235,255,.14);border-radius:10px;background:rgba(133,235,255,.055);color:var(--muted);font:700 12px 'Barlow Condensed',sans-serif;letter-spacing:.6px;text-align:center}
 .queue-waiting-count strong{color:#85ebff;font-size:14px}
 .queue-volume.show { display: flex; }
@@ -3425,7 +3431,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 
           <label for="bot-variant" style="display:flex;flex-direction:column;gap:7px;font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;">
             Variante
-            <select id="bot-variant" onchange="setBotVariant(this.value)" style="width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface2);color:var(--text);font:700 14px 'Barlow',sans-serif;outline:none;cursor:pointer;">
+            <select id="bot-variant" class="queue-variant-select variant-native-select" onchange="setBotVariant(this.value)" style="width:100%;padding:11px 12px;border-radius:11px;font:700 14px 'Barlow',sans-serif;outline:none;cursor:pointer;">
               <option value="classic">Puissance 4 classique</option>
               <option value="rotate">Plateau rotatif</option>
               <option value="anti">Anti-Puissance 4</option>
@@ -3883,6 +3889,17 @@ let currentQueuePosition = 0;
 let activeQueueVariant = localStorage.getItem('p4_queue_variant') || 'classic';
 let queueVariantProfileStats = null;
 const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
+const ARENA_VARIANT_META = {
+  classic: { size:'6×7', icon:'●', description:'Aligne quatre jetons avant ton adversaire.' },
+  rotate: { size:'7×7', icon:'↻', description:'Le plateau pivote et la gravité redistribue les jetons.' },
+  anti: { size:'9×9', icon:'−', description:'Évite les alignements : le plus petit score gagne.' },
+  bomb: { size:'6×7', icon:'💣', description:'Une bombe par joueur peut renverser la position.' },
+  mission: { size:'7×7', icon:'◎', description:'Accomplis ton objectif secret avant l’adversaire.' },
+  simultaneous: { size:'6×7', icon:'⇄', description:'Les deux choix sont révélés et résolus ensemble.' },
+  fog: { size:'6×7', icon:'◌', description:'Mémorise les coups qui disparaissent dans la brume.' },
+  conquest: { size:'6×7', icon:'⚑', description:'Capture des lignes pour atteindre trois points.' },
+  naval: { size:'6×7', icon:'⚓', description:'Explore la grille cachée et découvre son unique ligne.' },
+};
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
 let duelSearchTimer = null;
@@ -5314,6 +5331,61 @@ window.addEventListener('p4:presence-counts', (event) => {
   applySiteStatsSnapshot(data);
 });
 
+function selectArenaVariant(value) {
+  const variant = Object.prototype.hasOwnProperty.call(ARENA_VARIANT_META, value) ? value : 'classic';
+  const select = document.getElementById('queue-variant');
+  if (select) select.value = variant;
+  activeQueueVariant = variant;
+  localStorage.setItem('p4_queue_variant', variant);
+  document.querySelectorAll('.arena-variant-card').forEach(card => {
+    const active = card.dataset.variant === variant;
+    card.classList.toggle('active', active);
+    card.setAttribute('aria-pressed', String(active));
+  });
+  const meta = ARENA_VARIANT_META[variant];
+  const title = document.getElementById('arena-variant-title');
+  const description = document.getElementById('arena-variant-description');
+  if (title) title.textContent = `${meta.icon} ${QUEUE_VARIANT_LABELS[variant]}`;
+  if (description) description.textContent = meta.description;
+  const error = document.getElementById('arena-tutorial-error');
+  if (error) error.textContent = '';
+  renderWaitingPlayersCount();
+}
+
+function renderArenaVariantPicker() {
+  const grid = document.getElementById('arena-variant-grid');
+  if (!grid) return;
+  grid.replaceChildren();
+  for (const [variant, meta] of Object.entries(ARENA_VARIANT_META)) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'arena-variant-card';
+    card.dataset.variant = variant;
+    card.innerHTML = `<b>${meta.icon} ${escapeHtml(QUEUE_VARIANT_LABELS[variant])}</b><small>${meta.size}</small>`;
+    card.addEventListener('click', () => selectArenaVariant(variant));
+    grid.appendChild(card);
+  }
+  selectArenaVariant(localStorage.getItem('p4_queue_variant') || 'classic');
+}
+
+async function startVariantTutorial() {
+  const variant = document.getElementById('queue-variant')?.value || activeQueueVariant || 'classic';
+  const errorBox = document.getElementById('arena-tutorial-error');
+  if (errorBox) errorBox.textContent = 'Préparation du duel IA…';
+  try {
+    const response = await fetch('/api/tutorial/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variant }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.url) throw new Error(data.error || 'Tutoriel indisponible.');
+    location.href = data.url;
+  } catch (error) {
+    if (errorBox) errorBox.textContent = error.message || 'Impossible de lancer le tutoriel.';
+  }
+}
+
 function showLoggedInView(p) {
   // Masquer le formulaire login, montrer un écran "prêt à jouer"
   const loginView = document.getElementById('view-login');
@@ -5334,9 +5406,9 @@ function showLoggedInView(p) {
           <div class="boost-alert-sub" id="logged-boost-alert-text"></div>
         </div>
       </div>
-      <label style="width:100%;font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1.4px;color:var(--muted);text-transform:uppercase;">
-        Variante
-        <select id="queue-variant" class="queue-variant-select">
+      <div class="arena-variant-picker">
+        <div class="arena-variant-head"><strong>Choisis ta variante</strong><span>Arène classée ou tuto express</span></div>
+        <select id="queue-variant" aria-label="Variante sélectionnée" style="display:none">
           <option value="classic">Classique · 6×7</option>
           <option value="rotate">Plateau rotatif · 7×7</option>
           <option value="anti">Anti-Puissance 4 · 9×9</option>
@@ -5347,11 +5419,18 @@ function showLoggedInView(p) {
           <option value="conquest">Conquête · 6×7</option>
           <option value="naval">Puissance 4 Navale · 6×7</option>
         </select>
-      </label>
-      <div class="queue-waiting-count" id="queue-waiting-count" aria-live="polite"><strong>0</strong> joueur en attente sur cette variante</div>
-      <button class="btn btn-play" style="width:100%" onclick="connectAndQueue()">
-        <span>&#9889;</span> <span data-i18n="home.joinGame">Rejoindre la partie</span>
-      </button>
+        <div class="arena-variant-grid" id="arena-variant-grid"></div>
+        <div class="arena-variant-choice">
+          <strong id="arena-variant-title">Classique</strong>
+          <span id="arena-variant-description"></span>
+          <div class="queue-waiting-count" id="queue-waiting-count" aria-live="polite" style="margin:9px 0 0"><strong>0</strong> joueur en attente sur cette variante</div>
+          <div class="arena-variant-actions">
+            <button class="btn btn-play" type="button" onclick="connectAndQueue()"><span>⚡</span> Rejoindre l’arène</button>
+            <button class="btn btn-ghost" type="button" onclick="startVariantTutorial()" style="border-color:rgba(155,124,255,.32);color:#d9ccff;background:rgba(155,124,255,.09)"><span>▶</span> Voir le tuto</button>
+          </div>
+          <div class="arena-tutorial-error" id="arena-tutorial-error"></div>
+        </div>
+      </div>
       <button class="btn btn-duel" style="width:100%" type="button" onclick="openDuelModal()">
         <span>⚔️</span> <span data-i18n="home.sendDuel">Envoyer un duel</span>
       </button>
@@ -5363,15 +5442,7 @@ function showLoggedInView(p) {
       </a>
     </div>
   `;
-  const variantSelect = document.getElementById('queue-variant');
-  if (variantSelect) {
-    variantSelect.value = localStorage.getItem('p4_queue_variant') || 'classic';
-    variantSelect.addEventListener('change', () => {
-      localStorage.setItem('p4_queue_variant', variantSelect.value);
-      renderWaitingPlayersCount();
-    });
-  }
-  renderWaitingPlayersCount();
+  renderArenaVariantPicker();
   window.P4I18n?.apply?.(loginView);
 }
 

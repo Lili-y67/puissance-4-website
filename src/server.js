@@ -96,6 +96,7 @@ const builtinBotIds = new Set();
 const botArenaPairs = new Map();
 const botArenaRestUntil = new Map();
 const botSearchWorkers = new Map();
+const tutorialStartWindows = new Map();
 const devMachineMetrics = [];
 let devMachineCpuBase = process.cpuUsage();
 let devMachineCpuAt = Date.now();
@@ -1712,6 +1713,22 @@ function getBuiltinBotTimeBudget(state, side) {
   return Math.max(BOT_SEARCH_TIME_MS, 2000);
 }
 
+function chooseQuickBotMove(state, side) {
+  const player = Number(side);
+  const opponent = player === 1 ? 2 : 1;
+  const cols = getOrderedValidCols(state.board.grid);
+  if (!cols.length) return null;
+  for (const target of [player, opponent]) {
+    for (const col of cols) {
+      const board = cloneGrid(state.board.grid);
+      const row = dropGrid(board, col, target);
+      if (row >= 0 && checkWinGrid(board, row, col, target)) return col;
+    }
+  }
+  const pool = cols.slice(0, Math.min(4, cols.length));
+  return pool[Math.floor(Math.random() * pool.length)] ?? cols[0];
+}
+
 function chooseNavalBotCell(state) {
   const board = state?.board?.grid;
   if (!Array.isArray(board) || !board.length) return null;
@@ -1932,7 +1949,7 @@ function chooseBuiltinBotMoveAsync(state, side) {
 function chooseVariantBotActionAsync(state, side) {
   const gameId = Number(state?.id || 0);
   if (!gameId || botSearchWorkers.has(gameId)) return Promise.resolve(null);
-  const rawDepth = getBuiltinBotSearchDepth(state, side);
+  const rawDepth = state.tutorial ? 3 : getBuiltinBotSearchDepth(state, side);
   // Conquête a besoin de voir au-delà d'une capture, puisque celle-ci retire
   // les quatre pions et recrée immédiatement une position par gravité.
   const depth = state.variant === 'conquest'
@@ -1973,10 +1990,12 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
       let side = state.current;
       if (state.variant === 'simultaneous' && state.simultaneousChoices?.[side] !== null) side = side === 1 ? 2 : 1;
       const player = state.players[side];
-      if (!builtinBotIds.has(Number(player?.id))) return;
+      if (!state.tutorial && !builtinBotIds.has(Number(player?.id))) return;
       const navalCell = state.variant === 'naval' ? chooseNavalBotCell(state) : null;
       const action = ['classic', 'naval'].includes(state.variant) ? null : await chooseVariantBotActionAsync(state, side);
-      let col = navalCell?.col ?? action?.col ?? (state.variant === 'classic' ? await chooseBuiltinBotMoveAsync(state, side) : null);
+      let col = navalCell?.col ?? action?.col ?? (state.variant === 'classic'
+        ? (state.tutorial ? chooseQuickBotMove(state, side) : await chooseBuiltinBotMoveAsync(state, side))
+        : null);
       const freshState = gm.games.get(gameId);
       if (!freshState || freshState !== state || state.status !== 'active' || (state.variant !== 'simultaneous' && state.current !== side)) return;
       const validCols = state.board.getValidCols();
@@ -1999,7 +2018,10 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
         }
       }
       if (result?.type !== 'game_over') emitLiveUpdate();
-      scheduleBuiltinBotTurn(gameId, state.variant === 'simultaneous' ? 80 : 300 + Math.floor(Math.random() * 350));
+      const nextDelay = state.tutorial
+        ? (state.variant === 'simultaneous' ? 45 : 110 + Math.floor(Math.random() * 90))
+        : (state.variant === 'simultaneous' ? 80 : 300 + Math.floor(Math.random() * 350));
+      scheduleBuiltinBotTurn(gameId, nextDelay);
     } catch (error) {
       console.error('[BOT TURN]', error.message);
       const state = gm.games.get(gameId);
@@ -2008,16 +2030,29 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
   }, delayMs);
 }
 
-function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic') {
+function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic', options = {}) {
   variant = getVariant(variant).botSupported === false ? 'classic' : normalizeVariant(variant);
-  const p1 = buildBotGamePayload(botA, botSocketId(botA.id));
-  const p2 = buildBotGamePayload(botB, botSocketId(botB.id));
+  const tutorial = options.tutorial === true;
+  const tutorialKey = tutorial ? crypto.randomUUID() : '';
+  const p1 = buildBotGamePayload(botA, tutorial ? `tutorial:${tutorialKey}:1` : botSocketId(botA.id));
+  const p2 = buildBotGamePayload(botB, tutorial ? `tutorial:${tutorialKey}:2` : botSocketId(botB.id));
+  if (tutorial) {
+    p1.id = -Math.abs(Number.parseInt(crypto.randomBytes(4).toString('hex'), 16) || 1);
+    p2.id = p1.id - 1;
+  }
   assignDistinctMatchColors(p1, p2);
-  const state = gm.create(p1, p2, { gameType, variant, moveTimeSeconds: 60, current: Math.random() < 0.5 ? 1 : 2 });
+  const state = gm.create(p1, p2, {
+    gameType,
+    variant,
+    persist: options.persist !== false,
+    moveTimeSeconds: tutorial ? 20 : 60,
+    current: Math.random() < 0.5 ? 1 : 2,
+  });
+  state.tutorial = tutorial;
   prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
-  scheduleBuiltinBotTurn(state.id, 250);
+  scheduleBuiltinBotTurn(state.id, tutorial ? 120 : 250);
   return state;
 }
 
@@ -2112,7 +2147,7 @@ function prepareBuiltinBotVariant(state) {
   if (state.variant !== 'mission') return;
   const missions = [...MISSION_DEFINITIONS].sort(() => Math.random() - 0.5);
   for (const side of [1, 2]) {
-    if (builtinBotIds.has(Number(state.players[side]?.id)) && !state.missions[side]) {
+    if ((state.tutorial || builtinBotIds.has(Number(state.players[side]?.id))) && !state.missions[side]) {
       gm.selectMission(state.players[side].socketId, missions[side - 1]?.id || missions[0].id);
     }
   }
@@ -7466,6 +7501,41 @@ app.post('/api/live/:id/predict', (req, res) => {
   }
 });
 
+app.post('/api/tutorial/start', (req, res) => {
+  const key = String(req.ip || req.socket?.remoteAddress || 'anonymous');
+  const now = Date.now();
+  const lastStart = Number(tutorialStartWindows.get(key) || 0);
+  if (now - lastStart < 3000) {
+    return res.status(429).json({ error: 'Patiente quelques secondes avant de relancer un tutoriel.' });
+  }
+  const activeTutorials = [...gm.games.values()].filter(state => state?.tutorial && state.status === 'active').length;
+  if (activeTutorials >= 6) {
+    return res.status(429).json({ error: 'Trop de tutoriels sont déjà en cours. Réessaie dans un instant.' });
+  }
+  const variant = normalizeVariant(req.body?.variant);
+  if (getVariant(variant).botSupported === false) {
+    return res.status(400).json({ error: 'Cette variante ne possède pas encore de tutoriel.' });
+  }
+  const bots = [...builtinBotIds]
+    .map(id => pQ.getById.get(id))
+    .filter(bot => bot && !bot.deleted && Number(bot.bot_enabled || 0) === 1)
+    .sort(() => Math.random() - 0.5);
+  if (bots.length < 2) return res.status(503).json({ error: 'Le tutoriel IA est momentanément indisponible.' });
+  tutorialStartWindows.set(key, now);
+  const cleanup = setTimeout(() => {
+    if (tutorialStartWindows.get(key) === now) tutorialStartWindows.delete(key);
+  }, 3000);
+  cleanup.unref?.();
+  const state = createBotVsBotGame(bots[0], bots[1], 'friendly', variant, { persist: false, tutorial: true });
+  res.json({
+    ok: true,
+    gameId: state.id,
+    variant: state.variant,
+    url: `/spec/${state.id}`,
+    counted: false,
+  });
+});
+
 app.get('/api/live', (_, res) => {
   const games = [];
   for (const [id, state] of gm.games) {
@@ -7494,6 +7564,7 @@ app.get('/api/live', (_, res) => {
       gameType: state.gameType || 'ranked',
       botGame: Number(state.players[1].is_bot || 0) === 1 || Number(state.players[2].is_bot || 0) === 1,
       botMatch: Number(state.players[1].is_bot || 0) === 1 && Number(state.players[2].is_bot || 0) === 1,
+      tutorial: state.tutorial === true,
       winCells: Array.isArray(state.winCells) ? state.winCells : [],
       spectators: getLiveSpectators(id),
       predictions: progression.predictionStats(id),
