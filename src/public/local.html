@@ -29,14 +29,17 @@ h1{font:900 clamp(48px,8vw,86px) "Barlow Condensed";line-height:.88;text-transfo
 .board{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,1.25vw,12px);max-width:720px;margin:0 auto;transition:filter .18s ease}.board.mobile-flipped{animation:phoneFlip .24s ease both}.cell{aspect-ratio:1;border:none;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.04),rgba(10,10,28,.98) 62%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.07),inset 0 10px 22px rgba(0,0,0,.42);cursor:pointer;position:relative;transition:transform .14s,box-shadow .18s}.cell:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 2px rgba(133,235,255,.24),inset 0 10px 22px rgba(0,0,0,.42),0 0 20px rgba(133,235,255,.12)}
 .cell.filled::after{content:"";position:absolute;inset:8%;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 12px 20px rgba(255,255,255,.28),inset 0 -14px 20px rgba(0,0,0,.24),0 0 24px var(--piece-glow,var(--piece));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.cell.filled.emoji-token::after{display:none}.local-emoji-token{position:absolute;inset:6%;display:grid;place-items:center;border-radius:50%;background:var(--piece-gradient,var(--piece));box-shadow:inset 0 11px 18px rgba(255,255,255,.22),inset 0 -14px 20px rgba(0,0,0,.26),0 0 24px var(--piece-glow,var(--piece));filter:drop-shadow(0 0 14px var(--piece-glow,var(--piece))) drop-shadow(0 3px 8px rgba(0,0,0,.5));animation:drop .28s cubic-bezier(.2,1.35,.45,1)}.local-emoji-token::before{content:"";position:absolute;inset:10%;border-radius:50%;background:radial-gradient(circle at 34% 24%,rgba(255,255,255,.42),transparent 28%),radial-gradient(circle at 50% 70%,rgba(0,0,0,.18),transparent 55%);pointer-events:none}.local-emoji-token canvas{position:relative;z-index:1;width:78%;height:78%;display:block;transition:transform .18s ease;filter:drop-shadow(0 2px 5px rgba(0,0,0,.42))}.board.mobile-flipped .local-emoji-token canvas{transform:rotate(180deg)}.cell.win{animation:winPulse .8s ease-in-out infinite alternate}.cell.win::after{box-shadow:inset 0 12px 20px rgba(255,255,255,.32),inset 0 -14px 20px rgba(0,0,0,.24),0 0 34px var(--green),0 0 8px #fff}.cell.win .local-emoji-token{filter:drop-shadow(0 0 20px var(--green)) drop-shadow(0 0 8px #fff)}
 .variant-setup{display:grid;gap:8px}.variant-missions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cell.forced{box-shadow:inset 0 0 0 3px #ff9f0a,0 0 22px rgba(255,159,10,.38)}.cell.bomb-target{box-shadow:inset 0 0 0 3px #ff453a,0 0 22px rgba(255,69,58,.4)}.board.rotating{transition:transform 1.15s cubic-bezier(.22,.72,.2,1);transform:rotate(90deg)}.board.rotating.ccw{transform:rotate(-90deg)}
+.local-variant-head{display:flex;align-items:end;justify-content:space-between;gap:10px}.local-variant-head span{color:var(--muted);font-size:10px;text-align:right}.local-variant-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.local-variant-card{display:grid;grid-template-columns:29px minmax(0,1fr);align-items:center;min-height:58px;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);color:var(--text);cursor:pointer;text-align:left;transition:.18s}.local-variant-card:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.28);background:rgba(133,235,255,.06)}.local-variant-card.active{border-color:rgba(133,235,255,.58);background:linear-gradient(145deg,rgba(133,235,255,.15),rgba(155,124,255,.09));box-shadow:0 0 20px rgba(133,235,255,.08)}.local-variant-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2);font-size:17px}.local-variant-card b{display:block;font:900 12px/1.05 "Barlow Condensed";letter-spacing:.2px}.local-variant-card small{display:block;margin-top:3px;color:var(--muted);font-size:9px}.local-variant-summary{padding:10px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(0,0,0,.14)}.local-variant-summary strong{display:block;color:var(--blue);font:900 16px "Barlow Condensed";text-transform:uppercase}.local-variant-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:9px}.local-variant-actions .btn{padding:10px 8px;font-size:11px}.local-variant-actions .tutorial{border-color:rgba(155,124,255,.34);color:#d9ccff;background:rgba(155,124,255,.09)}
+.board-shell{position:relative}.local-tutorial-overlay{position:absolute;z-index:20;inset:clamp(10px,2vw,18px);display:none;place-items:center;border-radius:20px;background:rgba(4,4,14,.72);backdrop-filter:blur(8px);text-align:center;padding:18px}.local-tutorial-overlay.show{display:grid}.local-tutorial-card{display:grid;gap:10px;justify-items:center}.local-tutorial-kicker{color:var(--blue);font:900 12px "Barlow Condensed";letter-spacing:3px;text-transform:uppercase}.local-tutorial-count{font:900 clamp(58px,10vw,96px)/.9 "Barlow Condensed";background:linear-gradient(135deg,var(--red),var(--yellow),var(--blue));background-clip:text;-webkit-background-clip:text;color:transparent}.local-tutorial-message{max-width:360px;color:var(--muted);line-height:1.45}.local-tutorial-result-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.local-tutorial-mode .setup input,.local-tutorial-mode .setup select{pointer-events:none;opacity:.62}.local-tutorial-mode .cell{cursor:default}.local-tutorial-mode .cell:hover{transform:none}
 .board.naval-active .cell{border-radius:50%}.board.naval-active .cell.naval-hidden{background:radial-gradient(circle at 34% 27%,#292932 0 8%,#09090d 52%,#010103 76%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),inset 0 8px 18px #000,0 4px 12px rgba(0,0,0,.5)}.board.naval-active .cell.naval-hidden::before{content:"?";position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.22);font:900 clamp(14px,2.5vw,26px) "Barlow Condensed",sans-serif}.board.naval-active .cell:not(.naval-hidden){border-radius:50%}
 .board.fog-active{box-shadow:inset 0 0 65px rgba(195,207,224,.18)}.cell.fog-hidden::after{opacity:0!important;filter:blur(8px);transform:scale(.72)!important}.cell.fog-visible::after{animation:fog-local 1.25s ease forwards!important}@keyframes fog-local{0%,58%{opacity:1;filter:blur(0)}100%{opacity:0;filter:blur(8px);transform:scale(.72)}}
 body.p4-wallpaper-mode .board-shell{background:linear-gradient(180deg,rgba(18,18,42,.76),rgba(8,9,24,.72));border-color:rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 18px 48px rgba(0,0,0,.28);backdrop-filter:blur(2px)}
 body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.06),rgba(8,9,27,.82) 66%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.09),inset 0 9px 20px rgba(0,0,0,.48)}
+body.p4-wallpaper-mode .local-variant-summary,body.p4-wallpaper-mode .local-tutorial-overlay{background:rgba(4,4,14,.36)!important}
 @keyframes drop{from{transform:translateY(-80%) scale(.85);opacity:.2}to{transform:translateY(0) scale(1);opacity:1}}@keyframes winPulse{to{transform:scale(1.04);filter:brightness(1.18)}}@keyframes phoneFlip{from{filter:brightness(.72) blur(1px)}to{filter:brightness(1) blur(0)}}
 .footer-note{margin-top:12px;text-align:center;color:var(--muted);font-size:13px}
 @media(max-width:860px){.hero{grid-template-columns:1fr}.page{width:min(100% - 14px,680px)}.status{grid-template-columns:1fr}.actions{display:grid;grid-template-columns:1fr 1fr}.board-shell{border-radius:22px}.intro{padding:20px}.score.four-score{grid-template-columns:repeat(2,1fr)}.score.four-score .score-draw-card{grid-column:1/-1;grid-row:3}}
-@media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr 1fr}.row .input:first-child{grid-column:1/-1}.color,.emoji-input{width:100%}}
+@media(max-width:440px){.nav a,.nav button{flex:1;text-align:center}.score{grid-template-columns:1fr}.cell.filled::after{inset:10%}.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr 1fr}.row .input:first-child{grid-column:1/-1}.color,.emoji-input{width:100%}.local-variant-grid{grid-template-columns:1fr}.local-variant-actions{grid-template-columns:1fr}}
 </style>
 <script>(function(){try{document.documentElement.dataset.theme=localStorage.getItem('p4_theme')==='light'?'light':'dark'}catch(e){document.documentElement.dataset.theme='dark'}})();</script>
 <link rel="stylesheet" href="/theme.css?v=eggs-33">
@@ -65,10 +68,18 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
       </div>
       <div class="setup">
         <div class="player-box variant-setup">
-          <label>Variante locale</label>
-          <select class="input" id="local-variant" onchange="onVariantChange()"><option value="classic">Classique</option><option value="four">4 joueurs</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option></select>
+          <div class="local-variant-head"><label>Variante locale</label><span>Partie canapé ou tuto express</span></div>
+          <select class="input" id="local-variant" onchange="onVariantChange()" style="display:none"><option value="classic">Classique</option><option value="four">4 joueurs</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option></select>
+          <div class="local-variant-grid" id="local-variant-grid"></div>
+          <div class="local-variant-summary">
+            <strong id="local-variant-title">Classique</strong>
+            <div class="setup-hint" id="variant-hint">Règles classiques : le premier alignement de 4 gagne.</div>
+            <div class="local-variant-actions">
+              <button class="btn primary" type="button" onclick="playSelectedLocalVariant()">⚡ Jouer</button>
+              <button class="btn tutorial" type="button" onclick="startLocalTutorial()">▶ Voir le tuto</button>
+            </div>
+          </div>
           <div class="variant-missions hidden" id="variant-missions"><select class="input" id="mission-p1"><option value="square">J1 · Carré 2×2</option><option value="center">J1 · 4 cases centrales</option><option value="high4">J1 · Ligne de 4 hors du bas</option></select><select class="input" id="mission-p2"><option value="square">J2 · Carré 2×2</option><option value="center">J2 · 4 cases centrales</option><option value="high4">J2 · Ligne de 4 hors du bas</option></select></div>
-          <div class="setup-hint" id="variant-hint">Règles classiques : le premier alignement de 4 gagne.</div>
         </div>
         <div class="player-box">
           <label>Joueur 1</label>
@@ -125,11 +136,22 @@ body.p4-wallpaper-mode .cell{background:radial-gradient(circle at 35% 30%,rgba(2
         <div class="actions">
           <button class="btn" type="button" id="undo-btn" onclick="undoMove()">Annuler</button>
           <button class="btn hidden" type="button" id="variant-action" onclick="toggleVariantAction()">Bombe</button>
-          <button class="btn primary" type="button" onclick="newRound()">Nouvelle manche</button>
+          <button class="btn primary" type="button" id="new-round-btn" onclick="newRound()">Nouvelle manche</button>
         </div>
       </div>
       <div class="board-shell">
         <div class="board" id="board" aria-label="Grille Puissance 4 local"></div>
+        <div class="local-tutorial-overlay" id="local-tutorial-overlay">
+          <div class="local-tutorial-card">
+            <div class="local-tutorial-kicker" id="local-tutorial-kicker">Tutoriel IA contre IA</div>
+            <div class="local-tutorial-count" id="local-tutorial-count">3</div>
+            <div class="local-tutorial-message" id="local-tutorial-message">Observe la variante directement sur le plateau local.</div>
+            <div class="local-tutorial-result-actions hidden" id="local-tutorial-result-actions">
+              <button class="btn primary" type="button" onclick="startLocalTutorial()">▶ Revoir</button>
+              <button class="btn" type="button" onclick="playSelectedLocalVariant()">⚡ Jouer cette variante</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="footer-note" id="phone-note">Astuce : clique n'importe quelle case d'une colonne pour poser le pion.</div>
     </section>
@@ -164,6 +186,26 @@ let fogVisibleCell = '';
 let fogTimer = null;
 let navalSecretGrid = [];
 let navalWinningLine = [];
+let tutorialMode = false;
+let tutorialTerminal = false;
+let tutorialTimer = null;
+let tutorialSteps = 0;
+let tutorialScoreSnapshot = null;
+let tutorialReplaySnapshot = null;
+let tutorialNextStarterSnapshot = 1;
+
+const LOCAL_VARIANTS = {
+  classic:{ icon:'🔴', label:'Classique', size:'6×7', hint:'Le premier alignement de 4 gagne.' },
+  four:{ icon:'👥', label:'4 joueurs', size:'8×10', hint:'Quatre joueurs sur une grande grille 10×8 : le premier alignement de 4 gagne.' },
+  rotate:{ icon:'🔄', label:'Plateau rotatif', size:'7×7', hint:'Grille 7×7, rotation imprévisible tous les 4 coups.' },
+  anti:{ icon:'🧩', label:'Anti-P4', size:'9×9', hint:'Grille 9×9 : le joueur avec le moins de lignes gagne.' },
+  bomb:{ icon:'💣', label:'Puissance Bombe', size:'6×7', hint:'Une bombe par joueur détruit les huit voisins.' },
+  mission:{ icon:'🎯', label:'Mission personnelle', size:'7×7', hint:'Le premier joueur qui accomplit sa mission gagne.' },
+  simultaneous:{ icon:'⚡', label:'Placement simultané', size:'6×7', hint:'Chaque joueur choisit sa colonne avant la résolution.' },
+  fog:{ icon:'🌫️', label:'Brouillard de Guerre', size:'6×7', hint:'Chaque pion disparaît dans la brume après 1,25 seconde.' },
+  conquest:{ icon:'🚩', label:'Conquête', size:'6×7', hint:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.' },
+  naval:{ icon:'⚓', label:'Puissance 4 Navale', size:'6×7', hint:'Révèle une case noire par tour : le premier qui découvre l’unique ligne secrète gagne.' },
+};
 
 const boardEl = document.getElementById('board');
 const statusText = document.getElementById('status-text');
@@ -226,12 +268,37 @@ function initGrid() {
 }
 
 function onVariantChange() {
+  stopLocalTutorial({ keepBoard: true });
   const selected = document.getElementById('local-variant')?.value || 'classic';
-  const hints = { classic:'Le premier alignement de 4 gagne.', four:'Quatre joueurs sur une grande grille 10×8 : le premier alignement de 4 gagne.', rotate:'Grille 7×7, rotation imprévisible tous les 4 coups.', anti:'Grille 9×9 : le joueur avec le moins de lignes gagne.', bomb:'Une bombe par joueur détruit les huit voisins.', mission:'Le premier joueur qui accomplit sa mission gagne.', simultaneous:'Chaque joueur choisit sa colonne avant la résolution.', fog:'Chaque pion disparaît dans la brume après 1,25 seconde.', conquest:'Capture 3 alignements ; quatre captures à 2–2 donnent un nul.', naval:'Révèle une case noire par tour : le premier qui découvre l’unique ligne secrète gagne.' };
-  document.getElementById('variant-hint').textContent = hints[selected];
+  document.getElementById('variant-hint').textContent = LOCAL_VARIANTS[selected]?.hint || LOCAL_VARIANTS.classic.hint;
+  document.getElementById('local-variant-title').textContent = LOCAL_VARIANTS[selected]?.label || 'Classique';
   document.getElementById('variant-missions').classList.toggle('hidden', selected !== 'mission');
   document.querySelectorAll('.four-only').forEach(el => el.classList.toggle('hidden', selected !== 'four'));
   document.getElementById('score-board').classList.toggle('four-score', selected === 'four');
+  renderLocalVariantMenu();
+  newRound();
+}
+
+function renderLocalVariantMenu() {
+  const selected = document.getElementById('local-variant')?.value || 'classic';
+  const gridEl = document.getElementById('local-variant-grid');
+  if (!gridEl) return;
+  gridEl.innerHTML = Object.entries(LOCAL_VARIANTS).map(([id, item]) => `
+    <button class="local-variant-card${id === selected ? ' active' : ''}" type="button" data-variant="${id}" onclick="selectLocalVariant('${id}')">
+      <span class="local-variant-icon">${item.icon}</span>
+      <span><b>${item.label}</b><small>${item.size}</small></span>
+    </button>
+  `).join('');
+}
+
+function selectLocalVariant(id) {
+  if (!LOCAL_VARIANTS[id]) return;
+  document.getElementById('local-variant').value = id;
+  onVariantChange();
+}
+
+function playSelectedLocalVariant() {
+  stopLocalTutorial({ keepBoard: false });
   newRound();
 }
 
@@ -261,6 +328,10 @@ function startTurnTimer() {
   clearTurnTimer();
   if (!turnClock) return;
   turnClock.className = 'turn-clock';
+  if (tutorialMode) {
+    turnClock.textContent = 'Tuto accéléré · non compté';
+    return;
+  }
   if (ended || !turnTimeLimitMs) {
     turnClock.textContent = 'Chrono libre';
     return;
@@ -324,6 +395,7 @@ function renderBoard(winCells = []) {
       const emoji = value ? playerEmoji(value) : '';
       const cell = document.createElement('button');
       cell.type = 'button';
+      cell.disabled = tutorialMode || ended;
       const fogKey = `${r}:${c}`;
       cell.className = `cell${value ? ' filled' : ''}${variant === 'naval' && !value ? ' naval-hidden' : ''}${emoji ? ' emoji-token' : ''}${winSet.has(fogKey) ? ' win' : ''}${forcedSet.has(fogKey) ? ' forced' : ''}${variant === 'bomb' && bombArmed && value ? ' bomb-target' : ''}${variant === 'fog' && value ? (fogVisibleCell === fogKey ? ' fog-visible' : ' fog-hidden') : ''}`;
       cell.style.setProperty('--piece', value ? playerColor(value) : 'transparent');
@@ -343,7 +415,7 @@ function renderBoard(winCells = []) {
   undoBtn.disabled = ended || history.length === 0 || variant !== 'classic';
   const action = document.getElementById('variant-action');
   action.classList.toggle('hidden', variant !== 'bomb');
-  action.disabled = variant !== 'bomb' || !bombs[current];
+  action.disabled = tutorialMode || variant !== 'bomb' || !bombs[current];
   action.textContent = bombArmed ? 'Annuler bombe' : `Bombe · ${bombs[current] ? 'prête' : 'utilisée'}`;
 }
 
@@ -459,6 +531,160 @@ function chooseEasyAutoColumn(player) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
+function chooseTutorialColumn(player) {
+  const legal = legalColumns();
+  if (!legal.length) return -1;
+  const win = legal.find(col => wouldWinColumn(col, player));
+  if (win !== undefined) return win;
+  if (variant === 'mission') {
+    const sequence = player === 1 ? [2, 3, 2, 3, 1, 4] : [5, 4, 5, 4, 6, 3];
+    const played = history.filter(move => move.player === player && Number.isInteger(move.col)).length;
+    const planned = sequence[played % sequence.length];
+    if (legal.includes(planned)) return planned;
+  }
+  const opponent = player === 1 ? 2 : 1;
+  const block = legal.find(col => wouldWinColumn(col, opponent));
+  if (block !== undefined && Math.random() < .7) return block;
+  const weighted = [Math.floor(COLS / 2), Math.floor(COLS / 2) - 1, Math.floor(COLS / 2) + 1, ...legal]
+    .filter(col => legal.includes(col));
+  return weighted[Math.floor(Math.random() * weighted.length)];
+}
+
+function setTutorialOverlay({ show = true, count = '', kicker = 'Tutoriel IA contre IA', message = '', result = false } = {}) {
+  const overlay = document.getElementById('local-tutorial-overlay');
+  overlay?.classList.toggle('show', show);
+  document.getElementById('local-tutorial-kicker').textContent = kicker;
+  document.getElementById('local-tutorial-count').textContent = count;
+  document.getElementById('local-tutorial-message').textContent = message;
+  document.getElementById('local-tutorial-result-actions')?.classList.toggle('hidden', !result);
+}
+
+function restoreTutorialSessionState() {
+  if (tutorialScoreSnapshot) scores = { ...tutorialScoreSnapshot };
+  if (tutorialReplaySnapshot) localReplays = [...tutorialReplaySnapshot];
+  nextStarter = tutorialNextStarterSnapshot;
+  updateScores();
+  renderLocalReplays();
+}
+
+function stopLocalTutorial({ keepBoard = false } = {}) {
+  if (tutorialTimer) clearTimeout(tutorialTimer);
+  tutorialTimer = null;
+  if (tutorialMode || tutorialScoreSnapshot) restoreTutorialSessionState();
+  tutorialMode = false;
+  tutorialTerminal = false;
+  tutorialScoreSnapshot = null;
+  tutorialReplaySnapshot = null;
+  document.body.classList.remove('local-tutorial-mode');
+  document.getElementById('new-round-btn')?.removeAttribute('disabled');
+  setTutorialOverlay({ show: false });
+  if (!keepBoard) ended = false;
+}
+
+function completeLocalTutorial(message = 'La démonstration est terminée.') {
+  if (!tutorialMode) return;
+  tutorialTerminal = true;
+  ended = true;
+  clearTurnTimer();
+  restoreTutorialSessionState();
+  renderBoard();
+  updateStatus('Démonstration terminée', `${LOCAL_VARIANTS[variant]?.label || 'Variante'} · non compté`);
+  tutorialTimer = setTimeout(() => setTutorialOverlay({
+    show: true,
+    count: '✓',
+    kicker: `${LOCAL_VARIANTS[variant]?.icon || '🎮'} Tutoriel terminé`,
+    message,
+    result: true,
+  }), 650);
+}
+
+function queueLocalTutorialStep(delay = 620) {
+  if (tutorialTimer) clearTimeout(tutorialTimer);
+  tutorialTimer = setTimeout(runLocalTutorialStep, delay);
+}
+
+function runLocalTutorialStep() {
+  if (!tutorialMode || tutorialTerminal) return;
+  if (ended) {
+    if (boardEl.classList.contains('rotating') || statusLabel.textContent === 'Rotation') return queueLocalTutorialStep(360);
+    return completeLocalTutorial('Tu viens de voir une partie complète jouée directement sur le plateau local.');
+  }
+  const limits = { anti: 34, conquest: 38, naval: 20, four: 34 };
+  if (tutorialSteps >= (limits[variant] || 28)) {
+    return completeLocalTutorial('Les mécaniques essentielles ont été montrées. À toi de jouer sur le même écran !');
+  }
+  tutorialSteps++;
+
+  if (variant === 'naval') {
+    const hiddenWinning = navalWinningLine.filter(([r, c]) => !grid[r][c]);
+    const hiddenOther = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (!grid[r][c] && !navalWinningLine.some(([wr, wc]) => wr === r && wc === c)) hiddenOther.push([r, c]);
+    }
+    const pool = tutorialSteps <= 3 && hiddenOther.length ? hiddenOther : hiddenWinning.length ? hiddenWinning : hiddenOther;
+    const target = pool[Math.floor(Math.random() * pool.length)];
+    if (!target) return completeLocalTutorial('Toute la grille a été explorée.');
+    playNaval(target[0], target[1]);
+    return queueLocalTutorialStep(600);
+  }
+
+  if (variant === 'bomb' && moveCount >= 5 && bombs[current]) {
+    const occupied = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) occupied.push([r, c]);
+    if (occupied.length) {
+      const target = occupied.sort((a, b) => Math.abs(a[1] - COLS / 2) - Math.abs(b[1] - COLS / 2))[0];
+      bombArmed = true;
+      renderBoard();
+      updateStatus(`${playerName(current)} arme sa bombe…`, 'Gadget en démonstration');
+      tutorialTimer = setTimeout(() => {
+        if (!tutorialMode) return;
+        detonateLocal(target[0], target[1]);
+        if (!tutorialTerminal) queueLocalTutorialStep(900);
+      }, 700);
+      return;
+    }
+  }
+
+  const col = chooseTutorialColumn(current);
+  if (col < 0) return completeLocalTutorial('La grille est pleine : la démonstration est terminée.');
+  playColumn(col);
+  if (tutorialTerminal) return;
+  const delay = variant === 'rotate' && moveCount % 4 === 0 ? 1550 : variant === 'conquest' ? 950 : variant === 'simultaneous' ? 480 : 620;
+  queueLocalTutorialStep(delay);
+}
+
+function startLocalTutorial() {
+  stopLocalTutorial({ keepBoard: true });
+  tutorialScoreSnapshot = { ...scores };
+  tutorialReplaySnapshot = [...localReplays];
+  tutorialNextStarterSnapshot = nextStarter;
+  tutorialMode = true;
+  tutorialTerminal = false;
+  tutorialSteps = 0;
+  document.body.classList.add('local-tutorial-mode');
+  document.getElementById('new-round-btn')?.setAttribute('disabled', '');
+  nextStarter = 1;
+  clearTurnTimer();
+  initGrid();
+  current = 1;
+  renderBoard();
+  updateStatus('Préparation des IA…', `${LOCAL_VARIANTS[variant]?.label || 'Variante'} · tutoriel`);
+  let count = 3;
+  const tick = () => {
+    if (!tutorialMode) return;
+    setTutorialOverlay({ show: true, count: String(count), message: `Observe ${LOCAL_VARIANTS[variant]?.label || 'la variante'} sans quitter cette page.` });
+    if (count <= 0) {
+      setTutorialOverlay({ show: false });
+      updateStatus(`${playerName(current)} ouvre la partie`, 'IA contre IA · accéléré');
+      queueLocalTutorialStep(380);
+      return;
+    }
+    count--;
+    tutorialTimer = setTimeout(tick, 650);
+  };
+  tick();
+}
+
 function findNavalSegments(board) {
   const out = [];
   for (const player of [1, 2]) for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) for (const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
@@ -527,7 +753,21 @@ function rotateLocalBoard(direction){const next=Array.from({length:ROWS},()=>Arr
 
 function detonateLocal(row,col){if(variant!=='bomb'||!bombArmed||!bombs[current]||!grid[row][col])return;clearTurnTimer();history.push({snapshot:grid.map(line=>[...line]),player:current,type:'bomb',row,col});for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const rr=row+dr,cc=col+dc;if(rr>=0&&rr<ROWS&&cc>=0&&cc<COLS)grid[rr][cc]=0;}bombs[current]=false;bombArmed=false;applyLocalGravity();replayFrames.push(grid.map(line=>[...line]));const winner=[1,2].find(p=>allSegments(p).length);if(winner)return finishLocal(winner,allSegments(winner)[0].cells,'Victoire après explosion');advanceTurn();}
 
-function finishLocal(winner, cells = [], label = 'Victoire locale') { ended=true;scores[winner]++;nextStarter=winner;saveLocalReplay(winner,cells);renderBoard(cells);updateScores();updateStatus(`${playerName(winner)} gagne !`,label);clearTurnTimer(); }
+function finishLocal(winner, cells = [], label = 'Victoire locale') {
+  ended = true;
+  renderBoard(cells);
+  updateStatus(`${playerName(winner)} gagne !`, label);
+  clearTurnTimer();
+  if (tutorialMode) {
+    tutorialTerminal = true;
+    tutorialTimer = setTimeout(() => completeLocalTutorial(`${playerName(winner)} remporte la démonstration. Le résultat ne compte pas dans les scores locaux.`), 900);
+    return;
+  }
+  scores[winner]++;
+  nextStarter = winner;
+  saveLocalReplay(winner, cells);
+  updateScores();
+}
 
 function advanceTurn(options={}){current=variant==='four'?(current%4)+1:(current===1?2:1);renderBoard();const label=variant==='four'?'4 joueurs · premier alignement de 4':variant==='anti'?`Anti-P4 · lignes ${antiScores[1]} — ${antiScores[2]}`:variant==='rotate'?`Rotation dans ${4-(moveCount%4)} coups`:variant==='simultaneous'?'Placement simultané':variant==='conquest'?`Conquêtes ${conquestPoints[1]} — ${conquestPoints[2]}`:variant==='naval'?`Navale · ${grid.flat().filter(Boolean).length} / 42 révélées`:'Tour actuel';updateStatus(options.automatic?`${playerName(current)} reprend la main`:null,label);startTurnTimer();}
 
@@ -627,6 +867,7 @@ function undoMove() {
 }
 
 function newRound() {
+  if (tutorialMode || tutorialScoreSnapshot) stopLocalTutorial({ keepBoard: true });
   stopLocalReplayPlayback();
   clearTurnTimer();
   initGrid();
@@ -636,6 +877,7 @@ function newRound() {
 }
 
 function resetAll() {
+  if (tutorialMode || tutorialScoreSnapshot) stopLocalTutorial({ keepBoard: true });
   stopLocalReplayPlayback();
   scores = { 1: 0, 2: 0, 3: 0, 4: 0, draw: 0 };
   nextStarter = 1;
@@ -786,6 +1028,7 @@ mobileTurnView.addEventListener?.('change', () => {
   updateStatus();
 });
 
+renderLocalVariantMenu();
 newRound();
 </script>
 <script src="/theme.js?v=eggs-33"></script>
