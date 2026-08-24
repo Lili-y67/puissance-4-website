@@ -513,9 +513,12 @@ function setLiveMode(mode) {
   document.getElementById('games-tab')?.classList.toggle('active', liveMode === 'games');
 }
 function updateLiveDiscordPresence(game = null, activeCount = null) {
+  const variantLabel = game
+    ? (LIVE_VARIANTS.find(([id]) => id === String(game.variant || 'classic'))?.[1] || 'Classique')
+    : '';
   const context = game ? {
-    details: `Regarde ${game.players?.[1]?.pseudo || 'Joueur 1'} contre ${game.players?.[2]?.pseudo || 'Joueur 2'}`,
-    state: `${Number.isFinite(Number(game.players?.[1]?.elo)) ? Math.round(Number(game.players[1].elo)) : '—'} ELO • ${Number.isFinite(Number(game.players?.[2]?.elo)) ? Math.round(Number(game.players[2].elo)) : '—'} ELO`,
+    details: `Regarde la variante ${variantLabel}`,
+    state: `${game.players?.[1]?.pseudo || 'Joueur 1'} contre ${game.players?.[2]?.pseudo || 'Joueur 2'} · ${Number.isFinite(Number(game.players?.[1]?.elo)) ? Math.round(Number(game.players[1].elo)) : '—'} / ${Number.isFinite(Number(game.players?.[2]?.elo)) ? Math.round(Number(game.players[2].elo)) : '—'} ELO`,
     hideIdentity: true,
     url: `${location.origin}/spec/${game.id}`,
   } : {

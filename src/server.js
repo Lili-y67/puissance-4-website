@@ -2207,9 +2207,9 @@ function pickArenaVariant(botA, botB) {
     GROUP BY COALESCE(variant, 'classic')
   `).all(botA.id, botB.id, botA.id, botB.id);
   const counts = new Map(rows.map(row => [String(row.variant), Number(row.count || 0)]));
-  // Le classique reste majoritaire, tandis que la Navale apparait environ
-  // deux fois plus souvent que les autres variantes speciales.
-  const weights = Object.fromEntries(variants.map(id => [id, id === 'classic' ? 4 : id === 'naval' ? 2 : 1]));
+  // Repartition cible avec neuf variantes : 25 % de Classique et une part
+  // egale du reste pour chaque variante speciale (3/32 = 9,375 % chacune).
+  const weights = Object.fromEntries(variants.map(id => [id, id === 'classic' ? 8 : 3]));
   const totalWeight = Object.values(weights).reduce((sum, value) => sum + value, 0);
   const totalGames = [...counts.values()].reduce((sum, value) => sum + value, 0);
   return variants.map(id => ({ id, score: ((totalGames + 1) * weights[id] / totalWeight) - Number(counts.get(id) || 0) + Math.random() * .2 })).sort((a, b) => b.score - a.score)[0]?.id || 'classic';

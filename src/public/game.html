@@ -1739,8 +1739,10 @@ function updateGameDiscordPresence(extra = {}) {
   const p1Elo = Number.isFinite(Number(players?.[1]?.elo)) ? Math.round(Number(players[1].elo)) : '—';
   const p2Elo = Number.isFinite(Number(players?.[2]?.elo)) ? Math.round(Number(players[2].elo)) : '—';
   const context = {
-    details: opponent?.pseudo ? `${variantLabel} · ${mode} contre ${opponent.pseudo}` : `${variantLabel} · ${mode}`,
-    state: `${p1Elo} ELO • ${p2Elo} ELO · ${variantLabel}`,
+    details: `Joue la variante ${variantLabel}`,
+    state: opponent?.pseudo
+      ? `${mode} contre ${opponent.pseudo} · ${p1Elo} / ${p2Elo} ELO`
+      : `${mode} · ${p1Elo} / ${p2Elo} ELO`,
     hideIdentity: true,
     url: location.href,
   };
