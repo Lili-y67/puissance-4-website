@@ -1613,6 +1613,17 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
 .arena-variant-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}.arena-variant-head strong{font:900 18px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase}.arena-variant-head span{color:var(--muted);font-size:10px;text-align:right}
 .arena-variant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.arena-variant-card{display:grid;grid-template-columns:30px minmax(0,1fr);align-items:center;min-width:0;min-height:62px;padding:9px 8px;border:1px solid rgba(255,255,255,.075);border-radius:12px;background:rgba(255,255,255,.035);color:#e9eaf5;cursor:pointer;text-align:left;transition:.18s}.arena-variant-card:hover{transform:translateY(-1px);border-color:rgba(133,235,255,.26);background:rgba(133,235,255,.07)}.arena-variant-card.active{border-color:rgba(133,235,255,.55);background:linear-gradient(145deg,rgba(133,235,255,.16),rgba(155,124,255,.10));box-shadow:0 0 22px rgba(133,235,255,.08)}.arena-variant-icon{display:grid;place-items:center;width:27px;height:27px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(0,0,0,.2);font-size:19px;line-height:1;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}.arena-variant-card.active .arena-variant-icon{border-color:rgba(133,235,255,.32);background:rgba(133,235,255,.1)}.arena-variant-card-copy{min-width:0}.arena-variant-card b{display:-webkit-box;overflow:hidden;color:inherit;font:900 13px/1.05 'Barlow Condensed',sans-serif;letter-spacing:.25px;white-space:normal;-webkit-box-orient:vertical;-webkit-line-clamp:2}.arena-variant-card small{display:block;margin-top:4px;color:var(--muted);font-size:9px}
 .arena-variant-choice{margin-top:11px;padding:11px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(0,0,0,.18)}.arena-variant-choice strong{display:block;color:#85ebff;font:900 17px 'Barlow Condensed',sans-serif;text-transform:uppercase}.arena-variant-choice span{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}.arena-variant-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.arena-variant-actions .btn{min-height:44px;padding:9px;font-size:12px}.arena-tutorial-error{min-height:16px;margin-top:7px;color:#ff6b84;font-size:10px;text-align:center}
+body.p4-wallpaper-mode .arena-variant-picker,
+body.p4-wallpaper-mode .arena-variant-choice,
+body.p4-wallpaper-mode .queue-waiting-count{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+body.p4-wallpaper-mode .arena-variant-picker{border-color:rgba(255,255,255,.22)}
+body.p4-wallpaper-mode .arena-variant-head,
+body.p4-wallpaper-mode .arena-variant-choice{text-shadow:0 2px 8px rgba(0,0,0,.9)}
 .variant-native-select{color-scheme:dark!important;background:#0b0d18!important;color:#f7f3ff!important;border-color:rgba(133,235,255,.22)!important}.variant-native-select option{background:#0b0d18!important;color:#f7f3ff!important}
 @media(max-width:520px){.arena-variant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arena-variant-actions{grid-template-columns:1fr}}
 .queue-waiting-count{width:100%;margin-top:-6px;padding:8px 11px;border:1px solid rgba(133,235,255,.14);border-radius:10px;background:rgba(133,235,255,.055);color:var(--muted);font:700 12px 'Barlow Condensed',sans-serif;letter-spacing:.6px;text-align:center}
