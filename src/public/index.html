@@ -3434,6 +3434,7 @@ html.party-mode .hero-logo-mark{animation:eggLogo .55s ease-in-out infinite alte
               <option value="simultaneous">Placement simultané</option>
               <option value="fog">Brouillard de Guerre</option>
               <option value="conquest">Conquête</option>
+              <option value="naval">Puissance 4 Navale</option>
             </select>
             <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques du Puissance 4.</span>
           </label>
@@ -4571,7 +4572,8 @@ const BOT_VARIANT_DESCRIPTIONS = {
   mission: 'Accomplis ton objectif personnel avant l’ordinateur.',
   simultaneous: 'Choisis ta colonne en secret avant la résolution simultanée des deux coups.',
   fog: 'Les jetons disparaissent visuellement dans la brume : mémorise la grille.',
-  conquest: 'Capture des alignements pour marquer des points et vider les lignes formées.'
+  conquest: 'Capture des alignements pour marquer des points et vider les lignes formées.',
+  naval: 'Explore une grille cachée case par case et découvre son unique ligne de quatre avant l’ordinateur.'
 };
 
 function setBotVariant(value) {
