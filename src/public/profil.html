@@ -2574,6 +2574,18 @@ async function load() {
   const urlId    = new URLSearchParams(location.search).get('id');
   const pathProfileRef = decodeURIComponent((location.pathname.match(/^\/profil\/([^/?#]+)/) || [])[1] || '').trim();
   viewerPlayer   = saved ? JSON.parse(saved) : null;
+
+  // Les administrateurs utilisent automatiquement la nouvelle page de profil.
+  // On conserve le joueur ciblé lorsque l'admin consulte un profil public.
+  if (String(viewerPlayer?.role || '').toLowerCase() === 'admin') {
+    const betaProfileRef = urlId || pathProfileRef || viewerPlayer.id;
+    const betaProfileUrl = betaProfileRef
+      ? `/profil-beta?id=${encodeURIComponent(betaProfileRef)}`
+      : '/profil-beta';
+    location.replace(betaProfileUrl);
+    return;
+  }
+
   let playerId = urlId || (/^\d+$/.test(pathProfileRef) ? pathProfileRef : '') || (viewerPlayer?.id ?? null);
   if (!playerId && pathProfileRef) {
     try {

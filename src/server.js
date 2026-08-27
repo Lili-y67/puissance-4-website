@@ -6246,6 +6246,8 @@ app.post('/api/reset-password', security.routeGuard('reset'), (req, res) => {
 
 app.get('/profil',     renderProfilePage);
 app.get('/profil/:ref', renderProfilePage);
+app.get('/profil-beta', renderStaticPage('profil-beta.html', { title: 'Profil beta - Puissance 4', description: 'Decouvre la nouvelle experience de profil et son studio de personnalisation.' }));
+app.get('/profil-beta/:ref', renderStaticPage('profil-beta.html', { title: 'Profil beta - Puissance 4', description: 'Decouvre la nouvelle experience de profil et son studio de personnalisation.' }));
 app.get('/replay/:id',     renderStaticPage('replay.html', { title: 'Replay - Puissance 4', description: 'Revois une partie Puissance 4 coup par coup.' }));
 app.get('/replay-bot/:id', renderStaticPage('replay.html', { title: 'Replay bot - Puissance 4', description: 'Analyse une partie jouee contre un bot Puissance 4.' }));
 app.get('/regles',     renderStaticPage('regles.html', { title: 'Regles - Puissance 4', description: 'Apprends les regles du Puissance 4 et les bases pour gagner.' }));
