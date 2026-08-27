@@ -344,8 +344,15 @@
         );
       }
       .identity-score {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
         text-align: right;
         padding-bottom: 6px;
+      }
+      .elo-copy {
+        min-width: 92px;
       }
       .elo {
         font: 900 clamp(42px, 6vw, 70px) / 0.8 "Barlow Condensed";
@@ -631,6 +638,151 @@
           inset 0 7px 12px rgba(255, 255, 255, 0.26),
           inset 0 -8px 13px rgba(0, 0, 0, 0.25),
           0 0 18px color-mix(in srgb, var(--c1) 35%, transparent);
+      }
+      .rank-asset {
+        width: 58px;
+        height: 58px;
+        object-fit: contain;
+        flex: 0 0 auto;
+        filter: drop-shadow(0 0 12px var(--rank-color, var(--accent2)));
+      }
+      .history-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .history-range {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 7px 11px;
+        background: rgba(255, 255, 255, 0.035);
+        color: var(--muted);
+        cursor: pointer;
+        font: 900 11px "Barlow Condensed";
+        text-transform: uppercase;
+      }
+      .history-range:hover,
+      .history-range.active {
+        border-color: rgba(133, 235, 255, 0.4);
+        background: rgba(133, 235, 255, 0.1);
+        color: var(--accent2);
+      }
+      .history-chart {
+        position: relative;
+        height: 250px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(0, 0, 0, 0.16);
+      }
+      .history-chart canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .history-stats {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 9px;
+        margin-top: 10px;
+      }
+      .history-stat,
+      .tool-card {
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+      .history-stat strong {
+        display: block;
+        font: 900 21px "Barlow Condensed";
+      }
+      .history-stat span {
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .tool-card strong,
+      .tool-card span {
+        display: block;
+      }
+      .tool-card strong {
+        font: 900 18px "Barlow Condensed";
+        text-transform: uppercase;
+      }
+      .tool-card span {
+        min-height: 36px;
+        margin: 5px 0 12px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .elo-sim {
+        position: fixed;
+        z-index: 20000;
+        inset: 0;
+        display: none;
+        place-items: center;
+        padding: 18px;
+        background: rgba(0, 0, 0, 0.78);
+        backdrop-filter: blur(10px);
+      }
+      .elo-sim.open {
+        display: grid;
+      }
+      .elo-sim-card {
+        position: relative;
+        width: min(420px, 100%);
+        padding: 25px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: linear-gradient(180deg, #151629, #090a15);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7);
+        text-align: center;
+      }
+      .elo-sim-close {
+        position: absolute;
+        top: 13px;
+        right: 13px;
+      }
+      .elo-slider {
+        width: 100%;
+        margin: 22px 0 10px;
+        accent-color: var(--sim-color, var(--accent));
+      }
+      .sim-value {
+        font: 900 44px "Barlow Condensed";
+      }
+      .sim-badge {
+        width: 90px;
+        height: 90px;
+        margin: 14px auto 6px;
+        object-fit: contain;
+      }
+      .sim-rank {
+        font: 900 25px "Barlow Condensed";
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .sim-progress {
+        height: 5px;
+        margin: 14px 0 8px;
+        overflow: hidden;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .sim-progress i {
+        display: block;
+        height: 100%;
+        transition: width 0.2s;
       }
       .empty {
         padding: 24px;
@@ -970,6 +1122,12 @@
         .collection {
           grid-template-columns: repeat(5, 1fr);
         }
+        .history-stats {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .tools-grid {
+          grid-template-columns: 1fr;
+        }
         .studio.open {
           grid-template-columns: 1fr;
         }
@@ -1065,6 +1223,12 @@
         }
         .collection {
           grid-template-columns: repeat(4, 1fr);
+        }
+        .history-chart {
+          height: 205px;
+        }
+        .history-stats {
+          grid-template-columns: repeat(2, 1fr);
         }
         .studio-panel {
           padding: 12px;
@@ -1192,6 +1356,9 @@
               <a class="side-link active" href="#overview"
                 ><span>◈</span>Aperçu</a
               ><a class="side-link" href="#variants"><span>▦</span>Variantes</a
+              ><a class="side-link" href="#progression"
+                ><span>⌁</span>Progression</a
+              ><a class="side-link" href="#tools"><span>⚙</span>Outils</a
               ><a class="side-link" href="#matches"><span>▶</span>Matchs</a
               ><a class="side-link" href="#collection"
                 ><span>●</span>Collection</a
@@ -1201,6 +1368,8 @@
           <div class="main">
             <section class="section" id="overview"></section>
             <section class="section" id="variants"></section>
+            <section class="section" id="progression"></section>
+            <section class="section" id="tools"></section>
             <section class="section" id="matches"></section>
             <section class="section" id="collection"></section>
           </div>
@@ -1344,6 +1513,37 @@
         <div class="preview-card hero" id="studio-preview-card"></div>
       </section>
     </div>
+    <div
+      class="elo-sim"
+      id="elo-sim"
+      aria-hidden="true"
+      onclick="if (event.target === this) closeEloSimulator()"
+    >
+      <div class="elo-sim-card">
+        <button class="button elo-sim-close" onclick="closeEloSimulator()">
+          ✕
+        </button>
+        <div class="section-kicker">Projection sans conséquence</div>
+        <div class="section-title">Simulateur ELO</div>
+        <input
+          class="elo-slider"
+          id="elo-sim-slider"
+          type="range"
+          min="100"
+          max="3500"
+          value="1000"
+          oninput="updateEloSimulator(this.value)"
+        />
+        <div>
+          <strong class="sim-value" id="elo-sim-value">1000</strong> ELO
+        </div>
+        <img class="sim-badge" id="elo-sim-image" src="" alt="" />
+        <div class="sim-rank" id="elo-sim-rank">Quartz III</div>
+        <div class="section-sub" id="elo-sim-range"></div>
+        <div class="sim-progress"><i id="elo-sim-progress"></i></div>
+        <div class="section-sub" id="elo-sim-next"></div>
+      </div>
+    </div>
     <div class="toast" id="toast"></div>
     <script>
       const VARIANT_ICONS = {
@@ -1377,6 +1577,39 @@
         ["heart", "♥"],
         ["emoji", "🙂"],
       ];
+      const RANKS = [
+        {
+          name: "Malachite",
+          key: "Malachite",
+          color: "#2ecc71",
+          min: 100,
+          max: 699,
+        },
+        {
+          name: "Quartz",
+          key: "Quartz",
+          color: "#b0bec5",
+          min: 700,
+          max: 1299,
+        },
+        { name: "Ambre", key: "Ambre", color: "#cd7f32", min: 1300, max: 1799 },
+        { name: "Jade", key: "Jade", color: "#1abc9c", min: 1800, max: 2299 },
+        {
+          name: "Saphir",
+          key: "Saphir",
+          color: "#3498db",
+          min: 2300,
+          max: 2799,
+        },
+        {
+          name: "Améthyste",
+          key: "Amethiste",
+          color: "#9b59b6",
+          min: 2800,
+          max: 3500,
+        },
+      ];
+      const RANK_LEVELS = ["I", "II", "III", "IV", "V"];
       let player = null,
         games = [],
         variantStats = [],
@@ -1386,6 +1619,8 @@
         isOwner = false,
         draft = null,
         assets = { decorations: [], nameplates: [], banners: [] };
+      let historyDays = 7;
+      let historyData = null;
       const token =
         localStorage.getItem("token") || sessionStorage.getItem("token") || "";
       try {
@@ -1507,6 +1742,15 @@
               year: "numeric",
             })
           : "—";
+        const rankAsset = rank.image
+          ? `<img
+              class="rank-asset"
+              src="${esc(rank.image)}"
+              alt="${esc(rank.displayLabel || rank.label || "Rang")}"
+              title="${esc(rank.displayLabel || rank.label || "Rang")}"
+              style="--rank-color:${esc(rank.color || "#85ebff")}"
+            >`
+          : "";
 
         return `
           <div class="cover" style="${cover}">
@@ -1554,8 +1798,11 @@
               class="identity-score"
               style="--rank-color:${esc(rank.color || "#85ebff")}"
             >
-              <div class="elo">${Number(p.elo || 1000)}</div>
-              <div class="elo-label">ELO CLASSIQUE</div>
+              ${rankAsset}
+              <div class="elo-copy">
+                <div class="elo">${Number(p.elo || 1000)}</div>
+                <div class="elo-label">ELO CLASSIQUE</div>
+              </div>
             </div>
           </div>
 
@@ -1650,6 +1897,8 @@
           </div>
         `;
         renderVariants();
+        renderProgression();
+        renderTools();
         renderMatches();
         renderCollection();
         document.getElementById("classic-profile-link").href =
@@ -1708,6 +1957,202 @@
             </div>
           </div>
           <div class="variant-grid">${cards}</div>
+        `;
+      }
+      function renderProgression() {
+        document.getElementById("progression").innerHTML = `
+          <div class="section-head">
+            <div>
+              <div class="section-kicker">Progression en temps réel</div>
+              <div class="section-title">Courbe ELO</div>
+              <div class="section-sub">
+                Historique classique, points de parties et statistiques détaillées.
+              </div>
+            </div>
+            <div class="history-actions">
+              ${[1, 7, 15]
+                .map(
+                  (days) => `
+                    <button
+                      class="history-range ${historyDays === days ? "active" : ""}"
+                      onclick="setHistoryDays(${days})"
+                    >
+                      ${days}j
+                    </button>
+                  `,
+                )
+                .join("")}
+            </div>
+          </div>
+          <div class="history-chart">
+            <canvas id="history-canvas"></canvas>
+          </div>
+          <div class="history-stats" id="history-stats">
+            <div class="history-stat"><strong>—</strong><span>Chargement</span></div>
+          </div>
+        `;
+        if (historyData) drawHistory(historyData);
+      }
+
+      function renderTools() {
+        const classicUrl = `/profil?id=${encodeURIComponent(player.id)}`;
+        const rank = player.rank || {};
+        document.getElementById("tools").innerHTML = `
+          <div class="section-head">
+            <div>
+              <div class="section-kicker">Fonctions du profil</div>
+              <div class="section-title">Outils et gestion</div>
+              <div class="section-sub">
+                Les outils historiques restent accessibles pendant la bêta.
+              </div>
+            </div>
+          </div>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <strong>Simulateur ELO</strong>
+              <span>Parcours tous les rangs et leurs cinq divisions.</span>
+              <button class="button primary" onclick="openEloSimulator()">
+                Ouvrir le simulateur
+              </button>
+            </div>
+            <div class="tool-card">
+              <strong>${esc(rank.displayLabel || rank.label || "Non classé")}</strong>
+              <span>Badge officiel et progression actuelle du joueur.</span>
+              <a class="button" href="${classicUrl}#section-overview">
+                Détails du rang
+              </a>
+            </div>
+            <div class="tool-card">
+              <strong>Centre de compte</strong>
+              <span>Clan, Discord, parrainage, mode bot et réglages avancés.</span>
+              <a class="button" href="${classicUrl}#section-custom">
+                Ouvrir les outils complets
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      async function setHistoryDays(days) {
+        historyDays = Number(days) || 7;
+        renderProgression();
+        await loadHistory();
+      }
+
+      async function loadHistory() {
+        if (!player?.id) return;
+        try {
+          historyData = await json(
+            `/api/players/${encodeURIComponent(player.id)}/elo-history?days=${historyDays}&variant=classic`,
+          );
+          drawHistory(historyData);
+        } catch (error) {
+          const stats = document.getElementById("history-stats");
+          if (stats) {
+            stats.innerHTML = `
+              <div class="empty" style="grid-column:1/-1">
+                Courbe momentanément indisponible.
+              </div>
+            `;
+          }
+        }
+      }
+
+      function drawHistory(data) {
+        const canvas = document.getElementById("history-canvas");
+        if (!canvas) return;
+        const wrap = canvas.parentElement;
+        const width = Math.max(300, Math.floor(wrap.clientWidth || 700));
+        const height = Math.max(190, Math.floor(wrap.clientHeight || 250));
+        const dpr = Math.max(1, Math.min(2, devicePixelRatio || 1));
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const points = Array.isArray(data?.points) ? data.points : [];
+        const fallbackElo = Number(data?.player?.elo || player.elo || 1000);
+        const values = points.length
+          ? points.map((point) => Number(point.elo || fallbackElo))
+          : [fallbackElo, fallbackElo];
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const padding = Math.max(20, Math.round((max - min) * 0.2));
+        const low = min - padding;
+        const high = max + padding;
+        const left = 48;
+        const right = 18;
+        const top = 28;
+        const bottom = 32;
+        const plotWidth = width - left - right;
+        const plotHeight = height - top - bottom;
+        const x = (index) =>
+          left + (plotWidth * index) / Math.max(1, values.length - 1);
+        const y = (elo) =>
+          top + (1 - (elo - low) / Math.max(1, high - low)) * plotHeight;
+
+        ctx.font = "11px Barlow, sans-serif";
+        for (let index = 0; index <= 4; index += 1) {
+          const lineY = top + (plotHeight / 4) * index;
+          const label = Math.round(high - ((high - low) / 4) * index);
+          ctx.strokeStyle = "rgba(255,255,255,.07)";
+          ctx.beginPath();
+          ctx.moveTo(left, lineY);
+          ctx.lineTo(width - right, lineY);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(245,244,251,.5)";
+          ctx.fillText(String(label), 9, lineY + 4);
+        }
+
+        const gradient = ctx.createLinearGradient(left, 0, width - right, 0);
+        gradient.addColorStop(0, validHex(player.color, "#ff2d55"));
+        gradient.addColorStop(1, validHex(player.color_secondary, "#85ebff"));
+        ctx.beginPath();
+        values.forEach((elo, index) => {
+          const px = x(index);
+          const py = y(elo);
+          if (index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 3;
+        ctx.lineJoin = "round";
+        ctx.shadowColor = validHex(player.color, "#ff2d55");
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        values.forEach((elo, index) => {
+          ctx.beginPath();
+          ctx.arc(
+            x(index),
+            y(elo),
+            index === values.length - 1 ? 5 : 3,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fillStyle = index === values.length - 1 ? "#ffffff" : "#85ebff";
+          ctx.fill();
+        });
+
+        const stats = data?.stats || {};
+        const start = Number(stats.startElo ?? values[0] ?? fallbackElo);
+        const end = Number(stats.endElo ?? values.at(-1) ?? fallbackElo);
+        const delta = Number(stats.delta ?? end - start);
+        const average =
+          values.reduce((sum, elo) => sum + elo, 0) / values.length;
+        document.getElementById("history-stats").innerHTML = `
+          <div class="history-stat"><strong>${Math.round(end)}</strong><span>Actuel</span></div>
+          <div class="history-stat">
+            <strong style="color:${delta >= 0 ? "#62ee87" : "#ff6b88"}">
+              ${delta >= 0 ? "+" : ""}${Math.round(delta)}
+            </strong>
+            <span>Variation</span>
+          </div>
+          <div class="history-stat"><strong>${Math.round(min)}</strong><span>Minimum</span></div>
+          <div class="history-stat"><strong>${Math.round(max)}</strong><span>Maximum</span></div>
+          <div class="history-stat"><strong>${Math.round(average)}</strong><span>Moyenne</span></div>
         `;
       }
       function renderMatches() {
@@ -2071,6 +2516,72 @@
           btn.disabled = false;
         }
       }
+      function simulatedRank(eloValue) {
+        const elo = Math.max(100, Math.min(3500, Number(eloValue) || 1000));
+        const rank =
+          RANKS.find((item) => elo >= item.min && elo <= item.max) ||
+          RANKS[RANKS.length - 1];
+        const span = Math.max(1, rank.max - rank.min + 1);
+        const divisionSize = span / 5;
+        const level = Math.min(
+          4,
+          Math.max(0, Math.floor((elo - rank.min) / divisionSize)),
+        );
+        const divisionStart = rank.min + level * divisionSize;
+        const progress = Math.max(
+          0,
+          Math.min(100, ((elo - divisionStart) / divisionSize) * 100),
+        );
+        return {
+          ...rank,
+          elo,
+          level,
+          label: `${rank.name} ${RANK_LEVELS[level]}`,
+          progress,
+          next: elo < 3500 ? Math.ceil(divisionStart + divisionSize) : null,
+        };
+      }
+
+      function openEloSimulator() {
+        const modal = document.getElementById("elo-sim");
+        const slider = document.getElementById("elo-sim-slider");
+        slider.value = Math.max(
+          100,
+          Math.min(3500, Number(player?.elo || 1000)),
+        );
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+        updateEloSimulator(slider.value);
+      }
+
+      function closeEloSimulator() {
+        const modal = document.getElementById("elo-sim");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+      }
+
+      function updateEloSimulator(value) {
+        const rank = simulatedRank(value);
+        const modal = document.getElementById("elo-sim");
+        modal.style.setProperty("--sim-color", rank.color);
+        document.getElementById("elo-sim-value").textContent = rank.elo;
+        document.getElementById("elo-sim-value").style.color = rank.color;
+        const image = document.getElementById("elo-sim-image");
+        image.src = `/ranks/${rank.key}_${rank.level + 1}.png`;
+        image.alt = rank.label;
+        image.style.filter = `drop-shadow(0 0 12px ${rank.color}88)`;
+        document.getElementById("elo-sim-rank").textContent = rank.label;
+        document.getElementById("elo-sim-rank").style.color = rank.color;
+        document.getElementById("elo-sim-range").textContent =
+          `${rank.min} – ${rank.max} ELO`;
+        const progress = document.getElementById("elo-sim-progress");
+        progress.style.width = `${rank.progress}%`;
+        progress.style.background = rank.color;
+        document.getElementById("elo-sim-next").textContent = rank.next
+          ? `${Math.round(rank.progress)} % · prochaine division à ${rank.next} ELO`
+          : "Rang maximum atteint";
+      }
+
       function toast(message) {
         const el = document.getElementById("toast");
         el.textContent = message;
@@ -2082,12 +2593,29 @@
         try {
           const ref = getTargetRef();
           if (!ref) throw new Error("Connecte-toi ou choisis un joueur.");
-          const id = await resolveId(ref);
+          let id;
+          try {
+            id = await resolveId(ref);
+          } catch (error) {
+            if (!viewer?.id || String(ref) === String(viewer.id)) throw error;
+            id = Number(viewer.id);
+          }
           isOwner = Number(viewer?.id) === id && !!token;
           const headers = isOwner ? { "x-session-token": token } : {};
-          const [profileData, statsData, collectionData, assetData, shopData] =
+          let profileData;
+          try {
+            profileData = await json("/api/players/" + id, { headers });
+          } catch (error) {
+            if (!viewer?.id || Number(viewer.id) === id) throw error;
+            id = Number(viewer.id);
+            isOwner = !!token;
+            profileData = await json("/api/players/" + id, {
+              headers: isOwner ? { "x-session-token": token } : {},
+            });
+          }
+          const activeHeaders = isOwner ? { "x-session-token": token } : {};
+          const [statsData, collectionData, assetData, shopData] =
             await Promise.all([
-              json("/api/players/" + id, { headers }),
               json(`/api/players/${id}/variant-stats`).catch(() => ({
                 stats: [],
               })),
@@ -2095,12 +2623,14 @@
                 collection: null,
               })),
               Promise.all([
-                json("/api/decorations"),
-                json("/api/nameplates"),
-                json("/api/profile-banners"),
+                json("/api/decorations").catch(() => ({ decorations: [] })),
+                json("/api/nameplates").catch(() => ({ nameplates: [] })),
+                json("/api/profile-banners").catch(() => ({ banners: [] })),
               ]),
               isOwner
-                ? json("/api/shop/me", { headers }).catch(() => null)
+                ? json("/api/shop/me", { headers: activeHeaders }).catch(
+                    () => null,
+                  )
                 : null,
             ]);
           player = profileData.player;
@@ -2117,6 +2647,7 @@
             banners: assetData[2].banners || [],
           };
           renderPage();
+          await loadHistory();
           document.getElementById("loading").hidden = true;
           document.getElementById("customize-button").onclick = openStudio;
           if (history.replaceState)
@@ -2146,9 +2677,19 @@
       document.addEventListener("keydown", (e) => {
         if (
           e.key === "Escape" &&
+          document.getElementById("elo-sim").classList.contains("open")
+        ) {
+          closeEloSimulator();
+          return;
+        }
+        if (
+          e.key === "Escape" &&
           document.getElementById("studio").classList.contains("open")
         )
           closeStudio();
+      });
+      window.addEventListener("resize", () => {
+        if (historyData) drawHistory(historyData);
       });
       boot();
     </script>

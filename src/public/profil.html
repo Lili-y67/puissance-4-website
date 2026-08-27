@@ -1463,6 +1463,7 @@ body.search-open .profile-side{
     <a class="logo-sm" href="/">Puissance <span>4</span></a>
     <div class="nav-btns">
       <a class="btn-nav" href="/">← Jouer</a>
+      <a class="btn-nav" id="btn-profile-beta" href="/profil-beta" style="display:none">✦ Profil bêta</a>
       <a class="btn-nav fortune-nav-btn" href="/roue-fortune"><img src="/assets/fortune-ticket.png" alt=""> Roue Fortune</a>
       <button class="btn-nav danger" id="btn-logout" onclick="logout()" style="display:none">Déconnexion</button>
       <button class="btn-nav" id="btn-close-account" onclick="confirmCloseAccount()" style="display:none;border-color:rgba(255,59,48,0.3);color:rgba(255,59,48,0.7);font-size:11px;">Fermer le compte</button>
@@ -2574,18 +2575,6 @@ async function load() {
   const urlId    = new URLSearchParams(location.search).get('id');
   const pathProfileRef = decodeURIComponent((location.pathname.match(/^\/profil\/([^/?#]+)/) || [])[1] || '').trim();
   viewerPlayer   = saved ? JSON.parse(saved) : null;
-
-  // Les administrateurs utilisent automatiquement la nouvelle page de profil.
-  // On conserve le joueur ciblé lorsque l'admin consulte un profil public.
-  if (String(viewerPlayer?.role || '').toLowerCase() === 'admin') {
-    const betaProfileRef = urlId || pathProfileRef || viewerPlayer.id;
-    const betaProfileUrl = betaProfileRef
-      ? `/profil-beta?id=${encodeURIComponent(betaProfileRef)}`
-      : '/profil-beta';
-    location.replace(betaProfileUrl);
-    return;
-  }
-
   let playerId = urlId || (/^\d+$/.test(pathProfileRef) ? pathProfileRef : '') || (viewerPlayer?.id ?? null);
   if (!playerId && pathProfileRef) {
     try {
@@ -2594,6 +2583,7 @@ async function load() {
     } catch {}
   }
   isOwnProfile   = viewerPlayer && ((!urlId && !pathProfileRef) || String(playerId) === String(viewerPlayer.id));
+
   await loadProfileShopInventory();
 
   if (isOwnProfile) {
@@ -2632,6 +2622,11 @@ async function load() {
     profileTokenCollection = tokenCollectionData.collection || { items: [], stats: {} };
     const freshPlayer = player;
     currentPlayer = freshPlayer;
+    const betaProfileButton = document.getElementById('btn-profile-beta');
+    if (betaProfileButton && String(viewerPlayer?.role || '').toLowerCase() === 'admin') {
+      betaProfileButton.href = `/profil-beta?id=${encodeURIComponent(freshPlayer.id)}`;
+      betaProfileButton.style.display = 'inline-flex';
+    }
     applyProfileWallpaperMode();
     if (isOwnProfile) {
       syncStoredPlayerPatch({ custom_cursor: String(freshPlayer.custom_cursor || ''), language: String(freshPlayer.language || 'fr') });
