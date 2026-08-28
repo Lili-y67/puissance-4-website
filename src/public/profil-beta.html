@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-studio-overlays-20260828-14" />
+  <meta name="p4-build" content="profile-mobile-studio-20260828-16" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6397,6 +6397,7 @@
         z-index: 90000;
         inset: 0;
         width: 100vw;
+        height: 100vh;
         height: 100dvh;
         max-width: none;
         max-height: none;
@@ -6630,6 +6631,7 @@
       dialog.avatar-decoration-modal-bg,
       dialog.pseudo-font-modal-bg {
         width: 100vw;
+        height: 100vh;
         height: 100dvh;
         max-width: none;
         max-height: none;
@@ -6680,6 +6682,25 @@
           grid-row: 3;
           padding: 12px;
         }
+        .studio-media-card { padding: 12px; border-radius: 17px; }
+        .studio-media-grid {
+          grid-template-columns: 108px minmax(0, 1fr);
+          gap: 8px;
+        }
+        .studio-media-item,
+        .studio-media-item.avatar { min-height: 126px; }
+        .studio-media-item.avatar img {
+          inset: 11px;
+          width: calc(100% - 22px);
+          height: calc(100% - 22px);
+        }
+        .studio-media-copy { left: 9px; right: 9px; bottom: 9px; }
+        .studio-media-copy strong { font-size: 15px; }
+        .studio-media-copy span { font-size: 8px; line-height: 1.25; }
+        .recent-avatar-history { margin-top: 11px; padding-top: 11px; }
+        .recent-avatar-head { align-items: flex-start; flex-direction: column; gap: 2px; }
+        .recent-avatar-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 5px; }
+        .recent-avatar-option { padding: 2px; }
       }
     </style>
     <script>
@@ -8677,11 +8698,37 @@
             localStorage.getItem("token") ||
             sessionStorage.getItem("token") ||
             "";
+          if (isOwnProfile && sessionToken) {
+            try {
+              const sessionRes = await fetch("/api/auth/session", {
+                headers: { "x-session-token": sessionToken },
+              });
+              const sessionData = sessionRes.ok
+                ? await sessionRes.json()
+                : null;
+              if (
+                !sessionRes.ok ||
+                String(sessionData?.player?.id || "") !== String(playerId)
+              ) {
+                isOwnProfile = false;
+                document.getElementById("btn-logout").style.display = "none";
+                document.getElementById("btn-close-account").style.display = "none";
+                const studioButton = document.getElementById("btn-beta-studio");
+                if (studioButton) studioButton.style.display = "none";
+                if (reportButton) {
+                  reportButton.disabled = false;
+                  reportButton.textContent = "Signaler le compte";
+                }
+              }
+            } catch {
+              isOwnProfile = false;
+            }
+          }
           const profileFetchOptions =
             isOwnProfile && sessionToken
               ? { headers: { "x-session-token": sessionToken } }
               : {};
-          const [profileRes, followRes, tokenCollectionRes] = await Promise.all(
+          let [profileRes, followRes, tokenCollectionRes] = await Promise.all(
             [
               fetch(`/api/players/${playerId}`, profileFetchOptions),
               viewerPlayer
@@ -8692,6 +8739,25 @@
               fetch(`/api/players/${playerId}/token-collection`),
             ],
           );
+          if (
+            isOwnProfile &&
+            sessionToken &&
+            (profileRes.status === 401 || profileRes.status === 403)
+          ) {
+            const publicProfileRes = await fetch(`/api/players/${playerId}`);
+            if (publicProfileRes.ok) {
+              profileRes = publicProfileRes;
+              isOwnProfile = false;
+              document.getElementById("btn-logout").style.display = "none";
+              document.getElementById("btn-close-account").style.display = "none";
+              const studioButton = document.getElementById("btn-beta-studio");
+              if (studioButton) studioButton.style.display = "none";
+              if (reportButton) {
+                reportButton.disabled = false;
+                reportButton.textContent = "Signaler le compte";
+              }
+            }
+          }
           if (profileRes.status === 404) {
             document.getElementById("content").innerHTML = `
         <div style="text-align:center;padding:80px 20px">
