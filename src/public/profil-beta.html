@@ -6027,6 +6027,104 @@
         width: 18px;
         height: 18px;
       }
+      .elo-sim-launch {
+        min-height: 34px;
+        border-color: rgba(133, 235, 255, 0.28);
+        background: rgba(133, 235, 255, 0.09);
+        color: #85ebff;
+      }
+      .profile-tools-section {
+        margin-top: 18px;
+        background:
+          radial-gradient(circle at 8% 0%, rgba(255, 45, 85, 0.12), transparent 34%),
+          radial-gradient(circle at 92% 100%, rgba(133, 235, 255, 0.11), transparent 36%),
+          rgba(12, 12, 28, 0.74);
+      }
+      .profile-tools-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .profile-tool-card {
+        min-width: 0;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 13px;
+        align-items: start;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, 0.085);
+        background: rgba(255, 255, 255, 0.035);
+      }
+      .profile-tool-icon {
+        width: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        background: rgba(255, 45, 85, 0.12);
+        border: 1px solid rgba(255, 45, 85, 0.22);
+        color: #ff7892;
+        font-size: 21px;
+      }
+      .profile-tool-fps .profile-tool-icon {
+        background: rgba(133, 235, 255, 0.1);
+        border-color: rgba(133, 235, 255, 0.2);
+        color: #85ebff;
+      }
+      .profile-tool-content { min-width: 0; }
+      .profile-tool-kicker {
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 1.7px;
+        text-transform: uppercase;
+      }
+      .profile-tool-title {
+        margin-top: 2px;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 21px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .profile-tool-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 10px;
+      }
+      .profile-tool-chip {
+        padding: 6px 9px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.055);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .profile-tool-chip strong { color: var(--text); }
+      .profile-tool-note {
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .profile-tool-button {
+        grid-column: 1 / -1;
+        width: 100%;
+        min-height: 40px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 45, 85, 0.3);
+        background: rgba(255, 45, 85, 0.11);
+        color: #ff8aa0;
+        font-family: "Barlow Condensed", sans-serif;
+        font-size: 13px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        cursor: pointer;
+      }
+      .profile-tool-fps .fps-toggle-row { margin-top: 10px; }
       @media (max-width: 620px) {
         .fps-toggle-row {
           grid-template-columns: 1fr;
@@ -6041,6 +6139,7 @@
         .fps-config-grid input[type="number"] {
           width: 94px;
         }
+        .profile-tools-grid { grid-template-columns: 1fr; }
       }
       .queue-music-search-results {
         display: none;
@@ -6396,15 +6495,109 @@
         .profile-section-head {
         margin-bottom: 18px;
       }
+      /* Studio unifié : un tiroir de gauche indépendant du contenu du profil. */
+      .beta-studio {
+        position: fixed;
+        z-index: 90000;
+        inset: 0;
+        display: none;
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+        background: rgba(2, 3, 10, 0.7);
+        backdrop-filter: blur(10px);
+        transition: opacity 0.28s ease, visibility 0.28s ease;
+      }
+      .beta-studio.open {
+        display: block;
+        visibility: visible;
+        pointer-events: auto;
+        opacity: 1;
+      }
+      .beta-studio-drawer {
+        position: absolute;
+        inset: 10px auto 10px 10px;
+        width: min(720px, calc(100vw - 20px));
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 0 0, rgba(255, 45, 85, 0.17), transparent 28%),
+          radial-gradient(circle at 100% 100%, rgba(133, 235, 255, 0.1), transparent 34%),
+          linear-gradient(155deg, #191a30 0%, #0a0b18 58%, #070812 100%);
+        box-shadow: 36px 0 100px rgba(0, 0, 0, 0.68), inset 0 1px 0 rgba(255,255,255,.07);
+        transform: translateX(calc(-100% - 24px));
+        transition: transform 0.32s cubic-bezier(.22,.8,.24,1);
+      }
+      .beta-studio.open .beta-studio-drawer { transform: translateX(0); }
+      .beta-studio-head {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0;
+        padding: 19px 20px 15px;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      .beta-studio-title { font-size: 31px; }
+      .beta-studio-tabs {
+        grid-column: 1;
+        grid-row: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-height: 0;
+        padding: 13px 10px;
+        overflow: auto;
+        border-right: 1px solid rgba(255,255,255,.07);
+        background: rgba(0,0,0,.13);
+      }
+      .beta-studio-tab {
+        width: 100%;
+        min-width: 0;
+        padding: 11px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+      }
+      .beta-studio-tab span:first-child {
+        width: 25px;
+        flex: 0 0 25px;
+        text-align: center;
+        font-size: 16px;
+      }
+      .beta-studio-main {
+        grid-column: 2;
+        grid-row: 2;
+        min-width: 0;
+        min-height: 0;
+        overflow: auto;
+        padding: 16px;
+      }
+      .beta-studio-main > .beta-studio-pane { display: none; }
+      .beta-studio-main > .beta-studio-pane.beta-studio-pane-active {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .beta-studio-pane > .color-card,
+      .beta-studio-pane > .avatar-decoration-card,
+      .beta-studio-pane > .shape-card { margin: 0; }
       @media (max-width: 600px) {
         .profile-beta-badge {
           margin-left: 5px;
           padding: 4px 6px;
           font-size: 8px;
         }
-        .beta-studio {
+        .beta-studio-drawer {
+          inset: 6px auto 6px 6px;
+          width: calc(100vw - 12px);
           grid-template-columns: 1fr;
-          grid-template-rows: auto minmax(0, 1fr);
+          grid-template-rows: auto auto minmax(0, 1fr);
+          border-radius: 20px;
         }
         .beta-studio-sidebar {
           padding: 12px;
@@ -6415,8 +6608,13 @@
           margin-bottom: 10px;
         }
         .beta-studio-tabs {
+          grid-column: 1;
+          grid-row: 2;
           display: flex;
+          flex-direction: row;
           overflow-x: auto;
+          border-right: 0;
+          border-bottom: 1px solid rgba(255,255,255,.07);
         }
         .beta-studio-tab {
           width: auto;
@@ -6424,6 +6622,8 @@
           padding: 9px 11px;
         }
         .beta-studio-main {
+          grid-column: 1;
+          grid-row: 3;
           padding: 12px;
         }
       }
@@ -6985,6 +7185,8 @@
       ];
       const eloVariantHistoryData = new Map();
       const eloVariantHitPoints = new Map();
+      let eloVariantRgbFrame = 0;
+      let eloVariantRgbLastPaint = 0;
 
       const PROFILE_LANGUAGE_FALLBACKS = [
         { code: "fr", name: "Français", country: "France" },
@@ -8135,10 +8337,13 @@
 
       const BETA_STUDIO_PANES = [
         { id: "studio-media", icon: "🖼️", label: "Avatar & bannière", title: "Avatar & bannière", sub: "Change les deux images principales de ta carte de profil.", selectors: ["#studio-media-card"] },
+        { id: "studio-identity", icon: "✍️", label: "Identité", title: "Pseudo, style & grade", sub: "Modifie ton pseudo, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#perso-role-card"] },
+        { id: "studio-colors", icon: "🎨", label: "Couleurs & pion", title: "Couleurs et pion", sub: "Personnalise tes couleurs, la forme du pion et ton emoji de jeu.", selectors: ["#color-card", "#shape-card"] },
         { id: "studio-decoration", icon: "✨", label: "Décoration", title: "Décoration d'avatar", sub: "Choisis le cadre qui entoure ton avatar.", selectors: ["#avatar-decoration-card", "#avatar-decoration-modal-bg"] },
         { id: "studio-wallpaper", icon: "🌌", label: "Fond d'écran", title: "Fond du profil", sub: "Configure les images PC et téléphone ainsi que leur intensité.", selectors: ["#profile-wallpaper-card"] },
         { id: "studio-nameplate", icon: "🏷️", label: "Plaque", title: "Plaque nominative", sub: "Sélectionne la plaque affichée derrière ton identité.", selectors: ["#search-nameplate-card", "#search-nameplate-modal-bg"] },
-        { id: "studio-identity", icon: "✍️", label: "Pseudo & grade", title: "Pseudo, style & grade Perso", sub: "Modifie ton pseudo, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#perso-role-card"] },
+        { id: "studio-music", icon: "🎵", label: "Musique d'attente", title: "Musique d'attente", sub: "Choisis, importe ou recherche la musique jouée pendant la file d'attente.", selectors: ["#queue-music-card"] },
+        { id: "studio-extras", icon: "⚙️", label: "Options avancées", title: "Options avancées", sub: "Retrouve le curseur personnalisé et les options réservées à ton grade.", selectors: ["#custom-cursor-card", "#crystal-alert-card"] },
       ];
 
       function ensureBetaStudioShell() {
@@ -8188,14 +8393,21 @@
       }
 
       function openBetaStudio(sectionId = "") {
-        const studio = document.getElementById("beta-profile-studio");
+        let studio = document.getElementById("beta-profile-studio");
+        if (!studio || !studio.querySelector(".beta-studio-tab")) {
+          mountBetaProfileExperience();
+          studio = document.getElementById("beta-profile-studio");
+        }
         if (!studio) return;
         const requested = Array.from(studio.querySelectorAll(".beta-studio-tab")).find((tab) => tab.dataset.section === sectionId);
         const target = requested?.dataset.section || studio.querySelector(".beta-studio-tab")?.dataset.section;
         if (target) selectBetaStudioPane(target);
+        studio.style.display = "block";
+        void studio.offsetWidth;
         studio.classList.add("open");
         studio.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
+        setTimeout(() => studio.querySelector(".beta-studio-tab.active")?.focus({ preventScroll: true }), 340);
       }
 
       function closeBetaStudio() {
@@ -8204,6 +8416,9 @@
         studio.classList.remove("open");
         studio.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
+        setTimeout(() => {
+          if (!studio.classList.contains("open")) studio.style.display = "";
+        }, 340);
       }
 
       function makeBetaSectionCollapsible(sectionId, collapsed = true) {
@@ -8974,6 +9189,7 @@
           <div class="elo-history-sub">Les neuf graphiques restent visibles ensemble. Survole un point pour consulter la partie.</div>
         </div>
         <div class="elo-history-actions">
+          <button class="elo-history-range elo-sim-launch" type="button" onclick="openEloSim()">◇ Simulateur ELO</button>
           <div class="elo-history-ranges">
             <button class="elo-history-range" data-elo-days="1" onclick="setEloHistoryRange(1)">1j</button>
             <button class="elo-history-range active" data-elo-days="7" onclick="setEloHistoryRange(7)">7j</button>
@@ -9822,6 +10038,58 @@
     </div>
 
     ${renderTokenCollectionSection(player)}
+    ${isOwnProfile ? `
+    <section class="profile-section profile-tools-section" id="section-tools">
+      <div class="profile-section-head">
+        <div>
+          <div class="profile-section-title">Boosts & affichage</div>
+          <div class="profile-section-sub">Active tes bonus et règle le compteur de performances.</div>
+        </div>
+      </div>
+      <div class="profile-tools-grid">
+        <article class="profile-tool-card profile-tool-boost">
+          <div class="profile-tool-icon">⚡</div>
+          <div class="profile-tool-content">
+            <div class="profile-tool-kicker">Inventaire</div>
+            <div class="profile-tool-title">Boosts disponibles</div>
+            <div class="profile-tool-chips">
+              <span class="profile-tool-chip"><strong>${Number(boosterCounts.elo || 0)}</strong> ELO</span>
+              <span class="profile-tool-chip"><strong>${Number(boosterCounts.coins || 0)}</strong> Coins</span>
+            </div>
+            <div class="profile-tool-note">Les boosters possédés restent actifs pendant 2 heures.</div>
+          </div>
+          <button class="profile-tool-button" type="button" onclick="openBoosterModal()">Choisir un boost</button>
+        </article>
+        <article class="profile-tool-card profile-tool-fps">
+          <div class="profile-tool-icon">◫</div>
+          <div class="profile-tool-content">
+            <div class="profile-tool-kicker">Performances</div>
+            <div class="profile-tool-title">Affichage FPS</div>
+            <div class="fps-toggle-row">
+              <label class="toggle-wrap">
+                <input type="checkbox" id="fps-counter-toggle" onchange="onFpsCounterChange(this.checked)">
+                <span class="toggle-text"><strong>Compteur FPS</strong><small id="fps-counter-sub">Compteur FPS masqué</small></span>
+              </label>
+              <button class="fps-config-btn" id="fps-config-btn" type="button" onclick="toggleFpsConfigPanel()" hidden>Configurer</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+    <div class="fps-config-modal" id="fps-config-panel" hidden onclick="if(event.target===this)closeFpsConfigPanel()" role="dialog" aria-modal="true">
+      <div class="fps-config-dialog">
+        <div class="fps-config-head"><div><div class="fps-config-title">Configuration FPS</div><div class="fps-config-sub">Personnalise le libellé, les seuils et les couleurs du compteur.</div></div><button class="fps-config-close" type="button" onclick="closeFpsConfigPanel()">×</button></div>
+        <div class="fps-config-grid">
+          <label>Texte <input id="fps-config-text" type="text" maxlength="12" oninput="saveFpsConfigFromUi()"></label>
+          <label>Fluide <input id="fps-color-good" type="color" oninput="saveFpsConfigFromUi()"></label>
+          <label>Moyen <input id="fps-color-ok" type="color" oninput="saveFpsConfigFromUi()"></label>
+          <label>Faible <input id="fps-color-bad" type="color" oninput="saveFpsConfigFromUi()"></label>
+          <label>Seuil fluide <input id="fps-threshold-good" type="number" min="1" max="240" oninput="saveFpsConfigFromUi()"></label>
+          <label>Seuil moyen <input id="fps-threshold-ok" type="number" min="1" max="240" oninput="saveFpsConfigFromUi()"></label>
+          <label class="fps-rgb-toggle"><input id="fps-rgb-toggle" type="checkbox" onchange="saveFpsConfigFromUi()"> Couleurs RGB animées</label>
+        </div>
+      </div>
+    </div>` : ""}
     </main>
     </div>
   `;
@@ -10066,6 +10334,7 @@
             if (label && !silent) label.textContent = "Courbe indisponible";
           }
         }));
+        startVariantEloRgbAnimation();
       }
 
       function drawVariantEloCard(variantId, data) {
@@ -10094,8 +10363,13 @@
         const minElo = minRaw - padding, maxElo = maxRaw + padding;
         const left = 38, right = 12, top = 17, bottom = 25;
         const plotW = width - left - right, plotH = height - top - bottom;
-        const colorA = /^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color || "")) ? currentPlayer.elo_curve_color : rank.color;
-        const colorB = /^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color_secondary || "")) ? currentPlayer.elo_curve_color_secondary : "#85EBFF";
+        const rgbEnabled = Number(currentPlayer?.elo_curve_rgb || 0) === 1;
+        const rgbSpeed = Math.max(.25, Math.min(4, Number(currentPlayer?.elo_curve_rgb_speed || 1)));
+        const rgbDirection = String(currentPlayer?.elo_curve_rgb_direction || "forward") === "reverse" ? -1 : 1;
+        const variantOffset = Math.max(0, ELO_PROFILE_VARIANTS.findIndex((item) => item.id === variantId)) * 28;
+        const rgbHue = ((Date.now() / 26 * rgbSpeed * rgbDirection) + variantOffset + 3600) % 360;
+        const colorA = rgbEnabled ? `hsl(${rgbHue} 92% 62%)` : (/^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color || "")) ? currentPlayer.elo_curve_color : rank.color);
+        const colorB = rgbEnabled ? `hsl(${(rgbHue + 105) % 360} 96% 68%)` : (/^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color_secondary || "")) ? currentPlayer.elo_curve_color_secondary : "#85EBFF");
 
         const bg = ctx.createLinearGradient(0, 0, width, height);
         bg.addColorStop(0, "rgba(255,255,255,.035)"); bg.addColorStop(1, "rgba(0,0,0,.08)");
@@ -10119,7 +10393,7 @@
           }
         };
         const fill = ctx.createLinearGradient(0, top, 0, height - bottom);
-        fill.addColorStop(0, `${colorA}48`); fill.addColorStop(1, `${colorA}00`);
+        fill.addColorStop(0, rgbEnabled ? `hsla(${rgbHue} 92% 62% / .28)` : `${colorA}48`); fill.addColorStop(1, rgbEnabled ? `hsla(${rgbHue} 92% 62% / 0)` : `${colorA}00`);
         ctx.beginPath(); path(); ctx.lineTo(line[line.length - 1].x, height - bottom); ctx.lineTo(line[0].x, height - bottom); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
         const stroke = ctx.createLinearGradient(left, 0, width - right, 0); stroke.addColorStop(0, colorA); stroke.addColorStop(1, colorB);
         ctx.beginPath(); path(); ctx.strokeStyle = stroke; ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.shadowColor = colorA; ctx.shadowBlur = 9; ctx.stroke(); ctx.shadowBlur = 0;
@@ -10177,6 +10451,25 @@
 
       function redrawAllVariantEloCards() {
         eloVariantHistoryData.forEach((data, variantId) => drawVariantEloCard(variantId, data));
+      }
+
+      function startVariantEloRgbAnimation() {
+        if (eloVariantRgbFrame) cancelAnimationFrame(eloVariantRgbFrame);
+        eloVariantRgbFrame = 0;
+        eloVariantRgbLastPaint = 0;
+        if (Number(currentPlayer?.elo_curve_rgb || 0) !== 1 || !eloVariantHistoryData.size) return;
+        const animate = (timestamp) => {
+          if (Number(currentPlayer?.elo_curve_rgb || 0) !== 1 || !document.getElementById("elo-variants-grid")) {
+            eloVariantRgbFrame = 0;
+            return;
+          }
+          if (timestamp - eloVariantRgbLastPaint >= 48) {
+            eloVariantRgbLastPaint = timestamp;
+            redrawAllVariantEloCards();
+          }
+          eloVariantRgbFrame = requestAnimationFrame(animate);
+        };
+        eloVariantRgbFrame = requestAnimationFrame(animate);
       }
 
       async function loadEloHistory(playerId, days = 7, silent = false) {
@@ -12739,10 +13032,11 @@
       // ── Auto-rejoin toggle ────────────────────────────────────────────────────────
       function initAutoRejoinToggle() {
         const toggle = document.getElementById("auto-rejoin-toggle");
-        if (!toggle) return;
-        const val = localStorage.getItem("auto_rejoin");
-        toggle.checked = val === null || val === "true";
-        updateAutoRejoinSub(toggle.checked);
+        if (toggle) {
+          const val = localStorage.getItem("auto_rejoin");
+          toggle.checked = val === null || val === "true";
+          updateAutoRejoinSub(toggle.checked);
+        }
         initFpsCounterToggle();
       }
 
@@ -15611,6 +15905,7 @@
             history.player = { ...(history.player || {}), ...patch };
           });
           redrawAllVariantEloCards();
+          startVariantEloRgbAnimation();
           const confirm = document.getElementById("elo-curve-confirm");
           if (confirm) {
             confirm.style.opacity = "1";
