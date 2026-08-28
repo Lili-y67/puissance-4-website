@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-replay-exports-tooltips-20260828-26" />
+  <meta name="p4-build" content="profile-bio-larger-identity-20260828-27" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -581,12 +581,12 @@
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        gap: 16px;
+        gap: 18px;
         width: 100%;
-        max-width: 600px;
-        min-height: 86px;
-        padding: 9px 18px;
-        border-radius: 16px;
+        max-width: 680px;
+        min-height: 104px;
+        padding: 11px 20px;
+        border-radius: 18px;
         overflow: visible;
       }
       .profile-nameplate-identity.has-nameplate {
@@ -601,7 +601,7 @@
         width: 100%;
         height: 100%;
         object-fit: fill;
-        border-radius: 16px;
+        border-radius: 18px;
         pointer-events: none;
       }
       .profile-nameplate-identity.has-nameplate::after {
@@ -610,7 +610,7 @@
         inset: 0;
         z-index: -1;
         border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: 16px;
+        border-radius: 18px;
         background: linear-gradient(
           90deg,
           rgba(5, 5, 12, 0.08),
@@ -624,12 +624,12 @@
         z-index: 1;
       }
       .profile-nameplate-identity .profile-avatar {
-        width: 62px;
-        height: 62px;
-        font-size: 27px;
+        width: 76px;
+        height: 76px;
+        font-size: 31px;
       }
       .profile-nameplate-identity .avatar-decoration {
-        inset: -12px;
+        inset: -14px;
       }
       .profile-nameplate-identity .profile-pseudo {
         font-size: clamp(34px, 4.2vw, 46px);
@@ -667,6 +667,22 @@
         width: 100%;
         padding-inline: 4px;
       }
+      .profile-bio {
+        width: min(680px, 100%);
+        padding: 11px 14px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 14px;
+        background: rgba(5,6,16,.42);
+        color: rgba(238,238,245,.78);
+        font-size: 12px;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+      }
+      .profile-bio-label { display:block; margin-bottom:4px; color:var(--muted); font:900 9px 'Barlow Condensed',sans-serif; letter-spacing:1.8px; text-transform:uppercase; }
+      .profile-bio a { color:#85ebff; text-decoration:none; border-bottom:1px solid rgba(133,235,255,.3); }
+      .profile-bio a:hover { color:#d9fbff; border-bottom-color:#85ebff; }
+      .profile-bio-editor { width:100%; min-height:112px; resize:vertical; padding:12px 13px; border:1px solid rgba(255,255,255,.1); border-radius:13px; outline:none; background:rgba(0,0,0,.18); color:var(--text); font:500 13px/1.5 Barlow,sans-serif; }
+      .profile-bio-editor:focus { border-color:rgba(133,235,255,.48); box-shadow:0 0 0 3px rgba(133,235,255,.07); }
       .avatar-wrap {
         position: relative;
         flex-shrink: 0;
@@ -5482,8 +5498,10 @@
         }
         .profile-nameplate-identity.has-nameplate {
           aspect-ratio: auto;
-          min-height: 104px;
+          min-height: 112px;
         }
+        .profile-nameplate-identity .profile-avatar { width:72px; height:72px; font-size:29px; }
+        .profile-nameplate-identity .avatar-decoration { inset:-13px; }
         .profile-nameplate-identity .profile-info {
           align-items: flex-start;
           text-align: left;
@@ -8250,6 +8268,28 @@
           .replace(/'/g, "&#39;");
       }
 
+      function renderProfileBio(value) {
+        const raw = String(value || "").trim().slice(0, 320);
+        if (!raw) return "";
+        const urlPattern = /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+        let output = "", cursor = 0;
+        for (const match of raw.matchAll(urlPattern)) {
+          output += escapeHtml(raw.slice(cursor, match.index));
+          let url = match[0], suffix = "";
+          const trailing = url.match(/[),.!?;:]+$/);
+          if (trailing) {
+            suffix = trailing[0];
+            url = url.slice(0, -suffix.length);
+          }
+          const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+          const label = url.length > 58 ? `${url.slice(0, 55)}…` : url;
+          output += `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer nofollow ugc">${escapeHtml(label)}</a>${escapeHtml(suffix)}`;
+          cursor = Number(match.index) + match[0].length;
+        }
+        output += escapeHtml(raw.slice(cursor));
+        return output.replace(/\n/g, "<br>");
+      }
+
       function formatTournamentDate(ts) {
         if (!ts) return "--";
         return new Date(Number(ts)).toLocaleString("fr-FR", {
@@ -8485,7 +8525,7 @@
 
       const BETA_STUDIO_PANES = [
         { id: "studio-media", icon: "🖼️", label: "Avatar & bannière", title: "Avatar & bannière", sub: "Change les deux images principales de ta carte de profil.", selectors: ["#studio-media-card"] },
-        { id: "studio-identity", icon: "✍️", label: "Identité", title: "Pseudo, style & grade", sub: "Modifie ton pseudo, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#perso-role-card"] },
+        { id: "studio-identity", icon: "✍️", label: "Identité", title: "Pseudo, bio, style & grade", sub: "Modifie ton pseudo, ta biographie, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#profile-bio-card", "#perso-role-card"] },
         { id: "studio-colors", icon: "🎨", label: "Couleurs & pion", title: "Couleurs et pion", sub: "Personnalise tes couleurs, la forme du pion et ton emoji de jeu.", selectors: ["#color-card", "#shape-card"] },
         { id: "studio-decoration", icon: "✨", label: "Décoration & plaque", title: "Décoration & plaque", sub: "Choisis le cadre de ton avatar et la plaque affichée derrière ton identité.", selectors: ["#avatar-decoration-card", "#search-nameplate-card", "#avatar-decoration-modal-bg", "#search-nameplate-modal-bg"] },
         { id: "studio-wallpaper", icon: "🌌", label: "Fond d'écran", title: "Fond du profil", sub: "Configure les images PC et téléphone ainsi que leur intensité.", selectors: ["#profile-wallpaper-card"] },
@@ -9371,6 +9411,10 @@
             <div class="profile-since">Membre depuis ${new Date(player.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</div>
             ${isOwnProfile ? `<div class="profile-wallet"><div class="wallet-chip coins"><img src="/assets/coin.png" alt="">${Number(player.coins || 0).toLocaleString("fr-FR")} coins</div><div class="wallet-chip gems"><img src="/assets/gem.png" alt="">${Number(player.gems || 0).toLocaleString("fr-FR")} gemmes</div></div>` : ""}
           </div>
+          <div class="profile-bio" id="profile-bio" ${String(player.bio || "").trim() ? "" : "hidden"}>
+            <span class="profile-bio-label">Biographie</span>
+            <div id="profile-bio-content">${renderProfileBio(player.bio)}</div>
+          </div>
         </div>
         <div class="profile-identity-actions">
           ${followBtn}
@@ -9589,6 +9633,18 @@
       <div style="font-size:11px;color:var(--muted)">Perso sans limite, VIP+ toutes les 24h, VIP toutes les 48h.</div>`
           : ""
       }
+    </div>
+    <div class="color-card" id="profile-bio-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Petite biographie</span>
+        <span class="save-confirm" id="profile-bio-confirm">✓ Enregistrée !</span>
+      </div>
+      <textarea class="profile-bio-editor" id="profile-bio-input" maxlength="320" placeholder="Quelques mots sur vous… Les liens https:// et www. deviennent cliquables." oninput="document.getElementById('profile-bio-count').textContent = this.value.length + '/320'">${escapeHtml(player.bio || "")}</textarea>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--muted)">Texte facultatif · liens HTTP(S) sécurisés · 320 caractères maximum.</span>
+        <span id="profile-bio-count" style="font-size:10px;color:var(--muted)">${String(player.bio || "").length}/320</span>
+      </div>
+      <button class="btn-save-color" id="btn-save-profile-bio" type="button" onclick="saveProfileBio()" style="align-self:flex-start;background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85ebff">💾 Enregistrer la bio</button>
     </div>
     <div class="color-card" id="color-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -16118,6 +16174,49 @@
         } finally {
           btn.disabled = false;
           btn.textContent = "✏️ Enregistrer";
+        }
+      }
+
+      async function saveProfileBio() {
+        const me = JSON.parse(localStorage.getItem("player") || sessionStorage.getItem("player") || "{}");
+        if (!me.id) return;
+        const input = document.getElementById("profile-bio-input");
+        const btn = document.getElementById("btn-save-profile-bio");
+        const bio = String(input?.value || "").replace(/\r\n?/g, "\n").trim();
+        if (bio.length > 320) return alert("La biographie est limitée à 320 caractères.");
+        PROFIL_SFX.click();
+        if (btn) { btn.disabled = true; btn.textContent = "..."; }
+        try {
+          const res = await fetch(`/api/players/${me.id}/bio`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", "x-session-token": localStorage.getItem("token") || sessionStorage.getItem("token") || "" },
+            body: JSON.stringify({ bio, token: localStorage.getItem("token") || sessionStorage.getItem("token") || "" }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            PROFIL_SFX.error();
+            alert(data.error || "Impossible d’enregistrer la biographie.");
+            return;
+          }
+          me.bio = data.bio || "";
+          if (currentPlayer) currentPlayer.bio = me.bio;
+          localStorage.setItem("player", JSON.stringify(me));
+          sessionStorage.setItem("player", JSON.stringify(me));
+          if (input) input.value = me.bio;
+          const count = document.getElementById("profile-bio-count");
+          if (count) count.textContent = `${me.bio.length}/320`;
+          const bioBox = document.getElementById("profile-bio");
+          const bioContent = document.getElementById("profile-bio-content");
+          if (bioContent) bioContent.innerHTML = renderProfileBio(me.bio);
+          if (bioBox) bioBox.hidden = !me.bio;
+          const confirm = document.getElementById("profile-bio-confirm");
+          if (confirm) {
+            confirm.style.opacity = "1";
+            setTimeout(() => (confirm.style.opacity = "0"), 2000);
+          }
+          PROFIL_SFX.success();
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = "💾 Enregistrer la bio"; }
         }
       }
 

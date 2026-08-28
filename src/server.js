@@ -7986,6 +7986,7 @@ function sanitize(p) {
       profile_wallpaper_mobile: '',
       profile_wallpaper_opacity: 0.48,
       profile_wallpaper_dim: 0.28,
+      bio:        '',
       color:      '#555555',
       color_secondary: '',
       discord_id: null,
@@ -8446,6 +8447,23 @@ app.patch('/api/players/:id/pseudo', (req, res) => {
   pQ.updatePseudoChangedAt.run({ changedAt: Date.now(), id });
   progression.recordAction(id, 'profile_updates');
   res.json({ ok: true, pseudo: nextPseudo });
+});
+
+app.patch('/api/players/:id/bio', (req, res) => {
+  const id = Number(req.params.id);
+  const token = String(req.body?.token || req.headers['x-session-token'] || '');
+  if (!token || validateSession(token) !== id) return res.status(403).json({ error: 'Non autorisé.' });
+  const player = pQ.getById.get(id);
+  if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+  const bio = String(req.body?.bio || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+    .trim();
+  if (bio.length > 320) return res.status(400).json({ error: 'La biographie est limitée à 320 caractères.' });
+  pQ.updateBio.run({ bio, id });
+  progression.recordAction(id, 'profile_updates');
+  notifyPlayerProfileChanged(id, 'Biographie mise à jour.', { bioChanged: true });
+  res.json({ ok: true, bio });
 });
 
 app.patch('/api/players/:id/pseudo-style', (req, res) => {
