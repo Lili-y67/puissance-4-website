@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.4-profile-mobile-studio-18';
+const CACHE_VERSION = 'p4-shell-v3.7.4-profile-marquee-elo-19';
 const APP_SHELL = [
   '/',
   '/index.html',

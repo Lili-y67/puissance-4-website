@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-mobile-studio-20260828-18" />
+  <meta name="p4-build" content="profile-marquee-elo-20260828-19" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -7272,6 +7272,38 @@
         { id: "conquest", label: "Conquête" },
         { id: "naval", label: "Puissance 4 Navale" },
       ];
+
+      function buildProfileMarqueeItems(player = currentPlayer) {
+        if (!player) return [];
+        const totalGames = Number(player.games_total ?? profileRpcGames ?? 0);
+        const completed = Number(player.wins || 0) + Number(player.losses || 0) + Number(player.draws || 0);
+        const winrate = completed ? Math.round(Number(player.wins || 0) / completed * 100) : 0;
+        const variantItems = ELO_PROFILE_VARIANTS.map((variant) => {
+          const stats = profileVariantStats.find((item) => item.id === variant.id);
+          if (!stats && variant.id !== "classic") return null;
+          const elo = Math.round(Number(stats?.elo ?? player.elo ?? 1000));
+          return `${variant.label} — ${elo} ELO`;
+        }).filter(Boolean);
+        return [
+          player.rank?.label || "Classement en cours",
+          `${totalGames} parties`,
+          `${winrate}% de winrate`,
+          ...variantItems,
+          player.avg_accuracy != null ? `${player.avg_accuracy}% de précision` : "Précision à venir",
+          player.is_vip_plus ? "VIP+ actif" : player.is_vip ? "VIP actif" : "Compte standard",
+          isOwnProfile && player.coins != null ? `${player.coins} coins` : `${currentFollowersCache.length} abonnés`,
+          isOwnProfile && player.gems != null ? `${player.gems} gemmes` : "Replays disponibles",
+        ];
+      }
+
+      function renderProfileMarquee(player = currentPlayer) {
+        const track = document.querySelector(".profile-marquee-track");
+        if (!track) return;
+        const items = buildProfileMarqueeItems(player);
+        track.innerHTML = [...items, ...items]
+          .map((item) => `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`)
+          .join("");
+      }
       const eloVariantHistoryData = new Map();
       const eloVariantHitPoints = new Map();
       let eloVariantRgbFrame = 0;
@@ -8900,6 +8932,7 @@
           if (!response.ok) return;
           const { stats = [] } = await response.json();
           profileVariantStats = stats;
+          renderProfileMarquee(currentPlayer);
           const select = document.getElementById("profile-variant-select");
           if (
             select &&
@@ -9167,27 +9200,7 @@
         const boosterCounts = isOwnProfile
           ? getProfileBoosterCounts()
           : { elo: 0, coins: 0 };
-        const marqueeItems = [
-          `${player.elo} ELO`,
-          `${gamesTotal} parties`,
-          `${wr}% de winrate`,
-          player.rank?.label || "Classement en cours",
-          "9 variantes classées",
-          "Classique · Rotatif · Anti-P4 · Bombe",
-          "Mission · Simultané · Brouillard · Conquête · Naval",
-          player.avg_accuracy != null
-            ? `${player.avg_accuracy}% de precision`
-            : "Precision a venir",
-          player.is_vip_plus
-            ? "VIP+ actif"
-            : player.is_vip
-              ? "VIP actif"
-              : "Compte standard",
-          isOwnProfile && player.coins != null
-            ? `${player.coins} coins`
-            : `${followers.length} abonnes`,
-          isOwnProfile && player.gems != null ? `${player.gems} gemmes` : "Replays disponibles",
-        ];
+        const marqueeItems = buildProfileMarqueeItems(player);
         const marqueeHtml = [...marqueeItems, ...marqueeItems]
           .map(
             (item) =>
@@ -9461,30 +9474,6 @@
       }
     </div>
 
-    <!-- Stats -->
-    <div class="stats-grid" style="${player.avg_accuracy != null ? "grid-template-columns:repeat(4,1fr)" : ""}">
-      <div class="stat-card wins"><img class="stat-icon-img" src="/badges/stat-victory.webp" alt="Victoires"><div class="stat-val" id="variant-wins">${player.wins}</div><div class="stat-lbl">Victoires</div></div>
-      <div class="stat-card losses"><img class="stat-icon-img" src="/badges/stat-defeat.webp" alt="Défaites"><div class="stat-val" id="variant-losses">${player.losses}</div><div class="stat-lbl">Défaites</div></div>
-      <div class="stat-card draws"><img class="stat-icon-img" src="/badges/stat-draw.webp" alt="Nuls"><div class="stat-val" id="variant-draws">${player.draws}</div><div class="stat-lbl">Nuls</div></div>
-      ${
-        player.avg_accuracy != null
-          ? `
-      <div class="stat-card accuracy" title="${player.analysed_count} partie(s) analysée(s)">
-        <div class="stat-val">${player.avg_accuracy}%</div>
-        <div class="stat-lbl">Précision</div>
-      </div>`
-          : ""
-      }
-    </div>
-
-    <!-- Winrate -->
-    <div class="winrate-card">
-      <div class="winrate-header">
-        <span class="wr-label">Winrate</span>
-        <span class="wr-pct" id="variant-winrate">${wr}%</span>
-      </div>
-      <div class="wr-bar"><div class="wr-fill" id="wr-fill" style="width:0%"></div></div>
-    </div>
     </section>
 
     ${renderClanSection(player, isOwnProfile)}
