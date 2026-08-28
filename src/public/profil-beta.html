@@ -2,7 +2,10 @@
 <html lang="fr">
   <head>
     <script src="/performance-bootstrap.js?v=1"></script>
-    <meta charset="UTF-8" />
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="p4-build" content="profile-studio-20260828-2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6251,6 +6254,7 @@
       .access-badge::after { content:attr(data-access-tip); position:absolute; z-index:20; left:50%; bottom:calc(100% + 10px); transform:translate(-50%,5px); min-width:190px; max-width:280px; padding:9px 11px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#090a17; color:#f7f7fb; font:600 11px/1.35 'Barlow',sans-serif; letter-spacing:0; text-transform:none; text-align:center; opacity:0; pointer-events:none; transition:.18s ease; box-shadow:0 16px 42px rgba(0,0,0,.45); }
       .access-badge:hover::after, .access-badge:focus-visible::after { opacity:1; transform:translate(-50%,0); }
       .profile-action-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
+      .profile-action-grid.single { grid-template-columns:1fr; }
       .profile-big-action { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:96px; padding:20px; border-radius:22px; border:1px solid rgba(255,255,255,.1); color:var(--text); text-decoration:none; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.018)); cursor:pointer; text-align:left; transition:.2s ease; }
       .profile-big-action:hover { transform:translateY(-2px); border-color:rgba(133,235,255,.34); box-shadow:0 18px 48px rgba(0,0,0,.25); }
       .profile-big-action strong { display:block; font-family:'Barlow Condensed',sans-serif; font-size:20px; letter-spacing:1px; text-transform:uppercase; }
@@ -6284,6 +6288,11 @@
       .elo-variant-tooltip strong { display:block; color:#fff; font:900 15px 'Barlow Condensed',sans-serif; }
       .elo-variant-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 14px 13px; color:var(--muted); font-size:10px; }
       .elo-variant-delta.up { color:#30d158; }.elo-variant-delta.down { color:#ff5c78; }
+      .elo-variant-mini-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; padding:0 10px 9px; }
+      .elo-variant-mini-stat { min-width:0; padding:6px 4px; border:1px solid rgba(255,255,255,.065); border-radius:9px; background:rgba(0,0,0,.13); text-align:center; }
+      .elo-variant-mini-stat strong { display:block; font:900 13px 'Barlow Condensed',sans-serif; color:var(--text); }
+      .elo-variant-mini-stat span { display:block; margin-top:1px; overflow:hidden; color:var(--muted); font-size:7px; font-weight:800; letter-spacing:.8px; text-overflow:ellipsis; text-transform:uppercase; }
+      .elo-variant-mini-stat.win strong { color:#30d158; }.elo-variant-mini-stat.loss strong { color:#ff5c78; }.elo-variant-mini-stat.draw strong { color:#ffd60a; }.elo-variant-mini-stat.wr strong { color:#85ebff; }
       @media (max-width:720px) {
         .profile-action-grid { grid-template-columns:1fr; }
         .profile-identity-actions { width:100%; justify-content:flex-start; margin-left:0; }
@@ -6667,6 +6676,7 @@
           <button
             class="btn-nav beta-studio-launch"
             id="btn-beta-studio"
+            data-open-beta-studio="studio-media"
             type="button"
             onclick="openBetaStudio()"
             style="display: none"
@@ -8421,6 +8431,14 @@
         }, 340);
       }
 
+      document.addEventListener("click", (event) => {
+        const trigger = event.target.closest?.("[data-open-beta-studio]");
+        if (!trigger) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        openBetaStudio(trigger.dataset.openBetaStudio || "studio-media");
+      }, true);
+
       function makeBetaSectionCollapsible(sectionId, collapsed = true) {
         const section = document.getElementById(sectionId);
         const head = section?.querySelector(":scope > .profile-section-head");
@@ -9210,6 +9228,7 @@
         ].map(([id, label]) => `<article class="elo-variant-card" data-elo-variant="${id}">
           <div class="elo-variant-card-head"><div class="elo-variant-identity"><img class="elo-variant-rank" id="elo-variant-rank-${id}" src="/ranks/Quartz_1.png" alt=""><div><div class="elo-variant-name">${label}</div><div class="elo-variant-rank-label" id="elo-variant-label-${id}">Chargement…</div></div></div><div class="elo-variant-value" id="elo-variant-value-${id}">—<small>ELO</small></div></div>
           <div class="elo-variant-canvas-wrap"><canvas class="elo-variant-canvas" id="elo-variant-canvas-${id}" data-variant="${id}"></canvas><div class="elo-variant-tooltip" id="elo-variant-tooltip-${id}"></div></div>
+          <div class="elo-variant-mini-stats"><div class="elo-variant-mini-stat win"><strong id="elo-variant-wins-${id}">0</strong><span>Victoires</span></div><div class="elo-variant-mini-stat loss"><strong id="elo-variant-losses-${id}">0</strong><span>Défaites</span></div><div class="elo-variant-mini-stat draw"><strong id="elo-variant-draws-${id}">0</strong><span>Nuls</span></div><div class="elo-variant-mini-stat wr"><strong id="elo-variant-wr-${id}">0%</strong><span>Winrate</span></div></div>
           <div class="elo-variant-card-foot"><span id="elo-variant-games-${id}">0 partie</span><span class="elo-variant-delta" id="elo-variant-delta-${id}">±0 ELO</span></div>
         </article>`).join("")}
       </div>
@@ -10032,9 +10051,8 @@
       ${renderPlayers(followers, "Aucun abonné pour l'instant.")}
     </div>
     </section>
-    <div class="profile-action-grid">
-      <button class="profile-big-action" type="button" onclick="document.getElementById('section-collection')?.scrollIntoView({behavior:'smooth'})"><span><strong>Voir la collection de pions</strong><small>Modèles secrets, raretés et doublons obtenus.</small></span><span>●</span></button>
-      ${isOwnProfile ? `<button class="profile-big-action" type="button" onclick="openBetaStudio('section-custom')"><span><strong>Configurer votre profil</strong><small>Avatar, décoration, fond, plaque, bannière, pseudo et grade Perso.</small></span><span>✦</span></button>` : `<a class="profile-big-action" href="/profil-beta?id=${encodeURIComponent(player.id)}"><span><strong>Partager ce profil</strong><small>Copie l’adresse de ce joueur pour la retrouver plus tard.</small></span><span>↗</span></a>`}
+    <div class="profile-action-grid single">
+      ${isOwnProfile ? `<button class="profile-big-action" data-open-beta-studio="studio-media" type="button" onclick="openBetaStudio('studio-media')"><span><strong>Configurer votre profil</strong><small>Avatar, décoration, fond, plaque, bannière, pseudo et grade Perso.</small></span><span>✦</span></button>` : `<a class="profile-big-action" href="/profil-beta?id=${encodeURIComponent(player.id)}"><span><strong>Partager ce profil</strong><small>Copie l’adresse de ce joueur pour la retrouver plus tard.</small></span><span>↗</span></a>`}
     </div>
 
     ${renderTokenCollectionSection(player)}
@@ -10412,10 +10430,23 @@
         const image = document.getElementById(`elo-variant-rank-${variantId}`);
         const games = document.getElementById(`elo-variant-games-${variantId}`);
         const delta = document.getElementById(`elo-variant-delta-${variantId}`);
+        const winsEl = document.getElementById(`elo-variant-wins-${variantId}`);
+        const lossesEl = document.getElementById(`elo-variant-losses-${variantId}`);
+        const drawsEl = document.getElementById(`elo-variant-draws-${variantId}`);
+        const wrEl = document.getElementById(`elo-variant-wr-${variantId}`);
+        const wins = Number(data?.player?.wins ?? variantStats.wins ?? 0);
+        const losses = Number(data?.player?.losses ?? variantStats.losses ?? 0);
+        const draws = Number(data?.player?.draws ?? variantStats.draws ?? 0);
+        const completed = wins + losses + draws;
+        const winrate = completed ? Math.round(wins / completed * 100) : 0;
         if (value) value.innerHTML = `${currentElo}<small>ELO</small>`;
         if (label) { label.textContent = rank.displayLabel; label.style.color = rank.color; }
         if (image) { image.src = `/ranks/${rank.key}_${rank.level + 1}.png`; image.alt = rank.displayLabel; image.style.filter = `drop-shadow(0 0 8px ${rank.color}66)`; }
         if (games) games.textContent = `${Number(stats.games || 0)} partie${Number(stats.games || 0) > 1 ? "s" : ""}`;
+        if (winsEl) winsEl.textContent = String(wins);
+        if (lossesEl) lossesEl.textContent = String(losses);
+        if (drawsEl) drawsEl.textContent = String(draws);
+        if (wrEl) wrEl.textContent = `${winrate}%`;
         if (delta) {
           const amount = Math.round(Number(stats.delta || 0));
           delta.textContent = `${amount > 0 ? "+" : amount < 0 ? "" : "±"}${amount} ELO`;

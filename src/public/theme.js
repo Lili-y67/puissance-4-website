@@ -420,7 +420,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=shop-cart-1', {
+      navigator.serviceWorker.register('/service-worker.js?v=profile-studio-2', {
         scope: '/',
         updateViaCache: 'none',
       }).then(registration => {
@@ -1304,4 +1304,3 @@
     mountPageEasterEgg();
   }
 })();
-
