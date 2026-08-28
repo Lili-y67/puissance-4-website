@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-bio-larger-identity-20260828-27" />
+  <meta name="p4-build" content="profile-centered-menu-20260828-28" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -437,6 +437,14 @@
       .nav-btns {
         display: flex;
         gap: 8px;
+      }
+      @media (min-width: 1180px) {
+        .nav {
+          display: grid;
+          grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+        }
+        .logo-sm { grid-column: 1; justify-self: start; }
+        .nav-btns { grid-column: 2; justify-content: center; flex-wrap: wrap; }
       }
       .btn-nav {
         font-family:

@@ -4,6 +4,7 @@
 <script src="/performance-bootstrap.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="p4-build" content="local-round-lock-20260828-1">
   <title>Puissance 4 - Jeu local</title>
 <link rel="icon" type="image/png" href="/assets/site-logo-small.png">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@400;600;800&display=swap" rel="stylesheet">
@@ -163,6 +164,7 @@ let COLS = 7;
 let grid = [];
 let current = 1;
 let ended = false;
+let roundActive = false;
 let history = [];
 let scores = { 1: 0, 2: 0, 3: 0, 4: 0, draw: 0 };
 let nextStarter = 1;
@@ -373,6 +375,15 @@ function shouldFlipBoard() {
   return variant !== 'four' && mobileTurnView.matches && current === 2 && !ended;
 }
 
+function syncNewRoundButton() {
+  const button = document.getElementById('new-round-btn');
+  if (!button) return;
+  const blocked = roundActive || tutorialMode || !!tutorialScoreSnapshot;
+  button.disabled = blocked;
+  button.title = blocked ? 'Une manche est déjà en cours.' : 'Démarrer une nouvelle manche';
+  button.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+}
+
 function renderBoard(winCells = []) {
   const winSet = new Set(winCells.map(([r, c]) => `${r}:${c}`));
   const forcedSet = new Set(forcedColumns().map(c => `${lowestRow(c)}:${c}`));
@@ -417,6 +428,7 @@ function renderBoard(winCells = []) {
   action.classList.toggle('hidden', variant !== 'bomb');
   action.disabled = tutorialMode || variant !== 'bomb' || !bombs[current];
   action.textContent = bombArmed ? 'Annuler bombe' : `Bombe · ${bombs[current] ? 'prête' : 'utilisée'}`;
+  syncNewRoundButton();
 }
 
 function makeGradientEmojiToken(target, emoji, colorA, colorB) {
@@ -576,7 +588,7 @@ function stopLocalTutorial({ keepBoard = false } = {}) {
   tutorialScoreSnapshot = null;
   tutorialReplaySnapshot = null;
   document.body.classList.remove('local-tutorial-mode');
-  document.getElementById('new-round-btn')?.removeAttribute('disabled');
+  syncNewRoundButton();
   setTutorialOverlay({ show: false });
   if (!keepBoard) ended = false;
 }
@@ -662,7 +674,7 @@ function startLocalTutorial() {
   tutorialTerminal = false;
   tutorialSteps = 0;
   document.body.classList.add('local-tutorial-mode');
-  document.getElementById('new-round-btn')?.setAttribute('disabled', '');
+  syncNewRoundButton();
   nextStarter = 1;
   clearTurnTimer();
   initGrid();
@@ -755,6 +767,7 @@ function detonateLocal(row,col){if(variant!=='bomb'||!bombArmed||!bombs[current]
 
 function finishLocal(winner, cells = [], label = 'Victoire locale') {
   ended = true;
+  roundActive = false;
   renderBoard(cells);
   updateStatus(`${playerName(winner)} gagne !`, label);
   clearTurnTimer();
@@ -796,7 +809,7 @@ function playColumn(col, options = {}) {
   }
   if (variant === 'anti') {
     const fresh=allSegments(current).filter(s=>!antiSegments[current].has(s.key));fresh.forEach(s=>antiSegments[current].add(s.key));antiScores[current]+=fresh.length;
-    if(!legalColumns().length){const winner=antiScores[1]===antiScores[2]?0:(antiScores[1]<antiScores[2]?1:2);if(winner)finishLocal(winner,[],`Anti-P4 · ${antiScores[1]} à ${antiScores[2]}`);else{ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Anti-P4');}return;}
+    if(!legalColumns().length){const winner=antiScores[1]===antiScores[2]?0:(antiScores[1]<antiScores[2]?1:2);if(winner)finishLocal(winner,[],`Anti-P4 · ${antiScores[1]} à ${antiScores[2]}`);else{ended=true;roundActive=false;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Anti-P4');}return;}
     advanceTurn(options);return;
   }
   if (variant === 'mission') { const mission=missionComplete(current);if(mission.length){finishLocal(current,mission,'Mission accomplie');return;}advanceTurn(options);return; }
@@ -812,7 +825,7 @@ function playColumn(col, options = {}) {
       applyLocalGravity();
       replayFrames.push(grid.map(line=>[...line]));
       if (conquestPoints[scorer] >= 3) return finishLocal(scorer, [], `Conquête ${conquestPoints[1]} — ${conquestPoints[2]}`);
-      if (conquestPoints[1] + conquestPoints[2] >= 4) { ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Conquête 2 — 2');clearTurnTimer();return; }
+      if (conquestPoints[1] + conquestPoints[2] >= 4) { ended=true;roundActive=false;scores.draw++;renderBoard();updateScores();updateStatus('Match nul','Conquête 2 — 2');clearTurnTimer();return; }
       ended = false;advanceTurn(options);
     }, 650);
     return;
@@ -825,6 +838,7 @@ function playColumn(col, options = {}) {
   if (grid[0].every(Boolean)) {
     if (variant === 'conquest') { grid=Array.from({length:ROWS},()=>Array(COLS).fill(0));replayFrames.push(grid.map(line=>[...line]));updateStatus('Grille pleine : nouveau plateau','Scores conservés');advanceTurn(options);return; }
     ended = true;
+    roundActive = false;
     scores.draw++;
     saveLocalReplay(null, []);
     renderBoard();
@@ -835,7 +849,7 @@ function playColumn(col, options = {}) {
   advanceTurn(options);
 }
 
-function playSimultaneousLocal(col){if(lowestRow(col)<0)return;simultaneousChoices[simultaneousChooser]=col;if(simultaneousChooser===1){simultaneousChooser=2;current=2;renderBoard();updateStatus(`Passe l’écran à ${playerName(2)} puis choisis une colonne`,'Choix du joueur 1 masqué');return;}const snapshot=grid.map(line=>[...line]);for(const player of [1,2]){const chosen=simultaneousChoices[player],row=lowestRow(chosen);if(row>=0){grid[row][chosen]=player;history.push({row,col:chosen,player,snapshot:player===1?snapshot:null});moveCount++;}}replayFrames.push(grid.map(line=>[...line]));const winners=[1,2].filter(p=>allSegments(p).length);if(winners.length===1){finishLocal(winners[0],allSegments(winners[0])[0].cells,'Placement simultané');return;}if(winners.length===2){ended=true;scores.draw++;renderBoard();updateScores();updateStatus('Double alignement','Match nul');return;}simultaneousChoices={1:null,2:null};simultaneousChooser=1;current=1;renderBoard();updateStatus(null,'Nouveau round · Joueur 1');startTurnTimer();}
+function playSimultaneousLocal(col){if(lowestRow(col)<0)return;simultaneousChoices[simultaneousChooser]=col;if(simultaneousChooser===1){simultaneousChooser=2;current=2;renderBoard();updateStatus(`Passe l’écran à ${playerName(2)} puis choisis une colonne`,'Choix du joueur 1 masqué');return;}const snapshot=grid.map(line=>[...line]);for(const player of [1,2]){const chosen=simultaneousChoices[player],row=lowestRow(chosen);if(row>=0){grid[row][chosen]=player;history.push({row,col:chosen,player,snapshot:player===1?snapshot:null});moveCount++;}}replayFrames.push(grid.map(line=>[...line]));const winners=[1,2].filter(p=>allSegments(p).length);if(winners.length===1){finishLocal(winners[0],allSegments(winners[0])[0].cells,'Placement simultané');return;}if(winners.length===2){ended=true;roundActive=false;scores.draw++;renderBoard();updateScores();updateStatus('Double alignement','Match nul');return;}simultaneousChoices={1:null,2:null};simultaneousChooser=1;current=1;renderBoard();updateStatus(null,'Nouveau round · Joueur 1');startTurnTimer();}
 
 function checkWin(row, col, player) {
   const dirs = [[0,1],[1,0],[1,1],[1,-1]];
@@ -871,6 +885,7 @@ function newRound() {
   stopLocalReplayPlayback();
   clearTurnTimer();
   initGrid();
+  roundActive = true;
   renderBoard();
   updateStatus();
   startTurnTimer();
@@ -972,6 +987,7 @@ function playLocalReplay(index) {
   history = [];
   current = replay.moves[0]?.player || 1;
   ended = true;
+  roundActive = false;
   let step = 0;
   const frames = Array.isArray(replay.frames) && replay.frames.length ? replay.frames : null;
   renderBoard();
