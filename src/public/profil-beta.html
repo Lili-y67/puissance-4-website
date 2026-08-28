@@ -6168,10 +6168,62 @@
       .report-modal select, .report-modal textarea { width:100%; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:var(--text); font:inherit; }
       .report-modal textarea { min-height:110px; resize:vertical; }
       .report-modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+      .elo-variants-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:18px; }
+      .elo-variant-card { position:relative; min-width:0; overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:20px; background:linear-gradient(150deg,rgba(255,255,255,.055),rgba(255,255,255,.018)); transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease; }
+      .elo-variant-card:hover { transform:translateY(-2px); border-color:rgba(133,235,255,.3); box-shadow:0 18px 48px rgba(0,0,0,.24); }
+      .elo-variant-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 14px 9px; }
+      .elo-variant-identity { display:flex; align-items:center; gap:10px; min-width:0; }
+      .elo-variant-rank { width:38px; height:38px; object-fit:contain; flex:0 0 38px; filter:drop-shadow(0 0 8px rgba(133,235,255,.25)); }
+      .elo-variant-name { font:900 16px 'Barlow Condensed',sans-serif; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .elo-variant-rank-label { margin-top:2px; color:var(--muted); font-size:9px; letter-spacing:1px; text-transform:uppercase; }
+      .elo-variant-value { text-align:right; font:900 24px 'Barlow Condensed',sans-serif; letter-spacing:1px; }
+      .elo-variant-value small { display:block; margin-top:1px; color:var(--muted); font:700 9px Barlow,sans-serif; letter-spacing:1px; text-transform:uppercase; }
+      .elo-variant-canvas-wrap { position:relative; height:190px; margin:0 8px 8px; overflow:hidden; border-radius:15px; background:rgba(0,0,0,.12); }
+      .elo-variant-canvas { display:block; width:100%; height:100%; }
+      .elo-variant-tooltip { position:absolute; z-index:5; display:none; min-width:150px; max-width:210px; transform:translate(-50%,calc(-100% - 10px)); padding:8px 10px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:#090a17; box-shadow:0 14px 38px rgba(0,0,0,.42); pointer-events:none; font-size:10px; line-height:1.4; }
+      .elo-variant-tooltip.show { display:block; }
+      .elo-variant-tooltip strong { display:block; color:#fff; font:900 15px 'Barlow Condensed',sans-serif; }
+      .elo-variant-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 14px 13px; color:var(--muted); font-size:10px; }
+      .elo-variant-delta.up { color:#30d158; }.elo-variant-delta.down { color:#ff5c78; }
       @media (max-width:720px) {
         .profile-action-grid { grid-template-columns:1fr; }
         .profile-identity-actions { width:100%; justify-content:flex-start; margin-left:0; }
         body.profile-beta-page .profile-header { min-height:340px; }
+        .elo-variants-grid { grid-template-columns:1fr; }
+      }
+      @media (min-width:721px) and (max-width:1050px) { .elo-variants-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+      /* Studio de personnalisation : tiroir latéral gauche, inspiré du panier */
+      .beta-studio { display:block; visibility:hidden; pointer-events:none; background:rgba(2,3,9,.6); backdrop-filter:blur(8px); transition:visibility .28s; }
+      .beta-studio.open { display:block; visibility:visible; pointer-events:auto; }
+      .beta-studio-drawer { position:absolute; inset:12px auto 12px 12px; width:min(620px,calc(100vw - 24px)); display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(255,255,255,.12); border-radius:26px; background:radial-gradient(circle at 8% 0,rgba(255,45,85,.12),transparent 30%),linear-gradient(160deg,#17182b,#080914); box-shadow:35px 0 100px rgba(0,0,0,.62); transform:translateX(calc(-100% - 24px)); transition:transform .32s cubic-bezier(.22,.8,.24,1); }
+      .beta-studio.open .beta-studio-drawer { transform:translateX(0); }
+      .beta-studio-head { flex:0 0 auto; align-items:center; margin:0; padding:20px 21px 14px; border-bottom:1px solid rgba(255,255,255,.07); }
+      .beta-studio-title { font-size:34px; }
+      .beta-studio-close { width:42px; height:42px; border-radius:13px; font-size:20px; }
+      .beta-studio-tabs { flex:0 0 auto; display:flex; gap:7px; padding:11px 14px; overflow-x:auto; border-bottom:1px solid rgba(255,255,255,.07); scrollbar-width:none; }
+      .beta-studio-tabs::-webkit-scrollbar { display:none; }
+      .beta-studio-tab { flex:0 0 auto; width:auto; min-width:max-content; padding:10px 12px; border-color:rgba(255,255,255,.06); background:rgba(255,255,255,.025); }
+      .beta-studio-main { flex:1; min-height:0; overflow:auto; padding:14px; }
+      .beta-studio-main > .beta-studio-pane { display:none; }
+      .beta-studio-main > .beta-studio-pane.beta-studio-pane-active { display:flex; flex-direction:column; gap:12px; }
+      .beta-studio-pane-head { padding:7px 5px 3px; }
+      .beta-studio-pane-head strong { display:block; font:900 24px 'Barlow Condensed',sans-serif; letter-spacing:1px; text-transform:uppercase; }
+      .beta-studio-pane-head span { display:block; margin-top:4px; color:var(--muted); font-size:12px; line-height:1.45; }
+      .beta-studio-pane > .color-card,.beta-studio-pane > .avatar-decoration-card,.beta-studio-pane > .shape-card { margin:0; }
+      .beta-studio-source-hidden { display:none!important; }
+      .studio-media-card { padding:16px; border:1px solid rgba(255,255,255,.09); border-radius:21px; background:linear-gradient(145deg,rgba(255,255,255,.05),rgba(255,255,255,.018)); }
+      .studio-media-grid { display:grid; grid-template-columns:160px minmax(0,1fr); gap:12px; }
+      .studio-media-item { position:relative; min-height:142px; overflow:hidden; border:1px solid rgba(255,255,255,.1); border-radius:17px; background:rgba(0,0,0,.22); cursor:pointer; color:#fff; text-align:left; }
+      .studio-media-item img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+      .studio-media-item.avatar img { inset:16px; width:calc(100% - 32px); height:calc(100% - 32px); border:3px solid rgba(255,255,255,.8); border-radius:50%; }
+      .studio-media-item::after { content:""; position:absolute; inset:0; background:linear-gradient(transparent 35%,rgba(0,0,0,.88)); }
+      .studio-media-copy { position:absolute; z-index:2; left:13px; right:13px; bottom:12px; }
+      .studio-media-copy strong { display:block; font:900 18px 'Barlow Condensed',sans-serif; letter-spacing:.7px; text-transform:uppercase; }
+      .studio-media-copy span { display:block; margin-top:2px; color:rgba(255,255,255,.7); font-size:10px; }
+      @media(max-width:600px) {
+        .beta-studio-drawer { inset:6px auto 6px 6px; width:calc(100vw - 12px); border-radius:20px; }
+        .beta-studio-head { padding:15px 16px 12px; }.beta-studio-title{font-size:29px}.beta-studio-main{padding:10px}.beta-studio-tabs{padding:9px 10px}.studio-media-grid{grid-template-columns:1fr}.studio-media-item{min-height:125px}.studio-media-item.avatar{min-height:160px}
       }
     </style>
     <style>
@@ -6920,6 +6972,19 @@
       let profileVariantStats = [];
       let selectedProfileVariant =
         localStorage.getItem("p4_profile_variant") || "classic";
+      const ELO_PROFILE_VARIANTS = [
+        { id: "classic", label: "Classique" },
+        { id: "rotate", label: "Plateau rotatif" },
+        { id: "anti", label: "Anti-Puissance 4" },
+        { id: "bomb", label: "Puissance Bombe" },
+        { id: "mission", label: "Mission personnelle" },
+        { id: "simultaneous", label: "Placement simultané" },
+        { id: "fog", label: "Brouillard de Guerre" },
+        { id: "conquest", label: "Conquête" },
+        { id: "naval", label: "Puissance 4 Navale" },
+      ];
+      const eloVariantHistoryData = new Map();
+      const eloVariantHitPoints = new Map();
 
       const PROFILE_LANGUAGE_FALLBACKS = [
         { code: "fr", name: "Français", country: "France" },
@@ -8069,11 +8134,11 @@
       }
 
       const BETA_STUDIO_PANES = [
-        { id: "section-custom", icon: "🎨", label: "Personnalisation" },
-        { id: "section-referral", icon: "🎁", label: "Parrainage" },
-        { id: "section-bot", icon: "🤖", label: "Mode bot" },
-        { id: "section-bot-host", icon: "💚", label: "Host bot" },
-        { id: "section-discord", icon: "💬", label: "Discord" },
+        { id: "studio-media", icon: "🖼️", label: "Avatar & bannière", title: "Avatar & bannière", sub: "Change les deux images principales de ta carte de profil.", selectors: ["#studio-media-card"] },
+        { id: "studio-decoration", icon: "✨", label: "Décoration", title: "Décoration d'avatar", sub: "Choisis le cadre qui entoure ton avatar.", selectors: ["#avatar-decoration-card", "#avatar-decoration-modal-bg"] },
+        { id: "studio-wallpaper", icon: "🌌", label: "Fond d'écran", title: "Fond du profil", sub: "Configure les images PC et téléphone ainsi que leur intensité.", selectors: ["#profile-wallpaper-card"] },
+        { id: "studio-nameplate", icon: "🏷️", label: "Plaque", title: "Plaque nominative", sub: "Sélectionne la plaque affichée derrière ton identité.", selectors: ["#search-nameplate-card", "#search-nameplate-modal-bg"] },
+        { id: "studio-identity", icon: "✍️", label: "Pseudo & grade", title: "Pseudo, style & grade Perso", sub: "Modifie ton pseudo, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#perso-role-card"] },
       ];
 
       function ensureBetaStudioShell() {
@@ -8084,17 +8149,17 @@
         studio.id = "beta-profile-studio";
         studio.setAttribute("aria-hidden", "true");
         studio.innerHTML = `
-    <aside class="beta-studio-sidebar">
+    <section class="beta-studio-drawer" role="dialog" aria-modal="true" aria-labelledby="beta-studio-title">
       <div class="beta-studio-head">
         <div>
           <div class="beta-studio-kicker">Profil bêta</div>
-          <div class="beta-studio-title">Studio du profil</div>
+          <div class="beta-studio-title" id="beta-studio-title">Personnaliser</div>
         </div>
         <button class="beta-studio-close" type="button" onclick="closeBetaStudio()" aria-label="Fermer">×</button>
       </div>
       <div class="beta-studio-tabs" id="beta-studio-tabs"></div>
-    </aside>
-    <main class="beta-studio-main" id="beta-studio-main"></main>
+      <main class="beta-studio-main" id="beta-studio-main"></main>
+    </section>
   `;
         studio.addEventListener("click", (event) => {
           if (event.target === studio) closeBetaStudio();
@@ -8110,11 +8175,11 @@
           tab.classList.toggle("active", tab.dataset.section === sectionId);
         });
         studio
-          .querySelectorAll(".beta-studio-main > .profile-section")
-          .forEach((section) => {
-            section.classList.toggle(
+          .querySelectorAll(".beta-studio-main > .beta-studio-pane")
+          .forEach((pane) => {
+            pane.classList.toggle(
               "beta-studio-pane-active",
-              section.id === sectionId,
+              pane.id === sectionId,
             );
           });
         studio
@@ -8125,9 +8190,8 @@
       function openBetaStudio(sectionId = "") {
         const studio = document.getElementById("beta-profile-studio");
         if (!studio) return;
-        const target =
-          sectionId ||
-          studio.querySelector(".beta-studio-tab")?.dataset.section;
+        const requested = Array.from(studio.querySelectorAll(".beta-studio-tab")).find((tab) => tab.dataset.section === sectionId);
+        const target = requested?.dataset.section || studio.querySelector(".beta-studio-tab")?.dataset.section;
         if (target) selectBetaStudioPane(target);
         studio.classList.add("open");
         studio.setAttribute("aria-hidden", "false");
@@ -8167,6 +8231,7 @@
       function mountBetaProfileExperience() {
         if (!location.pathname.startsWith("/profil-beta")) return;
         makeBetaSectionCollapsible("section-activity", true);
+        ["section-referral", "section-bot", "section-bot-host", "section-discord"].forEach((id) => makeBetaSectionCollapsible(id, true));
 
         const studio = ensureBetaStudioShell();
         const tabs = studio.querySelector("#beta-studio-tabs");
@@ -8174,18 +8239,25 @@
         main.replaceChildren();
         tabs.replaceChildren();
 
-        const canOpenStudio = !!isOwnProfile || isAdminTier(viewerPlayer);
+        const canOpenStudio = !!isOwnProfile;
         const content = document.getElementById("content");
         const available = canOpenStudio
           ? BETA_STUDIO_PANES.map((pane) => ({
               ...pane,
-              section: content?.querySelector(`#${pane.id}`),
-            })).filter((pane) => pane.section)
+              nodes: pane.selectors.map((selector) => content?.querySelector(selector)).filter(Boolean),
+            })).filter((pane) => pane.nodes.length)
           : [];
 
         available.forEach((pane, index) => {
-          main.appendChild(pane.section);
-          pane.section.classList.toggle("beta-studio-pane-active", index === 0);
+          const panel = document.createElement("section");
+          panel.id = pane.id;
+          panel.className = `beta-studio-pane${index === 0 ? " beta-studio-pane-active" : ""}`;
+          panel.innerHTML = `<div class="beta-studio-pane-head"><strong>${escapeHtml(pane.title)}</strong><span>${escapeHtml(pane.sub)}</span></div>`;
+          pane.nodes.forEach((node) => {
+            if (node.classList.contains("avatar-decoration-modal-bg")) document.body.appendChild(node);
+            else panel.appendChild(node);
+          });
+          main.appendChild(panel);
           const tab = document.createElement("button");
           tab.type = "button";
           tab.className = `beta-studio-tab${index === 0 ? " active" : ""}`;
@@ -8195,6 +8267,8 @@
           tabs.appendChild(tab);
         });
 
+        content?.querySelector("#section-custom")?.classList.add("beta-studio-source-hidden");
+
         const studioButton = document.getElementById("btn-beta-studio");
         if (studioButton)
           studioButton.style.display = available.length
@@ -8203,10 +8277,10 @@
 
         document.querySelectorAll("[data-section-link]").forEach((link) => {
           const sectionId = link.dataset.sectionLink;
-          if (!available.some((pane) => pane.id === sectionId)) return;
+          if (sectionId !== "section-custom") return;
           link.onclick = (event) => {
             event.preventDefault();
-            openBetaStudio(sectionId);
+            openBetaStudio();
           };
         });
       }
@@ -8373,11 +8447,11 @@
           window.P4I18n?.apply(document.getElementById("content"));
           renderQueueMusicPicker(freshPlayer);
           refreshProfileWallpaperControls();
-          loadEloHistory(freshPlayer.id, eloHistoryDays, true);
+          loadAllVariantEloHistories(freshPlayer.id, eloHistoryDays, true);
           if (eloHistoryTimer) clearInterval(eloHistoryTimer);
           eloHistoryTimer = setInterval(() => {
             if (currentPlayer?.id)
-              loadEloHistory(currentPlayer.id, eloHistoryDays, true);
+              loadAllVariantEloHistories(currentPlayer.id, eloHistoryDays, true);
           }, 15000);
 
           // Charger le statut en ligne (tous les profils)
@@ -8487,7 +8561,7 @@
         const fill = document.getElementById("wr-fill");
         if (fill) fill.style.width = `${winrate}%`;
         if (reloadHistory && currentPlayer?.id)
-          loadEloHistory(currentPlayer.id, eloHistoryDays);
+          loadAllVariantEloHistories(currentPlayer.id, eloHistoryDays);
       }
 
       async function openBoosterModal() {
@@ -8893,17 +8967,11 @@
     </div>
 
     <div class="elo-history-card">
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px;padding:14px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08)">
-        ${player.rank ? `<img id="profile-rank-image" src="${player.rank.image}" alt="${player.rank.displayLabel || player.rank.label}" style="width:62px;height:62px;object-fit:contain;filter:drop-shadow(0 0 12px ${player.rank.color}66)">` : ""}
-        <div><div class="profile-elo" id="profile-main-elo" style="${player.rank ? `color:${player.rank.color};text-shadow:0 0 20px ${player.rank.color}66` : ""}">${player.elo}</div><div class="profile-elo-lbl" id="profile-main-elo-label">ELO · Classique</div><div id="profile-rank-label" style="font:800 12px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;color:${player.rank?.color || "#fff"}">${player.rank?.displayLabel || player.rank?.label || "Non classé"}</div></div>
-        <div style="flex:1;min-width:160px"><div style="height:5px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden"><div id="profile-rank-progress" style="height:100%;width:${player.rank?.progress || 0}%;background:${player.rank?.color || "#85ebff"}"></div></div><div id="profile-rank-progress-label" style="font-size:10px;color:var(--muted);margin-top:5px">${player.rank?.progress || 0}% vers le prochain rang</div></div>
-        <select class="profile-variant-select" id="profile-variant-select" onchange="applyProfileVariant(this.value)"><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-Puissance 4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option></select>
-      </div>
       <div class="elo-history-head">
         <div>
-          <div class="elo-history-kicker">Progression en temps reel</div>
-          <div class="elo-history-title" id="elo-history-title">Courbe ELO · Classique</div>
-          <div class="elo-history-sub">Le graphe se compresse selon l'intervalle choisi.</div>
+          <div class="elo-history-kicker">Tous les classements en un coup d'œil</div>
+          <div class="elo-history-title">Courbes ELO par variante</div>
+          <div class="elo-history-sub">Les neuf graphiques restent visibles ensemble. Survole un point pour consulter la partie.</div>
         </div>
         <div class="elo-history-actions">
           <div class="elo-history-ranges">
@@ -8916,16 +8984,18 @@
             <div class="elo-date-field"><input type="date" id="elo-history-end-date" aria-label="Date de fin ELO"><button class="elo-date-picker-button" type="button" aria-label="Ouvrir le calendrier de fin" onclick="openEloDatePicker('elo-history-end-date')">📅</button></div>
             <button class="elo-history-range" type="button" onclick="applyEloHistoryDateRange()">Plage</button>
           </div>
-          <div class="elo-history-export">
-            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryImage()">PNG</button>
-            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('csv')">CSV</button>
-            <button class="elo-history-copy" type="button" onclick="downloadEloHistoryExport('json')">JSON</button>
-          </div>
         </div>
       </div>
-      <div class="elo-history-canvas-wrap">
-        <canvas id="elo-history-canvas"></canvas>
-        <div class="elo-history-tooltip" id="elo-history-tooltip"></div>
+      <div class="elo-variants-grid" id="elo-variants-grid">
+        ${[
+          ["classic", "Classique"], ["rotate", "Plateau rotatif"], ["anti", "Anti-Puissance 4"],
+          ["bomb", "Puissance Bombe"], ["mission", "Mission personnelle"], ["simultaneous", "Placement simultané"],
+          ["fog", "Brouillard de Guerre"], ["conquest", "Conquête"], ["naval", "Puissance 4 Navale"],
+        ].map(([id, label]) => `<article class="elo-variant-card" data-elo-variant="${id}">
+          <div class="elo-variant-card-head"><div class="elo-variant-identity"><img class="elo-variant-rank" id="elo-variant-rank-${id}" src="/ranks/Quartz_1.png" alt=""><div><div class="elo-variant-name">${label}</div><div class="elo-variant-rank-label" id="elo-variant-label-${id}">Chargement…</div></div></div><div class="elo-variant-value" id="elo-variant-value-${id}">—<small>ELO</small></div></div>
+          <div class="elo-variant-canvas-wrap"><canvas class="elo-variant-canvas" id="elo-variant-canvas-${id}" data-variant="${id}"></canvas><div class="elo-variant-tooltip" id="elo-variant-tooltip-${id}"></div></div>
+          <div class="elo-variant-card-foot"><span id="elo-variant-games-${id}">0 partie</span><span class="elo-variant-delta" id="elo-variant-delta-${id}">±0 ELO</span></div>
+        </article>`).join("")}
       </div>
       ${
         isOwnProfile && canUseEloCurveStyle(player)
@@ -8983,15 +9053,6 @@
       </div>`
           : ""
       }
-      <div class="elo-history-stats" id="elo-history-stats">
-        <div class="elo-history-stat"><strong>--</strong><span>Actuel</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>Variation</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>Ecart type</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>Parties</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>ELO min</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>ELO max</span></div>
-        <div class="elo-history-stat"><strong>--</strong><span>ELO moyen</span></div>
-      </div>
     </div>
 
     <!-- Stats -->
@@ -9034,6 +9095,19 @@
       </div>
     </div>
     <div class="profile-stack">
+    <div class="studio-media-card" id="studio-media-card">
+      <div style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Avatar & bannière</div>
+      <div class="studio-media-grid">
+        <button class="studio-media-item avatar" type="button" onclick="openUploadChooser('avatar')">
+          ${avatarSrc ? `<img src="${avatarSrc}" alt="Avatar actuel">` : `<span style="position:absolute;inset:16px;display:grid;place-items:center;border-radius:50%;background:${pc}33;border:3px solid ${pc};font:900 42px 'Barlow Condensed',sans-serif">${escapeHtml(player.pseudo[0].toUpperCase())}</span>`}
+          <span class="studio-media-copy"><strong>Avatar</strong><span>Importer ou rafraîchir depuis Discord</span></span>
+        </button>
+        <button class="studio-media-item" type="button" onclick="openUploadChooser('banner')">
+          ${bannerSrc ? `<img src="${bannerSrc}" alt="Bannière actuelle">` : `<span style="position:absolute;inset:0;background:linear-gradient(135deg,${pc}55,#4c6ef555)"></span>`}
+          <span class="studio-media-copy"><strong>Bannière</strong><span>Format paysage conseillé · recadrage inclus</span></span>
+        </button>
+      </div>
+    </div>
     <div class="color-card" id="pseudo-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted)">Pseudo du profil</span>
@@ -9888,7 +9962,7 @@
         const endInput = document.getElementById("elo-history-end-date");
         if (startInput) startInput.value = "";
         if (endInput) endInput.value = "";
-        if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
+        if (currentPlayer?.id) loadAllVariantEloHistories(currentPlayer.id, eloHistoryDays);
       }
 
       function isoDateInputValue(value) {
@@ -9958,7 +10032,7 @@
         document
           .querySelectorAll("[data-elo-days]")
           .forEach((btn) => btn.classList.remove("active"));
-        if (currentPlayer?.id) loadEloHistory(currentPlayer.id, eloHistoryDays);
+        if (currentPlayer?.id) loadAllVariantEloHistories(currentPlayer.id, eloHistoryDays);
       }
 
       function setEloHistoryButtonState(days) {
@@ -9968,6 +10042,141 @@
             Number(btn.dataset.eloDays) === Number(days),
           );
         });
+      }
+
+      async function loadAllVariantEloHistories(playerId, days = 7, silent = false) {
+        if (!playerId || !document.getElementById("elo-variants-grid")) return;
+        configureEloHistoryDateInputs();
+        if (!eloHistoryStartDate || !eloHistoryEndDate) setEloHistoryButtonState(days);
+        await Promise.all(ELO_PROFILE_VARIANTS.map(async (variant) => {
+          const params = new URLSearchParams({ days: String(days), variant: variant.id });
+          if (eloHistoryStartDate && eloHistoryEndDate) {
+            params.set("start", eloHistoryStartDate);
+            params.set("end", eloHistoryEndDate);
+          }
+          try {
+            const response = await fetch(`/api/players/${encodeURIComponent(playerId)}/elo-history?${params.toString()}`);
+            if (!response.ok) throw new Error("history");
+            const data = await response.json();
+            eloVariantHistoryData.set(variant.id, data);
+            if (variant.id === "classic") lastEloHistoryData = data;
+            drawVariantEloCard(variant.id, data);
+          } catch {
+            const label = document.getElementById(`elo-variant-label-${variant.id}`);
+            if (label && !silent) label.textContent = "Courbe indisponible";
+          }
+        }));
+      }
+
+      function drawVariantEloCard(variantId, data) {
+        const canvas = document.getElementById(`elo-variant-canvas-${variantId}`);
+        if (!canvas) return;
+        const wrap = canvas.parentElement;
+        const width = Math.max(250, Math.floor(wrap.clientWidth || 330));
+        const height = Math.max(160, Math.floor(wrap.clientHeight || 190));
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const stats = data?.stats || {};
+        const variantStats = profileVariantStats.find((item) => item.id === variantId) || {};
+        const currentElo = Math.round(Number(stats.endElo ?? variantStats.elo ?? data?.player?.elo ?? 1000));
+        const rank = getSimRank(currentElo);
+        const points = Array.isArray(data?.points) && data.points.length
+          ? data.points
+          : [{ t: Number(stats.startTime || Date.now() - 86400000), elo: currentElo }, { t: Number(stats.endTime || Date.now()), elo: currentElo }];
+        const values = points.map((point) => Number(point.elo || currentElo));
+        const minRaw = Math.min(...values), maxRaw = Math.max(...values);
+        const padding = Math.max(16, Math.round((maxRaw - minRaw) * .2));
+        const minElo = minRaw - padding, maxElo = maxRaw + padding;
+        const left = 38, right = 12, top = 17, bottom = 25;
+        const plotW = width - left - right, plotH = height - top - bottom;
+        const colorA = /^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color || "")) ? currentPlayer.elo_curve_color : rank.color;
+        const colorB = /^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color_secondary || "")) ? currentPlayer.elo_curve_color_secondary : "#85EBFF";
+
+        const bg = ctx.createLinearGradient(0, 0, width, height);
+        bg.addColorStop(0, "rgba(255,255,255,.035)"); bg.addColorStop(1, "rgba(0,0,0,.08)");
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, width, height);
+        ctx.font = "9px Barlow, sans-serif";
+        for (let i = 0; i <= 3; i += 1) {
+          const y = top + plotH * i / 3;
+          ctx.strokeStyle = "rgba(255,255,255,.055)"; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(width - right, y); ctx.stroke();
+          ctx.fillStyle = "rgba(238,238,245,.35)"; ctx.fillText(String(Math.round(maxElo - (maxElo - minElo) * i / 3)), 5, y + 3);
+        }
+        const line = points.map((point, index) => ({
+          x: left + plotW * index / Math.max(1, points.length - 1),
+          y: top + (1 - (Number(point.elo || currentElo) - minElo) / Math.max(1, maxElo - minElo)) * plotH,
+          point,
+        }));
+        const path = () => {
+          ctx.moveTo(line[0].x, line[0].y);
+          for (let i = 0; i < line.length - 1; i += 1) {
+            const a = line[i], b = line[i + 1], mid = (a.x + b.x) / 2;
+            ctx.bezierCurveTo(mid, a.y, mid, b.y, b.x, b.y);
+          }
+        };
+        const fill = ctx.createLinearGradient(0, top, 0, height - bottom);
+        fill.addColorStop(0, `${colorA}48`); fill.addColorStop(1, `${colorA}00`);
+        ctx.beginPath(); path(); ctx.lineTo(line[line.length - 1].x, height - bottom); ctx.lineTo(line[0].x, height - bottom); ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+        const stroke = ctx.createLinearGradient(left, 0, width - right, 0); stroke.addColorStop(0, colorA); stroke.addColorStop(1, colorB);
+        ctx.beginPath(); path(); ctx.strokeStyle = stroke; ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.shadowColor = colorA; ctx.shadowBlur = 9; ctx.stroke(); ctx.shadowBlur = 0;
+        line.forEach((entry, index) => {
+          if (line.length > 22 && index !== line.length - 1 && index % 2) return;
+          const delta = Number(entry.point.delta || 0);
+          ctx.beginPath(); ctx.arc(entry.x, entry.y, index === line.length - 1 ? 4 : 2.8, 0, Math.PI * 2);
+          ctx.fillStyle = delta > 0 ? "#30d158" : delta < 0 ? "#ff5c78" : "#85ebff"; ctx.fill();
+        });
+        const hits = line.map((entry) => ({ ...entry, variantId }));
+        eloVariantHitPoints.set(variantId, hits);
+        initVariantEloHover(canvas, variantId);
+
+        const value = document.getElementById(`elo-variant-value-${variantId}`);
+        const label = document.getElementById(`elo-variant-label-${variantId}`);
+        const image = document.getElementById(`elo-variant-rank-${variantId}`);
+        const games = document.getElementById(`elo-variant-games-${variantId}`);
+        const delta = document.getElementById(`elo-variant-delta-${variantId}`);
+        if (value) value.innerHTML = `${currentElo}<small>ELO</small>`;
+        if (label) { label.textContent = rank.displayLabel; label.style.color = rank.color; }
+        if (image) { image.src = `/ranks/${rank.key}_${rank.level + 1}.png`; image.alt = rank.displayLabel; image.style.filter = `drop-shadow(0 0 8px ${rank.color}66)`; }
+        if (games) games.textContent = `${Number(stats.games || 0)} partie${Number(stats.games || 0) > 1 ? "s" : ""}`;
+        if (delta) {
+          const amount = Math.round(Number(stats.delta || 0));
+          delta.textContent = `${amount > 0 ? "+" : amount < 0 ? "" : "±"}${amount} ELO`;
+          delta.className = `elo-variant-delta ${amount > 0 ? "up" : amount < 0 ? "down" : ""}`;
+        }
+      }
+
+      function initVariantEloHover(canvas, variantId) {
+        if (canvas.dataset.hoverReady === "1") return;
+        canvas.dataset.hoverReady = "1";
+        const hide = () => document.getElementById(`elo-variant-tooltip-${variantId}`)?.classList.remove("show");
+        canvas.addEventListener("mousemove", (event) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = (event.clientX - rect.left) * canvas.clientWidth / Math.max(1, rect.width);
+          const y = (event.clientY - rect.top) * canvas.clientHeight / Math.max(1, rect.height);
+          const nearest = (eloVariantHitPoints.get(variantId) || []).map((item) => ({ item, distance: Math.hypot(item.x - x, item.y - y) })).sort((a, b) => a.distance - b.distance)[0];
+          if (!nearest || nearest.distance > 15) { canvas.style.cursor = "default"; hide(); return; }
+          const point = nearest.item.point, tooltip = document.getElementById(`elo-variant-tooltip-${variantId}`);
+          const delta = Math.round(Number(point.delta || 0));
+          tooltip.innerHTML = `<strong>${Math.round(Number(point.elo || 0))} ELO</strong><span style="color:${delta > 0 ? "#30d158" : delta < 0 ? "#ff5c78" : "#85ebff"}">${delta > 0 ? "+" : ""}${delta} ELO</span><br><span>${point.gameId ? `Partie #${escapeHtml(point.gameId)}` : escapeHtml(point.label || "Point de repère")}</span>${point.opponent?.pseudo ? `<br><span>vs ${escapeHtml(point.opponent.pseudo)}</span>` : ""}`;
+          tooltip.style.left = `${Math.max(80, Math.min(canvas.clientWidth - 80, nearest.item.x))}px`;
+          tooltip.style.top = `${Math.max(58, nearest.item.y)}px`;
+          tooltip.classList.add("show");
+          tooltip.dataset.gameId = point.gameId && !point.replayDeleted ? String(point.gameId) : "";
+          canvas.style.cursor = tooltip.dataset.gameId ? "pointer" : "default";
+        });
+        canvas.addEventListener("mouseleave", hide);
+        canvas.addEventListener("click", () => {
+          const gameId = document.getElementById(`elo-variant-tooltip-${variantId}`)?.dataset.gameId;
+          if (gameId) location.href = `/replay/${encodeURIComponent(gameId)}`;
+        });
+      }
+
+      function redrawAllVariantEloCards() {
+        eloVariantHistoryData.forEach((data, variantId) => drawVariantEloCard(variantId, data));
       }
 
       async function loadEloHistory(playerId, days = 7, silent = false) {
@@ -10661,6 +10870,8 @@
       }
 
       window.addEventListener("resize", () => {
+        if (eloVariantHistoryData.size)
+          requestAnimationFrame(redrawAllVariantEloCards);
         if (lastEloHistoryData)
           requestAnimationFrame(() => drawEloHistory(lastEloHistoryData));
       });
@@ -15396,13 +15607,10 @@
           if (currentPlayer) Object.assign(currentPlayer, patch);
           localStorage.setItem("player", JSON.stringify(me));
           sessionStorage.setItem("player", JSON.stringify(me));
-          if (lastEloHistoryData) {
-            lastEloHistoryData.player = {
-              ...(lastEloHistoryData.player || {}),
-              ...patch,
-            };
-            drawEloHistory(lastEloHistoryData);
-          }
+          eloVariantHistoryData.forEach((history) => {
+            history.player = { ...(history.player || {}), ...patch };
+          });
+          redrawAllVariantEloCards();
           const confirm = document.getElementById("elo-curve-confirm");
           if (confirm) {
             confirm.style.opacity = "1";
