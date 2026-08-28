@@ -116,6 +116,19 @@ db.exec(`
     draws INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (player_id, variant)
   );
+
+  CREATE TABLE IF NOT EXISTS account_reports (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    reporter_id INTEGER NOT NULL,
+    target_id   INTEGER NOT NULL,
+    reason      TEXT NOT NULL DEFAULT '',
+    details     TEXT NOT NULL DEFAULT '',
+    status      TEXT NOT NULL DEFAULT 'open',
+    created_at  INTEGER NOT NULL,
+    UNIQUE(reporter_id, target_id, status),
+    FOREIGN KEY(reporter_id) REFERENCES players(id),
+    FOREIGN KEY(target_id) REFERENCES players(id)
+  );
   CREATE INDEX IF NOT EXISTS idx_variant_stats_rank
     ON player_variant_stats(variant, elo DESC);
   CREATE TABLE IF NOT EXISTS game_actions (

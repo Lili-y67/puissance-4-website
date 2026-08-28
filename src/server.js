@@ -2533,6 +2533,8 @@ app.get('/outils.html', renderStaticPage('outils.html', { title: 'Outils - Puiss
 app.get('/analyse.html', renderStaticPage('analyse.html', { title: 'Analyse - Puissance 4', description: 'Analyse tes parties de Puissance 4 et ameliore tes coups.' }));
 app.get('/progression.html', renderStaticPage('progression.html', { title: 'Progression - Puissance 4', description: 'Suis tes objectifs, recompenses et progres sur Puissance 4.' }));
 app.get('/roue-fortune.html', renderStaticPage('roue-fortune.html', { title: 'Roue Fortune - Puissance 4', description: 'Utilise tes tickets et tente de gagner des coins, des gemmes ou le Grade Chanceux.' }));
+app.get('/games.html', renderStaticPage('games.html', { title: 'Historique des parties - Puissance 4', description: 'Filtre les parties non archivees d un joueur et ouvre leurs replays.' }));
+app.use('/assets/fonts', express.static(path.join(__dirname, 'assets', 'fonts'), { maxAge: '7d', immutable: true }));
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: true,
   lastModified: true,
@@ -9750,6 +9752,75 @@ app.get('/api/players/:id', (req, res) => {
   const online = Number(player.is_bot || 0) === 1 ? !!runtime.online : onlineSockets.has(Number(player.id));
   const allGamesTotal = gamesTotal + purgedGamesTotal;
   res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: allGamesTotal, clan, online }, games, games_total: allGamesTotal, following, followers });
+});
+
+app.get('/api/players/:id/games', (req, res) => {
+  const playerId = Number(req.params.id);
+  const player = pQ.getById.get(playerId);
+  if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(50, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
+  const filters = ['(g.player1_id = ? OR g.player2_id = ?)', "g.status = 'finished'", 'COALESCE(g.archived, 0) = 0'];
+  const params = [playerId, playerId];
+  const variant = String(req.query.variant || 'all');
+  const type = String(req.query.type || 'all');
+  const result = String(req.query.result || 'all');
+  const kind = String(req.query.kind || 'all');
+  const opponent = String(req.query.opponent || '').trim().slice(0, 30);
+
+  if (variant !== 'all') { filters.push('COALESCE(g.variant, \'classic\') = ?'); params.push(variant); }
+  if (type !== 'all') { filters.push('COALESCE(g.game_type, \'ranked\') = ?'); params.push(type); }
+  if (opponent) {
+    filters.push('(CASE WHEN g.player1_id = ? THEN p2.pseudo ELSE p1.pseudo END) LIKE ? COLLATE NOCASE');
+    params.push(playerId, `%${opponent.replace(/[%_]/g, '')}%`);
+  }
+  if (kind === 'bot') {
+    filters.push('(CASE WHEN g.player1_id = ? THEN p2.is_bot ELSE p1.is_bot END) = 1');
+    params.push(playerId);
+  }
+  if (kind === 'human') {
+    filters.push('(CASE WHEN g.player1_id = ? THEN p2.is_bot ELSE p1.is_bot END) = 0');
+    params.push(playerId);
+  }
+  if (result === 'win') { filters.push('g.winner_id = ?'); params.push(playerId); }
+  if (result === 'loss') { filters.push('g.winner_id IS NOT NULL AND g.winner_id != ?'); params.push(playerId); }
+  if (result === 'draw') filters.push('g.winner_id IS NULL');
+
+  const from = `FROM games g
+    JOIN players p1 ON p1.id = g.player1_id
+    JOIN players p2 ON p2.id = g.player2_id
+    LEFT JOIN players w ON w.id = g.winner_id
+    WHERE ${filters.join(' AND ')}`;
+  const total = Number(db.prepare(`SELECT COUNT(*) AS count ${from}`).get(...params)?.count || 0);
+  const rows = db.prepare(`SELECT g.*,
+      p1.pseudo AS p1_pseudo, p1.avatar AS p1_avatar, p1.is_bot AS p1_is_bot,
+      p2.pseudo AS p2_pseudo, p2.avatar AS p2_avatar, p2.is_bot AS p2_is_bot,
+      w.pseudo AS winner_pseudo
+    ${from}
+    ORDER BY g.finished_at DESC, g.id DESC
+    LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+  res.json({ player: { id: player.id, pseudo: player.pseudo, avatar: player.avatar || '', color: player.color || '#ff2d55' }, games: rows, page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) });
+});
+
+app.post('/api/players/:id/report', security.routeGuard('account-report'), (req, res) => {
+  const token = String(req.headers['x-session-token'] || req.body?.token || '');
+  const reporterId = validateSession(token);
+  const targetId = Number(req.params.id);
+  if (!reporterId) return res.status(401).json({ error: 'Connecte-toi pour signaler ce compte.' });
+  if (reporterId === targetId) return res.status(400).json({ error: 'Tu ne peux pas signaler ton propre compte.' });
+  const target = pQ.getById.get(targetId);
+  if (!target || target.deleted) return res.status(404).json({ error: 'Compte introuvable.' });
+  const reason = String(req.body?.reason || 'other').trim().slice(0, 40);
+  const details = String(req.body?.details || '').trim().slice(0, 600);
+  try {
+    db.prepare(`INSERT INTO account_reports (reporter_id, target_id, reason, details, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(reporterId, targetId, reason, details, Date.now());
+    res.status(201).json({ ok: true });
+  } catch (error) {
+    if (String(error.code || '').includes('CONSTRAINT')) return res.status(409).json({ error: 'Ce compte a déjà été signalé et le dossier est ouvert.' });
+    throw error;
+  }
 });
 
 app.get('/api/players/:id/tournaments', (req, res) => {
