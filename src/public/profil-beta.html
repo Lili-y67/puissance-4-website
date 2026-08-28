@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-marquee-neon-20260828-20" />
+  <meta name="p4-build" content="profile-graph-elo-neon-20260828-23" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -1528,7 +1528,10 @@
         font-size: 12px;
         color: var(--marquee-color);
         font-weight: 700;
-        text-shadow: 0 0 9px color-mix(in srgb, var(--marquee-color) 62%, transparent);
+        text-shadow:
+          0 0 5px var(--marquee-color),
+          0 0 14px color-mix(in srgb, var(--marquee-color) 78%, transparent),
+          0 0 24px color-mix(in srgb, var(--marquee-color) 42%, transparent);
       }
       .profile-marquee-dot {
         width: 7px;
@@ -7275,8 +7278,22 @@
       function buildProfileMarqueeItems(player = currentPlayer) {
         if (!player) return [];
         const totalGames = Number(player.games_total ?? profileRpcGames ?? 0);
-        const completed = Number(player.wins || 0) + Number(player.losses || 0) + Number(player.draws || 0);
-        const winrate = completed ? Math.round(Number(player.wins || 0) / completed * 100) : 0;
+        const aggregate = profileVariantStats.length
+          ? profileVariantStats.reduce(
+              (totals, stats) => ({
+                wins: totals.wins + Number(stats.wins || 0),
+                losses: totals.losses + Number(stats.losses || 0),
+                draws: totals.draws + Number(stats.draws || 0),
+              }),
+              { wins: 0, losses: 0, draws: 0 },
+            )
+          : {
+              wins: Number(player.wins || 0),
+              losses: Number(player.losses || 0),
+              draws: Number(player.draws || 0),
+            };
+        const completed = aggregate.wins + aggregate.losses + aggregate.draws;
+        const winrate = completed ? Math.round(aggregate.wins / completed * 100) : 0;
         const variantItems = ELO_PROFILE_VARIANTS.map((variant) => {
           const stats = profileVariantStats.find((item) => item.id === variant.id);
           if (!stats && variant.id !== "classic") return null;
@@ -7285,7 +7302,7 @@
         }).filter(Boolean);
         return [
           { text: `${totalGames} parties`, color: "#85EBFF" },
-          { text: `${winrate}% de winrate`, color: "#30D158" },
+          { text: `Winrate toutes variantes — ${winrate}%`, color: "#30D158" },
           ...variantItems,
           { text: player.avg_accuracy != null ? `${player.avg_accuracy}% de précision` : "Précision à venir", color: "#BF5AF2" },
           { text: player.is_vip_plus ? "VIP+ actif" : player.is_vip ? "VIP actif" : "Compte standard", color: player.is_vip_plus ? "#85EBFF" : player.is_vip ? "#FFD60A" : "#A8A8B3" },
@@ -10616,7 +10633,16 @@
         const draws = Number(data?.player?.draws ?? variantStats.draws ?? 0);
         const completed = wins + losses + draws;
         const winrate = completed ? Math.round(wins / completed * 100) : 0;
-        if (value) value.innerHTML = `${currentElo}<small>ELO</small>`;
+        if (value) {
+          value.innerHTML = `${currentElo}<small>ELO</small>`;
+          value.style.color = rank.color;
+          value.style.textShadow = `0 0 6px ${rank.color}, 0 0 18px ${rank.color}88`;
+          const eloLabel = value.querySelector("small");
+          if (eloLabel) {
+            eloLabel.style.color = rank.color;
+            eloLabel.style.opacity = "0.72";
+          }
+        }
         if (label) { label.textContent = rank.displayLabel; label.style.color = rank.color; }
         if (image) { image.src = `/ranks/${rank.key}_${rank.level + 1}.png`; image.alt = rank.displayLabel; image.style.filter = `drop-shadow(0 0 8px ${rank.color}66)`; }
         if (games) games.textContent = `${Number(stats.games || 0)} partie${Number(stats.games || 0) > 1 ? "s" : ""}`;
@@ -14789,30 +14815,30 @@
         {
           name: "Malachite",
           key: "Malachite",
-          color: "#2ecc71",
+          color: "#30d158",
           min: 100,
           max: 699,
         },
         {
           name: "Quartz",
           key: "Quartz",
-          color: "#b0bec5",
+          color: "#d7f3ff",
           min: 700,
           max: 1299,
         },
-        { name: "Ambre", key: "Ambre", color: "#cd7f32", min: 1300, max: 1799 },
-        { name: "Jade", key: "Jade", color: "#1abc9c", min: 1800, max: 2299 },
+        { name: "Ambre", key: "Ambre", color: "#ff9f0a", min: 1300, max: 1799 },
+        { name: "Jade", key: "Jade", color: "#2de2c5", min: 1800, max: 2299 },
         {
           name: "Saphir",
           key: "Saphir",
-          color: "#3498db",
+          color: "#4da3ff",
           min: 2300,
           max: 2799,
         },
         {
           name: "Améthyste",
           key: "Amethiste",
-          color: "#9b59b6",
+          color: "#d66bff",
           min: 2800,
           max: 3500,
         },
