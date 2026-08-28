@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-studio-20260828-2" />
+  <meta name="p4-build" content="profile-studio-gpu-20260828-5" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6283,6 +6283,8 @@
       .elo-variant-value small { display:block; margin-top:1px; color:var(--muted); font:700 9px Barlow,sans-serif; letter-spacing:1px; text-transform:uppercase; }
       .elo-variant-canvas-wrap { position:relative; height:190px; margin:0 8px 8px; overflow:hidden; border-radius:15px; background:rgba(0,0,0,.12); }
       .elo-variant-canvas { display:block; width:100%; height:100%; }
+      .elo-variant-canvas.rgb-active { animation-name:elo-curve-hue; animation-timing-function:linear; animation-iteration-count:infinite; will-change:filter; }
+      @keyframes elo-curve-hue { from { filter:hue-rotate(0deg); } to { filter:hue-rotate(360deg); } }
       .elo-variant-tooltip { position:absolute; z-index:5; display:none; min-width:150px; max-width:210px; transform:translate(-50%,calc(-100% - 10px)); padding:8px 10px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:#090a17; box-shadow:0 14px 38px rgba(0,0,0,.42); pointer-events:none; font-size:10px; line-height:1.4; }
       .elo-variant-tooltip.show { display:block; }
       .elo-variant-tooltip strong { display:block; color:#fff; font:900 15px 'Barlow Condensed',sans-serif; }
@@ -6517,7 +6519,8 @@
         backdrop-filter: blur(10px);
         transition: opacity 0.28s ease, visibility 0.28s ease;
       }
-      .beta-studio.open {
+      .beta-studio.open,
+      .beta-studio:target {
         display: block;
         visibility: visible;
         pointer-events: auto;
@@ -6541,7 +6544,8 @@
         transform: translateX(calc(-100% - 24px));
         transition: transform 0.32s cubic-bezier(.22,.8,.24,1);
       }
-      .beta-studio.open .beta-studio-drawer { transform: translateX(0); }
+      .beta-studio.open .beta-studio-drawer,
+      .beta-studio:target .beta-studio-drawer { transform: translateX(0); }
       .beta-studio-head {
         grid-column: 1 / -1;
         display: flex;
@@ -6553,6 +6557,7 @@
         border-bottom: 1px solid rgba(255,255,255,.08);
       }
       .beta-studio-title { font-size: 31px; }
+      .beta-studio-close { text-decoration: none; }
       .beta-studio-tabs {
         grid-column: 1;
         grid-row: 2;
@@ -6658,6 +6663,19 @@
       <div class="orb four"></div>
     </div>
     <div class="scanlines"></div>
+    <div class="beta-studio" id="beta-profile-studio" aria-hidden="true">
+      <section class="beta-studio-drawer" role="dialog" aria-modal="true" aria-labelledby="beta-studio-title">
+        <div class="beta-studio-head">
+          <div>
+            <div class="beta-studio-kicker">Profil bêta</div>
+            <div class="beta-studio-title" id="beta-studio-title">Personnaliser</div>
+          </div>
+          <a class="beta-studio-close" href="#" onclick="closeBetaStudio()" aria-label="Fermer" role="button">×</a>
+        </div>
+        <div class="beta-studio-tabs" id="beta-studio-tabs"><span style="padding:10px;color:var(--muted);font-size:11px">Chargement du studio…</span></div>
+        <main class="beta-studio-main" id="beta-studio-main"></main>
+      </section>
+    </div>
     <div class="page">
       <nav class="nav">
         <a class="logo-sm" href="/"
@@ -6673,16 +6691,16 @@
             style="display: none"
             >✦ Profil bêta</a
           >
-          <button
+          <a
             class="btn-nav beta-studio-launch"
             id="btn-beta-studio"
             data-open-beta-studio="studio-media"
-            type="button"
+            href="#beta-profile-studio"
             onclick="openBetaStudio()"
             style="display: none"
           >
             ✦ Personnaliser mon profil
-          </button>
+          </a>
           <a class="btn-nav fortune-nav-btn" href="/roue-fortune"
             ><img src="/assets/fortune-ticket.png" alt="" /> Roue Fortune</a
           >
@@ -8358,7 +8376,15 @@
 
       function ensureBetaStudioShell() {
         let studio = document.getElementById("beta-profile-studio");
-        if (studio) return studio;
+        if (studio) {
+          if (studio.dataset.shellReady !== "1") {
+            studio.dataset.shellReady = "1";
+            studio.addEventListener("click", (event) => {
+              if (event.target === studio) closeBetaStudio();
+            });
+          }
+          return studio;
+        }
         studio = document.createElement("div");
         studio.className = "beta-studio";
         studio.id = "beta-profile-studio";
@@ -8370,7 +8396,7 @@
           <div class="beta-studio-kicker">Profil bêta</div>
           <div class="beta-studio-title" id="beta-studio-title">Personnaliser</div>
         </div>
-        <button class="beta-studio-close" type="button" onclick="closeBetaStudio()" aria-label="Fermer">×</button>
+        <a class="beta-studio-close" href="#" onclick="closeBetaStudio()" aria-label="Fermer" role="button">×</a>
       </div>
       <div class="beta-studio-tabs" id="beta-studio-tabs"></div>
       <main class="beta-studio-main" id="beta-studio-main"></main>
@@ -8379,6 +8405,7 @@
         studio.addEventListener("click", (event) => {
           if (event.target === studio) closeBetaStudio();
         });
+        studio.dataset.shellReady = "1";
         document.body.appendChild(studio);
         return studio;
       }
@@ -8426,6 +8453,7 @@
         studio.classList.remove("open");
         studio.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
+        if (location.hash === "#beta-profile-studio") history.replaceState(null, "", `${location.pathname}${location.search}`);
         setTimeout(() => {
           if (!studio.classList.contains("open")) studio.style.display = "";
         }, 340);
@@ -8434,8 +8462,6 @@
       document.addEventListener("click", (event) => {
         const trigger = event.target.closest?.("[data-open-beta-studio]");
         if (!trigger) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
         openBetaStudio(trigger.dataset.openBetaStudio || "studio-media");
       }, true);
 
@@ -10052,7 +10078,7 @@
     </div>
     </section>
     <div class="profile-action-grid single">
-      ${isOwnProfile ? `<button class="profile-big-action" data-open-beta-studio="studio-media" type="button" onclick="openBetaStudio('studio-media')"><span><strong>Configurer votre profil</strong><small>Avatar, décoration, fond, plaque, bannière, pseudo et grade Perso.</small></span><span>✦</span></button>` : `<a class="profile-big-action" href="/profil-beta?id=${encodeURIComponent(player.id)}"><span><strong>Partager ce profil</strong><small>Copie l’adresse de ce joueur pour la retrouver plus tard.</small></span><span>↗</span></a>`}
+      ${isOwnProfile ? `<a class="profile-big-action" data-open-beta-studio="studio-media" href="#beta-profile-studio" onclick="openBetaStudio('studio-media')"><span><strong>Configurer votre profil</strong><small>Avatar, décoration, fond, plaque, bannière, pseudo et grade Perso.</small></span><span>✦</span></a>` : `<a class="profile-big-action" href="/profil-beta?id=${encodeURIComponent(player.id)}"><span><strong>Partager ce profil</strong><small>Copie l’adresse de ce joueur pour la retrouver plus tard.</small></span><span>↗</span></a>`}
     </div>
 
     ${renderTokenCollectionSection(player)}
@@ -10355,15 +10381,19 @@
         startVariantEloRgbAnimation();
       }
 
-      function drawVariantEloCard(variantId, data) {
+      function drawVariantEloCard(variantId, data, animationFrameOnly = false) {
         const canvas = document.getElementById(`elo-variant-canvas-${variantId}`);
         if (!canvas) return;
         const wrap = canvas.parentElement;
         const width = Math.max(250, Math.floor(wrap.clientWidth || 330));
         const height = Math.max(160, Math.floor(wrap.clientHeight || 190));
-        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        canvas.width = Math.floor(width * dpr);
-        canvas.height = Math.floor(height * dpr);
+        const dpr = Math.max(1, Math.min(1.25, window.devicePixelRatio || 1));
+        const pixelWidth = Math.floor(width * dpr);
+        const pixelHeight = Math.floor(height * dpr);
+        if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+          canvas.width = pixelWidth;
+          canvas.height = pixelHeight;
+        }
         const ctx = canvas.getContext("2d");
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, width, height);
@@ -10385,9 +10415,12 @@
         const rgbSpeed = Math.max(.25, Math.min(4, Number(currentPlayer?.elo_curve_rgb_speed || 1)));
         const rgbDirection = String(currentPlayer?.elo_curve_rgb_direction || "forward") === "reverse" ? -1 : 1;
         const variantOffset = Math.max(0, ELO_PROFILE_VARIANTS.findIndex((item) => item.id === variantId)) * 28;
-        const rgbHue = ((Date.now() / 26 * rgbSpeed * rgbDirection) + variantOffset + 3600) % 360;
+        const rgbHue = variantOffset % 360;
         const colorA = rgbEnabled ? `hsl(${rgbHue} 92% 62%)` : (/^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color || "")) ? currentPlayer.elo_curve_color : rank.color);
         const colorB = rgbEnabled ? `hsl(${(rgbHue + 105) % 360} 96% 68%)` : (/^#[0-9a-f]{6}$/i.test(String(currentPlayer?.elo_curve_color_secondary || "")) ? currentPlayer.elo_curve_color_secondary : "#85EBFF");
+        canvas.classList.toggle("rgb-active", rgbEnabled);
+        canvas.style.animationDuration = rgbEnabled ? `${Math.max(1.8, 7 / rgbSpeed)}s` : "";
+        canvas.style.animationDirection = rgbDirection < 0 ? "reverse" : "normal";
 
         const bg = ctx.createLinearGradient(0, 0, width, height);
         bg.addColorStop(0, "rgba(255,255,255,.035)"); bg.addColorStop(1, "rgba(0,0,0,.08)");
@@ -10421,9 +10454,13 @@
           ctx.beginPath(); ctx.arc(entry.x, entry.y, index === line.length - 1 ? 4 : 2.8, 0, Math.PI * 2);
           ctx.fillStyle = delta > 0 ? "#30d158" : delta < 0 ? "#ff5c78" : "#85ebff"; ctx.fill();
         });
-        const hits = line.map((entry) => ({ ...entry, variantId }));
-        eloVariantHitPoints.set(variantId, hits);
-        initVariantEloHover(canvas, variantId);
+        if (!animationFrameOnly) {
+          const hits = line.map((entry) => ({ ...entry, variantId }));
+          eloVariantHitPoints.set(variantId, hits);
+          initVariantEloHover(canvas, variantId);
+        }
+
+        if (animationFrameOnly) return;
 
         const value = document.getElementById(`elo-variant-value-${variantId}`);
         const label = document.getElementById(`elo-variant-label-${variantId}`);
@@ -10480,27 +10517,14 @@
         });
       }
 
-      function redrawAllVariantEloCards() {
-        eloVariantHistoryData.forEach((data, variantId) => drawVariantEloCard(variantId, data));
+      function redrawAllVariantEloCards(animationFrameOnly = false) {
+        eloVariantHistoryData.forEach((data, variantId) => drawVariantEloCard(variantId, data, animationFrameOnly));
       }
 
       function startVariantEloRgbAnimation() {
         if (eloVariantRgbFrame) cancelAnimationFrame(eloVariantRgbFrame);
         eloVariantRgbFrame = 0;
         eloVariantRgbLastPaint = 0;
-        if (Number(currentPlayer?.elo_curve_rgb || 0) !== 1 || !eloVariantHistoryData.size) return;
-        const animate = (timestamp) => {
-          if (Number(currentPlayer?.elo_curve_rgb || 0) !== 1 || !document.getElementById("elo-variants-grid")) {
-            eloVariantRgbFrame = 0;
-            return;
-          }
-          if (timestamp - eloVariantRgbLastPaint >= 48) {
-            eloVariantRgbLastPaint = timestamp;
-            redrawAllVariantEloCards();
-          }
-          eloVariantRgbFrame = requestAnimationFrame(animate);
-        };
-        eloVariantRgbFrame = requestAnimationFrame(animate);
       }
 
       async function loadEloHistory(playerId, days = 7, silent = false) {
