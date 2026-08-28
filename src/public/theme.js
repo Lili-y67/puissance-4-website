@@ -420,7 +420,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=profile-marquee-elo-19', {
+      navigator.serviceWorker.register('/service-worker.js?v=profile-marquee-neon-20', {
         scope: '/',
         updateViaCache: 'none',
       }).then(registration => {

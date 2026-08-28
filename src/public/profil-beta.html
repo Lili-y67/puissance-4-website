@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-marquee-elo-20260828-19" />
+  <meta name="p4-build" content="profile-marquee-neon-20260828-20" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -1520,23 +1520,22 @@
         animation: profile-marquee-slide 24s linear infinite;
       }
       .profile-marquee-item {
+        --marquee-color: var(--muted);
         display: inline-flex;
         align-items: center;
         gap: 8px;
         white-space: nowrap;
         font-size: 12px;
-        color: var(--muted);
+        color: var(--marquee-color);
+        font-weight: 700;
+        text-shadow: 0 0 9px color-mix(in srgb, var(--marquee-color) 62%, transparent);
       }
       .profile-marquee-dot {
         width: 7px;
         height: 7px;
         border-radius: 50%;
-        background: linear-gradient(
-          135deg,
-          var(--player-color, var(--red)),
-          #85ebff
-        );
-        box-shadow: 0 0 10px rgba(133, 235, 255, 0.22);
+        background: var(--marquee-color);
+        box-shadow: 0 0 11px var(--marquee-color);
       }
       @keyframes profile-marquee-slide {
         0% {
@@ -7282,27 +7281,34 @@
           const stats = profileVariantStats.find((item) => item.id === variant.id);
           if (!stats && variant.id !== "classic") return null;
           const elo = Math.round(Number(stats?.elo ?? player.elo ?? 1000));
-          return `${variant.label} — ${elo} ELO`;
+          return { text: `${variant.label} — ${elo} ELO`, color: getSimRank(elo).color };
         }).filter(Boolean);
         return [
-          player.rank?.label || "Classement en cours",
-          `${totalGames} parties`,
-          `${winrate}% de winrate`,
+          { text: `${totalGames} parties`, color: "#85EBFF" },
+          { text: `${winrate}% de winrate`, color: "#30D158" },
           ...variantItems,
-          player.avg_accuracy != null ? `${player.avg_accuracy}% de précision` : "Précision à venir",
-          player.is_vip_plus ? "VIP+ actif" : player.is_vip ? "VIP actif" : "Compte standard",
-          isOwnProfile && player.coins != null ? `${player.coins} coins` : `${currentFollowersCache.length} abonnés`,
-          isOwnProfile && player.gems != null ? `${player.gems} gemmes` : "Replays disponibles",
+          { text: player.avg_accuracy != null ? `${player.avg_accuracy}% de précision` : "Précision à venir", color: "#BF5AF2" },
+          { text: player.is_vip_plus ? "VIP+ actif" : player.is_vip ? "VIP actif" : "Compte standard", color: player.is_vip_plus ? "#85EBFF" : player.is_vip ? "#FFD60A" : "#A8A8B3" },
+          { text: isOwnProfile && player.coins != null ? `${player.coins} coins` : `${currentFollowersCache.length} abonnés`, color: isOwnProfile && player.coins != null ? "#FFD60A" : "#85EBFF" },
+          { text: isOwnProfile && player.gems != null ? `${player.gems} gemmes` : "Replays disponibles", color: isOwnProfile && player.gems != null ? "#70E0FF" : "#4C6EF5" },
         ];
+      }
+
+      function buildProfileMarqueeHtml(items) {
+        return [...items, ...items]
+          .map((item) => {
+            const entry = typeof item === "string" ? { text: item, color: "#A8A8B3" } : item;
+            const color = /^#[0-9a-f]{6}$/i.test(String(entry?.color || "")) ? entry.color : "#A8A8B3";
+            return `<div class="profile-marquee-item" style="--marquee-color:${color}"><span class="profile-marquee-dot"></span><span>${escapeHtml(entry?.text || "")}</span></div>`;
+          })
+          .join("");
       }
 
       function renderProfileMarquee(player = currentPlayer) {
         const track = document.querySelector(".profile-marquee-track");
         if (!track) return;
         const items = buildProfileMarqueeItems(player);
-        track.innerHTML = [...items, ...items]
-          .map((item) => `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`)
-          .join("");
+        track.innerHTML = buildProfileMarqueeHtml(items);
       }
       const eloVariantHistoryData = new Map();
       const eloVariantHitPoints = new Map();
@@ -9201,12 +9207,7 @@
           ? getProfileBoosterCounts()
           : { elo: 0, coins: 0 };
         const marqueeItems = buildProfileMarqueeItems(player);
-        const marqueeHtml = [...marqueeItems, ...marqueeItems]
-          .map(
-            (item) =>
-              `<div class="profile-marquee-item"><span class="profile-marquee-dot"></span><span>${escapeHtml(item)}</span></div>`,
-          )
-          .join("");
+        const marqueeHtml = buildProfileMarqueeHtml(marqueeItems);
         const sectionLinks = [
           {
             href: "#section-overview",
