@@ -420,7 +420,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=profile-mobile-studio-16', {
+      navigator.serviceWorker.register('/service-worker.js?v=profile-mobile-studio-17', {
         scope: '/',
         updateViaCache: 'none',
       }).then(registration => {
