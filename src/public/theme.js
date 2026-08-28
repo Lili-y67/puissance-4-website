@@ -420,7 +420,7 @@
   function registerPwa() {
     ensurePwaMetadata();
     if ('serviceWorker' in navigator && window.isSecureContext) {
-      navigator.serviceWorker.register('/service-worker.js?v=profile-studio-opera-7', {
+      navigator.serviceWorker.register('/service-worker.js?v=profile-studio-dialog-8', {
         scope: '/',
         updateViaCache: 'none',
       }).then(registration => {
