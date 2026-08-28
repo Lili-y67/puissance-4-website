@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.4-profile-studio-dialog';
+const CACHE_VERSION = 'p4-shell-v3.7.4-profile-studio-overlays';
 const APP_SHELL = [
   '/',
   '/index.html',

@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-studio-dialog-20260828-8" />
+  <meta name="p4-build" content="profile-studio-overlays-20260828-14" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6331,9 +6331,18 @@
       .studio-media-copy { position:absolute; z-index:2; left:13px; right:13px; bottom:12px; }
       .studio-media-copy strong { display:block; font:900 18px 'Barlow Condensed',sans-serif; letter-spacing:.7px; text-transform:uppercase; }
       .studio-media-copy span { display:block; margin-top:2px; color:rgba(255,255,255,.7); font-size:10px; }
+      .recent-avatar-history { margin-top:14px; padding-top:14px; border-top:1px solid rgba(255,255,255,.07); }
+      .recent-avatar-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:9px; }
+      .recent-avatar-head strong { font:900 13px 'Barlow Condensed',sans-serif; letter-spacing:1.2px; text-transform:uppercase; }
+      .recent-avatar-head span { color:var(--muted); font-size:9px; }
+      .recent-avatar-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
+      .recent-avatar-option { aspect-ratio:1; padding:3px; overflow:hidden; border:1px solid rgba(255,255,255,.1); border-radius:50%; background:rgba(255,255,255,.035); cursor:pointer; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+      .recent-avatar-option:hover { transform:translateY(-2px) scale(1.03); border-color:rgba(133,235,255,.55); box-shadow:0 8px 22px rgba(0,0,0,.3); }
+      .recent-avatar-option img { display:block; width:100%; height:100%; border-radius:50%; object-fit:cover; }
       @media(max-width:600px) {
         .beta-studio-drawer { inset:6px auto 6px 6px; width:calc(100vw - 12px); border-radius:20px; }
         .beta-studio-head { padding:15px 16px 12px; }.beta-studio-title{font-size:29px}.beta-studio-main{padding:10px}.beta-studio-tabs{padding:9px 10px}.studio-media-grid{grid-template-columns:1fr}.studio-media-item{min-height:125px}.studio-media-item.avatar{min-height:160px}
+        .recent-avatar-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
       }
     </style>
     <style>
@@ -6616,6 +6625,21 @@
       .avatar-decoration-modal-bg {
         z-index: 100200 !important;
       }
+      dialog.upload-chooser-bg,
+      dialog.image-editor-bg,
+      dialog.avatar-decoration-modal-bg,
+      dialog.pseudo-font-modal-bg {
+        width: 100vw;
+        height: 100dvh;
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        border: 0;
+      }
+      dialog.upload-chooser-bg::backdrop,
+      dialog.image-editor-bg::backdrop,
+      dialog.avatar-decoration-modal-bg::backdrop,
+      dialog.pseudo-font-modal-bg::backdrop { background: transparent; }
       @media (max-width: 600px) {
         .profile-beta-badge {
           margin-left: 5px;
@@ -6848,7 +6872,7 @@
       accept="image/png,image/jpeg,image/jpg,image/webp"
       onchange="handleProfileWallpaperUpload(this)"
     />
-    <div class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true">
+    <dialog class="upload-chooser-bg" id="upload-chooser-bg" aria-hidden="true" oncancel="event.preventDefault();closeUploadChooser()">
       <div class="upload-chooser-modal">
         <div class="upload-chooser-head">
           <div>
@@ -6903,8 +6927,8 @@
           Dimensions conseillees et taille max affichees ici.
         </div>
       </div>
-    </div>
-    <div class="image-editor-bg" id="image-editor-bg" aria-hidden="true">
+    </dialog>
+    <dialog class="image-editor-bg" id="image-editor-bg" aria-hidden="true" oncancel="event.preventDefault();closeImageEditor()">
       <div class="image-editor-modal">
         <div class="image-editor-head">
           <div>
@@ -6964,7 +6988,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </dialog>
 
     <script src="/i18n.js?v=16"></script>
     <script>
@@ -7898,7 +7922,7 @@
       </div>
       <button class="btn-save-color" type="button" onclick="openPseudoFontPicker()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">🔠 Choisir une police</button>
     </div>
-    <div class="pseudo-font-modal-bg" id="pseudo-font-modal-bg" onclick="if(event.target===this)closePseudoFontPicker()">
+    <dialog class="pseudo-font-modal-bg" id="pseudo-font-modal-bg" onclick="if(event.target===this)closePseudoFontPicker()" oncancel="event.preventDefault();closePseudoFontPicker()">
       <div class="pseudo-font-modal">
         <div class="pseudo-font-modal-head">
           <div>
@@ -7913,7 +7937,7 @@
           <button class="btn-save-color" type="button" onclick="closePseudoFontPicker()" style="background:rgba(133,235,255,.10);border-color:rgba(133,235,255,.30);color:#85EBFF">Valider le choix</button>
         </div>
       </div>
-    </div>`;
+    </dialog>`;
       }
 
       function getPseudoDisplayStyle(player = currentPlayer) {
@@ -8383,9 +8407,8 @@
         { id: "studio-media", icon: "🖼️", label: "Avatar & bannière", title: "Avatar & bannière", sub: "Change les deux images principales de ta carte de profil.", selectors: ["#studio-media-card"] },
         { id: "studio-identity", icon: "✍️", label: "Identité", title: "Pseudo, style & grade", sub: "Modifie ton pseudo, sa typographie et ton badge personnalisé.", selectors: ["#pseudo-card", "#perso-role-card"] },
         { id: "studio-colors", icon: "🎨", label: "Couleurs & pion", title: "Couleurs et pion", sub: "Personnalise tes couleurs, la forme du pion et ton emoji de jeu.", selectors: ["#color-card", "#shape-card"] },
-        { id: "studio-decoration", icon: "✨", label: "Décoration", title: "Décoration d'avatar", sub: "Choisis le cadre qui entoure ton avatar.", selectors: ["#avatar-decoration-card", "#avatar-decoration-modal-bg"] },
+        { id: "studio-decoration", icon: "✨", label: "Décoration & plaque", title: "Décoration & plaque", sub: "Choisis le cadre de ton avatar et la plaque affichée derrière ton identité.", selectors: ["#avatar-decoration-card", "#search-nameplate-card", "#avatar-decoration-modal-bg", "#search-nameplate-modal-bg"] },
         { id: "studio-wallpaper", icon: "🌌", label: "Fond d'écran", title: "Fond du profil", sub: "Configure les images PC et téléphone ainsi que leur intensité.", selectors: ["#profile-wallpaper-card"] },
-        { id: "studio-nameplate", icon: "🏷️", label: "Plaque", title: "Plaque nominative", sub: "Sélectionne la plaque affichée derrière ton identité.", selectors: ["#search-nameplate-card", "#search-nameplate-modal-bg"] },
         { id: "studio-music", icon: "🎵", label: "Musique d'attente", title: "Musique d'attente", sub: "Choisis, importe ou recherche la musique jouée pendant la file d'attente.", selectors: ["#queue-music-card"] },
         { id: "studio-extras", icon: "⚙️", label: "Options avancées", title: "Options avancées", sub: "Retrouve le curseur personnalisé et les options réservées à ton grade.", selectors: ["#custom-cursor-card", "#crystal-alert-card"] },
       ];
@@ -8563,10 +8586,7 @@
           panel.id = pane.id;
           panel.className = `beta-studio-pane${index === 0 ? " beta-studio-pane-active" : ""}`;
           panel.innerHTML = `<div class="beta-studio-pane-head"><strong>${escapeHtml(pane.title)}</strong><span>${escapeHtml(pane.sub)}</span></div>`;
-          pane.nodes.forEach((node) => {
-            if (node.classList.contains("avatar-decoration-modal-bg")) document.body.appendChild(node);
-            else panel.appendChild(node);
-          });
+          pane.nodes.forEach((node) => panel.appendChild(node));
           main.appendChild(panel);
           const tab = document.createElement("button");
           tab.type = "button";
@@ -8596,6 +8616,7 @@
       }
 
       document.addEventListener("keydown", (event) => {
+        if (document.querySelector('dialog:not(#beta-profile-studio)[open]')) return;
         if (
           event.key === "Escape" &&
           document
@@ -9419,6 +9440,10 @@
           <span class="studio-media-copy"><strong>Bannière</strong><span>Format paysage conseillé · recadrage inclus</span></span>
         </button>
       </div>
+      <div class="recent-avatar-history" id="recent-avatar-history" hidden>
+        <div class="recent-avatar-head"><strong>Derniers avatars utilisés</strong><span>Disponibles sur cet appareil</span></div>
+        <div class="recent-avatar-grid" id="recent-avatar-grid"></div>
+      </div>
     </div>
     <div class="color-card" id="pseudo-card">
       <div style="display:flex;align-items:center;justify-content:space-between">
@@ -9714,7 +9739,7 @@
         YouTube fonctionne via le lecteur intégré quand le navigateur l'autorise. Si l'embed est bloqué dans la file, la musique du site prend le relais. La recherche utilise Lavalink si le serveur est configuré.
       </div>
     </div>
-    <div class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()">
+    <dialog class="avatar-decoration-modal-bg" id="avatar-decoration-modal-bg" onclick="if(event.target===this)closeAvatarDecorationPicker()" oncancel="event.preventDefault();closeAvatarDecorationPicker()">
       <div class="avatar-decoration-modal">
         <div class="avatar-decoration-modal-head">
           <div>
@@ -9737,8 +9762,8 @@
           <div class="avatar-decoration-gallery" id="avatar-decoration-gallery"></div>
         </div>
       </div>
-    </div>
-    <div class="avatar-decoration-modal-bg" id="search-nameplate-modal-bg" onclick="if(event.target===this)closeSearchNameplatePicker()">
+    </dialog>
+    <dialog class="avatar-decoration-modal-bg" id="search-nameplate-modal-bg" onclick="if(event.target===this)closeSearchNameplatePicker()" oncancel="event.preventDefault();closeSearchNameplatePicker()">
       <div class="avatar-decoration-modal">
         <div class="avatar-decoration-modal-head">
           <div>
@@ -9761,7 +9786,7 @@
           <div class="nameplate-gallery" id="search-nameplate-gallery"><span style="font-size:11px;color:var(--muted)">Chargement des plaques…</span></div>
         </div>
       </div>
-    </div>
+    </dialog>
     <!-- Carte mot de passe admin -->
     ${
       String(player.role || "") === "admin"
@@ -10220,6 +10245,7 @@
         initVipBoostUI();
         loadClanDirectory();
         mountBetaProfileExperience();
+        if (isOwnProfile) initRecentAvatarHistory(freshPlayer);
       }
 
       async function loadClanDirectory() {
@@ -11636,6 +11662,114 @@
         };
       }
 
+      const RECENT_AVATAR_DB = "p4-profile-media-history";
+      const RECENT_AVATAR_STORE = "recent-avatars";
+      let recentAvatarCache = [];
+
+      function openRecentAvatarDatabase() {
+        return new Promise((resolve, reject) => {
+          if (!window.indexedDB) return reject(new Error("IndexedDB indisponible"));
+          const request = indexedDB.open(RECENT_AVATAR_DB, 1);
+          request.onupgradeneeded = () => {
+            if (!request.result.objectStoreNames.contains(RECENT_AVATAR_STORE)) {
+              request.result.createObjectStore(RECENT_AVATAR_STORE, { keyPath: "playerId" });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error("Historique indisponible"));
+        });
+      }
+
+      async function readRecentAvatarHistory(playerId) {
+        if (!playerId) return [];
+        try {
+          const db = await openRecentAvatarDatabase();
+          const items = await new Promise((resolve, reject) => {
+            const request = db.transaction(RECENT_AVATAR_STORE, "readonly")
+              .objectStore(RECENT_AVATAR_STORE)
+              .get(String(playerId));
+            request.onsuccess = () => resolve(Array.isArray(request.result?.items) ? request.result.items : []);
+            request.onerror = () => reject(request.error);
+          });
+          db.close();
+          return items.filter((src) => /^data:image\//i.test(String(src || ""))).slice(0, 6);
+        } catch {
+          return [];
+        }
+      }
+
+      function renderRecentAvatarHistory(items = recentAvatarCache) {
+        const wrap = document.getElementById("recent-avatar-history");
+        const grid = document.getElementById("recent-avatar-grid");
+        recentAvatarCache = Array.isArray(items) ? items.slice(0, 6) : [];
+        if (!wrap || !grid) return;
+        wrap.hidden = recentAvatarCache.length === 0;
+        grid.replaceChildren();
+        recentAvatarCache.forEach((src, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "recent-avatar-option";
+          button.title = `Réutiliser l'avatar ${index + 1}`;
+          button.setAttribute("aria-label", button.title);
+          button.onclick = () => reuseRecentAvatar(index, button);
+          const image = document.createElement("img");
+          image.src = src;
+          image.alt = "";
+          button.appendChild(image);
+          grid.appendChild(button);
+        });
+      }
+
+      async function rememberRecentAvatarUsage(avatar, playerId) {
+        const src = String(avatar || "");
+        if (!playerId || !/^data:image\//i.test(src)) return false;
+        try {
+          const previous = await readRecentAvatarHistory(playerId);
+          const items = [src, ...previous.filter((item) => item !== src)].slice(0, 6);
+          const db = await openRecentAvatarDatabase();
+          await new Promise((resolve, reject) => {
+            const transaction = db.transaction(RECENT_AVATAR_STORE, "readwrite");
+            transaction.objectStore(RECENT_AVATAR_STORE).put({ playerId: String(playerId), items, updatedAt: Date.now() });
+            transaction.oncomplete = resolve;
+            transaction.onerror = () => reject(transaction.error);
+          });
+          db.close();
+          renderRecentAvatarHistory(items);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      async function initRecentAvatarHistory(player) {
+        if (!player?.id) return renderRecentAvatarHistory([]);
+        const current = String(player.avatar || "");
+        if (/^data:image\//i.test(current)) {
+          await rememberRecentAvatarUsage(current, player.id);
+          return;
+        }
+        renderRecentAvatarHistory(await readRecentAvatarHistory(player.id));
+      }
+
+      async function reuseRecentAvatar(index, button) {
+        const avatar = recentAvatarCache[Number(index)];
+        const me = JSON.parse(localStorage.getItem("player") || "{}");
+        if (!avatar || !me.id) return;
+        if (button) button.disabled = true;
+        const ok = await uploadAvatarData(avatar, me);
+        if (button) button.disabled = false;
+        if (ok) PROFIL_SFX.success();
+      }
+
+      function promoteStudioOverlay(overlay) {
+        if (!overlay || typeof overlay.showModal !== "function" || overlay.open) return;
+        try {
+          overlay.showModal();
+        } catch {
+          overlay.setAttribute("open", "");
+        }
+      }
+
       function openUploadChooser(target) {
         PROFIL_SFX.popupOpen();
         uploadChooserTarget = target;
@@ -11677,6 +11811,7 @@
             : "GIF VIP disponible";
         const bg = document.getElementById("upload-chooser-bg");
         bg.classList.add("show");
+        promoteStudioOverlay(bg);
         bg.setAttribute("aria-hidden", "false");
       }
 
@@ -11684,6 +11819,8 @@
         PROFIL_SFX.popupClose();
         const bg = document.getElementById("upload-chooser-bg");
         bg.classList.remove("show");
+        if (typeof bg.close === "function" && bg.open) bg.close();
+        else bg.removeAttribute("open");
         bg.setAttribute("aria-hidden", "true");
         uploadChooserTarget = null;
       }
@@ -12013,6 +12150,7 @@
                     : "Placez votre banniere exactement comme vous le souhaitez.";
           if (els.bg) {
             els.bg.classList.add("show");
+            promoteStudioOverlay(els.bg);
             els.bg.setAttribute("aria-hidden", "false");
           }
           drawImageEditor();
@@ -12029,6 +12167,8 @@
         const { bg } = getImageEditorElements();
         if (bg) {
           bg.classList.remove("show");
+          if (typeof bg.close === "function" && bg.open) bg.close();
+          else bg.removeAttribute("open");
           bg.setAttribute("aria-hidden", "true");
         }
         IMAGE_EDITOR.dragging = false;
@@ -12124,6 +12264,7 @@
           if (el) el.innerHTML = '<img src="' + renderSrc + '" alt="avatar">';
           me.avatar = avatarData;
           localStorage.setItem("player", JSON.stringify(me));
+          await rememberRecentAvatarUsage(avatarData, me.id);
           return true;
         }
         PROFIL_SFX.error();
@@ -14378,15 +14519,17 @@
         PROFIL_SFX.popupOpen();
         await loadAvatarDecorationLibrary();
         bg.classList.add("show");
+        promoteStudioOverlay(bg);
         renderAvatarDecorationGallery(currentPlayer);
         refreshAvatarDecorationPreview(currentPlayer);
       }
 
       function closeAvatarDecorationPicker() {
         PROFIL_SFX.popupClose();
-        document
-          .getElementById("avatar-decoration-modal-bg")
-          ?.classList.remove("show");
+        const bg = document.getElementById("avatar-decoration-modal-bg");
+        bg?.classList.remove("show");
+        if (typeof bg?.close === "function" && bg.open) bg.close();
+        else bg?.removeAttribute("open");
       }
 
       async function openSearchNameplatePicker() {
@@ -14396,6 +14539,7 @@
         await loadSearchNameplateLibrary();
         pendingSearchNameplate = String(currentPlayer?.search_nameplate || "");
         bg.classList.add("show");
+        promoteStudioOverlay(bg);
         renderSearchNameplateGallery(currentPlayer);
         refreshSearchNameplateSetting(currentPlayer);
       }
@@ -14405,6 +14549,8 @@
         if (!bg?.classList.contains("show")) return;
         PROFIL_SFX.popupClose();
         bg.classList.remove("show");
+        if (typeof bg.close === "function" && bg.open) bg.close();
+        else bg.removeAttribute("open");
         pendingSearchNameplate = null;
         refreshSearchNameplateSetting(currentPlayer);
       }
@@ -15768,13 +15914,16 @@
 
       function openPseudoFontPicker() {
         refreshPseudoFontPreviews();
-        document.getElementById("pseudo-font-modal-bg")?.classList.add("show");
+        const bg = document.getElementById("pseudo-font-modal-bg");
+        bg?.classList.add("show");
+        promoteStudioOverlay(bg);
       }
 
       function closePseudoFontPicker() {
-        document
-          .getElementById("pseudo-font-modal-bg")
-          ?.classList.remove("show");
+        const bg = document.getElementById("pseudo-font-modal-bg");
+        bg?.classList.remove("show");
+        if (typeof bg?.close === "function" && bg.open) bg.close();
+        else bg?.removeAttribute("open");
       }
 
       function filterPseudoFonts(rarity = "all") {
