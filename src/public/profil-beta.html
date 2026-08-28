@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-graph-elo-neon-20260828-23" />
+  <meta name="p4-build" content="profile-replay-exports-tooltips-20260828-26" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6252,7 +6252,8 @@
       .wallet-chip.gems { color:#9cf3ff; border-color:rgba(133,235,255,.32); }
       .wallet-chip.coins { color:#ffe46b; border-color:rgba(255,214,10,.32); }
       .profile-identity-actions { display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end; margin-left:auto; }
-      .access-badge { position:relative; text-decoration:none; cursor:pointer; }
+      .profile-badges:has(.access-badge) { position:relative; z-index:10; }
+      .profile-badge.access-badge { position:relative; z-index:11; overflow:visible; text-decoration:none; cursor:pointer; }
       .access-badge::after { content:attr(data-access-tip); position:absolute; z-index:20; left:50%; bottom:calc(100% + 10px); transform:translate(-50%,5px); min-width:190px; max-width:280px; padding:9px 11px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:#090a17; color:#f7f7fb; font:600 11px/1.35 'Barlow',sans-serif; letter-spacing:0; text-transform:none; text-align:center; opacity:0; pointer-events:none; transition:.18s ease; box-shadow:0 16px 42px rgba(0,0,0,.45); }
       .access-badge:hover::after, .access-badge:focus-visible::after { opacity:1; transform:translate(-50%,0); }
       .profile-action-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:16px; }
@@ -6283,13 +6284,15 @@
       .elo-variant-rank-label { margin-top:2px; color:var(--muted); font-size:9px; letter-spacing:1px; text-transform:uppercase; }
       .elo-variant-value { text-align:right; font:900 24px 'Barlow Condensed',sans-serif; letter-spacing:1px; }
       .elo-variant-value small { display:block; margin-top:1px; color:var(--muted); font:700 9px Barlow,sans-serif; letter-spacing:1px; text-transform:uppercase; }
-      .elo-variant-canvas-wrap { position:relative; height:190px; margin:0 8px 8px; overflow:hidden; border-radius:15px; background:rgba(0,0,0,.12); }
+      .elo-variant-canvas-wrap { position:relative; height:190px; margin:0 8px 8px; overflow:visible; border-radius:15px; background:rgba(0,0,0,.12); }
       .elo-variant-canvas { display:block; width:100%; height:100%; }
       .elo-variant-canvas.rgb-active { animation-name:elo-curve-hue; animation-timing-function:linear; animation-iteration-count:infinite; will-change:filter; }
       @keyframes elo-curve-hue { from { filter:hue-rotate(0deg); } to { filter:hue-rotate(360deg); } }
-      .elo-variant-tooltip { position:absolute; z-index:5; display:none; min-width:150px; max-width:210px; transform:translate(-50%,calc(-100% - 10px)); padding:8px 10px; border:1px solid rgba(255,255,255,.14); border-radius:10px; background:#090a17; box-shadow:0 14px 38px rgba(0,0,0,.42); pointer-events:none; font-size:10px; line-height:1.4; }
-      .elo-variant-tooltip.show { display:block; }
-      .elo-variant-tooltip strong { display:block; color:#fff; font:900 15px 'Barlow Condensed',sans-serif; }
+      .elo-variant-tooltip { position:absolute; z-index:30; visibility:hidden; min-width:150px; max-width:220px; padding:11px 12px; border:1px solid rgba(133,235,255,.48); border-radius:14px; background:linear-gradient(180deg,rgba(12,14,30,.98),rgba(6,7,16,.98)); box-shadow:0 20px 48px rgba(0,0,0,.62),0 0 26px rgba(133,235,255,.20); pointer-events:none; opacity:0; transform:translate(-50%,-112%) scale(.96); transition:opacity .12s ease,transform .12s ease,visibility .12s ease; }
+      .elo-variant-tooltip.show { visibility:visible; opacity:1; transform:translate(-50%,-118%) scale(1); }
+      .elo-variant-tooltip strong { display:block; color:#fff; font:900 24px/1 'Barlow Condensed',sans-serif; letter-spacing:1px; text-shadow:0 0 14px rgba(255,255,255,.18); }
+      .elo-variant-tooltip span { display:block; margin-top:4px; color:rgba(238,238,245,.74); font-size:10px; letter-spacing:1px; line-height:1.25; text-transform:uppercase; }
+      .elo-variant-tooltip .delta { font-weight:800; }
       .elo-variant-card-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 14px 13px; color:var(--muted); font-size:10px; }
       .elo-variant-delta.up { color:#30d158; }.elo-variant-delta.down { color:#ff5c78; }
       .elo-variant-mini-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; padding:0 10px 9px; }
@@ -6534,6 +6537,7 @@
         visibility: hidden;
         pointer-events: none;
         opacity: 0;
+        color: var(--text);
         background: rgba(2, 3, 10, 0.7);
         backdrop-filter: blur(10px);
         transition: opacity 0.28s ease, visibility 0.28s ease;
@@ -9420,6 +9424,11 @@
             <div class="elo-date-field"><input type="date" id="elo-history-end-date" aria-label="Date de fin ELO"><button class="elo-date-picker-button" type="button" aria-label="Ouvrir le calendrier de fin" onclick="openEloDatePicker('elo-history-end-date')">📅</button></div>
             <button class="elo-history-range" type="button" onclick="applyEloHistoryDateRange()">Plage</button>
           </div>
+          <div class="elo-history-export" aria-label="Télécharger les graphiques ELO">
+            <button class="elo-history-copy" type="button" onclick="downloadAllVariantEloImage()">PNG</button>
+            <button class="elo-history-copy" type="button" onclick="downloadAllVariantEloExport('csv')">CSV</button>
+            <button class="elo-history-copy" type="button" onclick="downloadAllVariantEloExport('json')">JSON</button>
+          </div>
         </div>
       </div>
       <div class="elo-variants-grid" id="elo-variants-grid">
@@ -10210,7 +10219,10 @@
         <div class="profile-section-title">10 parties récentes</div>
         <div class="profile-section-sub">Les derniers résultats non archivés, avec accès direct au replay.</div>
       </div>
-      <a class="view-all-games" href="/games.html?player=${encodeURIComponent(player.id)}">Voir plus →</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <a class="view-all-games" href="/api/players/${encodeURIComponent(player.id)}/games/export" download>↓ Sauvegarder (.zip)</a>
+        <a class="view-all-games" href="/games.html?player=${encodeURIComponent(player.id)}">Voir plus →</a>
+      </div>
     </div>
     <div class="tabs-row">
       <button class="tab active" id="tab-history"   onclick="switchTab('history')">Parties</button>
@@ -10636,7 +10648,7 @@
         if (value) {
           value.innerHTML = `${currentElo}<small>ELO</small>`;
           value.style.color = rank.color;
-          value.style.textShadow = `0 0 6px ${rank.color}, 0 0 18px ${rank.color}88`;
+          value.style.textShadow = `0 0 3px ${rank.color}99, 0 0 9px ${rank.color}44`;
           const eloLabel = value.querySelector("small");
           if (eloLabel) {
             eloLabel.style.color = rank.color;
@@ -10669,9 +10681,18 @@
           if (!nearest || nearest.distance > 15) { canvas.style.cursor = "default"; hide(); return; }
           const point = nearest.item.point, tooltip = document.getElementById(`elo-variant-tooltip-${variantId}`);
           const delta = Math.round(Number(point.delta || 0));
-          tooltip.innerHTML = `<strong>${Math.round(Number(point.elo || 0))} ELO</strong><span style="color:${delta > 0 ? "#30d158" : delta < 0 ? "#ff5c78" : "#85ebff"}">${delta > 0 ? "+" : ""}${delta} ELO</span><br><span>${point.gameId ? `Partie #${escapeHtml(point.gameId)}` : escapeHtml(point.label || "Point de repère")}</span>${point.opponent?.pseudo ? `<br><span>vs ${escapeHtml(point.opponent.pseudo)}</span>` : ""}`;
-          tooltip.style.left = `${Math.max(80, Math.min(canvas.clientWidth - 80, nearest.item.x))}px`;
-          tooltip.style.top = `${Math.max(58, nearest.item.y)}px`;
+          const deltaText = delta ? `${delta > 0 ? "+" : ""}${delta} ELO` : "Point de repère";
+          const replayText = point.gameId
+            ? `Replay #${escapeHtml(point.gameId)} · ${formatHistoryResult(point.result)}`
+            : escapeHtml(point.label || "Courbe ELO");
+          const details = [
+            formatEloPointDate(Number(point.t || 0)),
+            point.moveCount ? `${Number(point.moveCount)} coups` : "",
+            point.duration ? formatHistoryDuration(point.duration) : "",
+          ].filter(Boolean).join(" · ");
+          tooltip.innerHTML = `<strong>${Math.round(Number(point.elo || 0))} ELO</strong><span class="delta" style="color:${delta > 0 ? "#30d158" : delta < 0 ? "#ff5c78" : "#85ebff"}">${deltaText}</span><span>${replayText}</span>${details ? `<span>${escapeHtml(details)}</span>` : ""}${point.opponent?.pseudo ? `<span>vs ${escapeHtml(point.opponent.pseudo)}</span>` : ""}`;
+          tooltip.style.left = `${Math.max(112, Math.min(canvas.clientWidth - 112, nearest.item.x))}px`;
+          tooltip.style.top = `${Math.max(72, nearest.item.y)}px`;
           tooltip.classList.add("show");
           tooltip.dataset.gameId = point.gameId && !point.replayDeleted ? String(point.gameId) : "";
           canvas.style.cursor = tooltip.dataset.gameId ? "pointer" : "default";
@@ -11210,6 +11231,118 @@
             .slice(0, 40) || "joueur";
         const days = lastEloHistoryData?.days || eloHistoryDays || 7;
         return `elo-history-${pseudo}-${days}j.png`;
+      }
+
+      function getAllVariantEloFilename(extension) {
+        const pseudo = String(currentPlayer?.pseudo || "joueur")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9_-]+/gi, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 40) || "joueur";
+        const range = eloHistoryStartDate && eloHistoryEndDate
+          ? `${eloHistoryStartDate}-${eloHistoryEndDate}`
+          : `${eloHistoryDays || 7}j`;
+        return `elo-toutes-variantes-${pseudo}-${range}.${extension}`;
+      }
+
+      function getAllVariantEloPayload() {
+        return {
+          format: "puissance4-elo-variants-v1",
+          exported_at: new Date().toISOString(),
+          player: currentPlayer ? { id: currentPlayer.id, pseudo: currentPlayer.pseudo } : null,
+          days: eloHistoryDays || 7,
+          start: eloHistoryStartDate || null,
+          end: eloHistoryEndDate || null,
+          variants: ELO_PROFILE_VARIANTS.map((variant) => ({
+            id: variant.id,
+            label: variant.label,
+            ...(eloVariantHistoryData.get(variant.id) || { points: [], stats: {} }),
+          })),
+        };
+      }
+
+      function downloadAllVariantEloExport(format = "csv") {
+        if (!eloVariantHistoryData.size) {
+          alert("Aucun graphique ELO à télécharger pour le moment.");
+          return;
+        }
+        const payload = getAllVariantEloPayload();
+        if (format === "json") {
+          downloadBlob(getAllVariantEloFilename("json"), JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+          return;
+        }
+        const csvCell = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+        const rows = [["variante", "nom", "date", "elo", "delta", "partie_id", "resultat", "adversaire", "coups", "duree_secondes"]];
+        payload.variants.forEach((variant) => {
+          (Array.isArray(variant.points) ? variant.points : []).forEach((point) => rows.push([
+            variant.id,
+            variant.label,
+            point.t ? new Date(Number(point.t)).toISOString() : "",
+            Math.round(Number(point.elo || 0)),
+            Math.round(Number(point.delta || 0)),
+            point.gameId || "",
+            point.result || "",
+            point.opponent?.pseudo || "",
+            point.moveCount || "",
+            point.duration || "",
+          ]));
+        });
+        downloadBlob(getAllVariantEloFilename("csv"), `\uFEFF${rows.map(row => row.map(csvCell).join(";")).join("\r\n")}`, "text/csv;charset=utf-8");
+      }
+
+      function downloadAllVariantEloImage() {
+        const sources = ELO_PROFILE_VARIANTS.map((variant) => ({
+          variant,
+          canvas: document.getElementById(`elo-variant-canvas-${variant.id}`),
+          value: document.getElementById(`elo-variant-value-${variant.id}`)?.childNodes?.[0]?.textContent?.trim() || "—",
+          rank: document.getElementById(`elo-variant-label-${variant.id}`)?.textContent || "",
+        })).filter(item => item.canvas?.width && item.canvas?.height);
+        if (!sources.length) {
+          alert("Aucun graphique ELO à télécharger pour le moment.");
+          return;
+        }
+        const columns = 3, cellWidth = 520, cellHeight = 320, gap = 18, margin = 24;
+        const rows = Math.ceil(sources.length / columns);
+        const output = document.createElement("canvas");
+        output.width = margin * 2 + columns * cellWidth + (columns - 1) * gap;
+        output.height = margin * 2 + rows * cellHeight + (rows - 1) * gap;
+        const ctx = output.getContext("2d");
+        ctx.fillStyle = "#070812";
+        ctx.fillRect(0, 0, output.width, output.height);
+        sources.forEach((item, index) => {
+          const x = margin + (index % columns) * (cellWidth + gap);
+          const y = margin + Math.floor(index / columns) * (cellHeight + gap);
+          ctx.fillStyle = "#141524";
+          ctx.strokeStyle = "rgba(255,255,255,.14)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(x, y, cellWidth, cellHeight, 18);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#eeeef5";
+          ctx.font = "900 22px 'Barlow Condensed', sans-serif";
+          ctx.fillText(item.variant.label.toUpperCase(), x + 18, y + 30);
+          ctx.textAlign = "right";
+          ctx.font = "900 28px 'Barlow Condensed', sans-serif";
+          ctx.fillText(`${item.value} ELO`, x + cellWidth - 18, y + 30);
+          ctx.fillStyle = "rgba(238,238,245,.58)";
+          ctx.font = "700 11px Barlow, sans-serif";
+          ctx.fillText(item.rank.toUpperCase(), x + cellWidth - 18, y + 47);
+          ctx.textAlign = "left";
+          ctx.drawImage(item.canvas, x + 12, y + 58, cellWidth - 24, cellHeight - 70);
+        });
+        output.toBlob((blob) => {
+          if (!blob) return alert("Export PNG impossible.");
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = getAllVariantEloFilename("png");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, "image/png");
       }
 
       function downloadEloHistoryImage() {

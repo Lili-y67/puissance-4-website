@@ -2413,6 +2413,91 @@ function createCompressedGameArchive(rows) {
   return { filename, buffer: zlib.gzipSync(Buffer.from(JSON.stringify(payload)), { level: 9 }) };
 }
 
+let zipCrcTable = null;
+function getZipCrcTable() {
+  if (zipCrcTable) return zipCrcTable;
+  zipCrcTable = Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+    return value >>> 0;
+  });
+  return zipCrcTable;
+}
+
+function zipCrc32(buffer) {
+  const table = getZipCrcTable();
+  let crc = 0xffffffff;
+  for (const byte of buffer) crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function zipDosDateTime(date = new Date()) {
+  const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+  const year = Math.max(1980, safe.getFullYear());
+  return {
+    time: ((safe.getHours() & 0x1f) << 11) | ((safe.getMinutes() & 0x3f) << 5) | ((Math.floor(safe.getSeconds() / 2)) & 0x1f),
+    date: (((year - 1980) & 0x7f) << 9) | (((safe.getMonth() + 1) & 0x0f) << 5) | (safe.getDate() & 0x1f),
+  };
+}
+
+function createZipBuffer(entries) {
+  const localParts = [];
+  const centralParts = [];
+  let localOffset = 0;
+  const stamp = zipDosDateTime(new Date());
+  for (const entry of entries) {
+    const name = Buffer.from(String(entry.name || 'file').replace(/\\/g, '/'), 'utf8');
+    const content = Buffer.isBuffer(entry.content) ? entry.content : Buffer.from(String(entry.content ?? ''), 'utf8');
+    const compressed = zlib.deflateRawSync(content, { level: 9 });
+    const crc = zipCrc32(content);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt16LE(stamp.time, 10);
+    local.writeUInt16LE(stamp.date, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(compressed.length, 18);
+    local.writeUInt32LE(content.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    local.writeUInt16LE(0, 28);
+    localParts.push(local, name, compressed);
+
+    const central = Buffer.alloc(46);
+    central.writeUInt32LE(0x02014b50, 0);
+    central.writeUInt16LE(20, 4);
+    central.writeUInt16LE(20, 6);
+    central.writeUInt16LE(0x0800, 8);
+    central.writeUInt16LE(8, 10);
+    central.writeUInt16LE(stamp.time, 12);
+    central.writeUInt16LE(stamp.date, 14);
+    central.writeUInt32LE(crc, 16);
+    central.writeUInt32LE(compressed.length, 20);
+    central.writeUInt32LE(content.length, 24);
+    central.writeUInt16LE(name.length, 28);
+    central.writeUInt16LE(0, 30);
+    central.writeUInt16LE(0, 32);
+    central.writeUInt16LE(0, 34);
+    central.writeUInt16LE(0, 36);
+    central.writeUInt32LE(0, 38);
+    central.writeUInt32LE(localOffset, 42);
+    centralParts.push(central, name);
+    localOffset += local.length + name.length + compressed.length;
+  }
+  const centralDirectory = Buffer.concat(centralParts);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(0, 4);
+  end.writeUInt16LE(0, 6);
+  end.writeUInt16LE(entries.length, 8);
+  end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(centralDirectory.length, 12);
+  end.writeUInt32LE(localOffset, 16);
+  end.writeUInt16LE(0, 20);
+  return Buffer.concat([...localParts, centralDirectory, end]);
+}
+
 async function purgeArchivedGames() {
   const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const rows = db.prepare(`
@@ -9801,6 +9886,82 @@ app.get('/api/players/:id/games', (req, res) => {
     ORDER BY g.finished_at DESC, g.id DESC
     LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
   res.json({ player: { id: player.id, pseudo: player.pseudo, avatar: player.avatar || '', color: player.color || '#ff2d55' }, games: rows, page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) });
+});
+
+app.get('/api/players/:id/games/export', (req, res) => {
+  try {
+    const playerId = Number(req.params.id);
+    const player = pQ.getById.get(playerId);
+    if (!player || player.deleted) return res.status(404).json({ error: 'Joueur introuvable.' });
+    const games = db.prepare(`
+      SELECT g.*,
+        p1.pseudo AS p1_pseudo, p2.pseudo AS p2_pseudo,
+        w.pseudo AS winner_pseudo
+      FROM games g
+      JOIN players p1 ON p1.id = g.player1_id
+      JOIN players p2 ON p2.id = g.player2_id
+      LEFT JOIN players w ON w.id = g.winner_id
+      WHERE (g.player1_id = ? OR g.player2_id = ?)
+        AND g.status = 'finished'
+        AND COALESCE(g.archived, 0) = 0
+      ORDER BY g.finished_at DESC, g.id DESC
+      LIMIT 5001
+    `).all(playerId, playerId);
+    if (!games.length) return res.status(404).json({ error: 'Aucune partie non archivée à sauvegarder.' });
+    if (games.length > 5000) return res.status(413).json({ error: 'Trop de parties à exporter en une seule archive.' });
+
+    const exportedAt = new Date().toISOString();
+    const replayEntries = games.map(game => {
+      const actions = aQ.getByGame.all(game.id).map(action => {
+        try { return { ...action, payload: JSON.parse(action.payload || '{}') }; }
+        catch { return { ...action, payload: {} }; }
+      });
+      const replay = {
+        format: 'puissance4-replay-v2',
+        exported_at: exportedAt,
+        game,
+        moves: mQ.getByGame.all(game.id),
+        actions,
+      };
+      return {
+        name: `replays/puissance4-replay-${Number(game.id)}.json`,
+        content: JSON.stringify(replay, null, 2),
+      };
+    });
+    const manifest = {
+      format: 'puissance4-player-replay-bundle-v1',
+      exported_at: exportedAt,
+      player: { id: Number(player.id), pseudo: player.pseudo },
+      game_count: games.length,
+      replay_format: 'puissance4-replay-v2',
+      files: replayEntries.map(entry => entry.name),
+    };
+    const readme = [
+      'Sauvegarde de parties Puissance 4',
+      `Joueur : ${player.pseudo} (#${player.id})`,
+      `Parties non archivées : ${games.length}`,
+      '',
+      'Chaque fichier du dossier replays/ est un JSON au format puissance4-replay-v2.',
+      'Il peut être ouvert depuis la page Outils > Visualisateur de parties du site.',
+    ].join('\r\n');
+    const archive = createZipBuffer([
+      { name: 'manifest.json', content: JSON.stringify(manifest, null, 2) },
+      { name: 'LISEZ-MOI.txt', content: readme },
+      ...replayEntries,
+    ]);
+    const safePseudo = String(player.pseudo || `joueur-${player.id}`)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 40) || `joueur-${player.id}`;
+    const filename = `parties-${safePseudo}-${new Date().toISOString().slice(0, 10)}.zip`;
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', String(archive.length));
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.send(archive);
+  } catch (error) {
+    console.error('[GAMES EXPORT]', error.message);
+    return res.status(500).json({ error: 'Impossible de créer la sauvegarde des parties.' });
+  }
 });
 
 app.post('/api/players/:id/report', security.routeGuard('account-report'), (req, res) => {

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.4-profile-graph-elo-neon-23';
+const CACHE_VERSION = 'p4-shell-v3.7.4-profile-replay-exports-26';
 const APP_SHELL = [
   '/',
   '/index.html',
