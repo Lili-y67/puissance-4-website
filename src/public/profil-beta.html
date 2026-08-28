@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-studio-gpu-20260828-5" />
+  <meta name="p4-build" content="profile-studio-media-20260828-6" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -6528,6 +6528,7 @@
       }
       .beta-studio-drawer {
         position: absolute;
+        z-index: 1;
         inset: 10px auto 10px 10px;
         width: min(720px, calc(100vw - 20px));
         display: grid;
@@ -6600,6 +6601,12 @@
       .beta-studio-pane > .color-card,
       .beta-studio-pane > .avatar-decoration-card,
       .beta-studio-pane > .shape-card { margin: 0; }
+      .upload-chooser-bg,
+      .image-editor-bg,
+      .pseudo-font-modal-bg,
+      .avatar-decoration-modal-bg {
+        z-index: 100200 !important;
+      }
       @media (max-width: 600px) {
         .profile-beta-badge {
           margin-left: 5px;
@@ -8993,7 +9000,7 @@
 
         const avatarSection = isOwnProfile
           ? `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
-         <div class="avatar-wrap" onclick="openUploadChooser('avatar')" title="Changer la photo">
+         <div class="avatar-wrap" data-open-beta-studio="studio-media" onclick="openBetaStudio('studio-media')" title="Changer la photo dans le studio" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBetaStudio('studio-media')}">
            ${avatarDecorationSrc ? `<div class="avatar-decoration" id="avatar-decoration-el"><img src="${avatarDecorationSrc}" alt="décoration avatar"></div>` : `<div class="avatar-decoration" id="avatar-decoration-el"></div>`}
            <div class="profile-avatar" id="avatar-el">${avatarHtml}</div>
            <div class="avatar-overlay">Photo</div>
@@ -9162,7 +9169,7 @@
       </div>
       <div class="profile-header">
       <!-- Bannière -->
-      <div class="profile-banner" ${isOwnProfile ? 'onclick="openUploadChooser(\'banner\')" title="Changer la bannière"' : ""}>
+      <div class="profile-banner" ${isOwnProfile ? 'data-open-beta-studio="studio-media" onclick="openBetaStudio(\'studio-media\')" title="Changer la bannière dans le studio" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openBetaStudio(\'studio-media\')}"' : ""}>
         ${bannerSrc ? '<img src="' + bannerSrc + '" alt="bannière">' : ""}
         ${isOwnProfile ? '<div class="profile-banner-overlay">Modifier</div>' : ""}
       </div>

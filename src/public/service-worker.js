@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.4-profile-studio-gpu';
+const CACHE_VERSION = 'p4-shell-v3.7.4-profile-studio-media';
 const APP_SHELL = [
   '/',
   '/index.html',
