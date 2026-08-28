@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-studio-media-20260828-6" />
+  <meta name="p4-build" content="profile-studio-opera-20260828-7" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil bêta</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -8447,8 +8447,17 @@
         const target = requested?.dataset.section || studio.querySelector(".beta-studio-tab")?.dataset.section;
         if (target) selectBetaStudioPane(target);
         studio.style.display = "block";
+        studio.style.visibility = "visible";
+        studio.style.pointerEvents = "auto";
+        studio.style.opacity = "1";
         void studio.offsetWidth;
         studio.classList.add("open");
+        const drawer = studio.querySelector(".beta-studio-drawer");
+        if (drawer) {
+          drawer.style.transform = "translate3d(0, 0, 0)";
+          drawer.style.visibility = "visible";
+          drawer.style.opacity = "1";
+        }
         studio.setAttribute("aria-hidden", "false");
         document.body.style.overflow = "hidden";
         setTimeout(() => studio.querySelector(".beta-studio-tab.active")?.focus({ preventScroll: true }), 340);
@@ -8457,12 +8466,19 @@
       function closeBetaStudio() {
         const studio = document.getElementById("beta-profile-studio");
         if (!studio) return;
+        const drawer = studio.querySelector(".beta-studio-drawer");
+        if (drawer) drawer.style.transform = "translate3d(calc(-100% - 24px), 0, 0)";
         studio.classList.remove("open");
         studio.setAttribute("aria-hidden", "true");
         document.body.style.overflow = "";
         if (location.hash === "#beta-profile-studio") history.replaceState(null, "", `${location.pathname}${location.search}`);
         setTimeout(() => {
-          if (!studio.classList.contains("open")) studio.style.display = "";
+          if (!studio.classList.contains("open")) {
+            studio.style.display = "none";
+            studio.style.visibility = "hidden";
+            studio.style.pointerEvents = "none";
+            studio.style.opacity = "0";
+          }
         }, 340);
       }
 
