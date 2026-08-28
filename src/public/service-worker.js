@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.4-profile-mobile-studio-17';
+const CACHE_VERSION = 'p4-shell-v3.7.4-profile-mobile-studio-18';
 const APP_SHELL = [
   '/',
   '/index.html',
