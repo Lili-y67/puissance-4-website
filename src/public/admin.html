@@ -650,7 +650,7 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
   <div class="login-card">
     <div class="logo">Puissance <span>4</span></div>
     <h2>Security Gate</h2>
-    <p class="security-copy">Acces reserve au staff. Mot de passe admin, verification de role Discord et session securisee avant ouverture du panel.</p>
+    <p class="security-copy">Accès réservé au staff. Renseigne ton pseudo ou ton ID Discord, puis valide le code reçu en message privé.</p>
     <div class="security-badges">
       <span>2FA Discord</span>
       <span>Role Sync</span>
@@ -658,7 +658,6 @@ tbody tr:hover td{background:rgba(255,255,255,.04)}
     </div>
     <div id="login-error" class="error-msg" style="display:none"></div>
     <input type="text" id="discord-input" placeholder="Pseudo staff ou ID Discord..." autocomplete="username" onkeydown="if(event.key==='Enter')login()">
-    <input type="password" id="pwd-input" placeholder="Mot de passe admin..." onkeydown="if(event.key==='Enter')login()">
     <div id="code-step" class="code-step">
       <div class="code-copy">Un code a 6 chiffres sera envoye en message prive Discord au compte lie. Il expire apres 10 minutes.</div>
       <input type="text" id="code-input" inputmode="numeric" maxlength="6" pattern="[0-9]*" placeholder="000000" onkeydown="if(event.key==='Enter')login()">
@@ -996,7 +995,6 @@ function resetAdminLogin() {
   document.getElementById('code-step')?.classList.remove('is-visible');
   document.getElementById('code-input').value = '';
   document.getElementById('discord-input').disabled = false;
-  document.getElementById('pwd-input').disabled = false;
   document.getElementById('login-btn').textContent = 'Recevoir le code Discord';
   document.getElementById('reset-login-btn').style.display = 'none';
   document.getElementById('login-error').style.display = 'none';
@@ -1004,7 +1002,6 @@ function resetAdminLogin() {
 
 async function login() {
   const adminIdentity = document.getElementById('discord-input').value.trim();
-  const pwd = document.getElementById('pwd-input').value;
   const code = document.getElementById('code-input')?.value.trim() || '';
   const loginBtn = document.getElementById('login-btn');
   if (!adminIdentity) return setLoginError('Entre ton pseudo staff ou ton ID Discord.');
@@ -1013,7 +1010,7 @@ async function login() {
   // Le token joueur reste accepte si la personne est deja connectee, mais l'A2F admin
   // fonctionne aussi sans login site grace au pseudo/ID Discord.
   const playerToken = localStorage.getItem('token') || null;
-  const body = { password: pwd, playerToken, adminIdentity };
+  const body = { playerToken, adminIdentity };
   if (adminLoginRequestId) {
     if (!/^\d{6}$/.test(code)) {
       loginBtn.disabled = false;
@@ -1034,7 +1031,6 @@ async function login() {
       adminLoginRequestId = data.requestId;
       document.getElementById('code-step')?.classList.add('is-visible');
       document.getElementById('discord-input').disabled = true;
-      document.getElementById('pwd-input').disabled = true;
       document.getElementById('reset-login-btn').style.display = 'block';
       document.getElementById('login-error').style.display = 'none';
       loginBtn.disabled = false;

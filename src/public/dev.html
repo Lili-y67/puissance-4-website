@@ -89,11 +89,10 @@ button,input{font:inherit}.hidden{display:none!important}.btn{border:1px solid v
     <div class="gate-mark"><img src="/assets/site-logo-small.png" alt="Logo Puissance 4"></div>
     <div class="eyebrow">Puissance 4 staff access</div>
     <h1>Security Gate</h1>
-    <div class="gate-copy">Accès réservé aux développeurs. Mot de passe console, vérification du rôle Discord et code sécurisé envoyé en message privé.</div>
+    <div class="gate-copy">Accès réservé aux développeurs. Renseigne ton pseudo ou ton ID Discord, puis valide le code sécurisé reçu en message privé.</div>
     <div class="security-row"><span>2FA Discord</span><span>Role sync</span><span>Session 4h</span><span>Read only</span></div>
     <div id="login-error" class="error"></div>
     <div class="field"><label>Compte developpeur</label><input id="identity-input" class="input" placeholder="Pseudo ou ID Discord" autocomplete="username"></div>
-    <div class="field"><label>Mot de passe console</label><input id="password-input" type="password" class="input" placeholder="Mot de passe affiche sur le profil" autocomplete="current-password"></div>
     <div id="code-step" class="code-step">
       <div class="field"><label>Code Discord</label><input id="code-input" class="input" inputmode="numeric" maxlength="6" placeholder="000000"></div>
     </div>
@@ -230,7 +229,6 @@ function resetLogin() {
   loginRequestId = null;
   document.getElementById('code-step').classList.remove('visible');
   document.getElementById('identity-input').disabled = false;
-  document.getElementById('password-input').disabled = false;
   document.getElementById('code-input').value = '';
   document.getElementById('login-button').textContent = 'Recevoir le code Discord';
   document.getElementById('reset-button').classList.add('hidden');
@@ -240,22 +238,19 @@ function resetLogin() {
 async function login() {
   const button = document.getElementById('login-button');
   const devIdentity = document.getElementById('identity-input').value.trim();
-  const password = document.getElementById('password-input').value;
   const code = document.getElementById('code-input').value.trim();
   if (!devIdentity) return setLoginError('Entre ton pseudo ou ton ID Discord.');
-  if (!password) return setLoginError('Entre le mot de passe de la console.');
   if (loginRequestId && !/^\d{6}$/.test(code)) return setLoginError('Entre le code Discord a 6 chiffres.');
   button.disabled = true;
   button.textContent = loginRequestId ? 'Verification...' : 'Envoi du code...';
   try {
-    const body = { password, devIdentity, playerToken: localStorage.getItem('token') || null };
+    const body = { devIdentity, playerToken: localStorage.getItem('token') || null };
     if (loginRequestId) { body.requestId = loginRequestId; body.code = code; }
     const data = await request('/api/dev/login', { method: 'POST', body: JSON.stringify(body) });
     if (data.requiresCode) {
       loginRequestId = data.requestId;
       document.getElementById('code-step').classList.add('visible');
       document.getElementById('identity-input').disabled = true;
-      document.getElementById('password-input').disabled = true;
       document.getElementById('reset-button').classList.remove('hidden');
       document.getElementById('login-error').style.display = 'none';
       button.textContent = 'Valider le code';
@@ -931,7 +926,6 @@ async function loadMetrics() {
 }
 
 document.getElementById('identity-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
-document.getElementById('password-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
 document.getElementById('code-input').addEventListener('keydown', event => { if (event.key === 'Enter') login(); });
 if (devToken) openConsole();
 </script>

@@ -2608,6 +2608,8 @@ app.get('/api/beta-game/session', (req, res) => {
 });
 
 app.get('/profil.html', renderProfilePage);
+app.get('/profil-beta.html', (req, res) => res.redirect(302, `/profil${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`));
+app.get('/ancien-profil.html', renderStaticPage('ancien-profil.html', { title: 'Ancien profil - Puissance 4', description: 'Consulte la version classique du profil Puissance 4.' }));
 app.get('/leaderboard.html', renderStaticPage('leaderboard.html', { title: 'Classement - Puissance 4', description: 'Consulte le classement des meilleurs joueurs Puissance 4.' }));
 app.get('/players.html', renderStaticPage('players.html', { title: 'Joueurs - Puissance 4', description: 'Trouve les joueurs Puissance 4, leurs profils et leurs statistiques.' }));
 app.get('/boutique.html', renderStaticPage('boutique.html', { title: 'Boutique - Puissance 4', description: 'Personnalise ton profil Puissance 4 avec des cosmetiques.' }));
@@ -3716,15 +3718,6 @@ function getOrCreateAdminPassword() {
   return pwd;
 }
 const ADMIN_PASSWORD = getOrCreateAdminPassword();
-function getOrCreateDeveloperPassword() {
-  const row = db.prepare('SELECT value FROM config WHERE key = ?').get('developer_password');
-  if (row) return row.value;
-  const password = crypto.randomBytes(10).toString('hex');
-  db.prepare('INSERT INTO config (key, value) VALUES (?, ?)').run('developer_password', password);
-  console.log(`[DEV] Mot de passe genere : ${password}`);
-  return password;
-}
-const DEVELOPER_PASSWORD = getOrCreateDeveloperPassword();
 
 app.get('/admin', (_, res) => res.sendFile(path.join(__dirname, 'public/admin.html')));
 app.get('/dev', (_, res) => res.sendFile(path.join(__dirname, 'public/dev.html')));
@@ -3755,26 +3748,12 @@ function getDeveloperSessionByToken(tokenValue) {
   return player;
 }
 
-app.get('/api/dev/password', async (req, res) => {
-  const playerId = validateSession(String(req.headers['x-token'] || ''));
-  const player = playerId ? pQ.getById.get(playerId) : null;
-  if (!player?.discord_id || !isDeveloperPlayer(player)) {
-    return res.status(403).json({ error: 'Acces developpeur requis.' });
-  }
-  try {
-    const { botToken } = discordConfig();
-    const snapshot = await fetchDiscordMemberSnapshot(player.discord_id, botToken);
-    if (!snapshot?.developer) return res.status(403).json({ error: 'Role Discord developpeur requis.' });
-    applyDiscordSnapshotToPlayer(player, snapshot);
-  } catch(e) {
-    return res.status(503).json({ error: 'Verification Discord indisponible.' });
-  }
-  res.json({ password: DEVELOPER_PASSWORD });
+app.get('/api/dev/password', (req, res) => {
+  res.status(410).json({ error: 'Les mots de passe panel ont été remplacés par la vérification Discord.' });
 });
 
 app.post('/api/dev/login', async (req, res) => {
-  const { password, playerToken, devIdentity, requestId, code } = req.body || {};
-  if (password !== DEVELOPER_PASSWORD) return res.status(403).json({ error: 'Mot de passe incorrect.' });
+  const { playerToken, devIdentity, requestId, code } = req.body || {};
   const player = findAdminLoginPlayer(devIdentity, playerToken);
   if (!player?.discord_id) return res.status(403).json({ error: 'Compte Discord developpeur introuvable.' });
 
@@ -3969,26 +3948,9 @@ app.get('/api/dev/bot-usage', (req, res) => {
   });
 });
 
-// RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAcupAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAArer le mot de passe admin (rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux joueurs rAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAle admin)
-app.get('/api/admin/password', async (req, res) => {
-  const token = req.headers['x-token'];
-  const playerId = validateSession(token);
-  if (!playerId) return res.status(403).json({ error: 'Erreur Lili (403) : Tu y as pas accès hihi !' });
-  const player = pQ.getById.get(playerId);
-  if (!player?.discord_id) return res.status(403).json({ error: 'RAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAAservAAaAa AaaAAaA AAAasAAazAAAaAAAasAA...AAAaAAasAA aux administrateurs.' });
-  let role = player.role;
-  try {
-    const { botToken } = discordConfig();
-    const discordRole = await getDiscordRole(player.discord_id, botToken);
-    if (discordRole !== player.role) {
-      pQ.updateRole.run({ role: discordRole, id: player.id });
-      role = discordRole;
-    }
-  } catch(e) {}
-  if (role !== 'admin') {
-    return res.status(403).json({ error: 'Reserve aux administrateurs.' });
-  }
-  res.json({ password: ADMIN_PASSWORD });
+// Ancienne route conservée pour signaler clairement la migration vers le code Discord.
+app.get('/api/admin/password', (req, res) => {
+  res.status(410).json({ error: 'Les mots de passe panel ont été remplacés par la vérification Discord.' });
 });
 
 // Auth admin
@@ -4069,11 +4031,7 @@ function findAdminLoginPlayer(adminIdentity, playerToken) {
   }) || null;
 }
 
-async function resolveAdminLoginContext(password, playerToken, adminIdentity) {
-  if (password !== ADMIN_PASSWORD) {
-    return { status: 403, error: 'Mot de passe incorrect.' };
-  }
-
+async function resolveAdminLoginContext(playerToken, adminIdentity) {
   const player = findAdminLoginPlayer(adminIdentity, playerToken);
   if (!player) return { status: 403, error: 'Compte staff introuvable. Entre ton pseudo ou ton ID Discord.' };
   if (!player?.discord_id) {
@@ -4098,8 +4056,8 @@ async function resolveAdminLoginContext(password, playerToken, adminIdentity) {
 }
 
 app.post('/api/admin/login', async (req, res) => {
-  const { password, playerToken, adminIdentity, requestId, code } = req.body || {};
-  const ctx = await resolveAdminLoginContext(password, playerToken, adminIdentity);
+  const { playerToken, adminIdentity, requestId, code } = req.body || {};
+  const ctx = await resolveAdminLoginContext(playerToken, adminIdentity);
   if (ctx.error) return res.status(ctx.status || 403).json({ error: ctx.error });
 
   if (requestId) {
@@ -6333,8 +6291,10 @@ app.post('/api/reset-password', security.routeGuard('reset'), (req, res) => {
 
 app.get('/profil',     renderProfilePage);
 app.get('/profil/:ref', renderProfilePage);
-app.get('/profil-beta', renderStaticPage('profil-beta.html', { title: 'Profil beta - Puissance 4', description: 'Decouvre la nouvelle experience de profil et son studio de personnalisation.' }));
-app.get('/profil-beta/:ref', renderStaticPage('profil-beta.html', { title: 'Profil beta - Puissance 4', description: 'Decouvre la nouvelle experience de profil et son studio de personnalisation.' }));
+app.get('/ancien-profil', renderStaticPage('ancien-profil.html', { title: 'Ancien profil - Puissance 4', description: 'Consulte la version classique du profil Puissance 4.' }));
+app.get('/ancien-profil/:ref', renderStaticPage('ancien-profil.html', { title: 'Ancien profil - Puissance 4', description: 'Consulte la version classique du profil Puissance 4.' }));
+app.get('/profil-beta', (req, res) => res.redirect(302, `/profil${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`));
+app.get('/profil-beta/:ref', (req, res) => res.redirect(302, `/profil/${encodeURIComponent(req.params.ref)}${req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : ''}`));
 app.get('/replay/:id',     renderStaticPage('replay.html', { title: 'Replay - Puissance 4', description: 'Revois une partie Puissance 4 coup par coup.' }));
 app.get('/replay-bot/:id', renderStaticPage('replay.html', { title: 'Replay bot - Puissance 4', description: 'Analyse une partie jouee contre un bot Puissance 4.' }));
 app.get('/regles',     renderStaticPage('regles.html', { title: 'Regles - Puissance 4', description: 'Apprends les regles du Puissance 4 et les bases pour gagner.' }));
