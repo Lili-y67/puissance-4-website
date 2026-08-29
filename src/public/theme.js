@@ -34,7 +34,7 @@
 
   function ensureThemeStylesheet() {
     const stylesheets = [
-      { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-31', match: '/theme.css' },
+      { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-34', match: '/theme.css' },
       { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=1', match: '/theme-pc.css', media: '(min-width: 721px)' },
       { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=1', match: '/theme-phone.css', media: '(max-width: 720px)' },
     ];

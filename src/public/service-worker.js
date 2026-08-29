@@ -2,8 +2,8 @@ const CACHE_VERSION = 'p4-shell-v3.7.7-centered-fps-1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/theme.css?v=eggs-29',
-  '/theme.js?v=eggs-29',
+  '/theme.css?v=eggs-34',
+  '/theme.js?v=eggs-34',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',
