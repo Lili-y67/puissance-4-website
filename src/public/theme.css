@@ -567,7 +567,8 @@ pre {
 .p4-fps-meter {
   position: fixed;
   top: max(12px, env(safe-area-inset-top));
-  left: max(12px, env(safe-area-inset-left));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100020;
   min-width: 68px;
   padding: 6px 9px;
@@ -619,10 +620,10 @@ body.p4-menu-mounted .p4-fps-meter {
 @media (max-width: 720px) {
   .p4-fps-meter {
     top: max(8px, env(safe-area-inset-top));
-    left: max(8px, env(safe-area-inset-left));
+    left: 50%;
     right: auto;
     bottom: auto;
-    max-width: calc(100vw - 82px);
+    max-width: calc(100vw - 120px);
     white-space: nowrap;
   }
 }

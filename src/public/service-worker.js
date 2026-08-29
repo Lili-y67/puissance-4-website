@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'p4-shell-v3.7.6-global-games-profile-studio-1';
+const CACHE_VERSION = 'p4-shell-v3.7.7-centered-fps-1';
 const APP_SHELL = [
   '/',
   '/index.html',
