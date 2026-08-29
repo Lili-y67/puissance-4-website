@@ -35,8 +35,8 @@
   function ensureThemeStylesheet() {
     const stylesheets = [
       { id: 'p4-theme-base-css', href: '/theme.css?v=eggs-34', match: '/theme.css' },
-      { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=1', match: '/theme-pc.css', media: '(min-width: 721px)' },
-      { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=1', match: '/theme-phone.css', media: '(max-width: 720px)' },
+      { id: 'p4-theme-pc-css', href: '/theme-pc.css?v=2', match: '/theme-pc.css', media: '(min-width: 721px)' },
+      { id: 'p4-theme-phone-css', href: '/theme-phone.css?v=2', match: '/theme-phone.css', media: '(max-width: 720px)' },
     ];
 
     const hasStylesheet = match => [...document.styleSheets].some(sheet => {

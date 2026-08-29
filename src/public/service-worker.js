@@ -3,7 +3,7 @@ const APP_SHELL = [
   '/',
   '/index.html',
   '/theme.css?v=eggs-34',
-  '/theme.js?v=eggs-34',
+  '/theme.js?v=eggs-35',
   '/manifest.webmanifest',
   '/assets/site-logo-small.png',
   '/assets/wukong-cursor.cur',

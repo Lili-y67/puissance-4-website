@@ -10,10 +10,10 @@
   .p4-fps-meter {
     position: fixed !important;
     top: max(12px, env(safe-area-inset-top, 0px)) !important;
-    left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    left: 50% !important;
     right: auto !important;
     bottom: auto !important;
-    transform: none !important;
+    transform: translateX(-50%) !important;
     margin: 0 !important;
     z-index: 100020 !important;
   }
