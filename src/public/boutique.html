@@ -4,6 +4,7 @@
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="p4-build" content="boutique-orders-nameplates-20260829-1">
 <script src="/performance-bootstrap.js?v=1"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,6 +124,7 @@ body{
 .cosmetic-preview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px;border-radius:20px;background:rgba(5,6,14,.58);border:1px solid rgba(255,255,255,.07)}
 .cosmetic-swatch{min-height:82px;border-radius:15px;border:1px solid color-mix(in srgb,var(--pack-accent) 36%,transparent);background:color-mix(in srgb,var(--pack-accent) 10%,rgba(255,255,255,.025));display:flex;align-items:center;justify-content:center;overflow:hidden;padding:7px;text-align:center}
 .cosmetic-swatch img{width:100%;height:100%;max-height:78px;object-fit:contain;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--pack-accent) 28%,transparent))}
+.cosmetic-swatch.nameplate{grid-column:span 2;min-height:68px}.cosmetic-swatch.nameplate img{width:100%;max-width:190px;max-height:56px;object-fit:fill}
 .cosmetic-swatch.font{font-size:16px;font-weight:800;overflow-wrap:anywhere}
 .cosmetic-pack-note{font-size:12px;color:var(--muted);line-height:1.5}
 @media(max-width:850px){.cosmetic-grid{grid-template-columns:1fr}}
@@ -207,6 +209,7 @@ body{
 .cta.booster-coin{border-color:rgba(255,159,10,.22);background:rgba(255,159,10,.08);color:var(--orange)}
 .card-actions .cta{margin-top:0;flex:1}
 .cta:disabled{cursor:not-allowed;opacity:.45;filter:saturate(.7)}
+.cta.purchase-complete,.cta.purchase-complete:disabled{opacity:1;color:#06150b;border-color:rgba(111,255,151,.68);background:linear-gradient(135deg,#30d158,#7ff29f);box-shadow:0 0 0 1px rgba(255,255,255,.08) inset,0 10px 28px rgba(48,209,88,.24);filter:none;cursor:not-allowed}
 .cta small{display:block;font-size:11px;letter-spacing:.6px;margin-top:3px}
 .preview-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);z-index:30;padding:18px;align-items:center;justify-content:center}
 .preview-modal-bg.show{display:flex}
@@ -535,7 +538,7 @@ body{
       </div>
       <div class="category-tabs">
         <button type="button" class="category-tab active" id="tab-ranks" onclick="switchShopCategory('ranks')">Rangs</button>
-        <button type="button" class="category-tab" id="tab-cosmetics" onclick="switchShopCategory('cosmetics')">Decos & polices</button>
+        <button type="button" class="category-tab" id="tab-cosmetics" onclick="switchShopCategory('cosmetics')">Decos, plaques & polices</button>
         <button type="button" class="category-tab" id="tab-offers" onclick="switchShopCategory('offers')">Packs limités</button>
         <button type="button" class="category-tab" id="tab-boosters" onclick="switchShopCategory('boosters')">Boosters</button>
         <button type="button" class="category-tab" id="tab-host" onclick="switchShopCategory('host')" style="display:none">Host Bot</button>
@@ -968,7 +971,7 @@ body{background:var(--bg);overflow-x:hidden}
 .cart-item-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:14px;background:rgba(255,214,10,.1);font-size:23px}.cart-item strong{display:block}.cart-item small{color:var(--muted)}
 .cart-remove{border:0;background:none;color:var(--muted);font-size:20px;cursor:pointer}.cart-footer{border-top:1px solid rgba(255,255,255,.08);border-bottom:0}
 .cart-total{display:flex;justify-content:space-between;margin-bottom:15px}.cart-total strong{font:900 28px 'Barlow Condensed',sans-serif;color:var(--yellow)}
-.cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}
+.cart-checkout{width:100%;min-height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,var(--yellow),#ff9f0a);color:#17101d;font:900 16px 'Barlow Condensed',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer}.cart-checkout:disabled{opacity:.4;cursor:not-allowed}.cart-checkout.purchase-complete,.cart-checkout.purchase-complete:disabled{opacity:1;color:#06150b;background:linear-gradient(135deg,#30d158,#7ff29f);box-shadow:0 12px 30px rgba(48,209,88,.24);cursor:not-allowed}
 .cart-overlay{display:grid;place-items:center;padding:24px;background:rgba(2,3,9,.8);backdrop-filter:blur(14px)}
 .cart-drawer{position:relative;inset:auto;width:min(1080px,calc(100vw - 48px));max-height:calc(100dvh - 48px);border:1px solid rgba(255,255,255,.12);border-radius:30px;overflow:hidden;background:radial-gradient(circle at 8% 0,rgba(255,214,10,.08),transparent 30%),linear-gradient(150deg,#17182b,#090a15);box-shadow:0 45px 140px rgba(0,0,0,.7);transform:translateY(24px) scale(.97);opacity:0}
 .cart-overlay.open .cart-drawer{transform:none;opacity:1}
@@ -1558,7 +1561,7 @@ function getStockQty(pack) {
 
 function getButtonState(pack) {
   const purchaseNotice = getPurchaseNotice(pack);
-  if (purchaseNotice) return { disabled: false, note: purchaseNotice, purchased: true };
+  if (purchaseNotice) return { disabled: true, note: purchaseNotice, purchased: true };
   const price = getDisplayPrice(pack);
   const currency = pack === 'fortune_ticket' ? 'coins' : getShopCurrency();
   const balance = currency === 'gems' ? Number(shopPlayer?.gems || 0) : currency === 'crystals' ? Number(shopPlayer?.bot_crystals || 0) : Number(shopPlayer?.coins || 0);
@@ -1573,9 +1576,9 @@ function getButtonState(pack) {
   if (currency === 'gems' && !shopGemsUnlocked) return { disabled: true, note: 'Lie Discord pour utiliser les gemmes' };
   if (currency === 'crystals' && !shopBotHostEligible) return { disabled: true, note: 'Associe un bot pour utiliser les Cristaux' };
   if (pack === 'bot_host_1m' && !shopBotHostEligible) return { disabled: true, note: 'Aucun bot associe' };
-  if (item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin' };
-  if (item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack deja possede' };
-  if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role' };
+  if (item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin', purchased: true };
+  if (item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack deja possede', purchased: true };
+  if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez deja ce role', purchased: true };
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (balance < price) return { disabled: true, note: `Il manque ${price - balance} ${currency === 'gems' ? 'gemmes' : currency === 'crystals' ? 'Cristaux' : 'coins'}` };
   if (item.type === 'bundle') return { disabled: false, note: `${stock === null ? 'Offre active' : `Stock ${stock}`} - Offre limitee` };
@@ -1615,11 +1618,11 @@ function getCartEligibility(pack, { gift = false } = {}) {
   if (stock !== null && stock <= 0) return { disabled: true, note: 'Rupture de stock' };
   if (gift && (item.type === 'host' || currency === 'crystals')) return { disabled: true, note: 'Cet article ne peut pas être offert' };
   if (!gift && pack === 'bot_host_1m' && !shopBotHostEligible) return { disabled: true, note: 'Associe d’abord un bot' };
-  if (!gift && item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin' };
-  if (!gift && item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack déjà possédé' };
+  if (!gift && item.category === 'cosmetics' && isCosmeticAdmin()) return { disabled: true, note: '✓ Inclus avec le bypass admin', purchased: true };
+  if (!gift && item.category === 'cosmetics' && getInventoryQty(pack) > 0) return { disabled: true, note: '✓ Pack déjà possédé', purchased: true };
   if (!gift && item.type === 'rank') {
     const owned = packOwned(pack);
-    if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez déjà ce rôle' };
+    if (owned === 'vip_plus' || owned === true) return { disabled: true, note: '✓ Vous avez déjà ce rôle', purchased: true };
   }
   return { disabled: false, note: gift ? `Offrir · ${priceLabel}` : priceLabel };
 }
@@ -1651,10 +1654,13 @@ function renderCosmeticCard(item) {
   const giftState = getCartEligibility(item.key, { gift: true });
   const previews = assets.map(asset => item.cosmeticType === 'decoration'
     ? `<div class="cosmetic-swatch"><img src="${escapeHtml(asset)}" alt="Apercu decoration" loading="lazy"></div>`
-    : `<div class="cosmetic-swatch font" style="font-family:${getFontPreviewFamily(asset)}">${escapeHtml(shopPlayer?.pseudo || 'Pseudo')}</div>`
+    : item.cosmeticType === 'nameplate'
+      ? `<div class="cosmetic-swatch nameplate"><img src="${escapeHtml(asset)}" alt="Apercu plaque nominative" loading="lazy"></div>`
+      : `<div class="cosmetic-swatch font" style="font-family:${getFontPreviewFamily(asset)}">${escapeHtml(shopPlayer?.pseudo || 'Pseudo')}</div>`
   ).join('');
+  const cosmeticBadge = item.cosmeticType === 'decoration' ? '✨ DECOS' : item.cosmeticType === 'nameplate' ? '🏷️ PLAQUES' : '🔠 POLICES';
   return `<article class="card cosmetic-card" style="--pack-accent:${escapeHtml(item.accent || '#85ebff')}">
-    <div class="tier"><span class="badge vipplus">${item.cosmeticType === 'decoration' ? '✨ DECOS' : '🔠 POLICES'}</span><div class="duration">${assets.length}</div></div>
+    <div class="tier"><span class="badge vipplus">${cosmeticBadge}</span><div class="duration">${assets.length}</div></div>
     <h2>${escapeHtml(item.label || item.key)}</h2>
     <div class="meta">${assets.length} choix debloques ensemble. Selection depuis ton profil apres achat.</div>
     <div class="cosmetic-preview">${previews}</div>
@@ -1662,7 +1668,7 @@ function renderCosmeticCard(item) {
     <div class="cosmetic-pack-note">Tarif de base : 5 000 Coins ou 100 gemmes. Les joueurs Perso profitent automatiquement de -30%.</div>
     <div class="card-actions">
       <button class="gift-btn" type="button" onclick="openGiftModal('${item.key}')" ${giftState.disabled ? 'disabled' : ''}>🎁 Offrir</button>
-      <button class="cta vipplus" id="buy-${item.key}" onclick="addToCart('${item.key}')" ${state.disabled ? 'disabled' : ''}>${state.disabled ? state.note : `Ajouter au panier`}<small id="buy-${item.key}-note">${state.note}</small></button>
+      <button class="cta vipplus ${state.purchased ? 'purchase-complete' : ''}" id="buy-${item.key}" onclick="addToCart('${item.key}')" ${state.disabled ? 'disabled' : ''}>${state.disabled ? state.note : `Ajouter au panier`}<small id="buy-${item.key}-note">${state.note}</small></button>
     </div>
   </article>`;
 }
@@ -2173,7 +2179,7 @@ function renderCustomBoosterCard(pack) {
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
-        <button class="cta ${item.theme}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+        <button class="cta ${item.theme} ${btnState.purchased ? 'purchase-complete' : ''}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           ${btnState.purchased ? 'Achat effectué' : `Ajouter au panier`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
@@ -2225,7 +2231,7 @@ function renderCard(pack) {
       <div class="card-actions">
         <button class="preview-btn" type="button" onclick="openPreview('${pack}')">Aperçu</button>
         ${item.type === 'host' ? '' : `<button class="gift-btn" type="button" onclick="openGiftModal('${pack}')" ${giftState.disabled ? 'disabled' : ''} title="${escapeHtml(giftState.note)}">🎁 Offrir</button>`}
-        <button class="cta ${item.theme}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
+        <button class="cta ${item.theme} ${btnState.purchased ? 'purchase-complete' : ''}" id="buy-${pack}" onclick="addToCart('${pack}')" ${btnState.disabled ? 'disabled' : ''}>
           ${btnState.purchased ? 'Achat effectué' : `Ajouter au panier`}
           <small id="buy-${pack}-note">${btnState.note}</small>
         </button>
@@ -2637,6 +2643,14 @@ async function submitExchange() {
 let shopCart = [];
 let toastTimer = null;
 
+function resetCartCompletionState() {
+  const checkout = document.getElementById('cart-checkout');
+  if (!checkout) return;
+  delete checkout.dataset.complete;
+  checkout.classList.remove('purchase-complete');
+  checkout.textContent = 'Confirmer la commande';
+}
+
 function showStoreToast(message) {
   const toast = document.getElementById('store-toast');
   if (!toast) return;
@@ -2687,6 +2701,7 @@ function addToCart(pack, recipient = null) {
   const state = getCartEligibility(pack, { gift: !!recipient });
   if (state.disabled) return;
   const snapshot = getCartSnapshot(pack, recipient);
+  resetCartCompletionState();
   const key = `${pack}:${snapshot.multiplier ?? ''}:${snapshot.durationDays ?? ''}:${snapshot.resetVariant ?? ''}:${snapshot.currency}:${snapshot.recipient?.id || 0}`;
   const existing = shopCart.find(entry => entry.key === key);
   if (existing) {
@@ -2710,6 +2725,7 @@ function addToCart(pack, recipient = null) {
 function changeCartQuantity(key, delta) {
   const entry = shopCart.find(item => item.key === key);
   if (!entry || !isBulkCartItem(entry.pack)) return;
+  resetCartCompletionState();
   entry.quantity = Math.max(1, Math.min(getCartQuantityMax(entry), Number(entry.quantity || 1) + Number(delta || 0)));
   const paymentState = document.getElementById('cart-payment-state');
   if (paymentState) delete paymentState.dataset.locked;
@@ -2717,6 +2733,7 @@ function changeCartQuantity(key, delta) {
 }
 
 function removeFromCart(key) {
+  resetCartCompletionState();
   shopCart = shopCart.filter(entry => entry.key !== key);
   const paymentState = document.getElementById('cart-payment-state');
   if (paymentState) delete paymentState.dataset.locked;
@@ -2794,8 +2811,16 @@ function renderCart() {
     if (promoState) { promoState.textContent = 'Aucun code promotionnel appliqué'; promoState.classList.remove('active'); }
     total.textContent = '0 coins';
     checkout.disabled = true;
+    if (checkout.dataset.complete === '1') {
+      checkout.classList.add('purchase-complete');
+      checkout.textContent = 'Commande validée ✓';
+    } else {
+      checkout.classList.remove('purchase-complete');
+      checkout.textContent = 'Confirmer la commande';
+    }
     return;
   }
+  resetCartCompletionState();
   box.innerHTML = shopCart.map(renderCartItem).join('');
   const totals = shopCart.reduce((acc, entry) => { acc[entry.currency] = (acc[entry.currency] || 0) + Number(entry.price || 0) * Math.max(1, Number(entry.quantity || 1)); return acc; }, {});
   const currencyName = currency => currency === 'gems' ? 'Gemmes' : currency === 'crystals' ? 'Cristaux' : 'Coins';
@@ -2835,7 +2860,12 @@ async function checkoutCart() {
     return;
   }
   if (paymentState) { paymentState.dataset.locked = '1'; paymentState.textContent = validation.message; paymentState.className = 'cart-payment-state ok'; }
-  if (checkout) { checkout.disabled = true; checkout.textContent = 'Commande en cours...'; }
+  if (checkout) {
+    delete checkout.dataset.complete;
+    checkout.classList.remove('purchase-complete');
+    checkout.disabled = true;
+    checkout.textContent = 'Commande en cours...';
+  }
   const pending = [...shopCart];
   let completed = 0;
   for (const entry of pending) {
@@ -2855,11 +2885,29 @@ async function checkoutCart() {
     completed += Math.max(1, Number(entry.quantity || 1));
     shopCart = shopCart.filter(item => item.key !== entry.key);
   }
+  const fullyCompleted = completed > 0 && shopCart.length === 0;
+  if (checkout && fullyCompleted) checkout.dataset.complete = '1';
   renderCart();
-  if (paymentState) delete paymentState.dataset.locked;
-  if (checkout) checkout.textContent = 'Confirmer la commande';
+  if (fullyCompleted) {
+    if (paymentState) {
+      paymentState.dataset.locked = '1';
+      paymentState.textContent = `✓ Commande validée · ${completed} achat${completed > 1 ? 's' : ''} effectué${completed > 1 ? 's' : ''}.`;
+      paymentState.className = 'cart-payment-state ok';
+    }
+    if (checkout) {
+      checkout.dataset.complete = '1';
+      checkout.classList.add('purchase-complete');
+      checkout.disabled = true;
+      checkout.textContent = 'Commande validée ✓';
+    }
+  } else {
+    if (paymentState) delete paymentState.dataset.locked;
+    if (checkout) {
+      checkout.classList.remove('purchase-complete');
+      checkout.textContent = 'Confirmer la commande';
+    }
+  }
   if (completed) showStoreToast(`${completed} achat(s) validé(s)`);
-  if (!shopCart.length) closeCart();
 }
 
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeCart(); });

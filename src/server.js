@@ -4775,6 +4775,7 @@ function buildCosmeticPackItems() {
     }
   };
   addPacks('decoration', getAvatarDecorationPaths(), 'Decos');
+  addPacks('nameplate', getSearchNameplatePaths(), 'Plaques');
   addPacks('font', PSEUDO_FONT_CATALOG, 'Polices');
   return packs;
 }
@@ -8630,6 +8631,10 @@ app.patch('/api/players/:id/search-nameplate', (req, res) => {
     return res.status(400).json({ error: 'Plaque nominative invalide.' });
   }
   if (nextNameplate === String(player?.search_nameplate || '')) return res.json({ ok: true });
+  if (nextNameplate && !playerOwnsCosmeticAsset(player, 'nameplate', nextNameplate)) {
+    const pack = getCosmeticPackForAsset('nameplate', nextNameplate);
+    return res.status(403).json({ error: `Achete ${pack?.label || 'le pack de plaques'} dans la boutique.` });
+  }
   const remaining = getSearchNameplateRemainingMs(player);
   if (remaining > 0) {
     return res.status(429).json({ error: `Plaque nominative disponible dans ${formatCooldownHours(remaining)}.` });

@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="p4-build" content="profile-official-discord-access-20260829-1" />
+  <meta name="p4-build" content="profile-shop-nameplates-20260829-2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Puissance 4 - Profil</title>
     <link rel="icon" type="image/png" href="/assets/site-logo-small.png" />
@@ -13562,8 +13562,10 @@
             `<div class="avatar-decoration-tier" style="--tier-color:${tier.color}"><span>${tier.icon}</span>${tier.label}</div>`,
           );
           for (const src of items) {
+            const unlocked = ownsProfileCosmetic("nameplate", src, player);
+            const pack = getProfileCosmeticPack("nameplate", src);
             cards.push(
-              `<button type="button" class="nameplate-option ${selected === src ? "active" : ""}" style="${rarityStyle(tier.key)}" onclick="selectSearchNameplate('${src}')" aria-label="Choisir cette plaque ${tier.label.toLowerCase()}"><img src="${src}" alt=""></button>`,
+              `<button type="button" class="nameplate-option ${selected === src ? "active" : ""} ${unlocked ? "" : "locked"}" style="${rarityStyle(tier.key)}" ${unlocked ? `onclick="selectSearchNameplate('${src}')"` : "disabled"} title="${unlocked ? tier.label : `🔒 ${pack?.label || "Pack boutique requis"}`}" aria-label="${unlocked ? `Choisir cette plaque ${tier.label.toLowerCase()}` : `Plaque verrouillée, ${pack?.label || "pack boutique requis"}`}"><img src="${src}" alt=""></button>`,
             );
           }
         }
