@@ -450,7 +450,7 @@
   function loadI18n() {
     if (window.P4I18n || document.querySelector('script[data-p4-i18n]')) return;
     const script = document.createElement('script');
-    script.src = '/i18n.js?v=17';
+    script.src = '/i18n.js?v=18';
     script.defer = true;
     script.dataset.p4I18n = '1';
     script.addEventListener('load', () => window.P4I18n?.apply(document.body));
@@ -460,6 +460,7 @@
   const MENU_ITEMS = [
     { href: '/', icon: '🏠', labelKey: 'menu.home.label', subKey: 'menu.home.sub' },
     { href: '/profil', icon: '👤', labelKey: 'menu.profile.label', subKey: 'menu.profile.sub' },
+    { href: '/games.html', icon: '🎮', labelKey: 'menu.games.label', subKey: 'menu.games.sub' },
     { href: '/progression', icon: '🎯', labelKey: 'menu.progression.label', subKey: 'menu.progression.sub' },
     { href: '/live', icon: '🔴', labelKey: 'menu.live.label', subKey: 'menu.live.sub' },
     { href: '/local', icon: '🎲', labelKey: 'menu.local.label', subKey: 'menu.local.sub' },
@@ -481,6 +482,8 @@
     'menu.home.sub': 'Lancer une partie',
     'menu.profile.label': 'Profil',
     'menu.profile.sub': 'Compte et style',
+    'menu.games.label': 'Toutes les parties',
+    'menu.games.sub': 'Historique global et replays',
     'menu.progression.label': 'Progression',
     'menu.progression.sub': 'Quêtes et thèmes',
     'menu.live.label': 'Live',

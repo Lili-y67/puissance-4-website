@@ -40,6 +40,8 @@
     'menu.home.sub': 'Lancer une partie',
     'menu.profile.label': 'Profil',
     'menu.profile.sub': 'Compte et style',
+    'menu.games.label': 'Toutes les parties',
+    'menu.games.sub': 'Historique global et replays',
     'menu.progression.label': 'Progression',
     'menu.progression.sub': 'Quêtes et thèmes',
     'menu.live.label': 'Live',

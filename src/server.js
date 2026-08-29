@@ -9817,6 +9817,41 @@ app.get('/api/players/:id', (req, res) => {
   res.json({ player: { ...p, rank: getRank(p.elo), avg_accuracy, analysed_count: accRow?.analysed_count || 0, games_total: allGamesTotal, clan, online }, games, games_total: allGamesTotal, following, followers });
 });
 
+app.get('/api/games', (req, res) => {
+  const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(50, Math.max(5, Number.parseInt(req.query.limit, 10) || 20));
+  const filters = ["g.status = 'finished'", 'COALESCE(g.archived, 0) = 0'];
+  const params = [];
+  const variant = String(req.query.variant || 'all');
+  const type = String(req.query.type || 'all');
+  const result = String(req.query.result || 'all');
+  const kind = String(req.query.kind || 'all');
+  const opponent = String(req.query.opponent || '').trim().slice(0, 30).replace(/[%_]/g, '');
+
+  if (variant !== 'all') { filters.push("COALESCE(g.variant, 'classic') = ?"); params.push(variant); }
+  if (type !== 'all') { filters.push("COALESCE(g.game_type, 'ranked') = ?"); params.push(type); }
+  if (opponent) { filters.push('(p1.pseudo LIKE ? COLLATE NOCASE OR p2.pseudo LIKE ? COLLATE NOCASE)'); params.push(`%${opponent}%`, `%${opponent}%`); }
+  if (kind === 'bot') filters.push('(COALESCE(p1.is_bot, 0) = 1 OR COALESCE(p2.is_bot, 0) = 1)');
+  if (kind === 'human') filters.push('(COALESCE(p1.is_bot, 0) = 0 AND COALESCE(p2.is_bot, 0) = 0)');
+  if (result === 'win' || result === 'loss') filters.push('g.winner_id IS NOT NULL');
+  if (result === 'draw') filters.push('g.winner_id IS NULL');
+
+  const from = `FROM games g
+    JOIN players p1 ON p1.id = g.player1_id
+    JOIN players p2 ON p2.id = g.player2_id
+    LEFT JOIN players w ON w.id = g.winner_id
+    WHERE ${filters.join(' AND ')}`;
+  const total = Number(db.prepare(`SELECT COUNT(*) AS count ${from}`).get(...params)?.count || 0);
+  const rows = db.prepare(`SELECT g.*,
+      p1.pseudo AS p1_pseudo, p1.avatar AS p1_avatar, p1.is_bot AS p1_is_bot,
+      p2.pseudo AS p2_pseudo, p2.avatar AS p2_avatar, p2.is_bot AS p2_is_bot,
+      w.pseudo AS winner_pseudo
+    ${from}
+    ORDER BY g.finished_at DESC, g.id DESC
+    LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+  res.json({ global: true, games: rows, page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) });
+});
+
 app.get('/api/players/:id/games', (req, res) => {
   const playerId = Number(req.params.id);
   const player = pQ.getById.get(playerId);

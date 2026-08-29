@@ -143,7 +143,7 @@ body.p4-wallpaper-mode::before {
   filter: none !important;
 }
 
-body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel):not(.p4-fps-meter):not(.p4-egg-spark):not(.p4-page-egg):not(.p4-egg-toast):not(.p4-egg-banner):not(.egg-burst):not(.egg-toast):not(.egg-win-card):not(.reaction-pop) {
+body.p4-wallpaper-mode > :not(#p4-global-menu-toggle):not(.profile-customization-toggle):not(.p4-global-menu-backdrop):not(#p4-global-menu-panel):not(.p4-fps-meter):not(.p4-egg-spark):not(.p4-page-egg):not(.p4-egg-toast):not(.p4-egg-banner):not(.egg-burst):not(.egg-toast):not(.egg-win-card):not(.reaction-pop) {
   position: relative;
 }
 

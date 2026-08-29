@@ -6406,15 +6406,35 @@
         text-transform: uppercase;
         vertical-align: middle;
       }
-      .btn-nav.beta-studio-launch {
-        border-color: rgba(255, 45, 85, 0.45);
-        background: linear-gradient(
-          135deg,
-          rgba(255, 45, 85, 0.82),
-          rgba(150, 58, 190, 0.82)
-        );
-        color: #fff;
-        box-shadow: 0 12px 30px rgba(255, 45, 85, 0.18);
+      .profile-customization-toggle {
+        position: fixed;
+        top: 18px;
+        left: 18px;
+        z-index: 99997;
+        display: none;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 16px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 16px;
+        background: radial-gradient(circle at 18% 20%,rgba(133,235,255,.17),transparent 42%),linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025)),rgba(10,10,22,.86);
+        color: #f4f4fb;
+        box-shadow: 0 18px 46px rgba(0,0,0,.34);
+        backdrop-filter: blur(14px);
+        cursor: pointer;
+        font: 900 13px "Barlow Condensed",sans-serif;
+        letter-spacing: 1.3px;
+        text-transform: uppercase;
+        transition: transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+      }
+      .profile-customization-toggle:hover { transform:translateY(-2px); border-color:rgba(133,235,255,.34); box-shadow:0 22px 56px rgba(133,235,255,.12),0 18px 46px rgba(0,0,0,.38); }
+      .profile-customization-toggle-icon { width:24px; height:24px; border-radius:9px; display:grid; place-items:center; background:rgba(133,235,255,.14); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+      body.profile-beta-page .p4-fps-meter { top:76px; }
+      @media (max-width:720px) {
+        .profile-customization-toggle { top:12px; left:12px; min-height:42px; padding:0 12px; }
+        .profile-customization-toggle-text { display:none; }
+        body.profile-beta-page .p4-fps-meter { top:64px; }
       }
       body.profile-beta-page .profile-section {
         scroll-margin-top: 18px;
@@ -6765,6 +6785,10 @@
         <main class="beta-studio-main" id="beta-studio-main"></main>
       </section>
     </dialog>
+    <button class="profile-customization-toggle" id="btn-beta-studio" type="button" data-open-beta-studio="studio-media" aria-controls="beta-profile-studio" aria-label="Ouvrir la personnalisation du profil">
+      <span class="profile-customization-toggle-icon">🎨</span>
+      <span class="profile-customization-toggle-text">Personnalisation</span>
+    </button>
     <div class="page">
       <nav class="nav">
         <a class="logo-sm" href="/"
@@ -6774,16 +6798,6 @@
         <div class="nav-btns">
           <a class="btn-nav" href="/">← Jouer</a>
           <a class="btn-nav" id="btn-legacy-profile" href="/ancien-profil" style="display:none">← Ancien profil</a>
-          <a
-            class="btn-nav beta-studio-launch"
-            id="btn-beta-studio"
-            data-open-beta-studio="studio-media"
-            href="#beta-profile-studio"
-            onclick="openBetaStudio()"
-            style="display: none"
-          >
-            ✦ Personnaliser mon profil
-          </a>
           <a class="btn-nav fortune-nav-btn" href="/roue-fortune"
             ><img src="/assets/fortune-ticket.png" alt="" /> Roue Fortune</a
           >
@@ -7033,7 +7047,7 @@
       </div>
     </dialog>
 
-    <script src="/i18n.js?v=16"></script>
+    <script src="/i18n.js?v=18"></script>
     <script>
       // ── Audio Profil ──────────────────────────────────────────────────────────────
       const PROFIL_SFX = (() => {
