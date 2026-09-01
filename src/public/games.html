@@ -31,7 +31,7 @@
         <select class="control" id="result"><option value="all">Tous les résultats</option><option value="win">Victoires</option><option value="loss">Défaites</option><option value="draw">Nulles</option></select>
         <select class="control" id="type"><option value="all">Tous les modes</option><option value="ranked">Classé</option><option value="friendly">Amical</option></select>
         <select class="control" id="kind"><option value="all">Humains et bots</option><option value="human">Humains</option><option value="bot">Bots</option></select>
-        <select class="control" id="variant"><option value="all">Toutes les variantes</option><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-P4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option></select>
+        <select class="control" id="variant"><option value="all">Toutes les variantes</option><option value="classic">Classique</option><option value="rotate">Plateau rotatif</option><option value="anti">Anti-P4</option><option value="bomb">Puissance Bombe</option><option value="mission">Mission personnelle</option><option value="simultaneous">Placement simultané</option><option value="fog">Brouillard de Guerre</option><option value="conquest">Conquête</option><option value="naval">Puissance 4 Navale</option><option value="tetris">p4-Tetris</option></select>
         <button class="reset" type="button" id="reset">Réinitialiser</button>
       </form>
       <div class="list" id="games-list"><div class="loading">Chargement des parties…</div></div>
@@ -40,7 +40,7 @@
   </main>
   <div class="game-preview" id="game-preview" role="tooltip" aria-hidden="true"></div>
   <script>
-    const labels={classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête',naval:'Naval'};
+    const labels={classic:'Classique',rotate:'Rotatif',anti:'Anti-P4',bomb:'Bombe',mission:'Mission',simultaneous:'Simultané',fog:'Brouillard',conquest:'Conquête',naval:'Naval',tetris:'p4-Tetris'};
     const state={playerId:null,page:1,pages:1,total:0,timer:null,playerTimer:null,suggestions:[],suggestionIndex:-1,previewId:null,previewTimer:null,previewCache:new Map()};
     const $=id=>document.getElementById(id); const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     function resolvePlayer(){const direct=Number(new URLSearchParams(location.search).get('player'));return direct||null}

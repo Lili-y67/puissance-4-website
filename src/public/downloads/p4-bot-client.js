@@ -487,6 +487,12 @@ async function evaluateRootMoves(board, moveOrder, me, depth, deadline) {
 
 async function chooseMove(game) {
   const board = game.board;
+  if (game.variant === 'tetris') {
+    const width = Math.max(1, ...((game.activePiece?.cells || [[0, 0]]).map(([, col]) => Number(col) + 1)));
+    const maxX = Math.max(0, Number(board?.[0]?.length || 8) - width);
+    const center = Math.round(maxX / 2);
+    return { col: center, x: center, rotation: 0, stats: { tactical: 'tetris-center-drop', elapsedMs: 0 } };
+  }
   if (game.variant === 'naval') {
     const legalCells = Array.isArray(game.legalCells) ? game.legalCells : [];
     if (!legalCells.length) return { row: null, col: null, stats: { tactical: 'naval-no-target', elapsedMs: 0 } };
@@ -639,11 +645,13 @@ async function runBotWorker(token, workerIndex) {
 
       const result = await api('/api/bot/move', {
         method: 'POST',
-        body: JSON.stringify({ col, ...(game.variant === 'naval' ? { row: choice.row } : {}) }),
+        body: JSON.stringify(game.variant === 'tetris'
+          ? { action: 'place', x: choice.x, rotation: choice.rotation }
+          : { col, ...(game.variant === 'naval' ? { row: choice.row } : {}) }),
       }, token);
       const s = choice.stats || {};
-      if (game.variant !== 'naval') renderEngineReport(game, col, s, boardAfterMove(game.board, col, Number(game.side)));
-      workerLog(`[${gameLabel(game)}] Played ${game.variant === 'naval' ? `r${choice.row + 1}c${col + 1}` : `c${col + 1}`}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
+      if (game.variant !== 'naval' && game.variant !== 'tetris') renderEngineReport(game, col, s, boardAfterMove(game.board, col, Number(game.side)));
+      workerLog(`[${gameLabel(game)}] Played ${game.variant === 'naval' ? `r${choice.row + 1}c${col + 1}` : game.variant === 'tetris' ? `piece x${choice.x}` : `c${col + 1}`}${result.result?.type === 'game_over' ? ' - game over' : ''}`);
       if (result.result?.type === 'game_over') {
         const winner = result.result?.winner ? `side ${result.result.winner}` : 'draw';
         workerLog(`Game ${game.gameId} ended: ${winner}. Clearing local search memory and seeking next game.`);

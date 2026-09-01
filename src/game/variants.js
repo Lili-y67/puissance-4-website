@@ -8,6 +8,7 @@ const VARIANTS = Object.freeze({
   fog: Object.freeze({ id: 'fog', label: 'Brouillard de Guerre', rows: 6, cols: 7, ranked: true, revealMs: 1250 }),
   conquest: Object.freeze({ id: 'conquest', label: 'Conquête', rows: 6, cols: 7, ranked: true, pointsToResolve: 4 }),
   naval: Object.freeze({ id: 'naval', label: 'Puissance 4 Navale', rows: 6, cols: 7, ranked: true, botSupported: true }),
+  tetris: Object.freeze({ id: 'tetris', label: 'p4-Tetris', rows: 12, cols: 8, ranked: true, botSupported: true, matchDurationMs: 180000, fallEveryMs: 650 }),
 });
 
 const MISSION_DEFINITIONS = Object.freeze([

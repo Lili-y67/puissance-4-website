@@ -897,6 +897,7 @@ gm._onAfkEnd = (result) => {
   emitGameOver(result);
   console.log(`[AFK] Partie ${result.gameId} terminée : winner side ${result.winner}`);
 };
+gm._onTetrisEvent = result => emitTetrisResult(result);
 gm._onGameFinished = ({ gameId, player1Id, player2Id, winnerId, isDraw, reason, payload }) => {
   try {
     applyTournamentResult(gameId, player1Id, player2Id, winnerId, isDraw);
@@ -1616,13 +1617,20 @@ function serializeBotGameState(state, playerId) {
     current: state.current,
     isMyTurn: side === state.current,
     board: state.board.grid,
-    legalMoves: state.variant === 'naval' ? [] : (forcedCols.length ? forcedCols : state.board.getValidCols()),
+    legalMoves: state.variant === 'naval' || state.variant === 'tetris' ? [] : (forcedCols.length ? forcedCols : state.board.getValidCols()),
     legalCells: navalLegalCells,
     forcedCols,
     antiScores: state.variant === 'anti' ? state.antiScores : null,
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
+    grid: state.board.grid,
+    activePiece: state.variant === 'tetris' ? gm._publicTetrisPiece(state.tetrisPiece) : null,
+    legalActions: state.variant === 'tetris' ? ['left', 'right', 'rotate', 'down', 'drop', 'place'] : null,
+    tetrisScores: state.variant === 'tetris' ? state.tetrisScores : null,
+    tetrisStartsAt: state.variant === 'tetris' ? state.tetrisStartsAt : null,
+    tetrisEndsAt: state.variant === 'tetris' ? state.tetrisEndsAt : null,
+    tetrisResets: state.variant === 'tetris' ? state.tetrisResets : null,
     moveCount: state.moveCount,
-    moveTimeSeconds: state.moveTimeSeconds || 60,
+    moveTimeSeconds: state.variant === 'tetris' ? 0 : (state.moveTimeSeconds || 60),
     players: {
       1: { id: state.players[1].id, pseudo: state.players[1].pseudo, elo: state.players[1].elo, bot: !!state.players[1].is_bot },
       2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, bot: !!state.players[2].is_bot },
@@ -2006,6 +2014,47 @@ function chooseVariantBotActionAsync(state, side) {
   });
 }
 
+function chooseTetrisBotActionAsync(state, side) {
+  const gameId = Number(state?.id || 0);
+  if (!gameId || botSearchWorkers.has(gameId) || !state?.tetrisPiece) return Promise.resolve(null);
+  const worker = new Worker(path.join(__dirname, 'game', 'tetris-bot-worker.js'), {
+    workerData: {
+      board: state.board.grid,
+      piece: state.tetrisPiece,
+      side,
+      skill: Number(state.players?.[side]?.bot_skill || Math.round((Number(state.players?.[side]?.elo || 1000) - 400) / 150) || 6),
+      budgetMs: Math.min(1400, BOT_SEARCH_TIME_MS),
+    },
+  });
+  botSearchWorkers.set(gameId, worker);
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = action => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      if (botSearchWorkers.get(gameId) === worker) botSearchWorkers.delete(gameId);
+      worker.terminate().catch(() => {});
+      resolve(action || null);
+    };
+    const timeout = setTimeout(() => finish(null), 1800);
+    worker.once('message', message => finish(message?.ok ? message.action : null));
+    worker.once('error', error => {
+      console.error('[TETRIS BOT WORKER]', error.message);
+      finish(null);
+    });
+  });
+}
+
+function emitTetrisResult(result) {
+  if (!result || result.error) return result;
+  if (result.type === 'game_over') return emitGameOver(result);
+  io.to('game:' + result.gameId).emit('tetris_state', result);
+  emitLiveUpdate();
+  if (result.locked) scheduleBuiltinBotTurn(result.gameId, 260);
+  return result;
+}
+
 function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
   setTimeout(async () => {
     try {
@@ -2015,6 +2064,16 @@ function scheduleBuiltinBotTurn(gameId, delayMs = 350) {
       if (state.variant === 'simultaneous' && state.simultaneousChoices?.[side] !== null) side = side === 1 ? 2 : 1;
       const player = state.players[side];
       if (!state.tutorial && !builtinBotIds.has(Number(player?.id))) return;
+      if (state.variant === 'tetris') {
+        const action = await chooseTetrisBotActionAsync(state, side);
+        const freshState = gm.games.get(gameId);
+        if (!freshState || freshState !== state || state.status !== 'active' || state.current !== side) return;
+        const result = action
+          ? gm.tetrisAction(player.socketId, 'place', action)
+          : gm.tetrisAction(player.socketId, 'drop');
+        emitTetrisResult(result);
+        return;
+      }
       const navalCell = state.variant === 'naval' ? chooseNavalBotCell(state) : null;
       const tutorialBomb = chooseTutorialBombAction(state, side);
       const action = tutorialBomb || (['classic', 'naval'].includes(state.variant) ? null : await chooseVariantBotActionAsync(state, side));
@@ -2087,7 +2146,7 @@ function createBotVsBotGame(botA, botB, gameType = 'ranked', variant = 'classic'
   prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
-  scheduleBuiltinBotTurn(state.id, tutorial ? 3800 : 250);
+  scheduleBuiltinBotTurn(state.id, tutorial || state.variant === 'tetris' ? 3800 : 250);
   return state;
 }
 
@@ -2107,7 +2166,7 @@ function createChallengeVsBotGame(challenger, targetBot, gameType = 'ranked', va
   prepareBuiltinBotVariant(state);
   emitLiveUpdate();
   broadcastPresenceCounts(true);
-  if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, 250);
+  if (builtinBotIds.has(Number(p1.id)) || builtinBotIds.has(Number(p2.id))) scheduleBuiltinBotTurn(state.id, state.variant === 'tetris' ? 3500 : 250);
   return state;
 }
 
@@ -2147,7 +2206,7 @@ function startPracticeVsBot(socket, options = {}) {
     gameType: 'friendly',
     variant: practiceVariant,
     persist: false,
-    moveTimeSeconds: 180,
+    moveTimeSeconds: state.variant === 'tetris' ? 0 : 180,
     current: Math.random() < 0.5 ? 1 : 2,
   });
   state.gameType = 'bot';
@@ -2163,6 +2222,11 @@ function startPracticeVsBot(socket, options = {}) {
     selectedMissionId: null,
     missionReady: state.variant !== 'mission',
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
+    activePiece: state.variant === 'tetris' ? gm._publicTetrisPiece(state.tetrisPiece) : null,
+    tetrisScores: state.variant === 'tetris' ? state.tetrisScores : null,
+    tetrisStartsAt: state.variant === 'tetris' ? state.tetrisStartsAt : null,
+    tetrisEndsAt: state.variant === 'tetris' ? state.tetrisEndsAt : null,
+    tetrisResets: state.variant === 'tetris' ? state.tetrisResets : null,
     gameType: 'bot',
     moveTimeSeconds: 180,
     current: state.current,
@@ -7639,11 +7703,24 @@ app.get('/api/live', (req, res) => {
           2: { id: state.players[2].id, pseudo: state.players[2].pseudo, elo: state.players[2].elo, color: c2, avatar: state.players[2].avatar || '', shape: state.players[2].shape || 'circle', token_emoji_image: state.players[2].token_emoji_image || '', token_rgb: Number(state.players[2].pseudo_rgb || 0) === 1, avatar_decoration: state.players[2].avatar_decoration || '', search_nameplate: state.players[2].search_nameplate || '', profile_banner: state.players[2].profile_banner || '', color_secondary: state.players[2].color_secondary || '', is_bot: Number(state.players[2].is_bot || 0) },
         };
       })(),
-      grid:    state.board.grid,
+      grid: state.variant === 'tetris' ? (() => {
+        const snapshot = state.board.grid.map(row => [...row]);
+        const piece = gm._publicTetrisPiece(state.tetrisPiece);
+        for (const [row, col] of piece?.cells || []) {
+          const targetRow = Number(piece.y || 0) + Number(row);
+          const targetCol = Number(piece.x || 0) + Number(col);
+          if (snapshot[targetRow]?.[targetCol] === 0) snapshot[targetRow][targetCol] = Number(piece.player || state.current);
+        }
+        return snapshot;
+      })() : state.board.grid,
       variant: state.variant || 'classic',
       variantConfig: state.variantConfig || getVariant(state.variant),
       antiScores: state.antiScores || null,
       conquestScores: state.conquestScores || null,
+      activePiece: state.variant === 'tetris' ? gm._publicTetrisPiece(state.tetrisPiece) : null,
+      tetrisScores: state.variant === 'tetris' ? state.tetrisScores : null,
+      tetrisEndsAt: state.variant === 'tetris' ? state.tetrisEndsAt : null,
+      tetrisResets: state.variant === 'tetris' ? state.tetrisResets : null,
       bombs: state.bombs || null,
       current: state.current,
       moves:   state.moveCount,
@@ -8214,9 +8291,16 @@ app.post('/api/bot/move', (req, res) => {
   if (!state) return res.status(404).json({ error: 'Aucune partie active.' });
   const side = Number(state.players[1].id) === Number(bot.id) ? 1 : 2;
   if (state.current !== side) return res.status(409).json({ error: 'Pas ton tour.', game: serializeBotGameState(state, bot.id) });
-  const result = gm.playMove(state.players[side].socketId, Number(req.body?.col), req.body?.row);
+  const result = state.variant === 'tetris'
+    ? gm.tetrisAction(state.players[side].socketId, req.body?.action || 'place', {
+        col: req.body?.col,
+        x: req.body?.x,
+        rotation: req.body?.rotation,
+      })
+    : gm.playMove(state.players[side].socketId, Number(req.body?.col), req.body?.row);
   if (result?.error) return res.status(400).json({ error: result.error, game: serializeBotGameState(state, bot.id) });
-  scheduleBuiltinBotTurn(state.id);
+  if (state.variant === 'tetris') emitTetrisResult(result);
+  else scheduleBuiltinBotTurn(state.id);
   res.json({ ok: true, result, game: serializeBotGameState(gm.games.get(state.id), bot.id) });
 });
 
@@ -11549,6 +11633,12 @@ io.on('connection', socket => {
     if (result.type !== 'game_over') emitLiveUpdate();
   });
 
+  socket.on('game_tetris_action', ({ action, col } = {}) => {
+    const result = gm.tetrisAction(socket.id, action, { col });
+    if (result?.error) return socket.emit('game_action_error', { message: result.error });
+    emitTetrisResult(result);
+  });
+
   socket.on('game_use_bomb', ({ row, col } = {}) => {
     const result = gm.useBomb(socket.id, row, col);
     if (result.error) return socket.emit('game_action_error', { message: result.error });
@@ -11722,6 +11812,7 @@ io.on('connection', socket => {
       const variantConfig = getVariant(variant);
       const board = new Board(variantConfig);
       let navalSecretGrid = null, navalWinningLine = [], navalRevealed = new Set();
+      let tetrisScores = { 1: 0, 2: 0 }, tetrisResets = 0, tetrisPiece = null, tetrisEndsAt = Date.now() + Number(variantConfig.matchDurationMs || 180000);
       if (variant === 'naval') {
         const naval = createNavalGridForGame(gameId);
         navalSecretGrid = naval.grid;
@@ -11734,6 +11825,16 @@ io.on('connection', socket => {
             navalRevealed.add(`${row}:${col}`);
           }
         });
+      } else if (variant === 'tetris') {
+        const latest = aQ.getByGame.all(gameId)
+          .filter(action => action.action_type === 'tetris_lock')
+          .map(action => { try { return JSON.parse(action.payload || '{}'); } catch (_) { return {}; } })
+          .at(-1);
+        if (Array.isArray(latest?.board)) board.grid = latest.board.map(row => row.map(Number));
+        tetrisScores = { 1: Number(latest?.scores?.[1] || 0), 2: Number(latest?.scores?.[2] || 0) };
+        tetrisResets = Number(latest?.resets || 0);
+        tetrisPiece = latest?.nextPiece || null;
+        tetrisEndsAt = Math.max(Date.now() + 1000, Number(latest?.endsAt || tetrisEndsAt));
       } else moves.forEach(m => board.drop(m.col, gameRow.player1_id === m.player_id ? 1 : 2));
       const firstMoveSide = moves[0]
         ? (Number(gameRow.player1_id) === Number(moves[0].player_id) ? 1 : 2)
@@ -11770,7 +11871,11 @@ io.on('connection', socket => {
         missions: { 1: null, 2: null }, simultaneousChoices: { 1: null, 2: null }, initiative: nextSide,
         conquestScores: { 1: 0, 2: 0 }, conquestRound: 1,
         navalSecretGrid, navalWinningLine, navalRevealed,
+        tetrisScores, tetrisResets, tetrisPiece,
+        tetrisStartsAt: Date.now(), tetrisEndsAt,
+        tetrisNextFallAt: Date.now() + Number(variantConfig.fallEveryMs || 650),
       };
+      if (variant === 'tetris' && !state.tetrisPiece) gm._spawnTetrisPiece(state);
       gm.games.set(gameId, state);
     }
 
@@ -11816,6 +11921,11 @@ io.on('connection', socket => {
         conquestScores: state.conquestScores,
         bombs: state.bombs,
         revealedCount: state.variant === 'naval' ? state.navalRevealed?.size || 0 : null,
+        activePiece: state.variant === 'tetris' ? gm._publicTetrisPiece(state.tetrisPiece) : null,
+        tetrisScores: state.variant === 'tetris' ? state.tetrisScores : null,
+        tetrisStartsAt: state.variant === 'tetris' ? state.tetrisStartsAt : null,
+        tetrisEndsAt: state.variant === 'tetris' ? state.tetrisEndsAt : null,
+        tetrisResets: state.variant === 'tetris' ? state.tetrisResets : null,
       });
 
       // Notifier l'adversaire
@@ -12023,8 +12133,15 @@ function _startMatch(p1, p2, options = {}) {
     variantConfig: state.variantConfig,
     missions: state.variant === 'mission' ? MISSION_DEFINITIONS : [],
     conquestScores: state.variant === 'conquest' ? state.conquestScores : null,
+    current: state.current,
+    grid: state.board.grid,
+    activePiece: state.variant === 'tetris' ? gm._publicTetrisPiece(state.tetrisPiece) : null,
+    tetrisScores: state.variant === 'tetris' ? state.tetrisScores : null,
+    tetrisStartsAt: state.variant === 'tetris' ? state.tetrisStartsAt : null,
+    tetrisEndsAt: state.variant === 'tetris' ? state.tetrisEndsAt : null,
+    tetrisResets: state.variant === 'tetris' ? state.tetrisResets : null,
     gameType: String(state.gameType || options.gameType || 'ranked'),
-    moveTimeSeconds: Number(state.moveTimeSeconds || 0) || 60,
+    moveTimeSeconds: state.variant === 'tetris' ? 0 : (Number(state.moveTimeSeconds || 0) || 60),
     tournament: options.tournamentId ? {
       id: Number(options.tournamentId),
       name: options.tournamentName || 'Tournoi',

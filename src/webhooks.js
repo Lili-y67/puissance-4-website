@@ -368,7 +368,7 @@ module.exports = {
     // joueur prend alors la teinte disponible la plus proche pour garder la grille lisible.
     const p2Emoji = tokenEmojiFromColor(p2?.color, EMOJI.yellow, p1Emoji);
     const boardView = boardGrid(board, p1Emoji, p2Emoji, winCells);
-    const variantLabels = { classic: 'Classique', rotate: 'Plateau rotatif', anti: 'Anti-P4', bomb: 'Puissance Bombe', mission: 'Mission personnelle', simultaneous: 'Placement simultané', fog: 'Brouillard de Guerre', conquest: 'Conquête' };
+    const variantLabels = { classic: 'Classique', rotate: 'Plateau rotatif', anti: 'Anti-P4', bomb: 'Puissance Bombe', mission: 'Mission personnelle', simultaneous: 'Placement simultané', fog: 'Brouillard de Guerre', conquest: 'Conquête', naval: 'Puissance 4 Navale', tetris: 'p4-Tetris' };
     const variantLabel = variantLabels[String(variant || 'classic')] || clean(variant, 'Classique');
     const fields = [
       ['Duel', `${p1Emoji} **${clean(p1?.pseudo)}** \`${p1?.elo || 0} ELO\` (${d1})\n${p2Emoji} **${clean(p2?.pseudo)}** \`${p2?.elo || 0} ELO\` (${d2})`, false],

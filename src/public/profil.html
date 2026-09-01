@@ -7305,6 +7305,7 @@
         { id: "fog", label: "Brouillard de Guerre" },
         { id: "conquest", label: "Conquête" },
         { id: "naval", label: "Puissance 4 Navale" },
+        { id: "tetris", label: "p4-Tetris" },
       ];
 
       function buildProfileMarqueeItems(player = currentPlayer) {
@@ -9480,7 +9481,7 @@
         ${[
           ["classic", "Classique"], ["rotate", "Plateau rotatif"], ["anti", "Anti-Puissance 4"],
           ["bomb", "Puissance Bombe"], ["mission", "Mission personnelle"], ["simultaneous", "Placement simultané"],
-          ["fog", "Brouillard de Guerre"], ["conquest", "Conquête"], ["naval", "Puissance 4 Navale"],
+          ["fog", "Brouillard de Guerre"], ["conquest", "Conquête"], ["naval", "Puissance 4 Navale"], ["tetris", "p4-Tetris"],
         ].map(([id, label]) => `<article class="elo-variant-card" data-elo-variant="${id}">
           <div class="elo-variant-card-head"><div class="elo-variant-identity"><img class="elo-variant-rank" id="elo-variant-rank-${id}" src="/ranks/Quartz_1.png" alt=""><div><div class="elo-variant-name">${label}</div><div class="elo-variant-rank-label" id="elo-variant-label-${id}">Chargement…</div></div></div><div class="elo-variant-value" id="elo-variant-value-${id}">—<small>ELO</small></div></div>
           <div class="elo-variant-canvas-wrap"><canvas class="elo-variant-canvas" id="elo-variant-canvas-${id}" data-variant="${id}"></canvas><div class="elo-variant-tooltip" id="elo-variant-tooltip-${id}"></div></div>
@@ -11728,6 +11729,7 @@
           fog: "Brouillard de Guerre",
           conquest: "Conquête",
           naval: "Puissance 4 Navale",
+          tetris: "p4-Tetris",
         };
         const variantLabel = variantLabels[variant] || "Classique";
         const variantBadge = `<div title="Variante jouée" style="font-size:10px;letter-spacing:1px;background:rgba(133,235,255,.09);border:1px solid rgba(133,235,255,.24);color:#85EBFF;padding:2px 7px;border-radius:5px;white-space:nowrap;">${variantLabel}</div>`;
@@ -11747,6 +11749,8 @@
           simultaneous_win: "par placement simultané",
           conquest_win: "par 3 conquêtes",
           conquest_draw: "sur un score de conquête 2–2",
+          tetris_score: "au score après 3 minutes",
+          tetris_draw: "à égalité après 3 minutes",
           position_draw: "par double alignement",
           draw: "grille pleine",
         };

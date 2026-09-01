@@ -139,6 +139,7 @@ img,canvas,svg{max-width:100%}
 .token-drop{animation:token-drop .34s cubic-bezier(.2,.9,.25,1.18) both}
 @keyframes token-drop{from{opacity:.25;transform:translate3d(0,-34%,0) scale(.88)}70%{opacity:1;transform:translate3d(0,5%,0) scale(1.04)}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 .live-token.s-emoji,.mini-token.s-emoji{border-radius:0!important;overflow:visible!important;background:transparent!important;box-shadow:none!important;clip-path:none!important}
+[data-variant="tetris"] .live-token,[data-variant="tetris"] .mini-token{border-radius:50%!important;clip-path:circle(50%)!important;overflow:hidden!important}
 .live-token.s-emoji canvas,.mini-token.s-emoji canvas{display:block;width:100%;height:100%}
 .live-token.s-emoji img,.mini-token.s-emoji img{width:100%;height:100%;object-fit:cover;border-radius:18%;display:block}
 .spec-meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:16px}
@@ -494,7 +495,7 @@ let lastLiveGames = [];
 const LIVE_VARIANTS = [
   ['all','Toutes les variantes'],['classic','Classique'],['rotate','Plateau rotatif'],
   ['anti','Anti-Puissance 4'],['bomb','Puissance Bombe'],['mission','Mission personnelle'],
-  ['simultaneous','Placement simultané'],['fog','Brouillard de Guerre'],['conquest','Conquête'],['naval','Puissance 4 Navale'],
+  ['simultaneous','Placement simultané'],['fog','Brouillard de Guerre'],['conquest','Conquête'],['naval','Puissance 4 Navale'],['tetris','p4-Tetris'],
 ];
 const liveFilter = document.getElementById('live-variant-filter');
 liveFilter.innerHTML = LIVE_VARIANTS.map(([id,label]) => `<option value="${id}">${label}</option>`).join('');

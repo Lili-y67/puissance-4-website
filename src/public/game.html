@@ -655,6 +655,7 @@ body {
 .cell.fog-hidden .token{opacity:0;filter:blur(8px);transform:scale(.72)!important}
 .cell.fog-revealed .token{animation:fog-vanish 1.25s ease-in-out forwards!important}
 .col-buttons.naval-controls-hidden{display:none!important}.board.naval-active .cell{border-radius:50%}.board.naval-active .cell.naval-hidden{background:radial-gradient(circle at 34% 27%,#292932 0 8%,#09090d 52%,#010103 76%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),inset 0 8px 18px #000,0 4px 12px rgba(0,0,0,.5)}.board.naval-active .cell.naval-hidden::before{content:"?";inset:0;display:grid;place-items:center;border-radius:50%;background:none;color:rgba(255,255,255,.2);font:900 clamp(14px,2.5vw,26px) "Barlow Condensed",sans-serif;animation:none}.board.naval-active .cell:not(.naval-hidden){border-radius:50%}
+.board.tetris-active{width:min(100%,480px);border-radius:24px;padding:10px;gap:clamp(3px,.8vw,6px)}.board.tetris-active .cell,.board.tetris-active .token{border-radius:50%!important;clip-path:none!important}.board.tetris-active .cell.tetris-piece{z-index:4;box-shadow:inset 0 0 0 2px rgba(255,255,255,.28),0 0 18px rgba(133,235,255,.18)}.board.tetris-active .cell.tetris-piece.tetris-live-fall>.token{animation:tetris-live-fall .22s cubic-bezier(.18,.76,.28,1.08)!important}.board.tetris-active .cell.tetris-ghost::after{opacity:1;inset:15%;border:2px dashed rgba(255,255,255,.32);background:transparent;box-shadow:none}.board.tetris-active .cell.tetris-board-fall>.token{animation:tetris-board-fall calc(.42s + var(--tetris-fall-rows,1)*.08s) cubic-bezier(.18,.72,.24,1.08) both!important}.tetris-scoreboard{display:flex;align-items:center;gap:10px;padding:5px 10px;border-radius:999px;border:1px solid rgba(133,235,255,.18);background:rgba(133,235,255,.06)}.tetris-scoreboard strong{color:#fff;font-size:15px}.tetris-clock{min-width:48px;color:#85ebff;font-size:16px;text-align:center}.tetris-clock.danger{color:#ff4f6d}.tetris-command{min-width:42px!important;padding:8px 11px!important}@keyframes tetris-live-fall{from{transform:translateY(-112%)}82%{transform:translateY(4%)}to{transform:translateY(0)}}@keyframes tetris-board-fall{from{transform:translateY(calc(var(--tetris-fall-rows,1)*-112%))}82%{transform:translateY(3%)}to{transform:translateY(0)}}
 @keyframes fog-drift{from{transform:translate(-8%,-3%) scale(1)}to{transform:translate(9%,5%) scale(1.12)}}
 @keyframes fog-vanish{0%,58%{opacity:1;filter:blur(0);transform:scale(1)}100%{opacity:0;filter:blur(8px);transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){.board.fog-active::before{animation:none}}
@@ -1466,8 +1467,13 @@ let fogRevealTimer = null;
 let tutorialViewerMode = false;
 let tutorialViewerGameId = 0;
 let tutorialIntroTimer = null;
+let tetrisPiece = null;
+let tetrisScores = { 1: 0, 2: 0 };
+let tetrisEndsAt = 0;
+let tetrisResets = 0;
+let tetrisClockTimer = null;
 
-const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
+const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale', tetris:'p4-Tetris' };
 
 function configureVariant(data = {}) {
   currentVariant = data.variant || 'classic';
@@ -1488,7 +1494,12 @@ function configureVariant(data = {}) {
   if (badge) badge.textContent = VARIANT_LABELS[currentVariant] || 'Classique';
   board?.classList.toggle('fog-active', currentVariant === 'fog');
   board?.classList.toggle('naval-active', currentVariant === 'naval');
+  board?.classList.toggle('tetris-active', currentVariant === 'tetris');
   cols?.classList.toggle('naval-controls-hidden', currentVariant === 'naval');
+  tetrisPiece = currentVariant === 'tetris' ? data.activePiece || null : null;
+  tetrisScores = currentVariant === 'tetris' ? { 1: Number(data.tetrisScores?.[1] || 0), 2: Number(data.tetrisScores?.[2] || 0) } : { 1: 0, 2: 0 };
+  tetrisEndsAt = currentVariant === 'tetris' ? Number(data.tetrisEndsAt || 0) : 0;
+  tetrisResets = currentVariant === 'tetris' ? Number(data.tetrisResets || 0) : 0;
   ensureVariantControls(data);
 }
 
@@ -1504,8 +1515,11 @@ function ensureVariantControls(data = {}) {
   if (currentVariant === 'fog') controls.innerHTML = '<span>Le dernier pion disparaît dans la brume après 1,25 s</span>';
   if (currentVariant === 'conquest') controls.innerHTML = `<span id="conquest-score">Conquêtes : ${data.conquestScores?.[1] || 0} — ${data.conquestScores?.[2] || 0}</span>`;
   if (currentVariant === 'naval') controls.innerHTML = `<span id="naval-state">${Number(data.revealedCount ?? (Array.isArray(data.grid) ? data.grid.flat().filter(Boolean).length : 0))} / 42 cases révélées · trouve l’unique ligne</span>`;
+  if (currentVariant === 'tetris') controls.innerHTML = `<span class="tetris-scoreboard"><strong id="tetris-score">${tetrisScores[1]} — ${tetrisScores[2]}</strong><span class="tetris-clock" id="tetris-clock">3:00</span></span><button type="button" class="btn-action ghost tetris-command" data-tetris-action="left" aria-label="Déplacer à gauche">←</button><button type="button" class="btn-action ghost tetris-command" data-tetris-action="rotate" aria-label="Tourner">↻</button><button type="button" class="btn-action ghost tetris-command" data-tetris-action="right" aria-label="Déplacer à droite">→</button><button type="button" class="btn-action ghost tetris-command" data-tetris-action="down" aria-label="Accélérer">↓</button><button type="button" class="btn-action ghost tetris-command" data-tetris-action="drop" aria-label="Poser immédiatement">⤓</button>`;
   document.querySelector('.board-wrap')?.prepend(controls);
   document.getElementById('bomb-button')?.addEventListener('click', () => { bombTargeting = !bombTargeting; setStatus(bombTargeting ? 'Clique le jeton central de la bombe' : ''); });
+  controls.querySelectorAll('[data-tetris-action]').forEach(button => button.addEventListener('click', () => sendTetrisAction(button.dataset.tetrisAction)));
+  if (currentVariant === 'tetris') startTetrisClock();
   if (currentVariant === 'mission' && Array.isArray(data.missions) && data.missions.length) {
     const alreadySelected = data.missions.find(m => m.id === data.selectedMissionId);
     if (alreadySelected) {
@@ -2116,6 +2130,7 @@ function setupTutorialSocket(id) {
   socket = io({ transports: ['websocket', 'polling'] });
   socket.on('connect', () => socket.emit('join_tutorial_game', { gameId: id }));
   socket.on('move_played', onMovePlayed);
+  socket.on('tetris_state', onTetrisState);
   socket.on('bomb_used', async data => {
     await animateBombUse(data);
     currentTurn = data.next;
@@ -2339,6 +2354,11 @@ function connectSocket(pendingMatch, botPractice = null) {
 
     // Reconstruire le plateau depuis la grille reçue
     restoreBoard(data.grid);
+    if (currentVariant === 'tetris') {
+      renderTetrisOverlay();
+      updateTetrisControls();
+      startTetrisClock();
+    }
 
     // Fermer le banner de déconnexion + stopper le chrono s'il tourne
     const banner = document.getElementById('disconnect-banner');
@@ -2378,6 +2398,7 @@ function connectSocket(pendingMatch, botPractice = null) {
   });
 
   socket.on('move_played', onMovePlayed);
+  socket.on('tetris_state', onTetrisState);
   socket.on('simultaneous_waiting', () => {
     simultaneousWaiting = true;
     const state = document.getElementById('simultaneous-state');
@@ -2647,6 +2668,7 @@ function startGame(data) {
   gameOver    = false;
   currentGrid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   renderBoard();
+  if (currentVariant === 'tetris') renderTetrisOverlay();
   // Locker la board 400ms pour éviter les clics parasites au démarrage
   const boardEl = document.getElementById('board');
   boardEl.classList.add('locked');
@@ -2717,7 +2739,7 @@ function restoreBoard(grid) {
       if (next && (previous !== next || !cell.classList.contains('p' + next))) {
         applyToken(r, c, next, false);
       } else if (!next && (previous || cell.classList.contains('p1') || cell.classList.contains('p2'))) {
-        cell.classList.remove('p1', 'p2', 'drop', 'settled', 'winning');
+        cell.classList.remove('p1', 'p2', 'drop', 'settled', 'winning', 'tetris-piece', 'tetris-ghost', 'tetris-live-fall', 'tetris-board-fall');
         const token = cell.querySelector('.token');
         if (token) {
           token.removeAttribute('style');
@@ -2729,6 +2751,98 @@ function restoreBoard(grid) {
   }
   currentGrid = nextGrid;
   if (currentVariant === 'fog') applyFogVisibility();
+}
+
+function tetrisAbsoluteCells(piece = tetrisPiece, y = piece?.y, x = piece?.x) {
+  if (!piece || !Array.isArray(piece.cells)) return [];
+  return piece.cells.map(([row, col]) => [Number(y) + Number(row), Number(x) + Number(col)]);
+}
+
+function tetrisPositionValid(piece, y, x) {
+  return tetrisAbsoluteCells(piece, y, x).every(([row, col]) => row >= 0 && row < ROWS && col >= 0 && col < COLS && !currentGrid[row]?.[col]);
+}
+
+function renderTetrisOverlay(action = '') {
+  if (currentVariant !== 'tetris' || !tetrisPiece) return;
+  document.querySelectorAll('.tetris-piece,.tetris-ghost,.tetris-live-fall').forEach(cell => {
+    cell.classList.remove('tetris-piece', 'tetris-ghost', 'tetris-live-fall');
+  });
+  let ghostY = Number(tetrisPiece.y || 0);
+  while (tetrisPositionValid(tetrisPiece, ghostY + 1, Number(tetrisPiece.x || 0))) ghostY++;
+  const activeKeys = new Set(tetrisAbsoluteCells().map(cell => cell.join(':')));
+  for (const [row, col] of tetrisAbsoluteCells(tetrisPiece, ghostY, Number(tetrisPiece.x || 0))) {
+    if (activeKeys.has(`${row}:${col}`)) continue;
+    getBoardCell(row, col)?.classList.add('tetris-ghost');
+  }
+  for (const [row, col] of tetrisAbsoluteCells()) {
+    applyToken(row, col, Number(tetrisPiece.player || currentTurn), false);
+    const cell = getBoardCell(row, col);
+    cell?.classList.add('tetris-piece');
+    if (action === 'fall') cell?.classList.add('tetris-live-fall');
+  }
+}
+
+function updateTetrisControls() {
+  if (currentVariant !== 'tetris') return;
+  const active = !gameOver && currentTurn === mySide;
+  document.querySelectorAll('[data-tetris-action]').forEach(button => { button.disabled = !active; });
+  const score = document.getElementById('tetris-score');
+  if (score) score.textContent = `${tetrisScores[1]} — ${tetrisScores[2]}`;
+}
+
+function startTetrisClock() {
+  if (tetrisClockTimer) clearInterval(tetrisClockTimer);
+  const update = () => {
+    const clock = document.getElementById('tetris-clock');
+    if (!clock || currentVariant !== 'tetris') return;
+    const remaining = Math.max(0, Number(tetrisEndsAt || 0) - Date.now());
+    const seconds = Math.ceil(remaining / 1000);
+    clock.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+    clock.classList.toggle('danger', seconds <= 20);
+  };
+  update();
+  tetrisClockTimer = setInterval(update, 200);
+}
+
+function sendTetrisAction(action, col = null) {
+  if (currentVariant !== 'tetris' || gameOver || currentTurn !== mySide || !socket) return;
+  socket.emit('game_tetris_action', { action, ...(col === null ? {} : { col }) });
+}
+
+function animateTetrisFalls(falls = []) {
+  let duration = 0;
+  for (const fall of falls) {
+    const distance = Math.max(1, Number(fall.row) - Number(fall.fromRow));
+    const cell = getBoardCell(fall.row, fall.col);
+    if (!cell) continue;
+    cell.style.setProperty('--tetris-fall-rows', String(distance));
+    cell.classList.add('tetris-board-fall');
+    duration = Math.max(duration, 420 + distance * 80);
+  }
+  if (duration) setTimeout(() => document.querySelectorAll('.tetris-board-fall').forEach(cell => {
+    cell.classList.remove('tetris-board-fall');
+    cell.style.removeProperty('--tetris-fall-rows');
+  }), duration + 40);
+}
+
+async function onTetrisState(data = {}) {
+  if (currentVariant !== 'tetris') return;
+  const firstCapture = data.captures?.[0]?.cells || [];
+  if (firstCapture.length) {
+    firstCapture.forEach(([row, col]) => getBoardCell(row, col)?.classList.add('winning'));
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+  currentTurn = Number(data.current ?? data.next ?? currentTurn);
+  tetrisPiece = data.activePiece || null;
+  tetrisScores = { 1: Number(data.tetrisScores?.[1] || 0), 2: Number(data.tetrisScores?.[2] || 0) };
+  tetrisEndsAt = Number(data.tetrisEndsAt || tetrisEndsAt || 0);
+  tetrisResets = Number(data.tetrisResets || 0);
+  restoreBoard(data.board || currentGrid);
+  animateTetrisFalls([...(data.placedFalls || []), ...(data.falls || [])]);
+  renderTetrisOverlay(data.action || '');
+  updateTetrisControls();
+  updateTurnUI();
+  if (data.reset) setStatus(`Grille réinitialisée · scores conservés (${tetrisScores[1]} — ${tetrisScores[2]})`);
 }
 
 function applyFogVisibility(revealedRow = null, revealedCol = null) {
@@ -2748,6 +2862,10 @@ function applyFogVisibility(revealedRow = null, revealedCol = null) {
 
 // ── Gameplay ──────────────────────────────────────────────────────────────────
 function playMove(col, row = null) {
+  if (currentVariant === 'tetris') {
+    sendTetrisAction('column', col);
+    return;
+  }
   if (gameOver || (currentVariant !== 'simultaneous' && currentTurn !== mySide) || simultaneousWaiting) return;
   if (document.getElementById('board')?.classList.contains('locked')) return;
   if (iaMode && !serverBotMode) { iaPlayHuman(col); return; }
@@ -3135,6 +3253,23 @@ function updateTurnUI() {
     return;
   }
 
+  if (currentVariant === 'tetris') {
+    const canPlay = !gameOver && currentTurn === mySide;
+    for (let c = 0; c < COLS; c++) {
+      const button = columnButtons[c] || document.getElementById('cb' + c);
+      if (button) button.disabled = !canPlay;
+    }
+    updateTetrisControls();
+    document.getElementById('turn-lbl').textContent = gameOver
+      ? 'PARTIE TERMINÉE'
+      : canPlay ? '← TA PIÈCE' : 'PIÈCE ADVERSE…';
+    setStatus(gameOver ? '' : canPlay
+      ? 'Déplace, tourne puis lâche la pièce'
+      : 'L’adversaire positionne sa pièce…');
+    stopTurnTimer();
+    return;
+  }
+
   for (let c = 0; c < COLS; c++) {
     const b = columnButtons[c] || document.getElementById('cb' + c);
     if (b) {
@@ -3202,6 +3337,10 @@ function getCardElo(side) {
 async function onGameOver(data) {
   gameOver = true;
   stopTurnTimer();
+  if (tetrisClockTimer) {
+    clearInterval(tetrisClockTimer);
+    tetrisClockTimer = null;
+  }
   setGameActionState('ended');
   closeActionOffer();
 
@@ -3211,7 +3350,9 @@ async function onGameOver(data) {
     || data?.variant === 'simultaneous'
     || currentVariant === 'simultaneous'
     || data?.variant === 'naval'
-    || currentVariant === 'naval';
+    || currentVariant === 'naval'
+    || data?.variant === 'tetris'
+    || currentVariant === 'tetris';
   if (data?.bomb && Array.isArray(data?.board)) {
     await animateBombUse({ ...data.bomb, board: data.board });
   } else if (data?.rotation && Array.isArray(data?.board)) {
@@ -3223,6 +3364,11 @@ async function onGameOver(data) {
     await animateSimultaneousRound(data);
   } else if ((data?.variant === 'naval' || currentVariant === 'naval') && Array.isArray(data?.board)) {
     restoreBoard(data.board);
+  } else if ((data?.variant === 'tetris' || currentVariant === 'tetris') && Array.isArray(data?.board)) {
+    tetrisScores = { 1: Number(data.tetrisScores?.[1] || 0), 2: Number(data.tetrisScores?.[2] || 0) };
+    tetrisPiece = null;
+    restoreBoard(data.board);
+    updateTetrisControls();
   }
 
   const dcBanner = document.getElementById('disconnect-banner');
@@ -3255,7 +3401,7 @@ async function onGameOver(data) {
   setStatus('');
 
   if (tutorialViewerMode) {
-    const isDraw = ['draw','agreement_draw','position_draw','conquest_draw'].includes(data.reason);
+    const isDraw = ['draw','agreement_draw','position_draw','conquest_draw','tetris_draw'].includes(data.reason);
     const winnerName = data.players?.[data.winner]?.pseudo || lobbyData?.players?.[data.winner]?.pseudo || 'Une IA';
     const title = document.getElementById('result-title');
     if (title) {
@@ -3284,7 +3430,7 @@ async function onGameOver(data) {
   }
 
   const isWinner = data.winner === mySide;
-  const isDraw = ['draw','agreement_draw','position_draw','conquest_draw'].includes(data.reason);
+  const isDraw = ['draw','agreement_draw','position_draw','conquest_draw','tetris_draw'].includes(data.reason);
   updateGameDiscordPresence({
     players: data.players,
     result: isDraw ? 'Match nul' : isWinner ? 'Victoire' : 'Défaite',
@@ -3338,6 +3484,10 @@ async function onGameOver(data) {
     reasonEl.textContent = 'Nulle par position.';
   } else if (data.reason === 'disconnect') {
     reasonEl.textContent = isWinner ? 'Victoire par deconnexion adverse.' : 'Defaite apres deconnexion.';
+  } else if (data.reason === 'tetris_score') {
+    reasonEl.textContent = `Fin des 3 minutes · score ${Number(data.tetrisScores?.[mySide] || 0)} à ${Number(data.tetrisScores?.[oppSide] || 0)}.`;
+  } else if (data.reason === 'tetris_draw') {
+    reasonEl.textContent = `Égalité après 3 minutes · ${Number(data.tetrisScores?.[1] || 0)} ligne(s) chacun.`;
   } else if (isDraw) {
     reasonEl.textContent = 'Position nulle. Les ELO restent visibles et animes juste dessous.';
   } else if (vipBoostApplied) {
@@ -3364,8 +3514,10 @@ async function onGameOver(data) {
     const myTransition = Number.isFinite(myBefore) && Number.isFinite(myAfter) ? `${myBefore} → ${myAfter}` : deltaText(myDelta);
     const resultKind = data.reason === 'resign' ? 'Abandon'
       : data.reason === 'agreement_draw' ? 'Nulle par accord'
-        : data.reason === 'draw' || data.reason === 'position_draw' ? 'Position nulle'
-          : 'Alignement';
+        : data.reason === 'tetris_score' ? `Score ${Number(data.tetrisScores?.[1] || 0)} — ${Number(data.tetrisScores?.[2] || 0)}`
+          : data.reason === 'tetris_draw' ? `Égalité ${Number(data.tetrisScores?.[1] || 0)} — ${Number(data.tetrisScores?.[2] || 0)}`
+            : data.reason === 'draw' || data.reason === 'position_draw' ? 'Position nulle'
+              : 'Alignement';
     metaEl.innerHTML = `
       <div class="result-meta-chip">Resultat<strong>${resultKind}</strong></div>
       <div class="result-meta-chip">Vainqueur<strong>${winnerLabel}</strong></div>
@@ -4056,6 +4208,22 @@ async function saveBotReplay(winner, duration = 0) {
     }
   } catch (e) {}
 }
+
+window.addEventListener('keydown', event => {
+  if (currentVariant !== 'tetris' || gameOver) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+  const actions = {
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    ArrowUp: 'rotate',
+    ArrowDown: 'down',
+    ' ': 'drop',
+  };
+  const action = actions[event.key];
+  if (!action) return;
+  event.preventDefault();
+  sendTetrisAction(action);
+});
 </script>
 <script src="/theme.js?v=eggs-35"></script>
 <script src="/presence.js?v=session-1"></script>

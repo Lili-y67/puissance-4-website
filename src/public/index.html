@@ -3452,6 +3452,7 @@ body.p4-wallpaper-mode .arena-variant-choice{text-shadow:0 2px 8px rgba(0,0,0,.9
               <option value="fog">Brouillard de Guerre</option>
               <option value="conquest">Conquête</option>
               <option value="naval">Puissance 4 Navale</option>
+              <option value="tetris">p4-Tetris</option>
             </select>
             <span id="bot-variant-desc" style="font:500 11px 'Barlow',sans-serif;letter-spacing:0;text-transform:none;line-height:1.45;color:var(--muted);">Les règles classiques du Puissance 4.</span>
           </label>
@@ -3641,7 +3642,7 @@ body.p4-wallpaper-mode .arena-variant-choice{text-shadow:0 2px 8px rgba(0,0,0,.9
       </div>
       <label style="display:grid;gap:7px;color:var(--muted);font:800 11px 'Barlow Condensed',sans-serif;letter-spacing:1.7px;text-transform:uppercase">Variante du duel
         <select class="queue-variant-select" id="duel-variant" onchange="selectDuelVariant(this.value)">
-          <option value="classic">Classique · 6×7</option><option value="rotate">Plateau rotatif · 7×7</option><option value="anti">Anti-Puissance 4 · 9×9</option><option value="bomb">Puissance Bombe · 6×7</option><option value="mission">Mission personnelle · 7×7</option><option value="simultaneous">Placement simultané · 6×7</option><option value="fog">Brouillard de Guerre · 6×7</option><option value="conquest">Conquête · 6×7</option><option value="naval">Puissance 4 Navale · 6×7</option>
+          <option value="classic">Classique · 6×7</option><option value="rotate">Plateau rotatif · 7×7</option><option value="anti">Anti-Puissance 4 · 9×9</option><option value="bomb">Puissance Bombe · 6×7</option><option value="mission">Mission personnelle · 7×7</option><option value="simultaneous">Placement simultané · 6×7</option><option value="fog">Brouillard de Guerre · 6×7</option><option value="conquest">Conquête · 6×7</option><option value="naval">Puissance 4 Navale · 6×7</option><option value="tetris">p4-Tetris · 8×12</option>
         </select>
       </label>
       <div class="input-wrap">
@@ -3899,7 +3900,7 @@ let latestQueueCounts = { total: 0, byVariant: {} };
 let currentQueuePosition = 0;
 let activeQueueVariant = localStorage.getItem('p4_queue_variant') || 'classic';
 let queueVariantProfileStats = null;
-const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale' };
+const QUEUE_VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-P4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale', tetris:'p4-Tetris' };
 const ARENA_VARIANT_META = {
   classic: { size:'6×7', icon:'🔴', description:'Aligne quatre jetons avant ton adversaire.' },
   rotate: { size:'7×7', icon:'🔄', description:'Le plateau pivote et la gravité redistribue les jetons.' },
@@ -3910,6 +3911,7 @@ const ARENA_VARIANT_META = {
   fog: { size:'6×7', icon:'🌫️', description:'Mémorise les coups qui disparaissent dans la brume.' },
   conquest: { size:'6×7', icon:'🚩', description:'Capture des lignes pour atteindre trois points.' },
   naval: { size:'6×7', icon:'⚓', description:'Explore la grille cachée et découvre son unique ligne.' },
+  tetris: { size:'8×12', icon:'🧱', description:'Oriente des figures, forme des lignes de quatre et marque un maximum en 3 minutes.' },
 };
 let currentGlobalBoost = null;
 let currentCoinBoost = null;
@@ -4601,7 +4603,8 @@ const BOT_VARIANT_DESCRIPTIONS = {
   simultaneous: 'Choisis ta colonne en secret avant la résolution simultanée des deux coups.',
   fog: 'Les jetons disparaissent visuellement dans la brume : mémorise la grille.',
   conquest: 'Capture des alignements pour marquer des points et vider les lignes formées.',
-  naval: 'Explore une grille cachée case par case et découvre son unique ligne de quatre avant l’ordinateur.'
+  naval: 'Explore une grille cachée case par case et découvre son unique ligne de quatre avant l’ordinateur.',
+  tetris: 'Oriente et accélère les figures pour former un maximum de lignes de quatre en 3 minutes.'
 };
 
 function setBotVariant(value) {
@@ -5429,6 +5432,7 @@ function showLoggedInView(p) {
           <option value="fog">Brouillard de Guerre · 6×7</option>
           <option value="conquest">Conquête · 6×7</option>
           <option value="naval">Puissance 4 Navale · 6×7</option>
+          <option value="tetris">p4-Tetris · 8×12</option>
         </select>
         <div class="arena-variant-grid" id="arena-variant-grid"></div>
         <div class="arena-variant-choice">

@@ -6,6 +6,16 @@ const { gQ, mQ, aQ, finishGame, abQ } = require('../db/db');
 const { wlogGame } = require('../webhooks');
 const { getVariant, normalizeVariant, MISSION_DEFINITIONS } = require('./variants');
 const { createNavalGrid } = require('./naval');
+const {
+  rotateCells: rotateTetrisCells,
+  uniqueRotations: uniqueTetrisRotations,
+  pieceCells: getTetrisPieceCells,
+  positionValid: isTetrisPositionValid,
+  createPiece: createTetrisPiece,
+  hardDropY: getTetrisHardDropY,
+  placePiece: placeTetrisPiece,
+  resolveLines: resolveTetrisLines,
+} = require('./tetris');
 
 class GameManager {
   constructor() {
@@ -18,6 +28,7 @@ class GameManager {
       const now = Date.now();
       for (const [gameId, state] of this.games) {
         if (state.status !== 'active') continue;
+        if (state.variant === 'tetris') continue;
         if (state.variant === 'mission' && (!state.missions[1] || !state.missions[2])) continue;
         const moveTimerLimit = Number(state.turnTimeLimitMs || 0);
         const limit = moveTimerLimit > 0 ? moveTimerLimit : AFK_LIMIT;
@@ -34,6 +45,24 @@ class GameManager {
         }
       }
     }, 1000);
+
+    this._tetrisInterval = setInterval(() => {
+      const now = Date.now();
+      for (const state of this.games.values()) {
+        if (state.status !== 'active' || state.variant !== 'tetris') continue;
+        if (now < Number(state.tetrisStartsAt || 0)) continue;
+        if (now >= Number(state.tetrisEndsAt || 0)) {
+          const result = this._finishTetris(state);
+          if (result && this._onTetrisEvent) this._onTetrisEvent(result);
+          continue;
+        }
+        if (now < Number(state.tetrisNextFallAt || 0)) continue;
+        state.tetrisNextFallAt = now + Number(state.variantConfig.fallEveryMs || 650);
+        const result = this._stepTetris(state);
+        if (result && this._onTetrisEvent) this._onTetrisEvent(result);
+      }
+    }, 100);
+    this._tetrisInterval.unref?.();
   }
 
   create(p1, p2, options = {}) {
@@ -89,11 +118,25 @@ class GameManager {
       navalSecretGrid: null,
       navalWinningLine: [],
       navalRevealed: new Set(),
+      tetrisScores: { 1: 0, 2: 0 },
+      tetrisPiece: null,
+      tetrisStartsAt: 0,
+      tetrisEndsAt: 0,
+      tetrisNextFallAt: 0,
+      tetrisResets: 0,
     };
     if (variant === 'naval') {
       const naval = createNavalGrid(gameId);
       state.navalSecretGrid = naval.grid;
       state.navalWinningLine = naval.winningLine;
+    }
+    if (variant === 'tetris') {
+      state.turnTimeLimitMs = 0;
+      state.moveTimeSeconds = 0;
+      state.tetrisStartsAt = Date.now() + Number(options.startsInMs ?? 3000);
+      state.tetrisEndsAt = state.tetrisStartsAt + Number(variantConfig.matchDurationMs || 180000);
+      state.tetrisNextFallAt = state.tetrisStartsAt + Number(variantConfig.fallEveryMs || 650);
+      this._spawnTetrisPiece(state);
     }
 
     this.games.set(gameId, state);
@@ -110,6 +153,7 @@ class GameManager {
     if (!state || state.status !== 'active') return { error: 'Partie inactive.' };
 
     const playerNum = this._side(state, socketId);
+    if (state.variant === 'tetris') return { error: 'Utilise les commandes p4-Tetris.' };
     if (state.variant === 'simultaneous') return this.submitSimultaneous(socketId, col);
     if (state.variant === 'mission' && (!state.missions[1] || !state.missions[2])) return { error: 'Les deux missions doivent être choisies.' };
     if (playerNum !== state.current) return { error: 'Pas ton tour.' };
@@ -201,6 +245,166 @@ class GameManager {
       conquestScores: state.conquestScores,
       forcedCols: state.variant === 'anti' ? this._antiForcedCols(state, state.current) : [],
     };
+  }
+
+  _publicTetrisPiece(piece) {
+    if (!piece) return null;
+    return {
+      type: piece.type,
+      player: Number(piece.player),
+      x: Number(piece.x),
+      y: Number(piece.y),
+      cells: piece.cells.map(cell => [...cell]),
+    };
+  }
+
+  _tetrisPayload(state, extra = {}) {
+    return {
+      type: 'tetris_state',
+      gameId: state.id,
+      variant: 'tetris',
+      board: state.board.grid.map(row => [...row]),
+      activePiece: this._publicTetrisPiece(state.tetrisPiece),
+      tetrisScores: { 1: Number(state.tetrisScores[1] || 0), 2: Number(state.tetrisScores[2] || 0) },
+      tetrisEndsAt: Number(state.tetrisEndsAt || 0),
+      tetrisStartsAt: Number(state.tetrisStartsAt || 0),
+      tetrisResets: Number(state.tetrisResets || 0),
+      current: state.current,
+      next: state.current,
+      moveCount: state.moveCount,
+      ...extra,
+    };
+  }
+
+  _spawnTetrisPiece(state) {
+    let reset = false;
+    state.tetrisPiece = createTetrisPiece(state.current, state.board.cols);
+    if (!isTetrisPositionValid(state.board.grid, state.tetrisPiece.cells, state.tetrisPiece.y, state.tetrisPiece.x)) {
+      state.board = new Board(state.variantConfig);
+      state.tetrisResets++;
+      reset = true;
+    }
+    return reset;
+  }
+
+  _stepTetris(state) {
+    const piece = state.tetrisPiece;
+    if (!piece) return null;
+    if (isTetrisPositionValid(state.board.grid, piece.cells, piece.y + 1, piece.x)) {
+      piece.y++;
+      return this._tetrisPayload(state, { action: 'fall' });
+    }
+    return this._lockTetrisPiece(state);
+  }
+
+  _lockTetrisPiece(state) {
+    const piece = state.tetrisPiece;
+    if (!piece) return { error: 'Pièce p4-Tetris indisponible.' };
+    const actor = Number(piece.player);
+    const placedAt = getTetrisPieceCells(piece);
+    const placement = placeTetrisPiece(state.board.grid, piece, actor);
+    state.tetrisPiece = null;
+    state.moveCount++;
+    const now = Date.now();
+    const thinkMs = Math.max(0, now - Number(state.lastMoveAt || now));
+    state.lastMoveAt = now;
+    const resolved = resolveTetrisLines(state.board.grid, state.tetrisScores);
+    const firstCell = placedAt[0] || [0, 0];
+    if (state.persisted) {
+      mQ.insert.run({
+        game_id: state.id,
+        player_id: state.players[actor].id,
+        col: Number(firstCell[1] || 0),
+        row: Number(firstCell[0] || 0),
+        move_number: state.moveCount,
+        think_ms: thinkMs,
+      });
+    }
+    state.current = actor === 1 ? 2 : 1;
+    const reset = this._spawnTetrisPiece(state);
+    const details = {
+      action: 'lock',
+      locked: true,
+      actor,
+      piece: { ...this._publicTetrisPiece(piece), placedAt },
+      placedFalls: placement.falls,
+      captures: resolved.captures,
+      falls: resolved.falls,
+      reset,
+    };
+    this._recordAction(state, actor, 'tetris_lock', {
+      ...details,
+      board: state.board.grid,
+      scores: state.tetrisScores,
+      resets: state.tetrisResets,
+      endsAt: state.tetrisEndsAt,
+      nextPiece: this._publicTetrisPiece(state.tetrisPiece),
+    });
+    return this._tetrisPayload(state, details);
+  }
+
+  tetrisAction(socketId, requestedAction, payload = {}) {
+    const state = this.getBySocket(socketId);
+    if (!state || state.status !== 'active' || state.variant !== 'tetris') return { error: 'Partie p4-Tetris introuvable.' };
+    const side = this._side(state, socketId);
+    if (side !== state.current) return { error: 'Ce n’est pas ta pièce.' };
+    if (Date.now() < Number(state.tetrisStartsAt || 0)) return { error: 'La partie n’a pas encore commencé.' };
+    const piece = state.tetrisPiece;
+    if (!piece) return { error: 'Pièce indisponible.' };
+    const action = String(requestedAction || '').toLowerCase();
+    let changed = false;
+    if (action === 'left' || action === 'right') {
+      const nextX = piece.x + (action === 'left' ? -1 : 1);
+      if (isTetrisPositionValid(state.board.grid, piece.cells, piece.y, nextX)) {
+        piece.x = nextX;
+        changed = true;
+      }
+    } else if (action === 'rotate') {
+      const rotated = rotateTetrisCells(piece.cells);
+      for (const kick of [0, -1, 1, -2, 2]) {
+        if (!isTetrisPositionValid(state.board.grid, rotated, piece.y, piece.x + kick)) continue;
+        piece.cells = rotated;
+        piece.x += kick;
+        changed = true;
+        break;
+      }
+    } else if (action === 'column') {
+      const width = Math.max(...piece.cells.map(([, col]) => col)) + 1;
+      const target = Math.max(0, Math.min(state.board.cols - width, Number(payload.col) - Math.floor(width / 2)));
+      if (isTetrisPositionValid(state.board.grid, piece.cells, piece.y, target)) {
+        piece.x = target;
+        changed = true;
+      }
+    } else if (action === 'down') {
+      state.tetrisNextFallAt = Date.now() + Number(state.variantConfig.fallEveryMs || 650);
+      return this._stepTetris(state);
+    } else if (action === 'drop') {
+      piece.y = getTetrisHardDropY(state.board.grid, piece);
+      return this._lockTetrisPiece(state);
+    } else if (action === 'place') {
+      const rotations = uniqueTetrisRotations(piece.type);
+      const rotation = Math.max(0, Math.min(rotations.length - 1, Number(payload.rotation || 0)));
+      const cells = rotations[rotation];
+      const width = Math.max(...cells.map(([, col]) => col)) + 1;
+      const x = Math.max(0, Math.min(state.board.cols - width, Number(payload.x || 0)));
+      if (!isTetrisPositionValid(state.board.grid, cells, 0, x)) return { error: 'Placement robot impossible.' };
+      piece.cells = cells.map(cell => [...cell]);
+      piece.x = x;
+      piece.y = getTetrisHardDropY(state.board.grid, piece);
+      return this._lockTetrisPiece(state);
+    } else return { error: 'Commande p4-Tetris inconnue.' };
+    return this._tetrisPayload(state, { action, changed });
+  }
+
+  _finishTetris(state) {
+    if (!state || state.status !== 'active') return null;
+    const left = Number(state.tetrisScores[1] || 0);
+    const right = Number(state.tetrisScores[2] || 0);
+    const winner = left === right ? null : (left > right ? 1 : 2);
+    return this._end(state, winner, [], winner ? 'tetris_score' : 'tetris_draw', null, {
+      tetrisScores: { 1: left, 2: right },
+      tetrisResets: Number(state.tetrisResets || 0),
+    });
   }
 
   _playNaval(state, playerNum, requestedRow, requestedCol) {
@@ -482,7 +686,7 @@ class GameManager {
   _end(state, winnerSide, winCells, reason, lastMove = null, extra = {}) {
     state.status = 'finished';
     const duration = Math.round((Date.now() - state.startedAt) / 1000);
-    const isDraw = reason === 'draw' || reason === 'agreement_draw' || reason === 'position_draw' || reason === 'conquest_draw';
+    const isDraw = reason === 'draw' || reason === 'agreement_draw' || reason === 'position_draw' || reason === 'conquest_draw' || reason === 'tetris_draw';
 
     const winnerId = winnerSide ? state.players[winnerSide].id : state.players[1].id;
     const loserId = winnerSide ? state.players[winnerSide === 1 ? 2 : 1].id : state.players[2].id;
