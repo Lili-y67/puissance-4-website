@@ -133,6 +133,7 @@ function applyLineGravity(grid, removedKeys) {
 function resolveLines(grid, scores = { 1: 0, 2: 0 }) {
   const captures = [];
   const allFalls = [];
+  let lineCount = 0;
   let guard = 0;
   while (guard++ < 12) {
     const lines = [
@@ -142,18 +143,23 @@ function resolveLines(grid, scores = { 1: 0, 2: 0 }) {
     if (!lines.length) break;
     const keys = [...new Set(lines.flatMap(line => line.cells.map(cell => cell.join(':'))))];
     for (const side of [1, 2]) scores[side] = Number(scores[side] || 0) + lines.filter(line => line.player === side).length;
-    captures.push({
+    lineCount += lines.length;
+    const capture = {
       lines: lines.map(line => ({ player: line.player, cells: line.cells })),
       cells: keys.map(key => key.split(':').map(Number)),
       scores: { 1: scores[1], 2: scores[2] },
-    });
+    };
     for (const key of keys) {
       const [row, col] = key.split(':').map(Number);
       grid[row][col] = 0;
     }
-    allFalls.push(...applyLineGravity(grid, keys));
+    const falls = applyLineGravity(grid, keys);
+    allFalls.push(...falls);
+    capture.falls = falls;
+    capture.board = grid.map(row => [...row]);
+    captures.push(capture);
   }
-  return { captures, falls: allFalls, scores };
+  return { captures, falls: allFalls, scores, lineCount };
 }
 
 function placePiece(grid, piece, player = piece?.player) {

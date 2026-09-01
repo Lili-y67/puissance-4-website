@@ -2051,7 +2051,10 @@ function emitTetrisResult(result) {
   if (result.type === 'game_over') return emitGameOver(result);
   io.to('game:' + result.gameId).emit('tetris_state', result);
   emitLiveUpdate();
-  if (result.locked) scheduleBuiltinBotTurn(result.gameId, 260);
+  if (result.locked) {
+    const readyDelay = Math.max(260, Number(result.tetrisReadyAt || 0) - Date.now() + 120);
+    scheduleBuiltinBotTurn(result.gameId, readyDelay);
+  }
   return result;
 }
 
@@ -11871,7 +11874,7 @@ io.on('connection', socket => {
         missions: { 1: null, 2: null }, simultaneousChoices: { 1: null, 2: null }, initiative: nextSide,
         conquestScores: { 1: 0, 2: 0 }, conquestRound: 1,
         navalSecretGrid, navalWinningLine, navalRevealed,
-        tetrisScores, tetrisResets, tetrisPiece,
+        tetrisScores, tetrisResets, tetrisPiece, tetrisReadyAt: 0,
         tetrisStartsAt: Date.now(), tetrisEndsAt,
         tetrisNextFallAt: Date.now() + Number(variantConfig.fallEveryMs || 650),
       };

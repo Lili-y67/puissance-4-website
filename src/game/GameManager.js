@@ -124,6 +124,7 @@ class GameManager {
       tetrisEndsAt: 0,
       tetrisNextFallAt: 0,
       tetrisResets: 0,
+      tetrisReadyAt: 0,
     };
     if (variant === 'naval') {
       const naval = createNavalGrid(gameId);
@@ -269,6 +270,7 @@ class GameManager {
       tetrisEndsAt: Number(state.tetrisEndsAt || 0),
       tetrisStartsAt: Number(state.tetrisStartsAt || 0),
       tetrisResets: Number(state.tetrisResets || 0),
+      tetrisReadyAt: Number(state.tetrisReadyAt || 0),
       current: state.current,
       next: state.current,
       moveCount: state.moveCount,
@@ -288,6 +290,7 @@ class GameManager {
   }
 
   _stepTetris(state) {
+    if (Date.now() < Number(state.tetrisReadyAt || 0)) return null;
     const piece = state.tetrisPiece;
     if (!piece) return null;
     if (isTetrisPositionValid(state.board.grid, piece.cells, piece.y + 1, piece.x)) {
@@ -308,7 +311,22 @@ class GameManager {
     const now = Date.now();
     const thinkMs = Math.max(0, now - Number(state.lastMoveAt || now));
     state.lastMoveAt = now;
+    const captureStartBoard = state.board.grid.map(row => [...row]);
     const resolved = resolveTetrisLines(state.board.grid, state.tetrisScores);
+    const fallDuration = falls => (falls || []).reduce((duration, fall) => Math.max(
+      duration,
+      420 + Math.max(1, Number(fall.row) - Number(fall.fromRow)) * 80,
+    ), 0);
+    const resolutionMs = resolved.lineCount > 0
+      ? Math.min(fallDuration(placement.falls), 520)
+        + resolved.lineCount * 500
+        + resolved.captures.reduce((duration, capture) => {
+          const fallMs = fallDuration(capture.falls);
+          return duration + (fallMs ? fallMs + 30 : 0);
+        }, 0)
+      : 0;
+    state.tetrisReadyAt = resolutionMs ? now + resolutionMs : 0;
+    if (resolutionMs) state.tetrisNextFallAt = state.tetrisReadyAt + Number(state.variantConfig.fallEveryMs || 650);
     const firstCell = placedAt[0] || [0, 0];
     if (state.persisted) {
       mQ.insert.run({
@@ -330,6 +348,8 @@ class GameManager {
       placedFalls: placement.falls,
       captures: resolved.captures,
       falls: resolved.falls,
+      captureStartBoard: resolved.captures.length ? captureStartBoard : null,
+      resolutionMs,
       reset,
     };
     this._recordAction(state, actor, 'tetris_lock', {
@@ -349,6 +369,7 @@ class GameManager {
     const side = this._side(state, socketId);
     if (side !== state.current) return { error: 'Ce n’est pas ta pièce.' };
     if (Date.now() < Number(state.tetrisStartsAt || 0)) return { error: 'La partie n’a pas encore commencé.' };
+    if (Date.now() < Number(state.tetrisReadyAt || 0)) return { error: 'Les lignes sont encore en train de disparaître.' };
     const piece = state.tetrisPiece;
     if (!piece) return { error: 'Pièce indisponible.' };
     const action = String(requestedAction || '').toLowerCase();

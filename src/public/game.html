@@ -655,7 +655,7 @@ body {
 .cell.fog-hidden .token{opacity:0;filter:blur(8px);transform:scale(.72)!important}
 .cell.fog-revealed .token{animation:fog-vanish 1.25s ease-in-out forwards!important}
 .col-buttons.naval-controls-hidden{display:none!important}.board.naval-active .cell{border-radius:50%}.board.naval-active .cell.naval-hidden{background:radial-gradient(circle at 34% 27%,#292932 0 8%,#09090d 52%,#010103 76%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.08),inset 0 8px 18px #000,0 4px 12px rgba(0,0,0,.5)}.board.naval-active .cell.naval-hidden::before{content:"?";inset:0;display:grid;place-items:center;border-radius:50%;background:none;color:rgba(255,255,255,.2);font:900 clamp(14px,2.5vw,26px) "Barlow Condensed",sans-serif;animation:none}.board.naval-active .cell:not(.naval-hidden){border-radius:50%}
-.board.tetris-active{width:min(100%,480px);border-radius:24px;padding:10px;gap:clamp(3px,.8vw,6px)}.board.tetris-active .cell,.board.tetris-active .token{border-radius:50%!important;clip-path:none!important}.board.tetris-active .cell.tetris-piece{z-index:4;box-shadow:inset 0 0 0 2px rgba(255,255,255,.28),0 0 18px rgba(133,235,255,.18)}.board.tetris-active .cell.tetris-piece.tetris-live-fall>.token{animation:tetris-live-fall .22s cubic-bezier(.18,.76,.28,1.08)!important}.board.tetris-active .cell.tetris-ghost::after{opacity:1;inset:15%;border:2px dashed rgba(255,255,255,.32);background:transparent;box-shadow:none}.board.tetris-active .cell.tetris-board-fall>.token{animation:tetris-board-fall calc(.42s + var(--tetris-fall-rows,1)*.08s) cubic-bezier(.18,.72,.24,1.08) both!important}.tetris-scoreboard{display:flex;align-items:center;gap:10px;padding:5px 10px;border-radius:999px;border:1px solid rgba(133,235,255,.18);background:rgba(133,235,255,.06)}.tetris-scoreboard strong{color:#fff;font-size:15px}.tetris-clock{min-width:48px;color:#85ebff;font-size:16px;text-align:center}.tetris-clock.danger{color:#ff4f6d}.tetris-command{min-width:42px!important;padding:8px 11px!important}@keyframes tetris-live-fall{from{transform:translateY(-112%)}82%{transform:translateY(4%)}to{transform:translateY(0)}}@keyframes tetris-board-fall{from{transform:translateY(calc(var(--tetris-fall-rows,1)*-112%))}82%{transform:translateY(3%)}to{transform:translateY(0)}}
+.board.tetris-active{width:min(100%,430px);border-radius:24px;padding:8px;gap:clamp(3px,.65vw,5px)}.board.tetris-active .cell,.board.tetris-active .token{border-radius:50%!important;clip-path:none!important}.board.tetris-active .cell.tetris-piece{z-index:4;box-shadow:inset 0 0 0 2px rgba(255,255,255,.28),0 0 18px rgba(133,235,255,.18)}.board.tetris-active .cell.tetris-piece.tetris-live-fall>.token{animation:tetris-live-fall .22s cubic-bezier(.18,.76,.28,1.08)!important}.board.tetris-active .cell.tetris-ghost::after{opacity:1;inset:15%;border:2px dashed rgba(255,255,255,.32);background:transparent;box-shadow:none}.board.tetris-active .cell.tetris-board-fall>.token{animation:tetris-board-fall calc(.42s + var(--tetris-fall-rows,1)*.08s) cubic-bezier(.18,.72,.24,1.08) both!important}.board.tetris-active .cell.tetris-line-clearing>.token{animation:tetris-line-clear .16s ease-in forwards!important}.tetris-scoreboard{display:flex;align-items:center;gap:10px;padding:5px 10px;border-radius:999px;border:1px solid rgba(133,235,255,.18);background:rgba(133,235,255,.06)}.tetris-scoreboard strong{color:#fff;font-size:15px}.tetris-clock{min-width:48px;color:#85ebff;font-size:16px;text-align:center}.tetris-clock.danger{color:#ff4f6d}.tetris-command{min-width:42px!important;padding:8px 11px!important}@keyframes tetris-live-fall{from{transform:translateY(-112%)}82%{transform:translateY(4%)}to{transform:translateY(0)}}@keyframes tetris-board-fall{from{transform:translateY(calc(var(--tetris-fall-rows,1)*-112%))}82%{transform:translateY(3%)}to{transform:translateY(0)}}@keyframes tetris-line-clear{0%{transform:scale(1);opacity:1;filter:brightness(1.5)}70%{transform:scale(1.13);opacity:.7}100%{transform:scale(.18);opacity:0;filter:brightness(2)}}
 @keyframes fog-drift{from{transform:translate(-8%,-3%) scale(1)}to{transform:translate(9%,5%) scale(1.12)}}
 @keyframes fog-vanish{0%,58%{opacity:1;filter:blur(0);transform:scale(1)}100%{opacity:0;filter:blur(8px);transform:scale(.72)}}
 @media(prefers-reduced-motion:reduce){.board.fog-active::before{animation:none}}
@@ -1472,6 +1472,8 @@ let tetrisScores = { 1: 0, 2: 0 };
 let tetrisEndsAt = 0;
 let tetrisResets = 0;
 let tetrisClockTimer = null;
+let tetrisResolving = false;
+let tetrisAnimationQueue = Promise.resolve();
 
 const VARIANT_LABELS = { classic:'Classique', rotate:'Plateau rotatif', anti:'Anti-Puissance 4', bomb:'Puissance Bombe', mission:'Mission personnelle', simultaneous:'Placement simultané', fog:'Brouillard de Guerre', conquest:'Conquête', naval:'Puissance 4 Navale', tetris:'p4-Tetris' };
 
@@ -1500,6 +1502,8 @@ function configureVariant(data = {}) {
   tetrisScores = currentVariant === 'tetris' ? { 1: Number(data.tetrisScores?.[1] || 0), 2: Number(data.tetrisScores?.[2] || 0) } : { 1: 0, 2: 0 };
   tetrisEndsAt = currentVariant === 'tetris' ? Number(data.tetrisEndsAt || 0) : 0;
   tetrisResets = currentVariant === 'tetris' ? Number(data.tetrisResets || 0) : 0;
+  tetrisResolving = false;
+  tetrisAnimationQueue = Promise.resolve();
   ensureVariantControls(data);
 }
 
@@ -2739,7 +2743,7 @@ function restoreBoard(grid) {
       if (next && (previous !== next || !cell.classList.contains('p' + next))) {
         applyToken(r, c, next, false);
       } else if (!next && (previous || cell.classList.contains('p1') || cell.classList.contains('p2'))) {
-        cell.classList.remove('p1', 'p2', 'drop', 'settled', 'winning', 'tetris-piece', 'tetris-ghost', 'tetris-live-fall', 'tetris-board-fall');
+        cell.classList.remove('p1', 'p2', 'drop', 'settled', 'winning', 'tetris-piece', 'tetris-ghost', 'tetris-live-fall', 'tetris-board-fall', 'tetris-line-clearing');
         const token = cell.querySelector('.token');
         if (token) {
           token.removeAttribute('style');
@@ -2784,7 +2788,7 @@ function renderTetrisOverlay(action = '') {
 
 function updateTetrisControls() {
   if (currentVariant !== 'tetris') return;
-  const active = !gameOver && currentTurn === mySide;
+  const active = !gameOver && !tetrisResolving && currentTurn === mySide;
   document.querySelectorAll('[data-tetris-action]').forEach(button => { button.disabled = !active; });
   const score = document.getElementById('tetris-score');
   if (score) score.textContent = `${tetrisScores[1]} — ${tetrisScores[2]}`;
@@ -2805,7 +2809,7 @@ function startTetrisClock() {
 }
 
 function sendTetrisAction(action, col = null) {
-  if (currentVariant !== 'tetris' || gameOver || currentTurn !== mySide || !socket) return;
+  if (currentVariant !== 'tetris' || gameOver || tetrisResolving || currentTurn !== mySide || !socket) return;
   socket.emit('game_tetris_action', { action, ...(col === null ? {} : { col }) });
 }
 
@@ -2823,14 +2827,52 @@ function animateTetrisFalls(falls = []) {
     cell.classList.remove('tetris-board-fall');
     cell.style.removeProperty('--tetris-fall-rows');
   }), duration + 40);
+  return duration;
 }
 
-async function onTetrisState(data = {}) {
+function onTetrisState(data = {}) {
+  tetrisAnimationQueue = tetrisAnimationQueue
+    .then(() => applyTetrisState(data))
+    .catch(error => {
+      tetrisResolving = false;
+      updateTetrisControls();
+      console.error('[p4-Tetris animation]', error);
+    });
+  return tetrisAnimationQueue;
+}
+
+async function applyTetrisState(data = {}) {
   if (currentVariant !== 'tetris') return;
-  const firstCapture = data.captures?.[0]?.cells || [];
-  if (firstCapture.length) {
-    firstCapture.forEach(([row, col]) => getBoardCell(row, col)?.classList.add('winning'));
-    await new Promise(resolve => setTimeout(resolve, 300));
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const captures = Array.isArray(data.captures) ? data.captures : [];
+  if (captures.length && Array.isArray(data.captureStartBoard)) {
+    tetrisResolving = true;
+    updateTetrisControls();
+    let workingBoard = data.captureStartBoard.map(row => row.map(Number));
+    restoreBoard(workingBoard);
+    const placedDuration = animateTetrisFalls(data.placedFalls || []);
+    if (placedDuration) await wait(Math.min(placedDuration, 520));
+
+    for (const capture of captures) {
+      for (const line of capture.lines || []) {
+        const visibleCells = (line.cells || []).filter(([row, col]) => workingBoard[row]?.[col]);
+        visibleCells.forEach(([row, col]) => getBoardCell(row, col)?.classList.add('winning'));
+        await wait(260);
+        visibleCells.forEach(([row, col]) => getBoardCell(row, col)?.classList.add('tetris-line-clearing'));
+        await wait(160);
+        for (const [row, col] of line.cells || []) if (workingBoard[row]) workingBoard[row][col] = 0;
+        restoreBoard(workingBoard);
+        await wait(80);
+      }
+      if (Array.isArray(capture.board)) {
+        workingBoard = capture.board.map(row => row.map(Number));
+        restoreBoard(workingBoard);
+        const fallDuration = animateTetrisFalls(capture.falls || []);
+        if (fallDuration) await wait(fallDuration + 30);
+      }
+      tetrisScores = { 1: Number(capture.scores?.[1] || 0), 2: Number(capture.scores?.[2] || 0) };
+      updateTetrisControls();
+    }
   }
   currentTurn = Number(data.current ?? data.next ?? currentTurn);
   tetrisPiece = data.activePiece || null;
@@ -2838,8 +2880,9 @@ async function onTetrisState(data = {}) {
   tetrisEndsAt = Number(data.tetrisEndsAt || tetrisEndsAt || 0);
   tetrisResets = Number(data.tetrisResets || 0);
   restoreBoard(data.board || currentGrid);
-  animateTetrisFalls([...(data.placedFalls || []), ...(data.falls || [])]);
+  if (!captures.length) animateTetrisFalls(data.placedFalls || []);
   renderTetrisOverlay(data.action || '');
+  tetrisResolving = false;
   updateTetrisControls();
   updateTurnUI();
   if (data.reset) setStatus(`Grille réinitialisée · scores conservés (${tetrisScores[1]} — ${tetrisScores[2]})`);
