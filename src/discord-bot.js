@@ -23,6 +23,7 @@
   PermissionsBitField,
   EmbedBuilder,
 } = require('discord.js');
+require('./runtime-version').assertSupportedNode();
 const {DefaultWebSocketManagerOptions}=require('@discordjs/ws')
 DefaultWebSocketManagerOptions.identifyProperties.browser = 'Discord Android'
 const crypto = require('crypto');

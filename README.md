@@ -20,7 +20,7 @@ Variantes disponibles : Plateau rotatif, Anti-Puissance 4, Puissance Bombe, Miss
 
 ## Installation
 
-Prérequis : Node.js 20 et npm.
+Prérequis : **Node.js 24.22.1 minimum (branche 24.x)** et npm. Les versions 24 antérieures à 24.22.1 sont refusées car elles ne contiennent pas les correctifs de sécurité d’octobre 2026.
 
 ```bash
 cd final
@@ -132,11 +132,14 @@ npm run rpc
 
 ## Déploiement
 
-1. Installe les dépendances avec `npm install`.
-2. Configure `.env` et le reverse proxy.
-3. Sauvegarde `data/`.
-4. Lance `npm start` avec ton gestionnaire de processus.
-5. Vérifie `/api/health`, l’authentification, une partie et la boutique.
+1. Sauvegarde `data/`.
+2. Installe **Node.js 24.22.1 ou une 24.x plus récente**. Sur Pterodactyl, sélectionne une image Node.js 24 à jour puis vérifie `node -v` dans la console ; le nom « Node 24 » seul ne garantit pas que le correctif est présent.
+3. Supprime les anciens modules natifs construits sous Node 20, puis réinstalle avec `npm install` sous Node 24.
+4. Configure `.env` et le reverse proxy.
+5. Lance `npm run check:runtime`, puis `npm start` avec ton gestionnaire de processus.
+6. Vérifie `/api/health`, l’authentification, une partie et la boutique.
+
+Le projet fournit `.nvmrc` et `.node-version` pour verrouiller la version de référence. Le démarrage est volontairement bloqué sur Node 20 ou sur une version Node 24 antérieure à 24.22.1.
 
 La configuration Nginx se trouve dans `deploy/nginx/`. Les pages HTML et le service worker utilisent des règles anti-cache afin d’éviter une ancienne interface après déploiement.
 

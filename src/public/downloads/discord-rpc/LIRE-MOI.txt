@@ -6,7 +6,8 @@ PUISSANCE 4 - DISCORD RICH PRESENCE
 4. Laisse la fenetre ouverte pendant que tu utilises le site.
 
 Au premier lancement, les petits fichiers necessaires sont installes
-automatiquement. Node.js doit etre installe sur le PC.
+automatiquement. Node.js 24.22.1 minimum (branche 24.x) doit etre
+installe sur le PC. Une version 24 plus ancienne n'est pas securisee.
 
 Telechargement Node.js :
 https://nodejs.org/

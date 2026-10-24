@@ -1,4 +1,5 @@
 const http = require('http');
+require('./runtime-version').assertSupportedNode();
 const RPC = require('discord-rpc');
 
 const HOST = '127.0.0.1';

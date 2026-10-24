@@ -1,29 +1,34 @@
-﻿{
+{
   "name": "puissance4",
   "version": "4.1.0",
   "description": "Puissance 4 multijoueur en ligne",
   "main": "index.js",
   "engines": {
-    "node": "20.x"
+    "node": ">=24.22.1 <25"
   },
   "scripts": {
+    "check:runtime": "node src/runtime-version.js",
+    "prestart": "npm run check:runtime",
     "start": "node index.js",
+    "predev": "npm run check:runtime",
     "dev": "nodemon index.js",
+    "prerpc": "npm run check:runtime",
     "rpc": "node src/discord-rpc-companion.js",
+    "prebot": "npm run check:runtime",
     "bot": "node src/bot.js",
+    "preregister-commands": "npm run check:runtime",
     "register-commands": "node src/register-commands.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
+    "better-sqlite3": "^13.0.3",
     "dotenv": "^16.4.5",
     "discord-rpc": "^4.0.1",
     "express": "^4.18.3",
     "socket.io": "^4.7.4",
     "discord.js": "^14.14.1",
-    "canvas": "^2.11.2"
+    "canvas": "^3.2.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
   }
 }
-

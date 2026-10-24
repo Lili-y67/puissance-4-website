@@ -1,3 +1,8 @@
+const [nodeMajor, nodeMinor, nodePatch] = process.versions.node.split('.').map(Number);
+if (nodeMajor !== 24 || nodeMinor < 22 || (nodeMinor === 22 && nodePatch < 1)) {
+  throw new Error(`Node.js ${process.versions.node} non supporté : installe Node.js 24.22.1 ou une version 24.x plus récente.`);
+}
+
 const http = require('http');
 const RPC = require('discord-rpc');
 

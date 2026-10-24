@@ -1,12 +1,13 @@
 require('dotenv').config();
+require('./runtime-version').assertSupportedNode();
 const { REST, Routes } = require('discord.js');
 const { buildDiscordCommandDefinitions } = require('./discord-bot');
 
 const DISCORD_GUILD = process.env.DISCORD_GUILD_ID || '1477078197530263582';
 const FALLBACK_CLIENT_ID = '1477252548090921060';
-const FALLBACK_BOT_TOKEN = 'MTQ3NzI1MjU0ODA5MDkyMTA2MA.Gxv9su.HtL_16ym65VieW5VEL4Pr8EQI_AcZ6jFbgZKrc';
 const clientId = process.env.DISCORD_CLIENT_ID || FALLBACK_CLIENT_ID;
-const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || FALLBACK_BOT_TOKEN;
+const botToken = process.env.DISCORD_BOT_TOKEN || process.env.BOT_TOKEN || '';
+if (!botToken) throw new Error('DISCORD_BOT_TOKEN est obligatoire pour enregistrer les commandes.');
 
 const commands = buildDiscordCommandDefinitions({
   vip_1m: { key: 'vip_1m', label: 'VIP 1 mois' },

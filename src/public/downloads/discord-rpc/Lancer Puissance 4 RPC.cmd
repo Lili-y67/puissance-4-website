@@ -14,6 +14,16 @@ if errorlevel 1 (
   exit /b 1
 )
 
+for /f "tokens=*" %%v in ('node -p "const [a,b,c]=process.versions.node.split('.').map(Number); a===24 ^&^& (b^>22 ^|^| (b===22 ^&^& c^>=1)) ? 'ok' : process.versions.node"') do set "NODE_CHECK=%%v"
+if not "%NODE_CHECK%"=="ok" (
+  echo.
+  echo [Puissance 4 RPC] Node.js %NODE_CHECK% n'est pas compatible.
+  echo Installe Node.js 24.22.1 ou une version 24.x plus recente.
+  echo.
+  pause
+  exit /b 1
+)
+
 if not exist "node_modules\discord-rpc\package.json" (
   echo.
   echo [Puissance 4 RPC] Installation au premier lancement...
